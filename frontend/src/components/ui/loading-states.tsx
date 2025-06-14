@@ -178,6 +178,7 @@ export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonPr
   ) => {
     return (
       <button
+        type="button"
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { NextRequest } from "next/server";
-import { updateSession } from "../../../middleware";
 import { createServerClient } from "@supabase/ssr";
+import type { NextRequest } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { updateSession } from "../../../middleware";
 
 // Mock Supabase SSR
 vi.mock("@supabase/ssr", () => ({
@@ -78,8 +78,8 @@ describe("updateSession", () => {
   });
 
   it("should handle missing environment variables", async () => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = undefined;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined;
 
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { useAuth } from "@/contexts/auth-context";
+import { render, createMockUser } from "@/test/test-utils";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RegisterForm, RegisterFormSkeleton } from "../register-form";
-import { useAuth } from "@/contexts/auth-context";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -53,6 +54,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
   });
 
@@ -134,7 +138,7 @@ describe("RegisterForm", () => {
 
   it("should redirect if already authenticated", async () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1", email: "test@example.com" },
+      user: createMockUser({ id: "1" }),
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -143,6 +147,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
@@ -154,7 +161,7 @@ describe("RegisterForm", () => {
 
   it("should redirect to custom path if already authenticated", async () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1", email: "test@example.com" },
+      user: createMockUser({ id: "1" }),
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -163,6 +170,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm redirectTo="/custom-dashboard" />);
@@ -183,6 +193,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
@@ -210,6 +223,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
@@ -229,6 +245,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -251,6 +270,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -273,6 +295,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -423,6 +448,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);

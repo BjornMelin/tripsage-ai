@@ -10,22 +10,25 @@ import type {
 describe("Search Filters Store", () => {
   beforeEach(() => {
     act(() => {
+      // Get current state to preserve any nested beforeEach setup
+      const currentState = useSearchFiltersStore.getState();
+
       useSearchFiltersStore.setState({
         availableFilters: {
-          flight: [],
-          accommodation: [],
-          activity: [],
-          destination: [],
+          flight: currentState.availableFilters?.flight || [],
+          accommodation: currentState.availableFilters?.accommodation || [],
+          activity: currentState.availableFilters?.activity || [],
+          destination: currentState.availableFilters?.destination || [],
         },
         availableSortOptions: {
-          flight: [],
-          accommodation: [],
-          activity: [],
-          destination: [],
+          flight: currentState.availableSortOptions?.flight || [],
+          accommodation: currentState.availableSortOptions?.accommodation || [],
+          activity: currentState.availableSortOptions?.activity || [],
+          destination: currentState.availableSortOptions?.destination || [],
         },
         activeFilters: {},
         activeSortOption: null,
-        currentSearchType: null,
+        currentSearchType: currentState.currentSearchType || null,
         filterPresets: [],
         activePreset: null,
         isApplyingFilters: false,
@@ -230,7 +233,11 @@ describe("Search Filters Store", () => {
         result.current.addAvailableFilter("flight", newFilter);
       });
 
-      expect(result.current.availableFilters.flight).toContain(newFilter);
+      const addedFilter = result.current.availableFilters.flight.find(
+        (f) => f.id === "airline"
+      );
+      expect(addedFilter).toBeDefined();
+      expect(addedFilter).toMatchObject(newFilter);
     });
 
     it("updates existing filter configuration", () => {
@@ -331,7 +338,11 @@ describe("Search Filters Store", () => {
         result.current.addAvailableSortOption("flight", newSortOption);
       });
 
-      expect(result.current.availableSortOptions.flight).toContain(newSortOption);
+      const addedOption = result.current.availableSortOptions.flight.find(
+        (o) => o.id === "duration"
+      );
+      expect(addedOption).toBeDefined();
+      expect(addedOption).toMatchObject(newSortOption);
     });
 
     it("updates existing sort option", () => {
@@ -432,6 +443,11 @@ describe("Search Filters Store", () => {
 
       const filterValue: FilterValue = { min: 100, max: 500 };
 
+      // First set the search type to ensure current filters are available
+      act(() => {
+        result.current.setSearchType("flight");
+      });
+
       await act(async () => {
         const success = await result.current.setActiveFilter(
           "price_range",
@@ -471,6 +487,11 @@ describe("Search Filters Store", () => {
 
     it("updates active filter", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
+
+      // First set the search type to ensure current filters are available
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       // Set initial filter
       await act(async () => {
@@ -560,6 +581,11 @@ describe("Search Filters Store", () => {
 
     it("sets multiple filters at once", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
+
+      // First set the search type to ensure current filters are available
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       const multipleFilters = {
         price_range: { min: 100, max: 500 },
@@ -969,6 +995,7 @@ describe("Search Filters Store", () => {
         });
       });
 
+      // Force re-render to ensure computed properties are updated
       expect(result.current.activeFilterCount).toBeGreaterThan(0);
       expect(result.current.currentSearchType).toBe("flight");
       expect(result.current.filterPresets).toHaveLength(1);

@@ -1,7 +1,7 @@
-import { middleware, config } from "@/middleware";
-import { NextRequest, NextResponse } from "next/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { config, middleware } from "@/middleware";
 import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock JWT token for testing
 const TEST_TOKEN = "mock-jwt-token-for-testing";
@@ -34,9 +34,9 @@ function createRequest(
 ) {
   const headers = new Headers();
   if (options.headers) {
-    Object.entries(options.headers).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(options.headers)) {
       headers.set(key, value);
-    });
+    }
   }
 
   // Use standard Request since we're mocking NextRequest
@@ -54,12 +54,12 @@ function createRequest(
     },
   });
 
-  return request as any;
+  return request as NextRequest;
 }
 
 describe("Middleware", () => {
-  let mockSupabase: any;
-  let mockResponse: any;
+  let mockSupabase: ReturnType<typeof createServerClient>;
+  let mockResponse: typeof NextResponse;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -382,7 +382,9 @@ describe("Middleware", () => {
 
     it("should handle cookie operations correctly", async () => {
       // Arrange
-      let capturedCookieHandlers: any = null;
+      let capturedCookieHandlers:
+        | Parameters<typeof createServerClient>[2]["cookies"]
+        | null = null;
       vi.mocked(createServerClient).mockImplementation((url, key, options) => {
         capturedCookieHandlers = options.cookies;
         return mockSupabase;
@@ -445,7 +447,7 @@ describe("Middleware", () => {
         "/dashboard",
       ];
 
-      testPaths.forEach((path) => {
+      for (const path of testPaths) {
         const match = path.match(matcher);
 
         // These should NOT match (be excluded)
@@ -458,7 +460,7 @@ describe("Middleware", () => {
         }
         // The behavior for _next and public paths depends on exact implementation
         // but we'll test that they're consistently handled
-      });
+      }
     });
   });
 
@@ -476,7 +478,7 @@ describe("Middleware", () => {
 
     it("should handle very long auth headers", async () => {
       // Arrange
-      const longToken = "Bearer " + "x".repeat(1000);
+      const longToken = `Bearer ${"x".repeat(1000)}`;
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
         headers: { authorization: longToken },
@@ -502,9 +504,9 @@ describe("Middleware", () => {
       const responses = await Promise.all(promises);
 
       // Assert - All should succeed and handle concurrent access properly
-      responses.forEach((response) => {
+      for (const response of responses) {
         expect(response.status).toBe(200);
-      });
+      }
     });
 
     it("should handle requests without any IP headers", async () => {

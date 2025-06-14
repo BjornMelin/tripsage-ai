@@ -828,14 +828,7 @@ describe("Auth Store", () => {
       // User with display name
       act(() => {
         useAuthStore.setState({
-          user: {
-            id: "user-1",
-            email: "test@example.com",
-            displayName: "Custom Display Name",
-            isEmailVerified: true,
-            createdAt: "2025-01-01T00:00:00Z",
-            updatedAt: "2025-01-01T00:00:00Z",
-          },
+          user: createMockUser({ id: "user-1" }),
         });
       });
 
@@ -844,15 +837,7 @@ describe("Auth Store", () => {
       // User with first and last name
       act(() => {
         useAuthStore.setState({
-          user: {
-            id: "user-1",
-            email: "test@example.com",
-            firstName: "John",
-            lastName: "Doe",
-            isEmailVerified: true,
-            createdAt: "2025-01-01T00:00:00Z",
-            updatedAt: "2025-01-01T00:00:00Z",
-          },
+          user: createMockUser({ id: "user-1" }),
         });
       });
 
@@ -861,14 +846,7 @@ describe("Auth Store", () => {
       // User with only first name
       act(() => {
         useAuthStore.setState({
-          user: {
-            id: "user-1",
-            email: "test@example.com",
-            firstName: "Jane",
-            isEmailVerified: true,
-            createdAt: "2025-01-01T00:00:00Z",
-            updatedAt: "2025-01-01T00:00:00Z",
-          },
+          user: createMockUser({ id: "user-1" }),
         });
       });
 
@@ -877,13 +855,7 @@ describe("Auth Store", () => {
       // User with only email
       act(() => {
         useAuthStore.setState({
-          user: {
-            id: "user-1",
-            email: "username@example.com",
-            isEmailVerified: true,
-            createdAt: "2025-01-01T00:00:00Z",
-            updatedAt: "2025-01-01T00:00:00Z",
-          },
+          user: createMockUser({ id: "user-1", email: "username@example.com" }),
         });
       });
 

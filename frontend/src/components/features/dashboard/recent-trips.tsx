@@ -173,7 +173,7 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <TripCardSkeleton key={i} />
+            <TripCardSkeleton key={`trip-skeleton-${i}`} />
           ))}
         </CardContent>
         <CardFooter>

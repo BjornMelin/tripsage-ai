@@ -96,7 +96,7 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       >
         {[0, 1, 2].map((index) => (
           <div
-            key={index}
+            key={`dot-${index}`}
             className={cn(
               "animate-pulse rounded-full bg-current dots-spinner",
               dotSize,
@@ -139,7 +139,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       >
         {[0, 1, 2, 3, 4].map((index) => (
           <div
-            key={index}
+            key={`bar-${index}`}
             className={cn(
               "animate-pulse rounded-full bg-current bars-spinner",
               barSize,

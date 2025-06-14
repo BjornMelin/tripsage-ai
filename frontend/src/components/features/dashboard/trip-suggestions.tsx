@@ -156,7 +156,11 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
 
       <div className="flex flex-wrap gap-1 mb-3">
         {suggestion.highlights.slice(0, 3).map((highlight, index) => (
-          <Badge key={index} variant="outline" className="text-xs">
+          <Badge
+            key={`highlight-${highlight}-${index}`}
+            variant="outline"
+            className="text-xs"
+          >
             {highlight}
           </Badge>
         ))}
@@ -294,7 +298,7 @@ export function TripSuggestions({
         </CardHeader>
         <CardContent className="space-y-4">
           {Array.from({ length: 2 }).map((_, i) => (
-            <SuggestionCardSkeleton key={i} />
+            <SuggestionCardSkeleton key={`skeleton-${i}`} />
           ))}
         </CardContent>
         <CardFooter>

@@ -50,6 +50,8 @@ export default async function LoginPage({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="Smart Trip Planning icon"
                 >
                   <path
                     strokeLinecap="round"
@@ -74,6 +76,8 @@ export default async function LoginPage({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="Collaborative Planning icon"
                 >
                   <path
                     strokeLinecap="round"
@@ -100,6 +104,8 @@ export default async function LoginPage({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="Detailed Itineraries icon"
                 >
                   <path
                     strokeLinecap="round"

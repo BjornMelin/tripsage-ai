@@ -88,12 +88,13 @@ vi.mock("../use-agent-status-websocket", () => ({
   useAgentStatusWebSocket: vi.fn().mockReturnValue({
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn(),
-    status: "disconnected",
     isConnected: false,
-    isConnecting: false,
-    isDisconnected: true,
-    isReconnecting: false,
-    hasError: false,
+    connectionError: null,
+    reconnectAttempts: 0,
+    startAgentMonitoring: vi.fn(),
+    stopAgentMonitoring: vi.fn(),
+    reportResourceUsage: vi.fn(),
+    wsClient: null,
   }),
 }));
 
@@ -159,24 +160,19 @@ describe("WebSocket Hooks Integration", () => {
       expect(result.current).toMatchObject({
         connect: expect.any(Function),
         disconnect: expect.any(Function),
-        status: expect.any(String),
         isConnected: expect.any(Boolean),
-        isConnecting: expect.any(Boolean),
-        isDisconnected: expect.any(Boolean),
-        isReconnecting: expect.any(Boolean),
-        hasError: expect.any(Boolean),
+        startAgentMonitoring: expect.any(Function),
+        stopAgentMonitoring: expect.any(Function),
+        reportResourceUsage: expect.any(Function),
       });
     });
 
     it("should initialize with disconnected state", () => {
       const { result } = renderHook(() => useAgentStatusWebSocket());
 
-      expect(result.current.status).toBe("disconnected");
       expect(result.current.isConnected).toBe(false);
-      expect(result.current.isDisconnected).toBe(true);
-      expect(result.current.isConnecting).toBe(false);
-      expect(result.current.isReconnecting).toBe(false);
-      expect(result.current.hasError).toBe(false);
+      expect(result.current.connectionError).toBe(null);
+      expect(result.current.reconnectAttempts).toBe(0);
     });
   });
 
@@ -247,10 +243,12 @@ describe("WebSocket Hooks Integration", () => {
 
       // Should not throw when accessing state properties
       expect(() => {
-        const { status, isConnected, isDisconnected } = result.current;
-        expect(typeof status).toBe("string");
+        const { isConnected, connectionError, reconnectAttempts } = result.current;
         expect(typeof isConnected).toBe("boolean");
-        expect(typeof isDisconnected).toBe("boolean");
+        expect(typeof reconnectAttempts).toBe("number");
+        expect(connectionError === null || typeof connectionError === "string").toBe(
+          true
+        );
       }).not.toThrow();
     });
   });

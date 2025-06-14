@@ -7,7 +7,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.itineraries import (
     ItineraryConflictCheckResponse,
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 @router.post("", response_model=ItineraryResponse, status_code=status.HTTP_201_CREATED)
 async def create_itinerary(
     request: ItineraryCreateRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -56,7 +56,7 @@ async def create_itinerary(
 
 @router.get("", response_model=List[ItineraryResponse])
 async def list_itineraries(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -69,7 +69,7 @@ async def list_itineraries(
 @router.post("/search", response_model=ItinerarySearchResponse)
 async def search_itineraries(
     request: ItinerarySearchRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -82,7 +82,7 @@ async def search_itineraries(
 @router.get("/{itinerary_id}", response_model=ItineraryResponse)
 async def get_itinerary(
     itinerary_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -103,7 +103,7 @@ async def get_itinerary(
 async def update_itinerary(
     itinerary_id: str,
     request: ItineraryUpdateRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -129,7 +129,7 @@ async def update_itinerary(
 @router.delete("/{itinerary_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_itinerary(
     itinerary_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -150,7 +150,7 @@ async def delete_itinerary(
 async def add_item_to_itinerary(
     itinerary_id: str,
     request: ItineraryItemCreateRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -179,7 +179,7 @@ async def add_item_to_itinerary(
 async def get_itinerary_item(
     itinerary_id: str,
     item_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -201,7 +201,7 @@ async def update_itinerary_item(
     itinerary_id: str,
     item_id: str,
     request: ItineraryItemUpdateRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -232,7 +232,7 @@ async def update_itinerary_item(
 async def delete_itinerary_item(
     itinerary_id: str,
     item_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -252,7 +252,7 @@ async def delete_itinerary_item(
 @router.get("/{itinerary_id}/conflicts", response_model=ItineraryConflictCheckResponse)
 async def check_itinerary_conflicts(
     itinerary_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
@@ -272,7 +272,7 @@ async def check_itinerary_conflicts(
 @router.post("/optimize", response_model=ItineraryOptimizeResponse)
 async def optimize_itinerary(
     request: ItineraryOptimizeRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """

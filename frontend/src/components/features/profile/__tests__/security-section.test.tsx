@@ -5,11 +5,14 @@
  * patterns and behavioral validation. Following ULTRATHINK methodology.
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Mock the toast at module level
+vi.mock("@/components/ui/use-toast");
+
 import { SecuritySection } from "../security-section";
-import { toast } from "@/components/ui/use-toast";
 
 // Mock the stores and hooks
 const mockUpdateUser = vi.fn();
@@ -293,7 +296,10 @@ describe("SecuritySection", () => {
 
   describe("Error Handling", () => {
     it("should handle missing security settings gracefully", () => {
-      mockUserStore.user.security = undefined;
+      mockUserStore.user = {
+        ...mockUserStore.user!,
+        security: undefined as any,
+      };
 
       render(<SecuritySection />);
 
@@ -302,7 +308,7 @@ describe("SecuritySection", () => {
     });
 
     it("should render with missing user data", () => {
-      mockUserStore.user = null;
+      mockUserStore.user = null as any;
 
       render(<SecuritySection />);
 

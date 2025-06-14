@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApiError } from "@/lib/api/client";
+import type { ApiError } from "@/lib/api/client";
 import {
   type UseMutationOptions,
   type UseQueryOptions,
@@ -11,7 +11,7 @@ import {
 import { useAuthenticatedApi } from "./use-authenticated-api";
 
 type ApiQueryOptions<TData, TError> = Omit<
-  UseQueryOptions<TData, TError, TData, (string | Record<string, any>)[]>,
+  UseQueryOptions<TData, TError, TData, (string | Record<string, unknown>)[]>,
   "queryKey" | "queryFn"
 >;
 
@@ -23,12 +23,12 @@ type ApiMutationOptions<TData, TVariables, TError> = Omit<
 // Hook for GET requests
 export function useApiQuery<TData = any, TError = ApiError>(
   endpoint: string,
-  params?: Record<string, any>,
+  params?: Record<string, unknown>,
   options?: ApiQueryOptions<TData, TError>
 ) {
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
-  return useQuery<TData, TError, TData, (string | Record<string, any>)[]>({
+  return useQuery<TData, TError, TData, (string | Record<string, unknown>)[]>({
     queryKey: [endpoint, ...(params ? [params] : [])],
     queryFn: () => makeAuthenticatedRequest<TData>(endpoint, { params }),
     ...options,
@@ -36,10 +36,11 @@ export function useApiQuery<TData = any, TError = ApiError>(
 }
 
 // Hook for POST requests
-export function useApiMutation<TData = any, TVariables = any, TError = ApiError>(
-  endpoint: string,
-  options?: ApiMutationOptions<TData, TVariables, TError>
-) {
+export function useApiMutation<
+  TData = unknown,
+  TVariables = unknown,
+  TError = ApiError,
+>(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
   const queryClient = useQueryClient();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 

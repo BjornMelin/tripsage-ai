@@ -400,15 +400,11 @@ class TestActivityService:
     @pytest.mark.asyncio
     async def test_cache_behavior(self, activity_service):
         """Test that service uses caching appropriately."""
-        request = ActivitySearchRequest(
-            destination="New York, NY",
-            start_date=date(2025, 1, 15),
-            adults=2,
-            categories=["museum"],
-        )
+        # Mock cache behavior - implementation detail test
+        pass
 
         # Ensure service is initialized
         await activity_service.ensure_services()
-        
+
         # Check that cache service exists
         assert activity_service.cache_service is not None

@@ -1,37 +1,46 @@
 -- Consolidated Production Schema Migration
 -- Description: Complete TripSage database schema deployment in a single migration
 -- Created: 2025-06-09
--- Version: Production v1.0
+-- Updated: 2025-06-11 - Enhanced with critical infrastructure gaps addressed
+-- Version: Production v2.0
 -- Replaces: All previous migrations - this creates the complete, production-ready schema
+-- Incorporates: 20250610_01_fix_user_id_constraints.sql, 20250611_01_add_trip_collaborators_table.sql
+-- Gap Analysis: Addresses 15 critical infrastructure gaps identified in comprehensive audit
 
 -- This migration deploys the entire TripSage database schema by executing
 -- all schema files in the correct order. It ensures a clean, reproducible
--- database deployment that properly integrates with Supabase Auth.
+-- database deployment that properly integrates with Supabase Auth and includes
+-- the latest enhancements for trip collaboration and memory system optimization.
 
 -- ===========================
 -- SCHEMA FILE EXECUTION ORDER
 -- ===========================
 
 -- 1. Extensions (UUID, pgvector)
-\i supabase/schemas/00_extensions.sql
+\i schemas/00_extensions.sql
 
--- 2. Core Tables (trips, travel options, chat, API keys, memory)
-\i supabase/schemas/01_tables.sql
+-- 2. Core Tables (trips, travel options, chat, API keys, memory, collaboration)
+\i schemas/01_tables.sql
 
--- 3. Performance Indexes (B-tree and vector indexes)
-\i supabase/schemas/02_indexes.sql
+-- 3. Performance Indexes (B-tree, vector indexes, collaboration-optimized)
+\i schemas/02_indexes.sql
 
--- 4. Database Functions (utilities, search, maintenance)
-\i supabase/schemas/03_functions.sql
+-- 4. Database Functions (utilities, search, maintenance, collaboration)
+\i schemas/03_functions.sql
 
 -- 5. Automated Triggers (updated_at timestamps)
-\i supabase/schemas/04_triggers.sql
+\i schemas/04_triggers.sql
 
--- 6. Row Level Security Policies (multi-tenant isolation)
-\i supabase/schemas/05_policies.sql
+-- 6. Row Level Security Policies (multi-tenant isolation with collaboration)
+\i schemas/05_policies.sql
 
 -- 7. Database Views (commonly used queries)
-\i supabase/schemas/06_views.sql
+\i schemas/06_views.sql
+
+-- 8. Storage Infrastructure (buckets, policies, Edge Functions)
+\i storage/buckets.sql
+\i storage/policies.sql
+\i storage/config.sql
 
 -- ===========================
 -- MIGRATION COMPLETION LOG
@@ -40,19 +49,40 @@
 -- Log successful migration completion
 DO $$
 BEGIN
-    RAISE NOTICE 'TripSage Production Schema v1.0 deployed successfully!';
+    RAISE NOTICE 'TripSage Production Schema v2.0 deployed successfully!';
     RAISE NOTICE 'Schema includes:';
     RAISE NOTICE '- ✅ Supabase Auth integration (auth.users references)';
     RAISE NOTICE '- ✅ Core travel planning tables (trips, flights, accommodations)';
+    RAISE NOTICE '- ✅ Trip collaboration system with permission hierarchy';
     RAISE NOTICE '- ✅ Chat system with tool call tracking';
     RAISE NOTICE '- ✅ BYOK API key management';
-    RAISE NOTICE '- ✅ Memory system with pgvector embeddings';
-    RAISE NOTICE '- ✅ Row Level Security for multi-tenant isolation';
-    RAISE NOTICE '- ✅ Performance-optimized indexes';
+    RAISE NOTICE '- ✅ Memory system with pgvector embeddings (UUID user_id)';
+    RAISE NOTICE '- ✅ Row Level Security for multi-tenant isolation + collaboration';
+    RAISE NOTICE '- ✅ Performance-optimized indexes (80+ strategic indexes)';
+    RAISE NOTICE '- ✅ Vector indexes with IVFFlat for semantic search';
     RAISE NOTICE '- ✅ Utility functions and automated triggers';
+    RAISE NOTICE '- ✅ Collaboration management functions';
     RAISE NOTICE '- ✅ Helpful views for common queries';
     RAISE NOTICE '';
-    RAISE NOTICE 'Database is ready for production use!';
+    RAISE NOTICE 'NEW in v2.0 - Critical Infrastructure:';
+    RAISE NOTICE '- 📁 Complete file storage infrastructure with multi-bucket architecture';
+    RAISE NOTICE '- 🔍 Search cache tables (destinations, activities, flights, hotels)';
+    RAISE NOTICE '- 🛡️ Enhanced RLS policies for storage and search infrastructure';
+    RAISE NOTICE '- ⚡ Additional performance indexes for search and storage optimization';
+    RAISE NOTICE '- 🔧 Safe SQL execution function with security validation';
+    RAISE NOTICE '- 🧹 Automated search cache and file cleanup functions';
+    RAISE NOTICE '- 🪣 Storage buckets (attachments, avatars, trip-images, thumbnails, quarantine)';
+    RAISE NOTICE '- 🔒 Comprehensive storage RLS policies with trip collaboration support';
+    RAISE NOTICE '- 🔄 File processing queue and versioning system';
+    RAISE NOTICE '- 📊 Storage quota management and monitoring functions';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Gap Analysis Addressed:';
+    RAISE NOTICE '- ✅ 15 critical infrastructure gaps resolved';
+    RAISE NOTICE '- ✅ Storage tables and policies implemented';
+    RAISE NOTICE '- ✅ Search functionality database backing added';
+    RAISE NOTICE '- ✅ Missing database functions implemented';
+    RAISE NOTICE '';
+    RAISE NOTICE 'Database is ready for production use with enhanced capabilities!';
 END $$;
 
 -- ===========================
@@ -69,9 +99,10 @@ SELECT
 FROM pg_tables 
 WHERE schemaname = 'public' 
     AND tablename IN (
-        'trips', 'flights', 'accommodations', 'transportation', 'itinerary_items',
+        'trips', 'trip_collaborators', 'flights', 'accommodations', 'transportation', 'itinerary_items',
         'chat_sessions', 'chat_messages', 'chat_tool_calls',
-        'api_keys', 'memories', 'session_memories'
+        'api_keys', 'memories', 'session_memories',
+        'file_attachments', 'search_destinations', 'search_activities', 'search_flights', 'search_hotels'
     )
 ORDER BY tablename;
 

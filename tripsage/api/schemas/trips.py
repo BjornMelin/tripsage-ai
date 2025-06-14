@@ -330,3 +330,59 @@ class TripSuggestionResponse(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Additional metadata"
     )
+
+
+# ===== Trip Collaboration Schemas =====
+
+
+class TripShareRequest(BaseModel):
+    """Request model for sharing a trip with other users."""
+
+    user_emails: List[str] = Field(
+        description="Email addresses of users to share with",
+        min_length=1,
+        max_length=10,
+    )
+    permission_level: str = Field(
+        default="view",
+        description="Permission level (view, edit, admin)",
+        pattern="^(view|edit|admin)$",
+    )
+    message: Optional[str] = Field(
+        default=None,
+        description="Optional message to send with invitation",
+        max_length=500,
+    )
+
+
+class TripCollaboratorResponse(BaseModel):
+    """Response model for trip collaborator information."""
+
+    user_id: UUID = Field(description="Collaborator user ID")
+    email: str = Field(description="Collaborator email")
+    name: Optional[str] = Field(default=None, description="Collaborator name")
+    permission_level: str = Field(description="Permission level (view, edit, admin)")
+    added_by: UUID = Field(description="User ID who added this collaborator")
+    added_at: datetime = Field(description="Timestamp when access was granted")
+    is_active: bool = Field(
+        default=True, description="Whether the collaborator is active"
+    )
+
+
+class TripCollaboratorUpdateRequest(BaseModel):
+    """Request model for updating collaborator permissions."""
+
+    permission_level: str = Field(
+        description="New permission level (view, edit, admin)",
+        pattern="^(view|edit|admin)$",
+    )
+
+
+class TripCollaboratorsListResponse(BaseModel):
+    """Response model for listing trip collaborators."""
+
+    collaborators: List[TripCollaboratorResponse] = Field(
+        description="List of trip collaborators"
+    )
+    total: int = Field(description="Total number of collaborators")
+    owner_id: UUID = Field(description="Trip owner user ID")

@@ -418,7 +418,11 @@ export function PersonalizationInsights({
             variant={selectedView === id ? "secondary" : "ghost"}
             size="sm"
             className="flex-1"
-            onClick={() => setSelectedView(id as any)}
+            onClick={() =>
+              setSelectedView(
+                id as "overview" | "budget" | "destinations" | "recommendations"
+              )
+            }
           >
             <Icon className="h-4 w-4 mr-2" />
             {label}

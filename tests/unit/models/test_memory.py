@@ -76,7 +76,7 @@ class TestMemoryModel:
         """Test validation for empty/invalid user ID."""
         with pytest.raises(ValidationError):
             Memory(**{**base_memory_data, "user_id": ""})
-        
+
         with pytest.raises(ValidationError):
             Memory(**{**base_memory_data, "user_id": "invalid-uuid"})
 
@@ -231,15 +231,15 @@ class TestSessionMemoryModel:
         # Test empty session_id
         with pytest.raises(ValidationError):
             SessionMemory(**{**base_session_data, "session_id": ""})
-        
+
         # Test invalid session_id UUID format
         with pytest.raises(ValidationError):
             SessionMemory(**{**base_session_data, "session_id": "invalid-uuid"})
-            
+
         # Test empty user_id
         with pytest.raises(ValidationError):
             SessionMemory(**{**base_session_data, "user_id": ""})
-        
+
         # Test invalid user_id UUID format
         with pytest.raises(ValidationError):
             SessionMemory(**{**base_session_data, "user_id": "invalid-uuid"})

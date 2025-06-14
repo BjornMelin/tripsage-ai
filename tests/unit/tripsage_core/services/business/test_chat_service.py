@@ -169,11 +169,11 @@ class TestChatService:
         )
 
         assert result is not None
-        assert result.id == sample_chat_session.id
-        assert result.user_id == sample_chat_session.user_id
+        assert result["id"] == sample_chat_session.id
+        assert result["user_id"] == sample_chat_session.user_id
 
         mock_database_service.get_chat_session.assert_called_once_with(
-            sample_chat_session.id, sample_chat_session.user_id
+            sample_chat_session.user_id, sample_chat_session.id
         )
 
     @pytest.mark.asyncio

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createBrowserClient } from "@supabase/ssr";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "../client";
 
 // Mock the @supabase/ssr module

@@ -573,7 +573,8 @@ describe("UI Store", () => {
 
       act(() => {
         result.current.addNotification({
-          type: "invalid-type" as any,
+          // @ts-expect-error - intentionally testing invalid type
+          type: "invalid-type",
           title: "Invalid",
           isRead: false,
         });

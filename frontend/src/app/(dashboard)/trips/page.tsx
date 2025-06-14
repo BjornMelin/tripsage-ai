@@ -1,5 +1,6 @@
 "use client";
 
+import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,15 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTripStore } from "@/stores/trip-store";
+import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
+import { type Trip, useTripStore } from "@/stores/trip-store";
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
 export default function TripsPage() {
-  const { trips, createTrip, deleteTrip } = useTripStore();
+  const { createTrip, deleteTrip } = useTripStore();
+  const { trips, isLoading, error, realtimeStatus } = useTripsWithRealtime();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
@@ -38,8 +41,10 @@ export default function TripsPage() {
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
-        (trip) =>
-          trip.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (trip: Trip) =>
+          (trip.title || trip.name || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           trip.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           trip.destinations.some((dest) =>
             dest.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -49,10 +54,16 @@ export default function TripsPage() {
 
     // Apply status filter
     if (filterBy !== "all") {
-      filtered = filtered.filter((trip) => {
+      filtered = filtered.filter((trip: Trip) => {
         const now = new Date();
-        const startDate = trip.startDate ? new Date(trip.startDate) : null;
-        const endDate = trip.endDate ? new Date(trip.endDate) : null;
+        const startDate =
+          trip.startDate || trip.start_date
+            ? new Date(trip.startDate || trip.start_date || "")
+            : null;
+        const endDate =
+          trip.endDate || trip.end_date
+            ? new Date(trip.endDate || trip.end_date || "")
+            : null;
 
         switch (filterBy) {
           case "draft":
@@ -70,12 +81,15 @@ export default function TripsPage() {
     }
 
     // Apply sorting
-    return filtered.sort((a, b) => {
+    return filtered.sort((a: Trip, b: Trip) => {
       switch (sortBy) {
         case "name":
-          return a.name.localeCompare(b.name);
+          return (a.title || a.name || "").localeCompare(b.title || b.name || "");
         case "date":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (
+            new Date(b.createdAt || b.created_at || "").getTime() -
+            new Date(a.createdAt || a.created_at || "").getTime()
+          );
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
         case "destinations":
@@ -88,7 +102,7 @@ export default function TripsPage() {
 
   const handleCreateTrip = async () => {
     await createTrip({
-      name: "New Trip",
+      title: "New Trip",
       description: "",
       destinations: [],
       isPublic: false,
@@ -104,9 +118,15 @@ export default function TripsPage() {
   const getStatusCounts = () => {
     const now = new Date();
     return trips.reduce(
-      (counts, trip) => {
-        const startDate = trip.startDate ? new Date(trip.startDate) : null;
-        const endDate = trip.endDate ? new Date(trip.endDate) : null;
+      (counts: Record<string, number>, trip: Trip) => {
+        const startDate =
+          trip.startDate || trip.start_date
+            ? new Date(trip.startDate || trip.start_date || "")
+            : null;
+        const endDate =
+          trip.endDate || trip.end_date
+            ? new Date(trip.endDate || trip.end_date || "")
+            : null;
 
         if (!startDate || !endDate) {
           counts.draft++;
@@ -126,7 +146,43 @@ export default function TripsPage() {
 
   const statusCounts = getStatusCounts();
 
-  if (trips.length === 0) {
+  // Handle error state
+  useEffect(() => {
+    if (error) {
+      console.error("Trips error:", error);
+    }
+  }, [error]);
+
+  // Show loading state
+  if (isLoading && trips.length === 0) {
+    return (
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold">My Trips</h1>
+            <p className="text-muted-foreground">Loading your trips...</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <ConnectionStatusIndicator />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={`trip-skeleton-${i}-${Date.now()}`} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-gray-200 rounded mb-4" />
+                <div className="h-3 bg-gray-200 rounded mb-2" />
+                <div className="h-3 bg-gray-200 rounded mb-4" />
+                <div className="h-8 bg-gray-200 rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (trips.length === 0 && !isLoading) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-8">
@@ -166,10 +222,13 @@ export default function TripsPage() {
             {trips.length} trip{trips.length !== 1 ? "s" : ""} in your collection
           </p>
         </div>
-        <Button onClick={handleCreateTrip}>
-          <Plus className="h-4 w-4 mr-2" />
-          Create Trip
-        </Button>
+        <div className="flex items-center space-x-4">
+          <ConnectionStatusIndicator />
+          <Button onClick={handleCreateTrip}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Trip
+          </Button>
+        </div>
       </div>
 
       {/* Status Overview */}
@@ -298,7 +357,7 @@ export default function TripsPage() {
               : "space-y-4"
           }
         >
-          {filteredAndSortedTrips.map((trip) => (
+          {filteredAndSortedTrips.map((trip: Trip) => (
             <TripCard
               key={trip.id}
               trip={trip}

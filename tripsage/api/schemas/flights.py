@@ -222,8 +222,8 @@ class UpcomingFlightResponse(BaseModel):
     """Response model for upcoming flights with real-time status."""
 
     id: str = Field(description="Flight ID")
-    trip_id: Optional[UUID] = Field(default=None, description="Associated trip ID")
-    trip_name: Optional[str] = Field(default=None, description="Trip name")
+    trip_id: Optional[str] = Field(default=None, description="Associated trip ID")
+    trip_title: Optional[str] = Field(default=None, description="Trip title")
     airline: str = Field(description="Airline code")
     airline_name: str = Field(description="Airline name")
     flight_number: str = Field(description="Flight number")
@@ -242,3 +242,10 @@ class UpcomingFlightResponse(BaseModel):
     )  # upcoming, boarding, delayed, cancelled
     terminal: Optional[str] = Field(default=None, description="Terminal")
     gate: Optional[str] = Field(default=None, description="Gate")
+    # Enhanced trip context fields
+    is_shared_trip: Optional[bool] = Field(
+        default=False, description="Whether the trip is shared"
+    )
+    collaborator_count: Optional[int] = Field(
+        default=0, description="Number of trip collaborators"
+    )

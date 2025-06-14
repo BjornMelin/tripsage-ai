@@ -1,6 +1,6 @@
-import type { ApiKey } from "@/types/api-keys";
 import { fetchApi } from "@/lib/api/client";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import type { ApiKey } from "@/types/api-keys";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

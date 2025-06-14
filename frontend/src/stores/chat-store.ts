@@ -1,6 +1,7 @@
 import {
   ConnectionStatus,
   type WebSocketClient,
+  type WebSocketEvent,
   WebSocketEventType,
 } from "@/lib/websocket/websocket-client";
 import type {
@@ -821,36 +822,45 @@ export const useChatStore = create<ChatState>()(
           );
 
           // Handle incoming messages
-          newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: any) => {
+          newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: WebSocketEvent) => {
+            const message = event.payload.message as
+              | { content?: string; role?: string; id?: string }
+              | undefined;
             get().handleRealtimeMessage({
               type: "chat_message",
               sessionId,
-              content: event.payload.message?.content || "",
-              role: event.payload.message?.role,
-              messageId: event.payload.message?.id,
+              content: message?.content || "",
+              role: (message?.role as "user" | "assistant" | "system") || "assistant",
+              messageId: message?.id,
             });
           });
 
-          newClient.on(WebSocketEventType.CHAT_MESSAGE_CHUNK, (event: any) => {
-            get().handleRealtimeMessage({
-              type: "chat_message_chunk",
-              sessionId,
-              content: event.payload.content || "",
-              messageId: event.id,
-              isComplete: event.payload.is_final || false,
-            });
-          });
+          newClient.on(
+            WebSocketEventType.CHAT_MESSAGE_CHUNK,
+            (event: WebSocketEvent) => {
+              get().handleRealtimeMessage({
+                type: "chat_message_chunk",
+                sessionId,
+                content: (event.payload.content as string) || "",
+                messageId: event.id,
+                isComplete: (event.payload.is_final as boolean) || false,
+              });
+            }
+          );
 
-          newClient.on(WebSocketEventType.AGENT_STATUS_UPDATE, (event: any) => {
-            get().handleAgentStatusUpdate({
-              type: "agent_status_update",
-              sessionId,
-              isActive: event.payload.is_active || false,
-              currentTask: event.payload.current_task,
-              progress: event.payload.progress || 0,
-              statusMessage: event.payload.status_message,
-            });
-          });
+          newClient.on(
+            WebSocketEventType.AGENT_STATUS_UPDATE,
+            (event: WebSocketEvent) => {
+              get().handleAgentStatusUpdate({
+                type: "agent_status_update",
+                sessionId,
+                isActive: (event.payload.is_active as boolean) || false,
+                currentTask: event.payload.current_task as string | undefined,
+                progress: (event.payload.progress as number) || 0,
+                statusMessage: event.payload.status_message as string | undefined,
+              });
+            }
+          );
 
           newClient.on(WebSocketEventType.CHAT_TYPING_START, () => {
             // Handle typing indicator start
@@ -882,13 +892,14 @@ export const useChatStore = create<ChatState>()(
         const { websocketClient } = get();
         if (websocketClient) {
           websocketClient.disconnect();
-          set({
-            websocketClient: null,
-            connectionStatus: ConnectionStatus.DISCONNECTED,
-            typingUsers: {},
-            pendingMessages: [],
-          });
         }
+        // Always update state to disconnected, regardless of client existence
+        set({
+          websocketClient: null,
+          connectionStatus: ConnectionStatus.DISCONNECTED,
+          typingUsers: {},
+          pendingMessages: [],
+        });
       },
 
       setRealtimeEnabled: (enabled) => {

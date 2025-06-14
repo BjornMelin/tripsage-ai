@@ -1,14 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { useAuth } from "@/contexts/auth-context";
+import { render, screen, waitFor, createMockUser } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginForm, LoginFormSkeleton } from "../login-form";
-import { useAuth } from "@/contexts/auth-context";
-
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(),
-}));
 
 // Mock auth context
 vi.mock("@/contexts/auth-context", () => ({
@@ -25,6 +20,9 @@ describe("LoginForm", () => {
   const mockSignUp = vi.fn();
   const mockSignOut = vi.fn();
   const mockRefreshUser = vi.fn();
+  const mockSignInWithOAuth = vi.fn();
+  const mockResetPassword = vi.fn();
+  const mockUpdatePassword = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,6 +51,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
   });
 
@@ -118,8 +119,9 @@ describe("LoginForm", () => {
   });
 
   it("should redirect if already authenticated", async () => {
+    const mockUser = createMockUser();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1", email: "test@example.com" },
+      user: mockUser,
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -128,6 +130,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
@@ -138,8 +143,9 @@ describe("LoginForm", () => {
   });
 
   it("should redirect to custom path if already authenticated", async () => {
+    const mockUser = createMockUser();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1", email: "test@example.com" },
+      user: mockUser,
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -148,6 +154,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm redirectTo="/custom-dashboard" />);
@@ -168,6 +177,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
@@ -193,6 +205,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
@@ -212,6 +227,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     const user = userEvent.setup();
@@ -234,6 +252,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     const user = userEvent.setup();
@@ -327,6 +348,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);

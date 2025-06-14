@@ -252,6 +252,18 @@ class ChatFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
+    def create_websocket_message(cls, **kwargs):
+        """Create a WebSocket message object for event tests."""
+        from tripsage_core.models.schemas_common.chat import ChatMessage, MessageRole
+
+        defaults = {
+            "role": MessageRole.USER,
+            "content": "I'm looking for a great hotel in Tokyo",
+            "timestamp": cls.future_datetime(-1),
+        }
+        return ChatMessage(**{**defaults, **kwargs})
+
+    @classmethod
     def create_assistant_message(cls, **kwargs) -> Dict[str, Any]:
         """Create an assistant response message."""
         return cls.create_message(

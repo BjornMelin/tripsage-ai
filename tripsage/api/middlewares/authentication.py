@@ -37,6 +37,11 @@ class Principal(TripSageModel):
     scopes: list[str] = []
     metadata: dict = {}
 
+    @property
+    def user_id(self) -> str:
+        """Get user ID (alias for id field)."""
+        return self.id
+
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """Enhanced middleware for JWT and API Key authentication.
@@ -83,7 +88,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Response]
     ) -> Response:
-        """Process the request and handle authentication.
+        """Process the request and handle authentication with enhanced security.
 
         Args:
             request: The incoming request
@@ -99,6 +104,14 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Ensure services are initialized
         await self._ensure_services()
 
+        # Enhanced security: validate request headers
+        if not self._validate_request_headers(request):
+            return Response(
+                content="Invalid request headers",
+                status_code=HTTP_401_UNAUTHORIZED,
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         # Try to authenticate the request
         principal = None
         auth_error = None
@@ -108,23 +121,59 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if authorization_header and authorization_header.startswith("Bearer "):
             try:
                 token = authorization_header.replace("Bearer ", "")
+                # Enhanced security: validate token format
+                if not self._validate_token_format(token):
+                    raise AuthenticationError("Invalid token format")
                 principal = await self._authenticate_jwt(token)
             except AuthenticationError as e:
                 auth_error = e
-                logger.debug(f"JWT authentication failed: {e}")
+                logger.warning(
+                    f"JWT authentication failed: {e}",
+                    extra={
+                        "ip_address": self._get_client_ip(request),
+                        "user_agent": request.headers.get("User-Agent", "Unknown")[
+                            :200
+                        ],
+                        "path": request.url.path,
+                    },
+                )
 
         # Try API key authentication if JWT failed
         if not principal:
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
+                    # Enhanced security: validate API key format
+                    if not self._validate_api_key_format(api_key_header):
+                        raise KeyValidationError("Invalid API key format")
                     principal = await self._authenticate_api_key(api_key_header)
                 except (AuthenticationError, KeyValidationError) as e:
                     auth_error = e
-                    logger.debug(f"API key authentication failed: {e}")
+                    user_agent = request.headers.get("User-Agent", "Unknown")[:200]
+                    logger.warning(
+                        f"API key authentication failed: {e}",
+                        extra={
+                            "ip_address": self._get_client_ip(request),
+                            "user_agent": user_agent,
+                            "path": request.url.path,
+                        },
+                    )
 
         # If no authentication succeeded
         if not principal:
+            # Log failed authentication attempt
+            user_agent = request.headers.get("User-Agent", "Unknown")[:200]
+            error_msg = str(auth_error) if auth_error else "No credentials provided"
+            logger.warning(
+                "Authentication failed",
+                extra={
+                    "ip_address": self._get_client_ip(request),
+                    "user_agent": user_agent,
+                    "path": request.url.path,
+                    "error": error_msg,
+                },
+            )
+
             if auth_error:
                 # Return specific error if we have one
                 return self._create_auth_error_response(auth_error)
@@ -139,7 +188,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Set authenticated principal in request state
         request.state.principal = principal
 
-        # Log successful authentication
+        # Enhanced logging with security context
         logger.info(
             "Request authenticated",
             extra={
@@ -147,12 +196,18 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 "principal_type": principal.type,
                 "auth_method": principal.auth_method,
                 "path": request.url.path,
+                "ip_address": self._get_client_ip(request),
+                "user_agent": request.headers.get("User-Agent", "Unknown")[:200],
                 "correlation_id": getattr(request.state, "correlation_id", None),
             },
         )
 
         # Continue with the request
         response = await call_next(request)
+
+        # Add security headers to response
+        self._add_security_headers(response)
+
         return response
 
     def _should_skip_auth(self, path: str) -> bool:
@@ -314,3 +369,185 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 status_code=HTTP_401_UNAUTHORIZED,
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+    def _validate_request_headers(self, request: Request) -> bool:
+        """Validate request headers for security.
+
+        Args:
+            request: The HTTP request
+
+        Returns:
+            True if headers are valid, False otherwise
+        """
+        # Check for excessively long headers (potential DoS)
+        for name, value in request.headers.items():
+            if len(name) > 256 or len(value) > 8192:
+                logger.warning(
+                    "Excessively long header detected",
+                    extra={
+                        "header_name": name[:100],
+                        "header_length": len(value),
+                        "ip_address": self._get_client_ip(request),
+                    },
+                )
+                return False
+
+            # Check for suspicious patterns in headers
+            suspicious_patterns = [
+                "<script",
+                "javascript:",
+                "data:",
+                "eval(",
+                "DROP TABLE",
+                "UNION SELECT",
+                "../",
+                "\x00",
+            ]
+
+            combined_header = f"{name}:{value}".lower()
+            for pattern in suspicious_patterns:
+                if pattern.lower() in combined_header:
+                    logger.warning(
+                        "Suspicious pattern in header",
+                        extra={
+                            "header_name": name,
+                            "pattern": pattern,
+                            "ip_address": self._get_client_ip(request),
+                        },
+                    )
+                    return False
+
+        return True
+
+    def _validate_token_format(self, token: str) -> bool:
+        """Validate JWT token format.
+
+        Args:
+            token: JWT token string
+
+        Returns:
+            True if format is valid, False otherwise
+        """
+        if not token or not isinstance(token, str):
+            return False
+
+        # Check length bounds
+        if len(token) < 20 or len(token) > 4096:
+            return False
+
+        # Check for null bytes and control characters
+        if "\x00" in token or any(ord(c) < 32 for c in token if c not in "\t\n\r"):
+            return False
+
+        # Basic JWT format check (three parts separated by dots)
+        parts = token.split(".")
+        if len(parts) != 3:
+            return False
+
+        # Each part should be base64url encoded (basic check)
+        base64url_chars = (
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+        )
+        for part in parts:
+            if not part or not all(c in base64url_chars for c in part):
+                return False
+
+        return True
+
+    def _validate_api_key_format(self, api_key: str) -> bool:
+        """Validate API key format.
+
+        Args:
+            api_key: API key string
+
+        Returns:
+            True if format is valid, False otherwise
+        """
+        if not api_key or not isinstance(api_key, str):
+            return False
+
+        # Check length bounds
+        if len(api_key) < 10 or len(api_key) > 512:
+            return False
+
+        # Check for null bytes and control characters
+        if "\x00" in api_key or any(ord(c) < 32 for c in api_key):
+            return False
+
+        # Basic format check for our API key format: sk_service_keyid_secret
+        if api_key.startswith("sk_"):
+            parts = api_key.split("_")
+            if len(parts) >= 4:
+                return True
+
+        # Allow other formats but they must be printable ASCII
+        return all(32 <= ord(c) <= 126 for c in api_key)
+
+    def _get_client_ip(self, request: Request) -> str:
+        """Get client IP address with proper header precedence.
+
+        Args:
+            request: The HTTP request
+
+        Returns:
+            Client IP address
+        """
+        # Check forwarded headers in order of preference
+        forwarded_headers = [
+            "X-Forwarded-For",
+            "X-Real-IP",
+            "CF-Connecting-IP",  # Cloudflare
+            "X-Client-IP",
+        ]
+
+        for header in forwarded_headers:
+            ip = request.headers.get(header)
+            if ip:
+                # Take first IP if comma-separated
+                ip = ip.split(",")[0].strip()
+                if self._is_valid_ip_format(ip):
+                    return ip
+
+        # Fall back to direct connection IP
+        if hasattr(request.client, "host"):
+            return request.client.host
+
+        return "unknown"
+
+    def _is_valid_ip_format(self, ip: str) -> bool:
+        """Check if string is a valid IP address format.
+
+        Args:
+            ip: IP address string
+
+        Returns:
+            True if valid IP format, False otherwise
+        """
+        try:
+            from ipaddress import AddressValueError, ip_address
+
+            ip_address(ip)
+            return True
+        except (ValueError, AddressValueError):
+            return False
+
+    def _add_security_headers(self, response: Response) -> None:
+        """Add security headers to response.
+
+        Args:
+            response: HTTP response to modify
+        """
+        # Security headers to prevent various attacks
+        security_headers = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "X-XSS-Protection": "1; mode=block",
+            "Referrer-Policy": "strict-origin-when-cross-origin",
+            "Content-Security-Policy": "default-src 'self'",
+            "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+        }
+
+        # Only add headers that aren't already set
+        for header, value in security_headers.items():
+            if header not in response.headers:
+                response.headers[header] = value

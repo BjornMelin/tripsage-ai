@@ -40,7 +40,7 @@ RUN playwright install chromium
 # Copy application code
 COPY tripsage/ ./tripsage/
 COPY tripsage_core/ ./tripsage_core/
-COPY migrations/ ./migrations/
+COPY supabase/migrations/ ./migrations/
 
 # Create non-root user for security
 RUN groupadd -r tripsage && useradd -r -g tripsage tripsage
