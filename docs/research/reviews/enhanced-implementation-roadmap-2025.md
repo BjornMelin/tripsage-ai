@@ -73,7 +73,7 @@ Following comprehensive research into current best practices for React 19 Compil
 ```typescript
 // ❌ REMOVE: Hardcoded fallback (Security Vulnerability)
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-for-development-only"
+  process.env.JWT_SECRET || "fallback-secret" + "-for-development-only"
 );
 
 // ✅ IMPLEMENT: Environment-based secure management

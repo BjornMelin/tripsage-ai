@@ -36,6 +36,7 @@ from tripsage.api.routers import (
     memory,
     search,
     trips,
+    users,
     websocket,
 )
 from tripsage_core.exceptions.exceptions import (
@@ -552,8 +553,7 @@ def create_app() -> FastAPI:
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 
-    # TODO: Include additional routers as they are implemented
-    # app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)
