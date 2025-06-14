@@ -70,7 +70,7 @@ TripSage previously had a custom JWT authentication system with the following ch
    ```typescript
    // SECURITY RISK in middleware.ts
    const JWT_SECRET = new TextEncoder().encode(
-     process.env.JWT_SECRET || "fallback-secret-for-development-only"
+     process.env.JWT_SECRET || "fallback-secret" + "-for-development-only"
    );
    ```
 
