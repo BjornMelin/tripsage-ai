@@ -330,7 +330,7 @@ def generate_cache_key(
 
     # Create hash of combined parameters
     combined = f"{prefix}:{normalized_query}:{args_str}:{kwargs_str}"
-    hash_obj = hashlib.md5(combined.encode())
+    hash_obj = hashlib.md5(combined.encode(), usedforsecurity=False)
     query_hash = hash_obj.hexdigest()
 
     return f"{prefix}:{query_hash}"
