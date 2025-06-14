@@ -525,7 +525,7 @@ class CoreAppSettings(BaseSettings):
             # Check Supabase JWT secret
             if self.database.supabase_jwt_secret.get_secret_value() in [
                 "test-jwt-secret",
-                "fallback-secret-for-development-only",
+                "fallback-secret-for-development-only",  # nosec B107 - This is a security check, not a hardcoded password
             ]:
                 errors.append("Supabase JWT secret must be changed in production")
 

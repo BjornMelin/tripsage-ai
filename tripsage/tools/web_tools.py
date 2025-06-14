@@ -317,7 +317,9 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         # Generate hash for the query
         import hashlib
 
-        query_hash = hashlib.md5(query.lower().strip().encode()).hexdigest()
+        query_hash = hashlib.md5(
+            query.lower().strip().encode(), usedforsecurity=False
+        ).hexdigest()
 
         # Invalidate all entries containing this hash
         pattern = f"*{query_hash}*"
