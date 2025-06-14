@@ -542,6 +542,91 @@ class UserService:
             )
             return False
 
+    async def update_user_preferences(
+        self, user_id: str, preferences: Dict[str, Any]
+    ) -> UserResponse:
+        """
+        Update user preferences.
+
+        Args:
+            user_id: User ID
+            preferences: New preferences to merge
+
+        Returns:
+            Updated user information
+
+        Raises:
+            NotFoundError: If user not found
+        """
+        try:
+            # Get current user
+            user_data = await self.db.get_user_by_id(user_id)
+            if not user_data:
+                raise NotFoundError(f"User {user_id} not found")
+
+            # Merge preferences (deep merge)
+            current_preferences = user_data.get("preferences", {})
+            merged_preferences = self._merge_preferences(
+                current_preferences, preferences
+            )
+
+            # Update in database
+            updated_at = datetime.now(timezone.utc).isoformat()
+            await self.db.update_user_preferences(
+                user_id, merged_preferences, updated_at
+            )
+
+            # Return updated user
+            return UserResponse(
+                id=user_data["id"],
+                email=user_data["email"],
+                full_name=user_data.get("full_name"),
+                username=user_data.get("username"),
+                is_active=user_data["is_active"],
+                is_verified=user_data["is_verified"],
+                created_at=datetime.fromisoformat(user_data["created_at"]),
+                updated_at=datetime.fromisoformat(updated_at),
+                preferences=merged_preferences,
+            )
+
+        except NotFoundError:
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to update user preferences",
+                extra={"user_id": user_id, "error": str(e)},
+            )
+            raise
+
+    def _merge_preferences(
+        self, current: Dict[str, Any], updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Deep merge preference dictionaries.
+
+        Args:
+            current: Current preferences
+            updates: Updates to apply
+
+        Returns:
+            Merged preferences
+        """
+        result = current.copy()
+
+        for key, value in updates.items():
+            if (
+                isinstance(value, dict)
+                and key in result
+                and isinstance(result[key], dict)
+            ):
+                # Recursively merge nested dictionaries
+                result[key] = self._merge_preferences(result[key], value)
+            else:
+                # Override at current level
+                result[key] = value
+
+        return result
+
     def _hash_password(self, password: str) -> str:
         """
         Hash a password using bcrypt.
