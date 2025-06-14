@@ -73,8 +73,8 @@ jobs:
       run: |
         source .venv/bin/activate
         uv pip install bandit[toml]
-        bandit -r tripsage/ tripsage_core/ -f json -o bandit-report.json || true
-        bandit -r tripsage/ tripsage_core/ -ll  # Show results
+        bandit -r tripsage/ tripsage_core/ -f json -o bandit-report.json --config pyproject.toml || true
+        bandit -r tripsage/ tripsage_core/ -ll --config pyproject.toml  # Show results
 
     - name: Lint with ruff
       run: |
