@@ -12,15 +12,7 @@ from uuid import UUID, uuid4
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType
-
-
-class TripVisibility(str):
-    """Trip visibility options."""
-
-    PRIVATE = "private"
-    SHARED = "shared"
-    PUBLIC = "public"
+from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
 
 
 class BudgetBreakdown(TripSageModel):
@@ -144,8 +136,7 @@ class Trip(TripSageModel):
         """Validate and clean trip tags."""
         # Remove duplicates and empty strings
         cleaned = list(set(tag.strip() for tag in v if tag.strip()))
-        if len(cleaned) > 20:
-            raise ValueError("Maximum 20 tags allowed")
+        # max_items constraint already enforces the limit
         return cleaned
 
     @property
@@ -274,7 +265,6 @@ class Trip(TripSageModel):
 # Export the models
 __all__ = [
     "Trip",
-    "TripVisibility",
     "EnhancedBudget",
     "BudgetBreakdown",
     "TripPreferences",

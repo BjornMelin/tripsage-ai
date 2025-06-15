@@ -294,7 +294,7 @@ class TestTrip:
         data["tags"] = [f"tag{i}" for i in range(25)]
         with pytest.raises(ValidationError) as exc_info:
             Trip(**data)
-        assert "Maximum 20 tags allowed" in str(exc_info.value)
+        assert "at most 20 items" in str(exc_info.value)
 
     def test_trip_visibility_validation(self, valid_trip_data):
         """Test visibility validation."""
