@@ -10,7 +10,7 @@ from fastapi import Depends, Request
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
-from tripsage_core.mcp_abstraction import MCPManager, mcp_manager
+from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager, mcp_manager
 from tripsage_core.services.business.accommodation_service import (
     get_accommodation_service,
 )
