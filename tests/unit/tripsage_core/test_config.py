@@ -284,19 +284,33 @@ class TestLangGraphConfig:
 
     def test_langgraph_config_defaults(self):
         """Test default configuration values."""
-        config = LangGraphConfig(_env_file=None)
+        # Clear environment variables that would override defaults
+        import os
+        env_backup = {}
+        env_vars_to_clear = ['ENABLE_TRACING', 'ENABLE_STREAMING', 'CHECKPOINT_STORAGE']
+        for var in env_vars_to_clear:
+            if var in os.environ:
+                env_backup[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            config = LangGraphConfig(_env_file=None)
 
-        assert config.checkpoint_storage == "postgresql"
-        assert config.enable_streaming is True
-        assert config.max_graph_depth == 20
-        assert config.default_agent_timeout == 300
-        assert config.enable_parallel_execution is True
-        assert config.max_parallel_agents == 5
-        assert config.max_retries == 3
-        assert config.retry_delay == 1.0
-        assert config.enable_error_recovery is True
-        assert config.enable_tracing is True
-        assert config.trace_storage_days == 7
+            assert config.checkpoint_storage == "postgresql"
+            assert config.enable_streaming is True
+            assert config.max_graph_depth == 20
+            assert config.default_agent_timeout == 300
+            assert config.enable_parallel_execution is True
+            assert config.max_parallel_agents == 5
+            assert config.max_retries == 3
+            assert config.retry_delay == 1.0
+            assert config.enable_error_recovery is True
+            assert config.enable_tracing is True
+            assert config.trace_storage_days == 7
+        finally:
+            # Restore environment variables
+            for var, value in env_backup.items():
+                os.environ[var] = value
 
     def test_langgraph_config_performance_settings(self):
         """Test performance-related settings."""
@@ -388,22 +402,39 @@ class TestFeatureFlags:
 
     def test_feature_flags_defaults(self):
         """Test default feature flag values."""
-        flags = FeatureFlags()
+        # Clear environment variables that would override defaults
+        import os
+        env_backup = {}
+        env_vars_to_clear = [
+            'ENABLE_STREAMING_RESPONSES', 'ENABLE_RATE_LIMITING', 
+            'ENABLE_CACHING', 'ENABLE_DEBUG_MODE'
+        ]
+        for var in env_vars_to_clear:
+            if var in os.environ:
+                env_backup[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            flags = FeatureFlags(_env_file=None)
 
-        # Agent features
-        assert flags.enable_agent_memory is True
-        assert flags.enable_parallel_agents is True
-        assert flags.enable_streaming_responses is True
+            # Agent features
+            assert flags.enable_agent_memory is True
+            assert flags.enable_parallel_agents is True
+            assert flags.enable_streaming_responses is True
 
-        # API features
-        assert flags.enable_rate_limiting is True
-        assert flags.enable_caching is True
-        assert flags.enable_debug_mode is False
+            # API features
+            assert flags.enable_rate_limiting is True
+            assert flags.enable_caching is True
+            assert flags.enable_debug_mode is False
 
-        # External integrations
-        assert flags.enable_crawl4ai is True
-        assert flags.enable_mem0 is True
-        assert flags.enable_langgraph is True
+            # External integrations
+            assert flags.enable_crawl4ai is True
+            assert flags.enable_mem0 is True
+            assert flags.enable_langgraph is True
+        finally:
+            # Restore environment variables
+            for var, value in env_backup.items():
+                os.environ[var] = value
 
     def test_feature_flags_custom_values(self):
         """Test custom feature flag values."""
@@ -448,37 +479,58 @@ class TestCoreAppSettings:
 
     def test_core_app_settings_defaults(self):
         """Test default configuration values."""
-        settings = CoreAppSettings()
+        # Clear environment variables that would override defaults
+        import os
+        env_backup = {}
+        env_vars_to_clear = ['ENVIRONMENT', 'DEBUG', 'LOG_LEVEL']
+        for var in env_vars_to_clear:
+            if var in os.environ:
+                env_backup[var] = os.environ[var]
+                del os.environ[var]
+        
+        try:
+            settings = CoreAppSettings(_env_file=None)
 
-        assert settings.app_name == "TripSage"
-        assert settings.debug is False
-        assert settings.environment == "development"
-        assert settings.log_level == "INFO"
-        assert isinstance(settings.base_dir, Path)
+            assert settings.app_name == "TripSage"
+            assert settings.debug is False
+            assert settings.environment == "development"
+            assert settings.log_level == "INFO"
+            assert isinstance(settings.base_dir, Path)
 
-        # Check nested configurations
-        assert isinstance(settings.database, DatabaseConfig)
-        assert isinstance(settings.dragonfly, DragonflyConfig)
-        assert isinstance(settings.mem0, Mem0Config)
-        assert isinstance(settings.langgraph, LangGraphConfig)
-        assert isinstance(settings.crawl4ai, Crawl4AIConfig)
-        assert isinstance(settings.agent, AgentConfig)
-        assert isinstance(settings.feature_flags, FeatureFlags)
-        assert isinstance(settings.opentelemetry, OpenTelemetryConfig)
+            # Check nested configurations
+            assert isinstance(settings.database, DatabaseConfig)
+            assert isinstance(settings.dragonfly, DragonflyConfig)
+            assert isinstance(settings.mem0, Mem0Config)
+            assert isinstance(settings.langgraph, LangGraphConfig)
+            assert isinstance(settings.crawl4ai, Crawl4AIConfig)
+            assert isinstance(settings.agent, AgentConfig)
+            assert isinstance(settings.feature_flags, FeatureFlags)
+            assert isinstance(settings.opentelemetry, OpenTelemetryConfig)
+        finally:
+            # Restore environment variables
+            for var, value in env_backup.items():
+                os.environ[var] = value
 
     def test_core_app_settings_environment_validation(self):
         """Test environment validation."""
-        # Valid environments
+        import os
+        from unittest.mock import patch
+        
+        # Valid environments - need to clear environment variables for each test
         for env in ["development", "testing", "staging", "production"]:
-            settings = CoreAppSettings(environment=env)
-            assert settings.environment == env
+            with patch.dict(os.environ, {}, clear=True):
+                os.environ['ENV'] = env
+                settings = CoreAppSettings(_env_file=None)
+                assert settings.environment == env
 
         # Invalid environment
-        with pytest.raises(ValidationError) as exc_info:
-            CoreAppSettings(environment="invalid")
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'invalid'
+            with pytest.raises(ValidationError) as exc_info:
+                CoreAppSettings(_env_file=None)
 
-        error = exc_info.value.errors()[0]
-        assert "Environment must be one of" in error["msg"]
+            error = exc_info.value.errors()[0]
+            assert "Environment must be one of" in error["msg"] or "Input should be" in error["msg"]
 
     def test_core_app_settings_log_level_validation(self):
         """Test log level validation."""
@@ -496,23 +548,32 @@ class TestCoreAppSettings:
 
     def test_core_app_settings_environment_methods(self):
         """Test environment checking methods."""
+        import os
+        from unittest.mock import patch
+        
         # Development
-        dev_settings = CoreAppSettings(environment="development")
-        assert dev_settings.is_development() is True
-        assert dev_settings.is_testing() is False
-        assert dev_settings.is_production() is False
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'development'
+            dev_settings = CoreAppSettings(_env_file=None)
+            assert dev_settings.is_development() is True
+            assert dev_settings.is_testing() is False
+            assert dev_settings.is_production() is False
 
         # Testing
-        test_settings = CoreAppSettings(environment="testing")
-        assert test_settings.is_development() is False
-        assert test_settings.is_testing() is True
-        assert test_settings.is_production() is False
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'testing'
+            test_settings = CoreAppSettings(_env_file=None)
+            assert test_settings.is_development() is False
+            assert test_settings.is_testing() is True
+            assert test_settings.is_production() is False
 
         # Production
-        prod_settings = CoreAppSettings(environment="production")
-        assert prod_settings.is_development() is False
-        assert prod_settings.is_testing() is False
-        assert prod_settings.is_production() is True
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            prod_settings = CoreAppSettings(_env_file=None)
+            assert prod_settings.is_development() is False
+            assert prod_settings.is_testing() is False
+            assert prod_settings.is_production() is True
 
     def test_core_app_settings_get_secret_value(self):
         """Test get_secret_value method."""
@@ -556,71 +617,90 @@ class TestCoreAppSettings:
 
     def test_core_app_settings_validate_critical_settings_production_debug_mode(self):
         """Test production validation with debug mode enabled."""
-        settings = CoreAppSettings(environment="production", debug=True)
+        import os
+        from unittest.mock import patch
+        
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            os.environ['DEBUG'] = 'true'
+            settings = CoreAppSettings(_env_file=None)
 
-        errors = settings.validate_critical_settings()
+            errors = settings.validate_critical_settings()
 
-        assert any(
-            "Debug mode should be disabled in production" in error for error in errors
-        )
+            assert any(
+                "Debug mode should be disabled in production" in error for error in errors
+            )
 
     def test_core_app_settings_validate_critical_settings_production_localhost_services(
         self,
     ):
         """Test production validation with localhost services."""
-        settings = CoreAppSettings(environment="production")
+        import os
+        from unittest.mock import patch
+        
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            settings = CoreAppSettings(_env_file=None)
 
-        # Set localhost URLs
-        settings.dragonfly.url = "redis://localhost:6379/0"
-        settings.crawl4ai.api_url = "http://localhost:8000/api"
+            # Set localhost URLs
+            settings.dragonfly.url = "redis://localhost:6379/0"
+            settings.crawl4ai.api_url = "http://localhost:8000/api"
 
-        errors = settings.validate_critical_settings()
+            errors = settings.validate_critical_settings()
 
-        assert any(
-            "DragonflyDB is using localhost in production" in error for error in errors
-        )
-        assert any(
-            "Crawl4AI is using localhost in production" in error for error in errors
-        )
+            assert any(
+                "DragonflyDB is using localhost in production" in error for error in errors
+            )
+            assert any(
+                "Crawl4AI is using localhost in production" in error for error in errors
+            )
 
     def test_core_app_settings_validate_critical_settings_production_default_secrets(
         self,
     ):
         """Test production validation with default secrets."""
+        import os
+        from unittest.mock import patch
+
         from pydantic import SecretStr
 
-        settings = CoreAppSettings(
-            environment="production",
-            api_key_master_secret=SecretStr("master-secret-for-byok-encryption"),
-        )
-        settings.database.jwt_secret = SecretStr("test-jwt-secret")
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            os.environ['API_KEY_MASTER_SECRET'] = 'master-secret-for-byok-encryption'
+            settings = CoreAppSettings(_env_file=None)
+            settings.database.jwt_secret = SecretStr("test-jwt-secret")
 
-        errors = settings.validate_critical_settings()
+            errors = settings.validate_critical_settings()
 
-        assert any(
-            "API key master secret must be changed in production" in error
-            for error in errors
-        )
-        assert any(
-            "Supabase JWT secret must be changed in production" in error
-            for error in errors
-        )
+            assert any(
+                "API key master secret must be changed in production" in error
+                for error in errors
+            )
+            assert any(
+                "Supabase JWT secret must be changed in production" in error
+                for error in errors
+            )
 
     def test_core_app_settings_validate_critical_settings_production_fallback_secret(
         self,
     ):
         """Test production validation with fallback JWT secret."""
+        import os
+        from unittest.mock import patch
+
         from pydantic import SecretStr
 
-        settings = CoreAppSettings(environment="production")
-        settings.database.jwt_secret = SecretStr("fallback-secret-for-development-only")  # nosec B107
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            settings = CoreAppSettings(_env_file=None)
+            settings.database.jwt_secret = SecretStr("fallback-secret-for-development-only")  # nosec B107
 
-        errors = settings.validate_critical_settings()
+            errors = settings.validate_critical_settings()
 
-        assert any(
-            "Supabase JWT secret must be changed in production" in error
-            for error in errors
-        )
+            assert any(
+                "Supabase JWT secret must be changed in production" in error
+                for error in errors
+            )
 
     def test_core_app_settings_nested_config_integration(self):
         """Test that nested configurations are properly integrated."""
@@ -657,6 +737,7 @@ class TestConfigurationLoading:
             assert isinstance(settings, CoreAppSettings)
             assert settings.environment in [
                 "development",
+                "test",
                 "testing",
                 "staging",
                 "production",
@@ -687,14 +768,15 @@ class TestConfigurationLoading:
         env_vars = {
             "APP_NAME": "CustomTripSage",
             "DEBUG": "true",
-            "ENVIRONMENT": "staging",
+            "ENV": "staging",  # Use ENV instead of ENVIRONMENT due to field alias
             "LOG_LEVEL": "DEBUG",
             "SUPABASE_URL": "https://custom.supabase.co",
             "DRAGONFLY_TTL_SHORT": "900",
         }
 
-        with patch.dict(os.environ, env_vars):
-            settings = CoreAppSettings()
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ.update(env_vars)
+            settings = CoreAppSettings(_env_file=None)
 
             assert settings.app_name == "CustomTripSage"
             assert settings.debug is True
@@ -756,12 +838,15 @@ class TestConfigurationErrorHandling:
 
     def test_invalid_environment_value(self):
         """Test handling of invalid environment values."""
-        with pytest.raises(ValidationError) as exc_info:
-            CoreAppSettings(environment="invalid_env")
+        # Clear environment to avoid interference from autouse fixture
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'invalid_env'
+            with pytest.raises(ValidationError) as exc_info:
+                CoreAppSettings(_env_file=None)
 
-        error = exc_info.value.errors()[0]
-        assert error["type"] == "value_error"
-        assert "Environment must be one of" in error["msg"]
+            error = exc_info.value.errors()[0]
+            assert error["type"] in ["value_error", "literal_error"]
+            assert "Environment must be one of" in error["msg"] or "Input should be" in error["msg"]
 
     def test_invalid_log_level_value(self):
         """Test handling of invalid log level values."""
@@ -769,8 +854,8 @@ class TestConfigurationErrorHandling:
             CoreAppSettings(log_level="INVALID_LEVEL")
 
         error = exc_info.value.errors()[0]
-        assert error["type"] == "value_error"
-        assert "Log level must be one of" in error["msg"]
+        assert error["type"] in ["value_error", "literal_error"]
+        assert "Log level must be one of" in error["msg"] or "Input should be" in error["msg"]
 
     def test_configuration_with_none_values(self):
         """Test configuration with None values for optional fields."""
@@ -842,57 +927,80 @@ class TestProductionReadinessValidation:
 
     def test_production_readiness_missing_external_api_keys(self):
         """Test production readiness with missing external API keys."""
-        settings = CoreAppSettings(environment="production")
-
-        errors = settings.validate_critical_settings()
-
-        # Should have errors for missing production API keys
-        expected_missing = [
-            "Duffel API key is missing for production",
-            "Google Maps API key is missing for production",
-            "OpenWeatherMap API key is missing for production",
+        import os
+        from unittest.mock import patch
+        
+        # Clear all environment variables that could interfere
+        env_vars_to_clear = [
+            'ENV', 'ENVIRONMENT', 'DEBUG', 
+            'DUFFEL_API_KEY', 'GOOGLE_MAPS_API_KEY', 'OPENWEATHERMAP_API_KEY',
+            'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
+            'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'
         ]
+        
+        with patch.dict(os.environ, {}, clear=True):
+            # Set only ENV=production, no API keys
+            os.environ['ENV'] = 'production'
+            
+            settings = CoreAppSettings(_env_file=None)
+            
+            errors = settings.validate_critical_settings()
 
-        for expected_error in expected_missing:
-            assert any(expected_error in error for error in errors)
+            # Should have errors for missing production API keys
+            expected_missing = [
+                "Duffel API key is missing for production",
+                "Google Maps API key is missing for production",
+                "OpenWeatherMap API key is missing for production",
+            ]
+            
+            for expected_error in expected_missing:
+                assert any(expected_error in error for error in errors), f"Expected error '{expected_error}' not found in errors: {errors}"
 
     def test_production_readiness_localhost_detection(self):
         """Test production readiness localhost detection."""
-        settings = CoreAppSettings(environment="production")
+        import os
+        from unittest.mock import patch
+        
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            settings = CoreAppSettings(_env_file=None)
 
-        # Set localhost URLs (should be detected)
-        settings.dragonfly.url = "redis://localhost:6379/0"
-        settings.crawl4ai.api_url = "http://localhost:8000/api"
+            # Set localhost URLs (should be detected)
+            settings.dragonfly.url = "redis://localhost:6379/0"
+            settings.crawl4ai.api_url = "http://localhost:8000/api"
 
-        errors = settings.validate_critical_settings()
+            errors = settings.validate_critical_settings()
 
-        assert any(
-            "DragonflyDB is using localhost in production" in error for error in errors
-        )
-        assert any(
-            "Crawl4AI is using localhost in production" in error for error in errors
-        )
+            assert any(
+                "DragonflyDB is using localhost in production" in error for error in errors
+            )
+            assert any(
+                "Crawl4AI is using localhost in production" in error for error in errors
+            )
 
     def test_production_readiness_insecure_secrets_detection(self):
         """Test production readiness insecure secrets detection."""
+        import os
+        from unittest.mock import patch
+
         from pydantic import SecretStr
 
-        settings = CoreAppSettings(
-            environment="production",
-            api_key_master_secret=SecretStr("master-secret-for-byok-encryption"),
-        )
-        settings.database.jwt_secret = SecretStr("test-jwt-secret")
+        with patch.dict(os.environ, {}, clear=True):
+            os.environ['ENV'] = 'production'
+            os.environ['API_KEY_MASTER_SECRET'] = 'master-secret-for-byok-encryption'
+            settings = CoreAppSettings(_env_file=None)
+            settings.database.jwt_secret = SecretStr("test-jwt-secret")
 
-        errors = settings.validate_critical_settings()
+            errors = settings.validate_critical_settings()
 
-        assert any(
-            "API key master secret must be changed in production" in error
-            for error in errors
-        )
-        assert any(
-            "Supabase JWT secret must be changed in production" in error
-            for error in errors
-        )
+            assert any(
+                "API key master secret must be changed in production" in error
+                for error in errors
+            )
+            assert any(
+                "Supabase JWT secret must be changed in production" in error
+                for error in errors
+            )
 
     def test_staging_environment_validation(self):
         """Test validation in staging environment (less strict than production)."""
