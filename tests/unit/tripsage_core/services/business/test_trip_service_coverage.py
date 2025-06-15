@@ -15,7 +15,7 @@ from tripsage_core.exceptions import (
     CoreResourceNotFoundError,
     CoreValidationError,
 )
-from tripsage_core.models.db.trip import Trip as DbTrip
+from tripsage_core.models.trip import Trip as DbTrip
 from tripsage_core.services.business.trip_service import (
     TripCollaborator,
     TripLocation,
