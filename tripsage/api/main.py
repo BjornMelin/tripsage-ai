@@ -50,7 +50,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreTripSageError,
     CoreValidationError,
 )
-from tripsage_core.mcp_abstraction import mcp_manager
+from tripsage_core.services.simple_mcp_service import mcp_manager
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
