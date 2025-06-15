@@ -22,9 +22,8 @@ from tripsage_core.models.trip import (
     EnhancedBudget,
     Trip,
     TripPreferences,
-    TripVisibility,
 )
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType
+from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
 
 logger = logging.getLogger(__name__)
 
