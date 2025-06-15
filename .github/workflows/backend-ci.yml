@@ -194,7 +194,7 @@ jobs:
 
     - name: Run unit tests with coverage
       env:
-        ENV: test
+        ENV: testing
         PYTHONPATH: .
         # Database
         SUPABASE_URL: https://test-project.supabase.co
@@ -327,7 +327,7 @@ jobs:
 
     - name: Run integration tests
       env:
-        ENV: test
+        ENV: testing
         PYTHONPATH: .
         # Database
         SUPABASE_URL: https://test-project.supabase.co
@@ -527,7 +527,7 @@ jobs:
 
     - name: Run performance tests
       env:
-        ENV: test
+        ENV: testing
         PYTHONPATH: .
         DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tripsage_test
         DRAGONFLY_URL: redis://localhost:6379/0

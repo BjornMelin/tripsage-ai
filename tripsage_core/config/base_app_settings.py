@@ -369,7 +369,7 @@ class CoreAppSettings(BaseSettings):
     app_name: str = Field(default="TripSage", description="Application name")
     debug: bool = Field(default=False, description="Enable debug mode")
     environment: Literal["development", "testing", "staging", "production"] = Field(
-        default="development", description="Runtime environment"
+        default="development", description="Runtime environment", alias="ENV"
     )
     log_level: str = Field(default="INFO", description="Logging level")
 
@@ -473,6 +473,22 @@ class CoreAppSettings(BaseSettings):
 
     # JWT convenience properties removed - will be replaced with Supabase Auth
 
+    def _safe_get_secret_value(self, secret_attr) -> str:
+        """
+        Safely get secret value from either SecretStr or string attribute.
+        
+        Args:
+            secret_attr: The secret attribute (SecretStr or string)
+            
+        Returns:
+            The secret value as string, or empty string if None
+        """
+        if secret_attr is None:
+            return ""
+        if hasattr(secret_attr, 'get_secret_value'):
+            return secret_attr.get_secret_value()
+        return str(secret_attr)
+
     def validate_critical_settings(self) -> List[str]:
         """
         Validate critical settings required for the application to function.
@@ -483,15 +499,15 @@ class CoreAppSettings(BaseSettings):
         errors = []
 
         # Check OpenAI API key
-        if not self.openai_api_key.get_secret_value():
+        if not self._safe_get_secret_value(self.openai_api_key):
             errors.append("OpenAI API key is missing")
 
         # Check Supabase configuration
         if not self.database.supabase_url:
             errors.append("Supabase URL is missing")
-        if not self.database.supabase_anon_key.get_secret_value():
+        if not self._safe_get_secret_value(self.database.supabase_anon_key):
             errors.append("Supabase anonymous key is missing")
-        if not self.database.supabase_jwt_secret.get_secret_value():
+        if not self._safe_get_secret_value(self.database.supabase_jwt_secret):
             errors.append("Supabase JWT secret is missing")
 
         # Production-specific validations
@@ -517,7 +533,7 @@ class CoreAppSettings(BaseSettings):
                 errors.append("Crawl4AI is using localhost in production")
 
             # Check security secrets
-            if self.api_key_master_secret.get_secret_value() in [
+            if self._safe_get_secret_value(self.api_key_master_secret) in [
                 "master-secret-for-byok-encryption"
             ]:
                 errors.append("API key master secret must be changed in production")
@@ -527,7 +543,7 @@ class CoreAppSettings(BaseSettings):
                 "test-jwt-secret",
                 "fallback-secret-for-development-only",  # nosec B107 - This is a security check, not a hardcoded password
             ]
-            if self.database.supabase_jwt_secret.get_secret_value() in insecure_secrets:
+            if self._safe_get_secret_value(self.database.supabase_jwt_secret) in insecure_secrets:
                 errors.append("Supabase JWT secret must be changed in production")
 
         return errors
