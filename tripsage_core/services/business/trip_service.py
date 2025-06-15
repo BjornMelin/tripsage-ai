@@ -1,65 +1,32 @@
-"""
-Trip service for comprehensive trip management operations.
+"""Trip service for comprehensive trip management operations.
 
 This service handles all trip-related business logic including trip creation,
-retrieval, updates, sharing, and collaboration features. It integrates with
-external services and maintains proper data relationships.
+retrieval, updates, sharing, and collaboration features.
 """
 
 import logging
-import uuid
 from datetime import datetime, timezone
-from enum import Enum
 from typing import Any, Dict, List, Optional
+from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator
 
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.utils.schema_adapters import (
-    SchemaAdapter,
-    log_schema_usage,
-    validate_schema_compatibility,
+from tripsage_core.models.trip import (
+    BudgetBreakdown,
+    EnhancedBudget,
+    Trip,
+    TripPreferences,
+    TripVisibility,
 )
+from tripsage_core.models.schemas_common.enums import TripStatus, TripType
 
 logger = logging.getLogger(__name__)
-
-
-class TripStatus(str, Enum):
-    """Trip status enumeration."""
-
-    PLANNING = "planning"
-    CONFIRMED = "confirmed"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-
-
-class TripVisibility(str, Enum):
-    """Trip visibility enumeration."""
-
-    PRIVATE = "private"
-    SHARED = "shared"
-    PUBLIC = "public"
-
-
-class TripBudget(TripSageModel):
-    """Trip budget information."""
-
-    total_budget: Optional[float] = Field(None, ge=0, description="Total trip budget")
-    currency: str = Field(default="USD", description="Budget currency")
-    spent_amount: float = Field(default=0.0, ge=0, description="Amount spent so far")
-    categories: Dict[str, float] = Field(
-        default_factory=dict, description="Budget by category"
-    )
 
 
 class TripLocation(TripSageModel):
@@ -83,23 +50,26 @@ class TripCreateRequest(TripSageModel):
     )
     start_date: datetime = Field(..., description="Trip start date")
     end_date: datetime = Field(..., description="Trip end date")
+    destination: str = Field(..., description="Primary destination")
     destinations: List[TripLocation] = Field(
         default_factory=list, description="Trip destinations"
     )
-    budget: Optional[TripBudget] = Field(None, description="Trip budget")
+    budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
+    travelers: int = Field(default=1, ge=1, description="Number of travelers")
+    trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
     visibility: TripVisibility = Field(
         default=TripVisibility.PRIVATE, description="Trip visibility"
     )
     tags: List[str] = Field(default_factory=list, description="Trip tags")
-    preferences: Dict[str, Any] = Field(
-        default_factory=dict, description="Trip preferences"
+    preferences: Optional[TripPreferences] = Field(
+        None, description="Trip preferences"
     )
 
     @field_validator("end_date")
     @classmethod
     def validate_dates(cls, v, info):
-        """Validate that end date is after start date."""
-        if info.data.get("start_date") and v <= info.data["start_date"]:
+        """Validate that end_date is after start_date."""
+        if "start_date" in info.data and v <= info.data["start_date"]:
             raise ValueError("End date must be after start date")
         return v
 
@@ -111,88 +81,65 @@ class TripUpdateRequest(TripSageModel):
     description: Optional[str] = Field(None, max_length=2000)
     start_date: Optional[datetime] = Field(None)
     end_date: Optional[datetime] = Field(None)
+    destination: Optional[str] = Field(None)
     destinations: Optional[List[TripLocation]] = Field(None)
-    budget: Optional[TripBudget] = Field(None)
-    status: Optional[TripStatus] = Field(None)
+    budget: Optional[EnhancedBudget] = Field(None)
+    travelers: Optional[int] = Field(None, ge=1)
+    trip_type: Optional[TripType] = Field(None)
     visibility: Optional[TripVisibility] = Field(None)
     tags: Optional[List[str]] = Field(None)
-    preferences: Optional[Dict[str, Any]] = Field(None)
+    preferences: Optional[TripPreferences] = Field(None)
+    status: Optional[TripStatus] = Field(None)
 
 
 class TripResponse(TripSageModel):
     """Response model for trip data."""
 
-    id: str = Field(..., description="Trip ID")
-    user_id: str = Field(..., description="Owner user ID")
+    id: UUID = Field(..., description="Trip ID")
+    user_id: UUID = Field(..., description="Owner user ID")
     title: str = Field(..., description="Trip title")
     description: Optional[str] = Field(None, description="Trip description")
     start_date: datetime = Field(..., description="Trip start date")
     end_date: datetime = Field(..., description="Trip end date")
+    destination: str = Field(..., description="Primary destination")
     destinations: List[TripLocation] = Field(
         default_factory=list, description="Trip destinations"
     )
-    budget: Optional[TripBudget] = Field(None, description="Trip budget")
+    budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
+    travelers: int = Field(..., description="Number of travelers")
+    trip_type: TripType = Field(..., description="Type of trip")
     status: TripStatus = Field(..., description="Trip status")
     visibility: TripVisibility = Field(..., description="Trip visibility")
     tags: List[str] = Field(default_factory=list, description="Trip tags")
-    preferences: Dict[str, Any] = Field(
-        default_factory=dict, description="Trip preferences"
-    )
+    preferences: TripPreferences = Field(..., description="Trip preferences")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
+
+    # Related data counts
+    note_count: int = Field(default=0, description="Number of notes")
+    attachment_count: int = Field(default=0, description="Number of attachments")
+    collaborator_count: int = Field(default=0, description="Number of collaborators")
     shared_with: List[str] = Field(
-        default_factory=list, description="User IDs with access"
+        default_factory=list, description="User IDs trip is shared with"
     )
-    itinerary_count: int = Field(default=0, description="Number of itinerary items")
-    flight_count: int = Field(default=0, description="Number of flights")
-    accommodation_count: int = Field(default=0, description="Number of accommodations")
-
-
-class TripShareRequest(TripSageModel):
-    """Request model for trip sharing."""
-
-    user_emails: List[str] = Field(..., description="Email addresses to share with")
-    permission_level: str = Field(
-        default="view", description="Permission level (view/edit)"
-    )
-    message: Optional[str] = Field(None, description="Optional message")
-
-
-class TripCollaborator(TripSageModel):
-    """Trip collaborator information."""
-
-    user_id: str = Field(..., description="User ID")
-    email: str = Field(..., description="User email")
-    permission_level: str = Field(..., description="Permission level")
-    added_at: datetime = Field(..., description="When access was granted")
 
 
 class TripService:
-    """
-    Comprehensive trip management service.
-
-    This service handles:
-    - Trip CRUD operations
-    - Trip sharing and collaboration
-    - Budget tracking
-    - Status management
-    - Search and filtering
-    - Integration with other services (flights, accommodations, etc.)
-    """
+    """Service for managing trips."""
 
     def __init__(self, database_service=None, user_service=None):
-        """
-        Initialize the trip service.
+        """Initialize trip service with dependencies.
 
         Args:
-            database_service: Database service for persistence
-            user_service: User service for user operations
+            database_service: Database service instance
+            user_service: User service instance
         """
-        # Import here to avoid circular imports
         if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
+            from tripsage_core.services.infrastructure.database_service import (
+                DatabaseService,
+            )
 
-            database_service = get_database_service()
+            database_service = DatabaseService()
 
         if user_service is None:
             from tripsage_core.services.business.user_service import UserService
@@ -205,8 +152,7 @@ class TripService:
     async def create_trip(
         self, user_id: str, trip_data: TripCreateRequest
     ) -> TripResponse:
-        """
-        Create a new trip.
+        """Create a new trip.
 
         Args:
             user_id: Owner user ID
@@ -219,40 +165,31 @@ class TripService:
             ValidationError: If trip data is invalid
         """
         try:
-            # Generate trip ID
-            trip_id = str(uuid.uuid4())
-
-            # Prepare trip data for database using schema adapter
-            api_trip_data = {
-                "id": trip_id,
-                "user_id": user_id,
-                "title": trip_data.title,
-                "name": trip_data.title,  # Map title to name for database
-                "description": trip_data.description,
-                "start_date": trip_data.start_date.isoformat(),
-                "end_date": trip_data.end_date.isoformat(),
-                "destinations": [dest.model_dump() for dest in trip_data.destinations],
-                "budget": trip_data.budget.model_dump() if trip_data.budget else None,
-                "status": TripStatus.PLANNING.value,
-                "visibility": trip_data.visibility.value,
-                "tags": trip_data.tags,
-                "preferences": trip_data.preferences,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
-
-            # Convert to database format
-            db_trip_data = SchemaAdapter.convert_api_trip_to_db(api_trip_data)
+            # Create Trip model instance
+            trip = Trip(
+                user_id=UUID(user_id),
+                title=trip_data.title,
+                description=trip_data.description,
+                start_date=trip_data.start_date.date(),
+                end_date=trip_data.end_date.date(),
+                destination=trip_data.destination,
+                budget_breakdown=trip_data.budget,
+                travelers=trip_data.travelers,
+                trip_type=trip_data.trip_type,
+                visibility=trip_data.visibility,
+                tags=trip_data.tags,
+                preferences_extended=trip_data.preferences or TripPreferences(),
+            )
 
             # Store in database
-            result = await self.db.create_trip(db_trip_data)
+            result = await self.db.create_trip(trip.model_dump())
 
             logger.info(
                 "Trip created successfully",
                 extra={
-                    "trip_id": trip_id,
+                    "trip_id": str(trip.id),
                     "user_id": user_id,
-                    "title": trip_data.title,
+                    "title": trip.title,
                 },
             )
 
@@ -265,8 +202,7 @@ class TripService:
             raise
 
     async def get_trip(self, trip_id: str, user_id: str) -> Optional[TripResponse]:
-        """
-        Get trip by ID.
+        """Get trip by ID.
 
         Args:
             trip_id: Trip ID
@@ -297,27 +233,38 @@ class TripService:
         self,
         user_id: str,
         status: Optional[TripStatus] = None,
+        visibility: Optional[TripVisibility] = None,
+        tag: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[TripResponse]:
-        """
-        Get trips for a user.
+        """Get trips for a user with optional filters.
 
         Args:
             user_id: User ID
-            status: Optional status filter
-            limit: Maximum number of trips to return
-            offset: Number of trips to skip
+            status: Filter by trip status
+            visibility: Filter by visibility
+            tag: Filter by tag
+            limit: Maximum number of results
+            offset: Pagination offset
 
         Returns:
-            List of user's trips
+            List of trips
         """
         try:
-            filters = {"user_id": user_id}
-            if status:
-                filters["status"] = status.value
+            filters = {
+                "user_id": user_id,
+                "status": status.value if status else None,
+                "visibility": visibility.value if visibility else None,
+                "tag": tag,
+            }
 
-            results = await self.db.get_trips(filters, limit, offset)
+            # Remove None values
+            filters = {k: v for k, v in filters.items() if v is not None}
+
+            results = await self.db.get_trips(
+                filters=filters, limit=limit, offset=offset
+            )
 
             trips = []
             for result in results:
@@ -328,78 +275,72 @@ class TripService:
 
         except Exception as e:
             logger.error(
-                "Failed to get user trips", extra={"user_id": user_id, "error": str(e)}
+                "Failed to get user trips",
+                extra={"user_id": user_id, "error": str(e)},
             )
             return []
 
     async def update_trip(
         self, trip_id: str, user_id: str, update_data: TripUpdateRequest
-    ) -> TripResponse:
-        """
-        Update trip information.
+    ) -> Optional[TripResponse]:
+        """Update a trip.
 
         Args:
             trip_id: Trip ID
-            user_id: Requesting user ID
+            user_id: User ID making the update
             update_data: Update data
 
         Returns:
-            Updated trip information
+            Updated trip or None if not found/unauthorized
 
         Raises:
-            NotFoundError: If trip not found
-            PermissionError: If user doesn't have edit access
+            PermissionError: If user doesn't have permission
+            ValidationError: If update data is invalid
         """
         try:
-            # Check edit permissions
-            if not await self._check_trip_edit_access(trip_id, user_id):
-                raise PermissionError("No permission to edit this trip")
+            # Check access permissions
+            if not await self._check_trip_access(trip_id, user_id, require_owner=True):
+                raise PermissionError("You don't have permission to update this trip")
 
-            # Validate date constraints if both dates are being updated
-            if update_data.start_date and update_data.end_date:
-                if update_data.end_date <= update_data.start_date:
+            # Get existing trip
+            existing = await self.db.get_trip_by_id(trip_id)
+            if not existing:
+                return None
+
+            # Prepare update dict
+            updates = update_data.model_dump(exclude_unset=True)
+            
+            # Convert datetime to date for date fields
+            if "start_date" in updates:
+                updates["start_date"] = updates["start_date"].date()
+            if "end_date" in updates:
+                updates["end_date"] = updates["end_date"].date()
+
+            # Validate date range if dates are being updated
+            if "start_date" in updates or "end_date" in updates:
+                start = updates.get("start_date", existing["start_date"])
+                end = updates.get("end_date", existing["end_date"])
+                if end < start:
                     raise ValidationError("End date must be after start date")
 
-            # Prepare update data
-            db_update_data = update_data.model_dump(exclude_unset=True)
+            # Update timestamp
+            updates["updated_at"] = datetime.now(timezone.utc)
 
-            # Convert datetime objects to ISO strings
-            if "start_date" in db_update_data:
-                db_update_data["start_date"] = db_update_data["start_date"].isoformat()
-            if "end_date" in db_update_data:
-                db_update_data["end_date"] = db_update_data["end_date"].isoformat()
-
-            # Convert enum values to strings
-            if "status" in db_update_data:
-                db_update_data["status"] = db_update_data["status"].value
-            if "visibility" in db_update_data:
-                db_update_data["visibility"] = db_update_data["visibility"].value
-
-            # Convert Pydantic models to dicts
-            if "destinations" in db_update_data:
-                db_update_data["destinations"] = [
-                    dest.model_dump() for dest in db_update_data["destinations"]
-                ]
-            if "budget" in db_update_data and db_update_data["budget"]:
-                db_update_data["budget"] = db_update_data["budget"].model_dump()
-
-            db_update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-            # Update in database
-            result = await self.db.update_trip(trip_id, db_update_data)
+            # Perform update
+            result = await self.db.update_trip(trip_id, updates)
 
             logger.info(
                 "Trip updated successfully",
                 extra={
                     "trip_id": trip_id,
                     "user_id": user_id,
-                    "updated_fields": list(db_update_data.keys()),
+                    "updates": list(updates.keys()),
                 },
             )
 
             return await self._build_trip_response(result)
 
-        except (NotFoundError, PermissionError, ValidationError):
+        except PermissionError:
             raise
         except Exception as e:
             logger.error(
@@ -409,41 +350,34 @@ class TripService:
             raise
 
     async def delete_trip(self, trip_id: str, user_id: str) -> bool:
-        """
-        Delete a trip.
+        """Delete a trip.
 
         Args:
             trip_id: Trip ID
-            user_id: Requesting user ID
+            user_id: User ID making the deletion
 
         Returns:
-            True if deleted successfully
+            True if deleted, False if not found
 
         Raises:
-            NotFoundError: If trip not found
-            PermissionError: If user doesn't own the trip
+            PermissionError: If user doesn't have permission
         """
         try:
-            # Check ownership
-            trip = await self.get_trip(trip_id, user_id)
-            if not trip:
-                raise NotFoundError("Trip not found")
+            # Check access permissions
+            if not await self._check_trip_access(trip_id, user_id, require_owner=True):
+                raise PermissionError("You don't have permission to delete this trip")
 
-            if trip.user_id != user_id:
-                raise PermissionError("Only trip owner can delete the trip")
+            result = await self.db.delete_trip(trip_id)
 
-            # Delete from database (cascade deletes related data)
-            success = await self.db.delete_trip(trip_id)
-
-            if success:
+            if result:
                 logger.info(
                     "Trip deleted successfully",
                     extra={"trip_id": trip_id, "user_id": user_id},
                 )
 
-            return success
+            return result
 
-        except (NotFoundError, PermissionError):
+        except PermissionError:
             raise
         except Exception as e:
             logger.error(
@@ -452,238 +386,192 @@ class TripService:
             )
             return False
 
-    async def duplicate_trip(self, user_id: str, trip_id: str) -> TripResponse:
-        """
-        Duplicate an existing trip.
-
-        Creates a copy of the specified trip with a "Copy of " prefix in the title.
-        The new trip will be owned by the requesting user and will have the same
-        destinations, budget, tags, and preferences as the original.
-
-        Args:
-            user_id: User ID who is duplicating the trip
-            trip_id: ID of the trip to duplicate
-
-        Returns:
-            The newly created duplicate trip
-
-        Raises:
-            NotFoundError: If the original trip is not found
-            PermissionError: If user doesn't have access to the original trip
-            ValidationError: If trip data is invalid
-        """
-        try:
-            # Get the original trip and check access
-            original_trip = await self.get_trip(trip_id, user_id)
-            if not original_trip:
-                raise NotFoundError(
-                    f"Trip with ID {trip_id} not found or not accessible"
-                )
-
-            # Create trip data for the duplicate
-            duplicate_data = TripCreateRequest(
-                title=f"Copy of {original_trip.title}",
-                description=original_trip.description,
-                start_date=original_trip.start_date,
-                end_date=original_trip.end_date,
-                destinations=original_trip.destinations,
-                budget=original_trip.budget,
-                visibility=TripVisibility.PRIVATE,  # New copies are private by default
-                tags=original_trip.tags,
-                preferences=original_trip.preferences,
-            )
-
-            # Create the duplicate trip
-            duplicate_trip = await self.create_trip(user_id, duplicate_data)
-
-            logger.info(
-                "Trip duplicated successfully",
-                extra={
-                    "original_trip_id": trip_id,
-                    "duplicate_trip_id": duplicate_trip.id,
-                    "user_id": user_id,
-                },
-            )
-
-            return duplicate_trip
-
-        except (NotFoundError, PermissionError, ValidationError):
-            raise
-        except Exception as e:
-            logger.error(
-                "Failed to duplicate trip",
-                extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
-            )
-            raise
-
     async def share_trip(
-        self, trip_id: str, owner_id: str, share_request: TripShareRequest
-    ) -> List[TripCollaborator]:
-        """
-        Share trip with other users.
+        self, trip_id: str, owner_id: str, share_with_user_id: str, permission: str = "view"
+    ) -> bool:
+        """Share a trip with another user.
 
         Args:
             trip_id: Trip ID
-            owner_id: Trip owner ID
-            share_request: Share request data
+            owner_id: Owner user ID
+            share_with_user_id: User ID to share with
+            permission: Permission level (view, edit)
 
         Returns:
-            List of collaborators added
+            True if shared successfully
 
         Raises:
-            NotFoundError: If trip not found
-            PermissionError: If user doesn't own the trip
+            PermissionError: If user doesn't have permission
+            NotFoundError: If trip or user not found
         """
         try:
-            # Check ownership
-            trip = await self.get_trip(trip_id, owner_id)
-            if not trip or trip.user_id != owner_id:
-                raise PermissionError("Only trip owner can share the trip")
+            # Verify owner
+            if not await self._check_trip_access(trip_id, owner_id, require_owner=True):
+                raise PermissionError("Only the trip owner can share the trip")
 
-            collaborators = []
+            # Verify target user exists
+            target_user = await self.user_service.get_user(share_with_user_id)
+            if not target_user:
+                raise NotFoundError("User not found")
 
-            for email in share_request.user_emails:
-                # Find user by email
-                user = await self.user_service.get_user_by_email(email)
-                if not user:
-                    logger.warning(
-                        "User not found for sharing",
-                        extra={"email": email, "trip_id": trip_id},
-                    )
-                    continue
+            # Create collaborator record
+            collaborator_data = {
+                "trip_id": trip_id,
+                "user_id": share_with_user_id,
+                "permission": permission,
+                "added_by": owner_id,
+                "added_at": datetime.now(timezone.utc),
+            }
 
-                # Add collaborator
-                collaborator_data = {
-                    "trip_id": trip_id,
-                    "user_id": user.id,
-                    "permission_level": share_request.permission_level,
-                    "added_at": datetime.now(timezone.utc).isoformat(),
-                    "added_by": owner_id,
-                }
+            result = await self.db.add_trip_collaborator(collaborator_data)
 
-                await self.db.add_trip_collaborator(collaborator_data)
-
-                collaborators.append(
-                    TripCollaborator(
-                        user_id=user.id,
-                        email=user.email,
-                        permission_level=share_request.permission_level,
-                        added_at=datetime.now(timezone.utc),
-                    )
-                )
-
+            if result:
                 logger.info(
-                    "Trip shared with user",
+                    "Trip shared successfully",
                     extra={
                         "trip_id": trip_id,
-                        "shared_with": user.id,
-                        "permission": share_request.permission_level,
+                        "owner_id": owner_id,
+                        "shared_with": share_with_user_id,
+                        "permission": permission,
                     },
                 )
 
-            # Update trip visibility if sharing
-            if collaborators and trip.visibility == TripVisibility.PRIVATE:
-                await self.update_trip(
-                    trip_id,
-                    owner_id,
-                    TripUpdateRequest(visibility=TripVisibility.SHARED),
-                )
+            return result
 
-            return collaborators
-
-        except (NotFoundError, PermissionError):
+        except (PermissionError, NotFoundError):
             raise
         except Exception as e:
             logger.error(
                 "Failed to share trip",
-                extra={"trip_id": trip_id, "owner_id": owner_id, "error": str(e)},
+                extra={
+                    "trip_id": trip_id,
+                    "owner_id": owner_id,
+                    "share_with": share_with_user_id,
+                    "error": str(e),
+                },
             )
-            raise
+            return False
 
-    async def get_trip_collaborators(
-        self, trip_id: str, user_id: str
-    ) -> List[TripCollaborator]:
-        """
-        Get trip collaborators.
+    async def unshare_trip(
+        self, trip_id: str, owner_id: str, unshare_user_id: str
+    ) -> bool:
+        """Remove trip sharing with a user.
 
         Args:
             trip_id: Trip ID
-            user_id: Requesting user ID
+            owner_id: Owner user ID
+            unshare_user_id: User ID to remove sharing
 
         Returns:
-            List of trip collaborators
+            True if unshared successfully
+
+        Raises:
+            PermissionError: If user doesn't have permission
         """
         try:
-            # Check access
-            if not await self._check_trip_access(trip_id, user_id):
-                return []
+            # Verify owner
+            if not await self._check_trip_access(trip_id, owner_id, require_owner=True):
+                raise PermissionError("Only the trip owner can unshare the trip")
 
-            results = await self.db.get_trip_collaborators(trip_id)
+            result = await self.db.remove_trip_collaborator(trip_id, unshare_user_id)
 
-            collaborators = []
-            for result in results:
-                # Get user info
-                user = await self.user_service.get_user_by_id(result["user_id"])
-                if user:
-                    collaborators.append(
-                        TripCollaborator(
-                            user_id=result["user_id"],
-                            email=user.email,
-                            permission_level=result["permission_level"],
-                            added_at=datetime.fromisoformat(result["added_at"]),
-                        )
-                    )
+            if result:
+                logger.info(
+                    "Trip unshared successfully",
+                    extra={
+                        "trip_id": trip_id,
+                        "owner_id": owner_id,
+                        "unshared_from": unshare_user_id,
+                    },
+                )
 
-            return collaborators
+            return result
+
+        except PermissionError:
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to unshare trip",
+                extra={
+                    "trip_id": trip_id,
+                    "owner_id": owner_id,
+                    "unshare_from": unshare_user_id,
+                    "error": str(e),
+                },
+            )
+            return False
+
+    async def get_shared_trips(
+        self, user_id: str, limit: int = 50, offset: int = 0
+    ) -> List[TripResponse]:
+        """Get trips shared with a user.
+
+        Args:
+            user_id: User ID
+            limit: Maximum number of results
+            offset: Pagination offset
+
+        Returns:
+            List of shared trips
+        """
+        try:
+            # Get trips where user is a collaborator
+            collaborations = await self.db.get_user_collaborations(user_id)
+
+            trips = []
+            for collab in collaborations:
+                result = await self.db.get_trip_by_id(collab["trip_id"])
+                if result:
+                    trip = await self._build_trip_response(result)
+                    trips.append(trip)
+
+            # Apply pagination
+            return trips[offset : offset + limit]
 
         except Exception as e:
             logger.error(
-                "Failed to get trip collaborators",
-                extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
+                "Failed to get shared trips",
+                extra={"user_id": user_id, "error": str(e)},
             )
             return []
 
     async def search_trips(
         self,
         user_id: str,
-        query: Optional[str] = None,
-        destinations: Optional[List[str]] = None,
-        date_range: Optional[Dict[str, datetime]] = None,
-        tags: Optional[List[str]] = None,
-        limit: int = 20,
+        query: str,
+        filters: Optional[Dict[str, Any]] = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> List[TripResponse]:
-        """
-        Search trips with various filters.
+        """Search trips by query and filters.
 
         Args:
             user_id: User ID
-            query: Text query for title/description
-            destinations: Destination names to filter by
-            date_range: Date range filter (start_date, end_date)
-            tags: Tags to filter by
+            query: Search query
+            filters: Additional filters
             limit: Maximum number of results
+            offset: Pagination offset
 
         Returns:
             List of matching trips
         """
         try:
-            search_filters = {
-                "user_id": user_id,
-                "query": query,
-                "destinations": destinations,
-                "date_range": date_range,
-                "tags": tags,
-            }
+            # Build search filters
+            search_filters = {"user_id": user_id}
+            if filters:
+                search_filters.update(filters)
 
-            # Remove None values
-            search_filters = {k: v for k, v in search_filters.items() if v is not None}
-
-            results = await self.db.search_trips(search_filters, limit)
+            # Perform search
+            results = await self.db.search_trips(
+                query=query, filters=search_filters, limit=limit, offset=offset
+            )
 
             trips = []
             for result in results:
-                trip = await self._build_trip_response(result)
-                trips.append(trip)
+                # Check access
+                if await self._check_trip_access(result["id"], user_id):
+                    trip = await self._build_trip_response(result)
+                    trips.append(trip)
 
             return trips
 
@@ -694,154 +582,45 @@ class TripService:
             )
             return []
 
-    async def update_collaborator_permissions(
-        self, trip_id: str, collaborator_id: str, permission_level: str
+    async def _check_trip_access(
+        self, trip_id: str, user_id: str, require_owner: bool = False
     ) -> bool:
-        """
-        Update collaborator permissions for a trip.
-
-        Args:
-            trip_id: Trip ID
-            collaborator_id: Collaborator user ID
-            permission_level: New permission level
-
-        Returns:
-            True if updated successfully
-        """
-        try:
-            # Update in database
-            success = await self.db.update_trip_collaborator(
-                trip_id=trip_id,
-                user_id=collaborator_id,
-                permission_level=permission_level,
-            )
-
-            if success:
-                logger.info(
-                    "Collaborator permissions updated",
-                    extra={
-                        "trip_id": trip_id,
-                        "collaborator_id": collaborator_id,
-                        "permission_level": permission_level,
-                    },
-                )
-
-            return success
-
-        except Exception as e:
-            logger.error(
-                "Failed to update collaborator permissions",
-                extra={
-                    "trip_id": trip_id,
-                    "collaborator_id": collaborator_id,
-                    "error": str(e),
-                },
-            )
-            return False
-
-    async def remove_collaborator(self, trip_id: str, collaborator_id: str) -> bool:
-        """
-        Remove a collaborator from a trip.
-
-        Args:
-            trip_id: Trip ID
-            collaborator_id: Collaborator user ID to remove
-
-        Returns:
-            True if removed successfully
-        """
-        try:
-            # Remove from database
-            success = await self.db.remove_trip_collaborator(
-                trip_id=trip_id, user_id=collaborator_id
-            )
-
-            if success:
-                logger.info(
-                    "Collaborator removed from trip",
-                    extra={"trip_id": trip_id, "collaborator_id": collaborator_id},
-                )
-
-            return success
-
-        except Exception as e:
-            logger.error(
-                "Failed to remove collaborator",
-                extra={
-                    "trip_id": trip_id,
-                    "collaborator_id": collaborator_id,
-                    "error": str(e),
-                },
-            )
-            return False
-
-    async def _check_trip_access(self, trip_id: str, user_id: str) -> bool:
-        """
-        Check if user has access to trip.
+        """Check if user has access to a trip.
 
         Args:
             trip_id: Trip ID
             user_id: User ID
+            require_owner: Whether to require owner access
 
         Returns:
             True if user has access
         """
-        try:
-            # Check if user owns the trip
-            trip_data = await self.db.get_trip_by_id(trip_id)
-            if not trip_data:
-                return False
-
-            if trip_data["user_id"] == user_id:
-                return True
-
-            # Check if trip is shared with user
-            collaborator = await self.db.get_trip_collaborator(trip_id, user_id)
-            if collaborator:
-                return True
-
-            # Check if trip is public
-            if trip_data.get("visibility") == TripVisibility.PUBLIC.value:
-                return True
-
+        trip = await self.db.get_trip_by_id(trip_id)
+        if not trip:
             return False
 
-        except Exception:
+        # Check if owner
+        if str(trip["user_id"]) == user_id:
+            return True
+
+        # If owner access required, deny
+        if require_owner:
             return False
 
-    async def _check_trip_edit_access(self, trip_id: str, user_id: str) -> bool:
-        """
-        Check if user has edit access to trip.
-
-        Args:
-            trip_id: Trip ID
-            user_id: User ID
-
-        Returns:
-            True if user has edit access
-        """
-        try:
-            # Check if user owns the trip
-            trip_data = await self.db.get_trip_by_id(trip_id)
-            if not trip_data:
-                return False
-
-            if trip_data["user_id"] == user_id:
+        # Check if collaborator
+        collaborators = await self.db.get_trip_collaborators(trip_id)
+        for collab in collaborators:
+            if collab["user_id"] == user_id:
                 return True
 
-            # Check if user has edit permission as collaborator
-            collaborator = await self.db.get_trip_collaborator(trip_id, user_id)
-            if collaborator and collaborator["permission_level"] == "edit":
-                return True
+        # Check if public
+        if trip.get("visibility") == TripVisibility.PUBLIC:
+            return True
 
-            return False
-
-        except Exception:
-            return False
+        return False
 
     async def _build_trip_response(self, trip_data: Dict[str, Any]) -> TripResponse:
-        """
-        Build trip response from database data.
+        """Build trip response from database data.
 
         Args:
             trip_data: Raw trip data from database
@@ -849,94 +628,42 @@ class TripService:
         Returns:
             Trip response model
         """
-        # Validate schema compatibility
-        if not validate_schema_compatibility(trip_data):
-            logger.warning(
-                f"Schema compatibility issues with trip {trip_data.get('id')}"
-            )
-
-        # Convert database format to API format using schema adapter
-        api_trip_data = SchemaAdapter.convert_db_trip_to_api(trip_data)
-
-        # Log schema usage for monitoring
-        id_type = "uuid" if SchemaAdapter.is_uuid(api_trip_data["id"]) else "bigint"
-        log_schema_usage(
-            "build_trip_response",
-            id_type,
-            {
-                "title_source": "title" if trip_data.get("title") else "name",
-                "has_uuid": bool(trip_data.get("uuid_id")),
-            },
-        )
-
-        # Get the proper trip ID for related data queries
-        db_trip_id = trip_data.get("id") or trip_data.get("id_bigint")
-
         # Get related counts
-        counts = await self.db.get_trip_related_counts(db_trip_id)
+        counts = await self.db.get_trip_related_counts(trip_data["id"])
 
         # Get shared user IDs
-        collaborators = await self.db.get_trip_collaborators(db_trip_id)
+        collaborators = await self.db.get_trip_collaborators(trip_data["id"])
         shared_with = [c["user_id"] for c in collaborators]
 
         # Build destinations
         destinations = []
-        for dest_data in api_trip_data.get("destinations", []):
+        for dest_data in trip_data.get("destinations", []):
             if isinstance(dest_data, dict):
                 destinations.append(TripLocation(**dest_data))
-            else:
-                # Handle legacy destination format
-                destinations.append(TripLocation(name=str(dest_data)))
-
-        # Build budget
-        budget = None
-        budget_data = api_trip_data.get("budget")
-        if budget_data and isinstance(budget_data, dict):
-            budget = TripBudget(**budget_data)
 
         return TripResponse(
-            id=api_trip_data["id"],
-            user_id=api_trip_data["user_id"],
-            title=api_trip_data["title"],
-            description=api_trip_data.get("description"),
-            start_date=datetime.fromisoformat(api_trip_data["start_date"])
-            if isinstance(api_trip_data["start_date"], str)
-            else api_trip_data["start_date"],
-            end_date=datetime.fromisoformat(api_trip_data["end_date"])
-            if isinstance(api_trip_data["end_date"], str)
-            else api_trip_data["end_date"],
+            id=UUID(trip_data["id"]),
+            user_id=UUID(trip_data["user_id"]),
+            title=trip_data["title"],
+            description=trip_data.get("description"),
+            start_date=trip_data["start_date"],
+            end_date=trip_data["end_date"],
+            destination=trip_data["destination"],
             destinations=destinations,
-            budget=budget,
-            status=TripStatus(api_trip_data["status"]),
-            visibility=TripVisibility(api_trip_data["visibility"]),
-            tags=api_trip_data.get("tags", []),
-            preferences=api_trip_data.get("preferences", {}),
-            created_at=datetime.fromisoformat(api_trip_data["created_at"])
-            if isinstance(api_trip_data["created_at"], str)
-            else api_trip_data["created_at"],
-            updated_at=datetime.fromisoformat(api_trip_data["updated_at"])
-            if isinstance(api_trip_data["updated_at"], str)
-            else api_trip_data["updated_at"],
+            budget=EnhancedBudget(**trip_data["budget_breakdown"]),
+            travelers=trip_data["travelers"],
+            trip_type=TripType(trip_data["trip_type"]),
+            status=TripStatus(trip_data["status"]),
+            visibility=TripVisibility(trip_data["visibility"]),
+            tags=trip_data.get("tags", []),
+            preferences=TripPreferences(**trip_data.get("preferences_extended", {})),
+            created_at=trip_data["created_at"],
+            updated_at=trip_data["updated_at"],
+            note_count=counts.get("notes", 0),
+            attachment_count=counts.get("attachments", 0),
+            collaborator_count=counts.get("collaborators", 0),
             shared_with=shared_with,
-            itinerary_count=counts.get("itinerary_count", 0),
-            flight_count=counts.get("flight_count", 0),
-            accommodation_count=counts.get("accommodation_count", 0),
         )
 
 
-# Dependency function for FastAPI
-async def get_trip_service() -> TripService:
-    """
-    Get trip service instance for dependency injection.
-
-    Returns:
-        TripService instance
-    """
-    from tripsage_core.services.business.user_service import UserService
-    from tripsage_core.services.infrastructure.database_service import (
-        get_database_service,
-    )
-
-    database_service = await get_database_service()
-    user_service = UserService(database_service=database_service)
-    return TripService(database_service=database_service, user_service=user_service)
+__all__ = ["TripService", "TripCreateRequest", "TripUpdateRequest", "TripResponse"]
