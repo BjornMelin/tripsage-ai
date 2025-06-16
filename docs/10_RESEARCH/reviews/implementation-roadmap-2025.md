@@ -39,7 +39,7 @@ Following the comprehensive frontend architecture review that revealed a **Grade
 
 ### System Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                         FRONTEND LAYER                          │
 ├─────────────────────────────────────────────────────────────────┤
@@ -93,7 +93,7 @@ Following the comprehensive frontend architecture review that revealed a **Grade
 
 ### Authentication Flow
 
-```
+```text
 1. User Login (Frontend) 
    ↓
 2. JWT Token Generation (Backend FastAPI)
@@ -111,7 +111,7 @@ Following the comprehensive frontend architecture review that revealed a **Grade
 
 ### Real-time Communication Flow
 
-```
+```text
 1. WebSocket Connection (Frontend)
    ↓
 2. JWT Authentication (WebSocket Handshake)
