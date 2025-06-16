@@ -20,17 +20,13 @@ from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
 from tripsage_core.services.business.trip_service import (
-    TripBudget,
     TripCreateRequest,
     TripLocation,
-    TripResponse,
     TripService,
-    TripShareRequest,
-    TripStatus,
     TripUpdateRequest,
-    TripVisibility,
-    get_trip_service,
 )
+from tripsage_core.models.trip import EnhancedBudget, BudgetBreakdown, Trip
+from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
 
 
 class TestTripService:
@@ -104,16 +100,16 @@ class TestTripService:
                     timezone="Europe/Rome",
                 ),
             ],
-            budget=TripBudget(
-                total_budget=5000.00,
+            budget=EnhancedBudget(
+                total=5000.00,
                 currency="USD",
-                spent_amount=0.00,
-                categories={
-                    "accommodation": 2000.00,
-                    "transportation": 1500.00,
-                    "food": 1000.00,
-                    "activities": 500.00,
-                },
+                spent=0.00,
+                breakdown=BudgetBreakdown(
+                    accommodation=2000.00,
+                    transportation=1500.00,
+                    food=1000.00,
+                    activities=500.00,
+                ),
             ),
             visibility=TripVisibility.PRIVATE,
             tags=["vacation", "europe", "cities"],
