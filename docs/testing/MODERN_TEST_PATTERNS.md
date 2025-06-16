@@ -5,16 +5,19 @@ This document consolidates the optimized test patterns implemented during the te
 ## Core Principles
 
 ### 1. Delete & Rewrite Over Patch
+
 - Delete broken or outdated test files entirely
 - Rewrite concise tests that validate actual functionality
 - Prioritize real-world usage with actionable assertions
 
 ### 2. Behavioral Over Implementation Testing
+
 - Test what users experience, not how code works internally
 - Use flexible assertions that focus on outcomes
 - Avoid testing hardcoded content that might change
 
 ### 3. Deterministic Over Flaky
+
 - Remove dependencies on random generation
 - Use helper functions for consistent date/time handling
 - Mock external dependencies completely
@@ -245,6 +248,7 @@ async def test_endpoint_success(client: TestClient, mock_service):
 ## Common Anti-Patterns to Avoid
 
 ### ❌ Testing Implementation Details
+
 ```typescript
 // BAD: Testing specific class names or internal structure
 expect(document.querySelector('.hover\\:bg-accent\\/50')).toBeInTheDocument()
@@ -254,6 +258,7 @@ expect(screen.getByRole('button', { name: /action/i })).toBeInTheDocument()
 ```
 
 ### ❌ Hardcoded Content Testing
+
 ```typescript
 // BAD: Testing exact content that might change
 expect(screen.getByText("Tokyo Cherry Blossom Adventure")).toBeInTheDocument()
@@ -263,6 +268,7 @@ expect(screen.getByText(/adventure/i)).toBeInTheDocument()
 ```
 
 ### ❌ Non-Deterministic Tests
+
 ```typescript
 // BAD: Random generation in tests
 const randomAirline = airlines[Math.floor(Math.random() * airlines.length)]
@@ -276,6 +282,7 @@ const getFutureDate = (daysFromNow: number) => {
 ```
 
 ### ❌ Over-Mocking
+
 ```typescript
 // BAD: Mocking everything including the kitchen sink
 vi.mock('external-lib', () => ({ every: vi.fn(), method: vi.fn() }))
@@ -289,6 +296,7 @@ vi.mock('@/stores/user-store', () => ({
 ## Test Organization Best Practices
 
 ### 1. Descriptive Test Structure
+
 ```typescript
 describe('ComponentName', () => {
   describe('Basic Rendering', () => {
@@ -310,6 +318,7 @@ describe('ComponentName', () => {
 ```
 
 ### 2. Clear Test Names
+
 ```typescript
 // Use descriptive "should" statements
 it('should show empty state when no data available', () => {})
@@ -318,6 +327,7 @@ it('should display error message on network failure', () => {})
 ```
 
 ### 3. Arrange-Act-Assert Pattern
+
 ```typescript
 it('should update user profile successfully', async () => {
   // Arrange
@@ -336,6 +346,7 @@ it('should update user profile successfully', async () => {
 ## Mock Patterns
 
 ### 1. Service Mocking
+
 ```typescript
 const mockService = {
   method: vi.fn().mockResolvedValue(mockResponse),
@@ -344,6 +355,7 @@ const mockService = {
 ```
 
 ### 2. Store Mocking
+
 ```typescript
 const mockStore = {
   data: null,
@@ -357,6 +369,7 @@ const mockStore = {
 ```
 
 ### 3. Router Mocking
+
 ```typescript
 const mockPush = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -367,6 +380,7 @@ vi.mock('next/navigation', () => ({
 ## Error Handling Patterns
 
 ### 1. Graceful Degradation Testing
+
 ```typescript
 it('should handle missing data gracefully', () => {
   mockStore.data = undefined
@@ -376,6 +390,7 @@ it('should handle missing data gracefully', () => {
 ```
 
 ### 2. Network Error Testing
+
 ```typescript
 it('should handle network errors', async () => {
   mockService.method.mockRejectedValue(new Error('Network error'))
@@ -384,6 +399,7 @@ it('should handle network errors', async () => {
 ```
 
 ### 3. Validation Error Testing
+
 ```typescript
 it('should show validation errors for invalid input', async () => {
   const user = userEvent.setup()
@@ -399,6 +415,7 @@ it('should show validation errors for invalid input', async () => {
 ## Performance Considerations
 
 ### 1. Batch Mock Calls
+
 ```typescript
 beforeEach(() => {
   vi.clearAllMocks()
@@ -409,6 +426,7 @@ beforeEach(() => {
 ```
 
 ### 2. Use Query Methods
+
 ```typescript
 // Prefer queryBy for optional elements
 const optionalElement = screen.queryByText('Optional Text')
@@ -421,6 +439,7 @@ expect(screen.getByText('Required Text')).toBeInTheDocument()
 ```
 
 ### 3. Avoid Test Pollution
+
 ```typescript
 describe('Component', () => {
   const originalState = { ...initialState }
@@ -434,6 +453,7 @@ describe('Component', () => {
 ## Success Metrics
 
 A modernized test suite should achieve:
+
 - ✅ 90%+ test coverage with meaningful tests
 - ✅ Zero flaky tests (deterministic results)
 - ✅ Fast execution (under 10s for frontend, under 30s for backend)
@@ -444,6 +464,7 @@ A modernized test suite should achieve:
 ## Migration Checklist
 
 When modernizing tests:
+
 - [ ] Remove hardcoded content assertions
 - [ ] Replace implementation testing with behavioral testing
 - [ ] Add proper error handling tests
@@ -462,27 +483,32 @@ When modernizing tests:
 ## Test Modernization Results Summary
 
 ### Backend Test Suite Improvements
+
 - **Total Tests**: 2,444 tests
 - **Status**: 1,953 passed, 261 failed, 220 errors (79.9% pass rate)
 - **Improvement**: ~5% reduction in failures from previous 505 total issues
 
-#### Modernized Files:
+#### Modernized Files
+
 - `tests/e2e/test_trip_planning_journey.py` - **100% passing** (6/6 tests)
 - `tests/integration/external/test_weather_service_integration.py` - **100% passing** (all tests)
 - `tests/integration/test_accommodation_workflow.py` - **100% passing** (all tests)
 
 ### Frontend Test Suite Improvements
+
 - **Total Tests**: 1,443 tests  
 - **Status**: 925 passed, 473 failed, 45 skipped (64.1% pass rate)
 - **Improvement**: ~8.7% reduction in failures from previous 518 failed tests
 
-#### Modernized Files:
+#### Modernized Files
+
 - `src/stores/__tests__/chat-store-websocket.test.ts` - Rewritten from 945 to 299 lines (68% reduction)
 - `src/contexts/__tests__/auth-context.test.tsx` - Rewritten from 974 to 369 lines (62% reduction)
 - `src/components/features/dashboard/__tests__/upcoming-flights.test.tsx` - Modern patterns applied
 - `src/components/features/profile/__tests__/security-section.test.tsx` - Modern patterns applied
 
 ### Key Achievements
+
 1. **Delete & Rewrite Methodology**: Successfully eliminated problematic legacy test files and replaced with modern, maintainable alternatives
 2. **Mock Hoisting Resolution**: Solved Vitest-specific hoisting issues that were causing widespread test failures
 3. **Behavioral Testing**: Shifted from implementation testing to user-behavior focused assertions
@@ -490,6 +516,7 @@ When modernizing tests:
 5. **Deterministic Results**: Eliminated random generation and time-based flakiness
 
 ### Pattern Standardization
+
 - All modernized tests follow consistent structure (Arrange-Act-Assert)
 - Proper mock dependency injection without external service dependencies
 - Error boundary testing with graceful degradation validation
@@ -497,12 +524,14 @@ When modernizing tests:
 - Comprehensive test organization by functional areas
 
 ### Technical Debt Reduction
+
 - **Eliminated**: 1,500+ lines of broken test code
 - **Replaced**: Legacy authentication patterns with Principal-based system
 - **Standardized**: Mock patterns to avoid hoisting issues across all test suites
 - **Documented**: Comprehensive patterns for future development
 
 ### Next Steps for Full Modernization
+
 1. Apply patterns to remaining 453 failed frontend tests
 2. Address remaining 481 backend test issues using established patterns
 3. Implement automated test quality checks based on documented patterns

@@ -88,7 +88,7 @@ async def supabase_service():
 
 
 @pytest.fixture
-def benchmark():
+def performance_benchmark():
     """Fixture for performance benchmark utility."""
     return PerformanceBenchmark(iterations=50)  # Reduced for test speed
 
@@ -97,14 +97,14 @@ class TestDragonflyMigrationPerformance:
     """Test performance improvements from DragonflyDB migration."""
 
     async def test_dragonfly_set_operations_performance(
-        self, dragonfly_service, benchmark
+        self, dragonfly_service, performance_benchmark
     ):
         """Test DragonflyDB SET operation performance."""
         test_key = "benchmark:test:set"
         test_value = {"message": "performance test", "timestamp": time.time()}
 
         # Benchmark direct SDK operation
-        direct_stats = await benchmark.benchmark_operation(
+        direct_stats = await performance_benchmark.benchmark_operation(
             "dragonfly_direct_set",
             dragonfly_service.set_json,
             test_key,
@@ -113,7 +113,7 @@ class TestDragonflyMigrationPerformance:
         )
 
         # Benchmark current cache_tools (using direct SDK)
-        cache_stats = await benchmark.benchmark_operation(
+        cache_stats = await performance_benchmark.benchmark_operation(
             "cache_tools_set", web_cache.set_cache, test_key, test_value, ttl=300
         )
 
@@ -142,7 +142,7 @@ class TestDragonflyMigrationPerformance:
         )
 
     async def test_dragonfly_get_operations_performance(
-        self, dragonfly_service, benchmark
+        self, dragonfly_service, performance_benchmark
     ):
         """Test DragonflyDB GET operation performance."""
         test_key = "benchmark:test:get"
@@ -152,12 +152,12 @@ class TestDragonflyMigrationPerformance:
         await dragonfly_service.set_json(test_key, test_value, ex=300)
 
         # Benchmark direct SDK operation
-        direct_stats = await benchmark.benchmark_operation(
+        direct_stats = await performance_benchmark.benchmark_operation(
             "dragonfly_direct_get", dragonfly_service.get_json, test_key
         )
 
         # Benchmark current cache_tools (using direct SDK)
-        cache_stats = await benchmark.benchmark_operation(
+        cache_stats = await performance_benchmark.benchmark_operation(
             "cache_tools_get", web_cache.get_cache, test_key
         )
 
@@ -183,10 +183,10 @@ class TestDragonflyMigrationPerformance:
 class TestSupabaseMigrationPerformance:
     """Test performance improvements from Supabase SDK migration."""
 
-    async def test_supabase_connection_performance(self, supabase_service, benchmark):
+    async def test_supabase_connection_performance(self, supabase_service, performance_benchmark):
         """Test Supabase connection establishment performance."""
         # Test connection performance
-        connection_stats = await benchmark.benchmark_operation(
+        connection_stats = await performance_benchmark.benchmark_operation(
             "supabase_connect", supabase_service.ensure_connected
         )
 
@@ -201,10 +201,10 @@ class TestSupabaseMigrationPerformance:
             f"Connection too slow: {connection_stats['mean']:.2f}ms"
         )
 
-    async def test_supabase_query_performance(self, supabase_service, benchmark):
+    async def test_supabase_query_performance(self, supabase_service, performance_benchmark):
         """Test basic Supabase query performance."""
         # Simple query that should work on any Supabase instance
-        query_stats = await benchmark.benchmark_operation(
+        query_stats = await performance_benchmark.benchmark_operation(
             "supabase_query",
             supabase_service.select,
             "users",
@@ -248,7 +248,7 @@ class TestOverallMigrationImpact:
             or flags.supabase_integration == IntegrationMode.MCP
         )
 
-    async def test_performance_improvement_validation(self, benchmark):
+    async def test_performance_improvement_validation(self, performance_benchmark):
         """Validate that we've achieved meaningful performance improvements."""
         # This test validates that our direct SDK implementations are performant
 
@@ -265,7 +265,7 @@ class TestOverallMigrationImpact:
                 pipe.set(f"batch:key:{i}", f"value:{i}")
             await pipe.execute()
 
-        batch_stats = await benchmark.benchmark_operation(
+        batch_stats = await performance_benchmark.benchmark_operation(
             "dragonfly_batch_operations", batch_dragonfly_operations
         )
 
@@ -294,7 +294,7 @@ async def run_comprehensive_benchmark():
 
     try:
         # DragonflyDB SET performance
-        set_stats = await benchmark.benchmark_operation(
+        set_stats = await performance_benchmark.benchmark_operation(
             "dragonfly_set",
             dragonfly_service.set_json,
             "benchmark:test",
@@ -303,7 +303,7 @@ async def run_comprehensive_benchmark():
         )
 
         # DragonflyDB GET performance
-        get_stats = await benchmark.benchmark_operation(
+        get_stats = await performance_benchmark.benchmark_operation(
             "dragonfly_get", dragonfly_service.get_json, "benchmark:test"
         )
 
@@ -326,7 +326,7 @@ async def run_comprehensive_benchmark():
     # Core database service auto-connects
 
     try:
-        connection_stats = await benchmark.benchmark_operation(
+        connection_stats = await performance_benchmark.benchmark_operation(
             "supabase_connection", supabase_service.ensure_connected
         )
 

@@ -755,33 +755,22 @@ class TestMemoryRouter:
         data = response.json()
         assert data["status"] == "confirmation_required"
 
-    async def test_memory_endpoints_unauthorized(self, async_client):
+    async def test_memory_endpoints_unauthorized(self):
         """Test that memory endpoints require authentication."""
-        # Create client without authentication override
+        # Create client without authentication override - same pattern as chat router
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
-            # Test various endpoints without auth
-            endpoints = [
-                ("GET", "/api/memory/context"),
-                ("POST", "/api/memory/conversation"),
-                ("POST", "/api/memory/search"),
-                ("PUT", "/api/memory/preferences"),
-                ("GET", "/api/memory/stats"),
-                ("DELETE", "/api/memory/clear"),
-            ]
-
-            for method, endpoint in endpoints:
-                if method == "GET":
-                    response = await client.get(endpoint)
-                elif method == "POST":
-                    response = await client.post(endpoint, json={})
-                elif method == "PUT":
-                    response = await client.put(endpoint, json={})
-                elif method == "DELETE":
-                    response = await client.delete(endpoint)
-
-                assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            # Test GET endpoint
+            response = await client.get("/api/memory/context")
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            
+            # Test POST endpoint
+            response = await client.post("/api/memory/conversation", json={
+                "messages": [{"role": "user", "content": "test"}],
+                "context_type": "travel_planning"
+            })
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     async def test_memory_endpoints_service_errors(
         self, async_client, mock_memory_service

@@ -220,9 +220,19 @@ class TestUsersRouter:
         mock_user_service.update_user_preferences.return_value = mock_user_response
 
         # Call endpoint
+        from tripsage.api.middlewares.authentication import Principal
+        mock_principal = Principal(
+            id=mock_user_id,
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         result = await update_user_preferences(
             preferences_request=preferences_request,
-            user_id=mock_user_id,
+            principal=mock_principal,
             user_service=mock_user_service,
         )
 
@@ -243,10 +253,20 @@ class TestUsersRouter:
         )
 
         # Call endpoint and expect 500
+        from tripsage.api.middlewares.authentication import Principal
+        mock_principal = Principal(
+            id=mock_user_id,
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         with pytest.raises(HTTPException) as exc_info:
             await update_user_preferences(
                 preferences_request=preferences_request,
-                user_id=mock_user_id,
+                principal=mock_principal,
                 user_service=mock_user_service,
             )
 

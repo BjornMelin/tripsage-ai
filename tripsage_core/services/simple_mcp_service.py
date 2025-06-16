@@ -181,6 +181,38 @@ class SimpleMCPService:
         except Exception as e:
             return {"status": "unhealthy", "error": str(e)}
 
+    async def initialize_all_enabled(self) -> None:
+        """Initialize all enabled MCP services."""
+        logger.info("Initializing all enabled MCP services")
+        # Initialize Airbnb client if available
+        await self._get_airbnb_client()
+
+    def get_available_mcps(self) -> list[str]:
+        """Get list of available MCP services."""
+        return ["airbnb", "mock_flight", "mock_geocode", "mock_weather", "mock_memory"]
+
+    def get_initialized_mcps(self) -> list[str]:
+        """Get list of initialized MCP services."""
+        initialized = []
+        if self._airbnb_client:
+            initialized.append("airbnb")
+        # Mock services are always available
+        initialized.extend(
+            ["mock_flight", "mock_geocode", "mock_weather", "mock_memory"]
+        )
+        return initialized
+
+    async def shutdown(self) -> None:
+        """Shutdown all MCP services."""
+        logger.info("Shutting down MCP services")
+        if self._airbnb_client:
+            try:
+                await self._airbnb_client.disconnect()
+                self._airbnb_client = None
+                logger.info("Airbnb MCP client disconnected")
+            except Exception as e:
+                logger.error(f"Error disconnecting Airbnb client: {e}")
+
 
 # Global instance
 _mcp_service: Optional[SimpleMCPService] = None

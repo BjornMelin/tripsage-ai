@@ -43,8 +43,8 @@ class FlightAgentNode(BaseAgentNode):
         # Initialize LLM for flight-specific tasks
         settings = get_settings()
         self.llm = ChatOpenAI(
-            model=settings.agent.model_name,
-            temperature=settings.agent.temperature,
+            model=settings.openai_model,
+            temperature=settings.model_temperature,
             api_key=settings.openai_api_key.get_secret_value(),
         )
 

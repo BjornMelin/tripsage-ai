@@ -120,7 +120,7 @@ def valid_jwt_token():
     }
     return jwt.encode(
         payload,
-        settings.database.supabase_jwt_secret.get_secret_value(),
+        settings.database_jwt_secret.get_secret_value(),
         algorithm="HS256",
     )
 

@@ -253,7 +253,6 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object using new flat structure
-    from pydantic import SecretStr
 
     from tripsage_core.config import Settings
 
@@ -261,10 +260,9 @@ def mock_settings_and_redis(monkeypatch):
         environment="testing",
         debug=True,
         database_url="https://test.supabase.co",
-        database_service_key=SecretStr("test_service_key"),
-        database_public_key=SecretStr("test_anon_key"),
-        openai_api_key=SecretStr("test_openai_key"),
-        _env_file=None,
+        database_service_key="test_service_key",
+        database_public_key="test_anon_key",
+        openai_api_key="test_openai_key",
     )
 
     # Mock Redis client

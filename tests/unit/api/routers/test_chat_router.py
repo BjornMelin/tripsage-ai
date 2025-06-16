@@ -14,7 +14,6 @@ import pytest
 from fastapi import status
 from httpx import ASGITransport, AsyncClient
 
-from tests.factories import ChatFactory
 from tripsage.api.core.dependencies import get_chat_service, require_principal
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
@@ -45,8 +44,22 @@ class TestChatRouter:
 
     @pytest.fixture
     def sample_chat_response(self):
-        """Sample chat response."""
-        return ChatFactory.create_response()
+        """Sample chat response matching ChatResponse schema."""
+        return {
+            "id": str(uuid4()),
+            "session_id": str(uuid4()),
+            "content": (
+                "I'd be happy to help you plan your trip! Where would you like to go?"
+            ),
+            "tool_calls": None,
+            "finish_reason": "stop",
+            "usage": {
+                "prompt_tokens": 50,
+                "completion_tokens": 25,
+                "total_tokens": 75,
+            },
+            "created_at": "2024-01-01T00:00:00Z",
+        }
 
     @pytest.fixture
     async def async_client(self, mock_principal, mock_chat_service):
@@ -68,12 +81,23 @@ class TestChatRouter:
     ):
         """Test successful chat interaction."""
         # Arrange
-        mock_chat_service.chat_completion.return_value = sample_chat_response
+        session_id = uuid4()
+        response_with_session = {
+            **sample_chat_response,
+            "session_id": str(session_id),
+        }
+        mock_chat_service.chat_completion.return_value = response_with_session
 
         chat_request = {
-            "message": "Help me plan a trip to Tokyo",
-            "session_id": "test-session-id",
-            "context": {"user_preferences": {"budget": "medium"}},
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Help me plan a trip to Tokyo",
+                }
+            ],
+            "session_id": str(session_id),
+            "stream": True,
+            "save_history": True,
         }
 
         # Act
@@ -86,19 +110,21 @@ class TestChatRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "response" in data
+        assert "content" in data
         assert "session_id" in data
-        assert data["session_id"] == "test-session-id"
+        assert data["session_id"] == str(session_id)
 
         # Verify service call
         mock_chat_service.chat_completion.assert_called_once()
         call_args = mock_chat_service.chat_completion.call_args
         assert call_args[0][0] == "test-user-id"  # user_id
 
-    async def test_chat_empty_message(self, async_client):
-        """Test chat with empty message."""
-        # Arrange
-        chat_request = {"message": "", "session_id": "test-session-id"}
+    async def test_chat_invalid_request(self, async_client):
+        """Test chat with invalid request format."""
+        # Arrange - missing required messages field
+        chat_request = {
+            "session_id": str(uuid4()),
+        }
 
         # Act
         response = await async_client.post(
@@ -118,8 +144,13 @@ class TestChatRouter:
         )
 
         chat_request = {
-            "message": "Help me plan a trip",
-            "session_id": "test-session-id",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Help me plan a trip",
+                }
+            ],
+            "session_id": str(uuid4()),
         }
 
         # Act
@@ -139,8 +170,13 @@ class TestChatRouter:
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             chat_request = {
-                "message": "Help me plan a trip",
-                "session_id": "test-session-id",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": "Help me plan a trip",
+                    }
+                ],
+                "session_id": str(uuid4()),
             }
 
             response = await client.post("/api/chat/", json=chat_request)
@@ -155,16 +191,23 @@ class TestChatRouter:
             **sample_chat_response,
             "tool_calls": [
                 {
-                    "function": "search_flights",
+                    "id": "call_123",
+                    "name": "search_flights",
                     "arguments": {"destination": "Tokyo", "date": "2024-03-15"},
+                    "status": "completed",
                 }
             ],
         }
         mock_chat_service.chat_completion.return_value = response_with_tools
 
         chat_request = {
-            "message": "Find flights to Tokyo for March 15th",
-            "session_id": "test-session-id",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Find flights to Tokyo for March 15th",
+                }
+            ],
+            "session_id": str(uuid4()),
         }
 
         # Act
@@ -179,14 +222,21 @@ class TestChatRouter:
         data = response.json()
         assert "tool_calls" in data
         assert len(data["tool_calls"]) == 1
-        assert data["tool_calls"][0]["function"] == "search_flights"
+        assert data["tool_calls"][0]["name"] == "search_flights"
 
-    @pytest.mark.parametrize("message_length", [5001, 10000])
+    @pytest.mark.parametrize(
+        "message_length", [40000, 50000]
+    )  # ChatMessage max_length is 32768
     async def test_chat_message_too_long(self, async_client, message_length):
         """Test chat with excessively long message."""
         chat_request = {
-            "message": "x" * message_length,
-            "session_id": "test-session-id",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "x" * message_length,
+                }
+            ],
+            "session_id": str(uuid4()),
         }
 
         response = await async_client.post(
@@ -201,20 +251,18 @@ class TestChatRouter:
         self, async_client, mock_chat_service, sample_chat_response
     ):
         """Test chat with memory context retrieval."""
-        # Arrange
-        response_with_memory = {
-            **sample_chat_response,
-            "memory_context": {
-                "previous_destinations": ["Paris", "London"],
-                "travel_preferences": {"budget": "luxury"},
-            },
-        }
-        mock_chat_service.chat_completion.return_value = response_with_memory
+        # Arrange - memory context would be handled by the chat service internally
+        mock_chat_service.chat_completion.return_value = sample_chat_response
 
         chat_request = {
-            "message": "What about another trip similar to my last one?",
-            "session_id": "test-session-id",
-            "use_memory": True,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "What about another trip similar to my last one?",
+                }
+            ],
+            "session_id": str(uuid4()),
+            "save_history": True,  # Enable memory/history
         }
 
         # Act
@@ -227,24 +275,24 @@ class TestChatRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "memory_context" in data
-        assert "previous_destinations" in data["memory_context"]
+        assert "content" in data
+        # Memory context is handled internally by the chat service
 
     async def test_chat_streaming_response(
         self, async_client, mock_chat_service, sample_chat_response
     ):
         """Test chat with streaming response."""
         # Arrange
-        streaming_response = {
-            **sample_chat_response,
-            "streaming": True,
-            "stream_id": "stream-123",
-        }
-        mock_chat_service.chat_completion.return_value = streaming_response
+        mock_chat_service.chat_completion.return_value = sample_chat_response
 
         chat_request = {
-            "message": "Plan a detailed itinerary for Tokyo",
-            "session_id": "test-session-id",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Plan a detailed itinerary for Tokyo",
+                }
+            ],
+            "session_id": str(uuid4()),
             "stream": True,
         }
 
@@ -258,8 +306,8 @@ class TestChatRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["streaming"] is True
-        assert "stream_id" in data
+        assert "content" in data
+        # Streaming is handled by the chat service response format
 
     # Session Management Tests
     async def test_create_session_success(self, async_client, mock_chat_service):

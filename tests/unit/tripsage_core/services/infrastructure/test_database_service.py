@@ -32,14 +32,13 @@ class TestDatabaseService:
     def mock_settings(self):
         """Create mock settings."""
         settings = Mock(spec=Settings)
-        settings.database = Mock()
-        settings.database.supabase_url = "https://test.supabase.co"
-        settings.database.supabase_anon_key = Mock(
+        settings.database_url = "https://test.supabase.co"
+        settings.database_public_key = Mock(
             get_secret_value=Mock(return_value="test_key_1234567890123456789012")
         )
-        settings.database.supabase_auto_refresh_token = True
-        settings.database.supabase_persist_session = True
-        settings.database.supabase_timeout = 10
+        settings.database_auto_refresh_token = True
+        settings.database_persist_session = True
+        settings.database_timeout = 10
         return settings
 
     @pytest.fixture

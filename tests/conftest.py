@@ -7,7 +7,7 @@ Updated for Pydantic v2 and modern pytest patterns (2025).
 import os
 from datetime import datetime, timezone
 from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -16,6 +16,27 @@ from pydantic import SecretStr
 
 # Configure pytest-asyncio - updated for pytest-asyncio 1.0
 # No longer need event_loop fixture with pytest-asyncio 1.0
+
+# Global mock for cache service to prevent Redis connection errors in tests
+@pytest.fixture(scope="session", autouse=True)
+def mock_cache_globally():
+    """Mock cache service globally to prevent Redis connection issues."""
+    mock_cache = AsyncMock()
+    mock_cache.get = AsyncMock(return_value=None)
+    mock_cache.set = AsyncMock(return_value=True)
+    mock_cache.delete = AsyncMock(return_value=True)
+    mock_cache.exists = AsyncMock(return_value=False)
+    mock_cache.connect = AsyncMock()
+    mock_cache.disconnect = AsyncMock()
+    mock_cache.ping = AsyncMock(return_value=True)
+    mock_cache.health_check = AsyncMock(return_value=True)
+    mock_cache.is_connected = True
+    mock_cache._connected = True
+    
+    # Patch the service getter AND the CacheService class itself
+    with patch('tripsage_core.services.infrastructure.cache_service.get_cache_service', return_value=mock_cache), \
+         patch('tripsage_core.services.infrastructure.cache_service.CacheService', return_value=mock_cache):
+        yield mock_cache
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -27,6 +48,8 @@ def setup_test_environment():
         "DATABASE_URL": "https://test.supabase.com",
         "DATABASE_PUBLIC_KEY": "test-public-key",
         "DATABASE_SERVICE_KEY": "test-service-key",
+        "DATABASE_JWT_SECRET": "test-jwt-secret-for-testing-only",
+        "SECRET_KEY": "test-application-secret-key-for-testing-only",
         "REDIS_URL": "redis://localhost:6379/1",
         "REDIS_PASSWORD": "test-password",
         "OPENAI_API_KEY": "sk-test-1234567890",
@@ -62,6 +85,8 @@ def mock_settings():
     settings.database_url = "https://test.supabase.com"
     settings.database_public_key = SecretStr("test-public-key")
     settings.database_service_key = SecretStr("test-service-key")
+    settings.database_jwt_secret = SecretStr("test-jwt-secret-for-testing-only")
+    settings.secret_key = SecretStr("test-application-secret-key-for-testing-only")
     settings.redis_url = "redis://localhost:6379/1"
     settings.redis_password = "test-password"
     settings.redis_max_connections = 50

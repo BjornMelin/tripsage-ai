@@ -52,6 +52,12 @@ class CacheService:
         if self._is_connected:
             return
 
+        # Skip connection if redis_url is None (testing/disabled mode)
+        if self.settings.redis_url is None:
+            logger.info("Redis URL not configured, cache service will operate in disabled mode")
+            self._is_connected = False
+            return
+
         try:
             # Get DragonflyDB URL from settings
             redis_url = self.settings.redis_url
@@ -152,6 +158,10 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
+        
+        # Return success in disabled mode
+        if not self.is_connected:
+            return True
 
         try:
             # Use default TTL if not specified (flat config)
@@ -181,6 +191,10 @@ class CacheService:
             Deserialized value or default
         """
         await self.ensure_connected()
+        
+        # Return default in disabled mode
+        if not self.is_connected:
+            return default
 
         try:
             value = await self._client.get(key)
@@ -213,6 +227,10 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
+        
+        # Return success in disabled mode
+        if not self.is_connected:
+            return True
 
         try:
             if ttl is None:
@@ -238,6 +256,10 @@ class CacheService:
             The value as string or None if not found
         """
         await self.ensure_connected()
+        
+        # Return None in disabled mode
+        if not self.is_connected:
+            return None
 
         try:
             value = await self._client.get(key)
@@ -263,6 +285,10 @@ class CacheService:
             Number of keys deleted
         """
         await self.ensure_connected()
+        
+        # Return length of keys in disabled mode (simulate successful deletion)
+        if not self.is_connected:
+            return len(keys)
 
         try:
             return await self._client.delete(*keys)
@@ -285,6 +311,10 @@ class CacheService:
             Number of existing keys
         """
         await self.ensure_connected()
+        
+        # Return 0 in disabled mode (no keys exist)
+        if not self.is_connected:
+            return 0
 
         try:
             return await self._client.exists(*keys)
@@ -308,6 +338,10 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
+        
+        # Return True in disabled mode (simulate success)
+        if not self.is_connected:
+            return True
 
         try:
             return await self._client.expire(key, seconds)
@@ -330,6 +364,10 @@ class CacheService:
             TTL in seconds, -1 if no expiration, -2 if key doesn't exist
         """
         await self.ensure_connected()
+        
+        # Return -2 in disabled mode (key doesn't exist)
+        if not self.is_connected:
+            return -2
 
         try:
             return await self._client.ttl(key)
@@ -349,6 +387,10 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
+        
+        # Return None in disabled mode (operation not available)
+        if not self.is_connected:
+            return None
 
         try:
             return await self._client.incr(key)
@@ -366,6 +408,10 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
+        
+        # Return None in disabled mode (operation not available)
+        if not self.is_connected:
+            return None
 
         try:
             return await self._client.decr(key)
@@ -402,6 +448,10 @@ class CacheService:
             List of values (None for missing keys)
         """
         await self.ensure_connected()
+        
+        # Return list of None values in disabled mode
+        if not self.is_connected:
+            return [None] * len(keys)
 
         try:
             values = await self._client.mget(keys)
@@ -425,6 +475,10 @@ class CacheService:
             True if successful
         """
         await self.ensure_connected()
+        
+        # Return True in disabled mode (simulate success)
+        if not self.is_connected:
+            return True
 
         try:
             return await self._client.mset(mapping)
@@ -449,6 +503,10 @@ class CacheService:
             List of matching keys
         """
         await self.ensure_connected()
+        
+        # Return empty list in disabled mode
+        if not self.is_connected:
+            return []
 
         try:
             keys = await self._client.keys(pattern)
@@ -524,6 +582,11 @@ class CacheService:
         """
         try:
             await self.ensure_connected()
+            
+            # Return False in disabled mode (not healthy)
+            if not self.is_connected:
+                return False
+                
             return await self._client.ping()
         except Exception as e:
             logger.error(f"Cache health check failed: {e}")
