@@ -14,8 +14,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from pydantic import Field, field_validator
 
+from tripsage_core.config import get_settings
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
 )
@@ -743,8 +746,7 @@ class ChatService:
             Chat response with AI assistant message
         """
         try:
-            # For now, return a mock response
-            # TODO: Implement actual AI chat completion logic
+            # Generate or use existing session ID
             session_id = str(request.session_id) if request.session_id else str(uuid4())
 
             logger.info(
@@ -756,20 +758,98 @@ class ChatService:
                 },
             )
 
-            # Mock AI response - replace with actual AI integration
+            # Initialize ChatOpenAI with settings
+            settings = get_settings()
+            model_name = getattr(request, "model", "gpt-4")
+            temperature = getattr(request, "temperature", 0.7)
+            max_tokens = getattr(request, "max_tokens", 4096)
+
+            llm = ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=settings.openai_api_key.get_secret_value(),
+            )
+
+            # Convert request messages to LangChain format
+            langchain_messages = []
+
+            # Add system message for travel assistant context
+            system_prompt = (
+                "You are TripSage AI, an expert travel planning assistant. "
+                "You help users plan trips, find flights and accommodations, "
+                "create itineraries, and provide destination recommendations. "
+                "Be helpful, informative, and personalized in your responses."
+            )
+            langchain_messages.append(SystemMessage(content=system_prompt))
+
+            # Process user messages
+            for msg in request.messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+
+                if role == "user":
+                    langchain_messages.append(HumanMessage(content=content))
+                elif role == "assistant":
+                    langchain_messages.append(AIMessage(content=content))
+                elif role == "system":
+                    langchain_messages.append(SystemMessage(content=content))
+
+            # Get AI response
+            response = await llm.ainvoke(langchain_messages)
+
+            # Extract token usage information
+            usage_metadata = getattr(response, "response_metadata", {})
+            token_usage = usage_metadata.get("token_usage", {})
+            finish_reason = usage_metadata.get("finish_reason", "stop")
+
+            # Store the conversation in the session if we have a session ID
+            if session_id and hasattr(self, "db"):
+                try:
+                    # Create session if it doesn't exist
+                    session = await self._get_session_internal(session_id, user_id)
+                    if not session:
+                        session_data = ChatSessionCreateRequest(
+                            title="Chat with TripSage AI",
+                            metadata={"model": model_name},
+                        )
+                        await self.create_session(user_id, session_data)
+
+                    # Add user message to session
+                    if request.messages:
+                        last_user_msg = request.messages[-1]
+                        if last_user_msg.get("role") == "user":
+                            user_msg_data = MessageCreateRequest(
+                                role="user",
+                                content=last_user_msg.get("content", ""),
+                            )
+                            await self.add_message(session_id, user_id, user_msg_data)
+
+                    # Add AI response to session
+                    ai_msg_data = MessageCreateRequest(
+                        role="assistant",
+                        content=response.content,
+                        metadata={"model": model_name, "usage": token_usage},
+                    )
+                    await self.add_message(session_id, user_id, ai_msg_data)
+
+                except Exception as e:
+                    logger.warning(
+                        "Failed to store chat in session",
+                        extra={"session_id": session_id, "error": str(e)},
+                    )
+
+            # Return formatted response
             return {
-                "content": (
-                    "I can help you plan your trip! What destinations "
-                    "are you interested in?"
-                ),
+                "content": response.content,
                 "session_id": session_id,
-                "model": "gpt-4",
+                "model": model_name,
                 "usage": {
-                    "prompt_tokens": 10,
-                    "completion_tokens": 20,
-                    "total_tokens": 30,
+                    "prompt_tokens": token_usage.get("prompt_tokens", 0),
+                    "completion_tokens": token_usage.get("completion_tokens", 0),
+                    "total_tokens": token_usage.get("total_tokens", 0),
                 },
-                "finish_reason": "stop",
+                "finish_reason": finish_reason,
             }
 
         except Exception as e:

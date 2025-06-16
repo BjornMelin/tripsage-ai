@@ -1,516 +1,307 @@
-"""
-Simplified, reliable test configuration for TripSage.
+"""Root test configuration for TripSage test suite.
 
-This conftest provides a clean, minimal test setup that:
-1. Uses environment variables exclusively
-2. Avoids import-time configuration instantiation
-3. Provides simple, effective mocking
-4. Works seamlessly with Pydantic v2
-5. Eliminates validation errors
+This module provides shared fixtures and configuration for all tests.
+Updated for Pydantic v2 and modern pytest patterns (2025).
 """
 
-import asyncio
-import sys
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+import os
+from datetime import datetime, timezone
+from typing import Any, Dict
+from unittest.mock import AsyncMock, MagicMock, Mock
+from uuid import uuid4
 
 import pytest
+import pytest_asyncio
+from pydantic import SecretStr
 
-# Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Import our clean test configuration
-from tests.test_config import (
-    MockCacheService,
-    MockDatabaseService,
-    create_mock_api_settings,
-    create_test_settings,
-    setup_test_environment,
-)
-
-# Set up test environment immediately on import
-setup_test_environment()
-
-# Import test factories
-from tests.factories import (
-    AccommodationFactory,
-    APIKeyFactory,
-    ChatFactory,
-    DestinationFactory,
-    FlightFactory,
-    ItineraryFactory,
-    MemoryFactory,
-    TripFactory,
-    UserFactory,
-    WebSocketFactory,
-)
+# Configure pytest-asyncio - updated for pytest-asyncio 1.0
+# No longer need event_loop fixture with pytest-asyncio 1.0
 
 
-@pytest.fixture
-def event_loop():
-    """Create event loop for async tests."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """Set up test environment variables."""
+    test_env = {
+        "ENVIRONMENT": "testing",
+        "DEBUG": "True",
+        "DATABASE_URL": "https://test.supabase.com",
+        "DATABASE_PUBLIC_KEY": "test-public-key",
+        "DATABASE_SERVICE_KEY": "test-service-key",
+        "REDIS_URL": "redis://localhost:6379/1",
+        "REDIS_PASSWORD": "test-password",
+        "OPENAI_API_KEY": "sk-test-1234567890",
+        "WEATHER_API_KEY": "test-weather-key",
+        "GOOGLE_MAPS_API_KEY": "test-maps-key",
+        "DUFFEL_API_KEY": "test-duffel-key",
+    }
+
+    # Save original environment
+    original_env = {}
+    for key, value in test_env.items():
+        original_env[key] = os.environ.get(key)
+        os.environ[key] = value
+
+    yield
+
+    # Restore original environment
+    for key, original_value in original_env.items():
+        if original_value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = original_value
 
 
 @pytest.fixture
 def mock_settings():
-    """Provide clean test settings."""
-    return create_test_settings()
+    """Create mock settings for testing."""
+    from tripsage_core.config import Settings
+
+    settings = MagicMock(spec=Settings)
+    settings.environment = "testing"
+    settings.debug = True
+    settings.database_url = "https://test.supabase.com"
+    settings.database_public_key = SecretStr("test-public-key")
+    settings.database_service_key = SecretStr("test-service-key")
+    settings.redis_url = "redis://localhost:6379/1"
+    settings.redis_password = "test-password"
+    settings.redis_max_connections = 50
+    settings.openai_api_key = SecretStr("sk-test-1234567890")
+    settings.openai_model = "gpt-4"
+    settings.weather_api_key = SecretStr("test-weather-key")
+    settings.google_maps_api_key = SecretStr("test-maps-key")
+    settings.duffel_api_key = SecretStr("test-duffel-key")
+    settings.rate_limit_requests = 100
+    settings.rate_limit_window = 60
+
+    # Add commonly used methods
+    settings.validate_critical_settings = MagicMock()
+
+    return settings
 
 
 @pytest.fixture
-def mock_api_settings():
-    """Provide mock API settings for API tests."""
-    return create_mock_api_settings()
+def mock_database_service():
+    """Create mock database service."""
+    db_service = AsyncMock()
 
+    # Common database operations
+    db_service.fetch_one = AsyncMock(return_value=None)
+    db_service.fetch_all = AsyncMock(return_value=[])
+    db_service.execute = AsyncMock(return_value=None)
+    db_service.execute_many = AsyncMock(return_value=None)
 
-# Sample data fixtures using factories
-@pytest.fixture
-def sample_user():
-    """Sample user data."""
-    return UserFactory.create()
+    # Transaction support
+    db_service.begin = AsyncMock()
+    db_service.commit = AsyncMock()
+    db_service.rollback = AsyncMock()
 
-
-@pytest.fixture
-def sample_trip():
-    """Sample trip data."""
-    return TripFactory.create()
-
-
-@pytest.fixture
-def sample_accommodation():
-    """Sample accommodation data."""
-    return AccommodationFactory.create()
+    return db_service
 
 
 @pytest.fixture
-def sample_flight():
-    """Sample flight data."""
-    return FlightFactory.create()
+def mock_cache_service():
+    """Create mock cache service."""
+    cache_service = AsyncMock()
+
+    # Common cache operations
+    cache_service.get = AsyncMock(return_value=None)
+    cache_service.set = AsyncMock(return_value=True)
+    cache_service.delete = AsyncMock(return_value=True)
+    cache_service.exists = AsyncMock(return_value=False)
+    cache_service.expire = AsyncMock(return_value=True)
+    cache_service.ttl = AsyncMock(return_value=-1)
+
+    # Connection state
+    cache_service.is_connected = True
+    cache_service.connect = AsyncMock()
+    cache_service.disconnect = AsyncMock()
+
+    return cache_service
 
 
 @pytest.fixture
-def sample_chat_message():
-    """Sample chat message."""
-    return ChatFactory.create_message()
+def sample_user_id() -> str:
+    """Generate a sample user ID."""
+    return str(uuid4())
 
 
 @pytest.fixture
-def sample_api_key():
-    """Sample API key data."""
-    return APIKeyFactory.create()
+def sample_trip_id() -> str:
+    """Generate a sample trip ID."""
+    return str(uuid4())
 
 
 @pytest.fixture
-def sample_destination():
-    """Sample destination data."""
-    return DestinationFactory.create()
+def sample_timestamp() -> datetime:
+    """Generate a sample timestamp."""
+    return datetime.now(timezone.utc)
 
 
 @pytest.fixture
-def sample_itinerary():
-    """Sample itinerary data."""
-    return ItineraryFactory.create()
+def sample_user_data(sample_user_id: str) -> Dict[str, Any]:
+    """Create sample user data."""
+    return {
+        "id": sample_user_id,
+        "email": "test@example.com",
+        "username": "testuser",
+        "full_name": "Test User",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "is_active": True,
+        "is_verified": True,
+    }
 
 
 @pytest.fixture
-def sample_memory():
-    """Sample memory data."""
-    return MemoryFactory.create_conversation_result()
+def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> Dict[str, Any]:
+    """Create sample trip data."""
+    return {
+        "id": sample_trip_id,
+        "user_id": sample_user_id,
+        "name": "Test Trip to Paris",
+        "description": "A wonderful trip to the City of Light",
+        "start_date": "2025-07-01",
+        "end_date": "2025-07-10",
+        "destination": "Paris, France",
+        "status": "planning",
+        "budget": 5000.00,
+        "currency": "USD",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
 
 
-@pytest.fixture
-def sample_websocket_message():
-    """Sample WebSocket message."""
-    return WebSocketFactory.create_chat_message()
-
-
-# Service mocks
-@pytest.fixture
-def mock_mcp_manager():
-    """Mock MCP manager for testing."""
-    manager = MagicMock()
-    manager.invoke = AsyncMock(return_value={"success": True, "data": {}})
-    manager.initialize = AsyncMock()
-    manager.initialize_all_enabled = AsyncMock()
-    manager.get_available_mcps = Mock(return_value=[])
-    manager.get_initialized_mcps = Mock(return_value=[])
-    manager.shutdown = AsyncMock()
-    return manager
-
-
-@pytest.fixture
-def mock_memory_service():
-    """Mock memory service."""
-    service = MagicMock()
-    service.add_memory = AsyncMock(return_value={"memory_id": "test-memory-id"})
-    service.get_memories = AsyncMock(return_value=[])
-    service.search_memories = AsyncMock(return_value=[])
-    service.delete_memory = AsyncMock(return_value=True)
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_auth_service():
-    """Mock authentication service."""
-    service = MagicMock()
-    service.verify_token = AsyncMock(
-        return_value={"user_id": "test-user", "email": "test@example.com"}
-    )
-    service.create_access_token = Mock(return_value="test-token")
-    service.hash_password = Mock(return_value="hashed-password")
-    service.verify_password = Mock(return_value=True)
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_chat_service():
-    """Mock chat service."""
-    service = MagicMock()
-    service.process_message = AsyncMock(
-        return_value={
-            "response": "Test response",
-            "session_id": "test-session",
-            "status": "completed",
-        }
-    )
-    service.get_conversation = AsyncMock(return_value=[])
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_trip_service():
-    """Mock trip service."""
-    service = MagicMock()
-    service.create_trip = AsyncMock(return_value=TripFactory.create())
-    service.get_trip = AsyncMock(return_value=TripFactory.create())
-    service.list_trips = AsyncMock(return_value=[])
-    service.update_trip = AsyncMock(return_value=TripFactory.create())
-    service.delete_trip = AsyncMock(return_value=True)
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_flight_service():
-    """Mock flight service."""
-    service = MagicMock()
-    service.search_flights = AsyncMock(return_value={"flights": [], "total": 0})
-    service.get_flight_details = AsyncMock(return_value=FlightFactory.create())
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_accommodation_service():
-    """Mock accommodation service."""
-    service = MagicMock()
-    service.search_accommodations = AsyncMock(
-        return_value={"accommodations": [], "total": 0}
-    )
-    service.get_accommodation_details = AsyncMock(
-        return_value=AccommodationFactory.create()
-    )
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_destination_service():
-    """Mock destination service."""
-    service = MagicMock()
-    service.search_destinations = AsyncMock(
-        return_value={"destinations": [], "total": 0}
-    )
-    service.get_destination_details = AsyncMock(
-        return_value=DestinationFactory.create()
-    )
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_itinerary_service():
-    """Mock itinerary service."""
-    service = MagicMock()
-    service.create_itinerary = AsyncMock(return_value=ItineraryFactory.create())
-    service.get_itinerary = AsyncMock(return_value=ItineraryFactory.create())
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-@pytest.fixture
-def mock_key_management_service():
-    """Mock key management service."""
-    service = MagicMock()
-    service.store_api_key = AsyncMock(return_value=APIKeyFactory.create())
-    service.get_api_keys = AsyncMock(return_value=[])
-    service.delete_api_key = AsyncMock(return_value=True)
-    service.health_check = AsyncMock(return_value=True)
-    return service
-
-
-# WebSocket mocks
-@pytest.fixture
-def mock_websocket():
-    """Mock WebSocket connection."""
-    websocket = MagicMock()
-    websocket.send_text = AsyncMock()
-    websocket.send_json = AsyncMock()
-    websocket.receive_text = AsyncMock(return_value='{"type": "heartbeat"}')
-    websocket.receive_json = AsyncMock(return_value={"type": "heartbeat"})
-    websocket.close = AsyncMock()
-    return websocket
-
-
-@pytest.fixture
-def mock_websocket_manager():
-    """Mock WebSocket manager."""
-    manager = MagicMock()
-    manager.connect = AsyncMock()
-    manager.disconnect = AsyncMock()
-    manager.send_message = AsyncMock()
-    manager.broadcast = AsyncMock()
-    manager.get_active_connections = Mock(return_value=[])
-    manager.health_check = AsyncMock(return_value=True)
-    return manager
-
-
-# HTTP client mocks
-@pytest.fixture
-def mock_httpx_client():
-    """Mock HTTPX client."""
+@pytest_asyncio.fixture
+async def mock_supabase_client():
+    """Create mock Supabase client."""
     client = AsyncMock()
 
-    # Mock response
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"success": True, "data": {}}
-    mock_response.text = "mock response"
+    # Table operations
+    table_mock = AsyncMock()
+    table_mock.select = AsyncMock(return_value=table_mock)
+    table_mock.insert = AsyncMock(return_value=table_mock)
+    table_mock.update = AsyncMock(return_value=table_mock)
+    table_mock.delete = AsyncMock(return_value=table_mock)
+    table_mock.eq = AsyncMock(return_value=table_mock)
+    table_mock.neq = AsyncMock(return_value=table_mock)
+    table_mock.gt = AsyncMock(return_value=table_mock)
+    table_mock.gte = AsyncMock(return_value=table_mock)
+    table_mock.lt = AsyncMock(return_value=table_mock)
+    table_mock.lte = AsyncMock(return_value=table_mock)
+    table_mock.like = AsyncMock(return_value=table_mock)
+    table_mock.ilike = AsyncMock(return_value=table_mock)
+    table_mock.is_ = AsyncMock(return_value=table_mock)
+    table_mock.in_ = AsyncMock(return_value=table_mock)
+    table_mock.order = AsyncMock(return_value=table_mock)
+    table_mock.limit = AsyncMock(return_value=table_mock)
+    table_mock.single = AsyncMock(return_value=table_mock)
+    table_mock.execute = AsyncMock(return_value=Mock(data=[], count=0))
 
-    client.request = AsyncMock(return_value=mock_response)
-    client.get = AsyncMock(return_value=mock_response)
-    client.post = AsyncMock(return_value=mock_response)
-    client.put = AsyncMock(return_value=mock_response)
-    client.delete = AsyncMock(return_value=mock_response)
-    client.aclose = AsyncMock()
+    client.table = AsyncMock(return_value=table_mock)
+
+    # Auth operations
+    auth_mock = AsyncMock()
+    auth_mock.sign_up = AsyncMock()
+    auth_mock.sign_in_with_password = AsyncMock()
+    auth_mock.sign_out = AsyncMock()
+    auth_mock.get_user = AsyncMock()
+    auth_mock.update_user = AsyncMock()
+
+    client.auth = auth_mock
+
+    # Storage operations
+    storage_mock = AsyncMock()
+    bucket_mock = AsyncMock()
+    bucket_mock.upload = AsyncMock()
+    bucket_mock.download = AsyncMock()
+    bucket_mock.remove = AsyncMock()
+    bucket_mock.list = AsyncMock(return_value=[])
+    bucket_mock.get_public_url = Mock(
+        return_value="https://test.supabase.com/storage/v1/object/public/test/file.jpg"
+    )
+
+    storage_mock.from_ = Mock(return_value=bucket_mock)
+    client.storage = storage_mock
 
     return client
 
 
-# Database fixtures
 @pytest.fixture
-def mock_database_session():
-    """Mock database session."""
-    session = MagicMock()
-    session.add = Mock()
-    session.commit = AsyncMock()
-    session.rollback = AsyncMock()
-    session.close = AsyncMock()
-    session.execute = AsyncMock()
-    session.scalar = AsyncMock()
-    return session
+def mock_openai_client():
+    """Create mock OpenAI client."""
+    client = AsyncMock()
 
+    # Chat completions
+    chat_mock = AsyncMock()
+    completions_mock = AsyncMock()
 
-# Utility fixtures
-@pytest.fixture
-def mock_successful_response():
-    """Mock successful API response."""
-    return {
-        "success": True,
-        "data": {"message": "Operation successful"},
-        "status_code": 200,
-    }
+    # Create a mock response
+    response_mock = Mock()
+    response_mock.choices = [
+        Mock(message=Mock(content="Test AI response"), finish_reason="stop")
+    ]
+    response_mock.usage = Mock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
+    completions_mock.create = AsyncMock(return_value=response_mock)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
 
-@pytest.fixture
-def mock_error_response():
-    """Mock error API response."""
-    return {"success": False, "error": "Test error", "status_code": 400}
+    # Embeddings
+    embeddings_mock = AsyncMock()
+    embedding_response = Mock()
+    embedding_response.data = [Mock(embedding=[0.1] * 1536)]
+    embeddings_mock.create = AsyncMock(return_value=embedding_response)
+    client.embeddings = embeddings_mock
 
-
-# Test client fixtures for FastAPI
-@pytest.fixture
-def test_client():
-    """Create FastAPI test client with mocked dependencies."""
-    from fastapi.testclient import TestClient
-
-    # Import the app with all dependencies mocked
-    with (
-        patch(
-            "tripsage_core.config.base_app_settings.get_settings",
-            side_effect=lambda: create_test_settings(),
-        ),
-        patch(
-            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
-            return_value=MockCacheService(),
-        ),
-        patch(
-            "tripsage_core.services.infrastructure.database_service.get_database_service",
-            return_value=MockDatabaseService(),
-        ),
-        patch("supabase.create_client", return_value=MagicMock()),
-    ):
-        from tripsage.api.main import app
-
-        with TestClient(app) as client:
-            yield client
+    return client
 
 
 @pytest.fixture
-async def async_test_client():
-    """Create async test client."""
-    from httpx import AsyncClient
+def mock_service_registry():
+    """Create mock service registry."""
+    from tripsage.agents.service_registry import ServiceRegistry
 
-    # For async testing, create a simple client
-    # Full app integration should use the sync test_client above
-    async with AsyncClient(base_url="http://testserver") as client:
-        yield client
+    registry = ServiceRegistry()
 
+    # Add commonly used services
+    registry.register("database", AsyncMock())
+    registry.register("cache", AsyncMock())
+    registry.register("openai", AsyncMock())
+    registry.register("memory", AsyncMock())
+    registry.register("websocket", AsyncMock())
 
-# Validation test helpers
-class ValidationTestHelper:
-    """Helper class for testing Pydantic model validation."""
-
-    @staticmethod
-    def assert_validation_error(model_class, data, field_name, error_message_part):
-        """Assert that creating a model with invalid data raises ValidationError."""
-        from pydantic import ValidationError
-
-        with pytest.raises(ValidationError) as exc_info:
-            model_class(**data)
-
-        errors = exc_info.value.errors()
-        field_errors = [e for e in errors if e["loc"][0] == field_name]
-        assert len(field_errors) > 0, (
-            f"No validation error found for field '{field_name}'"
-        )
-        actual_msg = field_errors[0]["msg"]
-        assert error_message_part in str(actual_msg), (
-            f"Expected error message containing '{error_message_part}' "
-            f"but got '{actual_msg}'"
-        )
-
-    @staticmethod
-    def assert_field_valid(model_class, data, field_name, valid_value):
-        """Assert that a field accepts a valid value."""
-        test_data = data.copy()
-        test_data[field_name] = valid_value
-        instance = model_class(**test_data)
-        assert getattr(instance, field_name) == valid_value
+    return registry
 
 
-@pytest.fixture
-def validation_helper():
-    """Fixture providing validation test utilities."""
-    return ValidationTestHelper()
+# Markers for test categorization
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line("markers", "unit: Unit tests")
+    config.addinivalue_line("markers", "integration: Integration tests")
+    config.addinivalue_line("markers", "e2e: End-to-end tests")
+    config.addinivalue_line("markers", "slow: Slow running tests")
+    config.addinivalue_line("markers", "external: Tests requiring external services")
+    config.addinivalue_line("markers", "asyncio: Async tests")
 
 
-# Serialization test helpers
-class SerializationTestHelper:
-    """Helper class for testing model serialization."""
-
-    @staticmethod
-    def test_json_round_trip(model_instance):
-        """Test that a model can be serialized to JSON and back."""
-        json_str = model_instance.model_dump_json()
-        reconstructed = model_instance.__class__.model_validate_json(json_str)
-        return reconstructed
-
-    @staticmethod
-    def test_dict_round_trip(model_instance):
-        """Test that a model can be converted to dict and back."""
-        data_dict = model_instance.model_dump()
-        reconstructed = model_instance.__class__.model_validate(data_dict)
-        return reconstructed
+# Skip slow tests by default
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection based on markers."""
+    if not config.getoption("--run-slow"):
+        skip_slow = pytest.mark.skip(reason="need --run-slow option to run")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
 
 
-@pytest.fixture
-def serialization_helper():
-    """Fixture providing serialization test utilities."""
-    return SerializationTestHelper()
-
-
-# Edge case testing data
-@pytest.fixture
-def edge_case_data():
-    """Edge case data for testing boundary conditions."""
-    from datetime import date, timedelta
-
-    today = date.today()
-    return {
-        "min_price": 0.01,
-        "max_price": 99999.99,
-        "min_rating": 0.0,
-        "max_rating": 5.0,
-        "past_date": today - timedelta(days=365),
-        "far_future_date": today + timedelta(days=365 * 5),
-        "empty_string": "",
-        "very_long_string": "x" * 1000,
-        "unicode_string": "🏨🌟✈️🏝️",
-    }
-
-
-# Parametrized test data
-@pytest.fixture
-def accommodation_types():
-    """All accommodation types for parametrized testing."""
-    from tripsage_core.models.schemas_common.enums import AccommodationType
-
-    return list(AccommodationType)
-
-
-@pytest.fixture
-def booking_statuses():
-    """All booking statuses for parametrized testing."""
-    from tripsage_core.models.schemas_common.enums import BookingStatus
-
-    return list(BookingStatus)
-
-
-@pytest.fixture
-def cancellation_policies():
-    """All cancellation policies for parametrized testing."""
-    from tripsage_core.models.schemas_common.enums import CancellationPolicy
-
-    return list(CancellationPolicy)
-
-
-# Performance testing fixtures
-@pytest.fixture
-def performance_timer():
-    """Timer for performance testing."""
-    import time
-
-    class Timer:
-        def __init__(self):
-            self.start_time = None
-            self.end_time = None
-
-        def start(self):
-            self.start_time = time.time()
-
-        def stop(self):
-            self.end_time = time.time()
-
-        @property
-        def elapsed(self):
-            if self.start_time and self.end_time:
-                return self.end_time - self.start_time
-            return 0
-
-    return Timer()
-
-
-# Cleanup
-@pytest.fixture(autouse=True)
-def cleanup_after_test():
-    """Clean up after each test."""
-    yield
-    # Any cleanup logic can go here
+def pytest_addoption(parser):
+    """Add custom command line options."""
+    parser.addoption(
+        "--run-slow", action="store_true", default=False, help="run slow tests"
+    )
+    parser.addoption(
+        "--run-external",
+        action="store_true",
+        default=False,
+        help="run tests requiring external services",
+    )

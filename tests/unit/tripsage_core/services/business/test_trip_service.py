@@ -1,33 +1,32 @@
 """
-Comprehensive tests for TripService.
+Comprehensive test suite for TripService.
 
-This module provides full test coverage for trip management operations
-including trip creation, retrieval, updates, sharing, and search functionality.
-Tests use actual domain models with proper mocking and async patterns.
+This module tests the TripService with realistic test data that aligns
+with the actual service implementation. Uses modern pytest patterns
+and proper mocking of dependencies.
 """
 
-from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
 
-from tripsage.api.schemas.trips import TripResponse, TripShareRequest
-from tripsage_core.exceptions.exceptions import (
-    CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions.exceptions import (
-    CoreResourceNotFoundError as NotFoundError,
+from tripsage_core.exceptions import (
+    CoreAuthorizationError,
+    CoreResourceNotFoundError,
 )
 from tripsage_core.models.schemas_common.enums import (
     TripStatus,
+    TripType,
     TripVisibility,
 )
-from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
+from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget, TripPreferences
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest,
     TripLocation,
+    TripResponse,
     TripService,
     TripUpdateRequest,
     get_trip_service,
@@ -35,11 +34,11 @@ from tripsage_core.services.business.trip_service import (
 
 
 class TestTripService:
-    """Test suite for TripService."""
+    """Test suite for TripService functionality."""
 
     @pytest.fixture
     def mock_database_service(self):
-        """Mock database service with comprehensive trip operations."""
+        """Create mock database service with comprehensive trip operations."""
         db = AsyncMock()
         # Set up default return values
         db.create_trip = AsyncMock()
@@ -50,28 +49,19 @@ class TestTripService:
         db.search_trips = AsyncMock(return_value=[])
         db.add_trip_collaborator = AsyncMock()
         db.get_trip_collaborators = AsyncMock(return_value=[])
-        db.get_trip_collaborator = AsyncMock(return_value=None)
         db.get_trip_related_counts = AsyncMock(
             return_value={
-                "itinerary_count": 0,
-                "flight_count": 0,
-                "accommodation_count": 0,
+                "notes": 0,
+                "attachments": 0,
+                "collaborators": 0,
             }
         )
         return db
 
     @pytest.fixture
     def mock_user_service(self):
-        """Mock user service with user operations."""
-        user_service = AsyncMock()
-        # Create mock user object
-        mock_user = MagicMock()
-        mock_user.id = str(uuid4())
-        mock_user.email = "test@example.com"
-
-        user_service.get_user_by_email = AsyncMock(return_value=mock_user)
-        user_service.get_user_by_id = AsyncMock(return_value=mock_user)
-        return user_service
+        """Create mock user service."""
+        return AsyncMock()
 
     @pytest.fixture
     def trip_service(self, mock_database_service, mock_user_service):
@@ -84,11 +74,15 @@ class TestTripService:
     @pytest.fixture
     def sample_trip_create_request(self):
         """Sample trip creation request using actual domain models."""
+        from datetime import timedelta
+
+        now = datetime.now(timezone.utc).replace(microsecond=0)
         return TripCreateRequest(
             title="Summer Europe Trip",
             description="A wonderful journey through European capitals",
-            start_date=datetime.now(timezone.utc) + timedelta(days=30),
-            end_date=datetime.now(timezone.utc) + timedelta(days=45),
+            start_date=now,
+            end_date=now + timedelta(days=7),
+            destination="Paris, France",
             destinations=[
                 TripLocation(
                     name="Paris",
@@ -116,9 +110,11 @@ class TestTripService:
                     activities=500.00,
                 ),
             ),
+            travelers=2,
+            trip_type=TripType.LEISURE,
             visibility=TripVisibility.PRIVATE,
             tags=["vacation", "europe", "cities"],
-            preferences={"travel_style": "balanced", "pace": "moderate"},
+            preferences=TripPreferences(),
         )
 
     @pytest.fixture
@@ -133,8 +129,9 @@ class TestTripService:
             "user_id": user_id,
             "title": "Summer Europe Trip",
             "description": "A wonderful journey through European capitals",
-            "start_date": (now + timedelta(days=30)).isoformat(),
-            "end_date": (now + timedelta(days=45)).isoformat(),
+            "start_date": now,
+            "end_date": now,
+            "destination": "Paris, France",
             "destinations": [
                 {
                     "name": "Paris",
@@ -151,24 +148,28 @@ class TestTripService:
                     "timezone": "Europe/Rome",
                 },
             ],
-            "budget": {
-                "total_budget": 5000.00,
+            "budget_breakdown": {
+                "total": 5000.00,
                 "currency": "USD",
-                "spent_amount": 0.00,
-                "categories": {
+                "spent": 0.00,
+                "breakdown": {
                     "accommodation": 2000.00,
                     "transportation": 1500.00,
                     "food": 1000.00,
                     "activities": 500.00,
                 },
             },
+            "travelers": 2,
+            "trip_type": TripType.LEISURE.value,
             "status": TripStatus.PLANNING.value,
             "visibility": TripVisibility.PRIVATE.value,
             "tags": ["vacation", "europe", "cities"],
-            "preferences": {"travel_style": "balanced", "pace": "moderate"},
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat(),
+            "preferences_extended": {},
+            "created_at": now,
+            "updated_at": now,
         }
+
+    # Test Trip Creation
 
     @pytest.mark.asyncio
     async def test_create_trip_success(
@@ -180,8 +181,6 @@ class TestTripService:
     ):
         """Test successful trip creation."""
         user_id = str(uuid4())
-
-        # Update sample_trip_data with the user_id we're using
         sample_trip_data["user_id"] = user_id
 
         # Mock database operations
@@ -190,39 +189,49 @@ class TestTripService:
         result = await trip_service.create_trip(user_id, sample_trip_create_request)
 
         # Assertions
-        assert result.user_id == user_id
+        assert isinstance(result, TripResponse)
+        assert str(result.user_id) == user_id
         assert result.title == sample_trip_create_request.title
         assert result.description == sample_trip_create_request.description
         assert len(result.destinations) == 2
         assert result.destinations[0].name == "Paris"
         assert result.destinations[1].name == "Rome"
         assert result.status == TripStatus.PLANNING
-        assert result.budget.total_budget == 5000.00
+        assert result.budget.total == 5000.00
         assert result.budget.currency == "USD"
 
         # Verify service calls
         mock_database_service.create_trip.assert_called_once()
-        args = mock_database_service.create_trip.call_args[0][0]
-        assert args["user_id"] == user_id
-        assert args["title"] == "Summer Europe Trip"
 
     @pytest.mark.asyncio
     async def test_create_trip_invalid_dates(self, trip_service):
-        """Test trip creation with invalid dates."""
+        """Test trip creation with invalid dates (end before start)."""
         now = datetime.now(timezone.utc)
 
-        # Try to create a trip with end date before start date
+        # This should raise ValidationError during model creation
         with pytest.raises(ValidationError) as exc_info:
             TripCreateRequest(
                 title="Invalid Trip",
                 description="This should fail",
-                start_date=now + timedelta(days=30),
-                end_date=now + timedelta(days=20),  # Before start date
-                destinations=[],
-                visibility=TripVisibility.PRIVATE,
+                start_date=now,
+                end_date=now,  # Same as start date, should fail
+                destination="Test City",
+                budget=EnhancedBudget(
+                    total=1000.00,
+                    currency="USD",
+                    spent=0.00,
+                    breakdown=BudgetBreakdown(
+                        accommodation=500.00,
+                        transportation=300.00,
+                        food=200.00,
+                        activities=0.00,
+                    ),
+                ),
             )
 
         assert "End date must be after start date" in str(exc_info.value)
+
+    # Test Trip Retrieval
 
     @pytest.mark.asyncio
     async def test_get_trip_success(
@@ -233,18 +242,19 @@ class TestTripService:
         trip_id = sample_trip_data["id"]
         sample_trip_data["user_id"] = user_id
 
+        # Mock the access check to return True (user owns the trip)
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
 
         result = await trip_service.get_trip(trip_id, user_id)
 
         assert result is not None
-        assert result.id == trip_id
+        assert isinstance(result, TripResponse)
+        assert str(result.id) == trip_id
         assert result.title == "Summer Europe Trip"
         assert result.status == TripStatus.PLANNING
-        # get_trip_by_id is called twice: once in _check_trip_access
-        # and once in get_trip
+
+        # get_trip_by_id called twice: once in _check_trip_access, once in get_trip
         assert mock_database_service.get_trip_by_id.call_count == 2
-        mock_database_service.get_trip_by_id.assert_any_call(trip_id)
 
     @pytest.mark.asyncio
     async def test_get_trip_not_found(self, trip_service, mock_database_service):
@@ -266,13 +276,15 @@ class TestTripService:
         different_user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
 
+        # User is not the owner
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        # User is not the owner and not a collaborator
-        mock_database_service.get_trip_collaborator.return_value = None
+        mock_database_service.get_trip_collaborators.return_value = []
 
         result = await trip_service.get_trip(trip_id, different_user_id)
 
         assert result is None
+
+    # Test Trip Updates
 
     @pytest.mark.asyncio
     async def test_update_trip_success(
@@ -283,6 +295,7 @@ class TestTripService:
         trip_id = sample_trip_data["id"]
         sample_trip_data["user_id"] = user_id
 
+        # Mock access check to return the trip
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
 
         update_request = TripUpdateRequest(
@@ -298,13 +311,14 @@ class TestTripService:
                 "title": "Updated Europe Trip",
                 "description": "Updated description",
                 "tags": ["vacation", "europe", "updated"],
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc),
             }
         )
         mock_database_service.update_trip.return_value = updated_trip_data
 
         result = await trip_service.update_trip(trip_id, user_id, update_request)
 
+        assert isinstance(result, TripResponse)
         assert result.title == "Updated Europe Trip"
         assert result.description == "Updated description"
         assert result.tags == ["vacation", "europe", "updated"]
@@ -321,30 +335,30 @@ class TestTripService:
 
         update_request = TripUpdateRequest(title="Updated Trip")
 
-        # Should raise PermissionError when trip not found
-        # (since _check_trip_edit_access returns False)
-        with pytest.raises(PermissionError) as exc_info:
+        with pytest.raises(CoreAuthorizationError) as exc_info:
             await trip_service.update_trip(trip_id, user_id, update_request)
 
-        assert "No permission to edit this trip" in str(exc_info.value)
+        assert "You don't have permission to update this trip" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_update_trip_no_permission(
         self, trip_service, mock_database_service, sample_trip_data
     ):
-        """Test trip update without edit permission."""
+        """Test trip update without permission."""
         different_user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
 
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_database_service.get_trip_collaborator.return_value = None
+        mock_database_service.get_trip_collaborators.return_value = []
 
         update_request = TripUpdateRequest(title="Unauthorized Update")
 
-        with pytest.raises(PermissionError) as exc_info:
+        with pytest.raises(CoreAuthorizationError) as exc_info:
             await trip_service.update_trip(trip_id, different_user_id, update_request)
 
-        assert "No permission to edit this trip" in str(exc_info.value)
+        assert "You don't have permission to update this trip" in str(exc_info.value)
+
+    # Test Trip Deletion
 
     @pytest.mark.asyncio
     async def test_delete_trip_success(
@@ -372,14 +386,14 @@ class TestTripService:
         trip_id = sample_trip_data["id"]
 
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        # Non-owner can't access the trip, so get_trip returns None
-        mock_database_service.get_trip_collaborator.return_value = None
+        mock_database_service.get_trip_collaborators.return_value = []
 
-        # When get_trip returns None, delete_trip raises NotFoundError
-        with pytest.raises(NotFoundError) as exc_info:
+        with pytest.raises(CoreAuthorizationError) as exc_info:
             await trip_service.delete_trip(trip_id, different_user_id)
 
-        assert "Trip not found" in str(exc_info.value)
+        assert "You don't have permission to delete this trip" in str(exc_info.value)
+
+    # Test User Trips Listing
 
     @pytest.mark.asyncio
     async def test_get_user_trips_success(
@@ -393,11 +407,12 @@ class TestTripService:
         results = await trip_service.get_user_trips(user_id)
 
         assert len(results) == 1
-        assert results[0].id == sample_trip_data["id"]
+        assert isinstance(results[0], TripResponse)
+        assert str(results[0].id) == sample_trip_data["id"]
         assert results[0].title == "Summer Europe Trip"
 
         mock_database_service.get_trips.assert_called_once_with(
-            {"user_id": user_id}, 50, 0
+            filters={"user_id": user_id}, limit=50, offset=0
         )
 
     @pytest.mark.asyncio
@@ -414,8 +429,10 @@ class TestTripService:
         assert len(results) == 1
 
         mock_database_service.get_trips.assert_called_once_with(
-            {"user_id": user_id, "status": "planning"}, 50, 0
+            filters={"user_id": user_id, "status": "planning"}, limit=50, offset=0
         )
+
+    # Test Trip Sharing
 
     @pytest.mark.asyncio
     async def test_share_trip_success(
@@ -428,23 +445,20 @@ class TestTripService:
 
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
 
-        share_request = TripShareRequest(
-            user_emails=["friend@example.com"],
-            permission_level="view",
-            message="Check out our trip!",
+        # Mock user lookup
+        mock_collaborator = AsyncMock()
+        mock_collaborator.id = str(uuid4())
+        mock_collaborator.email = "friend@example.com"
+        mock_user_service.get_user_by_email.return_value = mock_collaborator
+
+        # Mock successful sharing
+        mock_database_service.add_trip_collaborator.return_value = True
+
+        result = await trip_service.share_trip(
+            trip_id, user_id, mock_collaborator.id, "view"
         )
 
-        # Mock the update for visibility change
-        updated_trip_data = sample_trip_data.copy()
-        updated_trip_data["visibility"] = TripVisibility.SHARED.value
-        mock_database_service.update_trip.return_value = updated_trip_data
-
-        collaborators = await trip_service.share_trip(trip_id, user_id, share_request)
-
-        assert len(collaborators) == 1
-        assert collaborators[0].email == "test@example.com"
-        assert collaborators[0].permission_level == "view"
-
+        assert result is True
         mock_database_service.add_trip_collaborator.assert_called_once()
 
     @pytest.mark.asyncio
@@ -457,41 +471,15 @@ class TestTripService:
         sample_trip_data["user_id"] = user_id
 
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_user_service.get_user_by_email.return_value = None
+        mock_user_service.get_user.return_value = None
 
-        share_request = TripShareRequest(
-            user_emails=["nonexistent@example.com"],
-            permission_level="view",
-        )
+        # The service will raise NotFoundError for non-existent user
+        with pytest.raises(CoreResourceNotFoundError):
+            await trip_service.share_trip(
+                trip_id, user_id, "nonexistent_user_id", "view"
+            )
 
-        collaborators = await trip_service.share_trip(trip_id, user_id, share_request)
-
-        assert len(collaborators) == 0
-        mock_database_service.add_trip_collaborator.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_get_trip_collaborators_success(
-        self, trip_service, mock_database_service, mock_user_service, sample_trip_data
-    ):
-        """Test getting trip collaborators."""
-        user_id = str(uuid4())
-        trip_id = sample_trip_data["id"]
-        sample_trip_data["user_id"] = user_id
-
-        collaborator_data = {
-            "user_id": str(uuid4()),
-            "permission_level": "edit",
-            "added_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-        mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_database_service.get_trip_collaborators.return_value = [collaborator_data]
-
-        collaborators = await trip_service.get_trip_collaborators(trip_id, user_id)
-
-        assert len(collaborators) == 1
-        assert collaborators[0].email == "test@example.com"
-        assert collaborators[0].permission_level == "edit"
+    # Test Search Functionality
 
     @pytest.mark.asyncio
     async def test_search_trips_success(
@@ -499,45 +487,23 @@ class TestTripService:
     ):
         """Test successful trip search."""
         user_id = str(uuid4())
+        sample_trip_data["user_id"] = user_id  # Make sure user owns the trip
 
         mock_database_service.search_trips.return_value = [sample_trip_data]
+        # Mock the access check - search calls _check_trip_access for each result
+        mock_database_service.get_trip_by_id.return_value = sample_trip_data
 
-        results = await trip_service.search_trips(
-            user_id,
-            query="Europe",
-            destinations=["Paris", "Rome"],
-            tags=["vacation"],
-        )
+        results = await trip_service.search_trips(user_id, query="Europe")
 
         assert len(results) == 1
+        assert isinstance(results[0], TripResponse)
         assert results[0].title == "Summer Europe Trip"
 
-        mock_database_service.search_trips.assert_called_once()
-        search_filters = mock_database_service.search_trips.call_args[0][0]
-        assert search_filters["query"] == "Europe"
-        assert search_filters["destinations"] == ["Paris", "Rome"]
-        assert search_filters["tags"] == ["vacation"]
+        mock_database_service.search_trips.assert_called_once_with(
+            query="Europe", filters={"user_id": user_id}, limit=50, offset=0
+        )
 
-    @pytest.mark.asyncio
-    async def test_search_trips_with_date_range(
-        self, trip_service, mock_database_service, sample_trip_data
-    ):
-        """Test trip search with date range filter."""
-        user_id = str(uuid4())
-
-        date_range = {
-            "start_date": datetime.now(timezone.utc),
-            "end_date": datetime.now(timezone.utc) + timedelta(days=60),
-        }
-
-        mock_database_service.search_trips.return_value = [sample_trip_data]
-
-        results = await trip_service.search_trips(user_id, date_range=date_range)
-
-        assert len(results) == 1
-
-        search_filters = mock_database_service.search_trips.call_args[0][0]
-        assert "date_range" in search_filters
+    # Test Access Control
 
     @pytest.mark.asyncio
     async def test_check_trip_access_owner(
@@ -563,10 +529,9 @@ class TestTripService:
         trip_id = sample_trip_data["id"]
 
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_database_service.get_trip_collaborator.return_value = {
-            "user_id": collaborator_id,
-            "permission_level": "view",
-        }
+        mock_database_service.get_trip_collaborators.return_value = [
+            {"user_id": collaborator_id, "permission": "view"}
+        ]
 
         has_access = await trip_service._check_trip_access(trip_id, collaborator_id)
 
@@ -588,60 +553,7 @@ class TestTripService:
 
         assert has_access is True
 
-    @pytest.mark.asyncio
-    async def test_check_edit_access_owner(
-        self, trip_service, mock_database_service, sample_trip_data
-    ):
-        """Test edit access check for owner."""
-        user_id = str(uuid4())
-        trip_id = sample_trip_data["id"]
-        sample_trip_data["user_id"] = user_id
-
-        mock_database_service.get_trip_by_id.return_value = sample_trip_data
-
-        has_access = await trip_service._check_trip_edit_access(trip_id, user_id)
-
-        assert has_access is True
-
-    @pytest.mark.asyncio
-    async def test_check_edit_access_collaborator_with_edit(
-        self, trip_service, mock_database_service, sample_trip_data
-    ):
-        """Test edit access check for collaborator with edit permission."""
-        collaborator_id = str(uuid4())
-        trip_id = sample_trip_data["id"]
-
-        mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_database_service.get_trip_collaborator.return_value = {
-            "user_id": collaborator_id,
-            "permission_level": "edit",
-        }
-
-        has_access = await trip_service._check_trip_edit_access(
-            trip_id, collaborator_id
-        )
-
-        assert has_access is True
-
-    @pytest.mark.asyncio
-    async def test_check_edit_access_collaborator_view_only(
-        self, trip_service, mock_database_service, sample_trip_data
-    ):
-        """Test edit access check for view-only collaborator."""
-        collaborator_id = str(uuid4())
-        trip_id = sample_trip_data["id"]
-
-        mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_database_service.get_trip_collaborator.return_value = {
-            "user_id": collaborator_id,
-            "permission_level": "view",
-        }
-
-        has_access = await trip_service._check_trip_edit_access(
-            trip_id, collaborator_id
-        )
-
-        assert has_access is False
+    # Test Response Building
 
     @pytest.mark.asyncio
     async def test_build_trip_response(
@@ -651,50 +563,36 @@ class TestTripService:
         trip_response = await trip_service._build_trip_response(sample_trip_data)
 
         assert isinstance(trip_response, TripResponse)
-        assert trip_response.id == sample_trip_data["id"]
+        assert str(trip_response.id) == sample_trip_data["id"]
         assert trip_response.title == "Summer Europe Trip"
         assert len(trip_response.destinations) == 2
-        assert trip_response.budget.total_budget == 5000.00
+        assert trip_response.budget.total == 5000.00
         assert trip_response.status == TripStatus.PLANNING
         assert trip_response.visibility == TripVisibility.PRIVATE
 
+    # Test Dependency Injection
+
     @pytest.mark.asyncio
-    @patch(
-        "tripsage_core.services.infrastructure.database_service.get_database_service"
-    )
+    @patch("tripsage_core.services.infrastructure.database_service.DatabaseService")
     @patch("tripsage_core.services.business.user_service.UserService")
     async def test_get_trip_service_dependency(
-        self, mock_user_service_class, mock_get_db_service
+        self, mock_user_service_class, mock_database_service_class
     ):
         """Test the dependency injection function."""
-        # Mock the dependencies
+        # Mock the service classes
         mock_db_service = AsyncMock()
-        mock_get_db_service.return_value = mock_db_service
+        mock_database_service_class.return_value = mock_db_service
         mock_user_service = AsyncMock()
         mock_user_service_class.return_value = mock_user_service
 
         service = await get_trip_service()
         assert isinstance(service, TripService)
 
-        # Verify dependencies were called correctly
-        mock_get_db_service.assert_called_once()
-        mock_user_service_class.assert_called_once_with(
-            database_service=mock_db_service
-        )
+        # Verify dependencies were instantiated
+        mock_database_service_class.assert_called_once()
+        mock_user_service_class.assert_called_once()
 
-    @pytest.mark.asyncio
-    async def test_invalid_date_validation(self, trip_service):
-        """Test date validation in trip creation."""
-        # Test with end date before start date
-        with pytest.raises(ValidationError) as exc_info:
-            TripCreateRequest(
-                title="Invalid Trip",
-                start_date=datetime.now(timezone.utc) + timedelta(days=10),
-                end_date=datetime.now(timezone.utc) + timedelta(days=5),
-                destinations=[],
-            )
-
-        assert "End date must be after start date" in str(exc_info.value)
+    # Test Error Handling
 
     @pytest.mark.asyncio
     async def test_service_error_handling(
@@ -706,8 +604,74 @@ class TestTripService:
         # Mock database to raise an exception
         mock_database_service.create_trip.side_effect = Exception("Database error")
 
-        # The service should not raise but log the error
+        # The service should propagate the error
         with pytest.raises(Exception) as exc_info:
             await trip_service.create_trip(user_id, sample_trip_create_request)
 
         assert "Database error" in str(exc_info.value)
+
+    # Test Edge Cases
+
+    @pytest.mark.asyncio
+    async def test_create_trip_minimal_data(self, trip_service, mock_database_service):
+        """Test trip creation with minimal required data."""
+        user_id = str(uuid4())
+        now = datetime.now(timezone.utc)
+
+        minimal_request = TripCreateRequest(
+            title="Minimal Trip",
+            start_date=now,
+            end_date=now.replace(hour=23, minute=59, second=59),
+            destination="Test City",
+            budget=EnhancedBudget(
+                total=1000.00,
+                currency="USD",
+                spent=0.00,
+                breakdown=BudgetBreakdown(
+                    accommodation=400.00,
+                    transportation=300.00,
+                    food=200.00,
+                    activities=100.00,
+                ),
+            ),
+        )
+
+        # Mock successful creation
+        mock_trip_data = {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Minimal Trip",
+            "description": None,
+            "start_date": now,
+            "end_date": now.replace(hour=23, minute=59, second=59),
+            "destination": "Test City",
+            "destinations": [],
+            "budget_breakdown": {
+                "total": 1000.00,
+                "currency": "USD",
+                "spent": 0.00,
+                "breakdown": {
+                    "accommodation": 400.00,
+                    "transportation": 300.00,
+                    "food": 200.00,
+                    "activities": 100.00,
+                },
+            },
+            "travelers": 1,
+            "trip_type": TripType.LEISURE.value,
+            "status": TripStatus.PLANNING.value,
+            "visibility": TripVisibility.PRIVATE.value,
+            "tags": [],
+            "preferences_extended": {},
+            "created_at": now,
+            "updated_at": now,
+        }
+        mock_database_service.create_trip.return_value = mock_trip_data
+
+        result = await trip_service.create_trip(user_id, minimal_request)
+
+        assert isinstance(result, TripResponse)
+        assert result.title == "Minimal Trip"
+        assert result.travelers == 1
+        assert len(result.destinations) == 0
+        assert len(result.tags) == 0

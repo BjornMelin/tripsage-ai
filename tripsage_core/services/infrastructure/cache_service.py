@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import redis.asyncio as redis
 
-from tripsage_core.config import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class CacheService:
     - Connection pooling
     """
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """Initialize the cache service.
 
         Args:
@@ -154,9 +154,9 @@ class CacheService:
         await self.ensure_connected()
 
         try:
-            # Use default TTL if not specified
+            # Use default TTL if not specified (flat config)
             if ttl is None:
-                ttl = self.settings.cache_ttl_medium
+                ttl = 3600  # Default medium TTL (1 hour)
 
             json_value = json.dumps(value, default=str)
             result = await self._client.set(key, json_value, ex=ttl)
@@ -216,7 +216,7 @@ class CacheService:
 
         try:
             if ttl is None:
-                ttl = self.settings.cache_ttl_medium
+                ttl = 3600  # Default medium TTL (1 hour)
 
             return await self._client.setex(key, ttl, value)
         except Exception as e:
@@ -541,7 +541,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.cache_ttl_short)
+        return await self.set_json(key, value, ttl=300)  # Short TTL (5 minutes)
 
     async def set_medium(self, key: str, value: Any) -> bool:
         """Set a value with medium TTL (1 hour by default).
@@ -553,7 +553,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.cache_ttl_medium)
+        return await self.set_json(key, value, ttl=3600)  # Medium TTL (1 hour)
 
     async def set_long(self, key: str, value: Any) -> bool:
         """Set a value with long TTL (24 hours by default).
@@ -565,7 +565,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.cache_ttl_long)
+        return await self.set_json(key, value, ttl=86400)  # Long TTL (24 hours)
 
 
 # Global service instance

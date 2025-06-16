@@ -24,8 +24,8 @@ def get_supabase_client() -> Client:
     """Get a Supabase client instance."""
     settings = get_settings()
     return create_client(
-        settings.database.supabase_url,
-        settings.database.supabase_anon_key.get_secret_value(),
+        settings.database_url,
+        settings.database_public_key.get_secret_value(),
     )
 
 

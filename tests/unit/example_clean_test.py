@@ -28,10 +28,10 @@ class TestExampleService:
             debug=True,
         )
 
-        # Verify settings are properly configured
+        # Verify settings are properly configured (flat structure)
         assert settings.environment == "testing"
         assert settings.debug is True
-        assert settings.database.supabase_url == "https://test-project.supabase.co"
+        assert settings.database_url == "https://test-project.supabase.co"
         assert (
             settings.openai_api_key.get_secret_value()
             == "sk-test-openai-key-1234567890abcdef"
@@ -114,7 +114,7 @@ class TestExampleIntegration:
         # Use clean mocking to avoid dependency issues
         with (
             patch(
-                "tripsage_core.config.base_app_settings.get_settings",
+                "tripsage_core.config.get_settings",
                 side_effect=lambda: create_test_settings(),
             ),
             patch(

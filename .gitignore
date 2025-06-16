@@ -179,6 +179,8 @@ ARCHIVED_DOCS/
 !TODO.md
 !CLAUDE.md
 !KNOWLEDGE_PACK.md
+# Exception for security documentation
+!docs/07_CONFIGURATION/SECURITY/RLS_IMPLEMENTATION.md
 
 # Temporary analysis scripts
 analyze_*.py

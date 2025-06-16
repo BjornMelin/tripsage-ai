@@ -1,4 +1,4 @@
--- Configuration Management Schema Migration
+-- Configuration Management Schema Migration (Fixed)
 -- Adds tables for agent configuration management with versioning and audit support
 -- Date: 2025-06-16
 
@@ -24,14 +24,10 @@ CREATE TABLE IF NOT EXISTS configuration_profiles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_by VARCHAR(100),
-    updated_by VARCHAR(100),
-    
-    -- Ensure only one active config per agent type per environment
-    CONSTRAINT unique_active_agent_config UNIQUE (agent_type, environment, is_active) 
-        DEFERRABLE INITIALLY DEFERRED
+    updated_by VARCHAR(100)
 );
 
--- Create partial unique index for active configurations
+-- Create partial unique index for active configurations (replaces deferrable constraint)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_config_profiles_active_agent_env 
 ON configuration_profiles (agent_type, environment) 
 WHERE is_active = true;
@@ -229,43 +225,82 @@ CREATE TRIGGER trg_auto_config_version
     FOR EACH ROW
     EXECUTE FUNCTION auto_create_config_version();
 
--- Insert default agent configurations
+-- Insert default agent configurations using INSERT with a different approach
+-- First, try to insert budget_agent configuration
 INSERT INTO configuration_profiles (
     agent_type, scope, temperature, max_tokens, top_p, timeout_seconds, model, 
     description, environment, created_by
-) VALUES 
-(
+) 
+SELECT 
     'budget_agent', 'agent_specific', 0.2, 1000, 0.9, 30, 'gpt-4',
     'Budget optimization agent - low creativity, high accuracy', 'development', 'system'
-),
-(
-    'destination_research_agent', 'agent_specific', 0.5, 1000, 0.9, 30, 'gpt-4',
-    'Destination research agent - moderate creativity for comprehensive research', 'development', 'system'
-),
-(
-    'itinerary_agent', 'agent_specific', 0.4, 1000, 0.9, 30, 'gpt-4',
-    'Itinerary planning agent - structured creativity for logical planning', 'development', 'system'
-)
-ON CONFLICT (agent_type, environment, is_active) DO NOTHING;
+WHERE NOT EXISTS (
+    SELECT 1 FROM configuration_profiles 
+    WHERE agent_type = 'budget_agent' AND environment = 'development' AND is_active = true
+);
 
--- Create production configurations
+-- Insert destination_research_agent configuration
 INSERT INTO configuration_profiles (
     agent_type, scope, temperature, max_tokens, top_p, timeout_seconds, model, 
     description, environment, created_by
-) VALUES 
-(
+) 
+SELECT 
+    'destination_research_agent', 'agent_specific', 0.5, 1000, 0.9, 30, 'gpt-4',
+    'Destination research agent - moderate creativity for comprehensive research', 'development', 'system'
+WHERE NOT EXISTS (
+    SELECT 1 FROM configuration_profiles 
+    WHERE agent_type = 'destination_research_agent' AND environment = 'development' AND is_active = true
+);
+
+-- Insert itinerary_agent configuration
+INSERT INTO configuration_profiles (
+    agent_type, scope, temperature, max_tokens, top_p, timeout_seconds, model, 
+    description, environment, created_by
+) 
+SELECT 
+    'itinerary_agent', 'agent_specific', 0.4, 1000, 0.9, 30, 'gpt-4',
+    'Itinerary planning agent - structured creativity for logical planning', 'development', 'system'
+WHERE NOT EXISTS (
+    SELECT 1 FROM configuration_profiles 
+    WHERE agent_type = 'itinerary_agent' AND environment = 'development' AND is_active = true
+);
+
+-- Create production configurations using the same approach
+INSERT INTO configuration_profiles (
+    agent_type, scope, temperature, max_tokens, top_p, timeout_seconds, model, 
+    description, environment, created_by
+) 
+SELECT 
     'budget_agent', 'agent_specific', 0.1, 800, 0.8, 25, 'gpt-4',
     'Production budget agent - conservative settings for consistency', 'production', 'system'
-),
-(
+WHERE NOT EXISTS (
+    SELECT 1 FROM configuration_profiles 
+    WHERE agent_type = 'budget_agent' AND environment = 'production' AND is_active = true
+);
+
+INSERT INTO configuration_profiles (
+    agent_type, scope, temperature, max_tokens, top_p, timeout_seconds, model, 
+    description, environment, created_by
+) 
+SELECT 
     'destination_research_agent', 'agent_specific', 0.3, 800, 0.8, 25, 'gpt-4',
     'Production research agent - conservative creativity for reliable research', 'production', 'system'
-),
-(
+WHERE NOT EXISTS (
+    SELECT 1 FROM configuration_profiles 
+    WHERE agent_type = 'destination_research_agent' AND environment = 'production' AND is_active = true
+);
+
+INSERT INTO configuration_profiles (
+    agent_type, scope, temperature, max_tokens, top_p, timeout_seconds, model, 
+    description, environment, created_by
+) 
+SELECT 
     'itinerary_agent', 'agent_specific', 0.2, 800, 0.8, 25, 'gpt-4',
     'Production itinerary agent - conservative settings for reliable planning', 'production', 'system'
-)
-ON CONFLICT (agent_type, environment, is_active) DO NOTHING;
+WHERE NOT EXISTS (
+    SELECT 1 FROM configuration_profiles 
+    WHERE agent_type = 'itinerary_agent' AND environment = 'production' AND is_active = true
+);
 
 -- Create initial versions for all configurations
 DO $$
@@ -323,15 +358,6 @@ FROM configuration_versions cv
 JOIN configuration_profiles cp ON cv.configuration_profile_id = cp.id
 LEFT JOIN configuration_performance_metrics pm ON cp.id = pm.configuration_profile_id
 ORDER BY cv.created_at DESC;
-
--- Grant appropriate permissions (adjust as needed for your security model)
--- GRANT SELECT, INSERT, UPDATE ON configuration_profiles TO app_user;
--- GRANT SELECT, INSERT ON configuration_versions TO app_user;
--- GRANT SELECT, INSERT ON configuration_changes TO app_user;
--- GRANT SELECT, INSERT ON configuration_exports TO app_user;
--- GRANT SELECT, INSERT ON configuration_performance_metrics TO app_user;
--- GRANT SELECT ON active_agent_configurations TO app_user;
--- GRANT SELECT ON configuration_history TO app_user;
 
 -- Add comments for documentation
 COMMENT ON TABLE configuration_profiles IS 'Stores agent configuration profiles with versioning support';

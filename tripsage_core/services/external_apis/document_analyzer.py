@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.config import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
@@ -81,7 +81,7 @@ class DocumentAnalyzer:
     using appropriate extraction methods based on file type.
     """
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """
         Initialize document analyzer.
 

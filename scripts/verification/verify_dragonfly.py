@@ -22,15 +22,14 @@ async def verify_dragonfly_connection():
     print("🔍 Verifying DragonflyDB Configuration...")
 
     try:
-        # Get settings
+        # Get settings (flat structure)
         settings = get_settings()
         print("\n📋 Configuration:")
-        print(f"   URL: {settings.dragonfly.url}")
-        pwd_status = "***" if settings.dragonfly.password else "Not configured"
+        print(f"   URL: {settings.redis_url}")
+        pwd_status = "***" if settings.redis_password else "Not configured"
         print(f"   Password: {pwd_status}")
-        print(f"   Max Memory: {settings.dragonfly.max_memory}")
-        print(f"   Max Connections: {settings.dragonfly.max_connections}")
-        print(f"   Port: {settings.dragonfly.port}")
+        print(f"   Max Connections: {settings.redis_max_connections}")
+        # Note: DragonflyDB specific settings removed from flat config
 
         # Initialize cache service
         cache_service = CacheService(settings)

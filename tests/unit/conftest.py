@@ -255,21 +255,15 @@ def mock_settings_and_redis(monkeypatch):
     # Create a comprehensive mock settings object using new flat structure
     from pydantic import SecretStr
 
-    from tripsage_core.config import AppSettings
+    from tripsage_core.config import Settings
 
-    mock_settings = AppSettings(
+    mock_settings = Settings(
         environment="testing",
         debug=True,
         database_url="https://test.supabase.co",
-        database_key=SecretStr("test_service_key"),
+        database_service_key=SecretStr("test_service_key"),
         database_public_key=SecretStr("test_anon_key"),
-        database_jwt_secret=SecretStr("test_jwt_secret"),
         openai_api_key=SecretStr("test_openai_key"),
-        enable_advanced_agents=False,
-        enable_memory_system=True,
-        enable_real_time=True,
-        enable_vector_search=True,
-        enable_monitoring=False,
         _env_file=None,
     )
 

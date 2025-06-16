@@ -6,6 +6,7 @@ with authenticated entity information.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Callable, Optional, Union
 
 from fastapi import Request, Response
@@ -260,7 +261,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # Local JWT validation for performance
             payload = jwt.decode(
                 token,
-                settings.database.supabase_jwt_secret.get_secret_value(),
+                settings.database_jwt_secret.get_secret_value(),
                 algorithms=["HS256"],
                 audience="authenticated",
                 leeway=30,  # Allow 30 seconds clock skew
@@ -307,11 +308,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             KeyValidationError: If key validation fails
         """
         try:
-            # For API keys, we need to identify which user/service owns the key
-            # This is a simplified implementation - in production, you'd have a
-            # more sophisticated API key lookup system
-
-            # Extract key ID and secret from the API key format
+            # Extract key ID and service from the API key format
             # Format: "sk_<service>_<key_id>_<secret>"
             parts = api_key.split("_")
             if len(parts) < 4 or parts[0] != "sk":
@@ -322,23 +319,56 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # The rest is the secret
             secret = "_".join(parts[3:])
 
-            # TODO: Implement actual API key validation logic
-            # For now, we'll create a mock principal for valid-looking keys
-            if len(secret) < 20:
-                raise KeyValidationError("Invalid API key")
+            # Validate the API key using the key management service
+            if self.key_service:
+                # Reconstruct the full API key for validation
+                full_key = f"sk_{service}_{key_id}_{secret}"
 
-            # Create principal for API key
-            return Principal(
-                id=f"agent_{service}_{key_id}",
-                type="agent",
-                service=service,
-                auth_method="api_key",
-                scopes=[f"{service}:*"],  # Grant all scopes for the service
-                metadata={
-                    "key_id": key_id,
-                    "service": service,
-                },
-            )
+                # Validate the key with the appropriate service
+                validation_result = await self.key_service.validate_api_key(
+                    service=service, key_value=full_key
+                )
+
+                if not validation_result.is_valid:
+                    raise KeyValidationError(
+                        validation_result.message or "Invalid API key"
+                    )
+
+                # Retrieve key metadata if available
+                key_metadata = validation_result.details or {}
+
+                # Create principal for validated API key
+                return Principal(
+                    id=f"agent_{service}_{key_id}",
+                    type="agent",
+                    service=service,
+                    auth_method="api_key",
+                    scopes=[f"{service}:*"],  # Grant all scopes for the service
+                    metadata={
+                        "key_id": key_id,
+                        "service": service,
+                        "validated_at": datetime.now(timezone.utc).isoformat(),
+                        **key_metadata,  # Additional metadata
+                    },
+                )
+            else:
+                # Fallback validation if key service is not available
+                if len(secret) < 20:
+                    raise KeyValidationError("Invalid API key")
+
+                # Create principal with limited validation
+                return Principal(
+                    id=f"agent_{service}_{key_id}",
+                    type="agent",
+                    service=service,
+                    auth_method="api_key",
+                    scopes=[f"{service}:*"],
+                    metadata={
+                        "key_id": key_id,
+                        "service": service,
+                        "validation_mode": "fallback",
+                    },
+                )
 
         except (AuthenticationError, KeyValidationError):
             raise

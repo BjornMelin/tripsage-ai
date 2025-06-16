@@ -60,12 +60,10 @@ class SupabaseCheckpointManager:
             return self._connection_string
 
         try:
-            # Get Supabase configuration
+            # Get Supabase configuration (flat structure)
             settings = get_settings()
-            supabase_url = settings.database.supabase_url
-            supabase_key = (
-                settings.database.supabase_service_role_key.get_secret_value()
-            )
+            supabase_url = settings.database_url
+            supabase_key = settings.database_service_key.get_secret_value()
 
             # Parse Supabase URL to extract connection details
             # Format: https://[project-ref].supabase.co
@@ -108,12 +106,11 @@ class SupabaseCheckpointManager:
             return
 
         conn_string = self._build_connection_string()
-        settings = get_settings()
 
         pool_config = {
             "conninfo": conn_string,
             "min_size": 1,
-            "max_size": getattr(settings.database, "checkpoint_pool_size", 20),
+            "max_size": 20,  # Default pool size for flat config
             "kwargs": {
                 "sslmode": "require",
                 "connect_timeout": 30,

@@ -18,10 +18,10 @@ class TestSettings:
     """Test the unified Settings configuration class."""
 
     def test_settings_inheritance(self):
-        """Test that Settings properly inherits from CoreAppSettings."""
+        """Test that Settings properly inherits from Settings."""
         settings = Settings()
 
-        # Should have CoreAppSettings attributes
+        # Should have Settings attributes
         assert hasattr(settings, "app_name")
         assert hasattr(settings, "environment")
         assert hasattr(settings, "openai_api_key")

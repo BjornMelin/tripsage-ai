@@ -17,7 +17,7 @@ import pytest
 from fastapi import WebSocket
 from jose import jwt
 
-from tripsage_core.config import CoreAppSettings
+from tripsage_core.config import Settings
 from tripsage_core.services.infrastructure.websocket_manager import (
     ConnectionStatus,
     WebSocketAuthRequest,
@@ -218,7 +218,7 @@ class TestWebSocketManager:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        settings = Mock(spec=CoreAppSettings)
+        settings = Mock(spec=Settings)
         settings.jwt_secret_key = Mock()
         settings.jwt_secret_key.get_secret_value = Mock(
             return_value="test-secret-key-12345"

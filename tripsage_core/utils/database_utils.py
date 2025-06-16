@@ -23,20 +23,20 @@ def get_supabase_settings() -> Dict[str, str]:
     settings = get_settings()
     logger.info("Using Supabase database (consolidated architecture)")
     return {
-        "supabase_url": settings.database.supabase_url,
+        "supabase_url": settings.database_url,
         "supabase_anon_key": (
-            settings.database.supabase_anon_key.get_secret_value()
-            if settings.database.supabase_anon_key
+            settings.database_public_key.get_secret_value()
+            if settings.database_public_key
             else ""
         ),
         "supabase_service_role_key": (
-            settings.database.supabase_service_role_key.get_secret_value()
-            if settings.database.supabase_service_role_key
+            settings.database_service_key.get_secret_value()
+            if settings.database_service_key
             else ""
         ),
-        "supabase_timeout": str(settings.database.supabase_timeout),
-        "pgvector_enabled": str(settings.database.pgvector_enabled),
-        "vector_dimensions": str(settings.database.vector_dimensions),
+        "supabase_timeout": "60.0",  # Default timeout
+        "pgvector_enabled": "true",  # Default enabled
+        "vector_dimensions": "1536",  # Default OpenAI embedding dimensions
     }
 
 
@@ -59,10 +59,9 @@ class DatabaseConnectionFactory:
         Returns:
             Dictionary with pgvector configuration
         """
-        settings = get_settings()
         return {
-            "enabled": settings.database.pgvector_enabled,
-            "dimensions": settings.database.vector_dimensions,
+            "enabled": True,  # Default enabled for modern config
+            "dimensions": 1536,  # Default OpenAI embedding dimensions
             "distance_function": "cosine",  # Default distance function
             "index_type": "hnsw",  # Default index type for optimal performance
         }

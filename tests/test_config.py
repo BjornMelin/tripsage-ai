@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage_core.config import CoreAppSettings
+from tripsage_core.config import Settings
 
 
 def setup_test_environment() -> None:
@@ -25,37 +25,23 @@ def setup_test_environment() -> None:
         "ENVIRONMENT": "testing",
         "DEBUG": "true",
         "LOG_LEVEL": "INFO",
-        # Database configuration (Supabase)
-        "SUPABASE_URL": "https://test-project.supabase.co",
-        "SUPABASE_ANON_KEY": "test-anon-key-1234567890abcdef",
-        "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key-1234567890abcdef",
-        "SUPABASE_JWT_SECRET": "test-jwt-secret-1234567890abcdef",
-        "SUPABASE_PROJECT_ID": "test-project-id",
-        # Cache configuration (DragonflyDB)
-        "DRAGONFLY_URL": "redis://localhost:6379/1",
-        "DRAGONFLY_PASSWORD": "tripsage_secure_password",
-        # Core API Keys (safe test values)
+        # Database configuration (flat structure)
+        "DATABASE_URL": "https://test-project.supabase.co",
+        "DATABASE_PUBLIC_KEY": "test-anon-key-1234567890abcdef",
+        "DATABASE_SERVICE_KEY": "test-service-role-key-1234567890abcdef",
+        "DATABASE_JWT_SECRET": "test-jwt-secret-1234567890abcdef",
+        # Application security
+        "SECRET_KEY": "test-secret-key-1234567890abcdef",
+        # Cache configuration (flat structure)
+        "REDIS_URL": "redis://localhost:6379/1",
+        "REDIS_PASSWORD": "tripsage_secure_password",
+        "REDIS_MAX_CONNECTIONS": "50",
+        # AI services (flat structure)
         "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
-        "GOOGLE_MAPS_API_KEY": "test-google-maps-key-1234567890",
-        "DUFFEL_API_KEY": "test-duffel-api-key-1234567890",
-        "OPENWEATHERMAP_API_KEY": "test-weather-api-key-1234567890",
-        "VISUAL_CROSSING_API_KEY": "test-visual-crossing-key-1234567890",
-        # Security
-        "API_KEY_MASTER_SECRET": "test-master-secret-for-byok-encryption",
-        # External services
-        "CRAWL4AI_API_URL": "http://localhost:8000/api",
-        "CRAWL4AI_API_KEY": "test-crawl4ai-key-1234567890",
-        # Feature flags for testing
-        "ENABLE_STREAMING_RESPONSES": "false",
-        "ENABLE_RATE_LIMITING": "false",
-        "ENABLE_CACHING": "false",
-        "ENABLE_DEBUG_MODE": "true",
-        "ENABLE_TRACING": "false",
-        "ENABLE_AGENT_MEMORY": "true",
-        "ENABLE_PARALLEL_AGENTS": "true",
-        "ENABLE_CRAWL4AI": "true",
-        "ENABLE_MEM0": "true",
-        "ENABLE_LANGGRAPH": "true",
+        "OPENAI_MODEL": "gpt-4o",
+        # Rate limiting (flat structure)
+        "RATE_LIMIT_REQUESTS": "100",
+        "RATE_LIMIT_WINDOW": "60",
     }
 
     # Apply all environment variables
@@ -63,7 +49,7 @@ def setup_test_environment() -> None:
         os.environ[key] = value
 
 
-def create_test_settings(**overrides) -> CoreAppSettings:
+def create_test_settings(**overrides) -> Settings:
     """
     Create a test settings instance with proper defaults.
 
@@ -71,7 +57,7 @@ def create_test_settings(**overrides) -> CoreAppSettings:
         **overrides: Optional overrides for specific settings
 
     Returns:
-        CoreAppSettings instance configured for testing
+        Settings instance configured for testing
     """
     # Ensure test environment is set up
     setup_test_environment()
@@ -90,7 +76,7 @@ def create_test_settings(**overrides) -> CoreAppSettings:
 
     # Create settings instance - Pydantic v2 reads from environment variables
     # Don't pass any config to the constructor
-    return CoreAppSettings()
+    return Settings()
 
 
 class MockCacheService:
@@ -165,7 +151,7 @@ def clean_test_environment():
     with (
         # Mock settings functions to avoid import-time instantiation
         patch(
-            "tripsage_core.config.base_app_settings.get_settings",
+            "tripsage_core.config.get_settings",
             side_effect=lambda: create_test_settings(),
         ),
         # Mock cache service

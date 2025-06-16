@@ -46,8 +46,8 @@ def get_supabase_client() -> Client:
     """
     settings = get_settings()
     return create_client(
-        settings.database.supabase_url,
-        settings.database.supabase_service_role_key.get_secret_value(),
+        settings.database_url,
+        settings.database_service_key.get_secret_value(),
     )
 
 
@@ -76,7 +76,7 @@ async def get_current_user(
         # Local JWT validation - fast and efficient
         payload = jwt.decode(
             token,
-            settings.database.supabase_jwt_secret.get_secret_value(),
+            settings.database_jwt_secret.get_secret_value(),
             algorithms=["HS256"],
             audience="authenticated",
         )

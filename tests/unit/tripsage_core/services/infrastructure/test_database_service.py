@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.config import CoreAppSettings
+from tripsage_core.config import Settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
     CoreResourceNotFoundError,
@@ -31,7 +31,7 @@ class TestDatabaseService:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        settings = Mock(spec=CoreAppSettings)
+        settings = Mock(spec=Settings)
         settings.database = Mock()
         settings.database.supabase_url = "https://test.supabase.co"
         settings.database.supabase_anon_key = Mock(
