@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from tripsage_core.config import CoreAppSettings
+from tripsage_core.config import Settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.external_apis.duffel_http_client import (
     DuffelAPIError,
@@ -18,7 +18,7 @@ from tripsage_core.services.external_apis.duffel_http_client import (
 @pytest.fixture
 def mock_settings():
     """Create mock settings for DuffelHTTPClient."""
-    settings = MagicMock(spec=CoreAppSettings)
+    settings = MagicMock(spec=Settings)
     settings.duffel_api_key = SecretStr("test-duffel-api-key")
     settings.duffel_rate_limit_window = 60.0
     settings.duffel_max_requests_per_minute = 100
@@ -66,7 +66,7 @@ class TestDuffelHTTPClientInitialization:
     @pytest.mark.asyncio
     async def test_init_without_api_key(self):
         """Test initialization fails without API key."""
-        mock_settings = MagicMock(spec=CoreAppSettings)
+        mock_settings = MagicMock(spec=Settings)
         mock_settings.duffel_api_key = None
 
         with patch(

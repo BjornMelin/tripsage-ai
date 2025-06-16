@@ -689,7 +689,7 @@ class KeyManagementService:
             )
 
     async def _validate_openai_key(self, key_value: str) -> ApiKeyValidationResult:
-        """Validate OpenAI API key."""
+        """Validate OpenAI API key by attempting to list models."""
         # Basic format check
         if not key_value.startswith("sk-"):
             return ApiKeyValidationResult(
@@ -699,34 +699,191 @@ class KeyManagementService:
                 details={"expected_prefix": "sk-"},
             )
 
-        # TODO: Make actual API call to validate
-        # For now, just check format
-        return ApiKeyValidationResult(
-            is_valid=True,
-            service="openai",
-            message="OpenAI key format is valid",
-            details={"validation_type": "format_check"},
-        )
+        try:
+            # Use httpx to make a minimal API call to list models
+            import httpx
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://api.openai.com/v1/models",
+                    headers={"Authorization": f"Bearer {key_value}"},
+                    timeout=10.0,
+                )
+
+                if response.status_code == 401:
+                    return ApiKeyValidationResult(
+                        is_valid=False,
+                        service="openai",
+                        message="Invalid API key - authentication failed",
+                        details={"status_code": 401, "error": "Unauthorized"},
+                    )
+                elif response.status_code == 200:
+                    return ApiKeyValidationResult(
+                        is_valid=True,
+                        service="openai",
+                        message="OpenAI API key is valid",
+                        details={"validation_type": "api_call", "status_code": 200},
+                    )
+                else:
+                    return ApiKeyValidationResult(
+                        is_valid=False,
+                        service="openai",
+                        message=f"Unexpected response status: {response.status_code}",
+                        details={"status_code": response.status_code},
+                    )
+
+        except httpx.TimeoutException:
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="openai",
+                message="API validation timed out",
+                details={"error": "timeout"},
+            )
+        except Exception as e:
+            logger.warning(f"OpenAI key validation error: {str(e)}")
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="openai",
+                message=f"Validation error: {str(e)}",
+                details={"error": str(e)},
+            )
 
     async def _validate_weather_key(self, key_value: str) -> ApiKeyValidationResult:
-        """Validate weather API key."""
-        # TODO: Implement actual weather API validation
-        return ApiKeyValidationResult(
-            is_valid=len(key_value) >= 16,
-            service="weather",
-            message="Weather API key accepted",
-            details={"validation_type": "length_check"},
-        )
+        """Validate weather API key using OpenWeatherMap API."""
+        if len(key_value) < 16:
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="weather",
+                message="Weather API key too short",
+                details={"min_length": 16},
+            )
+
+        try:
+            import httpx
+
+            # Test with a simple weather request for London
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://api.openweathermap.org/data/2.5/weather",
+                    params={
+                        "q": "London",
+                        "appid": key_value,
+                    },
+                    timeout=10.0,
+                )
+
+                if response.status_code == 401:
+                    return ApiKeyValidationResult(
+                        is_valid=False,
+                        service="weather",
+                        message="Invalid API key - authentication failed",
+                        details={"status_code": 401, "error": "Unauthorized"},
+                    )
+                elif response.status_code == 200:
+                    return ApiKeyValidationResult(
+                        is_valid=True,
+                        service="weather",
+                        message="Weather API key is valid",
+                        details={"validation_type": "api_call", "status_code": 200},
+                    )
+                else:
+                    return ApiKeyValidationResult(
+                        is_valid=False,
+                        service="weather",
+                        message=f"Unexpected response status: {response.status_code}",
+                        details={"status_code": response.status_code},
+                    )
+
+        except httpx.TimeoutException:
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="weather",
+                message="API validation timed out",
+                details={"error": "timeout"},
+            )
+        except Exception as e:
+            logger.warning(f"Weather key validation error: {str(e)}")
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="weather",
+                message=f"Validation error: {str(e)}",
+                details={"error": str(e)},
+            )
 
     async def _validate_googlemaps_key(self, key_value: str) -> ApiKeyValidationResult:
-        """Validate Google Maps API key."""
-        # TODO: Implement actual Google Maps API validation
-        return ApiKeyValidationResult(
-            is_valid=len(key_value) >= 20,
-            service="googlemaps",
-            message="Google Maps API key accepted",
-            details={"validation_type": "length_check"},
-        )
+        """Validate Google Maps API key using Geocoding API."""
+        if len(key_value) < 20:
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="googlemaps",
+                message="Google Maps API key too short",
+                details={"min_length": 20},
+            )
+
+        try:
+            import httpx
+
+            # Test with a simple geocoding request for a known location
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://maps.googleapis.com/maps/api/geocode/json",
+                    params={
+                        "address": "1600 Amphitheatre Parkway, Mountain View, CA",
+                        "key": key_value,
+                    },
+                    timeout=10.0,
+                )
+
+                data = response.json()
+
+                # Check for specific error codes
+                if response.status_code == 200:
+                    status = data.get("status", "")
+                    if status == "OK":
+                        return ApiKeyValidationResult(
+                            is_valid=True,
+                            service="googlemaps",
+                            message="Google Maps API key is valid",
+                            details={"validation_type": "api_call", "status": "OK"},
+                        )
+                    elif status == "REQUEST_DENIED":
+                        error_message = data.get("error_message", "API key is invalid")
+                        return ApiKeyValidationResult(
+                            is_valid=False,
+                            service="googlemaps",
+                            message=f"Invalid API key: {error_message}",
+                            details={"status": status, "error": error_message},
+                        )
+                    else:
+                        return ApiKeyValidationResult(
+                            is_valid=False,
+                            service="googlemaps",
+                            message=f"API returned status: {status}",
+                            details={"status": status},
+                        )
+                else:
+                    return ApiKeyValidationResult(
+                        is_valid=False,
+                        service="googlemaps",
+                        message=f"Unexpected response status: {response.status_code}",
+                        details={"status_code": response.status_code},
+                    )
+
+        except httpx.TimeoutException:
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="googlemaps",
+                message="API validation timed out",
+                details={"error": "timeout"},
+            )
+        except Exception as e:
+            logger.warning(f"Google Maps key validation error: {str(e)}")
+            return ApiKeyValidationResult(
+                is_valid=False,
+                service="googlemaps",
+                message=f"Validation error: {str(e)}",
+                details={"error": str(e)},
+            )
 
     def _check_validation_rate_limit(self, key_id: str) -> bool:
         """

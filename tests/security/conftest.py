@@ -254,7 +254,7 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
-    from tripsage_core.config import CoreAppSettings as AppSettings
+    from tripsage_core.config import Settings as AppSettings
 
     mock_settings = AppSettings()
 
@@ -285,7 +285,7 @@ def mock_settings_and_redis(monkeypatch):
     # Apply all the patches we need
     with (
         patch(
-            "tripsage_core.config.base_app_settings.get_settings",
+            "tripsage_core.config.get_settings",
             return_value=mock_settings,
         ),
         patch("redis.asyncio.from_url", mock_from_url),

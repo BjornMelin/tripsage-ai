@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 import httpx
 from pydantic import ValidationError
 
-from tripsage_core.config import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
 )
@@ -71,7 +71,7 @@ class DuffelHTTPClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        settings: Optional[CoreAppSettings] = None,
+        settings: Optional[Settings] = None,
         base_url: str = "https://api.duffel.com",
         timeout: float = 30.0,
         max_retries: int = 3,

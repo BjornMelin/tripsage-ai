@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.config import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
@@ -63,7 +63,7 @@ class WorldClock(BaseModel):
 class TimeService:
     """Service for timezone and time operations with Core integration."""
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """
         Initialize Time service.
 

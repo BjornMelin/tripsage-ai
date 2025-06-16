@@ -6,7 +6,6 @@ to enable isolated testing without external dependencies.
 """
 
 import os
-from pathlib import Path
 from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock
 
@@ -14,59 +13,54 @@ import pytest
 from pydantic import SecretStr
 
 
-class MockCoreAppSettings:
-    """Mock version of CoreAppSettings for testing."""
+class MockSettings:
+    """Mock version of flat Settings for testing."""
 
     def __init__(self):
-        # Application metadata
-        self.app_name = "TripSage"
-        self.debug = True
+        # Environment & Core (flat structure)
         self.environment = "testing"
+        self.debug = True
         self.log_level = "INFO"
 
-        # Base paths
-        self.base_dir = Path("/tmp/test")
+        # API Configuration (flat structure)
+        self.api_title = "TripSage API"
+        self.api_version = "1.0.0"
+        self.cors_origins = ["http://localhost:3000", "http://localhost:3001"]
+        self.cors_credentials = True
 
-        # Security secrets (safe test values)
-        self.jwt_secret_key = SecretStr("test-jwt-secret-key")
-        self.api_key_master_secret = SecretStr("test-master-secret")
+        # Database (flat structure)
+        self.database_url = "https://test-project.supabase.co"
+        self.database_public_key = SecretStr("test-anon-key")
+        self.database_service_key = SecretStr("test-service-key")
+        self.database_jwt_secret = SecretStr("test-jwt-secret")
 
-        # API keys (safe test values)
+        # Application Security (flat structure)
+        self.secret_key = SecretStr("test-secret-key")
+
+        # Redis/Cache (flat structure)
+        self.redis_url = None  # Optional in test
+        self.redis_password = None
+        self.redis_max_connections = 50
+
+        # AI Services (flat structure)
         self.openai_api_key = SecretStr("sk-test-openai-key-1234567890abcdef")
-        self.google_maps_api_key = SecretStr("test-google-maps-key")
-        self.google_client_id = SecretStr("test-google-client-id")
-        self.google_client_secret = SecretStr("test-google-client-secret")
-        self.openweathermap_api_key = SecretStr("test-weather-api-key")
-        self.visual_crossing_api_key = SecretStr("test-visual-crossing-key")
-        self.duffel_api_key = SecretStr("test-duffel-api-key")
+        self.openai_model = "gpt-4o"
 
-        # Sub-configurations with mock defaults
-        self.database = MockDatabaseConfig()
-        self.dragonfly = MockDragonflyConfig()
-        self.mem0 = MockMem0Config()
-        self.langgraph = MockLangGraphConfig()
-        self.crawl4ai = MockCrawl4AIConfig()
-        self.agent = MockAgentConfig()
-        self.feature_flags = MockFeatureFlags()
-        self.opentelemetry = MockOpenTelemetryConfig()
+        # Rate Limiting (flat structure)
+        self.rate_limit_requests = 100
+        self.rate_limit_window = 60
 
+    @property
     def is_production(self) -> bool:
-        return False
+        return self.environment == "production"
 
+    @property
     def is_development(self) -> bool:
-        return False
+        return self.environment == "development"
 
+    @property
     def is_testing(self) -> bool:
-        return True
-
-    def get_secret_value(self, key: str) -> Optional[str]:
-        secret = getattr(self, key, None)
-        if secret and isinstance(secret, SecretStr):
-            return secret.get_secret_value()
-        return None
-
-    def validate_critical_settings(self) -> list:
-        return []  # No validation errors in test mode
+        return self.environment in ("test", "testing")
 
 
 class MockDatabaseConfig:
@@ -205,7 +199,7 @@ class MockOpenTelemetryConfig:
 @pytest.fixture
 def mock_settings():
     """Fixture providing mock settings for tests."""
-    return MockCoreAppSettings()
+    return MockSettings()
 
 
 @pytest.fixture
@@ -451,7 +445,7 @@ def mock_pydantic_settings():
 
     def mock_init(self, **kwargs):
         # Set all attributes from mock configurations
-        mock_settings = MockCoreAppSettings()
+        mock_settings = MockSettings()
         for key, value in mock_settings.__dict__.items():
             setattr(self, key, value)
 
@@ -461,25 +455,21 @@ def mock_pydantic_settings():
 # Test configuration validation
 def test_mock_settings_validation():
     """Test that mock settings are valid."""
-    settings = MockCoreAppSettings()
+    settings = MockSettings()
 
-    # Basic validation
-    assert settings.app_name == "TripSage"
+    # Basic validation (flat structure)
+    assert settings.api_title == "TripSage API"
     assert settings.environment == "testing"
     assert settings.is_testing() is True
     assert settings.is_production() is False
 
-    # API keys validation
-    assert settings.get_secret_value("openai_api_key") is not None
-    assert settings.get_secret_value("jwt_secret_key") is not None
+    # API keys validation (flat structure)
+    assert settings.openai_api_key.get_secret_value() is not None
+    assert settings.database_jwt_secret.get_secret_value() is not None
 
-    # Sub-configuration validation
-    assert settings.database.supabase_url is not None
-    assert settings.dragonfly.url is not None
-    assert settings.mem0.vector_store_type == "pgvector"
-
-    # No validation errors
-    assert len(settings.validate_critical_settings()) == 0
+    # Config validation (flat structure)
+    assert settings.database_url is not None
+    assert settings.redis_url is None  # Optional in test config
 
 
 def test_mock_service_registry():

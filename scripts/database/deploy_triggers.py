@@ -9,7 +9,7 @@ import logging
 import sys
 from pathlib import Path
 
-from tripsage_core.config import BaseAppSettings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 # Configure logging
@@ -447,7 +447,7 @@ async def main():
 
     try:
         # Initialize services
-        settings = BaseAppSettings()
+        settings = get_settings()
         db_service = DatabaseService(settings)
         await db_service.initialize()
 

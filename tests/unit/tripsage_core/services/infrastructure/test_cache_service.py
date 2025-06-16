@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from tripsage_core.config import CoreAppSettings
+from tripsage_core.config import Settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.cache_service import (
     CacheService,
@@ -27,7 +27,7 @@ class TestCacheService:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        settings = Mock(spec=CoreAppSettings)
+        settings = Mock(spec=Settings)
         settings.dragonfly = Mock()
         settings.dragonfly.url = "redis://localhost:6379/0"
         settings.dragonfly.ttl_short = 300

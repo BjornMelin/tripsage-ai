@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
-from tripsage_core.config import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
     CoreResourceNotFoundError,
@@ -37,7 +37,7 @@ class DatabaseService:
     - Health monitoring and statistics
     """
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """Initialize the database service.
 
         Args:

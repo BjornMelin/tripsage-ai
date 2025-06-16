@@ -7,16 +7,14 @@ conversation history, and travel preferences using the unified memory service.
 import logging
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import (
-    get_memory_service_dep,
+    MemoryServiceDep,
+    RequiredPrincipalDep,
     get_principal_id,
-    require_principal,
 )
-from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.services.business.memory_service import MemoryService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -46,8 +44,8 @@ class UpdatePreferencesRequest(BaseModel):
 @router.post("/conversation")
 async def add_conversation_memory(
     request: ConversationMemoryRequest,
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Add conversation messages to user memory.
 
@@ -90,8 +88,8 @@ async def add_conversation_memory(
 
 @router.get("/context")
 async def get_user_context(
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Get user context and preferences.
 
@@ -118,8 +116,8 @@ async def get_user_context(
 @router.post("/search")
 async def search_memories(
     request: SearchMemoryRequest,
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Search user memories.
 
@@ -149,8 +147,8 @@ async def search_memories(
 @router.put("/preferences")
 async def update_preferences(
     request: UpdatePreferencesRequest,
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Update user preferences.
 
@@ -181,9 +179,9 @@ async def update_preferences(
 async def add_preference(
     key: str,
     value: str,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
     category: str = "general",
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
 ):
     """Add or update a single user preference.
 
@@ -213,8 +211,8 @@ async def add_preference(
 @router.delete("/memory/{memory_id}")
 async def delete_memory(
     memory_id: str,
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Delete a specific memory.
 
@@ -249,8 +247,8 @@ async def delete_memory(
 
 @router.get("/stats")
 async def get_memory_stats(
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Get memory statistics for the user.
 
@@ -276,9 +274,9 @@ async def get_memory_stats(
 
 @router.delete("/clear")
 async def clear_user_memory(
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
     confirm: bool = False,
-    principal: Principal = Depends(require_principal),
-    memory_service: MemoryService = get_memory_service_dep,
 ):
     """Clear all memories for the user.
 

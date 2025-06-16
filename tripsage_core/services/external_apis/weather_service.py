@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
-from tripsage_core.config import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
@@ -32,7 +32,7 @@ class WeatherServiceError(CoreAPIError):
 class WeatherService:
     """Service for interacting with OpenWeatherMap API."""
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """
         Initialize the OpenWeatherMap service.
 

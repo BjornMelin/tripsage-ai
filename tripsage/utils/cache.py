@@ -344,9 +344,9 @@ def cached(
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            # Check if caching is enabled
+            # Check if caching is enabled (flat config)
             settings = get_settings()
-            if not settings.feature_flags.enable_caching:
+            if not settings.redis_url:
                 return await func(*args, **kwargs)
 
             # Check for skip_cache parameter
@@ -450,7 +450,7 @@ async def batch_cache_set(
         List of success/failure booleans for each item
     """
     settings = get_settings()
-    if not use_redis or not settings.feature_flags.enable_caching:
+    if not use_redis or not settings.redis_url:
         results = []
         for item in items:
             success = await memory_cache.set(
@@ -515,7 +515,7 @@ async def batch_cache_get(
         List of values (None for missing keys)
     """
     settings = get_settings()
-    if not use_redis or not settings.feature_flags.enable_caching:
+    if not use_redis or not settings.redis_url:
         results = []
         for key in keys:
             value = await memory_cache.get(key)
@@ -571,7 +571,7 @@ async def cache_lock(
         True if lock was acquired, False otherwise
     """
     settings = get_settings()
-    if not settings.feature_flags.enable_caching:
+    if not settings.redis_url:
         # Simple local lock for development
         yield True
         return

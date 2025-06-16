@@ -78,7 +78,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
     """Create FastAPI test client with all dependencies properly mocked."""
     with (
         # Mock settings
-        patch("tripsage_core.config.base_app_settings.get_settings") as mock_settings,
+        patch("tripsage_core.config.get_settings") as mock_settings,
         # Mock cache service
         patch(
             "tripsage_core.services.infrastructure.cache_service.get_cache_service",
@@ -270,7 +270,7 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
     """Create FastAPI test client for testing unauthenticated requests."""
     with (
         # Mock settings
-        patch("tripsage_core.config.base_app_settings.get_settings") as mock_settings,
+        patch("tripsage_core.config.get_settings") as mock_settings,
         # Mock cache service
         patch(
             "tripsage_core.services.infrastructure.cache_service.get_cache_service",
