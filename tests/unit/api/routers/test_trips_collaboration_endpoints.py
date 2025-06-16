@@ -14,17 +14,15 @@ import pytest
 from fastapi import HTTPException, status
 
 from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.schemas.trips import TripShareRequest
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
 )
 from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
-from tripsage_core.services.business.trip_service import (
-    TripCollaborator,
-    TripService,
-    TripShareRequest,
-)
+from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
+from tripsage_core.services.business.trip_service import TripService
 
 
 class TestTripCollaborationEndpoints:
@@ -70,13 +68,13 @@ class TestTripCollaborationEndpoints:
     def sample_collaborators(self):
         """Sample trip collaborators."""
         return [
-            TripCollaborator(
+            TripCollaboratorDB(
                 user_id="collab456",
                 email="collaborator@example.com",
                 permission_level="view",
                 added_at=datetime.now(timezone.utc),
             ),
-            TripCollaborator(
+            TripCollaboratorDB(
                 user_id="editor789",
                 email="editor@example.com",
                 permission_level="edit",
@@ -608,7 +606,7 @@ class TestTripCollaborationEndpoints:
 
         # Create 100 collaborators
         large_collaborator_list = [
-            TripCollaborator(
+            TripCollaboratorDB(
                 user_id=f"user{i}",
                 email=f"user{i}@example.com",
                 permission_level="view" if i % 2 == 0 else "edit",
@@ -643,7 +641,7 @@ class TestTripCollaborationEndpoints:
 
         # Mock returning all collaborators
         mock_collaborators = [
-            TripCollaborator(
+            TripCollaboratorDB(
                 user_id=f"user{i}",
                 email=f"user{i}@example.com",
                 permission_level="view",
