@@ -28,14 +28,14 @@ from tripsage.api.schemas.trips import (
     TripSummaryResponse,
     UpdateTripRequest,
 )
+from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
 from tripsage_core.models.schemas_common.travel import TripDestination
+from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
 
 # Import core service and models
 from tripsage_core.services.business.trip_service import (
-    TripCreateRequest as CoreTripCreateRequest,
-)
-from tripsage_core.services.business.trip_service import (
+    TripCreateRequest,
     TripLocation,
     TripService,
     get_trip_service,
@@ -92,18 +92,42 @@ async def create_trip(
             )
             trip_locations.append(trip_location)
 
-        # Create core trip create request
-        core_request = CoreTripCreateRequest(
+        # Extract primary destination from destinations list
+        primary_destination = (
+            trip_request.destinations[0].name
+            if trip_request.destinations
+            else "Unknown"
+        )
+
+        # Create default budget if preferences don't include one
+        default_budget = EnhancedBudget(
+            total=1000.0,  # Default $1000 budget
+            currency="USD",
+            breakdown=BudgetBreakdown(
+                accommodation=300.0, transportation=400.0, food=200.0, activities=100.0
+            ),
+        )
+
+        # Extract budget from preferences if available
+        budget = default_budget
+        if trip_request.preferences and hasattr(trip_request.preferences, "budget"):
+            if trip_request.preferences.budget:
+                budget = trip_request.preferences.budget
+
+        # Create core trip create request with all required fields
+        core_request = TripCreateRequest(
             title=trip_request.title,
             description=trip_request.description,
             start_date=start_datetime,
             end_date=end_datetime,
+            destination=primary_destination,  # Required field
             destinations=trip_locations,
-            preferences=(
-                trip_request.preferences.model_dump()
-                if trip_request.preferences
-                else {}
-            ),
+            budget=budget,  # Required field
+            travelers=1,  # Default to 1 traveler
+            trip_type=TripType.LEISURE,  # Default trip type
+            visibility=TripVisibility.PRIVATE,  # Default visibility
+            tags=[],  # Default empty tags
+            preferences=trip_request.preferences,
         )
 
         # Create trip via core service
@@ -495,7 +519,7 @@ async def duplicate_trip(
             )
 
         # Create new trip based on original
-        duplicate_request = CoreTripCreateRequest(
+        duplicate_request = TripCreateRequest(
             title=f"Copy of {original_trip.title}",
             description=original_trip.description,
             start_date=original_trip.start_date,

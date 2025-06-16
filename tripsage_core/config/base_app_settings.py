@@ -631,3 +631,12 @@ def init_settings() -> CoreAppSettings:
 
     logging.info("Core settings initialization completed successfully")
     return settings
+
+
+# Rebuild the model after EnterpriseFeatureFlags is fully defined
+try:
+    from tripsage_core.config.enterprise_config import EnterpriseFeatureFlags
+    CoreAppSettings.model_rebuild()
+except ImportError:
+    # EnterpriseFeatureFlags not available, will be rebuilt later
+    pass
