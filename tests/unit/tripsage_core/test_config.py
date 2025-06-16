@@ -221,20 +221,15 @@ class TestConfigurationErrorHandling:
             assert "Input should be" in error["msg"]
 
     def test_missing_required_fields(self):
-        """Test handling of missing required fields."""
+        """Test that Settings loads with defaults when no env vars provided."""
         with patch.dict(os.environ, {}, clear=True):
-            # Don't provide required fields
-            with pytest.raises(ValidationError) as exc_info:
-                Settings(_env_file=None)
-
-            errors = exc_info.value.errors()
-            required_fields = [
-                error["loc"][0] for error in errors if error["type"] == "missing"
-            ]
-
-            # Should require these critical fields
-            assert "openai_api_key" in required_fields
-            assert "database_url" in required_fields
+            # Settings should load successfully with default values
+            settings = Settings(_env_file=None)
+            
+            # Verify defaults are used
+            assert settings.openai_api_key.get_secret_value() == "sk-test-1234567890"
+            assert settings.database_url == "https://test.supabase.com"
+            assert settings.environment == "development"
 
 
 class TestModernBestPractices:

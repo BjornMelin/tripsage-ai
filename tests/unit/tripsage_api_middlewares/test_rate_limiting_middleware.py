@@ -27,7 +27,7 @@ def mock_app():
 def mock_settings():
     """Create mock settings."""
     settings = MagicMock()
-    settings.dragonfly.url = None  # Default to in-memory
+    settings.redis_url = None  # Default to in-memory
     return settings
 
 
@@ -472,7 +472,7 @@ class TestEnhancedRateLimitMiddleware:
     async def test_dragonfly_middleware_initialization(self, mock_app, mock_settings):
         """Test middleware initialization with DragonflyDB."""
         # Enable DragonflyDB
-        mock_settings.dragonfly.url = "redis://localhost:6379"
+        mock_settings.redis_url = "redis://localhost:6379"
 
         # Create middleware
         middleware = EnhancedRateLimitMiddleware(

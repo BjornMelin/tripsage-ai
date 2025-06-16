@@ -21,13 +21,13 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
-from tripsage_core.models.base_core_model import TripSageModel
+from pydantic import BaseModel, ConfigDict
 from tripsage_core.services.business.key_management_service import KeyManagementService
 
 logger = logging.getLogger(__name__)
 
 
-class Principal(TripSageModel):
+class Principal(BaseModel):
     """Represents an authenticated principal (user or agent)."""
 
     id: str
@@ -37,6 +37,14 @@ class Principal(TripSageModel):
     auth_method: str  # "jwt" or "api_key"
     scopes: list[str] = []
     metadata: dict = {}
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        extra="ignore",
+        # Use exclude_unset to avoid potential serialization issues
+        exclude_unset=True,
+    )
 
     @property
     def user_id(self) -> str:

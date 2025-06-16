@@ -11,10 +11,8 @@ class TestDestinationsRouter:
 
     def setup_method(self):
         """Set up test data."""
-        self.sample_destination = DestinationFactory.create()
-        self.sample_search_response = DestinationFactory.create_search_response()
-        self.sample_details_response = DestinationFactory.create_details_response()
-        self.sample_saved_destination = DestinationFactory.create_saved_destination()
+        # DestinationFactory methods are handled by mocks in conftest.py
+        pass
 
     # === SUCCESS TESTS ===
 
@@ -54,22 +52,20 @@ class TestDestinationsRouter:
     ):
         """Test successful destination details retrieval."""
         # Act
-        response = api_test_client.post(
-            "/api/destinations/details",
-            json=valid_destination_details,
+        response = api_test_client.get(
+            f"/api/destinations/{valid_destination_details['destination_id']}",
         )
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
 
     def test_get_destination_recommendations_success(
-        self, api_test_client, valid_destination_recommendations
+        self, api_test_client
     ):
         """Test successful destination recommendations."""
         # Act
-        response = api_test_client.post(
+        response = api_test_client.get(
             "/api/destinations/recommendations",
-            json=valid_destination_recommendations,
         )
 
         # Assert
@@ -146,22 +142,20 @@ class TestDestinationsRouter:
     ):
         """Test destination details without authentication."""
         # Act
-        response = unauthenticated_test_client.post(
-            "/api/destinations/details",
-            json=valid_destination_details,
+        response = unauthenticated_test_client.get(
+            f"/api/destinations/{valid_destination_details['destination_id']}",
         )
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_destination_recommendations_unauthorized(
-        self, unauthenticated_test_client, valid_destination_recommendations
+        self, unauthenticated_test_client
     ):
         """Test destination recommendations without authentication."""
         # Act
-        response = unauthenticated_test_client.post(
+        response = unauthenticated_test_client.get(
             "/api/destinations/recommendations",
-            json=valid_destination_recommendations,
         )
 
         # Assert

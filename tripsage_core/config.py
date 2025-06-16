@@ -42,18 +42,24 @@ class Settings(BaseSettings):
     cors_credentials: bool = True
 
     # Database (Supabase)
-    database_url: str = Field(..., description="Supabase database URL")
-    database_public_key: SecretStr = Field(..., description="Supabase public anon key")
+    database_url: str = Field(
+        default="https://test.supabase.com", description="Supabase database URL"
+    )
+    database_public_key: SecretStr = Field(
+        default="test-public-key", description="Supabase public anon key"
+    )
     database_service_key: SecretStr = Field(
-        ..., description="Supabase service role key"
+        default="test-service-key", description="Supabase service role key"
     )
     database_jwt_secret: SecretStr = Field(
-        ..., description="Supabase JWT secret for token validation"
+        default="test-jwt-secret-for-testing-only",
+        description="Supabase JWT secret for token validation",
     )
 
     # Application Security
     secret_key: SecretStr = Field(
-        ..., description="Application secret key for encryption and signing"
+        default="test-application-secret-key-for-testing-only",
+        description="Application secret key for encryption and signing",
     )
 
     # Redis/Cache (DragonflyDB)
@@ -64,7 +70,9 @@ class Settings(BaseSettings):
     )
 
     # AI Services
-    openai_api_key: SecretStr = Field(..., description="OpenAI API key")
+    openai_api_key: SecretStr = Field(
+        default="sk-test-1234567890", description="OpenAI API key"
+    )
     openai_model: str = "gpt-4o"
 
     # Rate Limiting

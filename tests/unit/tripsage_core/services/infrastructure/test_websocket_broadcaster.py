@@ -86,8 +86,7 @@ class TestWebSocketBroadcaster:
     def mock_settings(self):
         """Create mock settings."""
         settings = Mock(spec=Settings)
-        settings.dragonfly = Mock()
-        settings.dragonfly.url = "redis://localhost:6379/0"
+        settings.redis_url = "redis://localhost:6379/0"
         return settings
 
     @pytest.fixture

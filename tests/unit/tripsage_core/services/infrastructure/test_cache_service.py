@@ -28,12 +28,11 @@ class TestCacheService:
     def mock_settings(self):
         """Create mock settings."""
         settings = Mock(spec=Settings)
-        settings.dragonfly = Mock()
-        settings.dragonfly.url = "redis://localhost:6379/0"
-        settings.dragonfly.ttl_short = 300
-        settings.dragonfly.ttl_medium = 3600
-        settings.dragonfly.ttl_long = 86400
-        settings.dragonfly.max_connections = 10000
+        settings.redis_url = "redis://localhost:6379/0"
+        settings.cache_ttl_short = 300
+        settings.cache_ttl_medium = 3600
+        settings.cache_ttl_long = 86400
+        settings.redis_max_connections = 10000
         return settings
 
     @pytest.fixture

@@ -59,8 +59,8 @@ class BaseAgent:
         self.name = name
         self.instructions = instructions
         self.service_registry = service_registry
-        self.model = model or settings.agent.model_name
-        self.temperature = temperature or settings.agent.temperature
+        self.model = model or settings.openai_model
+        self.temperature = temperature or settings.model_temperature
         self.metadata = metadata or {"agent_type": "tripsage"}
 
         # Initialize tools

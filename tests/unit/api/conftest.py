@@ -73,6 +73,44 @@ def mock_database_service():
     return db
 
 
+def create_authenticated_test_client(mock_principal):
+    """Create an authenticated test client with all dependencies mocked.
+    
+    This is a helper function for creating test clients that need authentication.
+    Use this pattern in router tests for authenticated endpoints.
+    """
+    from fastapi.testclient import TestClient
+    from tripsage.api.main import app
+    from tripsage.api.core.dependencies import (
+        get_current_principal,
+        require_principal,
+        require_user_principal,
+    )
+    
+    # Override authentication dependencies
+    app.dependency_overrides[get_current_principal] = lambda: mock_principal
+    app.dependency_overrides[require_principal] = lambda: mock_principal
+    app.dependency_overrides[require_user_principal] = lambda: mock_principal
+    
+    return TestClient(app)
+
+
+def create_unauthenticated_test_client():
+    """Create an unauthenticated test client with authentication dependencies returning None.
+    
+    This is a helper function for creating test clients for testing unauthorized access.
+    Use this pattern in router tests for testing authentication failures.
+    """
+    from fastapi.testclient import TestClient
+    from tripsage.api.main import app
+    from tripsage.api.core.dependencies import get_current_principal
+    
+    # Override authentication dependencies to return None (unauthenticated)
+    app.dependency_overrides[get_current_principal] = lambda: None
+    
+    return TestClient(app)
+
+
 @pytest.fixture
 def api_test_client(mock_cache_service, mock_database_service, mock_principal):
     """Create FastAPI test client with all dependencies properly mocked."""
@@ -91,15 +129,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         ),
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
-        # Mock MCP manager to prevent initialization issues
-        patch(
-            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize_all_enabled",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize",
-            new_callable=AsyncMock,
-        ),
+        # Mock legacy MCP references (removed during modernization)
         # Mock rate limiting middleware to disable it
         patch(
             "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
@@ -114,7 +144,9 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             "tripsage_core.services.business.accommodation_service.get_accommodation_service"
         ) as mock_acc_service,
         patch("tripsage_core.services.business.trip_service.get_trip_service"),
-        patch("tripsage_core.services.business.flight_service.get_flight_service"),
+        patch(
+            "tripsage_core.services.business.flight_service.get_flight_service"
+        ) as mock_flight_service_getter,
         patch(
             "tripsage_core.services.business.destination_service.get_destination_service"
         ),
@@ -219,6 +251,33 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             }
         )
 
+        # Configure flight service mock
+        mock_flight_service = AsyncMock()
+        mock_flight_service_getter.return_value = mock_flight_service
+        
+        # Configure mock search flights response
+        from tripsage.api.schemas.flights import FlightSearchResponse, FlightOffer
+        from tripsage_core.models.domain.flight import CabinClass
+        
+        def mock_search_flights(request):
+            """Mock search flights method that returns API response format."""
+            # Debug what we're receiving
+            print(f"Mock flight service received: {request}")
+            print(f"Request type: {type(request)}")
+            
+            # Return a simple dict instead of FlightSearchResponse
+            return {
+                "results": [],
+                "count": 0,
+                "currency": "USD",
+                "search_id": "mock-search-id",
+                "search_request": request.__dict__ if hasattr(request, '__dict__') else request,
+            }
+        
+        mock_flight_service.search_flights = AsyncMock(
+            side_effect=mock_search_flights
+        )
+
         # Configure file processing service mock
         mock_file_instance = Mock()
         mock_file_service.return_value = mock_file_instance
@@ -283,15 +342,7 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         ),
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
-        # Mock MCP manager to prevent initialization issues
-        patch(
-            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize_all_enabled",
-            new_callable=AsyncMock,
-        ),
-        patch(
-            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize",
-            new_callable=AsyncMock,
-        ),
+        # Mock legacy MCP references (removed during modernization)
         # Mock rate limiting middleware to disable it
         patch(
             "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
@@ -336,10 +387,16 @@ def authenticated_headers():
 @pytest.fixture
 def mock_principal():
     """Mock principal for authentication tests."""
-    principal = Mock()
-    principal.id = "test-user-id"
-    principal.email = "test@example.com"
-    return principal
+    from tripsage.api.middlewares.authentication import Principal
+    
+    return Principal(
+        id="test-user-id",
+        type="user",
+        email="test@example.com",
+        auth_method="jwt",
+        scopes=["read", "write"],
+        metadata={"role": "authenticated", "aud": "authenticated"}
+    )
 
 
 # Validation test data fixtures
@@ -431,11 +488,9 @@ def valid_flight_search():
         "destination": "NRT",
         "departure_date": "2024-03-15",
         "return_date": "2024-03-22",
-        "passengers": {
-            "adults": 1,
-            "children": 0,
-            "infants": 0,
-        },
+        "adults": 1,
+        "children": 0,
+        "infants": 0,
         "cabin_class": "economy",
     }
 
@@ -444,9 +499,7 @@ def valid_flight_search():
 def valid_flight_details():
     """Valid flight details request data."""
     return {
-        "flight_id": "test-flight-id",
-        "include_baggage": True,
-        "include_seat_map": True,
+        "offer_id": "test-offer-id",  # Changed from flight_id
     }
 
 
@@ -454,7 +507,7 @@ def valid_flight_details():
 def valid_save_flight():
     """Valid save flight request data."""
     return {
-        "flight_id": "test-flight-id",
+        "offer_id": "test-offer-id",  # Changed from flight_id
         "trip_id": "550e8400-e29b-41d4-a716-446655440000",
         "notes": "Great price!",
     }

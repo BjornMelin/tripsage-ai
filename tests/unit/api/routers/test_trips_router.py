@@ -44,7 +44,7 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
-from tripsage_core.models.schemas_common.enums import TripStatus, TripVisibility
+from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.services.business.trip_service import TripService
 
@@ -106,6 +106,7 @@ class TestTripsRouterComprehensive:
     def sample_shared_trip_response(self):
         """Sample shared trip response from core service."""
         from tripsage_core.services.business.trip_service import TripLocation
+        from tripsage_core.models.trip import EnhancedBudget, BudgetBreakdown, TripPreferences
 
         # Create proper TripLocation object instead of mock
         destination = TripLocation(
@@ -123,10 +124,24 @@ class TestTripsRouterComprehensive:
         trip_mock.description = "5-day trip exploring Tokyo"
         trip_mock.start_date = datetime(2024, 5, 1, tzinfo=timezone.utc)
         trip_mock.end_date = datetime(2024, 5, 5, tzinfo=timezone.utc)
+        trip_mock.destination = "Tokyo, Japan"  # Core expects singular destination string
         trip_mock.destinations = [destination]  # Use proper TripLocation object
-        trip_mock.preferences = {}
+        trip_mock.budget = EnhancedBudget(
+            total=5000.0,
+            currency="USD",
+            breakdown=BudgetBreakdown(
+                accommodation=2000.0,
+                transportation=1500.0,
+                food=1000.0,
+                activities=500.0,
+            ),
+        )
+        trip_mock.travelers = 2
+        trip_mock.trip_type = TripType.LEISURE
+        trip_mock.visibility = TripVisibility.SHARED
+        trip_mock.tags = ["adventure", "culture"]
+        trip_mock.preferences = TripPreferences()
         trip_mock.status = TripStatus.PLANNING.value
-        trip_mock.visibility = TripVisibility.SHARED.value
         trip_mock.shared_with = ["user456", "user789"]
         trip_mock.created_at = datetime.now(timezone.utc)
         trip_mock.updated_at = datetime.now(timezone.utc)
@@ -138,16 +153,22 @@ class TestTripsRouterComprehensive:
         """Sample trip collaborators."""
         return [
             TripCollaboratorDB(
-                user_id="user456",
-                email="collaborator1@example.com",
+                id=1,
+                trip_id=123,
+                user_id=UUID("123e4567-e89b-12d3-a456-426614174456"),
                 permission_level="view",
+                added_by=UUID("123e4567-e89b-12d3-a456-426614174000"),
                 added_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
             ),
             TripCollaboratorDB(
-                user_id="user789",
-                email="collaborator2@example.com",
+                id=2,
+                trip_id=123,
+                user_id=UUID("123e4567-e89b-12d3-a456-426614174789"),
                 permission_level="edit",
+                added_by=UUID("123e4567-e89b-12d3-a456-426614174000"),
                 added_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
             ),
         ]
 
@@ -189,6 +210,8 @@ class TestTripsRouterComprehensive:
         from tripsage_core.models.schemas_common.financial import Budget, Price
         from tripsage_core.models.schemas_common.travel import TripPreferences
 
+        # Create Budget and TripPreferences as Pydantic models
+        # They should serialize to dicts properly
         budget = Budget(
             total_budget=Price(amount=Decimal("5000"), currency=CurrencyCode.USD)
         )
@@ -699,7 +722,8 @@ class TestTripsRouterComprehensive:
         )
 
         assert len(collaborators) == 2
-        assert collaborators[0].email == "collaborator1@example.com"
+        # Since TripCollaboratorDB doesn't have email, check user_id instead
+        assert str(collaborators[0].user_id) == "123e4567-e89b-12d3-a456-426614174456"
         assert collaborators[1].permission_level == "edit"
 
     async def test_permission_change_scenario(

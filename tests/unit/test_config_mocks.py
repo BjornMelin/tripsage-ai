@@ -63,191 +63,14 @@ class MockSettings:
         return self.environment in ("test", "testing")
 
 
-class MockDatabaseConfig:
-    """Mock database configuration."""
-
-    def __init__(self):
-        self.supabase_url = "https://test-project.supabase.co"
-        self.supabase_anon_key = SecretStr("test-anon-key")
-        self.supabase_service_role_key = SecretStr("test-service-role-key")
-        self.supabase_project_id = "test-project-id"
-        self.supabase_timeout = 60.0
-        self.supabase_auto_refresh_token = True
-        self.supabase_persist_session = True
-        self.pgvector_enabled = True
-        self.vector_dimensions = 1536
-
-
-class MockDragonflyConfig:
-    """Mock DragonflyDB configuration."""
-
-    def __init__(self):
-        self.url = "redis://localhost:6379/1"  # Test database
-        self.ttl_short = 300
-        self.ttl_medium = 3600
-        self.ttl_long = 86400
-        self.max_memory_policy = "allkeys-lru"
-        self.max_connections = 100  # Lower for tests
-        self.thread_count = 2  # Lower for tests
-
-
-class MockMem0Config:
-    """Mock Mem0 memory configuration."""
-
-    def __init__(self):
-        self.vector_store_type = "pgvector"
-        self.embedding_model = "text-embedding-3-small"
-        self.embedding_dimensions = 1536
-        self.memory_types = ["user_preferences", "trip_history"]
-        self.max_memories_per_user = 100  # Lower for tests
-        self.memory_ttl_days = 30  # Lower for tests
-        self.similarity_threshold = 0.7
-        self.max_search_results = 5  # Lower for tests
-        self.batch_size = 10  # Lower for tests
-        self.async_processing = True
-
-
-class MockLangGraphConfig:
-    """Mock LangGraph configuration."""
-
-    def __init__(self):
-        self.checkpoint_storage = "memory"  # Use memory for tests
-        self.enable_streaming = False  # Disable for tests
-        self.max_graph_depth = 10  # Lower for tests
-        self.default_agent_timeout = 30  # Lower for tests
-        self.enable_parallel_execution = True
-        self.max_parallel_agents = 2  # Lower for tests
-        self.max_retries = 1  # Lower for tests
-        self.retry_delay = 0.1  # Lower for tests
-        self.enable_error_recovery = True
-        self.enable_tracing = False  # Disable for tests
-        self.trace_storage_days = 1  # Lower for tests
-
-
-class MockCrawl4AIConfig:
-    """Mock Crawl4AI configuration."""
-
-    def __init__(self):
-        self.api_url = "http://localhost:8000/api"
-        self.api_key = SecretStr("test-crawl4ai-key")
-        self.timeout = 5000  # Lower for tests
-        self.max_depth = 1  # Lower for tests
-        self.max_pages = 10  # Lower for tests
-        self.default_format = "markdown"
-        self.extract_metadata = True
-        self.preserve_links = True
-        self.concurrent_requests = 2  # Lower for tests
-        self.rate_limit_delay = 0.1  # Lower for tests
-        self.cache_enabled = False  # Disable for tests
-        self.cache_ttl = 60  # Lower for tests
-
-
-class MockAgentConfig:
-    """Mock agent configuration."""
-
-    def __init__(self):
-        self.model_name = "gpt-4o"
-        self.max_tokens = 1000  # Lower for tests
-        self.temperature = 0.7
-        self.agent_timeout = 30  # Lower for tests
-        self.max_retries = 1  # Lower for tests
-        self.agent_memory_size = 5  # Lower for tests
-        self.default_flight_preferences = {
-            "seat_class": "economy",
-            "max_stops": 1,
-            "preferred_airlines": [],
-            "avoid_airlines": [],
-            "time_window": "flexible",
-        }
-        self.default_accommodation_preferences = {
-            "property_type": "hotel",
-            "min_rating": 3.5,
-            "amenities": ["wifi"],
-            "location_preference": "city_center",
-        }
-
-
-class MockFeatureFlags:
-    """Mock feature flags."""
-
-    def __init__(self):
-        self.enable_agent_memory = True
-        self.enable_parallel_agents = True
-        self.enable_streaming_responses = False  # Disable for tests
-        self.enable_rate_limiting = False  # Disable for tests
-        self.enable_caching = False  # Disable for tests
-        self.enable_debug_mode = True
-        self.enable_crawl4ai = True
-        self.enable_mem0 = True
-        self.enable_langgraph = True
-
-
-class MockOpenTelemetryConfig:
-    """Mock OpenTelemetry configuration."""
-
-    def __init__(self):
-        self.enabled = False  # Disable for tests
-        self.service_name = "tripsage-test"
-        self.service_version = "1.0.0-test"
-        self.otlp_endpoint = None
-        self.use_console_exporter = False  # Disable for tests
-        self.export_timeout_millis = 1000  # Lower for tests
-        self.max_queue_size = 100  # Lower for tests
-        self.headers = None
+# Legacy mock configuration classes removed - no longer needed with flat Settings structure
+# The flat Settings structure handles all configuration directly
 
 
 @pytest.fixture
 def mock_settings():
     """Fixture providing mock settings for tests."""
     return MockSettings()
-
-
-@pytest.fixture
-def mock_database_config():
-    """Fixture providing mock database configuration."""
-    return MockDatabaseConfig()
-
-
-@pytest.fixture
-def mock_dragonfly_config():
-    """Fixture providing mock DragonflyDB configuration."""
-    return MockDragonflyConfig()
-
-
-@pytest.fixture
-def mock_mem0_config():
-    """Fixture providing mock Mem0 configuration."""
-    return MockMem0Config()
-
-
-@pytest.fixture
-def mock_langgraph_config():
-    """Fixture providing mock LangGraph configuration."""
-    return MockLangGraphConfig()
-
-
-@pytest.fixture
-def mock_crawl4ai_config():
-    """Fixture providing mock Crawl4AI configuration."""
-    return MockCrawl4AIConfig()
-
-
-@pytest.fixture
-def mock_agent_config():
-    """Fixture providing mock agent configuration."""
-    return MockAgentConfig()
-
-
-@pytest.fixture
-def mock_feature_flags():
-    """Fixture providing mock feature flags."""
-    return MockFeatureFlags()
-
-
-@pytest.fixture
-def mock_opentelemetry_config():
-    """Fixture providing mock OpenTelemetry configuration."""
-    return MockOpenTelemetryConfig()
 
 
 def setup_test_environment():
@@ -460,8 +283,8 @@ def test_mock_settings_validation():
     # Basic validation (flat structure)
     assert settings.api_title == "TripSage API"
     assert settings.environment == "testing"
-    assert settings.is_testing() is True
-    assert settings.is_production() is False
+    assert settings.is_testing is True
+    assert settings.is_production is False
 
     # API keys validation (flat structure)
     assert settings.openai_api_key.get_secret_value() is not None

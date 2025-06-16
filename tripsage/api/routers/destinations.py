@@ -13,6 +13,7 @@ from tripsage.api.schemas.destinations import (
     DestinationDetailsResponse,
     DestinationSearchRequest,
     DestinationSearchResponse,
+    PointOfInterestSearchRequest,
     SavedDestinationResponse,
 )
 from tripsage_core.exceptions.exceptions import (
@@ -117,7 +118,7 @@ async def delete_saved_destination(
 
 @router.post("/points-of-interest", response_model=List[PointOfInterest])
 async def search_points_of_interest(
-    request: DestinationSearchRequest,
+    request: PointOfInterestSearchRequest,
     principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
