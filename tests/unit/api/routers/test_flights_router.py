@@ -17,13 +17,6 @@ class TestFlightsRouter:
 
     def test_search_flights_success(self, api_test_client, valid_flight_search):
         """Test successful flight search."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        # This is a known issue that needs investigation
-        # For now, we skip this test to allow the test suite to continue
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs instead of FlightSearchRequest fields")
-        
-        # Original test code preserved for when issue is fixed:
         # Act
         response = api_test_client.post(
             "/api/flights/search",
@@ -33,7 +26,10 @@ class TestFlightsRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert "results" in data  # Changed from "flights" to "results"
+        assert "results" in data
+        assert "count" in data
+        assert "currency" in data
+        assert "search_id" in data
 
     def test_get_flight_details_success(self, api_test_client, valid_flight_details):
         """Test successful flight details retrieval."""
@@ -60,10 +56,6 @@ class TestFlightsRouter:
 
     def test_search_flights_invalid_origin(self, api_test_client):
         """Test flight search with invalid origin."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs")
-        
         search_request = {
             "origin": "",  # Invalid empty origin
             "destination": "NRT",
@@ -85,10 +77,6 @@ class TestFlightsRouter:
 
     def test_search_flights_invalid_passengers(self, api_test_client):
         """Test flight search with invalid passenger count."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs")
-        
         search_request = {
             "origin": "LAX",
             "destination": "NRT",
@@ -110,10 +98,6 @@ class TestFlightsRouter:
 
     def test_search_flights_invalid_dates(self, api_test_client):
         """Test flight search with invalid date range."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs")
-        
         search_request = {
             "origin": "LAX",
             "destination": "NRT",
@@ -136,10 +120,6 @@ class TestFlightsRouter:
 
     def test_search_flights_invalid_cabin_class(self, api_test_client):
         """Test flight search with invalid cabin class."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs")
-        
         search_request = {
             "origin": "LAX",
             "destination": "NRT",
@@ -161,26 +141,12 @@ class TestFlightsRouter:
 
     # === ERROR HANDLING TESTS ===
 
-    def test_search_flights_service_error(self, api_test_client):
+    def test_search_flights_service_error(self, api_test_client, valid_flight_search):
         """Test flight search with service error."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs")
-        
-        search_request = {
-            "origin": "LAX",
-            "destination": "NRT",
-            "departure_date": "2024-03-15",
-            "adults": 1,
-            "children": 0,
-            "infants": 0,
-            "cabin_class": "economy",
-        }
-
-        # Act
+        # Act - Using valid request data since the mock service handles errors gracefully
         response = api_test_client.post(
             "/api/flights/search",
-            json=search_request,
+            json=valid_flight_search,
         )
 
         # Assert - The mock service handles errors gracefully
@@ -201,26 +167,12 @@ class TestFlightsRouter:
 
     # === AUTHENTICATION TESTS ===
 
-    def test_search_flights_unauthorized(self, unauthenticated_test_client):
+    def test_search_flights_unauthorized(self, unauthenticated_test_client, valid_flight_search):
         """Test flight search without authentication."""
-        # TODO: Fix validation issue - endpoint expects query.args and query.kwargs
-        import pytest
-        pytest.skip("Known validation issue - endpoint expects query.args and query.kwargs")
-        
-        search_request = {
-            "origin": "LAX",
-            "destination": "NRT",
-            "departure_date": "2024-03-15",
-            "adults": 1,
-            "children": 0,
-            "infants": 0,
-            "cabin_class": "economy",
-        }
-
         # Act
         response = unauthenticated_test_client.post(
             "/api/flights/search",
-            json=search_request,
+            json=valid_flight_search,
         )
 
         # Assert
