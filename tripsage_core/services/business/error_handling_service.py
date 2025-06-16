@@ -18,7 +18,9 @@ from tripsage_core.infrastructure.resilience import (
     circuit_breaker,
     register_circuit_breaker,
 )
-from tripsage_core.mcp_abstraction.manager import MCPManager
+
+# MCPManager removed as part of BJO-161 MCP abstraction removal
+# from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -98,13 +100,15 @@ class ErrorRecoveryService:
     fallback strategies and graceful degradation.
     """
 
-    def __init__(self, mcp_manager: MCPManager):
+    def __init__(self, mcp_manager=None):
         """Initialize error recovery service.
 
         Args:
-            mcp_manager: MCP manager instance
+            mcp_manager: MCP manager instance (deprecated - removed in BJO-161)
         """
-        self.mcp_manager = mcp_manager
+        # MCP manager removed as part of BJO-161 MCP abstraction removal
+        if mcp_manager is not None:
+            logger.warning("MCP manager parameter is deprecated and will be ignored")
         self.error_history: List[MCPOperationError] = []
         self.fallback_cache: Dict[str, Any] = {}
 
@@ -304,8 +308,9 @@ class ErrorRecoveryService:
             # Use circuit breaker to manage retries and failures
             @breaker
             async def protected_operation():
-                return await self.mcp_manager.invoke(
-                    service=service, method=method, params=params
+                # MCP abstraction removed - direct service calls should be used
+                raise NotImplementedError(
+                    f"Direct service integration needed for {service}.{method} after MCP removal"
                 )
 
             result = await protected_operation()
@@ -372,8 +377,9 @@ class ErrorRecoveryService:
                     await asyncio.sleep(delay)
 
                 # Retry the operation
-                result = await self.mcp_manager.invoke(
-                    service=service, method=method, params=params
+                # MCP abstraction removed - direct service calls should be used
+                raise NotImplementedError(
+                    f"Direct service integration needed for {service}.{method} after MCP removal"
                 )
 
                 logger.info(
@@ -427,8 +433,9 @@ class ErrorRecoveryService:
                         params, original_service, alt_service
                     )
 
-                    result = await self.mcp_manager.invoke(
-                        service=alt_service, method=method, params=adapted_params
+                    # MCP abstraction removed - direct service calls should be used
+                    raise NotImplementedError(
+                        f"Direct service integration needed for {alt_service}.{method} after MCP removal"
                     )
 
                     logger.info(f"Alternative service {alt_service} succeeded")

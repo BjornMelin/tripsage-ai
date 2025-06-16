@@ -665,4 +665,13 @@ class TripService:
         )
 
 
-__all__ = ["TripService", "TripCreateRequest", "TripUpdateRequest", "TripResponse"]
+async def get_trip_service() -> TripService:
+    """Get a configured TripService instance.
+    
+    Returns:
+        TripService: Configured trip service instance
+    """
+    return TripService()
+
+
+__all__ = ["TripService", "TripCreateRequest", "TripUpdateRequest", "TripResponse", "get_trip_service"]
