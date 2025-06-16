@@ -5,15 +5,15 @@
 
 ## 📋 User Documentation
 
-| Document | Purpose | User Type |
-|----------|---------|-----------|
-| [Getting Started (Users)](GETTING_STARTED_USERS.md) | User onboarding guide | 🌟 New users |
-| [Travel Planning Guide](TRAVEL_PLANNING_GUIDE.md) | Complete travel planning walkthrough | ✈️ Travelers |
-| [API Usage Examples](API_USAGE_EXAMPLES.md) | API usage for developers | 👨‍💻 Developers |
-| [Mobile App Guide](MOBILE_APP_GUIDE.md) | Mobile application user guide | 📱 Mobile users |
-| [Web App Guide](WEB_APP_GUIDE.md) | Web application user guide | 💻 Web users |
-| [FAQ](FAQ.md) | Frequently asked questions | ❓ All users |
-| [Support](SUPPORT.md) | Getting help & support channels | 🆘 All users |
+| Document | Purpose | User Type | Status |
+|----------|---------|-----------|---------|
+| **[FAQ](FAQ.md)** | Frequently asked questions | ❓ All users | ✅ **Updated** |
+| **[API Usage Examples](API_USAGE_EXAMPLES.md)** | Complete API integration guide | 👨‍💻 Developers | ✅ **Updated** |
+| [Getting Started (Users)](GETTING_STARTED_USERS.md) | User onboarding guide | 🌟 New users | 📝 Coming Soon |
+| [Travel Planning Guide](TRAVEL_PLANNING_GUIDE.md) | Complete travel planning walkthrough | ✈️ Travelers | 📝 Coming Soon |
+| [Mobile App Guide](MOBILE_APP_GUIDE.md) | Mobile application user guide | 📱 Mobile users | 📝 Coming Soon |
+| [Web App Guide](WEB_APP_GUIDE.md) | Web application user guide | 💻 Web users | 📝 Coming Soon |
+| [Support](SUPPORT.md) | Getting help & support channels | 🆘 All users | 📝 Coming Soon |
 
 ## 🌟 For New Users
 

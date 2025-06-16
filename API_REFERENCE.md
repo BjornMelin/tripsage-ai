@@ -64,6 +64,7 @@ curl -X POST "https://api.tripsage.ai/api/auth/login" \
 ```
 
 **Response:**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -79,6 +80,7 @@ curl -X POST "https://api.tripsage.ai/api/auth/login" \
 ```
 
 **Using JWT Token:**
+
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   "https://api.tripsage.ai/api/trips"
@@ -101,6 +103,7 @@ curl -X POST "https://api.tripsage.ai/api/user/keys" \
 ```
 
 **Response:**
+
 ```json
 {
   "id": "key_123abc",
@@ -113,6 +116,7 @@ curl -X POST "https://api.tripsage.ai/api/user/keys" \
 ```
 
 **Using API Key:**
+
 ```bash
 curl -H "Authorization: Bearer ts_live_1234567890abcdef" \
   "https://api.tripsage.ai/api/flights/search"
@@ -137,11 +141,13 @@ curl -H "Authorization: Bearer ts_live_1234567890abcdef" \
 ## Base URLs
 
 ### Production
+
 - **API Base URL**: `https://api.tripsage.ai`
 - **WebSocket**: `wss://api.tripsage.ai`
 - **Documentation**: `https://api.tripsage.ai/docs`
 
 ### Development
+
 - **API Base URL**: `http://localhost:8001`
 - **WebSocket**: `ws://localhost:8001`
 - **Documentation**: `http://localhost:8001/api/docs`
@@ -284,6 +290,7 @@ GET /api/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -302,6 +309,7 @@ Authorization: Bearer {token}
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -372,6 +380,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "Tokyo Cherry Blossom Trip",
@@ -401,6 +410,7 @@ Content-Type: application/json
 ```
 
 **Response (201 Created):**
+
 ```json
 {
   "id": "trip_789xyz",
@@ -428,6 +438,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "id": "trip_789xyz",
@@ -455,10 +466,12 @@ Authorization: Bearer {token}
 ```
 
 **Query Parameters:**
+
 - `skip` (integer, optional): Number of trips to skip (default: 0)
 - `limit` (integer, optional): Number of trips to return (default: 10, max: 100)
 
 **Response (200 OK):**
+
 ```json
 {
   "items": [
@@ -490,6 +503,7 @@ Content-Type: application/json
 ```
 
 **Request Body (partial updates allowed):**
+
 ```json
 {
   "title": "Updated Trip Title",
@@ -510,7 +524,7 @@ DELETE /api/trips/{trip_id}
 Authorization: Bearer {token}
 ```
 
-**Response (204 No Content)**
+**Response (204 No Content)** - The trip is deleted successfully.
 
 ### Trip Suggestions
 
@@ -522,11 +536,13 @@ Authorization: Bearer {token}
 ```
 
 **Query Parameters:**
+
 - `limit` (integer): Number of suggestions (1-20, default: 4)
 - `budget_max` (float): Maximum budget filter
 - `category` (string): Category filter (culture, adventure, relaxation, nature)
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -561,6 +577,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "user_emails": ["friend@example.com", "family@example.com"],
@@ -570,11 +587,13 @@ Content-Type: application/json
 ```
 
 **Permission Levels:**
+
 - `viewer`: Can view trip details
 - `editor`: Can view and edit trip details
 - `admin`: Can view, edit, and manage collaborators
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -597,6 +616,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "collaborators": [
@@ -632,6 +652,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "origin": "JFK",
@@ -651,6 +672,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "results": [
@@ -734,6 +756,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "route": {
@@ -765,6 +788,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "location": "Tokyo, Japan",
@@ -786,6 +810,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "results": [
@@ -888,6 +913,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "user_id": "user_123abc",
@@ -928,6 +954,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "budget_tier": "luxury",
@@ -950,6 +977,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "message": "I want to plan a romantic trip to Italy for my anniversary",
@@ -967,6 +995,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message_id": "msg_789xyz",
@@ -1143,6 +1172,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "id": "user_123abc",
@@ -1193,6 +1223,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "name": "John Doe",
@@ -1220,6 +1251,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "current_password": "old_password",
@@ -1235,6 +1267,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -1251,6 +1284,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "keys": [
@@ -1291,6 +1325,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "features": {
@@ -1331,6 +1366,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "version": "1.0.0",
@@ -1490,6 +1526,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "url": "https://your-app.com/webhooks/tripsage",
@@ -1619,13 +1656,14 @@ ws.onopen = () => {
 - **Interactive Docs**: Available at `/api/docs` and `/api/redoc`
 - **SDKs**: Official SDKs for popular languages
 - **Community**: Join our [Discord server](https://discord.gg/tripsage)
-- **Support**: Email support@tripsage.ai
+- **Support**: Email <support@tripsage.ai>
 - **Status Page**: [status.tripsage.ai](https://status.tripsage.ai)
 
 ### Rate Limits and Quotas
 
 Contact support for higher limits or enterprise pricing:
-- **Email**: enterprise@tripsage.ai
+
+- **Email**: <enterprise@tripsage.ai>
 - **Custom Limits**: Available for high-volume applications
 - **SLA Support**: 99.9% uptime guarantee
 - **Dedicated Support**: Priority technical assistance
@@ -1633,6 +1671,7 @@ Contact support for higher limits or enterprise pricing:
 ### Changelog
 
 Stay updated with API changes:
+
 - **API Version**: v1.0.0
 - **Last Updated**: 2025-01-15
 - **Breaking Changes**: None in current version

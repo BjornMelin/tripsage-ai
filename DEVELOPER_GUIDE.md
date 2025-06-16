@@ -139,6 +139,7 @@ graph TB
 ### Technology Stack
 
 #### Backend (Python)
+
 - **FastAPI**: Modern async web framework
 - **Pydantic v2**: Type-safe data validation
 - **LangGraph**: AI agent orchestration
@@ -147,6 +148,7 @@ graph TB
 - **Ruff**: Linting and formatting
 
 #### Frontend (TypeScript)
+
 - **Next.js 15**: React framework with App Router
 - **React 19**: Latest React with concurrent features
 - **TypeScript 5.5+**: Type safety
@@ -155,6 +157,7 @@ graph TB
 - **Biome**: Fast linting and formatting
 
 #### Data Layer
+
 - **Supabase**: PostgreSQL with real-time features
 - **pgvector**: Vector embeddings for AI
 - **DragonflyDB**: High-performance caching
@@ -162,7 +165,7 @@ graph TB
 
 ### Project Structure
 
-```
+```text
 tripsage-ai/
 ├── tripsage/                    # API package
 │   ├── api/                     # FastAPI application
@@ -198,6 +201,7 @@ tripsage-ai/
 ### Python Code Standards
 
 #### Type Hints
+
 All functions must include complete type hints:
 
 ```python
@@ -219,6 +223,7 @@ async def create_trip(
 ```
 
 #### Error Handling
+
 Use custom exception classes:
 
 ```python
@@ -235,6 +240,7 @@ class TripNotFoundError(CoreTripSageError):
 ```
 
 #### Async/Await Pattern
+
 Use async/await throughout:
 
 ```python
@@ -252,6 +258,7 @@ async def get_flight_options(
 ```
 
 #### Docstrings
+
 Use Google-style docstrings:
 
 ```python
@@ -282,6 +289,7 @@ async def search_accommodations(
 ### TypeScript Code Standards
 
 #### Interface Definitions
+
 Use interfaces for type safety:
 
 ```typescript
@@ -302,6 +310,7 @@ interface ApiResponse<T> {
 ```
 
 #### React Components
+
 Use TypeScript with React 19 patterns:
 
 ```typescript
@@ -343,6 +352,7 @@ export function TripSearchForm({ onResults, initialParams }: TripSearchFormProps
 ### Code Formatting
 
 #### Python with Ruff
+
 ```bash
 # Format code
 ruff format .
@@ -357,6 +367,7 @@ target-version = "py312"
 ```
 
 #### TypeScript with Biome
+
 ```bash
 # Format code
 npx biome format . --write
@@ -380,7 +391,8 @@ npx biome lint --apply .
 ### Python Testing with Pytest
 
 #### Test Structure
-```
+
+```text
 tests/
 ├── unit/                      # Fast, isolated tests
 │   ├── services/             # Service layer tests
@@ -395,6 +407,7 @@ tests/
 ```
 
 #### Example Unit Test
+
 ```python
 import pytest
 from unittest.mock import AsyncMock, patch
@@ -440,6 +453,7 @@ class TestFlightService:
 ```
 
 #### Example Integration Test
+
 ```python
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -467,6 +481,7 @@ class TestTripAPI:
 ```
 
 #### Running Tests
+
 ```bash
 # Run all tests with coverage
 uv run pytest
@@ -489,6 +504,7 @@ uv run pytest --cov=tripsage --cov-report=html
 ### Frontend Testing with Vitest
 
 #### Component Tests
+
 ```typescript
 import { render, screen, userEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -521,6 +537,7 @@ describe('TripSearchForm', () => {
 ```
 
 #### Hook Tests
+
 ```typescript
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
@@ -554,12 +571,14 @@ describe('useTripSearch', () => {
 ### Git Workflow
 
 #### Branch Naming
+
 - `feature/trip-search-enhancement`
 - `bugfix/memory-leak-fix`
 - `docs/api-documentation-update`
 - `refactor/service-layer-cleanup`
 
 #### Commit Messages
+
 Follow conventional commits:
 
 ```bash
@@ -574,6 +593,7 @@ Closes #123"
 ```
 
 #### Pull Request Process
+
 1. Create feature branch from `main`
 2. Implement changes with tests
 3. Run linting and formatting
@@ -584,6 +604,7 @@ Closes #123"
 ### Code Review Guidelines
 
 #### Checklist for Reviewers
+
 - [ ] Code follows style guidelines
 - [ ] All tests pass
 - [ ] New features have tests
@@ -593,6 +614,7 @@ Closes #123"
 - [ ] Error handling is comprehensive
 
 #### Review Template
+
 ```markdown
 ## Summary
 Brief description of changes
@@ -616,6 +638,7 @@ Brief description of changes
 ### Development Commands
 
 #### Backend Development
+
 ```bash
 # Start API server with auto-reload
 uv run python -m tripsage.api.main
@@ -640,6 +663,7 @@ DEBUG=true uv run python -m tripsage.api.main
 ```
 
 #### Frontend Development
+
 ```bash
 # Start Next.js development server
 pnpm dev
@@ -664,6 +688,7 @@ pnpm analyze
 ```
 
 #### Docker Development
+
 ```bash
 # Start all services
 docker-compose up -d
@@ -689,6 +714,7 @@ docker-compose exec postgres psql -U postgres
 ### Endpoint Development
 
 #### Router Structure
+
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status
 from tripsage.api.core.dependencies import get_current_user, get_db
@@ -724,6 +750,7 @@ async def create_trip(
 ```
 
 #### Schema Definitions
+
 ```python
 from datetime import date, datetime
 from typing import List, Optional
@@ -766,6 +793,7 @@ class TripResponse(BaseModel):
 ### Middleware Development
 
 #### Custom Middleware
+
 ```python
 import time
 from typing import Callable
@@ -805,6 +833,7 @@ class PerformanceMiddleware(BaseHTTPMiddleware):
 ### WebSocket Development
 
 #### WebSocket Handler
+
 ```python
 from fastapi import WebSocket, WebSocketDisconnect, Depends
 from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
@@ -848,11 +877,12 @@ async def websocket_chat_endpoint(
 
 ---
 
-## Frontend Development
+## Frontend Development (Next.js)
 
 ### Component Development
 
 #### Component Structure
+
 ```typescript
 'use client';
 
@@ -911,6 +941,7 @@ export default memo(Button);
 ### State Management
 
 #### Zustand Store
+
 ```typescript
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
@@ -1070,6 +1101,7 @@ export const useTripStore = create<TripStore>()(
 ### Custom Hooks
 
 #### API Hook with Error Handling
+
 ```typescript
 import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -1144,6 +1176,7 @@ export function useMutationApi<TData, TVariables>(
 ### Migration Development
 
 #### Creating Migrations
+
 ```python
 # scripts/database/create_migration.py
 import asyncio
@@ -1195,6 +1228,7 @@ if __name__ == "__main__":
 ```
 
 #### Migration Runner
+
 ```python
 # scripts/database/run_migrations.py
 import asyncio
@@ -1287,6 +1321,7 @@ if __name__ == "__main__":
 ### Database Models
 
 #### Pydantic Model with SQLAlchemy Integration
+
 ```python
 from datetime import datetime
 from typing import Optional, List
@@ -1352,6 +1387,7 @@ class Trip(BaseModel):
 ### LangGraph Agent Implementation
 
 #### Agent Node Definition
+
 ```python
 from typing import Dict, Any, List
 from langgraph import StateGraph, END
@@ -1434,6 +1470,7 @@ class FlightSearchAgent:
 ```
 
 #### Graph Configuration
+
 ```python
 from langgraph import StateGraph, END
 from tripsage.orchestration.nodes import (
@@ -1500,6 +1537,7 @@ def create_trip_planning_graph():
 ### Agent Tools
 
 #### Tool Definition
+
 ```python
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
@@ -1567,6 +1605,7 @@ class FlightSearchTool(BaseTool):
 ### Database Optimization
 
 #### Query Optimization
+
 ```python
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload, joinedload
@@ -1614,6 +1653,7 @@ WHERE status IN ('planning', 'booked');
 ```
 
 #### Caching Strategy
+
 ```python
 from functools import wraps
 from typing import Any, Callable, Optional
@@ -1672,6 +1712,7 @@ async def search_flights_cached(search_params: FlightSearchParams) -> List[Fligh
 ### API Performance
 
 #### Response Optimization
+
 ```python
 from fastapi import BackgroundTasks
 from fastapi.responses import StreamingResponse
@@ -1762,6 +1803,7 @@ async def optimize_trip(
 ### Frontend Performance
 
 #### Component Optimization
+
 ```typescript
 import { memo, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -1844,6 +1886,7 @@ TripList.displayName = 'TripList';
 ### API Security
 
 #### Authentication & Authorization
+
 ```python
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -1921,6 +1964,7 @@ def require_permission(permission: Permission):
 ```
 
 #### Input Validation & Sanitization
+
 ```python
 from pydantic import BaseModel, Field, validator
 import bleach
@@ -1995,6 +2039,7 @@ class RateLimiter:
 ### Data Protection
 
 #### Encryption & Secrets Management
+
 ```python
 from cryptography.fernet import Fernet
 import os
@@ -2075,6 +2120,7 @@ class APIKeyService:
 ### Docker Configuration
 
 #### Multi-stage Dockerfile
+
 ```dockerfile
 # Dockerfile.api
 FROM python:3.12-slim as builder
@@ -2140,6 +2186,7 @@ CMD ["python", "-m", "tripsage.api.main"]
 ```
 
 #### Docker Compose for Development
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -2214,6 +2261,7 @@ networks:
 ### CI/CD Pipeline
 
 #### GitHub Actions Workflow
+
 ```yaml
 # .github/workflows/ci-cd.yml
 name: TripSage CI/CD
@@ -2384,6 +2432,7 @@ jobs:
 ### Production Deployment
 
 #### Kubernetes Deployment
+
 ```yaml
 # k8s/api-deployment.yaml
 apiVersion: apps/v1
@@ -2487,24 +2536,28 @@ spec:
 This Developer Guide provides comprehensive documentation for building, testing, and deploying TripSage AI. Key highlights:
 
 ### Modern Architecture
+
 - **FastAPI + Next.js**: High-performance async backend with modern React frontend
 - **Pydantic v2**: Type-safe data validation and serialization
 - **LangGraph**: Sophisticated AI agent orchestration
 - **DragonflyDB**: 25x faster caching performance
 
 ### Development Excellence
+
 - **Type Safety**: Complete TypeScript and Python type hints
 - **Testing**: 90%+ coverage with unit, integration, and E2E tests
 - **Code Quality**: Automated linting, formatting, and security scanning
 - **Performance**: Optimized queries, caching, and async operations
 
 ### Production Ready
+
 - **Security**: Comprehensive authentication, authorization, and input validation
 - **Scalability**: Horizontal scaling with load balancing and caching
 - **Monitoring**: Health checks, logging, and performance metrics
 - **CI/CD**: Automated testing, security scanning, and deployment
 
 For additional resources, see:
+
 - [User Guide](USER_GUIDE.md) - End-user documentation
 - [API Reference](API_REFERENCE.md) - Complete API documentation
 - [Testing Guide](TESTING_GUIDE.md) - Testing framework details
