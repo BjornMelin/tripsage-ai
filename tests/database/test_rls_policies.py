@@ -329,7 +329,8 @@ class RLSPolicyTester:
                         has_access = False
 
                         if table_name == "trips":
-                            # User can update owned trips or shared trips with edit perms
+                            # User can update owned trips or shared trips with
+                            # edit perms
                             if record.get("user_id") == client._user_id:
                                 has_access = True
                             else:

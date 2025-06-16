@@ -103,7 +103,8 @@ class ConfigurableDeploymentOrchestrator:
         self.deployment_history: List[DeploymentResult] = []
 
         logger.info(
-            f"Initialized deployment orchestrator with strategy: {self.enterprise_config.deployment_strategy}"
+            f"Initialized deployment orchestrator with strategy: "
+            f"{self.enterprise_config.deployment_strategy}"
         )
 
     async def deploy(
@@ -423,9 +424,13 @@ class ConfigurableDeploymentOrchestrator:
             "strategies": strategy_counts,
             "environments": env_counts,
             "enterprise_features": {
-                "monitoring_enabled": self.enterprise_config.enable_deployment_monitoring,
+                "monitoring_enabled": (
+                    self.enterprise_config.enable_deployment_monitoring
+                ),
                 "auto_rollback_enabled": self.enterprise_config.enable_auto_rollback,
-                "canary_analysis_enabled": self.enterprise_config.enable_canary_analysis,
+                "canary_analysis_enabled": (
+                    self.enterprise_config.enable_canary_analysis
+                ),
             },
         }
 

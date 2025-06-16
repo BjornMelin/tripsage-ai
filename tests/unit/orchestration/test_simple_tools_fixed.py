@@ -351,7 +351,8 @@ class TestToolIntegration:
             assert len(tool.description) > 10, (
                 f"Tool {tool.name} needs a better description"
             )
-            # Memory tools should mention memory, other tools should mention travel or location
+            # Memory tools should mention memory, other tools should mention
+            # travel or location
             if "memory" in tool.name:
                 assert "memory" in tool.description.lower()
             else:

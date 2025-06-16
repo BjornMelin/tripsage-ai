@@ -331,7 +331,8 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
                 if not health_result.healthy:
                     metrics.phase = DeploymentPhase.FAILED
                     logger.error(
-                        f"Blue-green deployment {deployment_id} failed health check {i + 1}"
+                        f"Blue-green deployment {deployment_id} failed health check "
+                        f"{i + 1}"
                     )
                     metrics.end_time = time.time()
                     return metrics
@@ -504,7 +505,8 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
 
                 if not health_result.healthy:
                     logger.error(
-                        f"Canary deployment {deployment_id} failed at {step_percentage}%"
+                        f"Canary deployment {deployment_id} failed at "
+                        f"{step_percentage}%"
                     )
                     metrics.phase = DeploymentPhase.FAILED
 
@@ -524,7 +526,8 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
 
                     if not analysis_result["continue"]:
                         logger.warning(
-                            f"Canary analysis recommends stopping deployment {deployment_id}"
+                            f"Canary analysis recommends stopping deployment "
+                            f"{deployment_id}"
                         )
                         metrics.phase = DeploymentPhase.FAILED
 
@@ -640,7 +643,8 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         self.instance_count = config.get("instance_count", 3) if config else 3
         self.update_delay = config.get("update_delay", 2.0) if config else 2.0
         logger.info(
-            f"Initialized rolling deployment strategy with {self.instance_count} instances"
+            f"Initialized rolling deployment strategy with "
+            f"{self.instance_count} instances"
         )
 
     async def deploy(
@@ -670,7 +674,8 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
             for instance_num in range(1, self.instance_count + 1):
                 logger.info(
-                    f"Updating instance {instance_num}/{self.instance_count} for {deployment_id}"
+                    f"Updating instance {instance_num}/{self.instance_count} for "
+                    f"{deployment_id}"
                 )
 
                 # Update this instance
@@ -687,11 +692,13 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
                         instance_num / self.instance_count
                     ) * 100
                     logger.info(
-                        f"Instance {instance_num} healthy for deployment {deployment_id}"
+                        f"Instance {instance_num} healthy for deployment "
+                        f"{deployment_id}"
                     )
                 else:
                     logger.error(
-                        f"Instance {instance_num} failed health check for deployment {deployment_id}"
+                        f"Instance {instance_num} failed health check for deployment "
+                        f"{deployment_id}"
                     )
                     metrics.phase = DeploymentPhase.FAILED
 

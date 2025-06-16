@@ -98,7 +98,8 @@ async def demonstrate_blue_green_deployment():
         if result.metrics.health_checks:
             latest_check = result.metrics.health_checks[-1]
             print(
-                f"  Latest health check: {latest_check.healthy} ({latest_check.response_time:.3f}s)"
+                f"  Latest health check: {latest_check.healthy} "
+                f"({latest_check.response_time:.3f}s)"
             )
 
     return result
@@ -150,7 +151,8 @@ async def demonstrate_canary_deployment():
         print("  Canary progression:")
         for i, check in enumerate(result.metrics.health_checks):
             print(
-                f"    Step {i + 1}: {'✅' if check.healthy else '❌'} ({check.response_time:.3f}s)"
+                f"    Step {i + 1}: {'✅' if check.healthy else '❌'} "
+                f"({check.response_time:.3f}s)"
             )
 
     return result
@@ -293,7 +295,8 @@ async def demonstrate_deployment_monitoring():
         duration = deployment.get_duration()
         status_emoji = "✅" if deployment.success else "❌"
         print(
-            f"  {status_emoji} {deployment.deployment_id}: {deployment.strategy} → {deployment.environment} ({duration:.1f}s)"
+            f"  {status_emoji} {deployment.deployment_id}: {deployment.strategy} → "
+            f"{deployment.environment} ({duration:.1f}s)"
         )
 
 

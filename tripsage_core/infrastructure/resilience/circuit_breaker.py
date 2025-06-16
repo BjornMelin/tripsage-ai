@@ -175,7 +175,8 @@ class SimpleCircuitBreaker:
             except Exception as e:
                 self.metrics.record_failure(type(e).__name__)
                 logger.warning(
-                    f"Simple circuit breaker '{self.name}' failed after {self.max_retries} retries: {e}"
+                    f"Simple circuit breaker '{self.name}' failed after "
+                    f"{self.max_retries} retries: {e}"
                 )
                 raise
 
@@ -204,7 +205,8 @@ class SimpleCircuitBreaker:
             except Exception as e:
                 self.metrics.record_failure(type(e).__name__)
                 logger.warning(
-                    f"Simple circuit breaker '{self.name}' failed after {self.max_retries} retries: {e}"
+                    f"Simple circuit breaker '{self.name}' failed after "
+                    f"{self.max_retries} retries: {e}"
                 )
                 raise
 
@@ -255,7 +257,8 @@ class EnterpriseCircuitBreaker:
         )()
 
         logger.info(
-            f"Initialized enterprise circuit breaker '{name}' with failure_threshold={failure_threshold}"
+            f"Initialized enterprise circuit breaker '{name}' with "
+            f"failure_threshold={failure_threshold}"
         )
 
     def __call__(self, func: Callable) -> Callable:
@@ -296,7 +299,8 @@ class EnterpriseCircuitBreaker:
             # Reset failure count on success
             if self.failure_count > 0:
                 logger.debug(
-                    f"Circuit breaker '{self.name}' resetting failure count after success"
+                    f"Circuit breaker '{self.name}' resetting failure count "
+                    f"after success"
                 )
                 self.failure_count = 0
 
@@ -327,7 +331,8 @@ class EnterpriseCircuitBreaker:
     def _transition_to_half_open(self) -> None:
         """Transition circuit to HALF_OPEN state."""
         logger.info(
-            f"Circuit breaker '{self.name}' transitioning to half-open for recovery testing"
+            f"Circuit breaker '{self.name}' transitioning to half-open for "
+            f"recovery testing"
         )
         self.state = CircuitState.HALF_OPEN
         self.success_count = 0
@@ -339,7 +344,8 @@ class EnterpriseCircuitBreaker:
     def _transition_to_closed(self) -> None:
         """Transition circuit to CLOSED state."""
         logger.info(
-            f"Circuit breaker '{self.name}' closing after {self.success_count} successful recoveries"
+            f"Circuit breaker '{self.name}' closing after {self.success_count} "
+            f"successful recoveries"
         )
         self.state = CircuitState.CLOSED
         self.failure_count = 0

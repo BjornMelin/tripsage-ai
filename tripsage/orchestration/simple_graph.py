@@ -56,14 +56,18 @@ class SimpleTripSageOrchestrator:
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the travel planning agent."""
-        return """You are TripSage, an expert AI travel planning assistant. You help users plan comprehensive trips by:
+        return """You are TripSage, an expert AI travel planning assistant. 
+You help users plan comprehensive trips by:
 
 1. **Flight Search**: Use search_flights to find and compare flight options
-2. **Accommodation Search**: Use search_accommodations to find hotels, Airbnbs, and other lodging
+2. **Accommodation Search**: Use search_accommodations to find hotels, 
+   Airbnbs, and other lodging
 3. **Location Services**: Use geocode_location to get coordinates and location details
-4. **Weather Information**: Use get_weather to provide weather forecasts for destinations
+4. **Weather Information**: Use get_weather to provide weather forecasts 
+   for destinations
 5. **Research**: Use web_search to research destinations, activities, and travel tips
-6. **Memory Management**: Use add_memory and search_memories to remember user preferences and past conversations
+6. **Memory Management**: Use add_memory and search_memories to remember 
+   user preferences and past conversations
 
 **Guidelines:**
 - Always be helpful, accurate, and comprehensive in your travel planning
@@ -75,7 +79,8 @@ class SimpleTripSageOrchestrator:
 - Be proactive in suggesting improvements and alternatives
 
 **Example Workflow:**
-1. When a user asks about travel, extract key details (origin, destination, dates, budget)
+1. When a user asks about travel, extract key details (origin, destination, 
+   dates, budget)
 2. Use appropriate tools to search for flights and accommodations
 3. Research the destination for activities and tips
 4. Check weather for the travel dates
@@ -143,7 +148,8 @@ Start by greeting the user and asking how you can help with their travel plannin
                 + [
                     {
                         "role": "assistant",
-                        "content": f"I apologize, but I encountered an error while processing your request: {str(e)}. Please try again.",
+                        "content": f"I apologize, but I encountered an error while "
+                        f"processing your request: {str(e)}. Please try again.",
                     }
                 ],
                 "success": False,
