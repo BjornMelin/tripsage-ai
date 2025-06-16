@@ -438,8 +438,6 @@ class TestIntegrationScenarios:
         orchestrator = SimpleTripSageOrchestrator()
 
         # Test that custom config is used
-        config = {"configurable": {"thread_id": "user_123"}}
-
         # The process_conversation should handle config properly
         # This is tested indirectly through the mocking structure
         assert orchestrator.agent == mock_agent

@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from tripsage.api.schemas.trips import TripResponse, TripShareRequest
 from tripsage_core.exceptions.exceptions import (
     CoreAuthorizationError as PermissionError,
 )
@@ -29,6 +30,7 @@ from tripsage_core.services.business.trip_service import (
     TripLocation,
     TripService,
     TripUpdateRequest,
+    get_trip_service,
 )
 
 
