@@ -81,7 +81,8 @@ async def search_flights(
     passengers: int = 1,
     class_preference: str = "economy",
 ) -> str:
-    """Search for flights between locations with filters for dates, passengers, and preferences."""
+    """Search for flights between locations with filters for dates, passengers,
+    and preferences."""
     try:
         result = await mcp_manager.invoke(
             method_name="search_flights",
@@ -110,7 +111,8 @@ async def search_accommodations(
     price_min: Optional[float] = None,
     price_max: Optional[float] = None,
 ) -> str:
-    """Search for accommodations in a location with check-in/out dates and guest requirements."""
+    """Search for accommodations in a location with check-in/out dates and
+    guest requirements."""
     try:
         params = {
             "location": location,

@@ -83,7 +83,8 @@ class TestSimpleTripSageOrchestrator:
             "messages": [
                 HumanMessage(content="Find flights to Paris"),
                 AIMessage(
-                    content="I'll help you find flights to Paris. Let me search for options."
+                    content="I'll help you find flights to Paris. Let me search for "
+                    "options."
                 ),
             ]
         }
@@ -321,7 +322,8 @@ class TestOrchestratorGlobalAccess:
         assert mock_orchestrator_class.call_count == 2
         mock_orchestrator_class.assert_called_with(mock_service_registry)
 
-        # Third call without service registry should return the new instance (singleton behavior)
+        # Third call without service registry should return the new instance
+        # (singleton behavior)
         result3 = get_orchestrator()
         assert result3 == mock_instance2  # Same as result2
         # Should not create another instance
@@ -382,7 +384,8 @@ class TestIntegrationScenarios:
                 "messages": [
                     HumanMessage(content="I want to plan a trip to Tokyo"),
                     AIMessage(
-                        content="I'd love to help you plan your trip to Tokyo! When are you planning to travel?"
+                        content="I'd love to help you plan your trip to Tokyo! "
+                        "When are you planning to travel?"
                     ),
                 ]
             },
@@ -390,7 +393,8 @@ class TestIntegrationScenarios:
                 "messages": [
                     HumanMessage(content="March 15-22, 2024"),
                     AIMessage(
-                        content="Great! Let me search for flights and accommodations for March 15-22, 2024."
+                        content="Great! Let me search for flights and accommodations "
+                        "for March 15-22, 2024."
                     ),
                 ]
             },

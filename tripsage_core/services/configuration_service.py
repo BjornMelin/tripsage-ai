@@ -169,7 +169,8 @@ class ConfigurationService:
                 updated_config = await self.get_agent_config(agent_type, environment)
 
                 logger.info(
-                    f"Agent config updated for {agent_type} in {environment} by {updated_by}"
+                    f"Agent config updated for {agent_type} in {environment} "
+                    f"by {updated_by}"
                 )
                 return updated_config
 
@@ -290,7 +291,8 @@ class ConfigurationService:
                     SELECT cv.version_id, cv.config_snapshot, cv.description,
                            cv.created_at, cv.created_by, cv.is_current
                     FROM configuration_versions cv
-                    JOIN configuration_profiles cp ON cv.configuration_profile_id = cp.id
+                    JOIN configuration_profiles cp 
+                        ON cv.configuration_profile_id = cp.id
                     WHERE cp.agent_type = :agent_type 
                       AND cp.environment = :environment
                     ORDER BY cv.created_at DESC
@@ -332,7 +334,8 @@ class ConfigurationService:
                     text("""
                         SELECT cv.config_snapshot, cp.id as profile_id
                         FROM configuration_versions cv
-                        JOIN configuration_profiles cp ON cv.configuration_profile_id = cp.id
+                        JOIN configuration_profiles cp 
+                            ON cv.configuration_profile_id = cp.id
                         WHERE cv.version_id = :version_id
                           AND cp.agent_type = :agent_type
                           AND cp.environment = :environment
@@ -386,7 +389,8 @@ class ConfigurationService:
                 await delete_cache(cache_key_str)
 
                 logger.info(
-                    f"Configuration rolled back to {version_id} for {agent_type} by {rolled_back_by}"
+                    f"Configuration rolled back to {version_id} for {agent_type} "
+                    f"by {rolled_back_by}"
                 )
 
                 # Return updated configuration
@@ -444,7 +448,8 @@ class ConfigurationService:
                 row = result.fetchone()
                 if not row:
                     logger.warning(
-                        f"No configuration profile found for metrics recording: {agent_type}"
+                        f"No configuration profile found for metrics recording: "
+                        f"{agent_type}"
                     )
                     return
 
@@ -454,12 +459,14 @@ class ConfigurationService:
                 await session.execute(
                     text("""
                         INSERT INTO configuration_performance_metrics (
-                            configuration_profile_id, average_response_time, success_rate,
+                            configuration_profile_id, average_response_time, 
+                            success_rate,
                             error_rate, token_usage, cost_estimate, sample_size,
                             measurement_period_start, measurement_period_end
                         ) VALUES (
-                            :profile_id, :avg_response_time, :success_rate, :error_rate,
-                            :token_usage, :cost_estimate, :sample_size, :period_start, :period_end
+                            :profile_id, :avg_response_time, :success_rate, 
+                            :error_rate, :token_usage, :cost_estimate, 
+                            :sample_size, :period_start, :period_end
                         )
                     """),
                     {

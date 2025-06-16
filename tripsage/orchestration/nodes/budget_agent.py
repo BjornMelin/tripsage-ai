@@ -83,7 +83,8 @@ class BudgetAgentNode(BaseAgentNode):
             )
 
             logger.info(
-                f"Loaded budget agent configuration from database: temp={self.agent_config['temperature']}"
+                f"Loaded budget agent configuration from database: "
+                f"temp={self.agent_config['temperature']}"
             )
 
         except Exception as e:

@@ -86,7 +86,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             )
 
             logger.info(
-                f"Loaded destination research agent configuration from database: temp={self.agent_config['temperature']}"
+                f"Loaded destination research agent configuration from database: "
+                f"temp={self.agent_config['temperature']}"
             )
 
         except Exception as e:

@@ -160,7 +160,8 @@ async def demonstrate_enterprise_mode():
         if hasattr(breaker, "get_state"):
             state = breaker.get_state()
             print(
-                f"   Circuit state: {state['state']} (failures: {state['failure_count']}, successes: {state['success_count']})"
+                f"   Circuit state: {state['state']} (failures: "
+                f"{state['failure_count']}, successes: {state['success_count']})"
             )
 
         await asyncio.sleep(0.5)
@@ -236,7 +237,8 @@ async def demonstrate_recovery():
         if hasattr(breaker, "get_state"):
             state = breaker.get_state()
             print(
-                f"   Circuit state: {state['state']} (failures: {state['failure_count']}, successes: {state['success_count']})"
+                f"   Circuit state: {state['state']} (failures: "
+                f"{state['failure_count']}, successes: {state['success_count']})"
             )
 
         await asyncio.sleep(0.5)

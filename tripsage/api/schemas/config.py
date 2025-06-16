@@ -99,7 +99,8 @@ class AgentConfigRequest(BaseConfigModel):
             Field(
                 ge=0.0,
                 le=2.0,
-                description="Controls randomness in responses (0.0=deterministic, 2.0=very creative)",
+                description="Controls randomness in responses"
+                " (0.0=deterministic, 2.0=very creative)",
             ),
         ]
     ] = None
@@ -110,7 +111,8 @@ class AgentConfigRequest(BaseConfigModel):
             Field(
                 ge=1,
                 le=8000,
-                description="Maximum tokens in response (affects cost and response length)",
+                description="Maximum tokens in response"
+                " (affects cost and response length)",
             ),
         ]
     ] = None
@@ -154,7 +156,8 @@ class AgentConfigRequest(BaseConfigModel):
             # GPT-3.5 models work best with lower temperature
             if "gpt-3.5" in self.model and self.temperature > 1.5:
                 raise ValueError(
-                    "GPT-3.5 models work best with temperature ≤ 1.5 for optimal performance"
+                    "GPT-3.5 models work best with temperature ≤ 1.5"
+                    " for optimal performance"
                 )
 
             # Claude models have different optimal ranges
@@ -184,7 +187,10 @@ class AgentConfigRequest(BaseConfigModel):
     @property
     def configuration_hash(self) -> str:
         """Generate a hash of the configuration for change detection."""
-        config_str = f"{self.temperature}_{self.max_tokens}_{self.top_p}_{self.timeout_seconds}_{self.model}"
+        config_str = (
+            f"{self.temperature}_{self.max_tokens}_{self.top_p}"
+            f"_{self.timeout_seconds}_{self.model}"
+        )
         return hashlib.md5(config_str.encode()).hexdigest()[:8]
 
     def get_changed_fields(self, other: "AgentConfigRequest") -> List[str]:
@@ -287,17 +293,20 @@ class AgentConfigResponse(BaseConfigModel):
         recommended_temp = self.agent_type.recommended_temperature
         if abs(self.temperature - recommended_temp) > 0.2:
             suggestions.append(
-                f"Consider temperature {recommended_temp} for optimal {self.agent_type.display_name} performance"
+                f"Consider temperature {recommended_temp} for optimal "
+                f"{self.agent_type.display_name} performance"
             )
 
         if self.agent_type == AgentType.BUDGET_AGENT and self.temperature > 0.5:
             suggestions.append(
-                "Budget agents work best with lower temperature (≤0.3) for consistent calculations"
+                "Budget agents work best with lower temperature (≤0.3) for "
+                "consistent calculations"
             )
 
         if self.max_tokens > 2000 and self.agent_type == AgentType.BUDGET_AGENT:
             suggestions.append(
-                "Budget responses are typically concise; consider reducing max_tokens for cost efficiency"
+                "Budget responses are typically concise; consider reducing "
+                "max_tokens for cost efficiency"
             )
 
         return suggestions
@@ -430,7 +439,8 @@ class ConfigurationRecommendation(BaseConfigModel):
         if abs(recommended_temp - current_temp) > 0.5:
             if self.confidence_score > 0.9:
                 raise ValueError(
-                    "High confidence recommendations should not suggest dramatic temperature changes"
+                    "High confidence recommendations should not suggest "
+                    "dramatic temperature changes"
                 )
 
         return self
@@ -543,7 +553,10 @@ class ConfigurationValidationResponse(BaseConfigModel):
         if self.is_valid:
             return f"✅ Valid configuration ({len(self.warnings)} warnings)"
         else:
-            return f"❌ Invalid configuration ({len(self.errors)} errors, {len(self.warnings)} warnings)"
+            return (
+                f"❌ Invalid configuration ({len(self.errors)} errors, "
+                f"{len(self.warnings)} warnings)"
+            )
 
 
 class ConfigurationImportResult(BaseConfigModel):
@@ -572,4 +585,7 @@ class ConfigurationImportResult(BaseConfigModel):
         """Generate import operation summary."""
         total = len(self.imported_configurations) + len(self.failed_configurations)
         success_count = len(self.imported_configurations)
-        return f"Imported {success_count}/{total} configurations ({self.success_rate:.1%} success rate)"
+        return (
+            f"Imported {success_count}/{total} configurations "
+            f"({self.success_rate:.1%} success rate)"
+        )
