@@ -254,22 +254,18 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
-    from tripsage_core.config import CoreAppSettings
+    from pydantic import SecretStr
+    from tripsage_core.config import AppSettings
 
-    mock_settings = CoreAppSettings()
+    mock_settings = AppSettings()
 
     # Mock basic settings
     mock_settings.environment = "test"
     mock_settings.debug = True
-    mock_settings.agent.max_retries = 3
 
-    # Mock database settings
-    mock_settings.database.supabase_url = "https://test.supabase.co"
-    mock_settings.database.supabase_anon_key = "test_anon_key"
-
-    # Mock memory service (Mem0) - use actual fields from Mem0Config
-    mock_settings.mem0.vector_store_type = "pgvector"
-    mock_settings.mem0.embedding_model = "text-embedding-3-small"
+    # Mock database settings (now flat structure)
+    mock_settings.database_url = "https://test.supabase.co"
+    mock_settings.database_public_key = SecretStr("test_anon_key")
 
     # Mock Redis client
     mock_redis_client = MagicMock()
@@ -285,7 +281,7 @@ def mock_settings_and_redis(monkeypatch):
     # Apply all the patches we need
     with (
         patch(
-            "tripsage_core.config.base_app_settings.get_settings",
+            "tripsage_core.config.get_settings",
             return_value=mock_settings,
         ),
         patch("redis.asyncio.from_url", mock_from_url),

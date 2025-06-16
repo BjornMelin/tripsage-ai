@@ -44,7 +44,7 @@ def create_test_client(mock_settings_and_redis, mock_chat_service_instance):
         ),
         # Mock settings
         patch(
-            "tripsage_core.config.base_app_settings.get_settings",
+            "tripsage_core.config.get_settings",
             side_effect=lambda: mock_settings_and_redis["settings"],
         ),
         patch(

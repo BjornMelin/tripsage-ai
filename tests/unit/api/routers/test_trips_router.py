@@ -43,13 +43,10 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.schemas_common.travel import TripDestination
-from tripsage_core.services.business.trip_service import (
-    TripCollaborator,
-    TripService,
-    TripShareRequest,
-    TripStatus,
-    TripVisibility,
-)
+from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
+from tripsage_core.models.schemas_common.enums import TripStatus, TripVisibility
+from tripsage_core.services.business.trip_service import TripService
+from tripsage.api.schemas.trips import TripShareRequest
 
 
 class TestTripsRouterComprehensive:
@@ -140,13 +137,13 @@ class TestTripsRouterComprehensive:
     def sample_collaborators(self):
         """Sample trip collaborators."""
         return [
-            TripCollaborator(
+            TripCollaboratorDB(
                 user_id="user456",
                 email="collaborator1@example.com",
                 permission_level="view",
                 added_at=datetime.now(timezone.utc),
             ),
-            TripCollaborator(
+            TripCollaboratorDB(
                 user_id="user789",
                 email="collaborator2@example.com",
                 permission_level="edit",
