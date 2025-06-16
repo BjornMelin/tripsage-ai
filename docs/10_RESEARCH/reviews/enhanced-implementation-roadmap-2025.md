@@ -35,7 +35,7 @@ Following comprehensive research into current best practices for React 19 Compil
 
 ### Optimized System Flow
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                    FRONTEND LAYER (Enhanced)                    │
 ├─────────────────────────────────────────────────────────────────┤
