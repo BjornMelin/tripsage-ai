@@ -31,6 +31,7 @@ from tripsage.api.routers.trips import (
 from tripsage.api.schemas.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
+    TripShareRequest,
     UpdateTripRequest,
 )
 from tripsage_core.exceptions import (
@@ -42,11 +43,10 @@ from tripsage_core.exceptions import (
 from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
-from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
 from tripsage_core.models.schemas_common.enums import TripStatus, TripVisibility
+from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.services.business.trip_service import TripService
-from tripsage.api.schemas.trips import TripShareRequest
 
 
 class TestTripsRouterComprehensive:
