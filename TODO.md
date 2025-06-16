@@ -42,13 +42,13 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - `ruff check . --fix && ruff format .` on all changes
 - Test coverage ≥90%, pre-commit hooks enabled
 
-## 🚨 PRODUCTION READINESS BLOCKERS (Updated with Configurable Complexity Approach)
+## 🚨 V1 MVP CRITICAL PATH (Updated After GitHub ↔ Linear Synchronization)
 
-### 0. Critical Production Deployment Requirements ⭐ **COMPREHENSIVE TRACKING**
+### 0. V1 MVP Production Requirements ⭐ **PRIORITIZED IMPLEMENTATION ORDER**
 
-**Status**: 95% Production Ready - Major schema and security implementations completed
-**Linear Backlog**: Updated June 15, 2025 - New "configurable complexity" strategy implemented
-**Strategy Shift**: Changed from "remove enterprise features" to "make enterprise features configurable"
+**Status**: 87% Production Ready - Critical testing and core features need completion
+**GitHub ↔ Linear**: Updated June 16, 2025 - Complete synchronization with conventional commit formatting
+**Strategy**: Focus on V1 MVP launch requirements with clear implementation priority order
 
 **🎯 NEW APPROACH: Configurable Complexity for Portfolio Excellence**
 
@@ -70,38 +70,64 @@ ENTERPRISE_DEPLOYMENT_STRATEGY=blue_green
 ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
 ```
 
-After comprehensive production readiness assessment, all blockers are now tracked in Linear:
+### 📋 V1 MVP Critical Issues (Implementation Priority Order)
 
-- [x] **[BJO-119](https://linear.app/bjorn-dev/issue/BJO-119)** - feat(auth): unify frontend Supabase Auth with backend JWT system integration ✅ **COMPLETED - MARKED DONE**
-  - **Evidence**: `useAuthenticatedApi` hook fully implemented with automatic token refresh
-  - **Achievement**: Complete authentication flow functional from frontend to backend  
-  - **Performance**: <50ms auth latency (exceeded <100ms target), 87% code reduction vs custom JWT
-  - **Status**: 100% complete with production-ready implementation ✅
+**🔴 CRITICAL - MUST COMPLETE FOR V1 LAUNCH:**
 
-- [x] **[BJO-122](https://linear.app/bjorn-dev/issue/BJO-122)** - fix(frontend): resolve API client token format mismatch with backend authentication ✅ **COMPLETED - MARKED DONE**
-  - **Evidence**: All API calls use correct `Bearer <token>` format consistently
-  - **Achievement**: Frontend-backend token format compatibility established
-  - **Verification**: No token format mismatches found anywhere in codebase
-  - **Status**: Frontend-backend communication fully operational ✅
+1. **[GitHub #236](https://github.com/BjornMelin/tripsage-ai/issues/236) | [BJO-187](https://linear.app/bjorn-dev/issue/BJO-187)** - feat(trips): implement create_trip endpoint and core service methods
+   - **Status**: 🚨 CRITICAL - Breaks primary user workflow
+   - **Scope**: Trip creation, update, retrieval, and deletion endpoints
+   - **Priority**: V1 MVP blocker - implement first
 
-- [x] **[BJO-120](https://linear.app/bjorn-dev/issue/BJO-120)** - feat(api): complete implementation of core router endpoints ⚠️ **75% COMPLETE - CHILD ISSUES CREATED**
-  - **Achievement**: Activities and search routers use real Google Maps/unified search implementations
-  - **Critical Issue**: `create_trip` endpoint contains only `pass` statement (breaks primary workflow)
-  - **Child Issues**: BJO-130 (critical trip creation), BJO-131 (auth-dependent endpoints)
-  - **Status**: Major progress with remaining work extracted to focused child issues
+2. **[GitHub #237](https://github.com/BjornMelin/tripsage-ai/issues/237) | [BJO-188](https://linear.app/bjorn-dev/issue/BJO-188)** - feat(search): complete flight and accommodation search service integration
+   - **Status**: 🚨 CRITICAL - Core platform functionality missing
+   - **Scope**: Duffel flight search, hotel booking integration
+   - **Priority**: V1 MVP blocker - implement second
 
-- [x] **[BJO-121](https://linear.app/bjorn-dev/issue/BJO-121)** - fix(database): correct Supabase schema foreign key constraints and UUID references ⚠️ **80% COMPLETE - CHILD ISSUES CREATED**
-  - **Achievement**: Migration completed with proper UUID foreign keys and RLS policies
-  - **Inconsistency**: Schema files still show TEXT user_id instead of UUID foreign keys
-  - **Child Issues**: BJO-132 (schema consistency), BJO-133 (RLS policies configuration)
-  - **Status**: Core migration complete with documentation consistency work remaining
+3. **[GitHub #238](https://github.com/BjornMelin/tripsage-ai/issues/238) | [BJO-189](https://linear.app/bjorn-dev/issue/BJO-189)** - fix(database): resolve Supabase schema consistency and RLS policy gaps
+   - **Status**: ⚠️ HIGH - Security and data integrity issues
+   - **Scope**: UUID foreign key consistency, comprehensive RLS policies
+   - **Priority**: V1 MVP security requirement - implement third
 
-- [x] **[BJO-123](https://linear.app/bjorn-dev/issue/BJO-123)** - test(integration): comprehensive end-to-end integration testing ⏳ **READY FOR PHASE 1**
-  - **Dependencies**: BJO-119 ✅ Complete, BJO-122 ✅ Complete, BJO-120/121 mostly complete
-  - **Approach**: Phase 1 testing of completed components while child issues in development
-  - **Status**: Ready to begin integration testing of auth, activities, and search components
+**🟡 HIGH PRIORITY - COMPLETE BEFORE LAUNCH:**
 
-### UPDATED ISSUES WITH CONFIGURABLE COMPLEXITY APPROACH:
+4. **[GitHub #239](https://github.com/BjornMelin/tripsage-ai/issues/239) | [BJO-190](https://linear.app/bjorn-dev/issue/BJO-190)** - test(e2e): comprehensive integration test coverage
+   - **Status**: 📋 READY - All dependencies resolved
+   - **Scope**: End-to-end authentication, trip creation, search workflows
+   - **Priority**: V1 quality gate - implement fourth
+
+5. **[BJO-185](https://linear.app/bjorn-dev/issue/BJO-185)** - feat(langgraph): complete orchestration system implementation
+   - **Status**: 🔧 IN PROGRESS - 95% complete, production ready
+   - **Scope**: Finalize tool integrations and error handling
+   - **GitHub**: Closed as substantially complete
+
+6. **[GitHub #36](https://github.com/BjornMelin/tripsage-ai/issues/36) | [BJO-186](https://linear.app/bjorn-dev/issue/BJO-186)** - fix(tests): resolve Pydantic v2 migration test failures
+   - **Status**: 🔧 IN PROGRESS - 35% complete, major infrastructure work needed
+   - **Scope**: Fix 527 failing tests from Pydantic v1→v2 migration
+   - **Note**: Original GitHub #36 closed, focused child issue created
+
+**🟢 COMPLETED - PRODUCTION READY:**
+
+- ✅ **[GitHub #155](https://github.com/BjornMelin/tripsage-ai/issues/155) | [BJO-119](https://linear.app/bjorn-dev/issue/BJO-119)** - feat(auth): unified Supabase Auth integration
+- ✅ **[GitHub #159](https://github.com/BjornMelin/tripsage-ai/issues/159) | [BJO-122](https://linear.app/bjorn-dev/issue/BJO-122)** - fix(frontend): API client token format compatibility
+- ✅ **[GitHub #85](https://github.com/BjornMelin/tripsage-ai/issues/85) | [BJO-185](https://linear.app/bjorn-dev/issue/BJO-185)** - feat(langgraph): orchestration system (95% complete, production ready)
+
+### 📅 Implementation Timeline
+
+**Week 1 (Critical Path):**
+- Day 1-2: Complete GitHub #236 | BJO-187 (trip endpoints) 
+- Day 3-4: Complete GitHub #237 | BJO-188 (search integration)
+- Day 5: Complete GitHub #238 | BJO-189 (database security)
+
+**Week 2 (Quality & Launch):**
+- Day 1-3: Complete GitHub #239 | BJO-190 (integration tests)
+- Day 4-5: Final testing and V1 MVP launch preparation
+
+**Estimated Total**: 8-10 development days for V1 MVP launch readiness
+
+---
+
+## 🎯 LEGACY: Configurable Complexity Approach
 
 - **[BJO-169](https://linear.app/bjorn-dev/issue/BJO-169)** - feat(enterprise): implement enterprise feature flags framework 🎯 **NEW HIGH PRIORITY**
   - **Purpose**: Centralized configurable complexity framework for all enterprise patterns
