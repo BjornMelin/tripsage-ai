@@ -11,7 +11,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
-from tripsage.api.core.dependencies import get_current_user
+from tripsage.api.core.auth import get_current_user_id
 from tripsage.api.schemas.config import (
     AgentConfigRequest,
     AgentConfigResponse,
@@ -95,7 +95,7 @@ async def get_agent_config(agent_type: str):
 async def update_agent_config(
     agent_type: str,
     config_update: AgentConfigRequest,
-    current_user: str = Depends(get_current_user),
+    current_user: str = Depends(get_current_user_id),
 ):
     """Update configuration for a specific agent type."""
     settings = get_settings()
@@ -166,7 +166,7 @@ async def update_agent_config(
 
 @router.get("/agents/{agent_type}/versions", response_model=List[ConfigurationVersion])
 async def get_agent_config_versions(
-    agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user)
+    agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
 ):
     """Get configuration version history for an agent type."""
     # Validate agent type
@@ -191,7 +191,7 @@ async def get_agent_config_versions(
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
 async def rollback_agent_config(
-    agent_type: str, version_id: str, current_user: str = Depends(get_current_user)
+    agent_type: str, version_id: str, current_user: str = Depends(get_current_user_id)
 ):
     """Rollback agent configuration to a specific version."""
     # Validate agent type

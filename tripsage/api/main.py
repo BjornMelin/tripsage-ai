@@ -40,6 +40,7 @@ from tripsage.api.routers import (
     users,
     websocket,
 )
+from tripsage_core.config import get_api_settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreAuthorizationError,
@@ -212,12 +213,13 @@ def create_app() -> FastAPI:
         The configured FastAPI application
     """
     settings = get_settings()
+    api_settings = get_api_settings()
 
     # Create FastAPI app with OpenAPI configuration
     app = FastAPI(
-        title=settings.api_title,
-        description=settings.api_description,
-        version=settings.api_version,
+        title=api_settings.title,
+        description="TripSage AI Travel Planning API",
+        version=api_settings.version,
         docs_url="/api/docs" if settings.environment != "production" else None,
         redoc_url="/api/redoc" if settings.environment != "production" else None,
         openapi_url="/api/openapi.json"
@@ -227,10 +229,12 @@ def create_app() -> FastAPI:
     )
 
     # Configure CORS
-    cors_config = settings.get_cors_config()
     app.add_middleware(
         CORSMiddleware,
-        **cors_config,
+        allow_origins=api_settings.cors_origins,
+        allow_credentials=api_settings.cors_credentials,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Add custom middleware (order matters - first added is last executed)
@@ -238,7 +242,7 @@ def create_app() -> FastAPI:
     app.add_middleware(LoggingMiddleware)
 
     # Enhanced rate limiting middleware with principal-based limits
-    use_dragonfly = bool(settings.dragonfly.url)
+    use_dragonfly = bool(settings.redis_url)
     app.add_middleware(
         EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
     )
