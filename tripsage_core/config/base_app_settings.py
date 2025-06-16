@@ -425,6 +425,9 @@ class CoreAppSettings(BaseSettings):
     agent: AgentConfig = Field(default_factory=AgentConfig)
     feature_flags: FeatureFlags = Field(default_factory=FeatureFlags)
     opentelemetry: OpenTelemetryConfig = Field(default_factory=OpenTelemetryConfig)
+    
+    # Enterprise configuration (imported separately to avoid circular imports)
+    enterprise_config: Optional["EnterpriseFeatureFlags"] = Field(default=None, exclude=True)
 
     @field_validator("environment")
     @classmethod
@@ -547,6 +550,34 @@ class CoreAppSettings(BaseSettings):
                 errors.append("Supabase JWT secret must be changed in production")
 
         return errors
+
+    def get_enterprise_config(self):
+        """Get enterprise configuration instance.
+        
+        Returns:
+            EnterpriseFeatureFlags instance
+        """
+        if self.enterprise_config is None:
+            # Import here to avoid circular imports
+            from tripsage_core.config.enterprise_config import EnterpriseFeatureFlags
+            self.enterprise_config = EnterpriseFeatureFlags()
+        return self.enterprise_config
+
+    def is_enterprise_mode(self) -> bool:
+        """Check if enterprise features are enabled.
+        
+        Returns:
+            True if enterprise mode is enabled
+        """
+        return self.get_enterprise_config().enable_enterprise_features
+
+    def is_simple_mode(self) -> bool:
+        """Check if running in simple mode (enterprise features disabled).
+        
+        Returns:
+            True if simple mode is enabled
+        """
+        return not self.is_enterprise_mode()
 
 
 @lru_cache()
