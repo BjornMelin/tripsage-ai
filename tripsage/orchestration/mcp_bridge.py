@@ -219,12 +219,9 @@ class LangGraphMCPBridge:
                 else:
                     return str(result)
 
-            except TripSageMCPError as e:
+            except Exception as e:
                 logger.error(f"Airbnb tool {metadata.name} failed: {e}")
                 return f"Tool execution failed: {str(e)}"
-            except Exception as e:
-                logger.error(f"Unexpected error in tool {metadata.name}: {e}")
-                return f"Unexpected error: {str(e)}"
 
         # Create LangGraph tool with proper metadata
         return Tool(

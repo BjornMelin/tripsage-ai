@@ -102,7 +102,7 @@ class SimpleMCPService:
 
         except Exception as e:
             logger.error(f"MCP method '{method_name}' failed: {e}")
-            raise Exception(f"MCP method '{method_name}' failed: {str(e)}")
+            raise Exception(f"MCP method '{method_name}' failed: {str(e)}") from e
 
     def _convert_to_airbnb_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Convert generic params to Airbnb-specific format."""
