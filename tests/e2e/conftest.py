@@ -255,6 +255,7 @@ def mock_settings_and_redis(monkeypatch):
 
     # Create a comprehensive mock settings object
     from pydantic import SecretStr
+
     from tripsage_core.config import AppSettings
 
     mock_settings = AppSettings()
