@@ -2,8 +2,7 @@
 Accommodation agent node implementation for LangGraph orchestration.
 
 This module implements the accommodation search and booking agent as a LangGraph node,
-replacing the OpenAI Agents SDK implementation with improved performance and
-capabilities. Refactored to use dependency injection and service-based architecture.
+using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
 import json
@@ -13,9 +12,9 @@ from typing import Any, Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
+from tripsage.orchestration.tools import get_tools_for_agent
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -30,8 +29,8 @@ class AccommodationAgentNode(BaseAgentNode):
     and accommodation information using service-based integration.
     """
 
-    def __init__(self, service_registry: ServiceRegistry):
-        """Initialize the accommodation agent node with service injection."""
+    def __init__(self, service_registry):
+        """Initialize the accommodation agent node."""
         super().__init__("accommodation_agent", service_registry)
 
         # Initialize LLM for accommodation-specific tasks
@@ -43,10 +42,14 @@ class AccommodationAgentNode(BaseAgentNode):
         )
 
     def _initialize_tools(self) -> None:
-        """Initialize accommodation-specific tools and services."""
-        # Get required services
-        self.accommodation_service = self.get_service("accommodation_service")
-        self.memory_service = self.get_optional_service("memory_service")
+        """Initialize accommodation-specific tools using simple tool catalog."""
+        # Get tools for accommodation agent using simple catalog
+        self.available_tools = get_tools_for_agent("accommodation_agent")
+        
+        # Bind tools to LLM for direct use
+        self.llm_with_tools = self.llm.bind_tools(self.available_tools)
+
+        logger.info(f"Initialized accommodation agent with {len(self.available_tools)} tools")
 
         logger.info("Initialized accommodation agent with service-based architecture")
 

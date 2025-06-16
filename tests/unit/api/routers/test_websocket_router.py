@@ -40,11 +40,22 @@ class TestWebSocketRouter:
                 "tripsage_core.services.infrastructure.get_cache_service",
                 return_value=self.mock_cache,
             ),
+            # Mock settings to prevent database connection attempts
+            patch("tripsage_core.config.base_app_settings.get_settings"),
+            # Mock Supabase client
+            patch("supabase.create_client", return_value=Mock()),
         ]
 
-        # Start all patches
+        # Start all patches and configure mocks
+        mock_services = []
         for patcher in self.patchers:
-            patcher.start()
+            mock_service = patcher.start()
+            mock_services.append(mock_service)
+
+        # Configure settings mock (second to last in the list)
+        from tests.test_config import create_test_settings
+        settings_mock = mock_services[-2]  # get_settings mock
+        settings_mock.return_value = create_test_settings()
 
         self.client = TestClient(app)
         self.mock_websocket_manager = Mock()

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.models.db.trip import Trip
+from tripsage_core.models.trip import Trip
 from tripsage_core.models.db.user import User
 from tripsage_core.models.schemas_common.enums import TripStatus, TripType
 from tripsage_core.services.business.trip_service import TripService

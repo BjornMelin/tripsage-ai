@@ -493,7 +493,7 @@ COMMENT ON POLICY "Users can modify flights with edit permissions" ON flights
 -- 1. All collaborative queries use UNION to combine owned and shared resources
 -- 2. Indexes on trip_collaborators(user_id, trip_id) optimize collaboration lookups
 -- 3. Permission checks are cached at the database level for performance
--- 4. Memory tables use application-level filtering due to TEXT user_id fields
+-- 4. Memory tables use UUID user_id fields with proper foreign key constraints
 
 -- Security Notes:
 -- 1. Permission hierarchy: view < edit < admin

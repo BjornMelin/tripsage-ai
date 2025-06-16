@@ -42,7 +42,7 @@ class TestAttachmentsRouter:
 
         # Act
         response = api_test_client.post(
-            "/api/attachments/upload-batch",
+            "/api/attachments/upload/batch",
             files=files,
             data={"trip_id": "550e8400-e29b-41d4-a716-446655440000"},
         )
@@ -55,7 +55,7 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = api_test_client.get(f"/api/attachments/{file_id}/metadata")
+        response = api_test_client.get(f"/api/attachments/files/{file_id}")
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
@@ -65,15 +65,15 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = api_test_client.delete(f"/api/attachments/{file_id}")
+        response = api_test_client.delete(f"/api/attachments/files/{file_id}")
 
         # Assert
-        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert response.status_code == status.HTTP_200_OK
 
     def test_list_user_files_success(self, api_test_client):
         """Test successful user files listing."""
         # Act
-        response = api_test_client.get("/api/attachments/")
+        response = api_test_client.get("/api/attachments/files")
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
@@ -82,7 +82,7 @@ class TestAttachmentsRouter:
         """Test user files listing with pagination parameters."""
         # Act
         response = api_test_client.get(
-            "/api/attachments/", params={"skip": 0, "limit": 10}
+            "/api/attachments/files", params={"skip": 0, "limit": 10}
         )
 
         # Assert
@@ -92,14 +92,13 @@ class TestAttachmentsRouter:
 
     def test_upload_file_validation_failure(self, api_test_client):
         """Test file upload with validation failure."""
-        # Missing required trip_id
-        file_data = ("test.txt", BytesIO(b"Test content"), "text/plain")
-
+        # Missing required file
+        
         # Act
         response = api_test_client.post(
             "/api/attachments/upload",
-            files={"file": file_data},
-            # Missing trip_id data
+            # Missing files parameter
+            data={"trip_id": "550e8400-e29b-41d4-a716-446655440000"},
         )
 
         # Assert
@@ -109,7 +108,7 @@ class TestAttachmentsRouter:
         """Test batch upload with no files."""
         # Act
         response = api_test_client.post(
-            "/api/attachments/upload-batch",
+            "/api/attachments/upload/batch",
             data={"trip_id": "550e8400-e29b-41d4-a716-446655440000"},
             # No files provided
         )
@@ -118,23 +117,25 @@ class TestAttachmentsRouter:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     def test_upload_batch_size_limit_exceeded(self, api_test_client):
-        """Test batch upload with too many files."""
-        # Create many test files (assuming limit is around 10)
+        """Test batch upload with total size exceeding limit."""
+        # Create files that exceed MAX_SESSION_SIZE (50MB)
+        # Each file will be ~6MB, so 10 files = ~60MB > 50MB limit
+        large_content = b"X" * (6 * 1024 * 1024)  # 6MB per file
         files = []
-        for i in range(15):  # Exceed typical batch limit
+        for i in range(10):  # 10 files * 6MB = 60MB > 50MB limit
             files.append(
-                ("files", (f"test{i}.txt", BytesIO(b"Test content"), "text/plain"))
+                ("files", (f"large{i}.txt", BytesIO(large_content), "text/plain"))
             )
 
         # Act
         response = api_test_client.post(
-            "/api/attachments/upload-batch",
+            "/api/attachments/upload/batch",
             files=files,
             data={"trip_id": "550e8400-e29b-41d4-a716-446655440000"},
         )
 
         # Assert
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
 
     # === ERROR HANDLING TESTS ===
 
@@ -162,7 +163,7 @@ class TestAttachmentsRouter:
 
         # Act
         response = api_test_client.post(
-            "/api/attachments/upload-batch",
+            "/api/attachments/upload/batch",
             files=files,
             data={"trip_id": "550e8400-e29b-41d4-a716-446655440000"},
         )
@@ -175,7 +176,7 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = api_test_client.get(f"/api/attachments/{file_id}/metadata")
+        response = api_test_client.get(f"/api/attachments/files/{file_id}")
 
         # Assert - Mock service returns default response
         assert response.status_code == status.HTTP_200_OK
@@ -185,15 +186,15 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = api_test_client.delete(f"/api/attachments/{file_id}")
+        response = api_test_client.delete(f"/api/attachments/files/{file_id}")
 
         # Assert - Mock service handles errors gracefully
-        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert response.status_code == status.HTTP_200_OK
 
     def test_list_user_files_service_error(self, api_test_client):
         """Test user files listing with service error."""
         # Act
-        response = api_test_client.get("/api/attachments/")
+        response = api_test_client.get("/api/attachments/files")
 
         # Assert - Mock service returns default response
         assert response.status_code == status.HTTP_200_OK
@@ -206,7 +207,7 @@ class TestAttachmentsRouter:
 
         # Act
         response = unauthenticated_test_client.get(
-            f"/api/attachments/{file_id}/metadata"
+            f"/api/attachments/files/{file_id}"
         )
 
         # Assert
@@ -234,7 +235,7 @@ class TestAttachmentsRouter:
 
         # Act
         response = unauthenticated_test_client.post(
-            "/api/attachments/upload-batch",
+            "/api/attachments/upload/batch",
             files=files,
             data={"trip_id": "550e8400-e29b-41d4-a716-446655440000"},
         )
@@ -247,7 +248,7 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = unauthenticated_test_client.delete(f"/api/attachments/{file_id}")
+        response = unauthenticated_test_client.delete(f"/api/attachments/files/{file_id}")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -255,7 +256,7 @@ class TestAttachmentsRouter:
     def test_list_user_files_unauthorized(self, unauthenticated_test_client):
         """Test user files listing without authentication."""
         # Act
-        response = unauthenticated_test_client.get("/api/attachments/")
+        response = unauthenticated_test_client.get("/api/attachments/files")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED

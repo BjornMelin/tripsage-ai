@@ -11,15 +11,15 @@ Domain Models:
 - Flight: FlightOffer, Airport, FlightSegment, CabinClass
 - Transportation: TransportationOffer, TransportationProvider, TransportationVehicle,
   TransportationLocation
-- Trip: TripItinerary, TripLocation, TripBudget, TripPreferences
 - Memory: Entity, Relation, TravelMemory, SessionMemory
+
+Note: Trip domain models have been moved to a unified model at tripsage_core.models.trip
 
 Usage:
     from tripsage_core.models.domain import (
         AccommodationListing,
         FlightOffer,
         TransportationOffer,
-        TripItinerary,
         Entity,
         TravelMemory
     )
@@ -58,13 +58,7 @@ from .transportation import (
     TransportationVehicle,
 )
 
-# Trip domain models
-from .trip import (
-    TripBudget,
-    TripItinerary,
-    TripLocation,
-    TripPreferences,
-)
+# Trip domain models - removed as they're now in the unified model
 
 __all__ = [
     # Accommodation models
@@ -83,11 +77,6 @@ __all__ = [
     "TransportationProvider",
     "TransportationVehicle",
     "TransportationLocation",
-    # Trip models
-    "TripItinerary",
-    "TripLocation",
-    "TripBudget",
-    "TripPreferences",
     # Memory models
     "Entity",
     "Relation",

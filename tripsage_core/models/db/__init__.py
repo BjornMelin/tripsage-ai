@@ -66,7 +66,7 @@ from .transportation import (
 )
 
 # Trip models
-from .trip import Trip
+from ..trip import Trip
 
 # Trip management models
 from .trip_collaborator import (

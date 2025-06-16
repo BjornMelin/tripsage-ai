@@ -127,6 +127,10 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         patch(
             "tripsage_core.services.business.itinerary_service.get_itinerary_service"
         ),
+        # Mock file processing service
+        patch(
+            "tripsage_core.services.business.file_processing_service.FileProcessingService"
+        ) as mock_file_service,
     ):
         # Configure mock settings
         from tests.test_config import create_test_settings
@@ -215,6 +219,46 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             }
         )
 
+        # Configure file processing service mock
+        mock_file_instance = Mock()
+        mock_file_service.return_value = mock_file_instance
+        
+        # Mock file upload methods
+        from datetime import datetime
+
+        from tripsage_core.services.business.file_processing_service import (
+            FileType,
+            ProcessedFile,
+            ProcessingStatus,
+            StorageProvider,
+        )
+        
+        mock_upload_result = ProcessedFile(
+            id="test-file-id",
+            user_id="test-user-id",
+            original_filename="test.txt",
+            stored_filename="test-stored.txt",
+            file_size=1024,
+            file_type=FileType.TEXT,
+            mime_type="text/plain",
+            file_hash="test-hash",
+            storage_provider=StorageProvider.LOCAL,
+            storage_path="/test/path",
+            processing_status=ProcessingStatus.COMPLETED,
+            upload_timestamp=datetime.now()
+        )
+        
+        mock_file_instance.upload_file = AsyncMock(return_value=mock_upload_result)
+        mock_file_instance.upload_files_batch = AsyncMock(
+            return_value=[mock_upload_result]
+        )
+        mock_file_instance.get_file = AsyncMock(return_value=mock_upload_result)
+        mock_file_instance.get_file_content = AsyncMock(
+            return_value=b"test file content"
+        )
+        mock_file_instance.delete_file = AsyncMock(return_value=True)
+        mock_file_instance.search_files = AsyncMock(return_value=[])
+
         from tripsage.api.main import app
 
         with TestClient(app) as client:
@@ -256,6 +300,10 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         patch(
             "tripsage.api.core.dependencies.get_current_principal", return_value=None
         ),
+        # Mock file processing service
+        patch(
+            "tripsage_core.services.business.file_processing_service.FileProcessingService"
+        ) as mock_file_service,
     ):
         # Configure mock settings
         from tests.test_config import create_test_settings
@@ -267,6 +315,10 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
             return await call_next(request)
 
         mock_rate_limit.side_effect = pass_through_middleware
+
+        # Configure file processing service mock  
+        mock_file_instance = Mock()
+        mock_file_service.return_value = mock_file_instance
 
         # Import app after all patches are in place
         from tripsage.api.main import app

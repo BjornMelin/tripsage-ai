@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.registry import get_tool_registry
+from tripsage.orchestration.tools import get_tools_for_agent
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
