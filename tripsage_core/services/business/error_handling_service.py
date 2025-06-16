@@ -13,6 +13,11 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.infrastructure.resilience import (
+    CircuitBreakerError,
+    circuit_breaker,
+    register_circuit_breaker,
+)
 from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
@@ -111,6 +116,10 @@ class ErrorRecoveryService:
             "weather": ["openweather", "weatherapi"],
         }
 
+        # Initialize configurable circuit breakers for each service
+        self.circuit_breakers = {}
+        self._initialize_circuit_breakers()
+
         # Cached responses for graceful degradation
         self.degraded_responses = {
             "flights": {
@@ -137,6 +146,44 @@ class ErrorRecoveryService:
                 "fallback_data": {"status": "unavailable", "service": "maps"},
             },
         }
+
+    def _initialize_circuit_breakers(self) -> None:
+        """Initialize configurable circuit breakers for all services."""
+        # All services that need circuit breaker protection
+        services = [
+            "duffel_flights",
+            "amadeus_flights",
+            "skyscanner",
+            "airbnb",
+            "booking_com",
+            "expedia",
+            "google_maps",
+            "mapbox",
+            "openstreetmap",
+            "openweather",
+            "weatherapi",
+            "visual_crossing",
+        ]
+
+        for service in services:
+            # Create circuit breaker with service-specific configuration
+            breaker = circuit_breaker(
+                name=f"{service}_circuit_breaker",
+                failure_threshold=5,  # Open after 5 failures
+                success_threshold=3,  # Close after 3 successes in half-open
+                timeout=60.0,  # Wait 60s before trying half-open
+                max_retries=3,  # Retry up to 3 times
+                base_delay=1.0,  # Start with 1s delay
+                max_delay=30.0,  # Max 30s delay
+                exceptions=[Exception],  # Catch all exceptions
+            )
+
+            self.circuit_breakers[service] = breaker
+            register_circuit_breaker(breaker)
+
+        logger.info(
+            f"Initialized {len(self.circuit_breakers)} configurable circuit breakers"
+        )
 
     @with_error_handling()
     async def handle_mcp_error(
@@ -245,7 +292,75 @@ class ErrorRecoveryService:
         params: Dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
-        """Retry operation with exponential backoff."""
+        """Retry operation using configurable circuit breaker."""
+        # Get the circuit breaker for this service
+        breaker = self.circuit_breakers.get(service)
+
+        if not breaker:
+            # Fallback to simple retry if no circuit breaker available
+            return await self._simple_retry(service, method, params, error)
+
+        try:
+            # Use circuit breaker to manage retries and failures
+            @breaker
+            async def protected_operation():
+                return await self.mcp_manager.invoke(
+                    service=service, method=method, params=params
+                )
+
+            result = await protected_operation()
+
+            logger.info(f"Circuit breaker retry succeeded for {service}.{method}")
+            return FallbackResult(
+                success=True,
+                strategy_used=FallbackStrategy.RETRY,
+                result=result,
+                execution_time=0.0,  # Will be set by caller
+                metadata={
+                    "circuit_breaker": breaker.name,
+                    "circuit_mode": "simple"
+                    if hasattr(breaker, "max_retries")
+                    else "enterprise",
+                },
+            )
+
+        except CircuitBreakerError as cb_error:
+            logger.warning(f"Circuit breaker {service} is open: {cb_error}")
+            return FallbackResult(
+                success=False,
+                strategy_used=FallbackStrategy.RETRY,
+                error=f"Circuit breaker open: {str(cb_error)}",
+                execution_time=0.0,
+                metadata={
+                    "circuit_breaker": breaker.name,
+                    "circuit_state": "open",
+                    "failure_count": cb_error.failure_count,
+                },
+            )
+
+        except Exception as retry_error:
+            logger.warning(
+                f"Circuit breaker retry failed for {service}.{method}: {str(retry_error)}"
+            )
+            return FallbackResult(
+                success=False,
+                strategy_used=FallbackStrategy.RETRY,
+                error=f"Circuit breaker retry failed: {str(retry_error)}",
+                execution_time=0.0,
+                metadata={
+                    "circuit_breaker": breaker.name,
+                    "error_type": type(retry_error).__name__,
+                },
+            )
+
+    async def _simple_retry(
+        self,
+        service: str,
+        method: str,
+        params: Dict[str, Any],
+        error: MCPOperationError,
+    ) -> FallbackResult:
+        """Simple retry fallback when no circuit breaker is available."""
         max_retries = 3
         base_delay = 1.0
 
@@ -262,7 +377,7 @@ class ErrorRecoveryService:
                 )
 
                 logger.info(
-                    f"Retry succeeded for {service}.{method} on attempt {attempt + 1}"
+                    f"Simple retry succeeded for {service}.{method} on attempt {attempt + 1}"
                 )
                 return FallbackResult(
                     success=True,
@@ -272,19 +387,20 @@ class ErrorRecoveryService:
                     metadata={
                         "retry_attempt": attempt + 1,
                         "total_retries": max_retries,
+                        "retry_type": "simple",
                     },
                 )
 
             except Exception as retry_error:
                 logger.warning(
-                    f"Retry attempt {attempt + 1} failed: {str(retry_error)}"
+                    f"Simple retry attempt {attempt + 1} failed: {str(retry_error)}"
                 )
                 continue
 
         return FallbackResult(
             success=False,
             strategy_used=FallbackStrategy.RETRY,
-            error=f"All {max_retries} retry attempts failed",
+            error=f"All {max_retries} simple retry attempts failed",
             execution_time=0.0,
         )
 
@@ -547,4 +663,41 @@ class ErrorRecoveryService:
             "by_service": by_service,
             "by_severity": by_severity,
             "cache_size": len(self.fallback_cache),
+        }
+
+    def get_circuit_breaker_status(self) -> Dict[str, Any]:
+        """Get status of all circuit breakers for enterprise monitoring."""
+        status = {}
+
+        for service, breaker in self.circuit_breakers.items():
+            if hasattr(breaker, "get_state"):
+                # Enterprise circuit breaker
+                status[service] = breaker.get_state()
+            else:
+                # Simple circuit breaker
+                status[service] = {
+                    "name": breaker.name,
+                    "type": "simple",
+                    "max_retries": breaker.max_retries,
+                    "metrics": breaker.metrics.get_summary(),
+                }
+
+        return status
+
+    def get_comprehensive_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive error handling and circuit breaker statistics."""
+        error_stats = self.get_error_statistics()
+        circuit_stats = self.get_circuit_breaker_status()
+
+        return {
+            "timestamp": time.time(),
+            "error_handling": error_stats,
+            "circuit_breakers": {
+                "total_breakers": len(self.circuit_breakers),
+                "status": circuit_stats,
+            },
+            "fallback_strategies": {
+                "cache_size": len(self.fallback_cache),
+                "service_alternatives": len(self.service_alternatives),
+            },
         }
