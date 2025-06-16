@@ -19,14 +19,17 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
+from tripsage_core.models.schemas_common.enums import (
+    TripStatus,
+    TripVisibility,
+)
+from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest,
     TripLocation,
     TripService,
     TripUpdateRequest,
 )
-from tripsage_core.models.trip import EnhancedBudget, BudgetBreakdown, Trip
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
 
 
 class TestTripService:

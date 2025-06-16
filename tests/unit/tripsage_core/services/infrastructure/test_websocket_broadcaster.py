@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import CoreAppSettings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.websocket_broadcaster import (
     BroadcastMessage,

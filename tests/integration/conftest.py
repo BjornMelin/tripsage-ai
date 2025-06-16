@@ -254,7 +254,7 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
-    from tripsage_core.config.base_app_settings import CoreAppSettings
+    from tripsage_core.config import CoreAppSettings
 
     mock_settings = CoreAppSettings()
 

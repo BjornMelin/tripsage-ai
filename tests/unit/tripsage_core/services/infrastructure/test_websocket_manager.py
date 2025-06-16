@@ -17,7 +17,7 @@ import pytest
 from fastapi import WebSocket
 from jose import jwt
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import CoreAppSettings
 from tripsage_core.services.infrastructure.websocket_manager import (
     ConnectionStatus,
     WebSocketAuthRequest,

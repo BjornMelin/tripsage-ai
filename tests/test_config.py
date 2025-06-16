@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import CoreAppSettings
 
 
 def setup_test_environment() -> None:
@@ -77,7 +77,7 @@ def create_test_settings(**overrides) -> CoreAppSettings:
     setup_test_environment()
 
     # Clear any cached settings
-    from tripsage_core.config.base_app_settings import get_settings
+    from tripsage_core.config import get_settings
 
     if hasattr(get_settings, "cache_clear"):
         get_settings.cache_clear()

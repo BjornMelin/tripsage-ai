@@ -40,12 +40,33 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - `ruff check . --fix && ruff format .` on all changes
 - Test coverage ≥90%, pre-commit hooks enabled
 
-## 🚨 PRODUCTION READINESS BLOCKERS (Updated with All Linear Issues)
+## 🚨 PRODUCTION READINESS BLOCKERS (Updated with Configurable Complexity Approach)
 
 ### 0. Critical Production Deployment Requirements ⭐ **COMPREHENSIVE TRACKING**
 
-**Status**: 85% Production Ready - Critical blockers identified and tracked
-**Linear Backlog**: Cleaned up June 13, 2025 - Duplicates removed, completed issues verified
+**Status**: 87% Production Ready - Moving to configurable complexity approach for portfolio value
+**Linear Backlog**: Updated June 15, 2025 - New "configurable complexity" strategy implemented
+**Strategy Shift**: Changed from "remove enterprise features" to "make enterprise features configurable"
+
+**🎯 NEW APPROACH: Configurable Complexity for Portfolio Excellence**
+
+Based on comprehensive research, employers want to see enterprise features for portfolio showcasing. Our new approach uses environment-based feature toggles to provide:
+- **Simple by default** for fast development
+- **Enterprise mode** for portfolio demonstration  
+- **Production flexibility** for scaling based on requirements
+
+```bash
+# Development mode (default - simple)
+ENTERPRISE_ENABLE_ENTERPRISE_FEATURES=false
+ENTERPRISE_CIRCUIT_BREAKER_MODE=simple
+ENTERPRISE_DEPLOYMENT_STRATEGY=simple
+
+# Portfolio demonstration mode (showcase enterprise patterns)
+ENTERPRISE_ENABLE_ENTERPRISE_FEATURES=true
+ENTERPRISE_CIRCUIT_BREAKER_MODE=enterprise
+ENTERPRISE_DEPLOYMENT_STRATEGY=blue_green
+ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
+```
 
 After comprehensive production readiness assessment, all blockers are now tracked in Linear:
 
@@ -78,7 +99,27 @@ After comprehensive production readiness assessment, all blockers are now tracke
   - **Approach**: Phase 1 testing of completed components while child issues in development
   - **Status**: Ready to begin integration testing of auth, activities, and search components
 
-### NEW CHILD ISSUES CREATED (Focused Remaining Work):
+### UPDATED ISSUES WITH CONFIGURABLE COMPLEXITY APPROACH:
+
+- **[BJO-169](https://linear.app/bjorn-dev/issue/BJO-169)** - feat(enterprise): implement enterprise feature flags framework 🎯 **NEW HIGH PRIORITY**
+  - **Purpose**: Centralized configurable complexity framework for all enterprise patterns
+  - **Implementation**: Environment-based feature toggles with EnterpriseFeatureFlags class
+  - **Impact**: Enables portfolio demonstration while maintaining development simplicity
+  - **Estimate**: 1-2 days - foundation for all configurable complexity
+
+- **[BJO-150](https://linear.app/bjorn-dev/issue/BJO-150)** - feat(enterprise): configurable circuit breaker with simple/enterprise modes 🔄 **UPDATED**
+  - **New Approach**: Environment-configurable circuit breaker (CIRCUIT_BREAKER_MODE=simple|enterprise)
+  - **Implementation**: Wrapper class with selective enterprise features based on configuration
+  - **Portfolio Value**: Demonstrates enterprise reliability patterns while defaulting to simplicity
+  - **Estimate**: 2-3 days - configurable implementation
+
+- **[BJO-153](https://linear.app/bjorn-dev/issue/BJO-153)** - feat(enterprise): configurable deployment infrastructure 🚀 **UPDATED**
+  - **New Approach**: Multi-strategy deployment (DEPLOYMENT_STRATEGY=simple|canary|blue_green|ab_test)
+  - **Implementation**: Configurable deployment manager with strategy selection
+  - **Portfolio Value**: Shows enterprise DevOps patterns while maintaining simple defaults
+  - **Estimate**: 3-4 days - multi-strategy deployment system
+
+### REMAINING CHILD ISSUES (Original High Priority):
 
 - **[BJO-130](https://linear.app/bjorn-dev/issue/BJO-130)** - fix(trips): implement critical create_trip endpoint functionality 🚨 **URGENT**
   - **Problem**: Trip creation endpoint completely broken (only `pass` statement)
@@ -97,14 +138,18 @@ After comprehensive production readiness assessment, all blockers are now tracke
   - **Impact**: Maintainability and documentation accuracy
   - **Estimate**: 2-3 hours - consistency fix
 
-- [x] **[BJO-133](https://linear.app/bjorn-dev/issue/BJO-133)** - feat(database): configure and test RLS policies for production 🔒 **HIGH** ✅ **IN REVIEW**
-  - **Problem**: Row Level Security policies need production configuration and testing
-  - **Impact**: Security requirement for multi-user production deployment
-  - **Achievement**: Comprehensive RLS policies implemented for all user-owned tables
-  - **PR**: #229 - Schema consistency and RLS implementation ready for review
-  - **Status**: 100% complete - all RLS policies configured with collaboration support ✅
+- [ ] **[BJO-133](https://linear.app/bjorn-dev/issue/BJO-133)** - feat(database): configure and test RLS policies for production 🔒 **HIGH** ⚠️ **IN PROGRESS**
+  - **Problem**: 8 critical RLS test failures showing security vulnerabilities
+  - **Impact**: CRITICAL - Users can access other users' data (trips, memories, notifications, etc.)
+  - **Current State**: Moved back to IN PROGRESS (June 16, 2025) - tests show tables allowing unauthorized access
+  - **Failures**: memories, search_parameters, trips, accommodations, flights, notifications, api_key_usage, trip_notes
+  - **Status**: Actively implementing fixes for critical security vulnerabilities
 
-**Updated Status**: 5/5 major issues COMPLETED/IN REVIEW (BJO-119, BJO-122, BJO-120, BJO-131, BJO-133)  
+**Updated Status (June 16, 2025)**: 
+- 4/5 major issues COMPLETED (BJO-119, BJO-122, BJO-120, BJO-131)
+- BJO-133 moved back to IN PROGRESS due to 8 critical RLS test failures
+- BJO-170 (Configuration Layer Simplification) COMPLETED and IN REVIEW
+
 ### NEW PRODUCTION READINESS ISSUES CREATED:
 
 - [ ] **[BJO-144](https://linear.app/bjorn-dev/issue/BJO-144)** - fix(backend): resolve Python linting violations for production readiness 🧹 **HIGH**
@@ -127,8 +172,14 @@ After comprehensive production readiness assessment, all blockers are now tracke
   - **Impact**: Production operational visibility
   - **Estimate**: 8-10 hours monitoring setup
 
-**Critical Path**: BJO-144 (Python linting) → BJO-130 (trip creation) → BJO-133 (RLS policies)
-**Branch Readiness**: 85% production-ready - **MERGE APPROVED** with follow-up issues tracked
+**NEW CRITICAL PATH (Configurable Complexity Strategy)**: 
+1. ✅ BJO-170 (Configuration Layer Simplification) - COMPLETED
+2. ✅ BJO-130 (Trip Creation Fix) - COMPLETED 
+3. ⚠️ BJO-133 (RLS Test Failures) - IN PROGRESS (8 critical security failures)
+4. BJO-150 (Configurable Circuit Breaker) - IN REVIEW
+5. BJO-153 (Configurable Deployment) - 3-4 days
+
+**Branch Readiness**: 87% production-ready - **Enhanced with configurable complexity for portfolio value**
 
 **FINAL VERIFICATION COMPLETE** (Dec 13, 2025):
 - ✅ Security audit: No vulnerabilities detected
@@ -518,8 +569,74 @@ These features are intentionally deferred to avoid over-engineering:
 
 Note: Full V2 feature list archived for future reference.
 
+## 🔄 NEW: Configurable Complexity Strategy Update (June 16, 2025)
+
+### Strategy Shift: From Simplification to Configurable Enterprise Features
+
+**Research Findings**: Comprehensive research revealed that employers highly value enterprise patterns in technical portfolios. The new approach implements **"configurable complexity"** rather than removing enterprise features.
+
+### Updated Linear Issues
+
+#### ✅ **Updated to Configurable Complexity Approach**
+
+- **[BJO-150](https://linear.app/bjorn-dev/issue/BJO-150)** - **Implement Configurable Circuit Breaker with Simple/Enterprise Modes** ⚡ **URGENT**
+  - **New Approach**: Environment-based feature toggles (`CIRCUIT_BREAKER_MODE=simple|enterprise`)
+  - **Portfolio Value**: Demonstrates enterprise resilience patterns
+  - **Development Efficiency**: Simple mode for fast iteration
+  - **Status**: In Progress with configurable wrapper implementation
+
+- **[BJO-153](https://linear.app/bjorn-dev/issue/BJO-153)** - **Implement Configurable Deployment Infrastructure with Simple/Enterprise Modes** 📋 **HIGH**
+  - **New Approach**: Multi-strategy deployment (`DEPLOYMENT_STRATEGY=simple|canary|blue_green|ab_test`)
+  - **Portfolio Value**: Shows advanced DevOps and deployment strategy knowledge
+  - **Implementation**: Feature flags for canary analysis, auto-rollback, A/B testing
+  - **Status**: In Progress with strategy selection framework
+
+#### ✅ **Strategy Validated (Completed Issues)**
+
+- **[BJO-159](https://linear.app/bjorn-dev/issue/BJO-159)** - **LangGraph Orchestration** - Appropriate simplification maintained
+- **[BJO-161](https://linear.app/bjorn-dev/issue/BJO-161)** - **MCP Abstraction Layer** - Correct removal of unnecessary abstraction  
+- **[BJO-163](https://linear.app/bjorn-dev/issue/BJO-163)** - **Database Architecture** - Foundation ready for optional enterprise enhancements
+
+#### 🆕 **New Framework Issue Created**
+
+- **[BJO-169](https://linear.app/bjorn-dev/issue/BJO-169)** - **Implement Enterprise Feature Flags Configuration Framework** 🔧 **HIGH**
+  - **Purpose**: Centralized configurable complexity framework
+  - **Implementation**: `EnterpriseFeatureFlags` with environment-based toggles
+  - **Features**: Circuit breaker modes, deployment strategies, database patterns, monitoring
+  - **Status**: Ready for implementation
+
+### Environment Configuration Examples
+
+```bash
+# Development (default) - simple and fast
+ENTERPRISE_ENABLE_ENTERPRISE_FEATURES=false
+ENTERPRISE_CIRCUIT_BREAKER_MODE=simple
+ENTERPRISE_DEPLOYMENT_STRATEGY=simple
+
+# Portfolio demonstration - full enterprise showcase
+ENTERPRISE_ENABLE_ENTERPRISE_FEATURES=true
+ENTERPRISE_CIRCUIT_BREAKER_MODE=enterprise
+ENTERPRISE_DEPLOYMENT_STRATEGY=blue_green
+ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
+ENTERPRISE_DATABASE_ARCHITECTURE_MODE=enterprise
+```
+
+### Benefits of Configurable Complexity
+
+1. **Portfolio Differentiation**: Demonstrates enterprise architecture knowledge
+2. **Development Efficiency**: Simple defaults for fast development
+3. **Production Flexibility**: Choose complexity level based on requirements
+4. **Scalability Demonstration**: Shows systems thinking and configurable design
+
+### Implementation Priority
+
+1. **BJO-169** - Enterprise feature flags framework (foundation)
+2. **BJO-150** - Configurable circuit breaker implementation
+3. **BJO-153** - Configurable deployment infrastructure
+4. **Optional enhancements** - Database and orchestration enterprise patterns
+
 ---
 
-*Last Updated: December 14, 2025 - Completed RLS policies implementation (BJO-133) with PR #229*
-*Current Focus: Critical endpoint implementation (BJO-130), schema documentation consistency (BJO-132)*
-*Production Readiness: 90% complete - RLS policies done, trip creation endpoint and schema docs remaining (2-3 days)*
+*Last Updated: June 16, 2025 - Strategy updated to configurable complexity approach*
+*New Focus: Enterprise feature flags framework (BJO-169), configurable circuit breaker (BJO-150), deployment infrastructure (BJO-153)*
+*Portfolio Value: Enterprise patterns demonstrate advanced architecture knowledge while maintaining development efficiency*

@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 
 from tripsage_core.services.simple_mcp_service import (
     SimpleMCPService as MCPManager,
+)
+from tripsage_core.services.simple_mcp_service import (
     mcp_manager as global_mcp_manager,
 )
 

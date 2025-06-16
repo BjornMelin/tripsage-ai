@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 
 # Try to import PostgreSQL checkpoint classes, fallback to MemorySaver if not available
 try:

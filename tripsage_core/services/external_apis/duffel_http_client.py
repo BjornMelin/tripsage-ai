@@ -14,7 +14,7 @@ from urllib.parse import urljoin
 import httpx
 from pydantic import ValidationError
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import CoreAppSettings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
 )

@@ -7,7 +7,7 @@ using modern LangGraph @tool patterns for simplicity and maintainability.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools import get_tools_for_agent
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -52,7 +52,7 @@ class FlightAgentNode(BaseAgentNode):
         """Initialize flight-specific tools using simple tool catalog."""
         # Get tools for flight agent using simple catalog
         self.available_tools = get_tools_for_agent("flight_agent")
-        
+
         # Bind tools to LLM for direct use
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
@@ -181,7 +181,7 @@ class FlightAgentNode(BaseAgentNode):
         try:
             # Import and use the search_flights tool directly
             from tripsage.orchestration.tools import search_flights
-            
+
             # Execute flight search using the simple tool
             result_str = search_flights.invoke(search_params)
             result = json.loads(result_str)
@@ -195,7 +195,6 @@ class FlightAgentNode(BaseAgentNode):
         except Exception as e:
             logger.error(f"Flight search failed: {str(e)}")
             return {"error": f"Flight search failed: {str(e)}"}
-
 
     async def _generate_flight_response(
         self,

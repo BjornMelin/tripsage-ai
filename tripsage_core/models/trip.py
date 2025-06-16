@@ -12,14 +12,20 @@ from uuid import UUID, uuid4
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
+from tripsage_core.models.schemas_common.enums import (
+    TripStatus,
+    TripType,
+    TripVisibility,
+)
 
 
 class BudgetBreakdown(TripSageModel):
     """Detailed budget breakdown by category."""
 
     accommodation: float = Field(default=0.0, ge=0, description="Accommodation budget")
-    transportation: float = Field(default=0.0, ge=0, description="Transportation budget")
+    transportation: float = Field(
+        default=0.0, ge=0, description="Transportation budget"
+    )
     food: float = Field(default=0.0, ge=0, description="Food budget")
     activities: float = Field(default=0.0, ge=0, description="Activities budget")
     miscellaneous: float = Field(default=0.0, ge=0, description="Miscellaneous budget")
@@ -76,7 +82,9 @@ class Trip(TripSageModel):
 
     # Core Trip Information
     title: str = Field(..., min_length=1, max_length=200, description="Trip title")
-    description: Optional[str] = Field(None, max_length=2000, description="Trip description")
+    description: Optional[str] = Field(
+        None, max_length=2000, description="Trip description"
+    )
     start_date: date = Field(..., description="Trip start date")
     end_date: date = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination of the trip")
@@ -91,26 +99,20 @@ class Trip(TripSageModel):
     status: TripStatus = Field(
         default=TripStatus.PLANNING, description="Current status of the trip"
     )
-    trip_type: TripType = Field(
-        default=TripType.LEISURE, description="Type of trip"
-    )
+    trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
 
     # Enhanced Features
     visibility: TripVisibility = Field(
         default=TripVisibility.PRIVATE,
         description="Trip visibility (private/shared/public)",
     )
-    tags: List[str] = Field(
-        default_factory=list, max_items=20, description="Trip tags"
-    )
+    tags: List[str] = Field(default_factory=list, max_items=20, description="Trip tags")
     preferences_extended: TripPreferences = Field(
         default_factory=TripPreferences, description="Extended preferences"
     )
 
     # Additional metadata
-    notes: List[Dict[str, Any]] = Field(
-        default_factory=list, description="Trip notes"
-    )
+    notes: List[Dict[str, Any]] = Field(default_factory=list, description="Trip notes")
     search_metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Search and discovery metadata"
     )
@@ -156,11 +158,7 @@ class Trip(TripSageModel):
     @property
     def budget_per_person(self) -> float:
         """Get the budget per person for the trip."""
-        return (
-            self.budget_breakdown.total / self.travelers
-            if self.travelers > 0
-            else 0
-        )
+        return self.budget_breakdown.total / self.travelers if self.travelers > 0 else 0
 
     @property
     def budget_utilization(self) -> float:

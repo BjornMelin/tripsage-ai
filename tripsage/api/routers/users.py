@@ -9,7 +9,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.auth import get_current_user_id
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
 from tripsage_core.services.business.user_service import UserService, get_user_service
 
@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 @router.get("/preferences", response_model=UserPreferencesResponse)
 async def get_user_preferences(
-    user_id: str = Depends(get_current_user_id),
+    principal=Depends(require_principal),
     user_service: UserService = Depends(get_user_service),
 ) -> UserPreferencesResponse:
     """Get the authenticated user's preferences.
 
     Args:
-        user_id: Authenticated user ID from JWT
+        principal: Authenticated principal from JWT or API key
         user_service: Injected user service
 
     Returns:
@@ -34,6 +34,7 @@ async def get_user_preferences(
     Raises:
         HTTPException: If user is not found
     """
+    user_id = get_principal_id(principal)
     logger.info(f"Getting preferences for user: {user_id}")
 
     try:
@@ -61,7 +62,7 @@ async def get_user_preferences(
 @router.put("/preferences", response_model=UserPreferencesResponse)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
-    user_id: str = Depends(get_current_user_id),
+    principal=Depends(require_principal),
     user_service: UserService = Depends(get_user_service),
 ) -> UserPreferencesResponse:
     """Update the authenticated user's preferences.
@@ -71,7 +72,7 @@ async def update_user_preferences(
 
     Args:
         preferences_request: New preferences to set
-        user_id: Authenticated user ID from JWT
+        principal: Authenticated principal from JWT or API key
         user_service: Injected user service
 
     Returns:
@@ -80,6 +81,7 @@ async def update_user_preferences(
     Raises:
         HTTPException: If update fails
     """
+    user_id = get_principal_id(principal)
     logger.info(f"Updating preferences for user: {user_id}")
 
     try:

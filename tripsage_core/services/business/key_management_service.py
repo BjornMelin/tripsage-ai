@@ -146,7 +146,7 @@ class KeyManagementService:
             database_service = get_database_service()
 
         if master_secret is None:
-            from tripsage_core.config.base_app_settings import get_settings
+            from tripsage_core.config import get_settings
 
             settings = get_settings()
             master_secret = settings.secret_key

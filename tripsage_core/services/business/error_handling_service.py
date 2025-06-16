@@ -382,21 +382,6 @@ class ErrorRecoveryService:
                     f"Direct service integration needed for {service}.{method} after MCP removal"
                 )
 
-                logger.info(
-                    f"Simple retry succeeded for {service}.{method} on attempt {attempt + 1}"
-                )
-                return FallbackResult(
-                    success=True,
-                    strategy_used=FallbackStrategy.RETRY,
-                    result=result,
-                    execution_time=0.0,  # Will be set by caller
-                    metadata={
-                        "retry_attempt": attempt + 1,
-                        "total_retries": max_retries,
-                        "retry_type": "simple",
-                    },
-                )
-
             except Exception as retry_error:
                 logger.warning(
                     f"Simple retry attempt {attempt + 1} failed: {str(retry_error)}"
@@ -429,25 +414,13 @@ class ErrorRecoveryService:
                 # Check if alternative service is available
                 if await self._is_service_available(alt_service):
                     # Adapt parameters for alternative service if needed
-                    adapted_params = await self._adapt_params_for_service(
-                        params, original_service, alt_service
-                    )
+                    # adapted_params = await self._adapt_params_for_service(
+                    #     params, original_service, alt_service
+                    # )
 
                     # MCP abstraction removed - direct service calls should be used
                     raise NotImplementedError(
                         f"Direct service integration needed for {alt_service}.{method} after MCP removal"
-                    )
-
-                    logger.info(f"Alternative service {alt_service} succeeded")
-                    return FallbackResult(
-                        success=True,
-                        strategy_used=FallbackStrategy.ALTERNATIVE_SERVICE,
-                        result=result,
-                        execution_time=0.0,
-                        metadata={
-                            "original_service": original_service,
-                            "alternative_service": alt_service,
-                        },
                     )
 
             except Exception as alt_error:

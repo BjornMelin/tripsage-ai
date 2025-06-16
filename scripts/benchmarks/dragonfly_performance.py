@@ -11,7 +11,7 @@ import statistics
 import time
 from typing import Dict, List
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 
 
@@ -26,7 +26,7 @@ class DragonflyBenchmark:
     async def setup(self):
         """Connect to DragonflyDB."""
         await self.cache_service.connect()
-        print(f"✅ Connected to DragonflyDB at {self.settings.dragonfly.url}")
+        print(f"✅ Connected to DragonflyDB at {self.settings.redis_url}")
 
     async def teardown(self):
         """Disconnect from DragonflyDB."""

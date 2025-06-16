@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools import get_tools_for_agent
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -45,11 +45,13 @@ class AccommodationAgentNode(BaseAgentNode):
         """Initialize accommodation-specific tools using simple tool catalog."""
         # Get tools for accommodation agent using simple catalog
         self.available_tools = get_tools_for_agent("accommodation_agent")
-        
+
         # Bind tools to LLM for direct use
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
-        logger.info(f"Initialized accommodation agent with {len(self.available_tools)} tools")
+        logger.info(
+            f"Initialized accommodation agent with {len(self.available_tools)} tools"
+        )
 
         logger.info("Initialized accommodation agent with service-based architecture")
 

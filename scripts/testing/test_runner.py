@@ -29,7 +29,7 @@ def test_config_imports():
     """Test that config module can be imported and instantiated."""
     try:
         from tripsage.api.core.config import Settings, get_settings
-        from tripsage_core.config.base_app_settings import CoreAppSettings
+        from tripsage_core.config import CoreAppSettings
 
         # Test basic instantiation
         settings = Settings()

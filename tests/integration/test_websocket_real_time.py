@@ -25,7 +25,7 @@ from tripsage.api.routers.websocket import (
     chat_websocket,
     handle_chat_message,
 )
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.websocket_manager import (
     WebSocketEvent,
     WebSocketEventType,

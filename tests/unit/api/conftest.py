@@ -222,7 +222,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         # Configure file processing service mock
         mock_file_instance = Mock()
         mock_file_service.return_value = mock_file_instance
-        
+
         # Mock file upload methods
         from datetime import datetime
 
@@ -232,7 +232,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             ProcessingStatus,
             StorageProvider,
         )
-        
+
         mock_upload_result = ProcessedFile(
             id="test-file-id",
             user_id="test-user-id",
@@ -245,9 +245,9 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             storage_provider=StorageProvider.LOCAL,
             storage_path="/test/path",
             processing_status=ProcessingStatus.COMPLETED,
-            upload_timestamp=datetime.now()
+            upload_timestamp=datetime.now(),
         )
-        
+
         mock_file_instance.upload_file = AsyncMock(return_value=mock_upload_result)
         mock_file_instance.upload_files_batch = AsyncMock(
             return_value=[mock_upload_result]
@@ -316,7 +316,7 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
 
         mock_rate_limit.side_effect = pass_through_middleware
 
-        # Configure file processing service mock  
+        # Configure file processing service mock
         mock_file_instance = Mock()
         mock_file_service.return_value = mock_file_instance
 

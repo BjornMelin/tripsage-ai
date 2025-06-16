@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import redis.asyncio as redis
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import CoreAppSettings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
@@ -54,10 +54,10 @@ class CacheService:
 
         try:
             # Get DragonflyDB URL from settings
-            redis_url = self.settings.dragonfly.url
+            redis_url = self.settings.redis_url
 
             # Add password to URL if configured
-            if self.settings.dragonfly.password:
+            if self.settings.redis_password:
                 # Parse URL and add password
                 from urllib.parse import urlparse, urlunparse
 
@@ -65,11 +65,11 @@ class CacheService:
                 # Reconstruct with password
                 if parsed.username:
                     netloc = (
-                        f"{parsed.username}:{self.settings.dragonfly.password}"
+                        f"{parsed.username}:{self.settings.redis_password}"
                         f"@{parsed.hostname}"
                     )
                 else:
-                    netloc = f":{self.settings.dragonfly.password}@{parsed.hostname}"
+                    netloc = f":{self.settings.redis_password}@{parsed.hostname}"
                 if parsed.port:
                     netloc += f":{parsed.port}"
                 redis_url = urlunparse(
@@ -83,13 +83,13 @@ class CacheService:
                     )
                 )
 
-            safe_url = redis_url.replace(self.settings.dragonfly.password or "", "***")
+            safe_url = redis_url.replace(self.settings.redis_password or "", "***")
             logger.info(f"Connecting to DragonflyDB at {safe_url}")
 
             # Create connection pool for better performance
             self._connection_pool = redis.ConnectionPool.from_url(
                 redis_url,
-                max_connections=self.settings.dragonfly.max_connections,
+                max_connections=self.settings.redis_max_connections,
                 retry_on_timeout=True,
                 decode_responses=False,  # We handle JSON encoding/decoding manually
             )
@@ -156,7 +156,7 @@ class CacheService:
         try:
             # Use default TTL if not specified
             if ttl is None:
-                ttl = self.settings.dragonfly.ttl_medium
+                ttl = self.settings.cache_ttl_medium
 
             json_value = json.dumps(value, default=str)
             result = await self._client.set(key, json_value, ex=ttl)
@@ -216,7 +216,7 @@ class CacheService:
 
         try:
             if ttl is None:
-                ttl = self.settings.dragonfly.ttl_medium
+                ttl = self.settings.cache_ttl_medium
 
             return await self._client.setex(key, ttl, value)
         except Exception as e:
@@ -541,7 +541,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.dragonfly.ttl_short)
+        return await self.set_json(key, value, ttl=self.settings.cache_ttl_short)
 
     async def set_medium(self, key: str, value: Any) -> bool:
         """Set a value with medium TTL (1 hour by default).
@@ -553,7 +553,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.dragonfly.ttl_medium)
+        return await self.set_json(key, value, ttl=self.settings.cache_ttl_medium)
 
     async def set_long(self, key: str, value: Any) -> bool:
         """Set a value with long TTL (24 hours by default).
@@ -565,7 +565,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.dragonfly.ttl_long)
+        return await self.set_json(key, value, ttl=self.settings.cache_ttl_long)
 
 
 # Global service instance
