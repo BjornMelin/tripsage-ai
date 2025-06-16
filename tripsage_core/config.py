@@ -77,6 +77,71 @@ class AppSettings(BaseSettings):
     openai_api_key: SecretStr = Field(..., description="OpenAI API key")
     openai_model: str = Field(default="gpt-4", description="Default OpenAI model")
 
+    # Agent Configuration (Dynamic, Not Hardcoded)
+    agent_default_temperature: float = Field(
+        default=0.7, ge=0.0, le=2.0, description="Default agent temperature"
+    )
+    agent_default_max_tokens: int = Field(
+        default=1000, ge=1, le=8000, description="Default max tokens per response"
+    )
+    agent_default_top_p: float = Field(
+        default=0.9, ge=0.0, le=1.0, description="Default top-p for nucleus sampling"
+    )
+    agent_timeout_seconds: int = Field(
+        default=30, ge=5, le=300, description="Default agent timeout in seconds"
+    )
+
+    # Environment-Specific Agent Overrides
+    agent_production_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=2.0,
+        description="Conservative temperature for production",
+    )
+    agent_development_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="More exploratory temperature for development",
+    )
+
+    # Agent-Specific Configurations
+    budget_agent_temperature: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=2.0,
+        description="Budget agent - low creativity, high accuracy",
+    )
+    destination_research_temperature: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=2.0,
+        description="Destination research - moderate creativity",
+    )
+    itinerary_agent_temperature: float = Field(
+        default=0.4,
+        ge=0.0,
+        le=2.0,
+        description="Itinerary planning - structured creativity",
+    )
+
+    # Model Provider Validation
+    @field_validator(
+        "agent_default_temperature",
+        "agent_production_temperature",
+        "agent_development_temperature",
+        "budget_agent_temperature",
+        "destination_research_temperature",
+        "itinerary_agent_temperature",
+    )
+    @classmethod
+    def validate_temperature_range(cls, v: float, info) -> float:
+        """Validate temperature based on model provider constraints."""
+        # OpenAI supports 0.0-2.0, most others 0.0-1.0
+        if v < 0.0 or v > 2.0:
+            raise ValueError(f"Temperature {v} must be between 0.0 and 2.0")
+        return v
+
     # Feature Toggles (Configurable Complexity)
     enable_advanced_agents: bool = Field(
         default=False, description="Enable LangGraph agent orchestration"
@@ -118,6 +183,54 @@ class AppSettings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in test environment."""
         return self.environment in ["test", "testing"]
+
+    def get_agent_temperature(self, agent_type: str, **overrides) -> float:
+        """Get temperature for specific agent type with environment override support.
+
+        Priority order:
+        1. Runtime overrides (highest priority)
+        2. Agent-specific configuration
+        3. Environment-specific defaults
+        4. Global defaults (lowest priority)
+        """
+        # Check for runtime override first
+        if "temperature" in overrides:
+            temp = overrides["temperature"]
+            if 0.0 <= temp <= 2.0:
+                return temp
+            raise ValueError(f"Override temperature {temp} must be between 0.0 and 2.0")
+
+        # Agent-specific configuration
+        agent_temps = {
+            "budget_agent": self.budget_agent_temperature,
+            "destination_research_agent": self.destination_research_temperature,
+            "itinerary_agent": self.itinerary_agent_temperature,
+        }
+
+        if agent_type in agent_temps:
+            return agent_temps[agent_type]
+
+        # Environment-specific defaults
+        if self.is_production:
+            return self.agent_production_temperature
+        elif self.is_development:
+            return self.agent_development_temperature
+
+        # Global default
+        return self.agent_default_temperature
+
+    def get_agent_config(self, agent_type: str, **overrides) -> dict:
+        """Get complete configuration for an agent with runtime overrides."""
+        return {
+            "model": overrides.get("model", self.openai_model),
+            "temperature": self.get_agent_temperature(agent_type, **overrides),
+            "max_tokens": overrides.get("max_tokens", self.agent_default_max_tokens),
+            "top_p": overrides.get("top_p", self.agent_default_top_p),
+            "timeout_seconds": overrides.get(
+                "timeout_seconds", self.agent_timeout_seconds
+            ),
+            "api_key": self.openai_api_key.get_secret_value(),
+        }
 
 
 class APISettings(BaseSettings):

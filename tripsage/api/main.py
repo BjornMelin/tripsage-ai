@@ -28,6 +28,7 @@ from tripsage.api.routers import (
     attachments,
     auth,
     chat,
+    config,
     destinations,
     flights,
     health,
@@ -554,6 +555,7 @@ def create_app() -> FastAPI:
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 
     app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(config.router, prefix="/api", tags=["configuration"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)

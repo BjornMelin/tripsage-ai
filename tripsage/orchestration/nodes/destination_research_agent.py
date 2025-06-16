@@ -16,6 +16,7 @@ from langchain_openai import ChatOpenAI
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config import get_settings
+from tripsage_core.services.configuration_service import get_configuration_service
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -30,30 +31,80 @@ class DestinationResearchAgentNode(BaseAgentNode):
     information using MCP tool integration.
     """
 
-    def __init__(self, service_registry):
-        """Initialize the destination research agent node with tools and
-        language model."""
+    def __init__(self, service_registry, **config_overrides):
+        """Initialize the destination research agent node with dynamic configuration.
+
+        Args:
+            service_registry: Service registry for dependency injection
+            **config_overrides: Runtime configuration overrides (e.g., temperature=0.8)
+        """
+        # Get configuration service for database-backed config
+        self.config_service = get_configuration_service()
+
+        # Store overrides for async config loading
+        self.config_overrides = config_overrides
+        self.agent_config = None
+        self.llm = None
+
         super().__init__("destination_research_agent", service_registry)
 
-        # Initialize LLM for destination research tasks
-        settings = get_settings()
-        self.llm = ChatOpenAI(
-            model=settings.agent.model_name,
-            temperature=settings.agent.temperature,
-            api_key=settings.openai_api_key.get_secret_value(),
-        )
+    async def _initialize_tools(self) -> None:
+        """Initialize destination research tools using simple tool catalog."""
+        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
 
-    def _initialize_tools(self) -> None:
-        """Initialize destination research tools and MCP integrations."""
-        self.tool_registry = get_tool_registry(self.service_registry)
-        self.available_tools = self.tool_registry.get_tools_for_agent(
-            "destination_research_agent"
-        )
+        # Load configuration from database if not already loaded
+        if self.agent_config is None:
+            await self._load_configuration()
+
+        # Get tools for destination research agent using simple catalog
+        self.available_tools = get_tools_for_agent("destination_research_agent")
+
+        # Bind tools to LLM for direct use
+        if self.llm:
+            self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(
-            f"Initialized destination research agent with {len(self.available_tools)} "
-            "tools"
+            f"Initialized destination research agent with "
+            f"{len(self.available_tools)} tools"
         )
+
+    async def _load_configuration(self) -> None:
+        """Load agent configuration from database with fallback to settings."""
+        try:
+            # Get configuration from database with runtime overrides
+            self.agent_config = await self.config_service.get_agent_config(
+                "destination_research_agent", **self.config_overrides
+            )
+
+            # Initialize LLM with loaded configuration
+            self.llm = ChatOpenAI(
+                model=self.agent_config["model"],
+                temperature=self.agent_config["temperature"],
+                max_tokens=self.agent_config["max_tokens"],
+                top_p=self.agent_config["top_p"],
+                api_key=self.agent_config["api_key"],
+            )
+
+            logger.info(
+                f"Loaded destination research agent configuration from database: temp={self.agent_config['temperature']}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to load database configuration, using fallback: {e}")
+
+            # Fallback to settings-based configuration
+            settings = get_settings()
+            self.agent_config = settings.get_agent_config(
+                "destination_research_agent", **self.config_overrides
+            )
+
+            self.llm = ChatOpenAI(
+                model=self.agent_config["model"],
+                temperature=self.agent_config["temperature"],
+                max_tokens=self.agent_config["max_tokens"],
+                top_p=self.agent_config["top_p"],
+                api_key=self.agent_config["api_key"],
+            )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """
@@ -65,6 +116,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
         Returns:
             Updated state with destination research and response
         """
+        # Ensure configuration is loaded before processing
+        if self.agent_config is None:
+            await self._load_configuration()
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract research parameters from user message and context

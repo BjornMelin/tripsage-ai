@@ -27,9 +27,17 @@ class MemoryUpdateNode(BaseAgentNode):
         super().__init__("memory_update", service_registry)
 
     def _initialize_tools(self) -> None:
-        """Initialize memory management tools."""
-        self.tool_registry = get_tool_registry(self.service_registry)
-        self.memory_tool = self.tool_registry.get_tool("memory_add_memory")
+        """Initialize memory management tools using simple tool catalog."""
+        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+
+        # Get tools for memory update agent using simple catalog
+        self.available_tools = get_tools_for_agent("memory_update")
+
+        # Extract memory tool for convenience
+        self.memory_tool = next(
+            (tool for tool in self.available_tools if "memory" in tool.name.lower()),
+            None,
+        )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """

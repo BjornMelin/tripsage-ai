@@ -29,22 +29,40 @@ class ItineraryAgentNode(BaseAgentNode):
     modification, and calendar integration using MCP tool integration.
     """
 
-    def __init__(self, service_registry):
-        """Initialize the itinerary agent node with tools and language model."""
-        super().__init__("itinerary_agent", service_registry)
+    def __init__(self, service_registry, **config_overrides):
+        """Initialize the itinerary agent node with dynamic configuration.
 
-        # Initialize LLM for itinerary-specific tasks
+        Args:
+            service_registry: Service registry for dependency injection
+            **config_overrides: Runtime configuration overrides (e.g., temperature=0.6)
+        """
+        # Get dynamic configuration for itinerary agent
         settings = get_settings()
+        agent_config = settings.get_agent_config("itinerary_agent", **config_overrides)
+
+        # Initialize LLM with dynamic configuration (needed by _initialize_tools)
         self.llm = ChatOpenAI(
-            model=settings.agent.model_name,
-            temperature=settings.agent.temperature,
-            api_key=settings.openai_api_key.get_secret_value(),
+            model=agent_config["model"],
+            temperature=agent_config["temperature"],
+            max_tokens=agent_config["max_tokens"],
+            top_p=agent_config["top_p"],
+            api_key=agent_config["api_key"],
         )
 
+        # Store config for monitoring/debugging
+        self.agent_config = agent_config
+
+        super().__init__("itinerary_agent", service_registry)
+
     def _initialize_tools(self) -> None:
-        """Initialize itinerary-specific tools and MCP integrations."""
-        self.tool_registry = get_tool_registry(self.service_registry)
-        self.available_tools = self.tool_registry.get_tools_for_agent("itinerary_agent")
+        """Initialize itinerary-specific tools using simple tool catalog."""
+        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+
+        # Get tools for itinerary agent using simple catalog
+        self.available_tools = get_tools_for_agent("itinerary_agent")
+
+        # Bind tools to LLM for direct use
+        self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(
             f"Initialized itinerary agent with {len(self.available_tools)} tools"
