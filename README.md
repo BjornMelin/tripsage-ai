@@ -113,7 +113,7 @@ TripSage AI is a comprehensive travel planning platform that leverages artificia
 | **[📚 Complete Documentation](docs/README.md)** | **NEW: Organized documentation hub** |
 | **[User Guide](docs/08_USER_GUIDES/README.md)** | Complete user manual with API usage examples |
 | **[Developer Guide](docs/04_DEVELOPMENT_GUIDE/README.md)** | Development setup, architecture, and best practices |
-| **[API Reference](API_REFERENCE.md)** | Complete REST API and WebSocket documentation |
+| **[API Reference](docs/06_API_REFERENCE/README.md)** | Complete REST API and WebSocket documentation |
 | **[Testing Guide](TESTING_GUIDE.md)** | Testing framework and coverage guidelines |
 | **[Deployment Guide](DEPLOYMENT_GUIDE.md)** | Production deployment with Docker/Kubernetes |
 

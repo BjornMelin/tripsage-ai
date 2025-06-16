@@ -11,7 +11,7 @@ from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.destinations import (
     DestinationDetailsResponse,
-    DestinationSearchRequest,
+    DestinationSearchRequest as APIDestinationSearchRequest,
     DestinationSearchResponse,
     PointOfInterestSearchRequest,
     SavedDestinationResponse,
@@ -22,6 +22,7 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.models.schemas_common.geographic import Place as Destination
 from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
 from tripsage_core.services.business.destination_service import (
+    DestinationSearchRequest as ServiceDestinationSearchRequest,
     DestinationService,
     get_destination_service,
 )
@@ -32,14 +33,32 @@ logger = logging.getLogger(__name__)
 
 @router.post("/search", response_model=DestinationSearchResponse)
 async def search_destinations(
-    request: DestinationSearchRequest,
+    request: APIDestinationSearchRequest,
     principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Search for destinations based on provided criteria.
     """
-    return await destination_service.search_destinations(request)
+    # Convert API schema to service schema
+    service_request = ServiceDestinationSearchRequest(
+        query=request.query,
+        categories=request.categories,
+        min_safety_rating=request.min_safety_rating,
+        travel_month=request.travel_month,
+        limit=request.limit,
+        include_weather=request.include_weather,
+        include_pois=request.include_attractions,  # Map API field to service field
+    )
+    
+    service_response = await destination_service.search_destinations(service_request)
+    
+    # Convert service response to API response
+    return DestinationSearchResponse(
+        destinations=service_response.destinations,
+        count=service_response.total_results,
+        query=service_response.search_parameters.query,
+    )
 
 
 @router.get("/{destination_id}", response_model=DestinationDetailsResponse)

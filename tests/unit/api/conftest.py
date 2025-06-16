@@ -149,13 +149,13 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         ) as mock_flight_service_getter,
         patch(
             "tripsage_core.services.business.destination_service.get_destination_service"
-        ),
+        ) as mock_destination_service_getter,
         patch("tripsage_core.services.business.chat_service.get_chat_service"),
         patch("tripsage_core.services.business.memory_service.get_memory_service"),
         patch(
             "tripsage_core.services.business.key_management_service.get_key_management_service"
         ),
-        patch("tripsage_core.services.business.user_service.get_user_service"),
+        patch("tripsage_core.services.business.user_service.get_user_service") as mock_user_service_getter,
         patch(
             "tripsage_core.services.business.itinerary_service.get_itinerary_service"
         ),
@@ -251,31 +251,170 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             }
         )
 
+        # Configure destination service mock with simple return values
+        mock_destination_service = AsyncMock()
+        mock_destination_service_getter.return_value = mock_destination_service
+        
+        # Configure destination service mock responses with minimal data
+        from tripsage.api.schemas.destinations import DestinationSearchResponse, DestinationDetailsResponse
+        from tripsage_core.models.schemas_common.geographic import Place as Destination
+        
+        # Simple mock that just returns empty result
+        mock_search_response = DestinationSearchResponse(
+            destinations=[],
+            count=0,
+            query="Tokyo",
+        )
+        
+        mock_destination_service.search_destinations = AsyncMock(
+            return_value=mock_search_response
+        )
+        
+        # Simple mock destination for details
+        mock_destination = Destination(
+            id="test-destination-id",
+            name="Tokyo",
+            description="A vibrant city in Japan",
+            latitude=35.6762,
+            longitude=139.6503,
+            country="Japan",
+            city="Tokyo",
+            region="Kanto",
+            type="city"
+        )
+        
+        mock_destination_service.get_destination_details = AsyncMock(
+            return_value=DestinationDetailsResponse(destination=mock_destination)
+        )
+        
+        mock_destination_service.get_destination_recommendations = AsyncMock(
+            return_value=[]
+        )
+
+        # Configure user service mock
+        mock_user_service = AsyncMock()
+        mock_user_service_getter.return_value = mock_user_service
+        
+        # Configure user service mock responses
+        from tripsage_core.services.business.user_service import UserResponse
+        from datetime import datetime, timezone
+        
+        def mock_get_user_by_id(user_id):
+            """Mock get user by id method."""
+            from unittest.mock import MagicMock
+            mock_user = MagicMock()
+            mock_user.id = user_id
+            mock_user.preferences_json = {
+                "theme": "dark",
+                "currency": "USD",
+                "language": "en",
+                "notifications": {
+                    "email": True,
+                    "push": False,
+                    "marketing": False,
+                },
+            }
+            return mock_user
+        
+        mock_user_service.get_user_by_id = AsyncMock(
+            side_effect=mock_get_user_by_id
+        )
+        
+        def mock_update_user_preferences(user_id, preferences):
+            """Mock update user preferences method."""
+            return UserResponse(
+                id=user_id,
+                email="test@example.com",
+                is_active=True,
+                is_verified=True,
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+                preferences=preferences,
+            )
+        
+        mock_user_service.update_user_preferences = AsyncMock(
+            side_effect=mock_update_user_preferences
+        )
+
         # Configure flight service mock
         mock_flight_service = AsyncMock()
         mock_flight_service_getter.return_value = mock_flight_service
         
         # Configure mock search flights response
-        from tripsage.api.schemas.flights import FlightSearchResponse, FlightOffer
+        from tripsage.api.schemas.flights import FlightSearchResponse
         from tripsage_core.models.domain.flight import CabinClass
         
         def mock_search_flights(request):
             """Mock search flights method that returns API response format."""
-            # Debug what we're receiving
-            print(f"Mock flight service received: {request}")
-            print(f"Request type: {type(request)}")
-            
-            # Return a simple dict instead of FlightSearchResponse
-            return {
-                "results": [],
-                "count": 0,
-                "currency": "USD",
-                "search_id": "mock-search-id",
-                "search_request": request.__dict__ if hasattr(request, '__dict__') else request,
-            }
+            # Return proper FlightSearchResponse object
+            return FlightSearchResponse(
+                results=[],
+                count=0,
+                currency="USD",
+                search_id="mock-search-id",
+                search_request=request,
+            )
         
         mock_flight_service.search_flights = AsyncMock(
             side_effect=mock_search_flights
+        )
+        
+        # Configure get flight offer mock
+        from tripsage_core.models.domain.flight import FlightOffer, Airport
+        from datetime import datetime, timedelta
+        
+        def mock_get_flight_offer(offer_id):
+            """Mock get flight offer method."""
+            return FlightOffer(
+                id=offer_id,
+                origin_airport=Airport(
+                    iata_code="LAX",
+                    name="Los Angeles International Airport",
+                    city="Los Angeles",
+                    country="United States",
+                    latitude=33.9425,
+                    longitude=-118.4081,
+                ),
+                destination_airport=Airport(
+                    iata_code="NRT",
+                    name="Narita International Airport", 
+                    city="Tokyo",
+                    country="Japan",
+                    latitude=35.7647,
+                    longitude=140.3864,
+                ),
+                departure_time=datetime.now() + timedelta(days=30),
+                arrival_time=datetime.now() + timedelta(days=30, hours=12),
+                duration_minutes=720,
+                stops=0,
+                price=899.99,
+                currency="USD",
+                airline_code="AA",
+                flight_number="AA0001",
+                cabin_class=CabinClass.ECONOMY,
+                seats_available=42,
+            )
+        
+        mock_flight_service.get_flight_offer = AsyncMock(
+            side_effect=mock_get_flight_offer
+        )
+        
+        # Configure save flight mock
+        from tripsage.api.schemas.flights import SavedFlightResponse
+        
+        def mock_save_flight(user_id, request):
+            """Mock save flight method."""
+            return SavedFlightResponse(
+                id="saved-flight-123",
+                user_id=user_id,
+                trip_id=request.trip_id,
+                offer_id=request.offer_id,
+                saved_at=datetime.now(),
+                notes=request.notes,
+            )
+        
+        mock_flight_service.save_flight = AsyncMock(
+            side_effect=mock_save_flight
         )
 
         # Configure file processing service mock

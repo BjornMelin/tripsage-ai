@@ -20,11 +20,18 @@ class TestDestinationsRouter:
         self, api_test_client, valid_destination_search
     ):
         """Test successful destination search."""
+        # Debug: print what we're sending
+        print(f"Request data: {valid_destination_search}")
+        
         # Act
         response = api_test_client.post(
             "/api/destinations/search",
             json=valid_destination_search,
         )
+
+        # Debug: print response details
+        print(f"Response status: {response.status_code}")
+        print(f"Response content: {response.text}")
 
         # Assert
         assert response.status_code == status.HTTP_200_OK

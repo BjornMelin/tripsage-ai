@@ -25,11 +25,6 @@ class TestUsersRouter:
     """Test users router functionality."""
 
     @pytest.fixture
-    def mock_user_id(self):
-        """Mock authenticated user ID."""
-        return "user123"
-
-    @pytest.fixture
     def mock_user_service(self):
         """Mock user service."""
         service = MagicMock(spec=UserService)
@@ -58,9 +53,21 @@ class TestUsersRouter:
         }
 
     async def test_get_user_preferences_success(
-        self, mock_user_id, mock_user_service, sample_preferences
+        self, mock_user_service, sample_preferences
     ):
         """Test successful retrieval of user preferences."""
+        from tripsage.api.middlewares.authentication import Principal
+        
+        # Setup mock principal
+        mock_principal = Principal(
+            id="user123",
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         # Setup mock user with preferences
         mock_user = MagicMock()
         mock_user.id = "user123"
@@ -69,7 +76,7 @@ class TestUsersRouter:
 
         # Call endpoint
         result = await get_user_preferences(
-            user_id=mock_user_id,
+            principal=mock_principal,
             user_service=mock_user_service,
         )
 
@@ -78,9 +85,21 @@ class TestUsersRouter:
         mock_user_service.get_user_by_id.assert_called_once_with("user123")
 
     async def test_get_user_preferences_no_preferences(
-        self, mock_user_id, mock_user_service
+        self, mock_user_service
     ):
         """Test retrieval when user has no preferences set."""
+        from tripsage.api.middlewares.authentication import Principal
+        
+        # Setup mock principal
+        mock_principal = Principal(
+            id="user123",
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         # Setup mock user with no preferences
         mock_user = MagicMock()
         mock_user.id = "user123"
@@ -89,7 +108,7 @@ class TestUsersRouter:
 
         # Call endpoint
         result = await get_user_preferences(
-            user_id=mock_user_id,
+            principal=mock_principal,
             user_service=mock_user_service,
         )
 
@@ -98,16 +117,28 @@ class TestUsersRouter:
         mock_user_service.get_user_by_id.assert_called_once_with("user123")
 
     async def test_get_user_preferences_user_not_found(
-        self, mock_user_id, mock_user_service
+        self, mock_user_service
     ):
         """Test retrieval when user is not found."""
+        from tripsage.api.middlewares.authentication import Principal
+        
+        # Setup mock principal
+        mock_principal = Principal(
+            id="user123",
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         # Setup mock to return None
         mock_user_service.get_user_by_id.return_value = None
 
         # Call endpoint and expect 404
         with pytest.raises(HTTPException) as exc_info:
             await get_user_preferences(
-                user_id=mock_user_id,
+                principal=mock_principal,
                 user_service=mock_user_service,
             )
 
@@ -115,9 +146,21 @@ class TestUsersRouter:
         assert exc_info.value.detail == "User not found"
 
     async def test_update_user_preferences_success(
-        self, mock_user_id, mock_user_service, sample_preferences
+        self, mock_user_service, sample_preferences
     ):
         """Test successful update of user preferences."""
+        from tripsage.api.middlewares.authentication import Principal
+        
+        # Setup mock principal
+        mock_principal = Principal(
+            id="user123",
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         # Setup request
         preferences_request = UserPreferencesRequest(preferences=sample_preferences)
 
@@ -138,7 +181,7 @@ class TestUsersRouter:
         # Call endpoint
         result = await update_user_preferences(
             preferences_request=preferences_request,
-            user_id=mock_user_id,
+            principal=mock_principal,
             user_service=mock_user_service,
         )
 
@@ -149,9 +192,21 @@ class TestUsersRouter:
         )
 
     async def test_update_user_preferences_partial_update(
-        self, mock_user_id, mock_user_service
+        self, mock_user_service
     ):
         """Test partial update of user preferences."""
+        from tripsage.api.middlewares.authentication import Principal
+        
+        # Setup mock principal
+        mock_principal = Principal(
+            id="user123",
+            type="user",
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+        
         # Setup request with partial preferences
         partial_preferences = {
             "theme": "light",
@@ -188,7 +243,7 @@ class TestUsersRouter:
         # Call endpoint
         result = await update_user_preferences(
             preferences_request=preferences_request,
-            user_id=mock_user_id,
+            principal=mock_principal,
             user_service=mock_user_service,
         )
 
@@ -199,7 +254,7 @@ class TestUsersRouter:
         )
 
     async def test_update_user_preferences_empty_update(
-        self, mock_user_id, mock_user_service, sample_preferences
+        self, mock_user_service, sample_preferences
     ):
         """Test update with empty preferences object."""
         # Setup request with empty preferences
@@ -222,7 +277,7 @@ class TestUsersRouter:
         # Call endpoint
         from tripsage.api.middlewares.authentication import Principal
         mock_principal = Principal(
-            id=mock_user_id,
+            id="user123",
             type="user",
             email="test@example.com",
             auth_method="jwt",
@@ -241,7 +296,7 @@ class TestUsersRouter:
         mock_user_service.update_user_preferences.assert_called_once_with("user123", {})
 
     async def test_update_user_preferences_service_error(
-        self, mock_user_id, mock_user_service
+        self, mock_user_service
     ):
         """Test update when service raises an error."""
         # Setup request
@@ -255,7 +310,7 @@ class TestUsersRouter:
         # Call endpoint and expect 500
         from tripsage.api.middlewares.authentication import Principal
         mock_principal = Principal(
-            id=mock_user_id,
+            id="user123",
             type="user",
             email="test@example.com",
             auth_method="jwt",
