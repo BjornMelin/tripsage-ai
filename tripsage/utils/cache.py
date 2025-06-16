@@ -25,7 +25,7 @@ from typing import (
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.content_utils import ContentType, get_ttl_for_content_type
 from tripsage_core.utils.logging_utils import get_logger

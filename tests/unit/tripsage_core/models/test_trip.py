@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
+from tripsage_core.models.schemas_common.enums import TripStatus, TripType
 from tripsage_core.models.trip import (
     BudgetBreakdown,
     EnhancedBudget,
@@ -17,7 +18,6 @@ from tripsage_core.models.trip import (
     TripPreferences,
     TripVisibility,
 )
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType
 
 
 class TestBudgetBreakdown:
@@ -182,13 +182,13 @@ class TestTrip:
     def test_trip_creation_with_defaults(self, valid_trip_data):
         """Test Trip creation with default values."""
         trip = Trip(**valid_trip_data)
-        
+
         # Check required fields
         assert isinstance(trip.id, UUID)
         assert trip.user_id == valid_trip_data["user_id"]
         assert trip.title == "European Adventure"
         assert trip.destination == "Europe"
-        
+
         # Check defaults
         assert trip.status == TripStatus.PLANNING
         assert trip.visibility == TripVisibility.PRIVATE
@@ -205,7 +205,7 @@ class TestTrip:
             date_flexibility=2,
             activity_preferences=["museums", "hiking"],
         )
-        
+
         trip = Trip(
             **valid_trip_data,
             status=TripStatus.BOOKED,
@@ -213,7 +213,7 @@ class TestTrip:
             notes=[{"content": "Check visa requirements", "created_at": "2025-01-01"}],
             search_metadata={"source": "manual", "version": "1.0"},
         )
-        
+
         assert trip.status == TripStatus.BOOKED
         assert trip.preferences_extended.budget_flexibility == 0.15
         assert len(trip.notes) == 1
@@ -456,13 +456,13 @@ class TestTrip:
     def test_trip_json_serialization(self, valid_trip_data):
         """Test Trip JSON serialization."""
         trip = Trip(**valid_trip_data)
-        
+
         # Convert to dict
         trip_dict = trip.model_dump()
         assert isinstance(trip_dict["id"], UUID)
         assert trip_dict["title"] == "European Adventure"
         assert isinstance(trip_dict["created_at"], datetime)
-        
+
         # Convert to JSON
         trip_json = trip.model_dump_json()
         assert isinstance(trip_json, str)
@@ -548,7 +548,9 @@ class TestTripIntegration:
 
         # Verify complex setup
         assert trip.preferences_extended.accommodation_preferences["rating"] == 4
-        assert "wifi" in trip.preferences_extended.accommodation_preferences["amenities"]
+        assert (
+            "wifi" in trip.preferences_extended.accommodation_preferences["amenities"]
+        )
         assert trip.budget_utilization == 35.0
         assert trip.remaining_budget == 6500.0
         assert len(trip.notes) == 2

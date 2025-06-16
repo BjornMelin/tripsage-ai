@@ -6,8 +6,8 @@ These tests exercise the actual DB trip model implementation to increase coverag
 
 from datetime import date
 
-from tripsage_core.models.trip import Trip as DbTrip
 from tripsage_core.models.trip import EnhancedBudget as TripBudget
+from tripsage_core.models.trip import Trip as DbTrip
 
 
 class TestDbTripModelCoverage:

@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import CoreAppSettings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
     CoreResourceNotFoundError,
@@ -70,8 +70,8 @@ class DatabaseService:
 
         try:
             # Validate Supabase configuration
-            supabase_url = self.settings.database.supabase_url
-            supabase_key = self.settings.database.supabase_anon_key.get_secret_value()
+            supabase_url = self.settings.database_url
+            supabase_key = self.settings.database_public_key.get_secret_value()
 
             if not supabase_url or not supabase_url.startswith("https://"):
                 raise CoreDatabaseError(
@@ -92,9 +92,9 @@ class DatabaseService:
 
             # Client options for better performance
             options = ClientOptions(
-                auto_refresh_token=self.settings.database.supabase_auto_refresh_token,
-                persist_session=self.settings.database.supabase_persist_session,
-                postgrest_client_timeout=self.settings.database.supabase_timeout,
+                auto_refresh_token=True,  # Default to True
+                persist_session=True,  # Default to True
+                postgrest_client_timeout=60.0,  # Default timeout
             )
 
             # Create Supabase client

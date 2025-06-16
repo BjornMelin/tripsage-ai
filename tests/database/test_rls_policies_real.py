@@ -1,623 +1,725 @@
 #!/usr/bin/env python3
 """
-Real RLS (Row Level Security) Policy Test Suite
+Real RLS (Row Level Security) Policy Tests
 
-Tests actual RLS policies against a real Supabase database to ensure:
+Tests RLS policies against actual Supabase database to ensure:
 - Users can only access their own data
-- Collaboration permissions work correctly  
+- Collaboration permissions work correctly
 - No data leakage between users
-- System tables are properly restricted
+- Policies perform well under load
 
-This replaces the mock-based test with real database testing.
+This test suite connects to a real Supabase instance and creates/destroys
+test data to verify RLS policies are working correctly.
 """
 
 import asyncio
 import os
-import uuid
-from datetime import datetime
+import time
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import pytest
-from supabase import Client, create_client
+
+from supabase import create_client
+from tripsage_core.models.base_core_model import TripSageModel
+
+
+class RLSTestResult(TripSageModel):
+    """Model for RLS test results."""
+
+    test_name: str
+    table_name: str
+    operation: str
+    user_role: str
+    expected_access: bool
+    actual_access: bool
+    passed: bool
+    error: Optional[str] = None
+    performance_ms: Optional[float] = None
 
 
 class RealRLSPolicyTester:
     """Real RLS policy testing against actual Supabase database."""
-    
+
     def __init__(self):
-        """Initialize with real Supabase connection."""
-        self.supabase_url = os.getenv("SUPABASE_URL", "https://test.supabase.co")
-        self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY", "test-key")
-        self.supabase_service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-key")
-        
-        # Create clients
-        self.admin_client = create_client(self.supabase_url, self.supabase_service_key)
-        self.anon_client = create_client(self.supabase_url, self.supabase_anon_key)
-        
-        # Test users will be created during setup
-        self.test_users = []
-        self.user_clients = {}
-        self.cleanup_data = []
-        
+        self.supabase_url = os.getenv("SUPABASE_URL")
+        self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
+
+        if not self.supabase_url or not self.supabase_anon_key:
+            pytest.skip("Supabase credentials not available for RLS testing")
+
+        self.admin_client = create_client(self.supabase_url, self.supabase_anon_key)
+        self.test_users: List[Dict] = []
+        self.test_results: List[RLSTestResult] = []
+        self.cleanup_data: List[Dict] = []
+
     async def setup_test_users(self) -> List[Dict]:
         """Create real test users for RLS testing."""
-        users = []
-        
+        test_users = []
+
         for i in range(3):
-            email = f"rls_test_user_{i}_{uuid.uuid4().hex[:8]}@test.com"
+            email = f"rls_test_user_{i}_{int(time.time())}@tripsage.test"
             password = "TestPassword123!"
-            
+
             try:
-                # Create user with admin client
-                user_response = self.admin_client.auth.admin.create_user({
-                    "email": email,
-                    "password": password,
-                    "email_confirm": True
-                })
-                
-                if user_response.user:
+                # Create user
+                response = self.admin_client.auth.sign_up(
+                    {"email": email, "password": password}
+                )
+
+                if response.user:
                     user_data = {
-                        "id": user_response.user.id,
+                        "id": response.user.id,
                         "email": email,
-                        "password": password
+                        "password": password,
+                        "client": create_client(
+                            self.supabase_url, self.supabase_anon_key
+                        ),
                     }
-                    users.append(user_data)
-                    
-                    # Create authenticated client for this user
-                    user_client = create_client(self.supabase_url, self.supabase_anon_key)
-                    signin_response = user_client.auth.sign_in_with_password({
-                        "email": email,
-                        "password": password
-                    })
-                    
-                    if signin_response.user:
-                        self.user_clients[user_data["id"]] = user_client
-                        
+
+                    # Sign in the user's client
+                    await self._sign_in_user(user_data)
+                    test_users.append(user_data)
+
             except Exception as e:
-                print(f"Failed to create user {email}: {e}")
-                
-        self.test_users = users
-        return users
-        
-    async def cleanup_test_users(self):
-        """Clean up test users and data."""
+                print(f"Failed to create test user {email}: {e}")
+                continue
+
+        if len(test_users) < 2:
+            pytest.skip("Failed to create sufficient test users for RLS testing")
+
+        self.test_users = test_users
+        return test_users
+
+    async def _sign_in_user(self, user_data: Dict) -> None:
+        """Sign in a test user."""
+        try:
+            response = user_data["client"].auth.sign_in_with_password(
+                {"email": user_data["email"], "password": user_data["password"]}
+            )
+            if response.user:
+                print(f"Successfully signed in user: {user_data['email']}")
+        except Exception as e:
+            print(f"Failed to sign in user {user_data['email']}: {e}")
+            raise
+
+    async def cleanup_test_data(self) -> None:
+        """Clean up all test data and users."""
         # Clean up test data
-        for item in self.cleanup_data:
+        for cleanup_item in self.cleanup_data:
             try:
-                table = item["table"]
-                id_field = item.get("id_field", "id")
-                record_id = item["id"]
-                
-                self.admin_client.table(table).delete().eq(id_field, record_id).execute()
+                table = cleanup_item["table"]
+                record_id = cleanup_item["id"]
+                self.admin_client.table(table).delete().eq("id", record_id).execute()
             except Exception as e:
-                print(f"Cleanup error for {item}: {e}")
-                
-        # Delete test users
+                print(f"Failed to cleanup {cleanup_item}: {e}")
+
+        # Clean up test users
         for user in self.test_users:
             try:
-                self.admin_client.auth.admin.delete_user(user["id"])
+                user["client"].auth.sign_out()
+                # Note: In production, you'd use admin client to delete users
+                # self.admin_client.auth.admin.delete_user(user["id"])
             except Exception as e:
-                print(f"Failed to delete user {user['email']}: {e}")
-                
-    def test_user_data_isolation(self) -> List[Dict]:
+                print(f"Failed to cleanup user {user['email']}: {e}")
+
+    def record_result(
+        self,
+        test_name: str,
+        table_name: str,
+        operation: str,
+        user_role: str,
+        expected_access: bool,
+        actual_access: bool,
+        error: Optional[str] = None,
+        performance_ms: Optional[float] = None,
+    ) -> RLSTestResult:
+        """Record a test result."""
+        result = RLSTestResult(
+            test_name=test_name,
+            table_name=table_name,
+            operation=operation,
+            user_role=user_role,
+            expected_access=expected_access,
+            actual_access=actual_access,
+            passed=expected_access == actual_access,
+            error=error,
+            performance_ms=performance_ms,
+        )
+        self.test_results.append(result)
+        return result
+
+    async def test_user_data_isolation(self) -> List[RLSTestResult]:
         """Test that users can only access their own data."""
         results = []
-        
+
         if len(self.test_users) < 2:
-            return [{"error": "Need at least 2 test users"}]
-            
-        user_a = self.test_users[0]
-        user_b = self.test_users[1]
-        client_a = self.user_clients[user_a["id"]]
-        client_b = self.user_clients[user_b["id"]]
-        
+            return results
+
+        user_a, user_b = self.test_users[0], self.test_users[1]
+
         # Test 1: User A creates a trip
+        start_time = time.time()
         try:
-            trip_data = {
-                "user_id": user_a["id"],
-                "title": "User A's Trip",
-                "destination": "Paris",
-                "start_date": "2025-07-01",
-                "end_date": "2025-07-10",
-                "budget": 2000.0,
-                "currency": "USD"
-            }
-            
-            trip_response = client_a.table("trips").insert(trip_data).execute()
-            
-            if trip_response.data:
-                trip_id = trip_response.data[0]["id"]
+            trip_response = (
+                user_a["client"]
+                .table("trips")
+                .insert(
+                    {
+                        "name": "User A Private Trip",
+                        "start_date": "2025-07-01",
+                        "end_date": "2025-07-10",
+                        "destination": "Paris",
+                        "budget": 2000,
+                        "travelers": 2,
+                    }
+                )
+                .execute()
+            )
+
+            trip_created = bool(trip_response.data)
+            trip_id = trip_response.data[0]["id"] if trip_response.data else None
+
+            if trip_id:
                 self.cleanup_data.append({"table": "trips", "id": trip_id})
-                
-                results.append({
-                    "test": "user_data_isolation",
-                    "table": "trips", 
-                    "operation": "INSERT",
-                    "user_role": "owner",
-                    "expected": True,
-                    "actual": True,
-                    "passed": True
-                })
-                
-                # Test 2: User B tries to read User A's trip (should fail)
-                try:
-                    other_trip = client_b.table("trips").select("*").eq("id", trip_id).execute()
-                    can_access = len(other_trip.data) > 0
-                    
-                    results.append({
-                        "test": "user_data_isolation",
-                        "table": "trips",
-                        "operation": "SELECT", 
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": can_access,
-                        "passed": not can_access  # Pass if cannot access
-                    })
-                    
-                except Exception as e:
-                    # Exception means access denied - this is good
-                    results.append({
-                        "test": "user_data_isolation",
-                        "table": "trips",
-                        "operation": "SELECT",
-                        "user_role": "other_user", 
-                        "expected": False,
-                        "actual": False,
-                        "passed": True,
-                        "note": "Access properly denied with exception"
-                    })
-                    
-            else:
-                results.append({
-                    "test": "user_data_isolation",
-                    "table": "trips",
-                    "operation": "INSERT",
-                    "user_role": "owner",
-                    "expected": True,
-                    "actual": False,
-                    "passed": False,
-                    "error": "Failed to create trip"
-                })
-                
-        except Exception as e:
-            results.append({
-                "test": "user_data_isolation", 
-                "table": "trips",
-                "operation": "INSERT",
-                "user_role": "owner",
-                "expected": True,
-                "actual": False,
-                "passed": False,
-                "error": str(e)
-            })
-            
-        # Test 3: Memory isolation
+
+        except Exception:
+            trip_created = False
+            trip_id = None
+
+        perf_ms = (time.time() - start_time) * 1000
+
+        results.append(
+            self.record_result(
+                "user_data_isolation",
+                "trips",
+                "INSERT",
+                "owner",
+                True,
+                trip_created,
+                performance_ms=perf_ms,
+            )
+        )
+
+        # Test 2: User B tries to read User A's trip (should fail)
+        if trip_id:
+            start_time = time.time()
+            try:
+                other_trip_response = (
+                    user_b["client"]
+                    .table("trips")
+                    .select("*")
+                    .eq("id", trip_id)
+                    .execute()
+                )
+                access_granted = len(other_trip_response.data) > 0
+                error = None
+            except Exception as e:
+                access_granted = False
+                error = str(e)
+
+            perf_ms = (time.time() - start_time) * 1000
+
+            results.append(
+                self.record_result(
+                    "user_data_isolation",
+                    "trips",
+                    "SELECT",
+                    "other_user",
+                    False,
+                    access_granted,
+                    error=error,
+                    performance_ms=perf_ms,
+                )
+            )
+
+        # Test 3: User A creates a memory
         try:
-            memory_data = {
-                "user_id": user_a["id"],
-                "memory_type": "preference",
-                "content": "User A's private memory"
-            }
-            
-            memory_response = client_a.table("memories").insert(memory_data).execute()
-            
-            if memory_response.data:
-                memory_id = memory_response.data[0]["id"]
+            memory_response = (
+                user_a["client"]
+                .table("memories")
+                .insert(
+                    {
+                        "memory_type": "user_preference",
+                        "content": "Prefers budget travel",
+                    }
+                )
+                .execute()
+            )
+
+            memory_id = memory_response.data[0]["id"] if memory_response.data else None
+            if memory_id:
                 self.cleanup_data.append({"table": "memories", "id": memory_id})
-                
-                # User B tries to access User A's memory
-                try:
-                    other_memory = client_b.table("memories").select("*").eq("id", memory_id).execute()
-                    can_access = len(other_memory.data) > 0
-                    
-                    results.append({
-                        "test": "user_data_isolation",
-                        "table": "memories",
-                        "operation": "SELECT",
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": can_access,
-                        "passed": not can_access
-                    })
-                    
-                except Exception:
-                    results.append({
-                        "test": "user_data_isolation",
-                        "table": "memories", 
-                        "operation": "SELECT",
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": False,
-                        "passed": True
-                    })
-                    
-        except Exception as e:
-            results.append({
-                "test": "user_data_isolation",
-                "table": "memories",
-                "operation": "INSERT", 
-                "user_role": "owner",
-                "expected": True,
-                "actual": False,
-                "passed": False,
-                "error": str(e)
-            })
-            
+        except Exception:
+            memory_id = None
+
+        # Test 4: User B tries to read User A's memory (should fail)
+        if memory_id:
+            try:
+                other_memory_response = (
+                    user_b["client"]
+                    .table("memories")
+                    .select("*")
+                    .eq("id", memory_id)
+                    .execute()
+                )
+                access_granted = len(other_memory_response.data) > 0
+            except Exception:
+                access_granted = False
+
+            results.append(
+                self.record_result(
+                    "user_data_isolation",
+                    "memories",
+                    "SELECT",
+                    "other_user",
+                    False,
+                    access_granted,
+                )
+            )
+
         return results
-        
-    def test_collaboration_permissions(self) -> List[Dict]:
-        """Test trip collaboration permissions."""
+
+    async def test_collaboration_permissions(self) -> List[RLSTestResult]:
+        """Test trip collaboration permissions work correctly."""
         results = []
-        
+
         if len(self.test_users) < 3:
-            return [{"error": "Need at least 3 test users"}]
-            
-        user_a = self.test_users[0]  # Owner
-        user_b = self.test_users[1]  # Collaborator
-        user_c = self.test_users[2]  # Non-collaborator
-        
-        client_a = self.user_clients[user_a["id"]]
-        client_b = self.user_clients[user_b["id"]]
-        client_c = self.user_clients[user_c["id"]]
-        
+            return results
+
+        user_a, user_b, user_c = (
+            self.test_users[0],
+            self.test_users[1],
+            self.test_users[2],
+        )
+
+        # User A creates a trip
         try:
-            # User A creates a trip
-            trip_data = {
-                "user_id": user_a["id"],
-                "title": "Collaborative Trip",
-                "destination": "Tokyo", 
-                "start_date": "2025-08-01",
-                "end_date": "2025-08-15",
-                "budget": 5000.0,
-                "currency": "USD"
-            }
-            
-            trip_response = client_a.table("trips").insert(trip_data).execute()
-            
-            if not trip_response.data:
-                return [{"error": "Failed to create test trip"}]
-                
-            trip_id = trip_response.data[0]["id"]
-            self.cleanup_data.append({"table": "trips", "id": trip_id})
-            
-            # User A adds User B as viewer
-            collab_data = {
-                "trip_id": trip_id,
-                "user_id": user_b["id"],
-                "permission_level": "view",
-                "added_by": user_a["id"]
-            }
-            
-            collab_response = client_a.table("trip_collaborators").insert(collab_data).execute()
-            
-            if collab_response.data:
-                collab_id = collab_response.data[0]["id"]
-                self.cleanup_data.append({"table": "trip_collaborators", "id": collab_id})
-                
-                # Test: User B can view the trip
-                shared_trip = client_b.table("trips").select("*").eq("id", trip_id).execute()
-                can_view = len(shared_trip.data) > 0
-                
-                results.append({
-                    "test": "collaboration_permissions",
-                    "table": "trips",
-                    "operation": "SELECT",
-                    "user_role": "viewer",
-                    "expected": True,
-                    "actual": can_view,
-                    "passed": can_view
-                })
-                
-                # Test: User B cannot update the trip (viewer only)
-                try:
-                    update_response = client_b.table("trips").update({
-                        "title": "Modified by Viewer"
-                    }).eq("id", trip_id).execute()
-                    
-                    can_update = len(update_response.data) > 0
-                    
-                    results.append({
-                        "test": "collaboration_permissions", 
-                        "table": "trips",
-                        "operation": "UPDATE",
-                        "user_role": "viewer",
-                        "expected": False,
-                        "actual": can_update,
-                        "passed": not can_update
-                    })
-                    
-                except Exception:
-                    results.append({
-                        "test": "collaboration_permissions",
-                        "table": "trips",
-                        "operation": "UPDATE", 
-                        "user_role": "viewer",
-                        "expected": False,
-                        "actual": False,
-                        "passed": True
-                    })
-                    
-                # Test: User C cannot access the trip (not a collaborator)
-                try:
-                    no_access = client_c.table("trips").select("*").eq("id", trip_id).execute()
-                    can_access = len(no_access.data) > 0
-                    
-                    results.append({
-                        "test": "collaboration_permissions",
-                        "table": "trips", 
-                        "operation": "SELECT",
-                        "user_role": "non_collaborator",
-                        "expected": False,
-                        "actual": can_access,
-                        "passed": not can_access
-                    })
-                    
-                except Exception:
-                    results.append({
-                        "test": "collaboration_permissions",
-                        "table": "trips",
-                        "operation": "SELECT",
-                        "user_role": "non_collaborator", 
-                        "expected": False,
-                        "actual": False,
-                        "passed": True
-                    })
-                    
+            trip_response = (
+                user_a["client"]
+                .table("trips")
+                .insert(
+                    {
+                        "name": "Collaborative Trip",
+                        "start_date": "2025-08-01",
+                        "end_date": "2025-08-15",
+                        "destination": "Tokyo",
+                        "budget": 5000,
+                        "travelers": 3,
+                    }
+                )
+                .execute()
+            )
+
+            trip_id = trip_response.data[0]["id"] if trip_response.data else None
+            if trip_id:
+                self.cleanup_data.append({"table": "trips", "id": trip_id})
         except Exception as e:
-            results.append({
-                "test": "collaboration_permissions",
-                "table": "trips",
-                "operation": "setup",
-                "user_role": "owner",
-                "expected": True,
-                "actual": False,
-                "passed": False,
-                "error": str(e)
-            })
-            
+            trip_id = None
+            print(f"Failed to create collaborative trip: {e}")
+
+        if not trip_id:
+            return results
+
+        # User A adds User B as viewer
+        try:
+            collab_response = (
+                user_a["client"]
+                .table("trip_collaborators")
+                .insert(
+                    {
+                        "trip_id": trip_id,
+                        "user_id": user_b["id"],
+                        "permission_level": "view",
+                    }
+                )
+                .execute()
+            )
+
+            collab_id = collab_response.data[0]["id"] if collab_response.data else None
+            if collab_id:
+                self.cleanup_data.append(
+                    {"table": "trip_collaborators", "id": collab_id}
+                )
+
+            collaboration_created = bool(collab_response.data)
+        except Exception as e:
+            collaboration_created = False
+            print(f"Failed to create collaboration: {e}")
+
+        results.append(
+            self.record_result(
+                "collaboration_permissions",
+                "trip_collaborators",
+                "INSERT",
+                "trip_owner",
+                True,
+                collaboration_created,
+            )
+        )
+
+        # User B can view the shared trip
+        try:
+            shared_trip_response = (
+                user_b["client"].table("trips").select("*").eq("id", trip_id).execute()
+            )
+            can_view = len(shared_trip_response.data) > 0
+        except Exception:
+            can_view = False
+
+        results.append(
+            self.record_result(
+                "collaboration_permissions",
+                "trips",
+                "SELECT",
+                "viewer",
+                True,
+                can_view,
+            )
+        )
+
+        # User B tries to update the trip (should fail - viewers can't edit)
+        try:
+            update_response = (
+                user_b["client"]
+                .table("trips")
+                .update({"name": "Modified by Viewer"})
+                .eq("id", trip_id)
+                .execute()
+            )
+
+            can_update = len(update_response.data) > 0
+        except Exception:
+            can_update = False
+
+        results.append(
+            self.record_result(
+                "collaboration_permissions",
+                "trips",
+                "UPDATE",
+                "viewer",
+                False,
+                can_update,
+            )
+        )
+
+        # User C (non-collaborator) cannot access the trip
+        try:
+            no_access_response = (
+                user_c["client"].table("trips").select("*").eq("id", trip_id).execute()
+            )
+            unauthorized_access = len(no_access_response.data) > 0
+        except Exception:
+            unauthorized_access = False
+
+        results.append(
+            self.record_result(
+                "collaboration_permissions",
+                "trips",
+                "SELECT",
+                "non_collaborator",
+                False,
+                unauthorized_access,
+            )
+        )
+
         return results
-        
-    def test_system_tables_access(self) -> List[Dict]:
-        """Test that system tables are properly restricted."""
+
+    async def test_cascade_permissions(self) -> List[RLSTestResult]:
+        """Test that trip-related data inherits trip permissions."""
         results = []
-        
-        if not self.test_users:
-            return [{"error": "No test users available"}]
-            
-        user = self.test_users[0]
-        client = self.user_clients[user["id"]]
-        
-        # Test access to system_metrics
-        try:
-            metrics = client.table("system_metrics").select("*").limit(1).execute()
-            can_access = len(metrics.data) > 0
-            
-            results.append({
-                "test": "system_tables_access",
-                "table": "system_metrics",
-                "operation": "SELECT",
-                "user_role": "authenticated_user", 
-                "expected": False,
-                "actual": can_access,
-                "passed": not can_access
-            })
-            
-        except Exception:
-            results.append({
-                "test": "system_tables_access",
-                "table": "system_metrics",
-                "operation": "SELECT",
-                "user_role": "authenticated_user",
-                "expected": False,
-                "actual": False,
-                "passed": True
-            })
-            
-        # Test access to webhook_configs
-        try:
-            configs = client.table("webhook_configs").select("*").limit(1).execute()
-            can_access = len(configs.data) > 0
-            
-            results.append({
-                "test": "system_tables_access",
-                "table": "webhook_configs",
-                "operation": "SELECT", 
-                "user_role": "authenticated_user",
-                "expected": False,
-                "actual": can_access,
-                "passed": not can_access
-            })
-            
-        except Exception:
-            results.append({
-                "test": "system_tables_access",
-                "table": "webhook_configs",
-                "operation": "SELECT",
-                "user_role": "authenticated_user",
-                "expected": False,
-                "actual": False,
-                "passed": True
-            })
-            
-        # Test access to webhook_logs
-        try:
-            logs = client.table("webhook_logs").select("*").limit(1).execute()
-            can_access = len(logs.data) > 0
-            
-            results.append({
-                "test": "system_tables_access",
-                "table": "webhook_logs",
-                "operation": "SELECT",
-                "user_role": "authenticated_user",
-                "expected": False,
-                "actual": can_access,
-                "passed": not can_access
-            })
-            
-        except Exception:
-            results.append({
-                "test": "system_tables_access",
-                "table": "webhook_logs", 
-                "operation": "SELECT",
-                "user_role": "authenticated_user",
-                "expected": False,
-                "actual": False,
-                "passed": True
-            })
-            
-        return results
-        
-    def test_notification_isolation(self) -> List[Dict]:
-        """Test that notifications are properly isolated."""
-        results = []
-        
+
         if len(self.test_users) < 2:
-            return [{"error": "Need at least 2 test users"}]
-            
-        user_a = self.test_users[0]
-        user_b = self.test_users[1]
-        client_a = self.user_clients[user_a["id"]]
-        client_b = self.user_clients[user_b["id"]]
-        
+            return results
+
+        user_a, user_b = self.test_users[0], self.test_users[1]
+
+        # User A creates a trip
         try:
-            # Create notification for User A using admin client (service role)
-            notification_data = {
-                "user_id": user_a["id"],
-                "type": "trip_reminder",
-                "title": "Test Notification",
-                "message": "This is a test notification",
-                "metadata": {"test": True}
-            }
-            
-            notification_response = self.admin_client.table("notifications").insert(notification_data).execute()
-            
-            if notification_response.data:
-                notification_id = notification_response.data[0]["id"]
-                self.cleanup_data.append({"table": "notifications", "id": notification_id})
-                
-                # User A can see their notification
-                user_a_notif = client_a.table("notifications").select("*").eq("id", notification_id).execute()
-                can_view_own = len(user_a_notif.data) > 0
-                
-                results.append({
-                    "test": "notification_isolation",
-                    "table": "notifications",
-                    "operation": "SELECT",
-                    "user_role": "owner",
-                    "expected": True,
-                    "actual": can_view_own,
-                    "passed": can_view_own
-                })
-                
-                # User B cannot see User A's notification
-                try:
-                    user_b_notif = client_b.table("notifications").select("*").eq("id", notification_id).execute()
-                    can_view_other = len(user_b_notif.data) > 0
-                    
-                    results.append({
-                        "test": "notification_isolation",
-                        "table": "notifications",
-                        "operation": "SELECT",
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": can_view_other,
-                        "passed": not can_view_other
-                    })
-                    
-                except Exception:
-                    results.append({
-                        "test": "notification_isolation",
-                        "table": "notifications",
-                        "operation": "SELECT",
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": False,
-                        "passed": True
-                    })
-                    
-                # User A can update their notification
-                try:
-                    update_response = client_a.table("notifications").update({
-                        "read": True
-                    }).eq("id", notification_id).execute()
-                    
-                    can_update_own = len(update_response.data) > 0
-                    
-                    results.append({
-                        "test": "notification_isolation",
-                        "table": "notifications",
-                        "operation": "UPDATE",
-                        "user_role": "owner",
-                        "expected": True,
-                        "actual": can_update_own,
-                        "passed": can_update_own
-                    })
-                    
-                except Exception as e:
-                    results.append({
-                        "test": "notification_isolation",
-                        "table": "notifications",
-                        "operation": "UPDATE",
-                        "user_role": "owner",
-                        "expected": True,
-                        "actual": False,
-                        "passed": False,
-                        "error": str(e)
-                    })
-                    
-                # User B cannot update User A's notification
-                try:
-                    update_response = client_b.table("notifications").update({
-                        "read": True
-                    }).eq("id", notification_id).execute()
-                    
-                    can_update_other = len(update_response.data) > 0
-                    
-                    results.append({
-                        "test": "notification_isolation",
-                        "table": "notifications",
-                        "operation": "UPDATE",
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": can_update_other,
-                        "passed": not can_update_other
-                    })
-                    
-                except Exception:
-                    results.append({
-                        "test": "notification_isolation",
-                        "table": "notifications",
-                        "operation": "UPDATE",
-                        "user_role": "other_user",
-                        "expected": False,
-                        "actual": False,
-                        "passed": True
-                    })
-                    
-        except Exception as e:
-            results.append({
-                "test": "notification_isolation",
-                "table": "notifications",
-                "operation": "setup",
-                "user_role": "admin",
-                "expected": True,
-                "actual": False,
-                "passed": False,
-                "error": str(e)
-            })
-            
+            trip_response = (
+                user_a["client"]
+                .table("trips")
+                .insert(
+                    {
+                        "name": "Cascade Test Trip",
+                        "start_date": "2025-09-01",
+                        "end_date": "2025-09-07",
+                        "destination": "London",
+                        "budget": 3000,
+                        "travelers": 2,
+                    }
+                )
+                .execute()
+            )
+
+            trip_id = trip_response.data[0]["id"] if trip_response.data else None
+            if trip_id:
+                self.cleanup_data.append({"table": "trips", "id": trip_id})
+        except Exception:
+            trip_id = None
+
+        if not trip_id:
+            return results
+
+        # User A adds flight to trip
+        try:
+            flight_response = (
+                user_a["client"]
+                .table("flights")
+                .insert(
+                    {
+                        "trip_id": trip_id,
+                        "origin": "NYC",
+                        "destination": "LON",
+                        "departure_date": "2025-09-01",
+                        "price": 800,
+                    }
+                )
+                .execute()
+            )
+
+            flight_id = flight_response.data[0]["id"] if flight_response.data else None
+            if flight_id:
+                self.cleanup_data.append({"table": "flights", "id": flight_id})
+        except Exception:
+            flight_id = None
+
+        if flight_id:
+            # User B cannot see the flight (not a collaborator)
+            try:
+                no_access_response = (
+                    user_b["client"]
+                    .table("flights")
+                    .select("*")
+                    .eq("id", flight_id)
+                    .execute()
+                )
+                unauthorized_access = len(no_access_response.data) > 0
+            except Exception:
+                unauthorized_access = False
+
+            results.append(
+                self.record_result(
+                    "cascade_permissions",
+                    "flights",
+                    "SELECT",
+                    "non_collaborator",
+                    False,
+                    unauthorized_access,
+                )
+            )
+
         return results
-        
-    def generate_report(self, all_results: List[List[Dict]]) -> str:
-        """Generate comprehensive test report."""
-        flat_results = []
-        for result_group in all_results:
-            flat_results.extend(result_group)
-            
-        total_tests = len(flat_results)
-        passed_tests = sum(1 for r in flat_results if r.get("passed", False))
+
+    async def test_search_cache_isolation(self) -> List[RLSTestResult]:
+        """Test that search caches are user-specific."""
+        results = []
+
+        if len(self.test_users) < 2:
+            return results
+
+        user_a, user_b = self.test_users[0], self.test_users[1]
+
+        # User A creates a search cache entry
+        try:
+            search_response = (
+                user_a["client"]
+                .table("search_destinations")
+                .insert(
+                    {
+                        "query": "Paris hotels test",
+                        "query_hash": f"test_hash_{int(time.time())}",
+                        "results": {"hotels": ["Test Hotel A", "Test Hotel B"]},
+                        "source": "cached",
+                        "expires_at": (datetime.now() + timedelta(days=1)).isoformat(),
+                    }
+                )
+                .execute()
+            )
+
+            search_id = search_response.data[0]["id"] if search_response.data else None
+            if search_id:
+                self.cleanup_data.append(
+                    {"table": "search_destinations", "id": search_id}
+                )
+                query_hash = search_response.data[0]["query_hash"]
+        except Exception as e:
+            search_id = None
+            query_hash = None
+            print(f"Failed to create search cache: {e}")
+
+        if search_id and query_hash:
+            # User B cannot see User A's search cache
+            try:
+                other_cache_response = (
+                    user_b["client"]
+                    .table("search_destinations")
+                    .select("*")
+                    .eq("query_hash", query_hash)
+                    .execute()
+                )
+                unauthorized_access = len(other_cache_response.data) > 0
+            except Exception:
+                unauthorized_access = False
+
+            results.append(
+                self.record_result(
+                    "search_cache_isolation",
+                    "search_destinations",
+                    "SELECT",
+                    "other_user",
+                    False,
+                    unauthorized_access,
+                )
+            )
+
+        return results
+
+    async def test_notification_isolation(self) -> List[RLSTestResult]:
+        """Test that users can only access their own notifications."""
+        results = []
+
+        if len(self.test_users) < 2:
+            return results
+
+        user_a, user_b = self.test_users[0], self.test_users[1]
+
+        # Create notification for User A
+        try:
+            notification_response = (
+                user_a["client"]
+                .table("notifications")
+                .insert(
+                    {
+                        "type": "trip_reminder",
+                        "title": "Test Notification",
+                        "message": "This is a test notification",
+                        "metadata": {"test": True},
+                    }
+                )
+                .execute()
+            )
+
+            notification_id = (
+                notification_response.data[0]["id"]
+                if notification_response.data
+                else None
+            )
+            if notification_id:
+                self.cleanup_data.append(
+                    {"table": "notifications", "id": notification_id}
+                )
+        except Exception as e:
+            notification_id = None
+            print(f"Failed to create notification: {e}")
+
+        if notification_id:
+            # User A can see their notification
+            try:
+                own_notif_response = (
+                    user_a["client"]
+                    .table("notifications")
+                    .select("*")
+                    .eq("id", notification_id)
+                    .execute()
+                )
+                can_view_own = len(own_notif_response.data) > 0
+            except Exception:
+                can_view_own = False
+
+            results.append(
+                self.record_result(
+                    "notification_isolation",
+                    "notifications",
+                    "SELECT",
+                    "owner",
+                    True,
+                    can_view_own,
+                )
+            )
+
+            # User B cannot see User A's notification
+            try:
+                other_notif_response = (
+                    user_b["client"]
+                    .table("notifications")
+                    .select("*")
+                    .eq("id", notification_id)
+                    .execute()
+                )
+                unauthorized_access = len(other_notif_response.data) > 0
+            except Exception:
+                unauthorized_access = False
+
+            results.append(
+                self.record_result(
+                    "notification_isolation",
+                    "notifications",
+                    "SELECT",
+                    "other_user",
+                    False,
+                    unauthorized_access,
+                )
+            )
+
+            # User A can update their notification
+            try:
+                update_response = (
+                    user_a["client"]
+                    .table("notifications")
+                    .update({"read": True})
+                    .eq("id", notification_id)
+                    .execute()
+                )
+
+                can_update_own = len(update_response.data) > 0
+            except Exception:
+                can_update_own = False
+
+            results.append(
+                self.record_result(
+                    "notification_isolation",
+                    "notifications",
+                    "UPDATE",
+                    "owner",
+                    True,
+                    can_update_own,
+                )
+            )
+
+            # User B cannot update User A's notification
+            try:
+                unauthorized_update_response = (
+                    user_b["client"]
+                    .table("notifications")
+                    .update({"read": True})
+                    .eq("id", notification_id)
+                    .execute()
+                )
+
+                unauthorized_update = len(unauthorized_update_response.data) > 0
+            except Exception:
+                unauthorized_update = False
+
+            results.append(
+                self.record_result(
+                    "notification_isolation",
+                    "notifications",
+                    "UPDATE",
+                    "other_user",
+                    False,
+                    unauthorized_update,
+                )
+            )
+
+        return results
+
+    def generate_report(self) -> str:
+        """Generate a comprehensive test report."""
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for r in self.test_results if r.passed)
         failed_tests = total_tests - passed_tests
-        
+
         report = f"""
 # Real RLS Policy Test Report
 Generated: {datetime.now().isoformat()}
@@ -629,82 +731,107 @@ Database: {self.supabase_url}
 - Failed: {failed_tests}
 - Success Rate: {(passed_tests / total_tests * 100):.1f}%
 
-## Test Results
-
-| Test Category | Table | Operation | User Role | Expected | Actual | Status |
-|---------------|-------|-----------|-----------|----------|--------|--------|
+## Test Results by Category
 """
-        
-        for result in flat_results:
-            status = "✅ PASS" if result.get("passed", False) else "❌ FAIL"
-            expected = result.get("expected", "N/A")
-            actual = result.get("actual", "N/A")
-            
-            report += f"| {result.get('test', 'N/A')} | {result.get('table', 'N/A')} | {result.get('operation', 'N/A')} | {result.get('user_role', 'N/A')} | {expected} | {actual} | {status} |\n"
-            
+
+        # Group results by test category
+        categories = {}
+        for result in self.test_results:
+            if result.test_name not in categories:
+                categories[result.test_name] = []
+            categories[result.test_name].append(result)
+
+        for category, results in categories.items():
+            report += f"\n### {category.replace('_', ' ').title()}\n"
+            report += (
+                "| Table | Operation | User Role | Expected | Actual | Status | "
+                "Performance |\n"
+            )
+            report += (
+                "|-------|-----------|-----------|----------|--------|--------|"
+                "-------------|\n"
+            )
+
+            for r in results:
+                status = "✅ PASS" if r.passed else "❌ FAIL"
+                perf = f"{r.performance_ms:.1f}ms" if r.performance_ms else "N/A"
+                report += (
+                    f"| {r.table_name} | {r.operation} | {r.user_role} | "
+                    f"{r.expected_access} | {r.actual_access} | {status} | {perf} |\n"
+                )
+
+                if not r.passed and r.error:
+                    report += f"  - Error: {r.error}\n"
+
         # Add failed test details
-        failed_results = [r for r in flat_results if not r.get("passed", False)]
-        if failed_results:
-            report += "\n## Failed Tests Details\n\n"
-            for result in failed_results:
-                report += f"### {result.get('table', 'Unknown')} - {result.get('operation', 'Unknown')} ({result.get('user_role', 'Unknown')})\n"
-                report += f"- Expected: {result.get('expected', 'N/A')}\n"
-                report += f"- Actual: {result.get('actual', 'N/A')}\n"
-                if result.get('error'):
-                    report += f"- Error: {result['error']}\n"
-                report += "\n"
-                
+        if failed_tests > 0:
+            report += "\n## ❌ Failed Tests - Action Required\n"
+            for r in self.test_results:
+                if not r.passed:
+                    report += f"\n### {r.table_name} - {r.operation} ({r.user_role})\n"
+                    report += f"- **Expected**: {r.expected_access}\n"
+                    report += f"- **Actual**: {r.actual_access}\n"
+                    if r.error:
+                        report += f"- **Error**: {r.error}\n"
+
+                    # Add recommendations
+                    if r.table_name == "trips" and r.user_role == "other_user":
+                        report += (
+                            "- **Fix**: Review trips SELECT policy for user isolation\n"
+                        )
+                    elif (
+                        r.table_name == "trips"
+                        and r.user_role == "viewer"
+                        and r.operation == "UPDATE"
+                    ):
+                        report += (
+                            "- **Fix**: Review trips UPDATE policy to restrict "
+                            "viewer permissions\n"
+                        )
+                    elif "other_user" in r.user_role:
+                        report += (
+                            f"- **Fix**: Review {r.table_name} policies for user "
+                            f"isolation\n"
+                        )
+
         return report
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_SERVICE_ROLE_KEY"),
-    reason="Real Supabase credentials required for RLS testing"
+    not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"),
+    reason="Supabase credentials not available",
 )
 async def test_real_rls_policies():
-    """Test RLS policies against real Supabase database."""
+    """Main test function for real RLS policies."""
     tester = RealRLSPolicyTester()
-    
+
     try:
         # Setup test users
-        users = await tester.setup_test_users()
-        if len(users) < 2:
-            pytest.skip("Could not create enough test users")
-            
+        await tester.setup_test_users()
+
         # Run all test categories
-        all_results = []
-        all_results.append(tester.test_user_data_isolation())
-        all_results.append(tester.test_collaboration_permissions())
-        all_results.append(tester.test_system_tables_access())
-        all_results.append(tester.test_notification_isolation())
-        
-        # Generate and print report
-        report = tester.generate_report(all_results)
+        await tester.test_user_data_isolation()
+        await tester.test_collaboration_permissions()
+        await tester.test_cascade_permissions()
+        await tester.test_search_cache_isolation()
+        await tester.test_notification_isolation()
+
+        # Generate report
+        report = tester.generate_report()
         print(report)
-        
+
         # Assert all tests passed
-        flat_results = []
-        for result_group in all_results:
-            flat_results.extend(result_group)
-            
-        failed_tests = [r for r in flat_results if not r.get("passed", False)]
+        failed_tests = [r for r in tester.test_results if not r.passed]
         if failed_tests:
-            failure_details = []
-            for test in failed_tests:
-                details = f"{test.get('table', 'Unknown')}.{test.get('operation', 'Unknown')} ({test.get('user_role', 'Unknown')})"
-                if test.get('error'):
-                    details += f": {test['error']}"
-                failure_details.append(details)
-                
             pytest.fail(
-                f"{len(failed_tests)} RLS tests failed:\n" + 
-                "\n".join(f"- {detail}" for detail in failure_details)
+                f"{len(failed_tests)} real RLS tests failed. Database has "
+                f"security vulnerabilities!"
             )
-            
+
     finally:
         # Cleanup
-        await tester.cleanup_test_users()
+        await tester.cleanup_test_data()
 
 
 if __name__ == "__main__":

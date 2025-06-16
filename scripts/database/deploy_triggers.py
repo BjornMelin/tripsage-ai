@@ -9,7 +9,7 @@ import logging
 import sys
 from pathlib import Path
 
-from tripsage_core.config.base_app_settings import BaseAppSettings
+from tripsage_core.config import BaseAppSettings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 # Configure logging

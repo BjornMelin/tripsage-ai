@@ -54,6 +54,7 @@ class TestWebSocketRouter:
 
         # Configure settings mock (second to last in the list)
         from tests.test_config import create_test_settings
+
         settings_mock = mock_services[-2]  # get_settings mock
         settings_mock.return_value = create_test_settings()
 

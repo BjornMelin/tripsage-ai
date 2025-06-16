@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Dict, Protocol
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 
 
 class ServiceProtocol(Protocol):

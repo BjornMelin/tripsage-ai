@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import CoreAppSettings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.external_apis.duffel_http_client import (
     DuffelAPIError,

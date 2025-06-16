@@ -7,23 +7,30 @@ retrieval, updates, sharing, and collaboration features.
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from pydantic import Field, field_validator
 
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
+)
+from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
+)
+from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.enums import (
+    TripStatus,
+    TripType,
+    TripVisibility,
+)
 from tripsage_core.models.trip import (
-    BudgetBreakdown,
     EnhancedBudget,
     Trip,
     TripPreferences,
 )
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +67,7 @@ class TripCreateRequest(TripSageModel):
         default=TripVisibility.PRIVATE, description="Trip visibility"
     )
     tags: List[str] = Field(default_factory=list, description="Trip tags")
-    preferences: Optional[TripPreferences] = Field(
-        None, description="Trip preferences"
-    )
+    preferences: Optional[TripPreferences] = Field(None, description="Trip preferences")
 
     @field_validator("end_date")
     @classmethod
@@ -308,7 +313,7 @@ class TripService:
 
             # Prepare update dict
             updates = update_data.model_dump(exclude_unset=True)
-            
+
             # Convert datetime to date for date fields
             if "start_date" in updates:
                 updates["start_date"] = updates["start_date"].date()
@@ -386,7 +391,11 @@ class TripService:
             return False
 
     async def share_trip(
-        self, trip_id: str, owner_id: str, share_with_user_id: str, permission: str = "view"
+        self,
+        trip_id: str,
+        owner_id: str,
+        share_with_user_id: str,
+        permission: str = "view",
     ) -> bool:
         """Share a trip with another user.
 
@@ -667,11 +676,17 @@ class TripService:
 
 async def get_trip_service() -> TripService:
     """Get a configured TripService instance.
-    
+
     Returns:
         TripService: Configured trip service instance
     """
     return TripService()
 
 
-__all__ = ["TripService", "TripCreateRequest", "TripUpdateRequest", "TripResponse", "get_trip_service"]
+__all__ = [
+    "TripService",
+    "TripCreateRequest",
+    "TripUpdateRequest",
+    "TripResponse",
+    "get_trip_service",
+]

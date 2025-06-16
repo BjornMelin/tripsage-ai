@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import CoreAppSettings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
     CoreResourceNotFoundError,

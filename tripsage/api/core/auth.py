@@ -11,7 +11,7 @@ from typing import Optional
 import jwt
 from fastapi import Header, HTTPException, status
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 
 logger = logging.getLogger(__name__)
 

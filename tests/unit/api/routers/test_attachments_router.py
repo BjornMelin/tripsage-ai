@@ -93,7 +93,7 @@ class TestAttachmentsRouter:
     def test_upload_file_validation_failure(self, api_test_client):
         """Test file upload with validation failure."""
         # Missing required file
-        
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload",
@@ -206,9 +206,7 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = unauthenticated_test_client.get(
-            f"/api/attachments/files/{file_id}"
-        )
+        response = unauthenticated_test_client.get(f"/api/attachments/files/{file_id}")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -248,7 +246,9 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = unauthenticated_test_client.delete(f"/api/attachments/files/{file_id}")
+        response = unauthenticated_test_client.delete(
+            f"/api/attachments/files/{file_id}"
+        )
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED

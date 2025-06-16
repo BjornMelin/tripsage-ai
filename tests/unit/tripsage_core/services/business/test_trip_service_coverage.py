@@ -15,12 +15,12 @@ from tripsage_core.exceptions import (
     CoreResourceNotFoundError,
     CoreValidationError,
 )
+from tripsage_core.models.db import TripCollaboratorDB as TripCollaborator
+from tripsage_core.models.schemas_common.enums import TripVisibility
 from tripsage_core.models.trip import Trip as DbTrip
 from tripsage_core.services.business.trip_service import (
-    TripCollaborator,
     TripLocation,
     TripService,
-    TripVisibility,
 )
 
 

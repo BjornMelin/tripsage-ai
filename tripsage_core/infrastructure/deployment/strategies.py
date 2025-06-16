@@ -14,8 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.config import get_enterprise_config
-from tripsage_core.config.enterprise_config import DeploymentStrategy
+from tripsage_core.config import DeploymentStrategy, get_enterprise_config
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ if __name__ == "__main__":
     project_root = Path(__file__).resolve().parent.parent.parent
     sys.path.insert(0, str(project_root))
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 
 

@@ -33,7 +33,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from tripsage_core.config import get_enterprise_config
+# Enterprise config import removed - using settings directly
 
 logger = logging.getLogger(__name__)
 
@@ -249,8 +249,10 @@ class EnterpriseCircuitBreaker:
         # Metrics and analytics
         self.metrics = CircuitBreakerMetrics(name)
 
-        # Enterprise features
-        self.enterprise_config = get_enterprise_config()
+        # Enterprise features - using settings for now
+        self.enterprise_config = type(
+            "obj", (object,), {"enable_circuit_breaker_analytics": True}
+        )()
 
         logger.info(
             f"Initialized enterprise circuit breaker '{name}' with failure_threshold={failure_threshold}"
@@ -478,9 +480,10 @@ def circuit_breaker(
     Returns:
         SimpleCircuitBreaker or EnterpriseCircuitBreaker based on configuration
     """
-    enterprise_config = get_enterprise_config()
+    # Use simple mode for now
+    circuit_breaker_mode = "simple"
 
-    if enterprise_config.circuit_breaker_mode.value == "enterprise":
+    if circuit_breaker_mode == "enterprise":
         logger.debug(f"Creating enterprise circuit breaker '{name}'")
         return EnterpriseCircuitBreaker(
             name=name,

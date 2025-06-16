@@ -7,7 +7,11 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from tripsage.api.core.auth import get_current_user_id, get_optional_user_id
+from tripsage.api.core.dependencies import (
+    get_current_principal,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
 from tripsage_core.services.business.search_history_service import (
@@ -27,7 +31,7 @@ logger = logging.getLogger(__name__)
 async def unified_search(
     request: UnifiedSearchRequest,
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    user_id: Optional[str] = Depends(get_optional_user_id),
+    principal=Depends(get_current_principal),
 ):
     """
     Perform a unified search across multiple resource types with caching.
@@ -36,6 +40,7 @@ async def unified_search(
     and flights (when applicable) to provide comprehensive travel search results.
     Results are aggregated, filtered, sorted, and cached for performance.
     """
+    user_id = principal.id if principal else None
     logger.info(f"Unified search request: {request.query} (user: {user_id})")
 
     try:
@@ -169,13 +174,14 @@ async def get_recent_searches(
     limit: int = Query(
         10, ge=1, le=50, description="Maximum number of searches to return"
     ),
-    user_id: str = Depends(get_current_user_id),
+    principal=Depends(require_principal),
 ):
     """
     Get recent searches for the authenticated user.
 
     Returns the user's search history ordered by most recent first.
     """
+    user_id = get_principal_id(principal)
     logger.info(f"Get recent searches request for user: {user_id} (limit: {limit})")
 
     try:
@@ -198,7 +204,7 @@ async def get_recent_searches(
 @router.post("/save", response_model=Dict[str, str])
 async def save_search(
     request: UnifiedSearchRequest,
-    user_id: str = Depends(get_current_user_id),
+    principal=Depends(require_principal),
 ):
     """
     Save a search query for the authenticated user.
@@ -206,6 +212,7 @@ async def save_search(
     Saves the search parameters to the user's search history for
     quick access and personalization.
     """
+    user_id = get_principal_id(principal)
     logger.info(f"Save search request for user {user_id}: {request.query}")
 
     try:
@@ -229,13 +236,14 @@ async def save_search(
 @router.delete("/saved/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_search(
     search_id: str,
-    user_id: str = Depends(get_current_user_id),
+    principal=Depends(require_principal),
 ):
     """
     Delete a saved search for the authenticated user.
 
     Removes the specified search from the user's search history.
     """
+    user_id = get_principal_id(principal)
     logger.info(f"Delete saved search request from user {user_id}: {search_id}")
 
     try:
@@ -265,7 +273,7 @@ async def delete_saved_search(
 async def bulk_search(
     requests: List[UnifiedSearchRequest],
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    user_id: Optional[str] = Depends(get_optional_user_id),
+    principal=Depends(get_current_principal),
 ):
     """
     Perform multiple searches in a single request for efficiency.
@@ -273,6 +281,7 @@ async def bulk_search(
     Useful for comparing multiple destinations or search variations.
     Results are processed in parallel for optimal performance.
     """
+    user_id = principal.id if principal else None
     logger.info(f"Bulk search request: {len(requests)} queries (user: {user_id})")
 
     if len(requests) > 10:  # Limit bulk searches
@@ -356,13 +365,14 @@ async def bulk_search(
 @router.get("/analytics")
 async def get_search_analytics(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
-    user_id: str = Depends(get_current_user_id),
+    principal=Depends(require_principal),
 ):
     """
     Get search analytics for a specific date.
 
     Only available to authenticated users for their own analytics.
     """
+    user_id = get_principal_id(principal)
     logger.info(f"Search analytics request for {date} by user: {user_id}")
 
     try:

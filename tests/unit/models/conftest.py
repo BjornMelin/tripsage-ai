@@ -8,7 +8,6 @@ import pytest
 
 from tripsage_core.models.db.price_history import EntityType
 from tripsage_core.models.db.saved_option import OptionType
-from tripsage_core.models.schemas_common.enums import TripType
 from tripsage_core.models.db.trip_collaborator import PermissionLevel
 from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
@@ -18,6 +17,7 @@ from tripsage_core.models.schemas_common.enums import (
     DataSource,
     TransportationType,
     TripStatus,
+    TripType,
     UserRole,
 )
 

@@ -156,7 +156,7 @@ class TestExampleErrorHandling:
         """Test how validation errors are handled."""
         from pydantic import ValidationError
 
-        from tripsage_core.config.base_app_settings import DatabaseConfig
+        from tripsage_core.config import DatabaseConfig
 
         # Test invalid configuration
         with pytest.raises(ValidationError):

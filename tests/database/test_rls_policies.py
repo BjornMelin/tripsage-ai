@@ -58,25 +58,27 @@ class RLSPolicyTester:
         self.test_results: List[RLSTestResult] = []
         # Initialize mock data before creating clients
         self._mock_data = {
-            'trips': {},
-            'memories': {},
-            'notifications': {},
-            'trip_collaborators': {},
-            'flights': {},
-            'accommodations': {},
-            'search_destinations': {},
-            'system_metrics': {},
-            'webhook_configs': {},
-            'webhook_logs': {}
+            "trips": {},
+            "memories": {},
+            "notifications": {},
+            "trip_collaborators": {},
+            "flights": {},
+            "accommodations": {},
+            "search_destinations": {},
+            "system_metrics": {},
+            "webhook_configs": {},
+            "webhook_logs": {},
         }
         self._collaboration_data = {}
         # Create admin client after mock data is initialized
         self.admin_client = self._create_mock_client()
 
-    def _create_mock_client(self, is_authenticated: bool = True, user_id: str = None) -> MagicMock:
+    def _create_mock_client(
+        self, is_authenticated: bool = True, user_id: str = None
+    ) -> MagicMock:
         """Create a mock Supabase client that properly simulates RLS behavior."""
         client = MagicMock()
-        
+
         # Set user_id for this client if provided
         if user_id is None:
             user_id = str(uuid4())
@@ -85,9 +87,7 @@ class RLSPolicyTester:
 
         # Mock auth methods
         client.auth.sign_up.return_value = Mock(user=Mock(id=user_id))
-        client.auth.sign_in_with_password.return_value = Mock(
-            user=Mock(id=user_id)
-        )
+        client.auth.sign_in_with_password.return_value = Mock(user=Mock(id=user_id))
         client.auth.sign_out.return_value = None
         client.auth.admin.delete_user.return_value = None
 
@@ -101,7 +101,8 @@ class RLSPolicyTester:
             table_mock._table_name = table_name
             table_mock._client = client
             table_mock._filters = {}
-            
+            table_mock._debug_id = f"{table_name}_{client._user_id}"
+
             def mock_insert(data):
                 """Mock insert with RLS checks."""
                 new_mock = MagicMock()
@@ -109,32 +110,37 @@ class RLSPolicyTester:
                 new_mock._client = client
                 new_mock._insert_data = data
                 new_mock._filters = {}
-                
+
                 def execute_insert():
                     if not client._is_authenticated:
                         return Mock(data=[])
-                        
+
                     # Store the data with proper ownership
                     record_id = str(uuid4())
-                    record = {**data, 'id': record_id}
+                    record = {**data, "id": record_id}
                     
+                    # Ensure user_id is set for ownership if not explicitly provided
+                    if "user_id" not in record and table_name in ["trips", "memories", "notifications", "api_keys", "search_destinations"]:
+                        record["user_id"] = client._user_id
+
                     # Add to mock data store
                     client._mock_data[table_name][record_id] = record
-                    
+
                     # Track collaboration for trip_collaborators
-                    if table_name == 'trip_collaborators':
-                        trip_id = data.get('trip_id')
-                        collaborator_user_id = data.get('user_id')
+                    if table_name == "trip_collaborators":
+                        trip_id = data.get("trip_id")
+                        collaborator_user_id = data.get("user_id")
+                        permission_level = data.get("permission_level", "view")
                         if trip_id not in client._collaboration_data:
-                            client._collaboration_data[trip_id] = []
-                        if collaborator_user_id not in client._collaboration_data[trip_id]:
-                            client._collaboration_data[trip_id].append(collaborator_user_id)
-                    
+                            client._collaboration_data[trip_id] = {}
+                        # Store user with their permission level
+                        client._collaboration_data[trip_id][collaborator_user_id] = permission_level
+
                     return Mock(data=[record])
-                    
+
                 new_mock.execute = execute_insert
                 return new_mock
-                
+
             def mock_select(fields="*"):
                 """Mock select with RLS checks."""
                 new_mock = MagicMock()
@@ -142,88 +148,140 @@ class RLSPolicyTester:
                 new_mock._client = client
                 new_mock._filters = {}
                 new_mock._fields = fields
-                
+
                 def mock_eq(field, value):
                     new_mock._filters[field] = value
                     return new_mock
-                    
+
                 def execute_select():
                     if not client._is_authenticated:
                         return Mock(data=[])
-                        
+
                     # Apply RLS policies based on table
                     results = []
                     
+                    # Initialize table data if not exists
+                    if table_name not in client._mock_data:
+                        client._mock_data[table_name] = {}
+
+                    # Debug: log the query (disabled)
+                    # if table_name in ["trips", "memories", "notifications", "search_destinations"]:
+                    #     print(f"\nDEBUG SELECT: User {client._user_id} querying {table_name} with filters {new_mock._filters}")
+
                     for record_id, record in client._mock_data[table_name].items():
-                        # Check if filters match
+                        # First check if filters match
                         matches_filters = True
                         for field, value in new_mock._filters.items():
                             if record.get(field) != value:
                                 matches_filters = False
                                 break
-                                
-                        if not matches_filters:
-                            continue
-                            
-                        # Apply RLS policies
-                        has_access = False
                         
-                        if table_name in ['trips', 'memories', 'api_keys', 'session_memories']:
-                            # User can only see their own data
-                            has_access = record.get('user_id') == client._user_id
-                            
-                        elif table_name in ['flights', 'accommodations', 'transportation', 'itinerary_items']:
+                        if not matches_filters:
+                            continue  # Skip records that don't match filters
+                        
+                        # Now apply RLS policies
+                        has_access = False
+
+                        if table_name == "trips":
+                            # User can see their own trips or trips they collaborate on
+                            if record.get("user_id") == client._user_id:
+                                has_access = True
+                            else:
+                                trip_id = record.get("id")
+                                # Check if user is a collaborator
+                                if trip_id in client._collaboration_data:
+                                    collaborators = client._collaboration_data.get(trip_id, {})
+                                    has_access = client._user_id in collaborators
+                                else:
+                                    has_access = False
+                        
+                        elif table_name in [
+                            "memories",
+                            "api_keys",
+                            "session_memories",
+                        ]:
+                            # User can only see their own data (strict isolation)
+                            has_access = record.get("user_id") == client._user_id
+
+                        elif table_name in [
+                            "flights",
+                            "accommodations",
+                            "transportation",
+                            "itinerary_items",
+                        ]:
                             # User can see data for trips they own or collaborate on
-                            trip_id = record.get('trip_id')
+                            trip_id = record.get("trip_id")
                             # Check if user owns the trip
                             trip_record = None
-                            for tid, trip in client._mock_data.get('trips', {}).items():
-                                if trip.get('id') == trip_id:
+                            for tid, trip in client._mock_data.get("trips", {}).items():
+                                if trip.get("id") == trip_id:
                                     trip_record = trip
                                     break
-                            
-                            if trip_record and trip_record.get('user_id') == client._user_id:
+
+                            if (
+                                trip_record
+                                and trip_record.get("user_id") == client._user_id
+                            ):
                                 has_access = True
                             elif trip_id in client._collaboration_data:
-                                has_access = client._user_id in client._collaboration_data[trip_id]
-                                
-                        elif table_name == 'notifications':
+                                # User is a collaborator (any permission level can view)
+                                has_access = client._user_id in client._collaboration_data.get(trip_id, {})
+
+                        elif table_name == "notifications":
                             # Users can only see their own notifications
-                            has_access = record.get('user_id') == client._user_id
-                            
-                        elif table_name in ['search_destinations', 'search_activities', 'search_flights', 'search_hotels']:
+                            has_access = record.get("user_id") == client._user_id
+
+                        elif table_name in [
+                            "search_destinations",
+                            "search_activities",
+                            "search_flights",
+                            "search_hotels",
+                        ]:
                             # Users can only see their own search cache
-                            has_access = record.get('user_id') == client._user_id
-                            
-                        elif table_name in ['system_metrics', 'webhook_configs', 'webhook_logs']:
+                            has_access = record.get("user_id") == client._user_id
+
+                        elif table_name in [
+                            "system_metrics",
+                            "webhook_configs",
+                            "webhook_logs",
+                        ]:
                             # Only service role can access (simulated as no access for regular users)
                             has_access = False
-                            
-                        elif table_name == 'trip_collaborators':
+
+                        elif table_name == "trip_collaborators":
                             # Users can see collaborations they're part of
                             has_access = (
-                                record.get('user_id') == client._user_id or
-                                record.get('added_by') == client._user_id or
+                                record.get("user_id") == client._user_id
+                                or record.get("added_by") == client._user_id
+                                or
                                 # Check if user owns the trip
-                                any(trip.get('user_id') == client._user_id 
-                                   for trip in client._mock_data.get('trips', {}).values() 
-                                   if trip.get('id') == record.get('trip_id'))
+                                any(
+                                    trip.get("user_id") == client._user_id
+                                    for trip in client._mock_data.get(
+                                        "trips", {}
+                                    ).values()
+                                    if trip.get("id") == record.get("trip_id")
+                                )
                             )
-                            
+
                         else:
                             # Default: no access
                             has_access = False
-                            
+
+                        # If user has access, add to results
                         if has_access:
+                            # Debug output disabled
+                            # if table_name in ["trips", "memories", "notifications", "search_destinations"]:
+                            #     print(f"  - Record {record_id} ({record.get('user_id')}) accessible to user {client._user_id}")
                             results.append(record)
-                            
+
                     return Mock(data=results)
-                    
+
                 new_mock.eq = mock_eq
                 new_mock.limit = lambda x: new_mock
                 new_mock.execute = execute_select
                 return new_mock
-                
+
             def mock_update(data):
                 """Mock update with RLS checks."""
                 new_mock = MagicMock()
@@ -231,17 +289,21 @@ class RLSPolicyTester:
                 new_mock._client = client
                 new_mock._update_data = data
                 new_mock._filters = {}
-                
+
                 def mock_eq(field, value):
                     new_mock._filters[field] = value
                     return new_mock
-                    
+
                 def execute_update():
                     if not client._is_authenticated:
                         return Mock(data=[])
-                        
+
                     results = []
                     
+                    # Initialize table data if not exists
+                    if table_name not in client._mock_data:
+                        client._mock_data[table_name] = {}
+
                     for record_id, record in client._mock_data[table_name].items():
                         # Check if filters match
                         matches_filters = True
@@ -249,42 +311,72 @@ class RLSPolicyTester:
                             if record.get(field) != value:
                                 matches_filters = False
                                 break
-                                
+
                         if not matches_filters:
                             continue
-                            
+
                         # Apply RLS policies for UPDATE
                         has_access = False
-                        
-                        if table_name == 'trips':
+
+                        if table_name == "trips":
                             # User can update owned trips or shared trips with edit permission
-                            if record.get('user_id') == client._user_id:
+                            if record.get("user_id") == client._user_id:
                                 has_access = True
                             else:
                                 # Check collaboration permissions (only edit/admin can update)
-                                trip_id = record.get('id')
-                                # For this mock, viewers cannot update (simulating permission_level check)
-                                has_access = False  # Viewers should not be able to update
-                                
-                        elif table_name == 'notifications':
+                                trip_id = record.get("id")
+                                if trip_id in client._collaboration_data:
+                                    # Check if user is a collaborator with edit/admin permission
+                                    collaborators = client._collaboration_data.get(trip_id, {})
+                                    if client._user_id in collaborators:
+                                        # Check permission level
+                                        permission = collaborators[client._user_id]
+                                        has_access = permission in ['edit', 'admin']
+                                    else:
+                                        has_access = False
+                                else:
+                                    has_access = False
+
+                        elif table_name == "notifications":
                             # Users can only update their own notifications
-                            has_access = record.get('user_id') == client._user_id
+                            has_access = record.get("user_id") == client._user_id
                             
+                        elif table_name == "trip_collaborators":
+                            # Trip owner can update collaborators
+                            trip_id = record.get("trip_id")
+                            # Check if user owns the trip
+                            trip_owner = False
+                            for tid, trip in client._mock_data.get("trips", {}).items():
+                                if trip.get("id") == trip_id and trip.get("user_id") == client._user_id:
+                                    trip_owner = True
+                                    break
+                            has_access = trip_owner
+
                         else:
                             # Default: users can update their own data
-                            has_access = record.get('user_id') == client._user_id
-                            
+                            has_access = record.get("user_id") == client._user_id
+
                         if has_access:
                             # Update the record
                             record.update(data)
                             results.append(record)
                             
+                            # Special handling for trip_collaborators updates
+                            if table_name == "trip_collaborators" and "permission_level" in data:
+                                trip_id = record.get("trip_id")
+                                collab_user_id = record.get("user_id")
+                                if trip_id and collab_user_id:
+                                    # Update the collaboration data
+                                    if trip_id not in client._collaboration_data:
+                                        client._collaboration_data[trip_id] = {}
+                                    client._collaboration_data[trip_id][collab_user_id] = data["permission_level"]
+
                     return Mock(data=results)
-                    
+
                 new_mock.eq = mock_eq
                 new_mock.execute = execute_update
                 return new_mock
-            
+
             table_mock.insert = mock_insert
             table_mock.select = mock_select
             table_mock.update = mock_update
@@ -292,7 +384,7 @@ class RLSPolicyTester:
             table_mock.eq = lambda field, value: table_mock
             table_mock.limit = lambda x: table_mock
             table_mock.execute = lambda: Mock(data=[])
-            
+
             return table_mock
 
         client.table = create_table_mock
@@ -307,13 +399,19 @@ class RLSPolicyTester:
         ]
 
         for user in users:
-            # Create user via auth
-            auth_response = self.admin_client.auth.sign_up(
-                {"email": user.email, "password": user.password}
-            )
-            user.id = auth_response.user.id
+            # Generate unique user ID for each user
+            unique_user_id = str(uuid4())
+            user.id = unique_user_id
+            
             # Create client with specific user_id for proper RLS simulation
-            user.client = self._create_mock_client(is_authenticated=True, user_id=user.id)
+            user.client = self._create_mock_client(
+                is_authenticated=True, user_id=unique_user_id
+            )
+            
+            # Mock the auth response to return the correct user ID
+            user.client.auth.sign_up.return_value = Mock(user=Mock(id=unique_user_id))
+            user.client.auth.sign_in_with_password.return_value = Mock(user=Mock(id=unique_user_id))
+            
             await self._sign_in_user(user)
 
         self.test_users = users
@@ -399,6 +497,7 @@ class RLSPolicyTester:
 
         # User B tries to read User A's trip
         start_time = time.time()
+        error = None
         try:
             other_trips = (
                 user_b.client.table("trips")

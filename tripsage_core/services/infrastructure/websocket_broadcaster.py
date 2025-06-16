@@ -15,7 +15,7 @@ from uuid import UUID
 import redis.asyncio as redis
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class WebSocketBroadcaster:
             redis_url: Redis/DragonflyDB connection URL
         """
         self.settings = get_settings()
-        self.redis_url = redis_url or self.settings.dragonfly.url
+        self.redis_url = redis_url or self.settings.redis_url
         self.redis_client: Optional[redis.Redis] = None
         self.pubsub: Optional[redis.client.PubSub] = None
         self._running = False

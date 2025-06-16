@@ -7,10 +7,10 @@ for unified authentication across JWT (frontend) and API keys (agents).
 
 from fastapi import Depends, Request
 
-from tripsage.api.core.config import Settings, get_settings
+from tripsage.api.core.config import AppSettings as Settings
+from tripsage.api.core.config import get_settings
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
-from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager, mcp_manager
 from tripsage_core.services.business.accommodation_service import (
     get_accommodation_service,
 )
@@ -26,6 +26,8 @@ from tripsage_core.services.business.trip_service import get_trip_service
 from tripsage_core.services.business.user_service import get_user_service
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.services.infrastructure.database_service import get_database_service
+from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
+from tripsage_core.services.simple_mcp_service import mcp_manager
 from tripsage_core.utils.session_utils import SessionMemory
 
 

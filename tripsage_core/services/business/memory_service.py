@@ -189,7 +189,7 @@ class MemoryService:
             Mem0 configuration dictionary
         """
         # Get settings for API keys
-        from tripsage_core.config.base_app_settings import get_settings
+        from tripsage_core.config import get_settings
 
         settings = get_settings()
 

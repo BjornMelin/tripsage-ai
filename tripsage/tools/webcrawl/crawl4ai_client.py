@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from tripsage.tools.memory_tools import ConversationMessage
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.utils.logging_utils import get_logger
 

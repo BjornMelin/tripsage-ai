@@ -18,7 +18,7 @@ import jwt
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
 )

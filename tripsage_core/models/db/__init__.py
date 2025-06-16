@@ -8,6 +8,9 @@ different storage backends (Supabase SQL, Neo4j).
 # User models
 # Accommodation models
 from ..schemas_common.enums import TripStatus, TripType, TripVisibility
+
+# Trip models
+from ..trip import Trip
 from .accommodation import (
     Accommodation,
     AccommodationType,
@@ -64,9 +67,6 @@ from .transportation import (
     Transportation,
     TransportationType,
 )
-
-# Trip models
-from ..trip import Trip
 
 # Trip management models
 from .trip_collaborator import (
