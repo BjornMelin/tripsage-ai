@@ -18,13 +18,18 @@ from tripsage_core.services.external_apis.weather_service import WeatherService
 @pytest.fixture
 def mock_database():
     """Create a mock database service."""
+    from uuid import uuid4
+    
+    trip_id = str(uuid4())
+    user_id = str(uuid4())
+    
     db = MagicMock()
     db.execute = AsyncMock()
     db.fetch_all = AsyncMock(return_value=[])
     db.fetch_one = AsyncMock(
         return_value={
-            "id": "trip_123",
-            "user_id": "user_456",
+            "id": trip_id,
+            "user_id": user_id,
             "destination": "Paris",
             "status": "planning",
         }
@@ -32,18 +37,22 @@ def mock_database():
     # Add trip service specific methods as async mocks
     db.create_trip = AsyncMock(
         return_value={
-            "id": "trip_123",
-            "user_id": "user_456",
+            "id": trip_id,
+            "user_id": user_id,
             "title": "Test Trip",
             "description": "Test trip description",
             "start_date": "2024-02-15T00:00:00+00:00",
             "end_date": "2024-02-22T00:00:00+00:00",
+            "destination": "Paris, France",
             "destinations": [],
             "budget": None,
+            "budget_breakdown": {"total": 5000, "currency": "USD", "spent": 0.0, "breakdown": {}},
             "status": "planning",
             "visibility": "private",
             "tags": [],
             "preferences": {},
+            "travelers": 1,
+            "trip_type": "leisure",
             "created_at": "2024-01-01T00:00:00+00:00",
             "updated_at": "2024-01-01T00:00:00+00:00",
         }
@@ -139,18 +148,29 @@ def flight_service(mock_cache, mock_mcp_manager):
 @pytest.fixture
 def weather_service(mock_cache, monkeypatch):
     """Create WeatherService with mocked dependencies."""
+    # Set environment variable before importing/initializing the service
     monkeypatch.setenv("OPENWEATHERMAP_API_KEY", "test_key")
-    service = WeatherService()
-    service.cache = mock_cache
-    service._make_request = AsyncMock()
-    return service
+    
+    # Mock the settings to bypass validation
+    from unittest.mock import patch, MagicMock
+    from pydantic import SecretStr
+    
+    mock_settings = MagicMock()
+    mock_settings.openweathermap_api_key = SecretStr("test_key")
+    
+    with patch('tripsage_core.services.external_apis.weather_service.get_settings', return_value=mock_settings):
+        service = WeatherService()
+        service.cache = mock_cache
+        service._make_request = AsyncMock()
+        return service
 
 
 @pytest.fixture
 def sample_trip_data():
     """Sample trip planning data."""
+    from uuid import uuid4
     return {
-        "user_id": "user_456",
+        "user_id": str(uuid4()),
         "destination": "Paris, France",
         "departure_city": "New York",
         "start_date": date.today() + timedelta(days=30),
@@ -222,14 +242,18 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
+        from tripsage_core.models.trip import EnhancedBudget
+        
         trip_request = TripCreateRequest(
             title=f"Trip to {sample_trip_data['destination']}",
             description="Test trip",
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
+            destination=sample_trip_data["destination"],
             destinations=[
                 TripLocation(name=sample_trip_data["destination"], country="France")
             ],
+            budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
@@ -299,14 +323,18 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
+        from tripsage_core.models.trip import EnhancedBudget
+        
         trip_request = TripCreateRequest(
             title=f"Trip to {sample_trip_data['destination']}",
             description="Test trip with preferences",
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
+            destination=sample_trip_data["destination"],
             destinations=[
                 TripLocation(name=sample_trip_data["destination"], country="France")
             ],
+            budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
@@ -382,14 +410,18 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
+        from tripsage_core.models.trip import EnhancedBudget
+        
         trip_request = TripCreateRequest(
             title=f"Budget Trip to {sample_trip_data['destination']}",
             description="Budget-constrained test trip",
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
+            destination=sample_trip_data["destination"],
             destinations=[
                 TripLocation(name=sample_trip_data["destination"], country="France")
             ],
+            budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
@@ -536,14 +568,18 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
+        from tripsage_core.models.trip import EnhancedBudget
+        
         trip_request = TripCreateRequest(
             title=f"Trip to {sample_trip_data['destination']}",
             description="Test trip for error handling",
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
+            destination=sample_trip_data["destination"],
             destinations=[
                 TripLocation(name=sample_trip_data["destination"], country="France")
             ],
+            budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
