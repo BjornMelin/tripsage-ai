@@ -476,7 +476,8 @@ class TestTripPlanningJourney:
     ):
         """Test modifying an existing trip."""
         # Arrange
-        trip_id = "existing_trip_123"
+        from uuid import uuid4
+        trip_id = str(uuid4())  # Use proper UUID format
         user_id = sample_trip_data["user_id"]
         modifications = {
             "end_date": sample_trip_data["end_date"] + timedelta(days=2),
@@ -490,8 +491,8 @@ class TestTripPlanningJourney:
             "user_id": user_id,  # Same user ID for permission check
             "title": "Existing Trip",
             "description": "Test trip",
-            "start_date": sample_trip_data["start_date"].isoformat(),
-            "end_date": sample_trip_data["end_date"].isoformat(),
+            "start_date": sample_trip_data["start_date"],
+            "end_date": sample_trip_data["end_date"],
             "destinations": [],
             "budget": None,
             "status": "planning",
@@ -501,15 +502,38 @@ class TestTripPlanningJourney:
             "created_at": "2024-01-01T00:00:00+00:00",
             "updated_at": "2024-01-01T00:00:00+00:00",
         }
-        mock_database.update_trip.return_value = (
-            mock_database.get_trip_by_id.return_value
-        )
 
         # Act
         from tripsage_core.services.business.trip_service import TripUpdateRequest
-
+        from datetime import datetime
+        
+        # Convert date to datetime for the update request
+        new_end_date = datetime.combine(modifications["end_date"], datetime.min.time())
+        
+        # Set the mock for this specific test case after new_end_date is defined
+        mock_database.update_trip.return_value = {
+            "id": trip_id,
+            "user_id": user_id,
+            "title": "Existing Trip",
+            "description": "Test trip",
+            "start_date": sample_trip_data["start_date"],
+            "end_date": new_end_date.date(),  # Updated end date
+            "destination": "Paris, France",
+            "destinations": [],
+            "budget": None,
+            "budget_breakdown": {"total": 5000, "currency": "USD", "spent": 0.0, "breakdown": {}},
+            "status": "planning",
+            "visibility": "private",
+            "tags": [],
+            "preferences": {},
+            "travelers": 1,
+            "trip_type": "leisure",
+            "created_at": "2024-01-01T00:00:00+00:00",
+            "updated_at": "2024-01-01T00:00:00+00:00",
+        }
+        
         update_request = TripUpdateRequest(
-            end_date=modifications["end_date"]
+            end_date=new_end_date
             # Note: travelers and budget might not be part of standard trip updates
         )
         updated_trip = await trip_service.update_trip(trip_id, user_id, update_request)
@@ -522,8 +546,9 @@ class TestTripPlanningJourney:
     async def test_trip_cancellation_workflow(self, trip_service, mock_database):
         """Test cancelling a trip."""
         # Arrange
-        trip_id = "trip_to_cancel_456"
-        user_id = "user_456"
+        from uuid import uuid4
+        trip_id = str(uuid4())  # Use proper UUID format
+        user_id = str(uuid4())  # Use proper UUID format
 
         # Mock database to return trip data for permission checks
         trip_data = {
@@ -531,8 +556,8 @@ class TestTripPlanningJourney:
             "user_id": user_id,  # Same user ID for permission check
             "title": "Trip to Cancel",
             "description": "Test trip",
-            "start_date": "2024-02-15T00:00:00+00:00",
-            "end_date": "2024-02-22T00:00:00+00:00",
+            "start_date": date(2024, 2, 15),
+            "end_date": date(2024, 2, 22),
             "destinations": [],
             "budget": None,
             "status": "planning",

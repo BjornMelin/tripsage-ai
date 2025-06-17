@@ -99,6 +99,7 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 | `MISSING_AUTHORIZATION` | Authorization header missing | Include Authorization header |
 
 **Example:**
+
 ```json
 {
   "error": true,
@@ -298,12 +299,14 @@ When external services (flights, accommodations) are unavailable:
 #### 1. Authentication Issues
 
 **Problem**: Getting `401 Unauthorized`
+
 ```bash
 curl -H "Authorization: Bearer invalid_token" \
   "https://api.tripsage.ai/api/trips"
 ```
 
 **Solutions**:
+
 - Verify token format: `Bearer <token>`
 - Check token expiration
 - Ensure token has required scopes
@@ -312,6 +315,7 @@ curl -H "Authorization: Bearer invalid_token" \
 #### 2. Validation Errors
 
 **Problem**: Getting `422 Unprocessable Entity`
+
 ```json
 {
   "title": "",
@@ -321,6 +325,7 @@ curl -H "Authorization: Bearer invalid_token" \
 ```
 
 **Solutions**:
+
 - Check required fields
 - Validate date formats (ISO 8601)
 - Ensure dates are in the future
@@ -331,6 +336,7 @@ curl -H "Authorization: Bearer invalid_token" \
 **Problem**: Getting `429 Too Many Requests`
 
 **Solutions**:
+
 - Implement exponential backoff
 - Check rate limit headers
 - Upgrade API plan for higher limits
@@ -341,6 +347,7 @@ curl -H "Authorization: Bearer invalid_token" \
 **Problem**: Flight searches failing
 
 **Solutions**:
+
 - Retry with exponential backoff
 - Check service status page
 - Use fallback search parameters
@@ -404,6 +411,7 @@ async function handleApiError(response) {
 #### 3. Monitor Error Rates
 
 Track error patterns to identify issues:
+
 - High `401` rates → Authentication problems
 - High `422` rates → Client validation issues
 - High `429` rates → Need rate limit optimization
@@ -420,4 +428,4 @@ For persistent errors or questions:
 - **Support**: <support@tripsage.ai>
 - **Discord**: Join our developer community
 
-Include the `request_id` from error responses when contacting support for faster resolution. 
+Include the `request_id` from error responses when contacting support for faster resolution.

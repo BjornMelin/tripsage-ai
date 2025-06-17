@@ -42,6 +42,69 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - `ruff check . --fix && ruff format .` on all changes
 - Test coverage ≥90%, pre-commit hooks enabled
 
+## 🚨 CRITICAL CORE SERVICE IMPLEMENTATIONS (NEW HIGH PRIORITY - June 17, 2025)
+
+### ⚡ Missing Core Service Infrastructure - URGENT IMPLEMENTATION REQUIRED
+
+Based on comprehensive research and codebase analysis, critical core service implementations are missing or incomplete. These issues must be resolved for production readiness and system reliability.
+
+**🔴 URGENT - SECURITY & RELIABILITY:**
+
+1. **[BJO-210](https://linear.app/bjorn-dev/issue/BJO-210)** - **Memory Service Database Connection Hardening** 🚨 **URGENT**
+   - **Problem**: Brittle string parsing in Mem0 integration creates security and reliability vulnerabilities
+   - **Impact**: Potential credential exposure, connection failures with complex URLs
+   - **Scope**: Replace unsafe string splitting with proper URL parsing, add connection validation
+   - **Priority**: P0 - Security vulnerability fix
+
+2. **[BJO-211](https://linear.app/bjorn-dev/issue/BJO-211)** - **API Key Validation and Monitoring Infrastructure** 🚨 **URGENT** 
+   - **Problem**: No API key validation, health checking, or lifecycle management
+   - **Impact**: Production failures, service outages, security vulnerabilities
+   - **Scope**: Complete API key validation framework with monitoring and alerting
+   - **Priority**: P0 - Production operations blocker
+
+**🟡 HIGH PRIORITY - PERFORMANCE & RELIABILITY:**
+
+3. **[BJO-212](https://linear.app/bjorn-dev/issue/BJO-212)** - **Database Service Performance Optimization Framework** 📊 **HIGH**
+   - **Problem**: Missing connection pooling, query monitoring, and pgvector optimization
+   - **Impact**: Poor performance, limited scalability, production bottlenecks
+   - **Scope**: Connection pooling, caching, monitoring, vector search optimization
+   - **Priority**: P1 - Performance and scalability requirements
+
+4. **[BJO-213](https://linear.app/bjorn-dev/issue/BJO-213)** - **WebSocket Integration Error Recovery Framework** 🔄 **HIGH**
+   - **Problem**: Missing integration between broadcaster and manager, no error recovery
+   - **Impact**: Unreliable real-time features, connection failures, poor user experience
+   - **Scope**: Complete integration, automatic recovery, monitoring, rate limiting
+   - **Priority**: P1 - Real-time reliability requirements
+
+5. **[BJO-214](https://linear.app/bjorn-dev/issue/BJO-214)** - **MCP Service Framework and Caching Infrastructure** 🏗️ **HIGH**
+   - **Problem**: Only Airbnb MCP exists, no caching, limited error handling, no extensibility
+   - **Impact**: Performance issues, limited service integration, poor error resilience
+   - **Scope**: Generic MCP framework, caching system, additional service integrations
+   - **Priority**: P1 - Service extensibility and performance
+
+### 📊 Implementation Impact
+
+**Security**: Prevents credential exposure and API key vulnerabilities
+**Performance**: 3-5x query performance improvement with caching and optimization
+**Reliability**: Automatic error recovery and robust connection management
+**Scalability**: Connection pooling and load handling for production workloads
+**Operations**: Comprehensive monitoring and health checking capabilities
+
+### ⏱️ Estimated Timeline
+
+**Week 1 (Critical Security):**
+- Days 1-2: BJO-210 (Memory service hardening)
+- Days 3-4: BJO-211 (API key infrastructure)
+
+**Week 2 (Performance & Reliability):**
+- Days 1-2: BJO-212 (Database optimization)
+- Day 3: BJO-213 (WebSocket integration)
+- Day 4: BJO-214 (MCP framework)
+
+**Total Estimate**: 9-10 development days for complete core service implementation
+
+---
+
 ## 🚨 V1 MVP CRITICAL PATH (Updated After GitHub ↔ Linear Synchronization)
 
 ### 0. V1 MVP Production Requirements ⭐ **PRIORITIZED IMPLEMENTATION ORDER**
