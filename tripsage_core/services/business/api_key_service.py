@@ -21,12 +21,18 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Annotated, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from tripsage_core.config import Settings
+    from tripsage_core.services.infrastructure.cache_service import CacheService
+    from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 import httpx
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from fastapi import Depends
 from pydantic import (
     ConfigDict,
     Field,
@@ -216,75 +222,46 @@ class ServiceHealthCheck(TripSageModel):
 
 class ApiKeyService:
     """
-    Modern API key service for TripSage.
+    Simplified API key service for TripSage following KISS principles.
 
-    This service provides:
-    - Key management (CRUD operations)
-    - Validation and health checking
-    - Monitoring and rate limiting
-    - Security and encryption
-
-    Features:
-    - Modern async patterns
-    - Tenacity-based retries
-    - Pydantic V2 optimizations
-    - Clean architecture
-    - Security
+    Provides key management, validation, and security features with clean
+    dependency injection and atomic operations.
     """
 
     def __init__(
         self,
-        database_service=None,
-        cache_service=None,
-        master_secret: Optional[str] = None,
+        db: "DatabaseService",
+        cache: Optional["CacheService"] = None,
+        settings: Optional["Settings"] = None,
         validation_timeout: int = 10,
-        max_validation_attempts: int = 3,
-        circuit_breaker_failures: int = 5,
     ):
         """
-        Initialize the API key service.
+        Initialize the API key service with injected dependencies.
 
         Args:
-            database_service: Database service for persistence
-            cache_service: Cache service for performance
-            master_secret: Master secret for encryption
-            validation_timeout: Timeout for validation requests
-            max_validation_attempts: Max validation attempts per key per hour
-            circuit_breaker_failures: Failures before circuit breaker opens
+            db: Database service instance (required)
+            cache: Cache service instance (optional)
+            settings: Application settings (optional, will use defaults)
+            validation_timeout: Request timeout for validation (default: 10s)
         """
-        # Import here to avoid circular imports
-        if database_service is None:
-            from tripsage_core.services.infrastructure import get_database_service
+        self.db = db
+        self.cache = cache
+        self.validation_timeout = validation_timeout
 
-            database_service = get_database_service()
-
-        if cache_service is None:
-            from tripsage_core.services.infrastructure import get_cache_service
-
-            cache_service = get_cache_service()
-
-        if master_secret is None:
+        # Use settings or get defaults
+        if settings is None:
             from tripsage_core.config import get_settings
 
             settings = get_settings()
-            master_secret = settings.secret_key
 
-        self.db = database_service
-        self.cache = cache_service
-        self.validation_timeout = validation_timeout
-        self.max_validation_attempts = max_validation_attempts
+        # Initialize encryption with settings
+        self._initialize_encryption(settings.secret_key)
 
-        # Initialize encryption
-        self._initialize_encryption(master_secret)
-
-        # HTTP client with optimized settings
+        # HTTP client with simple configuration
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(validation_timeout),
-            limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
+            limits=httpx.Limits(max_keepalive_connections=10, max_connections=50),
         )
-
-        # Rate limiting cache
-        self._validation_attempts: Dict[str, List[float]] = {}
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -321,7 +298,7 @@ class ApiKeyService:
         self, user_id: str, key_data: ApiKeyCreateRequest
     ) -> ApiKeyResponse:
         """
-        Create and store a new API key.
+        Create and store a new API key atomically.
 
         Args:
             user_id: User ID
@@ -329,17 +306,18 @@ class ApiKeyService:
 
         Returns:
             Created API key information
+
+        Raises:
+            ServiceError: If creation fails
         """
         try:
-            # Validate the API key with retry logic
-            validation_result = await self._validate_api_key_with_retry(
+            # Validate the API key first
+            validation_result = await self.validate_api_key(
                 key_data.service, key_data.key_value
             )
 
-            # Generate secure key ID
+            # Generate secure key ID and encrypt key
             key_id = str(uuid.uuid4())
-
-            # Encrypt the API key using envelope encryption
             encrypted_key = self._encrypt_api_key(key_data.key_value)
 
             # Prepare database entry
@@ -361,25 +339,27 @@ class ApiKeyService:
                 "usage_count": 0,
             }
 
-            # Store in database
-            result = await self.db.create_api_key(db_key_data)
+            # Atomic transaction: create key + log operation
+            async with self.db.transaction() as tx:
+                tx.insert("api_keys", db_key_data)
+                tx.insert(
+                    "api_key_usage_logs",
+                    {
+                        "key_id": key_id,
+                        "user_id": user_id,
+                        "service": key_data.service.value,
+                        "operation": "create",
+                        "timestamp": now.isoformat(),
+                        "success": True,
+                    },
+                )
+                results = await tx.execute()
 
-            # Log creation event
-            await self._log_operation(
-                "create", user_id, key_id, key_data.service.value, True
-            )
+            result = results[0][0]  # First operation (create_api_key) result
 
-            # Audit log
-            await audit_api_key(
-                event_type=AuditEventType.API_KEY_CREATED,
-                outcome=AuditOutcome.SUCCESS,
-                key_id=key_id,
-                service=key_data.service.value,
-                ip_address="127.0.0.1",  # TODO: Extract from request context
-                message=f"API key created for service {key_data.service.value}",
-                key_name=key_data.name,
-                user_id=user_id,
-                validation_result=validation_result.is_valid,
+            # Audit log (fire-and-forget)
+            asyncio.create_task(
+                self._audit_key_creation(key_id, user_id, key_data, validation_result)
             )
 
             logger.info(
@@ -415,16 +395,8 @@ class ApiKeyService:
         Returns:
             List of user's API keys
         """
-        try:
-            results = await self.db.get_user_api_keys(user_id)
-            return [self._db_result_to_response(result) for result in results]
-
-        except Exception as e:
-            logger.error(
-                "Failed to list user API keys",
-                extra={"user_id": user_id, "error": str(e)},
-            )
-            return []
+        results = await self.db.get_user_api_keys(user_id)
+        return [self._db_result_to_response(result) for result in results]
 
     async def get_key_for_service(
         self, user_id: str, service: ServiceType
@@ -439,45 +411,26 @@ class ApiKeyService:
         Returns:
             Decrypted API key or None if not found/expired
         """
-        try:
-            result = await self.db.get_api_key_for_service(user_id, service.value)
-            if not result:
+        result = await self.db.get_api_key_for_service(user_id, service.value)
+        if not result:
+            return None
+
+        # Check expiration
+        if result.get("expires_at"):
+            expires_at = datetime.fromisoformat(result["expires_at"])
+            if datetime.now(timezone.utc) > expires_at:
+                logger.info(
+                    f"API key expired for user {user_id}, service {service.value}"
+                )
                 return None
 
-            # Check expiration
-            if result.get("expires_at"):
-                expires_at = datetime.fromisoformat(result["expires_at"])
-                if datetime.now(timezone.utc) > expires_at:
-                    logger.warning(
-                        "API key expired",
-                        extra={
-                            "user_id": user_id,
-                            "service": service.value,
-                            "key_id": result["id"],
-                            "expires_at": expires_at.isoformat(),
-                        },
-                    )
-                    return None
+        # Decrypt the API key
+        decrypted_key = self._decrypt_api_key(result["encrypted_key"])
 
-            # Decrypt the API key
-            decrypted_key = self._decrypt_api_key(result["encrypted_key"])
+        # Update last used timestamp (fire-and-forget)
+        asyncio.create_task(self.db.update_api_key_last_used(result["id"]))
 
-            # Update last used timestamp
-            await self.db.update_api_key_last_used(result["id"])
-
-            # Log usage
-            await self._log_operation(
-                "retrieve", user_id, result["id"], service.value, True
-            )
-
-            return decrypted_key
-
-        except Exception as e:
-            logger.error(
-                "Failed to get API key for service",
-                extra={"user_id": user_id, "service": service.value, "error": str(e)},
-            )
-            return None
+        return decrypted_key
 
     @retry(
         stop=stop_after_attempt(3),
@@ -550,12 +503,6 @@ class ApiKeyService:
                 * 1000,
             )
 
-    async def _validate_api_key_with_retry(
-        self, service: ServiceType, key_value: str
-    ) -> ValidationResult:
-        """Internal method that uses the retry-decorated validate_api_key."""
-        return await self.validate_api_key(service, key_value)
-
     async def check_service_health(self, service: ServiceType) -> ServiceHealthCheck:
         """
         Check the health of an external service.
@@ -625,7 +572,7 @@ class ApiKeyService:
 
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         """
-        Delete an API key.
+        Delete an API key atomically.
 
         Args:
             key_id: API key ID
@@ -634,49 +581,44 @@ class ApiKeyService:
         Returns:
             True if deleted successfully
         """
-        try:
-            # Verify ownership
-            key_data = await self.db.get_api_key_by_id(key_id, user_id)
-            if not key_data:
-                return False
-
-            # Delete from database
-            success = await self.db.delete_api_key(key_id, user_id)
-
-            if success:
-                # Log deletion
-                await self._log_operation(
-                    "delete", user_id, key_id, key_data["service"], True
-                )
-
-                # Audit log
-                await audit_api_key(
-                    event_type=AuditEventType.API_KEY_DELETED,
-                    outcome=AuditOutcome.SUCCESS,
-                    key_id=key_id,
-                    service=key_data["service"],
-                    ip_address="127.0.0.1",
-                    message=f"API key deleted for service {key_data['service']}",
-                    user_id=user_id,
-                )
-
-                logger.info(
-                    "API key deleted",
-                    extra={
-                        "key_id": key_id,
-                        "user_id": user_id,
-                        "service": key_data["service"],
-                    },
-                )
-
-            return success
-
-        except Exception as e:
-            logger.error(
-                "Failed to delete API key",
-                extra={"key_id": key_id, "user_id": user_id, "error": str(e)},
-            )
+        # Verify ownership first
+        key_data = await self.db.get_api_key_by_id(key_id, user_id)
+        if not key_data:
             return False
+
+        # Atomic transaction: delete key + log operation
+        now = datetime.now(timezone.utc)
+        async with self.db.transaction() as tx:
+            tx.delete("api_keys", {"id": key_id, "user_id": user_id})
+            tx.insert(
+                "api_key_usage_logs",
+                {
+                    "key_id": key_id,
+                    "user_id": user_id,
+                    "service": key_data["service"],
+                    "operation": "delete",
+                    "timestamp": now.isoformat(),
+                    "success": True,
+                },
+            )
+            results = await tx.execute()
+
+        success = len(results[0]) > 0  # Check if deletion was successful
+
+        if success:
+            # Audit log (fire-and-forget)
+            asyncio.create_task(self._audit_key_deletion(key_id, user_id, key_data))
+
+            logger.info(
+                "API key deleted",
+                extra={
+                    "key_id": key_id,
+                    "user_id": user_id,
+                    "service": key_data["service"],
+                },
+            )
+
+        return success
 
     def _encrypt_api_key(self, key_value: str) -> str:
         """
@@ -1216,45 +1158,45 @@ class ApiKeyService:
         except Exception as e:
             logger.warning(f"Cache storage error: {e}")
 
-    async def _log_operation(
+    async def _audit_key_creation(
         self,
-        operation: str,
-        user_id: str,
         key_id: str,
-        service: str,
-        success: bool,
-        error_message: Optional[str] = None,
+        user_id: str,
+        key_data: ApiKeyCreateRequest,
+        validation_result: ValidationResult,
     ) -> None:
-        """
-        Log API key operation for audit trail.
-
-        Args:
-            operation: Operation performed
-            user_id: User ID
-            key_id: API key ID
-            service: Service name
-            success: Whether operation was successful
-            error_message: Error message if failed
-        """
+        """Fire-and-forget audit logging for key creation."""
         try:
-            usage_log = {
-                "key_id": key_id,
-                "user_id": user_id,
-                "service": service,
-                "operation": operation,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "success": success,
-                "error_message": error_message,
-            }
-
-            await self.db.log_api_key_usage(usage_log)
-
-        except Exception as e:
-            # Don't fail main operation if logging fails
-            logger.error(
-                "Failed to log API key usage",
-                extra={"key_id": key_id, "operation": operation, "error": str(e)},
+            await audit_api_key(
+                event_type=AuditEventType.API_KEY_CREATED,
+                outcome=AuditOutcome.SUCCESS,
+                key_id=key_id,
+                service=key_data.service.value,
+                ip_address="127.0.0.1",  # TODO: Extract from request context
+                message=f"API key created for service {key_data.service.value}",
+                key_name=key_data.name,
+                user_id=user_id,
+                validation_result=validation_result.is_valid,
             )
+        except Exception as e:
+            logger.warning(f"Audit logging failed for key creation: {e}")
+
+    async def _audit_key_deletion(
+        self, key_id: str, user_id: str, key_data: Dict[str, Any]
+    ) -> None:
+        """Fire-and-forget audit logging for key deletion."""
+        try:
+            await audit_api_key(
+                event_type=AuditEventType.API_KEY_DELETED,
+                outcome=AuditOutcome.SUCCESS,
+                key_id=key_id,
+                service=key_data["service"],
+                ip_address="127.0.0.1",
+                message=f"API key deleted for service {key_data['service']}",
+                user_id=user_id,
+            )
+        except Exception as e:
+            logger.warning(f"Audit logging failed for key deletion: {e}")
 
     def _db_result_to_response(self, result: Dict[str, Any]) -> ApiKeyResponse:
         """Convert database result to modern response model."""
@@ -1279,12 +1221,25 @@ class ApiKeyService:
         )
 
 
-# Dependency function for FastAPI
-async def get_api_key_service() -> ApiKeyService:
+# Dependency functions for FastAPI
+
+
+async def get_api_key_service(
+    db: Annotated["DatabaseService", Depends("get_database_service")],
+    cache: Annotated[Optional["CacheService"], Depends("get_cache_service")] = None,
+) -> ApiKeyService:
     """
-    Get API key service instance for dependency injection.
+    Modern dependency injection for ApiKeyService.
+
+    Args:
+        db: Database service (injected)
+        cache: Cache service (injected, optional)
 
     Returns:
-        ApiKeyService instance
+        Configured ApiKeyService instance
     """
-    return ApiKeyService()
+    return ApiKeyService(db=db, cache=cache)
+
+
+# Type alias for easier use in endpoints
+ApiKeyServiceDep = Annotated[ApiKeyService, Depends(get_api_key_service)]

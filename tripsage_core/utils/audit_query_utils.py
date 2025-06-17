@@ -247,9 +247,10 @@ class AuditQueryEngine:
             return False
 
         # Risk score filters
-        if query.min_risk_score is not None and (not event.risk_score or event.risk_score < query.min_risk_score):
+        if query.min_risk_score is not None and (
+            not event.risk_score or event.risk_score < query.min_risk_score
+        ):
             return False
-
 
         if query.max_risk_score is not None:
             if not event.risk_score or event.risk_score > query.max_risk_score:

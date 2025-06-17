@@ -24,6 +24,14 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.enums import (
+    BookingStatus,
+    CabinClass,
+)
+from tripsage_core.models.schemas_common.flight_schemas import (
+    FlightPassenger,
+    FlightSearchRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,52 +44,7 @@ class FlightType(str, Enum):
     MULTI_CITY = "multi_city"
 
 
-class CabinClass(str, Enum):
-    """Cabin class enumeration."""
-
-    ECONOMY = "economy"
-    PREMIUM_ECONOMY = "premium_economy"
-    BUSINESS = "business"
-    FIRST = "first"
-
-
-class BookingStatus(str, Enum):
-    """Flight booking status enumeration."""
-
-    SEARCHED = "searched"
-    SAVED = "saved"
-    HOLD = "hold"
-    BOOKED = "booked"
-    CANCELLED = "cancelled"
-    EXPIRED = "expired"
-
-
-class PassengerType(str, Enum):
-    """Passenger type enumeration."""
-
-    ADULT = "adult"
-    CHILD = "child"
-    INFANT = "infant"
-
-
-class FlightPassenger(TripSageModel):
-    """Flight passenger information."""
-
-    type: PassengerType = Field(..., description="Passenger type")
-    given_name: Optional[str] = Field(None, description="First name")
-    family_name: Optional[str] = Field(None, description="Last name")
-    title: Optional[str] = Field(None, description="Title (Mr, Ms, etc.)")
-    date_of_birth: Optional[datetime] = Field(None, description="Date of birth")
-    email: Optional[str] = Field(None, description="Email address")
-    phone: Optional[str] = Field(None, description="Phone number")
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: Optional[str]) -> Optional[str]:
-        """Validate email format."""
-        if v and "@" not in v:
-            raise ValueError("Invalid email format")
-        return v
+# Note: Using BookingStatus, CabinClass, PassengerType from schemas_common.enums
 
 
 class FlightSegment(TripSageModel):
@@ -105,51 +68,6 @@ class FlightSegment(TripSageModel):
         if len(v) != 3 or not v.isalpha():
             raise ValueError("Airport code must be 3 letters")
         return v.upper()
-
-
-class FlightSearchRequest(TripSageModel):
-    """Request model for flight search."""
-
-    origin: str = Field(..., description="Origin airport code")
-    destination: str = Field(..., description="Destination airport code")
-    departure_date: datetime = Field(..., description="Departure date")
-    return_date: Optional[datetime] = Field(
-        None, description="Return date for round trip"
-    )
-    passengers: List[FlightPassenger] = Field(..., description="Passenger information")
-    cabin_class: CabinClass = Field(
-        default=CabinClass.ECONOMY, description="Preferred cabin class"
-    )
-    max_stops: Optional[int] = Field(
-        None, ge=0, le=5, description="Maximum number of stops"
-    )
-    max_price: Optional[float] = Field(None, ge=0, description="Maximum price filter")
-    currency: str = Field(default="USD", description="Price currency")
-    flexible_dates: bool = Field(
-        default=False, description="Allow flexible date search"
-    )
-    preferred_airlines: Optional[List[str]] = Field(
-        None, description="Preferred airline codes"
-    )
-    excluded_airlines: Optional[List[str]] = Field(
-        None, description="Excluded airline codes"
-    )
-
-    @field_validator("origin", "destination")
-    @classmethod
-    def validate_airport_code(cls, v: str) -> str:
-        """Validate airport code format."""
-        if len(v) != 3 or not v.isalpha():
-            raise ValueError("Airport code must be 3 letters")
-        return v.upper()
-
-    @field_validator("return_date")
-    @classmethod
-    def validate_return_date(cls, v: Optional[datetime], info) -> Optional[datetime]:
-        """Validate return date is after departure date."""
-        if v and info.data.get("departure_date") and v <= info.data["departure_date"]:
-            raise ValueError("Return date must be after departure date")
-        return v
 
 
 class FlightOffer(TripSageModel):
