@@ -3,22 +3,21 @@ WebSocket messaging service.
 
 This service consolidates all WebSocket message sending logic including:
 - Connection-level messaging
-- User-level messaging  
+- User-level messaging
 - Session-level messaging
 - Channel broadcasting
 - Rate limiting integration
 """
 
-import asyncio
 import logging
-from typing import Any, Dict, List, Optional, Set
+from datetime import datetime
+from typing import Any, Dict, Optional, Set
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from datetime import datetime
 
-from .websocket_connection_service import WebSocketConnection
 from .websocket_auth_service import WebSocketAuthService
+from .websocket_connection_service import WebSocketConnection
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 class WebSocketEvent(BaseModel):
     """Enhanced WebSocket event model."""
 
-    id: str = Field(default_factory=lambda: str(__import__('uuid').uuid4()))
+    id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     user_id: Optional[UUID] = None
@@ -36,6 +35,24 @@ class WebSocketEvent(BaseModel):
     priority: int = Field(default=1, description="1=high, 2=medium, 3=low")
     retry_count: int = Field(default=0)
     expires_at: Optional[datetime] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert event to serializable dictionary for WebSocket transmission.
+
+        Centralized JSON serialization logic to address code review comment.
+        """
+        return {
+            "id": self.id,
+            "type": self.type,
+            "timestamp": self.timestamp.isoformat(),
+            "user_id": str(self.user_id) if self.user_id else None,
+            "session_id": str(self.session_id) if self.session_id else None,
+            "connection_id": self.connection_id,
+            "payload": self.payload,
+            "priority": self.priority,
+            "retry_count": self.retry_count,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+        }
 
 
 class WebSocketEventType:
@@ -81,99 +98,99 @@ class WebSocketEventType:
 
 class WebSocketMessagingService:
     """Service for consolidating WebSocket messaging operations."""
-    
+
     def __init__(self, auth_service: WebSocketAuthService):
         self.auth_service = auth_service
-        
+
         # Connection tracking
         self.connections: Dict[str, WebSocketConnection] = {}
         self.user_connections: Dict[UUID, Set[str]] = {}
         self.session_connections: Dict[UUID, Set[str]] = {}
         self.channel_connections: Dict[str, Set[str]] = {}
-        
+
         # Performance metrics
         self.performance_metrics = {
             "total_messages_sent": 0,
             "total_bytes_sent": 0,
             "rate_limit_hits": 0,
         }
-    
+
     def register_connection(self, connection: WebSocketConnection) -> None:
         """Register a connection for messaging."""
         connection_id = connection.connection_id
         self.connections[connection_id] = connection
-        
+
         # Track by user
         if connection.user_id:
             if connection.user_id not in self.user_connections:
                 self.user_connections[connection.user_id] = set()
             self.user_connections[connection.user_id].add(connection_id)
-        
+
         # Track by session
         if connection.session_id:
             if connection.session_id not in self.session_connections:
                 self.session_connections[connection.session_id] = set()
             self.session_connections[connection.session_id].add(connection_id)
-    
+
     def unregister_connection(self, connection_id: str) -> None:
         """Unregister a connection from messaging."""
         connection = self.connections.pop(connection_id, None)
         if not connection:
             return
-            
+
         # Remove from user connections
         if connection.user_id and connection.user_id in self.user_connections:
             self.user_connections[connection.user_id].discard(connection_id)
             if not self.user_connections[connection.user_id]:
                 del self.user_connections[connection.user_id]
-        
+
         # Remove from session connections
         if connection.session_id and connection.session_id in self.session_connections:
             self.session_connections[connection.session_id].discard(connection_id)
             if not self.session_connections[connection.session_id]:
                 del self.session_connections[connection.session_id]
-        
+
         # Remove from channels
         for channel in connection.subscribed_channels:
             if channel in self.channel_connections:
                 self.channel_connections[channel].discard(connection_id)
                 if not self.channel_connections[channel]:
                     del self.channel_connections[channel]
-    
+
     def subscribe_to_channel(self, connection_id: str, channel: str) -> bool:
         """Subscribe connection to a channel."""
         connection = self.connections.get(connection_id)
         if not connection:
             return False
-            
+
         connection.subscribe_to_channel(channel)
-        
+
         if channel not in self.channel_connections:
             self.channel_connections[channel] = set()
         self.channel_connections[channel].add(connection_id)
-        
+
         return True
-    
+
     def unsubscribe_from_channel(self, connection_id: str, channel: str) -> bool:
         """Unsubscribe connection from a channel."""
         connection = self.connections.get(connection_id)
         if not connection:
             return False
-            
+
         connection.unsubscribe_from_channel(channel)
-        
+
         if channel in self.channel_connections:
             self.channel_connections[channel].discard(connection_id)
             if not self.channel_connections[channel]:
                 del self.channel_connections[channel]
-        
+
         return True
-    
+
     async def send_to_connection(
         self, connection_id: str, event: WebSocketEvent, rate_limiter=None
     ) -> bool:
         """Send event to specific connection with rate limiting.
-        
+
         Consolidated send logic to address code review comment about duplicate send_to_* logic.
         """
         connection = self.connections.get(connection_id)
@@ -202,16 +219,8 @@ class WebSocketMessagingService:
                 await connection.send(warning_event)
                 return False
 
-        # Convert event to dict for sending
-        event_dict = {
-            "id": event.id,
-            "type": event.type,
-            "timestamp": event.timestamp.isoformat(),
-            "user_id": str(event.user_id) if event.user_id else None,
-            "session_id": str(event.session_id) if event.session_id else None,
-            "payload": event.payload,
-            "priority": event.priority,
-        }
+        # Convert event to dict for sending using centralized serialization
+        event_dict = event.to_dict()
 
         success = await connection.send(event_dict)
         if success:
@@ -219,9 +228,11 @@ class WebSocketMessagingService:
 
         return success
 
-    async def send_to_user(self, user_id: UUID, event: WebSocketEvent, rate_limiter=None) -> int:
+    async def send_to_user(
+        self, user_id: UUID, event: WebSocketEvent, rate_limiter=None
+    ) -> int:
         """Send event to all connections for a user.
-        
+
         Consolidated logic for user messaging.
         """
         connection_ids = self.user_connections.get(user_id, set())
@@ -233,9 +244,11 @@ class WebSocketMessagingService:
 
         return sent_count
 
-    async def send_to_session(self, session_id: UUID, event: WebSocketEvent, rate_limiter=None) -> int:
+    async def send_to_session(
+        self, session_id: UUID, event: WebSocketEvent, rate_limiter=None
+    ) -> int:
         """Send event to all connections for a session.
-        
+
         Consolidated logic for session messaging.
         """
         connection_ids = self.session_connections.get(session_id, set())
@@ -247,9 +260,11 @@ class WebSocketMessagingService:
 
         return sent_count
 
-    async def send_to_channel(self, channel: str, event: WebSocketEvent, rate_limiter=None) -> int:
+    async def send_to_channel(
+        self, channel: str, event: WebSocketEvent, rate_limiter=None
+    ) -> int:
         """Send event to all connections subscribed to a channel.
-        
+
         Consolidated logic for channel messaging.
         """
         connection_ids = self.channel_connections.get(channel, set())
@@ -263,7 +278,7 @@ class WebSocketMessagingService:
 
     async def broadcast_to_all(self, event: WebSocketEvent, rate_limiter=None) -> int:
         """Broadcast event to all connections.
-        
+
         Consolidated logic for broadcasting.
         """
         sent_count = 0
@@ -275,14 +290,14 @@ class WebSocketMessagingService:
         return sent_count
 
     async def send_by_target(
-        self, 
-        target_type: str, 
-        target_id: Optional[str], 
-        event: WebSocketEvent, 
-        rate_limiter=None
+        self,
+        target_type: str,
+        target_id: Optional[str],
+        event: WebSocketEvent,
+        rate_limiter=None,
     ) -> int:
         """Send message by target type and ID.
-        
+
         Unified sending method that routes to appropriate send_to_* method.
         """
         if target_type == "connection" and target_id:

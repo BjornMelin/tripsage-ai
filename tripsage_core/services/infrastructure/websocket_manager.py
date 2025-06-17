@@ -13,14 +13,15 @@ This refactored version extracts responsibilities into focused services.
 """
 
 import asyncio
+import functools
 import json
 import logging
 import random
 import time
-from collections import defaultdict, deque
+from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-from typing import Any, Deque, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional
 from uuid import UUID, uuid4
 
 import redis.asyncio as redis
@@ -29,23 +30,74 @@ from pydantic import BaseModel, Field
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
-from .websocket_connection_service import (
-    WebSocketConnectionService, 
-    WebSocketConnection,
-    ExponentialBackoffException
-)
+
 from .websocket_auth_service import (
-    WebSocketAuthService,
     WebSocketAuthRequest,
-    WebSocketAuthResponse
+    WebSocketAuthResponse,
+    WebSocketAuthService,
+)
+from .websocket_connection_service import (
+    ExponentialBackoffException,
+    WebSocketConnectionService,
 )
 from .websocket_messaging_service import (
-    WebSocketMessagingService,
     WebSocketEvent,
-    WebSocketEventType
+    WebSocketMessagingService,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def redis_with_fallback(fallback_method: Optional[str] = None):
+    """Decorator to handle Redis operations with fallback to local methods.
+
+    Args:
+        fallback_method: Name of the fallback method to call if Redis fails.
+                        If None, will try to find a method with '_local_' prefix.
+    """
+
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            # If no Redis client, immediately fallback
+            if not hasattr(self, "redis") or not self.redis:
+                fallback_name = fallback_method or f"_local_{func.__name__}"
+                if hasattr(self, fallback_name):
+                    fallback_func = getattr(self, fallback_name)
+                    return (
+                        await fallback_func(*args, **kwargs)
+                        if asyncio.iscoroutinefunction(fallback_func)
+                        else fallback_func(*args, **kwargs)
+                    )
+                else:
+                    logger.warning(
+                        f"No Redis client and no fallback method {fallback_name} found for {func.__name__}"
+                    )
+                    return None
+
+            try:
+                return await func(self, *args, **kwargs)
+            except Exception as e:
+                logger.error(
+                    f"Redis operation failed in {func.__name__}, using fallback: {e}"
+                )
+                fallback_name = fallback_method or f"_local_{func.__name__}"
+                if hasattr(self, fallback_name):
+                    fallback_func = getattr(self, fallback_name)
+                    return (
+                        await fallback_func(*args, **kwargs)
+                        if asyncio.iscoroutinefunction(fallback_func)
+                        else fallback_func(*args, **kwargs)
+                    )
+                else:
+                    logger.error(
+                        f"No fallback method {fallback_name} found for {func.__name__}"
+                    )
+                    raise
+
+        return wrapper
+
+    return decorator
 
 
 # Lua script for atomic rate limiting
@@ -180,7 +232,7 @@ class ExponentialBackoff:
             raise ExponentialBackoffException(
                 f"Max reconnection attempts ({self.max_attempts}) exceeded",
                 self.max_attempts,
-                self.max_delay
+                self.max_delay,
             )
 
         # Exponential backoff: base_delay * (2 ^ attempt)
@@ -215,80 +267,66 @@ class RateLimiter:
             lambda: {"count": 0, "window_start": time.time()}
         )
 
+    @redis_with_fallback("_check_local_connection_limit")
     async def check_connection_limit(
         self, user_id: UUID, session_id: Optional[UUID] = None
     ) -> bool:
         """Check if user/session can create new connection."""
-        if not self.redis:
-            return self._check_local_connection_limit(user_id, session_id)
-
         user_key = f"connections:user:{user_id}"
         session_key = f"connections:session:{session_id}" if session_id else None
 
-        try:
-            user_count = await self.redis.scard(user_key)
+        user_count = await self.redis.scard(user_key)
 
-            if user_count >= self.config.max_connections_per_user:
+        if user_count >= self.config.max_connections_per_user:
+            return False
+
+        if session_key:
+            session_count = await self.redis.scard(session_key)
+            if session_count >= self.config.max_connections_per_session:
                 return False
 
-            if session_key:
-                session_count = await self.redis.scard(session_key)
-                if session_count >= self.config.max_connections_per_session:
-                    return False
+        return True
 
-            return True
-
-        except Exception as e:
-            logger.error(f"Rate limit check failed, using local fallback: {e}")
-            return self._check_local_connection_limit(user_id, session_id)
-
+    @redis_with_fallback("_check_local_message_rate")
     async def check_message_rate(
         self, user_id: UUID, connection_id: str
     ) -> Dict[str, Any]:
         """Check message rate limits."""
-        if not self.redis:
-            return self._check_local_message_rate(user_id, connection_id)
-
         user_key = f"messages:user:{user_id}"
         conn_key = f"messages:connection:{connection_id}"
         now = time.time()
         window_start = now - self.config.window_seconds
 
-        try:
-            # Use Redis script for atomic rate limiting
-            result = await self.redis.eval(
-                RATE_LIMIT_LUA_SCRIPT,
-                2,
-                user_key,
-                conn_key,
-                window_start,
-                now,
-                self.config.max_messages_per_user_per_minute,
-                self.config.max_messages_per_connection_per_second
-                * self.config.window_seconds,
-            )
+        # Use Redis script for atomic rate limiting
+        result = await self.redis.eval(
+            RATE_LIMIT_LUA_SCRIPT,
+            2,
+            user_key,
+            conn_key,
+            window_start,
+            now,
+            self.config.max_messages_per_user_per_minute,
+            self.config.max_messages_per_connection_per_second
+            * self.config.window_seconds,
+        )
 
-            allowed, reason, user_count, conn_count = result
+        allowed, reason, user_count, conn_count = result
 
-            return {
-                "allowed": bool(allowed),
-                "reason": reason,
-                "user_count": user_count,
-                "connection_count": conn_count,
-                "remaining": max(
-                    0, self.config.max_messages_per_user_per_minute - user_count
-                ),
-            }
-
-        except Exception as e:
-            logger.error(f"Redis rate limit check failed, using local fallback: {e}")
-            return self._check_local_message_rate(user_id, connection_id)
+        return {
+            "allowed": bool(allowed),
+            "reason": reason,
+            "user_count": user_count,
+            "connection_count": conn_count,
+            "remaining": max(
+                0, self.config.max_messages_per_user_per_minute - user_count
+            ),
+        }
 
     def _check_local_connection_limit(
-        self, user_id: UUID, session_id: Optional[UUID]
+        self, user_id: UUID, session_id: Optional[UUID] = None
     ) -> bool:
         """Fallback local connection limit check."""
-        # Simplified local implementation
+        # Simplified local implementation - always allow connections in fallback mode
         return True
 
     def _check_local_message_rate(
@@ -328,7 +366,7 @@ class RateLimiter:
 
 class WebSocketManager:
     """Enhanced WebSocket connection manager with broadcasting integration.
-    
+
     Refactored to use extracted services for better separation of concerns.
     """
 
@@ -489,7 +527,7 @@ class WebSocketManager:
         self, websocket: WebSocket, auth_request: WebSocketAuthRequest
     ) -> WebSocketAuthResponse:
         """Authenticate a WebSocket connection with rate limiting.
-        
+
         Refactored to use extracted authentication helper methods.
         """
         try:
@@ -520,10 +558,12 @@ class WebSocketManager:
 
             # Validate and subscribe to channels
             available_channels = self.auth_service.get_available_channels(user_id)
-            allowed_channels, _denied_channels = self.auth_service.validate_channel_access(
-                user_id, auth_request.channels
+            allowed_channels, _denied_channels = (
+                self.auth_service.validate_channel_access(
+                    user_id, auth_request.channels
+                )
             )
-            
+
             for channel in allowed_channels:
                 self.messaging_service.subscribe_to_channel(connection_id, channel)
 
@@ -538,6 +578,7 @@ class WebSocketManager:
 
             # Update connection state
             from .websocket_connection_service import ConnectionState
+
             connection.state = ConnectionState.AUTHENTICATED
 
             logger.info(
@@ -576,17 +617,21 @@ class WebSocketManager:
 
         # Subscribe to new channels
         if subscribe_request.channels:
-            available_channels = self.auth_service.get_available_channels(connection.user_id)
-            allowed_channels, denied_channels = self.auth_service.validate_channel_access(
-                connection.user_id, subscribe_request.channels
+            available_channels = self.auth_service.get_available_channels(
+                connection.user_id
             )
-            
+            allowed_channels, denied_channels = (
+                self.auth_service.validate_channel_access(
+                    connection.user_id, subscribe_request.channels
+                )
+            )
+
             for channel in allowed_channels:
                 if self.messaging_service.subscribe_to_channel(connection_id, channel):
                     subscribed.append(channel)
                 else:
                     failed.append(channel)
-            
+
             failed.extend(denied_channels)
 
         # Unsubscribe from channels
@@ -651,21 +696,16 @@ class WebSocketManager:
     async def broadcast_to_channel(self, channel: str, event: WebSocketEvent) -> int:
         """Broadcast event to channel using integrated broadcaster."""
         if self.broadcaster:
-            # Use broadcaster for distributed broadcasting
-            event_dict = {
-                "id": event.id,
-                "type": event.type,
-                "timestamp": event.timestamp.isoformat(),
-                "user_id": str(event.user_id) if event.user_id else None,
-                "session_id": str(event.session_id) if event.session_id else None,
-                "payload": event.payload,
-            }
+            # Use broadcaster for distributed broadcasting with centralized serialization
+            event_dict = event.to_dict()
             await self.broadcaster.broadcast_to_channel(
                 channel, event_dict, event.priority
             )
 
             # Also send to local connections via messaging service
-            return await self.messaging_service.send_to_channel(channel, event, self.rate_limiter)
+            return await self.messaging_service.send_to_channel(
+                channel, event, self.rate_limiter
+            )
         else:
             # Fallback to local broadcasting
             return await self.send_to_channel(channel, event)
@@ -680,14 +720,7 @@ class WebSocketManager:
         """Send event to all connections for a user."""
         # Use broadcaster for distributed messaging if available
         if self.broadcaster:
-            event_dict = {
-                "id": event.id,
-                "type": event.type,
-                "timestamp": event.timestamp.isoformat(),
-                "user_id": str(event.user_id) if event.user_id else None,
-                "session_id": str(event.session_id) if event.session_id else None,
-                "payload": event.payload,
-            }
+            event_dict = event.to_dict()
             await self.broadcaster.broadcast_to_user(
                 user_id, event_dict, event.priority
             )
@@ -701,14 +734,7 @@ class WebSocketManager:
         """Send event to all connections for a session."""
         # Use broadcaster for distributed messaging if available
         if self.broadcaster:
-            event_dict = {
-                "id": event.id,
-                "type": event.type,
-                "timestamp": event.timestamp.isoformat(),
-                "user_id": str(event.user_id) if event.user_id else None,
-                "session_id": str(event.session_id) if event.session_id else None,
-                "payload": event.payload,
-            }
+            event_dict = event.to_dict()
             await self.broadcaster.broadcast_to_session(
                 session_id, event_dict, event.priority
             )
@@ -728,17 +754,17 @@ class WebSocketManager:
         """Get comprehensive connection statistics."""
         # Get stats from messaging service and combine with local metrics
         messaging_stats = self.messaging_service.get_connection_stats()
-        
+
         combined_stats = {
             **messaging_stats,
             "redis_connected": self.redis_client is not None,
             "broadcaster_running": self.broadcaster is not None,
             "performance_metrics": {
                 **self.performance_metrics,
-                **messaging_stats.get("performance_metrics", {})
-            }
+                **messaging_stats.get("performance_metrics", {}),
+            },
         }
-        
+
         return combined_stats
 
     # Helper methods moved to auth service
@@ -765,6 +791,7 @@ class WebSocketManager:
         while self._running:
             try:
                 from .websocket_connection_service import ConnectionState
+
                 tasks = []
                 for connection in self.connection_service.connections.values():
                     if connection.state in [
@@ -841,7 +868,7 @@ class WebSocketManager:
             if ":" in channel:
                 # Parse channel using auth service for consistency
                 target_type, target_id = self.auth_service.parse_channel_target(channel)
-                
+
                 # Route based on parsed target
                 if target_type == "user" and target_id:
                     await self.send_to_user(UUID(target_id), event)
@@ -851,7 +878,9 @@ class WebSocketManager:
                     await self.send_to_channel(target_id, event)
                 else:
                     # Fallback to broadcast
-                    await self.messaging_service.broadcast_to_all(event, self.rate_limiter)
+                    await self.messaging_service.broadcast_to_all(
+                        event, self.rate_limiter
+                    )
             else:
                 # Broadcast to all local connections
                 await self.messaging_service.broadcast_to_all(event, self.rate_limiter)
@@ -864,7 +893,7 @@ class WebSocketManager:
         while self._running:
             try:
                 from .websocket_connection_service import ConnectionState
-                
+
                 # Only process connections with non-empty queues
                 connections_to_process = []
                 for connection in self.connection_service.connections.values():

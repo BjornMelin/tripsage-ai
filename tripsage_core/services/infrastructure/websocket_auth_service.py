@@ -42,10 +42,10 @@ class WebSocketAuthResponse(BaseModel):
 
 class WebSocketAuthService:
     """Service for WebSocket authentication and authorization."""
-    
+
     def __init__(self):
         self.settings = get_settings()
-    
+
     async def verify_jwt_token(self, token: str) -> UUID:
         """Verify JWT token and extract user ID.
 
@@ -80,10 +80,10 @@ class WebSocketAuthService:
 
     def get_available_channels(self, user_id: UUID) -> List[str]:
         """Get available channels for a user.
-        
+
         Args:
             user_id: User ID
-            
+
         Returns:
             List of available channels
         """
@@ -93,53 +93,55 @@ class WebSocketAuthService:
         # Base channels available to all authenticated users
         channels = [
             "general",
-            "notifications", 
+            "notifications",
             f"user:{user_id}",
             f"agent_status:{user_id}",
         ]
 
         return channels
-    
-    def validate_channel_access(self, user_id: UUID, channels: List[str]) -> tuple[List[str], List[str]]:
+
+    def validate_channel_access(
+        self, user_id: UUID, channels: List[str]
+    ) -> tuple[List[str], List[str]]:
         """Validate user access to requested channels.
-        
+
         Args:
             user_id: User ID
             channels: Requested channels
-            
+
         Returns:
             Tuple of (allowed_channels, denied_channels)
         """
         available_channels = self.get_available_channels(user_id)
         allowed = []
         denied = []
-        
+
         for channel in channels:
             if channel in available_channels:
                 allowed.append(channel)
             else:
                 denied.append(channel)
-                
+
         return allowed, denied
-    
+
     def parse_channel_target(self, channel: str) -> tuple[str, Optional[str]]:
         """Parse channel string to extract target type and ID.
-        
+
         Centralized channel parsing logic to address code review comment.
-        
+
         Args:
-            channel: Channel string (e.g., "user:123", "session:456", "agent_status:789")
-            
+            channel: Channel string (e.g., "user:123", "session:456", "agent_status"...)
+
         Returns:
             Tuple of (target_type, target_id)
         """
         if ":" not in channel:
             return "channel", channel
-            
+
         parts = channel.split(":", 1)
         if len(parts) == 2:
             target_type, target_id = parts
             if target_type in ["user", "session", "agent_status"]:
                 return target_type, target_id
-        
+
         return "channel", channel
