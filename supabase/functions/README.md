@@ -4,7 +4,7 @@ This directory contains comprehensive test coverage for all Supabase Edge Functi
 
 ## 📁 Structure
 
-```
+```text
 functions/
 ├── _shared/                    # Shared testing utilities
 │   ├── test-utils.ts          # Core testing infrastructure
@@ -36,6 +36,7 @@ functions/
 Each Edge Function has **90%+ test coverage** including:
 
 ### Core Functionality Tests
+
 - ✅ HTTP request/response handling
 - ✅ CORS preflight requests
 - ✅ Authentication and authorization
@@ -45,6 +46,7 @@ Each Edge Function has **90%+ test coverage** including:
 - ✅ External API integrations
 
 ### Edge Cases & Error Handling
+
 - ✅ Invalid input handling
 - ✅ Authentication failures
 - ✅ Database connection errors
@@ -54,6 +56,7 @@ Each Edge Function has **90%+ test coverage** including:
 - ✅ Resource not found scenarios
 
 ### Performance & Security
+
 - ✅ Response time validation
 - ✅ Concurrent request handling
 - ✅ Memory usage optimization
@@ -62,6 +65,7 @@ Each Edge Function has **90%+ test coverage** including:
 - ✅ SQL injection prevention
 
 ### Integration Workflows
+
 - ✅ Cross-function data flow
 - ✅ Database consistency
 - ✅ Cache invalidation chains
@@ -72,15 +76,18 @@ Each Edge Function has **90%+ test coverage** including:
 ## Available Functions
 
 ### 1. AI Processing (`ai-processing`)
+
 Handles AI-powered chat completions, memory processing, and embedding generation.
 
 **Features:**
+
 - OpenAI API integration for chat completions
 - User memory creation and retrieval
 - Embedding generation for semantic search
 - User preference extraction and storage
 
 **Test Coverage:**
+
 - Chat message processing workflows
 - Memory embedding operations
 - User preference extraction
@@ -88,15 +95,18 @@ Handles AI-powered chat completions, memory processing, and embedding generation
 - Error handling and edge cases
 
 ### 2. Trip Events (`trip-events`)
+
 Processes trip collaboration events and webhook notifications.
 
 **Features:**
+
 - Database webhook event handling
 - Notification creation for trip changes
 - Email integration for collaboration events
 - Real-time event processing
 
 **Test Coverage:**
+
 - Webhook event processing
 - Notification creation workflows
 - Email integration testing
@@ -104,15 +114,18 @@ Processes trip collaboration events and webhook notifications.
 - Collaboration event handling
 
 ### 3. File Processing (`file-processing`)
+
 Handles file upload processing, virus scanning, and image optimization.
 
 **Features:**
+
 - Virus scanning integration
 - Image resizing and optimization
 - File metadata extraction
 - Storage bucket management
 
 **Test Coverage:**
+
 - File upload processing
 - Virus scan operations
 - Image optimization workflows
@@ -120,15 +133,18 @@ Handles file upload processing, virus scanning, and image optimization.
 - Security validation
 
 ### 4. Cache Invalidation (`cache-invalidation`)
+
 Manages Redis/DragonflyDB cache invalidation and search cache cleanup.
 
 **Features:**
+
 - Redis cache pattern matching
 - Bulk cache key deletion
 - Search cache table cleanup
 - Webhook-triggered invalidation
 
 **Test Coverage:**
+
 - Redis cache operations
 - Pattern-based invalidation
 - Webhook event handling
@@ -136,15 +152,18 @@ Manages Redis/DragonflyDB cache invalidation and search cache cleanup.
 - Concurrent invalidation
 
 ### 5. Trip Notifications (`trip-notifications`)
+
 Handles email notifications and webhook delivery for trip events.
 
 **Features:**
+
 - Email notifications via Resend API
 - Webhook notifications to external services
 - Template-based email generation
 - User and trip data integration
 
 **Test Coverage:**
+
 - Email notification delivery
 - Webhook notification sending
 - Template generation testing
@@ -154,12 +173,15 @@ Handles email notifications and webhook delivery for trip events.
 ## 🚀 Running Tests
 
 ### Prerequisites
+
 Ensure you have Deno installed:
+
 ```bash
 curl -fsSL https://deno.land/install.sh | sh
 ```
 
 ### Quick Start
+
 ```bash
 # Run all tests
 deno task test
@@ -172,6 +194,7 @@ deno task test:watch
 ```
 
 ### Individual Function Tests
+
 ```bash
 # AI Processing tests
 deno task test:ai
@@ -196,12 +219,14 @@ deno task test:utils
 ```
 
 ### Advanced Test Runner
+
 ```bash
 # Use the comprehensive test runner
 deno run --allow-net --allow-env --allow-read --allow-write run-tests.ts
 ```
 
 This will:
+
 - Run all test suites sequentially
 - Generate detailed reports
 - Calculate coverage estimates
@@ -211,6 +236,7 @@ This will:
 ## 📊 Coverage Reports
 
 ### Generating Coverage
+
 ```bash
 # Generate LCOV coverage report
 deno task coverage:generate
@@ -220,6 +246,7 @@ deno task coverage:html
 ```
 
 ### Coverage Goals
+
 - **Individual Functions**: 90%+ coverage each
 - **Integration Tests**: Complete workflow coverage
 - **Error Scenarios**: All error paths tested
@@ -229,36 +256,42 @@ deno task coverage:html
 ## 🛠 Testing Infrastructure
 
 ### MockSupabase
+
 Simulates Supabase database operations:
+
 ```typescript
 const mockSupabase = new MockSupabase();
-mockSupabase.setResponse('trips_select_eq_single', {
+mockSupabase.setResponse("trips_select_eq_single", {
   data: TestDataFactory.createTrip(),
-  error: null
+  error: null,
 });
 ```
 
 ### MockRedis
+
 Simulates Redis cache operations:
+
 ```typescript
 const mockRedis = new MockRedis();
-mockRedis.setExpectedCalls([
-  { method: 'get', args: ['key'], result: 'value' }
-]);
+mockRedis.setExpectedCalls([{ method: "get", args: ["key"], result: "value" }]);
 ```
 
 ### MockFetch
+
 Simulates external API calls:
+
 ```typescript
 const mockFetch = new MockFetch();
-mockFetch.setResponse('https://api.openai.com/v1/chat', {
+mockFetch.setResponse("https://api.openai.com/v1/chat", {
   status: 200,
-  body: JSON.stringify({ response: 'Hello' })
+  body: JSON.stringify({ response: "Hello" }),
 });
 ```
 
 ### TestDataFactory
+
 Generates realistic test data:
+
 ```typescript
 const user = TestDataFactory.createUser();
 const trip = TestDataFactory.createTrip();
@@ -266,23 +299,28 @@ const message = TestDataFactory.createChatMessage();
 ```
 
 ### RequestTestHelper
+
 Creates proper test requests:
+
 ```typescript
 const request = RequestTestHelper.createAuthenticatedRequest(data, token);
 const webhook = RequestTestHelper.createWebhookRequest(payload);
 ```
 
 ### ResponseAssertions
+
 Validates responses:
+
 ```typescript
 const data = await ResponseAssertions.assertSuccess(response);
-await ResponseAssertions.assertError(response, 400, 'Error message');
+await ResponseAssertions.assertError(response, 400, "Error message");
 ResponseAssertions.assertCorsHeaders(response);
 ```
 
 ## 🔄 Development Workflow
 
 ### Adding New Tests
+
 1. **Create test file**: `function-name/index.test.ts`
 2. **Import utilities**: Use shared test infrastructure
 3. **Mock dependencies**: Set up required mocks
@@ -290,27 +328,28 @@ ResponseAssertions.assertCorsHeaders(response);
 5. **Run tests**: Verify coverage and functionality
 
 ### Test Structure Template
+
 ```typescript
 import {
   assertEquals,
   assertExists,
   TestDataFactory,
-  EdgeFunctionTester
+  EdgeFunctionTester,
 } from "../_shared/test-utils.ts";
 
 Deno.test("Function Name - Success Case", async () => {
   const tester = new EdgeFunctionTester();
   await tester.runTest(async ({ mockSupabase, mockFetch }) => {
     // Setup mocks
-    mockSupabase.setResponse('operation', { data: [], error: null });
-    
+    mockSupabase.setResponse("operation", { data: [], error: null });
+
     // Create function instance
     const func = new MockFunctionClass(mockSupabase, mockFetch);
-    
+
     // Execute test
     const request = RequestTestHelper.createAuthenticatedRequest(data);
     const response = await func.serve(request);
-    
+
     // Assertions
     const result = await ResponseAssertions.assertSuccess(response);
     assertEquals(result.expected, true);
@@ -321,6 +360,7 @@ Deno.test("Function Name - Success Case", async () => {
 ## 📈 Performance Benchmarks
 
 ### Response Time Targets
+
 - **Simple operations**: < 500ms
 - **Database queries**: < 1000ms
 - **External API calls**: < 2000ms
@@ -328,7 +368,9 @@ Deno.test("Function Name - Success Case", async () => {
 - **AI operations**: < 10000ms
 
 ### Concurrent Load Testing
+
 Integration tests include scenarios with:
+
 - 10+ concurrent requests
 - Multiple function interactions
 - Database consistency validation
@@ -337,18 +379,21 @@ Integration tests include scenarios with:
 ## 🔒 Security Testing
 
 ### Authentication Tests
+
 - Valid JWT token handling
 - Invalid token rejection
 - Missing authorization headers
 - Token expiration scenarios
 
 ### Input Validation
+
 - SQL injection prevention
 - XSS attack mitigation
 - File upload security
 - Request size limits
 
 ### CORS Configuration
+
 - Proper CORS headers
 - Origin validation
 - Method restrictions
@@ -373,6 +418,7 @@ WEBHOOK_SECRET=your_webhook_secret
 ### Function-Specific Environment Variables
 
 #### Trip Notifications
+
 ```bash
 # Email Service (optional)
 RESEND_API_KEY=your_resend_api_key
@@ -382,6 +428,7 @@ NOTIFICATION_WEBHOOK_URL=your_notification_webhook_url
 ```
 
 #### File Processing
+
 ```bash
 # Storage Configuration
 STORAGE_BUCKET=attachments
@@ -393,6 +440,7 @@ CLOUDFLARE_AI_TOKEN=your_cloudflare_token
 ```
 
 #### Cache Invalidation
+
 ```bash
 # Redis/DragonflyDB Configuration
 REDIS_URL=redis://localhost:6379
@@ -413,6 +461,7 @@ To enable automatic processing, set up database webhooks for these tables:
 3. **All tables** → cache-invalidation
 
 Example webhook configuration:
+
 ```sql
 -- Enable webhooks for trip_collaborators
 ALTER PUBLICATION supabase_realtime ADD TABLE trip_collaborators;
@@ -443,62 +492,68 @@ CREATE TRIGGER trip_collaborators_webhook
 ### Using Supabase CLI
 
 1. **Deploy all functions:**
-```bash
-supabase functions deploy
-```
+
+   ```bash
+   supabase functions deploy
+   ```
 
 2. **Deploy specific function:**
-```bash
-supabase functions deploy trip-notifications
-supabase functions deploy file-processing
-supabase functions deploy cache-invalidation
-```
+
+   ```bash
+   supabase functions deploy trip-notifications
+   supabase functions deploy file-processing
+   supabase functions deploy cache-invalidation
+   ```
 
 3. **Set environment variables:**
-```bash
-supabase secrets set RESEND_API_KEY=your_key
-supabase secrets set REDIS_URL=your_redis_url
-# ... other secrets
-```
+
+   ```bash
+   supabase secrets set RESEND_API_KEY=your_key
+   supabase secrets set REDIS_URL=your_redis_url
+   # ... other secrets
+   ```
 
 ### Testing Functions
 
 1. **Test trip notifications:**
-```bash
-curl -X POST https://your-project.supabase.co/functions/v1/trip-notifications \
-  -H "Authorization: Bearer your_token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_type": "collaboration_added",
-    "trip_id": 123,
-    "user_id": "user-uuid",
-    "target_user_id": "target-uuid",
-    "permission_level": "view"
-  }'
-```
+
+   ```bash
+   curl -X POST https://your-project.supabase.co/functions/v1/trip-notifications \
+     -H "Authorization: Bearer your_token" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "event_type": "collaboration_added",
+       "trip_id": 123,
+       "user_id": "user-uuid",
+       "target_user_id": "target-uuid",
+       "permission_level": "view"
+     }'
+   ```
 
 2. **Test file processing:**
-```bash
-curl -X POST https://your-project.supabase.co/functions/v1/file-processing \
-  -H "Authorization: Bearer your_token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "file_id": "file-uuid",
-    "operation": "process_all"
-  }'
-```
+
+   ```bash
+   curl -X POST https://your-project.supabase.co/functions/v1/file-processing \
+     -H "Authorization: Bearer your_token" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "file_id": "file-uuid",
+       "operation": "process_all"
+     }'
+   ```
 
 3. **Test cache invalidation:**
-```bash
-curl -X POST https://your-project.supabase.co/functions/v1/cache-invalidation \
-  -H "Authorization: Bearer your_token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "cache_type": "all",
-    "patterns": ["trip:*", "search:*"],
-    "reason": "Manual cleanup"
-  }'
-```
+
+   ```bash
+   curl -X POST https://your-project.supabase.co/functions/v1/cache-invalidation \
+     -H "Authorization: Bearer your_token" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "cache_type": "all",
+       "patterns": ["trip:*", "search:*"],
+       "reason": "Manual cleanup"
+     }'
+   ```
 
 ## Monitoring and Logging
 
@@ -510,6 +565,7 @@ All functions include comprehensive logging and error handling:
 - Performance metrics (processing times)
 
 Monitor function logs through the Supabase Dashboard or CLI:
+
 ```bash
 supabase functions logs trip-notifications
 ```
@@ -534,6 +590,7 @@ supabase functions logs trip-notifications
 ### Debug Mode
 
 Enable debug logging by setting environment variable:
+
 ```bash
 SUPABASE_DEBUG=true
 ```

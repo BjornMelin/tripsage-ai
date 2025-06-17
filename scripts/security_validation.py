@@ -496,7 +496,7 @@ def main():
 
     # Save report to file
     report_data = {
-        "timestamp": "2024-12-11T10:00:00Z",
+        "timestamp": "2025-06-11T10:00:00Z",
         "checks": SECURITY_CHECKS,
         "summary": {
             "critical": len(SECURITY_CHECKS["critical"]),

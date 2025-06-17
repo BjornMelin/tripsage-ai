@@ -1,119 +1,169 @@
-# TripSage Supabase Database Schema
+# TripSage Supabase Project
 
-This directory contains the complete, production-ready database schema for TripSage, organized using modern Supabase best practices with declarative schema management.
+Comprehensive Supabase infrastructure for TripSage, including database schemas, edge functions, storage configuration, and migrations. Built with modern best practices for scalability and maintainability.
 
-## 📁 Directory Structure
+## 🏗️ Project Structure
 
 ```text
 supabase/
-├── schemas/                    # Declarative schema files (organized by concern)
-│   ├── 00_extensions.sql      # Extensions (UUID, pgvector)
-│   ├── 01_tables.sql          # Core tables and business logic
-│   ├── 02_indexes.sql         # Performance-optimized indexes
-│   ├── 03_functions.sql       # Utility functions and stored procedures
-│   ├── 04_triggers.sql        # Automated triggers
-│   ├── 05_policies.sql        # Row Level Security policies
-│   └── 06_views.sql           # Common database views
-├── migrations/                 # Generated migration files
-│   └── 20250609_02_consolidated_production_schema.sql
-├── tests/                      # Database tests (optional)
-├── config.toml                 # Supabase CLI configuration
-├── seed.sql                    # Development seed data
-└── README.md                   # This documentation
+├── schemas/                    # Declarative schema files
+│   ├── 00_extensions.sql      # PostgreSQL extensions
+│   ├── 01_tables.sql          # Core table definitions
+│   ├── 02_indexes.sql         # Performance indexes
+│   ├── 03_functions.sql       # Stored procedures
+│   ├── 04_triggers.sql        # Database triggers
+│   ├── 05_policies.sql        # Row Level Security
+│   └── README.md              # Schema documentation
+├── migrations/                 # Version-controlled migrations
+│   ├── 20250609_*.sql         # Production schema
+│   ├── 20250611_*.sql         # Feature additions
+│   └── README.md              # Migration guide
+├── edge-functions/            # Serverless functions
+│   ├── ai-processing/         # AI chat processing
+│   ├── trip-events/          # Event handling
+│   └── README.md             # Functions guide
+├── functions/                 # Legacy edge functions
+│   ├── _shared/              # Shared utilities
+│   ├── cache-invalidation/   # Cache management
+│   ├── file-processing/      # File operations
+│   └── README.md             # Detailed documentation
+├── storage/                   # Storage configuration
+│   ├── buckets.sql           # Bucket definitions
+│   ├── policies.sql          # Storage RLS
+│   └── README.md             # Storage guide
+├── config.toml               # Supabase CLI config
+├── seed.sql                  # Development data
+├── .env.example              # Environment template
+└── TROUBLESHOOTING.md        # Common issues
 ```
 
-## 🚀 Quick Start
+## 📚 Documentation Index
 
-### Automated Deployment (Recommended)
+| Component | Documentation | Purpose |
+|-----------|--------------|----------|
+| **Schemas** | [schemas/README.md](./schemas/README.md) | Declarative schema management guide |
+| **Migrations** | [migrations/README.md](./migrations/README.md) | Database migration best practices |
+| **Edge Functions** | [edge-functions/README.md](./edge-functions/README.md) | Serverless function development |
+| **Storage** | [storage/README.md](./storage/README.md) | File storage and management |
+| **Functions** | [functions/README.md](./functions/README.md) | Comprehensive edge function suite |
+| **Troubleshooting** | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions |
 
-**For Local Development:**
+## 🚀 Quick Start Guide
+
+### Prerequisites
+
+- [Supabase CLI](https://supabase.com/docs/guides/cli) installed
+- [Docker](https://www.docker.com/) for local development
+- Python 3.8+ for deployment scripts
+- Node.js 18+ for edge functions
+
+### 1. Initial Setup
+
 ```bash
-# Run automated deployment with validation
-python3 supabase/deploy_database_schema.py local
-```
+# Clone and navigate to project
+cd supabase/
 
-**For Production:**
-```bash
-# Deploy to production with project reference
-python3 supabase/deploy_database_schema.py production --project-ref your-project-ref
-```
-
-### Manual Setup (Alternative)
-
-**Local Development Setup:**
-
-1. **Prerequisites:**
-   ```bash
-   # Install Supabase CLI
-   npm install -g supabase
-   
-   # Verify installation
-   supabase --version
-   ```
-
-2. **Initialize and validate:**
-   ```bash
-   # Validate schema before deployment
-   python3 supabase/validate_database_schema.py
-   
-   # Start local Supabase
-   supabase init
-   supabase start
-   ```
-
-3. **Apply schema:**
-   ```bash
-   # Apply consolidated schema
-   supabase db reset
-   
-   # Verify deployment
-   python3 supabase/test_database_integration.py
-   ```
-
-4. **Load development data (optional):**
-   ```bash
-   psql postgres://postgres:postgres@localhost:54322/postgres < supabase/seed.sql
-   ```
-
-**Production Deployment:**
-
-1. **Pre-deployment validation:**
-   ```bash
-   # Validate schema integrity
-   python3 supabase/validate_database_schema.py
-   
-   # Run integration tests
-   python3 supabase/test_database_integration.py
-   ```
-
-2. **Deploy to production:**
-   ```bash
-   # Link to production project
-   supabase link --project-ref your-project-ref
-   
-   # Push schema
-   supabase db push
-   
-   # Verify production deployment
-   python3 supabase/test_database_integration.py
-   ```
-
-### Environment Setup
-
-**Required Environment Variables:**
-```bash
-# Copy and configure environment
+# Copy environment template
 cp .env.example .env
 
-# Edit .env with your Supabase credentials:
-SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+# Edit .env with your credentials
+nano .env
 ```
 
-## 📊 Schema Overview
+### 2. Local Development
 
-### Database Entity Relationships
+```bash
+# Initialize Supabase
+supabase init
+
+# Start local Supabase stack
+supabase start
+
+# Apply database schema
+supabase db reset
+
+# Serve edge functions
+supabase functions serve
+```
+
+### 3. Production Deployment
+
+```bash
+# Link to production project
+supabase link --project-ref your-project-ref
+
+# Push database changes
+supabase db push
+
+# Deploy edge functions
+supabase functions deploy
+
+# Set production secrets
+supabase secrets set OPENAI_API_KEY=your_key
+supabase secrets set RESEND_API_KEY=your_key
+```
+
+### Alternative: Automated Deployment
+
+For complex deployments, use our automated scripts:
+
+```bash
+# Validate schema integrity
+python3 validate_database_schema.py
+
+# Deploy to local environment
+python3 deploy_database_schema.py local
+
+# Deploy to production with validation
+python3 deploy_database_schema.py production --project-ref your-project-ref
+
+# Run integration tests
+python3 test_database_integration.py
+```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+See [.env.example](./.env.example) for a complete list. Key variables:
+
+```bash
+# Supabase Core
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Edge Functions
+OPENAI_API_KEY=sk-...
+RESEND_API_KEY=re_...
+WEBHOOK_SECRET=whsec_...
+
+# Storage
+STORAGE_BUCKET=attachments
+MAX_FILE_SIZE=50000000
+```
+
+### Database Connection
+
+```bash
+# Direct connection (for migrations)
+DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+
+# Pooled connection (for applications)
+DATABASE_POOLER_URL=postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
+```
+
+## 🗄️ Database Architecture
+
+### Core Components
+
+1. **[Declarative Schemas](./schemas/README.md)** - Define database structure in SQL files
+2. **[Migrations](./migrations/README.md)** - Version-controlled database changes
+3. **[Edge Functions](./edge-functions/README.md)** - Serverless compute at the edge
+4. **[Storage](./storage/README.md)** - File storage with RLS policies
+5. **[Functions](./functions/README.md)** - Comprehensive serverless suite
+
+### Entity Relationship Diagram
 
 ```mermaid
 erDiagram
@@ -355,6 +405,7 @@ erDiagram
 | **Performance Optimization** | Efficient collaboration queries | Composite indexes and optimized permission lookup patterns |
 
 **Advanced Collaboration Functions:**
+
 - `get_user_accessible_trips(user_id, include_role)` - Get owned + shared trips with role information
 - `check_trip_permission(user_id, trip_id, permission)` - Validate user access with permission hierarchy
 - `get_trip_permission_details(user_id, trip_id)` - Detailed permission information and capabilities
@@ -519,38 +570,148 @@ GITHUB_CLIENT_ID=your-github-oauth-id
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [TripSage Architecture Guide](../docs/03_ARCHITECTURE/DATABASE_ARCHITECTURE.md)
 
-## 🆘 Troubleshooting
+## 🧪 Testing & Validation
 
-### Common Issues
+### Schema Validation
 
-**Extension not found:**
+```bash
+# Validate schema files
+python3 validate_database_schema.py
 
-```sql
--- Enable in Supabase Dashboard: Database > Extensions
-CREATE EXTENSION IF NOT EXISTS vector;
+# Test migrations locally
+supabase db reset --debug
 ```
 
-**RLS blocking queries:**
+### Integration Testing
 
-```sql
--- Check auth context
-SELECT auth.uid();
+```bash
+# Run full test suite
+python3 test_database_integration.py
 
--- Temporarily disable for debugging (dev only!)
-ALTER TABLE table_name DISABLE ROW LEVEL SECURITY;
+# Test edge functions
+deno task test
 ```
 
-**Vector index issues:**
+### Performance Testing
 
 ```sql
--- Rebuild vector index
-DROP INDEX IF EXISTS idx_memories_embedding;
-CREATE INDEX idx_memories_embedding ON memories 
-USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+-- Check query performance
+EXPLAIN ANALYZE SELECT * FROM trips WHERE user_id = 'uuid';
+
+-- Monitor index usage
+SELECT schemaname, tablename, indexname, idx_scan
+FROM pg_stat_user_indexes
+ORDER BY idx_scan DESC;
 ```
+
+## 📈 Monitoring & Maintenance
+
+### Health Checks
+
+```sql
+-- Database size
+SELECT pg_database_size(current_database()) / 1024 / 1024 as size_mb;
+
+-- Table sizes
+SELECT relname, pg_size_pretty(pg_total_relation_size(relid))
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+
+-- Active connections
+SELECT count(*) FROM pg_stat_activity;
+```
+
+### Regular Maintenance
+
+```bash
+# Weekly tasks
+- Review slow query logs
+- Check index usage statistics
+- Monitor storage usage
+- Review error logs
+
+# Monthly tasks
+- Analyze table statistics
+- Review and optimize queries
+- Check for unused indexes
+- Update dependencies
+```
+
+## 🔐 Security Best Practices
+
+1. **Always use RLS** - Enable on all tables
+2. **Secure functions** - Use `SECURITY DEFINER` carefully
+3. **Validate inputs** - Sanitize all user inputs
+4. **Use service role sparingly** - Only for admin operations
+5. **Monitor access logs** - Regular security audits
+
+## 🚀 Deployment Checklist
+
+### Pre-deployment
+
+- [ ] All tests passing
+- [ ] Schema validated
+- [ ] Migrations reviewed
+- [ ] Environment variables set
+- [ ] Backup created
+
+### Deployment
+
+- [ ] Link to correct project
+- [ ] Push migrations
+- [ ] Deploy functions
+- [ ] Set secrets
+- [ ] Verify deployment
+
+### Post-deployment
+
+- [ ] Run integration tests
+- [ ] Check logs for errors
+- [ ] Monitor performance
+- [ ] Update documentation
+
+## 📚 Additional Resources - Documentation
+
+### Internal Documentation
+
+- [Database Architecture](../docs/03_ARCHITECTURE/DATABASE_ARCHITECTURE.md)
+- [API Documentation](../docs/API.md)
+- [Security Guide](../docs/SECURITY.md)
+
+### External Resources
+
+- [Supabase Documentation](https://supabase.com/docs)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Deno Documentation](https://deno.land/manual)
+- [pgvector Documentation](https://github.com/pgvector/pgvector)
+
+## 🤝 Contributing
+
+### Making Changes
+
+1. Create feature branch
+2. Update schema files
+3. Generate migrations
+4. Add tests
+5. Update documentation
+6. Submit pull request
+
+### Code Standards
+
+- SQL files use 2-space indentation
+- Functions follow naming convention: `verb_noun_object`
+- Tables use snake_case
+- Always include comments
+
+## 🆘 Getting Help
+
+- **Common Issues**: See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
+- **Schema Questions**: Check [schemas/README.md](./schemas/README.md)
+- **Migration Help**: See [migrations/README.md](./migrations/README.md)
+- **Function Issues**: Check [functions/README.md](./functions/README.md)
 
 ---
 
-**Schema Version**: Production v1.0  
-**Last Updated**: 2025-06-09  
-**Compatibility**: Supabase CLI v1.x, PostgreSQL 15+
+**Version**: 2.0.0  
+**Last Updated**: 2025-06-17  
+**Maintained By**: TripSage Development Team
