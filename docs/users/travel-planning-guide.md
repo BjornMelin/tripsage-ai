@@ -369,6 +369,7 @@ Get the most from TripSage's AI travel assistant:
 ### Natural Language Planning
 
 Describe your trip naturally:
+
 - "Plan a romantic anniversary weekend somewhere warm"
 - "I need a work-friendly hotel with conference rooms"
 - "Find family activities for teenagers in Tokyo"
@@ -376,6 +377,7 @@ Describe your trip naturally:
 ### AI Memory System
 
 The AI remembers:
+
 - **Past Preferences**: Learns your travel style
 - **Budget Patterns**: Understands your spending habits
 - **Favorite Places**: Remembers loved destinations
@@ -391,6 +393,7 @@ The AI remembers:
 ### Quick Planning
 
 For fast trip planning:
+
 - "Book the same as my Paris trip but in Rome"
 - "Weekend getaway under $500"
 - "Business trip with Saturday extension"
@@ -428,6 +431,7 @@ For last-minute and quick trip planning:
 ### Weekend Trips
 
 Perfect for spontaneous getaways:
+
 - "This weekend in [nearby city]"
 - "Quick beach escape for 2 days"
 - "City break leaving tomorrow"

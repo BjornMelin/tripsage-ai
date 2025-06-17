@@ -35,11 +35,13 @@ graph TD
 **Purpose**: Validates Python backend code quality, functionality, and build integrity.
 
 **Triggers**:
+
 - Push to `main`, `dev`, feature branches
 - Pull requests to `main`, `dev`
 - Manual dispatch
 
 **Jobs**:
+
 - **Code Quality**: Linting with Ruff, type checking with MyPy
 - **Unit Tests**: Fast unit test execution with pytest
 - **Integration Tests**: Database and API integration tests
@@ -48,6 +50,7 @@ graph TD
 - **Performance Tests**: Basic API performance benchmarks
 
 **Quality Thresholds**:
+
 - Code coverage: ≥85%
 - Zero critical linting errors
 - All tests must pass
@@ -59,11 +62,13 @@ graph TD
 **Purpose**: Validates TypeScript/React frontend code quality and functionality.
 
 **Triggers**:
+
 - Push to `main`, `dev`, feature branches
 - Pull requests to `main`, `dev`
 - Manual dispatch
 
 **Jobs**:
+
 - **Code Quality**: Biome linting and formatting, TypeScript compilation
 - **Unit Tests**: Vitest unit tests with coverage
 - **E2E Tests**: Playwright end-to-end tests
@@ -72,6 +77,7 @@ graph TD
 - **Performance Tests**: Lighthouse performance audits
 
 **Quality Thresholds**:
+
 - Code coverage: ≥80%
 - Zero TypeScript errors
 - All tests must pass
@@ -83,12 +89,14 @@ graph TD
 **Purpose**: Comprehensive security vulnerability detection and assessment.
 
 **Triggers**:
+
 - Push to main branches and feature branches
 - Pull requests
 - Daily schedule (2 AM UTC)
 - Manual dispatch
 
 **Jobs**:
+
 - **Secret Detection**: TruffleHog for exposed secrets
 - **Python Security**: Bandit, Safety, Semgrep analysis
 - **Frontend Security**: npm audit, XSS pattern detection
@@ -97,6 +105,7 @@ graph TD
 - **Infrastructure Security**: Configuration security assessment
 
 **Security Thresholds**:
+
 - Zero exposed secrets
 - Zero critical vulnerabilities
 - Maximum 2 high-severity vulnerabilities
@@ -107,12 +116,14 @@ graph TD
 **Purpose**: Comprehensive test coverage analysis and enforcement.
 
 **Triggers**:
+
 - Push to `main`, `dev`
 - Pull requests
 - Daily schedule (3 AM UTC)
 - Manual dispatch
 
 **Features**:
+
 - Combined backend and frontend coverage reporting
 - Coverage trend tracking
 - Codecov integration
@@ -124,6 +135,7 @@ graph TD
 **Purpose**: Automated pull request quality checks and enhancement.
 
 **Features**:
+
 - **Auto-labeling**: Based on file changes and PR size
 - **Title validation**: Conventional commit format enforcement
 - **Description requirements**: Minimum length and content checks
@@ -137,6 +149,7 @@ graph TD
 **Purpose**: Final quality validation before merge approval.
 
 **Validation Criteria**:
+
 - All CI workflows must pass
 - Security scans must not find critical issues
 - Coverage thresholds must be met
@@ -205,6 +218,7 @@ graph LR
 Configure these branch protection rules in GitHub:
 
 ### Main Branch (`main`)
+
 - ✅ Require pull request reviews before merging
 - ✅ Require status checks to pass before merging
   - Backend CI
@@ -217,6 +231,7 @@ Configure these branch protection rules in GitHub:
 - ✅ Do not allow bypassing the above settings
 
 ### Development Branch (`dev`)
+
 - ✅ Require pull request reviews before merging
 - ✅ Require status checks to pass before merging
   - Backend CI
@@ -230,7 +245,8 @@ Configure these branch protection rules in GitHub:
 
 #### 1. Backend CI Failures
 
-**Coverage Below Threshold**
+##### **Coverage Below Threshold**
+
 ```bash
 # Check current coverage
 uv run pytest --cov=tripsage --cov=tripsage_core --cov-report=term-missing
@@ -239,7 +255,8 @@ uv run pytest --cov=tripsage --cov=tripsage_core --cov-report=term-missing
 # Update test files in tests/unit/ and tests/integration/
 ```
 
-**Linting Errors**
+##### **Linting Errors**
+
 ```bash
 # Fix formatting issues
 ruff format .
@@ -250,7 +267,8 @@ ruff check . --fix
 # Manual fixes may be needed for complex issues
 ```
 
-**Test Failures**
+##### **Test Failures**
+
 ```bash
 # Run specific failing test
 uv run pytest tests/path/to/test.py::test_name -v
@@ -261,7 +279,8 @@ uv run pytest tests/path/to/test.py::test_name -v
 
 #### 2. Frontend CI Failures
 
-**TypeScript Errors**
+##### **TypeScript Errors**
+
 ```bash
 # Check TypeScript compilation
 cd frontend
@@ -271,7 +290,8 @@ pnpm type-check
 # Update type definitions if needed
 ```
 
-**Test Failures**
+##### **Test Failures - Vitest**
+
 ```bash
 # Run specific test suite
 cd frontend
@@ -281,7 +301,8 @@ pnpm test src/components/specific-component
 # Update mocks and test data as needed
 ```
 
-**Build Failures**
+##### **Build Failures - Next.js**
+
 ```bash
 # Test production build locally
 cd frontend
@@ -293,7 +314,8 @@ pnpm build
 
 #### 3. Security Scan Failures
 
-**Secrets Detected**
+##### **Secrets Detected**
+
 ```bash
 # Check for exposed secrets
 git grep -i "api_key\|password\|secret" .
@@ -303,7 +325,8 @@ git grep -i "api_key\|password\|secret" .
 # Add secrets to .gitignore patterns
 ```
 
-**Vulnerability in Dependencies**
+##### **Vulnerability in Dependencies**
+
 ```bash
 # Check Python vulnerabilities
 safety check
@@ -318,13 +341,15 @@ pnpm audit
 
 #### 4. Coverage Failures
 
-**Coverage Below Threshold**
+##### **Coverage Below Threshold - pytest**
+
 - Add unit tests for uncovered functions
 - Add integration tests for workflows
 - Remove dead code that can't be tested
 - Update coverage configuration if needed
 
-**Coverage Report Generation Failed**
+##### **Coverage Report Generation Failed**
+
 ```bash
 # Regenerate coverage locally
 uv run pytest --cov=tripsage --cov=tripsage_core --cov-report=html
@@ -335,12 +360,14 @@ uv run pytest --cov=tripsage --cov=tripsage_core --cov-report=html
 
 #### 5. Quality Gate Failures
 
-**Multiple Workflow Failures**
+##### **Multiple Workflow Failures**
+
 - Address individual workflow failures first
 - Check for systemic issues (environment, dependencies)
 - Verify all required workflows are enabled
 
-**Workflow Timeout**
+##### **Workflow Timeout**
+
 - Check for infinite loops or hanging processes
 - Optimize test execution time
 - Increase timeout if necessary
@@ -362,6 +389,7 @@ In emergency situations, administrators can:
    - Create follow-up issue to address skipped checks
 
 3. **Hotfix process**:
+
    ```bash
    # Create hotfix branch from main
    git checkout main
@@ -425,24 +453,28 @@ git push --force-with-lease
 ## Maintenance Schedule
 
 ### Daily Tasks (Automated)
+
 - Security vulnerability scanning
 - Dependency update checks
 - Coverage trend updates
 - Performance baseline updates
 
 ### Weekly Tasks
+
 - Review failed workflow patterns
 - Update dependency versions via Dependabot
 - Clean up old workflow runs and artifacts
 - Review and update security suppressions
 
 ### Monthly Tasks
+
 - Review and update quality thresholds
 - Audit CI performance and optimization opportunities
 - Update CI tools and actions to latest versions
 - Review branch protection rules and policies
 
 ### Quarterly Tasks
+
 - Comprehensive CI pipeline audit
 - Security tool evaluation and updates
 - Performance benchmarking and optimization
@@ -451,17 +483,20 @@ git push --force-with-lease
 ## Support and Contacts
 
 ### CI/CD Team Responsibilities
+
 - **Primary Maintainer**: BjornMelin
 - **Security Champion**: BjornMelin
 - **Quality Assurance**: Team Lead
 
 ### Getting Help
+
 1. **Check this documentation** for common issues
 2. **Search GitHub Issues** for similar problems
 3. **Create new issue** with CI/CD label if needed
 4. **Contact team lead** for urgent issues
 
 ### Contributing to CI/CD
+
 1. Fork repository and create feature branch
 2. Make changes to workflow files
 3. Test changes on feature branch
@@ -471,12 +506,14 @@ git push --force-with-lease
 ## Changelog
 
 ### Recent Updates
+
 - **2025-06-11**: Comprehensive CI pipeline implementation
 - **2025-06-11**: Added quality gates and automated PR checks
 - **2025-06-11**: Implemented security scanning workflows
 - **2025-06-11**: Added coverage analysis and reporting
 
 ### Planned Improvements
+
 - Enhanced performance testing integration
 - Advanced security scanning with custom rules
 - Automated deployment to staging environments
