@@ -5,7 +5,7 @@
 
 ## 📋 API Overview
 
-- **Base URL**: `https://api.tripsage.ai/v1`
+- **Base URL**: `https://api.tripsage.ai` (Production), `http://localhost:8001` (Development)
 - **Authentication**: Bearer JWT token, API key
 - **Content-Type**: `application/json`
 - **Rate Limiting**: 1000 requests/hour (standard tier)
@@ -15,7 +15,7 @@
 All API endpoints require authentication via JWT token:
 
 ```http
-GET /api/v1/trips
+GET /api/trips
 Authorization: Bearer your-jwt-token
 Content-Type: application/json
 ```
@@ -25,7 +25,7 @@ Content-Type: application/json
 ### Create Trip
 
 ```http
-POST /api/v1/trips
+POST /api/trips
 ```
 
 **Request Body:**
@@ -82,7 +82,7 @@ POST /api/v1/trips
 ### Get Trip
 
 ```http
-GET /api/v1/trips/{trip_id}
+GET /api/trips/{trip_id}
 ```
 
 **Response:** Same as create trip response
@@ -90,7 +90,7 @@ GET /api/v1/trips/{trip_id}
 ### Update Trip
 
 ```http
-PUT /api/v1/trips/{trip_id}
+PUT /api/trips/{trip_id}
 ```
 
 **Request Body:** (All fields optional)
@@ -107,7 +107,7 @@ PUT /api/v1/trips/{trip_id}
 ### Delete Trip
 
 ```http
-DELETE /api/v1/trips/{trip_id}
+DELETE /api/trips/{trip_id}
 ```
 
 **Response:** `204 No Content`
@@ -115,7 +115,7 @@ DELETE /api/v1/trips/{trip_id}
 ### List User Trips
 
 ```http
-GET /api/v1/trips?skip=0&limit=10
+GET /api/trips?skip=0&limit=10
 ```
 
 **Response:**
@@ -143,19 +143,19 @@ GET /api/v1/trips?skip=0&limit=10
 ### Search Trips
 
 ```http
-GET /api/v1/trips/search?q=europe&status=planning&skip=0&limit=10
+GET /api/trips/search?q=europe&status=planning&skip=0&limit=10
 ```
 
 ### Duplicate Trip
 
 ```http
-POST /api/v1/trips/{trip_id}/duplicate
+POST /api/trips/{trip_id}/duplicate
 ```
 
 ### Trip Summary
 
 ```http
-GET /api/v1/trips/{trip_id}/summary
+GET /api/trips/{trip_id}/summary
 ```
 
 **Response:**
@@ -187,7 +187,7 @@ GET /api/v1/trips/{trip_id}/summary
 ### Trip Preferences
 
 ```http
-PUT /api/v1/trips/{trip_id}/preferences
+PUT /api/trips/{trip_id}/preferences
 ```
 
 **Request Body:**
@@ -211,19 +211,19 @@ PUT /api/v1/trips/{trip_id}/preferences
 ### Trip Itinerary
 
 ```http
-GET /api/v1/trips/{trip_id}/itinerary
+GET /api/trips/{trip_id}/itinerary
 ```
 
 ### Export Trip
 
 ```http
-POST /api/v1/trips/{trip_id}/export?format=pdf
+POST /api/trips/{trip_id}/export?format=pdf
 ```
 
 ### Trip Suggestions
 
 ```http
-GET /api/v1/trips/suggestions?limit=4&budget_max=3000&category=culture
+GET /api/trips/suggestions?limit=4&budget_max=3000&category=culture
 ```
 
 **Response:**
@@ -253,7 +253,7 @@ GET /api/v1/trips/suggestions?limit=4&budget_max=3000&category=culture
 ### Share Trip
 
 ```http
-POST /api/v1/trips/{trip_id}/share
+POST /api/trips/{trip_id}/share
 ```
 
 **Request Body:**
@@ -285,7 +285,7 @@ POST /api/v1/trips/{trip_id}/share
 ### List Trip Collaborators
 
 ```http
-GET /api/v1/trips/{trip_id}/collaborators
+GET /api/trips/{trip_id}/collaborators
 ```
 
 **Response:**
@@ -311,7 +311,7 @@ GET /api/v1/trips/{trip_id}/collaborators
 ### Update Collaborator Permissions
 
 ```http
-PUT /api/v1/trips/{trip_id}/collaborators/{user_id}
+PUT /api/trips/{trip_id}/collaborators/{user_id}
 ```
 
 **Request Body:**
@@ -325,7 +325,7 @@ PUT /api/v1/trips/{trip_id}/collaborators/{user_id}
 ### Remove Collaborator
 
 ```http
-DELETE /api/v1/trips/{trip_id}/collaborators/{user_id}
+DELETE /api/trips/{trip_id}/collaborators/{user_id}
 ```
 
 **Response:** `204 No Content`
@@ -335,7 +335,7 @@ DELETE /api/v1/trips/{trip_id}/collaborators/{user_id}
 ### Search Destinations
 
 ```http
-GET /api/v1/destinations/search?q=paris&limit=10
+GET /api/destinations/search?q=paris&limit=10
 ```
 
 **Response:**
@@ -363,7 +363,7 @@ GET /api/v1/destinations/search?q=paris&limit=10
 ### Search Flights
 
 ```http
-GET /api/v1/flights/search
+GET /api/flights/search
 ```
 
 **Query Parameters:**
@@ -416,7 +416,7 @@ GET /api/v1/flights/search
 ### Search Accommodations
 
 ```http
-GET /api/v1/accommodations/search
+GET /api/accommodations/search
 ```
 
 **Query Parameters:**
@@ -462,7 +462,7 @@ GET /api/v1/accommodations/search
 ### Search Activities
 
 ```http
-GET /api/v1/activities/search?destination=paris&category=museums&date=2025-06-01
+GET /api/activities/search?destination=paris&category=museums&date=2025-06-01
 ```
 
 ## 💬 Chat & AI
@@ -470,7 +470,7 @@ GET /api/v1/activities/search?destination=paris&category=museums&date=2025-06-01
 ### Start Chat Session
 
 ```http
-POST /api/v1/chat/sessions
+POST /api/chat/sessions
 ```
 
 **Response:**
@@ -485,7 +485,7 @@ POST /api/v1/chat/sessions
 ### Send Chat Message
 
 ```http
-POST /api/v1/chat/sessions/{session_id}/messages
+POST /api/chat/sessions/{session_id}/messages
 ```
 
 **Request Body:**
@@ -512,7 +512,7 @@ POST /api/v1/chat/sessions/{session_id}/messages
 ### Get Chat History
 
 ```http
-GET /api/v1/chat/sessions/{session_id}/messages?limit=50
+GET /api/chat/sessions/{session_id}/messages?limit=50
 ```
 
 ## 🧠 Memory & Preferences
@@ -520,13 +520,13 @@ GET /api/v1/chat/sessions/{session_id}/messages?limit=50
 ### Get User Memory
 
 ```http
-GET /api/v1/memory/conversations?session_id={session_id}
+GET /api/memory/conversations?session_id={session_id}
 ```
 
 ### Update User Preferences
 
 ```http
-PUT /api/v1/memory/preferences
+PUT /api/memory/preferences
 ```
 
 **Request Body:**
@@ -545,7 +545,7 @@ PUT /api/v1/memory/preferences
 ### List API Keys
 
 ```http
-GET /api/v1/keys
+GET /api/keys
 ```
 
 **Response:**
@@ -570,7 +570,7 @@ GET /api/v1/keys
 ### Create API Key
 
 ```http
-POST /api/v1/keys
+POST /api/keys
 ```
 
 **Request Body:**
@@ -587,13 +587,13 @@ POST /api/v1/keys
 ### Update API Key
 
 ```http
-PUT /api/v1/keys/{key_id}
+PUT /api/keys/{key_id}
 ```
 
 ### Delete API Key
 
 ```http
-DELETE /api/v1/keys/{key_id}
+DELETE /api/keys/{key_id}
 ```
 
 ## 🎯 Attachments & Files
@@ -601,7 +601,7 @@ DELETE /api/v1/keys/{key_id}
 ### Upload File
 
 ```http
-POST /api/v1/attachments/upload
+POST /api/attachments/upload
 Content-Type: multipart/form-data
 ```
 
@@ -627,13 +627,13 @@ Content-Type: multipart/form-data
 ### Get Attachment
 
 ```http
-GET /api/v1/attachments/{attachment_id}
+GET /api/attachments/{attachment_id}
 ```
 
 ### Delete Attachment
 
 ```http
-DELETE /api/v1/attachments/{attachment_id}
+DELETE /api/attachments/{attachment_id}
 ```
 
 ## 📊 Analytics & Insights
@@ -641,13 +641,13 @@ DELETE /api/v1/attachments/{attachment_id}
 ### Trip Analytics
 
 ```http
-GET /api/v1/trips/{trip_id}/analytics
+GET /api/trips/{trip_id}/analytics
 ```
 
 ### User Travel Insights
 
 ```http
-GET /api/v1/users/insights
+GET /api/users/insights
 ```
 
 ## 🚨 Error Responses
@@ -695,7 +695,7 @@ X-RateLimit-Window: 3600
 1. **Create Trip**
 
    ```bash
-   curl -X POST https://api.tripsage.ai/v1/trips \
+   curl -X POST https://api.tripsage.ai/api/trips \
      -H "Authorization: Bearer your-jwt-token" \
      -H "Content-Type: application/json" \
      -d '{
@@ -709,7 +709,7 @@ X-RateLimit-Window: 3600
 2. **Search Flights**
 
    ```bash
-   curl -G https://api.tripsage.ai/v1/flights/search \
+   curl -G https://api.tripsage.ai/api/flights/search \
      -H "Authorization: Bearer your-jwt-token" \
      -d origin=JFK \
      -d destination=CDG \
@@ -719,7 +719,7 @@ X-RateLimit-Window: 3600
 3. **Share Trip**
 
    ```bash
-   curl -X POST https://api.tripsage.ai/v1/trips/123/share \
+   curl -X POST https://api.tripsage.ai/api/trips/123/share \
      -H "Authorization: Bearer your-jwt-token" \
      -H "Content-Type: application/json" \
      -d '{
@@ -730,4 +730,27 @@ X-RateLimit-Window: 3600
 
 ---
 
-_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket API documentation](WEBSOCKET_API.md)._
+## 🔗 Related Documentation
+
+### Getting Started
+- **[API Overview](README.md)** - Complete API documentation index
+- **[Getting Started Guide](getting-started.md)** - First steps with the API
+- **[Authentication Guide](authentication.md)** - Setup JWT tokens and API keys
+
+### Code Examples
+- **[Quick Examples](usage-examples.md)** - Copy-paste REST API examples
+- **[Complete Integration Guide](examples.md)** - Full workflow implementations
+- **[Error Handling](error-codes.md)** - Troubleshoot API responses
+
+### Real-time Features
+- **[WebSocket API](websocket-api.md)** - Real-time chat and collaboration
+- **[Real-time Guide](realtime-guide.md)** - Advanced real-time patterns
+
+### Support
+- **[Error Codes Reference](error-codes.md)** - Debug failed requests
+- **Interactive Docs**: `/api/docs` (Swagger UI)
+- **Support**: <api@tripsage.ai>
+
+---
+
+_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket API documentation](websocket-api.md)._

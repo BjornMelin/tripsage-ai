@@ -25,12 +25,12 @@ curl https://api.tripsage.ai/v1/health \
 
 | Document | Description | Type |
 |----------|-------------|------|
-| **[Usage Examples](usage-examples.md)** | Practical code examples | 🔧 Tutorial |
-| **[REST API Reference](../06_API_REFERENCE/REST_API_ENDPOINTS.md)** | Complete endpoint documentation | 📖 Reference |
-| **[WebSocket API](../06_API_REFERENCE/WEBSOCKET_API.md)** | Real-time communication | 🔄 Reference |
-| **[Authentication](../06_API_REFERENCE/AUTHENTICATION_API.md)** | Auth flows and security | 🔐 Reference |
-| **[Data Models](../06_API_REFERENCE/DATA_MODELS.md)** | Request/response schemas | 📊 Reference |
-| **[Error Codes](../06_API_REFERENCE/ERROR_CODES.md)** | Error handling guide | ⚠️ Reference |
+| **[Quick Start Examples](usage-examples.md)** | Practical code snippets and API calls | 🔧 Quick Reference |
+| **[REST API Reference](rest-endpoints.md)** | Complete endpoint documentation | 📖 Reference |
+| **[WebSocket API](websocket-api.md)** | Real-time communication | 🔄 Reference |
+| **[Authentication](authentication.md)** | Auth flows and security | 🔐 Reference |
+| **[Complete Integration Guide](examples.md)** | Full tutorials, workflows & SDKs | 📚 Tutorial |
+| **[Error Codes](error-codes.md)** | Error handling guide | ⚠️ Reference |
 
 ### Integration Guides
 
@@ -39,6 +39,64 @@ curl https://api.tripsage.ai/v1/health \
 - **[Webhooks](webhooks.md)** - Event subscriptions
 - **[Rate Limits](rate-limits.md)** - Usage quotas and limits
 - **[Best Practices](best-practices.md)** - Performance tips
+
+## ⚡ Quick Integration Patterns
+
+### 5-Minute Setup
+```bash
+# 1. Get your API key at app.tripsage.ai
+# 2. Test connection
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  https://api.tripsage.ai/api/health
+
+# 3. Create your first trip
+curl -X POST https://api.tripsage.ai/api/trips \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Weekend Getaway", "start_date": "2025-07-01", "end_date": "2025-07-03"}'
+```
+
+### Common Integration Scenarios
+
+#### Travel Agency Dashboard
+```javascript
+// Real-time trip updates for customer dashboard
+const ws = new WebSocket('wss://api.tripsage.ai/api/chat/ws?token=JWT_TOKEN');
+ws.onmessage = (event) => {
+  const update = JSON.parse(event.data);
+  if (update.type === 'trip_update') {
+    updateCustomerTrip(update.trip_id, update.changes);
+  }
+};
+```
+
+#### Corporate Travel Tool
+```python
+# Batch create trips for team
+import requests
+
+headers = {"Authorization": "Bearer API_KEY"}
+team_trips = [
+    {"title": "Q1 Conference", "start_date": "2025-03-15"},
+    {"title": "Client Visit", "start_date": "2025-04-10"}
+]
+
+for trip in team_trips:
+    response = requests.post(
+        "https://api.tripsage.ai/api/trips", 
+        json=trip, 
+        headers=headers
+    )
+    print(f"Created trip: {response.json()['id']}")
+```
+
+#### Travel Blog Automation
+```javascript
+// Auto-generate content from trip data
+const trip = await fetch(`/api/trips/${tripId}`, {headers});
+const itinerary = await fetch(`/api/trips/${tripId}/itinerary`, {headers});
+const content = generateBlogPost(trip.data, itinerary.data);
+```
 
 ## 🔧 Available SDKs
 
@@ -221,6 +279,30 @@ Sandbox for development:
 - Itinerary visualization
 - SEO optimization
 
+## 🚨 Quick Troubleshooting
+
+### Common Issues & Fixes
+
+| Issue | Solution | Reference |
+|-------|----------|-----------|
+| `401 Unauthorized` | Check Authorization header format | [Auth Guide](authentication.md#jwt-tokens) |
+| `422 Validation Error` | Verify required fields and formats | [Error Codes](error-codes.md#validation-errors) |
+| `429 Rate Limited` | Implement retry logic with backoff | [Rate Limiting](error-codes.md#rate-limiting-errors) |
+| Empty search results | Check date formats and airport codes | [Troubleshooting](error-codes.md#practical-troubleshooting-scenarios) |
+| WebSocket disconnect | Implement reconnection logic | [WebSocket Guide](websocket-api.md#connection-management) |
+
+### Debug Checklist
+```bash
+# ✅ Verify API key
+curl -H "Authorization: Bearer YOUR_KEY" https://api.tripsage.ai/api/health
+
+# ✅ Check request format
+echo '{"test": "json"}' | jq .  # Validate JSON
+
+# ✅ Monitor rate limits
+curl -i https://api.tripsage.ai/api/trips | grep X-RateLimit
+```
+
 ## 🆘 Getting Help
 
 ### Resources
@@ -271,6 +353,6 @@ Sandbox for development:
 
 ---
 
-**Ready to build?** Start with our [Usage Examples](usage-examples.md) or dive into the [REST API Reference](../06_API_REFERENCE/REST_API_ENDPOINTS.md)!
+**Ready to build?** Start with our [Usage Examples](usage-examples.md) or dive into the [REST API Reference](rest-endpoints.md)!
 
 > Questions? Join our [Developer Discord](https://discord.gg/tripsage-dev) or email [api@tripsage.ai](mailto:api@tripsage.ai)

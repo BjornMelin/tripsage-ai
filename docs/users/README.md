@@ -20,30 +20,30 @@
 
 - **[Getting Started Guide](getting-started.md)** - Account setup, preferences, first steps
 - **[Web App Guide](web-app-guide.md)** - Navigate the TripSage interface
-- **[Mobile Access](mobile-guide.md)** - Using TripSage on mobile devices
+- **[Mobile Access](web-app-guide.md#mobile-access)** - Using TripSage on mobile devices
 
 ### ✈️ Planning Your Trips
 
 - **[Travel Planning Guide](travel-planning-guide.md)** - Complete trip planning walkthrough
-- **[Search & Booking](search-booking.md)** - Find flights, hotels, and activities
-- **[AI Assistant](ai-assistant-guide.md)** - Work effectively with TripSage AI
+- **[Search & Booking](travel-planning-guide.md#search-and-booking)** - Find flights, hotels, and activities
+- **[AI Assistant](travel-planning-guide.md#ai-assistance)** - Work effectively with TripSage AI
 - **[Trip Collaboration](collaboration.md)** - Share and plan trips with others
 
 ### ⚙️ Account & Settings
 
-- **[Account Management](account-management.md)** - Profile, preferences, and security
-- **[Notification Settings](notifications.md)** - Alerts, updates, and preferences
-- **[Data & Privacy](privacy-security.md)** - Your data, privacy controls, and security
+- **[Account Management](web-app-guide.md#account-settings)** - Profile, preferences, and security
+- **[Notification Settings](web-app-guide.md#notification-settings)** - Alerts, updates, and preferences
+- **[Data & Privacy](web-app-guide.md#privacy-controls)** - Your data, privacy controls, and security
 
 ### 🆘 Support & Help
 
 - **[FAQ](faq.md)** - Frequently asked questions
-- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
-- **[Getting Help](support.md)** - Contact support and community resources
+- **[Troubleshooting](faq.md#troubleshooting)** - Common issues and solutions
+- **[Getting Help](faq.md#getting-help)** - Contact support and community resources
 
 ### 🔗 For Developers
 
-- **[API Access](../api/getting-started.md)** - Integrate with TripSage
+- **[API Documentation](../api/getting-started.md)** - Integrate with TripSage
 - **[Developer Resources](../developers/README.md)** - Build on TripSage platform
 
 ## 🎯 User Types & Paths
@@ -53,7 +53,7 @@
 **Goal**: Plan a simple trip quickly
 
 1. **[Getting Started](getting-started.md#quick-setup)** - 2 min account setup
-2. **[AI Planning](ai-assistant-guide.md#quick-planning)** - 3 min trip planning
+2. **[AI Planning](travel-planning-guide.md#quick-planning)** - 3 min trip planning
 
 ### 👥 Collaborative Planner (15 minutes)
 
@@ -68,8 +68,8 @@
 **Goal**: Efficient business trip management
 
 1. **[Getting Started](getting-started.md#business-setup)** - Business preferences
-2. **[Search & Booking](search-booking.md#business-travel)** - Corporate travel features
-3. **[Account Management](account-management.md#expense-tracking)** - Expense tracking
+2. **[Search & Booking](travel-planning-guide.md#business-travel)** - Corporate travel features
+3. **[Account Management](web-app-guide.md#expense-tracking)** - Expense tracking
 
 ### 🔧 Power User (30 minutes)
 
@@ -77,7 +77,7 @@
 
 1. Complete all Quick Start steps above
 2. **[Advanced Features](advanced-features.md)** - All capabilities
-3. **[API Access](../api/getting-started.md)** - Integration options
+3. **[API Documentation](../api/getting-started.md)** - Integration options
 
 ## 💡 Popular Use Cases
 
@@ -85,11 +85,11 @@
 
 - **Weekend Getaways** → [Quick Planning Guide](travel-planning-guide.md#weekend-trips)
 - **Vacation Planning** → [Complete Travel Guide](travel-planning-guide.md)
-- **Last-Minute Trips** → [Quick Planning](ai-assistant-guide.md#last-minute)
+- **Last-Minute Trips** → [Quick Planning](travel-planning-guide.md#last-minute)
 
 ### Business Travel
 
-- **Corporate Trips** → [Business Travel Features](search-booking.md#business-travel)
+- **Corporate Trips** → [Business Travel Features](travel-planning-guide.md#business-travel)
 - **Conference Travel** → [Group Booking](collaboration.md#group-events)
 - **Client Meetings** → [Professional Planning](travel-planning-guide.md#business-trips)
 
@@ -115,8 +115,8 @@
 
 ### API Integration
 
-- **Personal Use**: Connect your apps → [API Guide](../api/personal-use.md)
-- **Business Integration**: Enterprise features → [Enterprise API](../api/enterprise.md)
+- **Personal Use**: Connect your apps → [API Documentation](../api/getting-started.md)
+- **Business Integration**: Enterprise features → [API Examples](../api/examples.md)
 
 ## 🌟 Key Features
 
@@ -153,7 +153,7 @@
 ### Self-Service
 
 - **[FAQ](faq.md)** - Quick answers to common questions
-- **[Troubleshooting](troubleshooting.md)** - Solve issues yourself
+- **[Troubleshooting](faq.md#troubleshooting)** - Solve issues yourself
 - **[Video Tutorials](https://youtube.com/@tripsage)** - Step-by-step guides
 
 ### Direct Support

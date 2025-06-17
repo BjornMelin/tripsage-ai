@@ -433,7 +433,7 @@ Common test cases:
 
 Now that you've made your first API calls:
 
-1. **Explore Endpoints**: Check our [API Reference](../06_API_REFERENCE/REST_API_ENDPOINTS.md)
+1. **Explore Endpoints**: Check our [API Reference](rest-endpoints.md)
 2. **Try Examples**: See [Usage Examples](usage-examples.md) for common scenarios
 3. **Build Something**: Start with a simple integration
 4. **Join Community**: Get help in our [Discord](https://discord.gg/tripsage-dev)
@@ -488,6 +488,6 @@ Now that you've made your first API calls:
 
 ---
 
-**Ready for more?** Dive into our [complete API documentation](../06_API_REFERENCE/REST_API_ENDPOINTS.md) or explore [advanced features](usage-examples.md)!
+**Ready for more?** Dive into our [complete API documentation](rest-endpoints.md) or explore [advanced features](usage-examples.md)!
 
 > Need help? Join our [Developer Discord](https://discord.gg/tripsage-dev) or email [api@tripsage.ai](mailto:api@tripsage.ai)

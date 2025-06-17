@@ -415,10 +415,12 @@ The migration is complete and production-ready.
 ## Configuration by Service
 
 ### Database Services
+
 - **Supabase**: Primary database with pgvector extensions
 - **DragonflyDB**: High-performance caching layer
 
 ### External APIs
+
 - **Duffel**: Flight booking and search
 - **Google Maps/Calendar**: Location and calendar services
 - **OpenWeatherMap/Visual Crossing**: Weather data
@@ -426,17 +428,20 @@ The migration is complete and production-ready.
 - **Mem0**: Memory and embedding services
 
 ### MCP Integrations
+
 - **Airbnb**: Accommodation search (unofficial API)
 
 ## Development vs Production
 
 ### Development Environment
+
 - Use `.env.development` for local development
 - Enable DEBUG mode for detailed logging
 - Use test API keys where possible
 - Local DragonflyDB instance via Docker
 
-### Production Environment
+### Production Environment (Vercel)
+
 - Use `.env.production` with real credentials
 - Disable DEBUG mode
 - Use production Supabase instance
@@ -445,12 +450,14 @@ The migration is complete and production-ready.
 ## Validation and Testing
 
 ### Environment Validation
+
 ```bash
 # Validate all required environment variables are set
 uv run python -c "from tripsage.core.settings import get_settings; print('✅ All env vars validated')"
 ```
 
 ### Connection Testing
+
 ```bash
 # Test database connection
 uv run python scripts/verification/verify_supabase_connection.py

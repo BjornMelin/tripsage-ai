@@ -125,8 +125,8 @@ dates and booking options?"
 ### Common Questions
 
 - **[How do I share trips?](collaboration.md)** - Invite companions
-- **[Can I book through TripSage?](search-booking.md)** - Yes, with price guarantees
-- **[Is my data safe?](privacy-security.md)** - Bank-level security
+- **[Can I book through TripSage?](travel-planning-guide.md#search-and-booking)** - Yes, with price guarantees
+- **[Is my data safe?](web-app-guide.md#privacy-controls)** - Bank-level security
 - **[What about refunds?](faq.md#refunds)** - Flexible cancellation
 
 ## 🚀 Next Steps

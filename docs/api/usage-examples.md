@@ -1,7 +1,9 @@
 # 🔌 API Usage Examples
 
-> **Practical Examples for TripSage API Integration**  
-> Complete code examples for REST API, WebSocket, and authentication
+> **Quick Reference for TripSage API Integration**  
+> Practical code snippets for REST API, WebSocket, and authentication
+
+> **💡 Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
 
 ## 📋 Table of Contents
 
@@ -785,7 +787,7 @@ function FlightSearchComponent() {
 
 ### **API Documentation**
 
-- **[📚 Complete API Reference](../06_API_REFERENCE/README.md)** - Full endpoint documentation
+- **[📚 Complete API Reference](rest-endpoints.md)** - Full endpoint documentation
 - **[🔧 Interactive Docs](http://localhost:8001/api/docs)** - Test endpoints in browser
 - **[📖 OpenAPI Schema](http://localhost:8001/api/openapi.json)** - Machine-readable API spec
 
