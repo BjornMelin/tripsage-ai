@@ -11,6 +11,7 @@
 ---
 
 ## Supabase Production Setup
+
 - [Security Configuration](#security-configuration)
 - [Environment Configuration](#environment-configuration)
 - [Real-time Setup](#real-time-setup)
@@ -881,10 +882,11 @@ For additional support:
 - **Emergency Procedures**: See [Incident Response Guide](../08_USER_GUIDES/INCIDENT_RESPONSE.md)
 
 Remember to regularly review and update your production configuration as your application scales and evolves.
--e 
+-e
 ---
 
 ## Extensions and Automation
+
 - **pg_net**: HTTP requests from database for webhook notifications
 - **Realtime**: Live updates for collaborative features
 - **Additional extensions**: Performance monitoring and security enhancements

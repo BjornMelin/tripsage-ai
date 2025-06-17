@@ -14,6 +14,7 @@
 ---
 
 ## Local Development Setup
+
 - **uv**: Recommended but optional (modern Python package manager - 10-100x faster than pip)
 - **Git**: For cloning the repository
 - **Docker**: Optional, for local DragonflyDB
@@ -393,7 +394,8 @@ pnpm build
 - **Rotate API keys** regularly
 - **Enable HTTPS** in production
 - **Configure CORS** appropriately for your domain
--e 
+-e
+
 ---
 
 ## Node.js Compatibility
