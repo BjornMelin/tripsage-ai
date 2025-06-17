@@ -63,8 +63,8 @@ class MockSettings:
         return self.environment in ("test", "testing")
 
 
-# Legacy mock configuration classes removed - no longer needed with flat Settings structure
-# The flat Settings structure handles all configuration directly
+# Legacy mock configuration classes removed - no longer needed with flat Settings
+# structure. The flat Settings structure handles all configuration directly.
 
 
 @pytest.fixture

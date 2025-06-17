@@ -263,7 +263,7 @@ def mock_settings_and_redis(monkeypatch):
         database_public_key="test_anon_key",
         database_service_key="test_service_key",
         openai_api_key="test_openai_key",
-        _env_file=None
+        _env_file=None,
     )
 
     # Mock Redis client

@@ -121,11 +121,11 @@ class TestMemorySystemIntegration:
             "results": [{"id": "mem-123", "content": "memory content"}],
             "usage": {"total_tokens": 100},
         }
-        
+
         # Override the dependency in the FastAPI app
-        from tripsage.api.main import app
         from tripsage.api.core.dependencies import get_memory_service
-        
+        from tripsage.api.main import app
+
         app.dependency_overrides[get_memory_service] = lambda: mock_service
 
         # Test data matching frontend request format
