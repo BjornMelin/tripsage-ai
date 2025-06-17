@@ -356,7 +356,7 @@ class DatabasePoolManager:
                         # Test connection with simple query
                         start_time = time.time()
                         await asyncio.to_thread(
-                            lambda: client.table("users")
+                            lambda c=client: c.table("users")
                             .select("id")
                             .limit(1)
                             .execute()

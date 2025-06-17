@@ -574,7 +574,8 @@ class PerformanceMetricsCollector:
                     validation_results["validation_passed"] = False
                     validation_results["recommendations"].append(
                         f"Query performance improvement ({improvement_ratio:.1f}x) "
-                        f"is below target ({self.thresholds.query_performance_improvement}x)"
+                        f"is below target "
+                        f"({self.thresholds.query_performance_improvement}x)"
                     )
 
         # Validate vector search improvements
@@ -608,7 +609,8 @@ class PerformanceMetricsCollector:
                     validation_results["validation_passed"] = False
                     validation_results["recommendations"].append(
                         f"Vector search improvement ({vector_improvement:.1f}x) "
-                        f"is below target ({self.thresholds.vector_performance_improvement}x)"
+                        f"is below target "
+                        f"({self.thresholds.vector_performance_improvement}x)"
                     )
 
         # Validate cache performance
