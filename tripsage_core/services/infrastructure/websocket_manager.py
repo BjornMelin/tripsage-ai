@@ -867,6 +867,48 @@ class WebSocketManager:
                 error=str(e),
             )
 
+    async def subscribe_connection(
+        self, connection_id: str, subscribe_request: WebSocketSubscribeRequest
+    ) -> WebSocketSubscribeResponse:
+        """Subscribe connection to channels."""
+        connection = self.connections.get(connection_id)
+        if not connection:
+            return WebSocketSubscribeResponse(
+                success=False,
+                error="Connection not found"
+            )
+        
+        subscribed = []
+        failed = []
+        
+        # Subscribe to new channels
+        if subscribe_request.channels:
+            available_channels = self._get_available_channels(connection.user_id)
+            for channel in subscribe_request.channels:
+                if channel in available_channels:
+                    connection.subscribe_to_channel(channel)
+                    if channel not in self.channel_connections:
+                        self.channel_connections[channel] = set()
+                    self.channel_connections[channel].add(connection_id)
+                    subscribed.append(channel)
+                else:
+                    failed.append(channel)
+        
+        # Unsubscribe from channels
+        if subscribe_request.unsubscribe_channels:
+            for channel in subscribe_request.unsubscribe_channels:
+                connection.unsubscribe_from_channel(channel)
+                if channel in self.channel_connections:
+                    self.channel_connections[channel].discard(connection_id)
+                    if not self.channel_connections[channel]:
+                        del self.channel_connections[channel]
+                        
+        return WebSocketSubscribeResponse(
+            success=True,
+            subscribed_channels=subscribed,
+            failed_channels=failed
+        )
+
     async def disconnect_connection(self, connection_id: str) -> None:
         """Disconnect a WebSocket connection with cleanup."""
         connection = self.connections.get(connection_id)
