@@ -29,6 +29,7 @@ POST /api/v1/trips
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "Summer Vacation in Europe",
@@ -60,6 +61,7 @@ POST /api/v1/trips
 ```
 
 **Response:**
+
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -92,6 +94,7 @@ PUT /api/v1/trips/{trip_id}
 ```
 
 **Request Body:** (All fields optional)
+
 ```json
 {
   "title": "Updated Trip Title",
@@ -116,6 +119,7 @@ GET /api/v1/trips?skip=0&limit=10
 ```
 
 **Response:**
+
 ```json
 {
   "items": [
@@ -155,6 +159,7 @@ GET /api/v1/trips/{trip_id}/summary
 ```
 
 **Response:**
+
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -170,8 +175,8 @@ GET /api/v1/trips/{trip_id}/summary
     "spent": 1500,
     "remaining": 3500,
     "breakdown": {
-      "accommodation": {"budget": 2000, "spent": 800},
-      "transportation": {"budget": 1500, "spent": 700}
+      "accommodation": { "budget": 2000, "spent": 800 },
+      "transportation": { "budget": 1500, "spent": 700 }
     }
   },
   "has_itinerary": true,
@@ -186,6 +191,7 @@ PUT /api/v1/trips/{trip_id}/preferences
 ```
 
 **Request Body:**
+
 ```json
 {
   "budget": {
@@ -221,6 +227,7 @@ GET /api/v1/trips/suggestions?limit=4&budget_max=3000&category=culture
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -250,6 +257,7 @@ POST /api/v1/trips/{trip_id}/share
 ```
 
 **Request Body:**
+
 ```json
 {
   "user_emails": ["friend@example.com", "family@example.com"],
@@ -259,6 +267,7 @@ POST /api/v1/trips/{trip_id}/share
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -280,6 +289,7 @@ GET /api/v1/trips/{trip_id}/collaborators
 ```
 
 **Response:**
+
 ```json
 {
   "collaborators": [
@@ -305,6 +315,7 @@ PUT /api/v1/trips/{trip_id}/collaborators/{user_id}
 ```
 
 **Request Body:**
+
 ```json
 {
   "permission_level": "admin"
@@ -328,6 +339,7 @@ GET /api/v1/destinations/search?q=paris&limit=10
 ```
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -355,6 +367,7 @@ GET /api/v1/flights/search
 ```
 
 **Query Parameters:**
+
 - `origin`: Origin airport code (required)
 - `destination`: Destination airport code (required)
 - `departure_date`: Departure date (required)
@@ -363,6 +376,7 @@ GET /api/v1/flights/search
 - `class`: Seat class (economy, business, first)
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -384,7 +398,7 @@ GET /api/v1/flights/search
       "arrival_time": "2025-06-02T02:45:00Z",
       "duration": "7h 15m",
       "price": {
-        "amount": 850.00,
+        "amount": 850.0,
         "currency": "USD"
       },
       "stops": 0,
@@ -406,6 +420,7 @@ GET /api/v1/accommodations/search
 ```
 
 **Query Parameters:**
+
 - `destination`: Destination name or coordinates
 - `check_in`: Check-in date
 - `check_out`: Check-out date
@@ -414,6 +429,7 @@ GET /api/v1/accommodations/search
 - `min_rating`: Minimum rating (1-5)
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -428,11 +444,11 @@ GET /api/v1/accommodations/search
         "longitude": 2.3522
       },
       "price_per_night": {
-        "amount": 250.00,
+        "amount": 250.0,
         "currency": "USD"
       },
       "total_price": {
-        "amount": 1750.00,
+        "amount": 1750.0,
         "currency": "USD"
       },
       "amenities": ["wifi", "breakfast", "pool", "gym"],
@@ -458,6 +474,7 @@ POST /api/v1/chat/sessions
 ```
 
 **Response:**
+
 ```json
 {
   "session_id": "session_123",
@@ -472,6 +489,7 @@ POST /api/v1/chat/sessions/{session_id}/messages
 ```
 
 **Request Body:**
+
 ```json
 {
   "content": "Help me find flights from New York to Paris",
@@ -480,6 +498,7 @@ POST /api/v1/chat/sessions/{session_id}/messages
 ```
 
 **Response:**
+
 ```json
 {
   "id": "msg_001",
@@ -511,6 +530,7 @@ PUT /api/v1/memory/preferences
 ```
 
 **Request Body:**
+
 ```json
 {
   "travel_style": "luxury",
@@ -529,6 +549,7 @@ GET /api/v1/keys
 ```
 
 **Response:**
+
 ```json
 {
   "keys": [
@@ -553,6 +574,7 @@ POST /api/v1/keys
 ```
 
 **Request Body:**
+
 ```json
 {
   "name": "My Integration",
@@ -584,11 +606,13 @@ Content-Type: multipart/form-data
 ```
 
 **Form Data:**
+
 - `file`: File to upload
 - `session_id`: Chat session ID (optional)
 - `trip_id`: Trip ID (optional)
 
 **Response:**
+
 ```json
 {
   "id": "attachment_001",
@@ -669,38 +693,41 @@ X-RateLimit-Window: 3600
 ### Complete Trip Planning Flow
 
 1. **Create Trip**
-```bash
-curl -X POST https://api.tripsage.ai/v1/trips \
-  -H "Authorization: Bearer your-jwt-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "European Adventure",
-    "start_date": "2025-06-01",
-    "end_date": "2025-06-15",
-    "destinations": [{"name": "Paris", "country": "France"}]
-  }'
-```
+
+   ```bash
+   curl -X POST https://api.tripsage.ai/v1/trips \
+     -H "Authorization: Bearer your-jwt-token" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "title": "European Adventure",
+       "start_date": "2025-06-01",
+       "end_date": "2025-06-15",
+       "destinations": [{"name": "Paris", "country": "France"}]
+     }'
+   ```
 
 2. **Search Flights**
-```bash
-curl -G https://api.tripsage.ai/v1/flights/search \
-  -H "Authorization: Bearer your-jwt-token" \
-  -d origin=JFK \
-  -d destination=CDG \
-  -d departure_date=2025-06-01
-```
+
+   ```bash
+   curl -G https://api.tripsage.ai/v1/flights/search \
+     -H "Authorization: Bearer your-jwt-token" \
+     -d origin=JFK \
+     -d destination=CDG \
+     -d departure_date=2025-06-01
+   ```
 
 3. **Share Trip**
-```bash
-curl -X POST https://api.tripsage.ai/v1/trips/123/share \
-  -H "Authorization: Bearer your-jwt-token" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_emails": ["friend@example.com"],
-    "permission_level": "edit"
-  }'
-```
+
+   ```bash
+   curl -X POST https://api.tripsage.ai/v1/trips/123/share \
+     -H "Authorization: Bearer your-jwt-token" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "user_emails": ["friend@example.com"],
+       "permission_level": "edit"
+     }'
+   ```
 
 ---
 
-*This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket API documentation](WEBSOCKET_API.md).*
+_This documentation covers all REST API endpoints available in TripSage. For real-time features, see the [WebSocket API documentation](WEBSOCKET_API.md)._

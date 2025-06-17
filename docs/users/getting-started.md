@@ -52,7 +52,7 @@ Link services for better recommendations:
 
 ### Example Conversation
 
-```
+```text
 You: "I want to visit Japan for 10 days in cherry blossom season"
 
 TripSage: "Great choice! Cherry blossom season in Japan is magical. 
@@ -70,18 +70,21 @@ dates and booking options?"
 ## 🌟 Key Features to Explore
 
 ### AI Travel Assistant
+
 - **Natural Conversations**: Speak naturally, no forms to fill
 - **Smart Memory**: Remembers your preferences and past trips
 - **Real-Time Updates**: Live prices and availability
 - **Personalized Advice**: Tailored to your travel style
 
 ### Search & Booking
+
 - **Flight Search**: Compare airlines, find deals, track prices
 - **Hotels & Stays**: From budget to luxury, with reviews
 - **Activities**: Local experiences and must-see attractions
 - **Package Deals**: Bundled savings on flight + hotel
 
 ### Trip Management
+
 - **Visual Itinerary**: Day-by-day trip overview
 - **Collaboration**: Share trips with travel companions
 - **Documents**: Store confirmations and travel docs
@@ -90,18 +93,21 @@ dates and booking options?"
 ## 💡 Pro Tips for New Users
 
 ### Getting Better Recommendations
+
 1. **Be Specific**: "Beach vacation" → "Quiet beach with snorkeling, not too touristy"
 2. **Share Context**: Mention special occasions, mobility needs, dietary restrictions
 3. **Set Clear Budgets**: Include all costs - flights, hotels, food, activities
 4. **Ask Questions**: The AI loves follow-up questions for clarification
 
 ### Saving Time
+
 - **Use Templates**: "Plan it like my Bali trip last year"
 - **Set Defaults**: Save your common preferences
 - **Quick Commands**: "Cheapest flight to London next month"
 - **Voice Input**: Speak instead of typing on mobile
 
 ### Making the Most of AI
+
 - **Explore Options**: Ask for alternatives and comparisons
 - **Get Local Tips**: "What do locals recommend in Tokyo?"
 - **Weather Planning**: "Best weather for hiking in Peru?"
@@ -110,12 +116,14 @@ dates and booking options?"
 ## 🆘 Need Help?
 
 ### Quick Help Options
+
 - **💬 In-App Chat**: Click the help icon for instant support
 - **📚 Help Center**: Searchable guides and tutorials
 - **🎥 Video Tutorials**: Step-by-step walkthroughs
-- **📧 Email Support**: support@tripsage.ai
+- **📧 Email Support**: <support@tripsage.ai>
 
 ### Common Questions
+
 - **[How do I share trips?](collaboration.md)** - Invite companions
 - **[Can I book through TripSage?](search-booking.md)** - Yes, with price guarantees
 - **[Is my data safe?](privacy-security.md)** - Bank-level security

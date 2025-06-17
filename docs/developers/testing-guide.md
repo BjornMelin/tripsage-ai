@@ -500,7 +500,7 @@ When modernizing tests:
 - **Status**: 925 passed, 473 failed, 45 skipped (64.1% pass rate)
 - **Improvement**: ~8.7% reduction in failures from previous 518 failed tests
 
-#### Modernized Files
+#### Modernized Files - Frontend
 
 - `src/stores/__tests__/chat-store-websocket.test.ts` - Rewritten from 945 to 299 lines (68% reduction)
 - `src/contexts/__tests__/auth-context.test.tsx` - Rewritten from 974 to 369 lines (62% reduction)

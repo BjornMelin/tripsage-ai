@@ -23,6 +23,7 @@ Traditional Redis, while popular, has limitations in multi-core utilization and 
 We will use DragonflyDB as our primary caching solution.
 
 DragonflyDB provides:
+
 - 25x higher throughput than Redis on multi-core machines
 - Full Redis API compatibility (drop-in replacement)
 - Memory efficiency with built-in compression
@@ -58,7 +59,8 @@ DragonflyDB provides:
 
 The industry-standard in-memory data store.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Single-threaded architecture limits multi-core utilization
 - Higher memory overhead
 - Would require clustering for our performance needs
@@ -68,7 +70,8 @@ The industry-standard in-memory data store.
 
 Simple, high-performance distributed memory caching system.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Limited data structure support
 - No persistence options
 - Lacks advanced features needed for agent state management
@@ -78,7 +81,8 @@ Simple, high-performance distributed memory caching system.
 
 Multi-threaded fork of Redis.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Less performance improvement compared to DragonflyDB
 - Smaller community and uncertain long-term support
 - Still carries Redis architectural limitations

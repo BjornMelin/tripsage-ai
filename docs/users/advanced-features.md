@@ -10,6 +10,7 @@
 TripSage's AI remembers and learns from every interaction:
 
 **What It Remembers:**
+
 - ✈️ Travel preferences (airlines, seats, meal choices)
 - 🏨 Accommodation styles (boutique hotels vs chains)
 - 💰 Budget patterns and spending habits
@@ -20,7 +21,8 @@ TripSage's AI remembers and learns from every interaction:
 ### Training Your AI
 
 **Explicit Training:**
-```
+
+```text
 "Remember that I always prefer:"
 - Window seats on flights
 - Hotels with gyms
@@ -30,6 +32,7 @@ TripSage's AI remembers and learns from every interaction:
 ```
 
 **Implicit Learning:**
+
 - Books similar flights repeatedly
 - Consistently chooses certain hotel chains
 - Always adds cultural activities
@@ -38,6 +41,7 @@ TripSage's AI remembers and learns from every interaction:
 ### Memory Management
 
 **View Your AI Profile:**
+
 1. Go to Settings → AI Preferences
 2. See learned preferences
 3. Edit or remove memories
@@ -45,6 +49,7 @@ TripSage's AI remembers and learns from every interaction:
 5. Reset specific categories
 
 **Privacy Controls:**
+
 - Pause learning mode
 - Clear specific memories
 - Download all AI data
@@ -56,6 +61,7 @@ TripSage's AI remembers and learns from every interaction:
 ### Smart Alerts
 
 **Price Tracking Automation:**
+
 ```yaml
 Alert Name: "Tokyo Flight Deal"
 Conditions:
@@ -70,6 +76,7 @@ Actions:
 ```
 
 **Availability Monitoring:**
+
 - Hotel room upgrades
 - Restaurant reservations
 - Tour availability
@@ -96,6 +103,7 @@ Actions:
 ### Automated Workflows
 
 **Pre-Trip Automation:**
+
 - Check-in reminders (24h before)
 - Weather updates (3 days before)
 - Packing list generation
@@ -103,6 +111,7 @@ Actions:
 - Local currency rates
 
 **During Trip:**
+
 - Daily itinerary delivery
 - Real-time flight updates
 - Restaurant confirmations
@@ -114,6 +123,7 @@ Actions:
 ### Personal Travel Analytics
 
 **Dashboard Metrics:**
+
 - Total distance traveled
 - Countries/cities visited
 - Average trip cost
@@ -122,7 +132,8 @@ Actions:
 - Seasonal patterns
 
 **Spending Analysis:**
-```
+
+```text
 ┌─────────────────────────────────────┐
 │ 2024 Travel Spending Breakdown      │
 │                                     │
@@ -139,6 +150,7 @@ Actions:
 ### Predictive Insights
 
 **AI-Powered Predictions:**
+
 - "You typically book flights 45 days in advance"
 - "Your average hotel budget in Europe is $150/night"
 - "You prefer trips of 5-7 days duration"
@@ -147,6 +159,7 @@ Actions:
 ### Custom Reports
 
 **Report Builder:**
+
 1. Select data range
 2. Choose metrics
 3. Apply filters
@@ -154,6 +167,7 @@ Actions:
 5. Schedule delivery
 
 **Example Reports:**
+
 - Annual travel summary
 - Business vs leisure breakdown
 - Loyalty program optimization
@@ -164,6 +178,7 @@ Actions:
 ### Advanced API Features
 
 **Webhook Subscriptions:**
+
 ```javascript
 // Subscribe to price changes
 const webhook = await tripsage.webhooks.create({
@@ -177,6 +192,7 @@ const webhook = await tripsage.webhooks.create({
 ```
 
 **Batch Operations:**
+
 ```python
 # Search multiple routes simultaneously
 results = tripsage.flights.batch_search([
@@ -189,6 +205,7 @@ results = tripsage.flights.batch_search([
 ### Custom Integrations
 
 **Build Your Own Tools:**
+
 - Slack bot for trip updates
 - Calendar sync with detailed events
 - Expense report generators
@@ -196,6 +213,7 @@ results = tripsage.flights.batch_search([
 - Analytics dashboards
 
 **Integration Examples:**
+
 ```javascript
 // Slack notification for flight deals
 async function notifySlackChannel(deal) {
@@ -219,6 +237,7 @@ async function notifySlackChannel(deal) {
 ### Multi-Destination Planning
 
 **Complex Itinerary Building:**
+
 1. Start with rough dates and regions
 2. Let AI suggest optimal routing
 3. Adjust for visa requirements
@@ -226,7 +245,8 @@ async function notifySlackChannel(deal) {
 5. Balance travel time vs experiences
 
 **Example Multi-City Trip:**
-```
+
+```text
 Base: New York
 Leg 1: NYC → London (3 days)
 Leg 2: London → Paris (3 days) via Eurostar
@@ -238,6 +258,7 @@ Total: 10 days, optimized routing
 ### Group Trip Coordination
 
 **Advanced Group Features:**
+
 - Preference voting system
 - Budget pooling calculator
 - Room assignment optimizer
@@ -245,6 +266,7 @@ Total: 10 days, optimized routing
 - Group chat with polls
 
 **Managing Large Groups:**
+
 1. Create master itinerary
 2. Set up sub-groups
 3. Assign group leaders
@@ -254,6 +276,7 @@ Total: 10 days, optimized routing
 ### Business Travel Optimization
 
 **Corporate Features:**
+
 - Policy compliance checking
 - Preferred vendor enforcement
 - Receipt management
@@ -261,6 +284,7 @@ Total: 10 days, optimized routing
 - Travel report generation
 
 **Approval Workflows:**
+
 ```yaml
 Workflow: "Executive Travel"
 Steps:
@@ -277,6 +301,7 @@ Steps:
 ### API Testing Sandbox
 
 **Test Environment:**
+
 - Separate API endpoint
 - Test data included
 - No charge for bookings
@@ -284,6 +309,7 @@ Steps:
 - Performance metrics
 
 **Sample Test Code:**
+
 ```bash
 # Test flight search
 curl -X POST https://sandbox.tripsage.ai/api/flights/search \
@@ -300,6 +326,7 @@ curl -X POST https://sandbox.tripsage.ai/api/flights/search \
 ### Performance Optimization
 
 **API Best Practices:**
+
 - Use pagination for large datasets
 - Implement caching strategies
 - Batch similar requests
@@ -307,6 +334,7 @@ curl -X POST https://sandbox.tripsage.ai/api/flights/search \
 - Monitor usage metrics
 
 **Caching Strategy:**
+
 ```python
 import redis
 import json
@@ -335,6 +363,7 @@ def get_flights(route, date):
 ### Keyboard Shortcuts Master List
 
 **Global Shortcuts:**
+
 - `Cmd/Ctrl + K`: Universal search
 - `Cmd/Ctrl + /`: Focus AI chat
 - `Cmd/Ctrl + S`: Save current state
@@ -342,6 +371,7 @@ def get_flights(route, date):
 - `Cmd/Ctrl + Shift + D`: Duplicate trip
 
 **Planning Shortcuts:**
+
 - `T`: Add new trip
 - `F`: Search flights
 - `H`: Search hotels
@@ -351,6 +381,7 @@ def get_flights(route, date):
 ### URL Tricks
 
 **Direct Access URLs:**
+
 - `/app/quick-plan` - AI planning wizard
 - `/app/deals` - Current deals dashboard
 - `/app/analytics` - Personal analytics
@@ -360,6 +391,7 @@ def get_flights(route, date):
 ### Easter Eggs
 
 **Fun Commands in AI Chat:**
+
 - "I'm feeling lucky" - Random destination suggestion
 - "Surprise me" - Mystery trip planning
 - "Budget infinity" - Dream trip without limits
@@ -371,6 +403,7 @@ def get_flights(route, date):
 ### Currently in Beta
 
 **Visual Trip Builder:**
+
 - Drag-and-drop interface
 - Pinterest-style boards
 - Visual timeline
@@ -378,6 +411,7 @@ def get_flights(route, date):
 - Mood-based planning
 
 **AI Travel Companion:**
+
 - Real-time chat during trips
 - Local recommendations
 - Translation assistance
@@ -387,6 +421,7 @@ def get_flights(route, date):
 ### Coming Soon
 
 **Announced Features:**
+
 - AR city navigation
 - Voice-controlled planning
 - Blockchain-based loyalty
@@ -399,6 +434,7 @@ Join the beta program in Settings → Beta Features
 ## 💎 Pro Tips Collection
 
 ### Money-Saving Hacks
+
 1. **Error Fare Monitoring**: Enable aggressive price tracking
 2. **Hidden City Ticketing**: Use with caution
 3. **Loyalty Arbitrage**: Maximize point values
@@ -406,6 +442,7 @@ Join the beta program in Settings → Beta Features
 5. **Package Splitting**: Sometimes cheaper separately
 
 ### Efficiency Tricks
+
 1. **Bulk Import**: Email forwards for quick addition
 2. **Quick Clone**: Duplicate and modify trips
 3. **Preset Searches**: Save complex search criteria
@@ -415,6 +452,7 @@ Join the beta program in Settings → Beta Features
 ### Power User Settings
 
 **Hidden Settings (via URL):**
+
 - `/app/settings/experimental` - Lab features
 - `/app/settings/developer` - API configuration
 - `/app/settings/advanced` - Power user options

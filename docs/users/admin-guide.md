@@ -14,7 +14,7 @@
 
 ### Dashboard Layout
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  🔧 Admin Dashboard                    [👤 Admin]    │
 ├─────────────────────────────────────────────────────┤
@@ -33,12 +33,14 @@
 ### User Administration
 
 **View All Users:**
+
 - Search by email, name, or ID
 - Filter by plan type, status, join date
 - Sort by activity, spending, trips created
 - Export user lists to CSV
 
 **User Actions:**
+
 - 👁️ View detailed profile and activity
 - ✏️ Edit user information and preferences
 - 🔒 Reset passwords and 2FA
@@ -59,6 +61,7 @@
 | **Support** | User assistance tools | Support team |
 
 **Assigning Roles:**
+
 1. Navigate to Users → Select User
 2. Click "Edit Roles"
 3. Select appropriate role(s)
@@ -68,6 +71,7 @@
 ### Team Management
 
 **Creating Teams:**
+
 - Business/Enterprise feature
 - Centralized billing
 - Shared trip planning
@@ -75,6 +79,7 @@
 - Policy enforcement
 
 **Team Settings:**
+
 - Member limits
 - Spending controls
 - Approval workflows
@@ -86,6 +91,7 @@
 ### General Settings
 
 **Application Settings:**
+
 ```yaml
 # Core Configuration
 app_name: "TripSage"
@@ -103,6 +109,7 @@ maintenance_mode: false
 ```
 
 **Email Configuration:**
+
 - SMTP settings
 - Email templates
 - Sending limits
@@ -112,6 +119,7 @@ maintenance_mode: false
 ### API Configuration
 
 **Rate Limiting:**
+
 ```yaml
 rate_limits:
   free_tier:
@@ -125,6 +133,7 @@ rate_limits:
 ```
 
 **API Keys Management:**
+
 - Generate master keys
 - Set expiration policies
 - Monitor usage
@@ -144,6 +153,7 @@ rate_limits:
 | **DragonflyDB** | Connection string | ✅ Active |
 
 **Webhook Configuration:**
+
 - Endpoint URLs
 - Authentication
 - Retry policies
@@ -155,6 +165,7 @@ rate_limits:
 ### System Metrics
 
 **Real-Time Dashboard:**
+
 - Active users
 - API request rate
 - Response times
@@ -162,7 +173,8 @@ rate_limits:
 - Cache hit rates
 
 **Performance Monitoring:**
-```
+
+```text
 ┌─────────────────────────────────────┐
 │ Response Time (last 24h)            │
 │ ────────────────────────────        │
@@ -178,6 +190,7 @@ rate_limits:
 ### Usage Analytics
 
 **User Behavior:**
+
 - Trip planning patterns
 - Popular destinations
 - Booking conversion rates
@@ -185,6 +198,7 @@ rate_limits:
 - User retention
 
 **Business Metrics:**
+
 - Revenue by plan type
 - Customer acquisition cost
 - Lifetime value
@@ -194,6 +208,7 @@ rate_limits:
 ### Custom Reports
 
 **Report Builder:**
+
 1. Select data source
 2. Choose metrics
 3. Apply filters
@@ -201,6 +216,7 @@ rate_limits:
 5. Configure delivery
 
 **Available Reports:**
+
 - User activity summary
 - API usage breakdown
 - Revenue reports
@@ -212,6 +228,7 @@ rate_limits:
 ### Access Control
 
 **Authentication Settings:**
+
 - Password policies
 - 2FA requirements
 - Session management
@@ -219,6 +236,7 @@ rate_limits:
 - OAuth providers
 
 **Security Policies:**
+
 ```yaml
 security:
   password_min_length: 12
@@ -232,6 +250,7 @@ security:
 ### Audit Logging
 
 **Tracked Events:**
+
 - User logins/logouts
 - Permission changes
 - Data exports
@@ -240,6 +259,7 @@ security:
 - Security incidents
 
 **Log Management:**
+
 - Retention policies
 - Search and filter
 - Export capabilities
@@ -249,6 +269,7 @@ security:
 ### Data Protection
 
 **Privacy Controls:**
+
 - Data retention settings
 - Deletion policies
 - Anonymization rules
@@ -256,6 +277,7 @@ security:
 - GDPR compliance tools
 
 **Backup Management:**
+
 - Automated backups
 - Retention periods
 - Recovery testing
@@ -267,6 +289,7 @@ security:
 ### System Health
 
 **Health Checks:**
+
 - Database connectivity
 - Cache performance
 - API availability
@@ -274,6 +297,7 @@ security:
 - Storage capacity
 
 **Alert Configuration:**
+
 ```yaml
 alerts:
   - name: "High Error Rate"
@@ -293,6 +317,7 @@ alerts:
 ### Incident Management
 
 **Incident Response:**
+
 1. Alert triggered
 2. Automatic diagnostics
 3. Team notification
@@ -300,6 +325,7 @@ alerts:
 5. Resolution tracking
 
 **Status Page Management:**
+
 - Component status
 - Incident creation
 - Update posting
@@ -311,6 +337,7 @@ alerts:
 ### Database Management
 
 **Regular Tasks:**
+
 - Performance optimization
 - Index maintenance
 - Backup verification
@@ -318,6 +345,7 @@ alerts:
 - Storage monitoring
 
 **Migration Management:**
+
 - Schema updates
 - Data migrations
 - Rollback procedures
@@ -327,6 +355,7 @@ alerts:
 ### Cache Operations
 
 **DragonflyDB Management:**
+
 - Memory usage monitoring
 - Key analysis
 - Performance tuning
@@ -336,6 +365,7 @@ alerts:
 ### Update Management
 
 **System Updates:**
+
 1. Review changelog
 2. Test in staging
 3. Schedule maintenance
@@ -349,6 +379,7 @@ alerts:
 ### User Support
 
 **Support Dashboard:**
+
 - Ticket queue
 - User lookup
 - Trip inspection
@@ -356,6 +387,7 @@ alerts:
 - Refund processing
 
 **Support Actions:**
+
 - View user sessions
 - Impersonate users (with audit)
 - Modify bookings
@@ -365,6 +397,7 @@ alerts:
 ### Troubleshooting
 
 **Diagnostic Tools:**
+
 - User session replay
 - API request logs
 - Error stack traces
@@ -372,6 +405,7 @@ alerts:
 - Database queries
 
 **Common Issues:**
+
 - Payment failures → Check payment logs
 - Sync issues → Verify cache state
 - Login problems → Review auth logs
@@ -381,6 +415,7 @@ alerts:
 ## 🎯 Best Practices
 
 ### Daily Tasks
+
 - ✅ Check system health dashboard
 - ✅ Review error logs
 - ✅ Monitor API usage
@@ -388,6 +423,7 @@ alerts:
 - ✅ Verify backup completion
 
 ### Weekly Tasks
+
 - 📊 Generate usage reports
 - 🔍 Review security logs
 - 💾 Database maintenance
@@ -395,6 +431,7 @@ alerts:
 - 👥 Team sync meeting
 
 ### Monthly Tasks
+
 - 🔐 Security audit
 - 💰 Billing reconciliation
 - 📊 Business metrics review
@@ -406,6 +443,7 @@ alerts:
 ### Infrastructure Management
 
 **Scaling Triggers:**
+
 - CPU usage > 70%
 - Memory usage > 80%
 - Request queue depth
@@ -413,6 +451,7 @@ alerts:
 - Storage capacity
 
 **Scaling Actions:**
+
 - Horizontal pod scaling
 - Database read replicas
 - Cache cluster expansion
@@ -422,6 +461,7 @@ alerts:
 ### Deployment Process
 
 **Production Deployment:**
+
 1. Code review approval
 2. Automated testing
 3. Staging deployment

@@ -6,6 +6,7 @@
 ## 📂 Documentation Structure
 
 ### 🚀 Deployment & Installation
+
 | Document | Purpose | Scope |
 |----------|---------|-------|
 | [Installation Guide](INSTALLATION_GUIDE.md) | Complete setup instructions | Development & Production |
@@ -15,6 +16,7 @@
 | [Node.js Compatibility](NODEJS_COMPATIBILITY_GUIDE.md) | Node.js version requirements | Frontend deployment |
 
 ### ⚙️ Configuration Management
+
 | Document | Purpose | Environment |
 |----------|---------|-------------|
 | [Environment Variables](ENVIRONMENT_VARIABLES.md) | All environment variables reference | 🌍 All environments |
@@ -24,6 +26,7 @@
 | [Extensions & Automation](EXTENSIONS_AND_AUTOMATION.md) | Database extensions & automation | 🔧 Infrastructure |
 
 ### 🔒 Security Documentation
+
 | Document | Purpose | Priority |
 |----------|---------|----------|
 | [Security Overview](SECURITY_OVERVIEW.md) | Overall security architecture | High |
@@ -33,6 +36,7 @@
 | [Security Runbook](security-runbook.md) | Security incident response | Critical |
 
 ### 📊 Operations & Monitoring
+
 | Document | Purpose | Status |
 |----------|---------|--------|
 | [Infrastructure Upgrade Summary](INFRASTRUCTURE_UPGRADE_SUMMARY.md) | Recent infrastructure changes | ✅ Complete |

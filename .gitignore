@@ -180,7 +180,8 @@ ARCHIVED_DOCS/
 !CLAUDE.md
 !KNOWLEDGE_PACK.md
 # Exception for security documentation
-!docs/07_CONFIGURATION/SECURITY/RLS_IMPLEMENTATION.md
+!docs/operators/RLS_IMPLEMENTATION.md
+!docs/operators/INFRASTRUCTURE_UPGRADE_SUMMARY.md
 
 # Temporary analysis scripts
 analyze_*.py

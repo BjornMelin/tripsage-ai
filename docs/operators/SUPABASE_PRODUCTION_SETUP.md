@@ -127,7 +127,7 @@ supabase db push
 supabase db diff
 ```
 
-**Alternative: Deploy via Schema Files**
+#### Alternative: Deploy via Schema Files
 
 ```bash
 # If using schema files approach

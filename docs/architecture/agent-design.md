@@ -120,6 +120,7 @@ The **graph-based orchestrator** manages agent coordination through deterministi
 The system implements **context-aware agent handoffs** for seamless transitions:
 
 **Handoff Coordinator Features:**
+
 - **Intent Detection**: Automatic routing based on user intent
 - **Context Preservation**: Full state transfer between agents
 - **Trigger Patterns**: Multiple handoff triggers (completion, error, context)
@@ -138,6 +139,7 @@ The system implements **context-aware agent handoffs** for seamless transitions:
 The system ensures **complete state continuity** across agent transitions:
 
 **Preserved State Elements:**
+
 - **Conversation History**: Full message timeline with metadata
 - **Search Results**: All previous searches and results
 - **User Preferences**: Learned preferences and patterns
@@ -145,6 +147,7 @@ The system ensures **complete state continuity** across agent transitions:
 - **Error Context**: Failure information for recovery
 
 **State Management Patterns:**
+
 - **Immutable Updates**: State changes create new versions
 - **Selective Hydration**: Agents load only relevant state
 - **Compression**: Large state elements are compressed
@@ -170,6 +173,7 @@ LangGraph agents are optimized for stateful, multi-turn conversations with persi
 The system implements **comprehensive state management**:
 
 **State Access Patterns:**
+
 - **Read-Only Access**: Agents read historical state without modification
 - **Append-Only Updates**: New information added without overwriting
 - **Atomic Operations**: State updates are transactional
@@ -177,6 +181,7 @@ The system implements **comprehensive state management**:
 - **Cache Integration**: Frequently accessed state cached
 
 **State Components:**
+
 - **Message History**: Complete conversation timeline
 - **Search Results**: Accumulated search data across sessions
 - **User Context**: Preferences, constraints, and patterns
@@ -207,6 +212,7 @@ The system uses **dynamic prompt generation** based on state:
 #### Context-Aware Prompting
 
 **Dynamic Context Elements:**
+
 - **User History**: Previous interactions and preferences
 - **Session State**: Current conversation progress
 - **Search Results**: Relevant past searches
@@ -214,6 +220,7 @@ The system uses **dynamic prompt generation** based on state:
 - **Error Context**: Past failures and constraints
 
 **Prompt Optimization Strategies:**
+
 - **Selective Context**: Only relevant information included
 - **Context Compression**: Summarized historical data
 - **Template Caching**: Reusable prompt components
@@ -240,6 +247,7 @@ The system uses **dynamic prompt generation** based on state:
 The **memory bridge** provides intelligent context management:
 
 **Memory Operations:**
+
 - **State Hydration**: Enrich state with relevant memories
 - **Insight Extraction**: Identify valuable information from interactions
 - **Memory Persistence**: Store insights for future use
@@ -247,6 +255,7 @@ The **memory bridge** provides intelligent context management:
 - **Memory Compression**: Automatic summarization of old memories
 
 **Memory Types:**
+
 - **Short-term**: Current session context
 - **Long-term**: User preferences and patterns
 - **Episodic**: Specific trip memories
@@ -263,6 +272,7 @@ TripSage has migrated from complex MCP patterns to **direct SDK integration** fo
 The system uses **dependency injection** for service management:
 
 **Service Registry Benefits:**
+
 - **Centralized Management**: Single point of service configuration
 - **Dependency Injection**: Clean separation of concerns
 - **Service Discovery**: Dynamic service resolution
@@ -270,6 +280,7 @@ The system uses **dependency injection** for service management:
 - **Lifecycle Management**: Controlled service initialization
 
 **Service Categories:**
+
 1. **Business Services**: Core domain logic (flights, hotels, etc.)
 2. **Infrastructure Services**: Database, cache, messaging
 3. **External Services**: Third-party API integrations
@@ -296,6 +307,7 @@ LangGraph agents use service injection for clean, testable tool integration:
 The system implements **type-safe tool integration**:
 
 **Tool Components:**
+
 - **Parameter Models**: Strongly typed input validation
 - **Service Adapters**: Clean interface to external services
 - **Response Models**: Consistent output formatting
@@ -303,13 +315,14 @@ The system implements **type-safe tool integration**:
 - **Retry Logic**: Intelligent retry strategies
 
 **Integration Patterns:**
+
 1. **Direct Integration**: Native SDK usage
 2. **Adapter Pattern**: Thin wrappers for consistency
 3. **Circuit Breaker**: Failure protection
 4. **Bulkhead Pattern**: Resource isolation
 5. **Cache-Aside**: Performance optimization
 
-#### Error Recovery Architecture
+#### Error Recovery Architecture - LangGraph
 
 **Multi-level error handling** ensures reliability:
 
@@ -319,6 +332,7 @@ The system implements **type-safe tool integration**:
 - **User Level**: Graceful degradation with user feedback
 
 **Recovery Strategies:**
+
 - **Retry with Backoff**: Transient failure handling
 - **Alternative Services**: Fallback to secondary providers
 - **Cached Results**: Serve stale data when fresh unavailable
@@ -338,6 +352,7 @@ The system implements **sophisticated error recovery** mechanisms:
 #### Recovery Node Design
 
 **Error Recovery Components:**
+
 - **Error Classification**: Categorize errors by type and severity
 - **Strategy Selection**: Choose appropriate recovery approach
 - **State Rollback**: Revert to known-good state
@@ -347,6 +362,7 @@ The system implements **sophisticated error recovery** mechanisms:
 #### Graceful Degradation Patterns
 
 **Service Degradation Strategies:**
+
 1. **Cached Fallback**: Use recent cached data
 2. **Simplified Service**: Reduce feature set
 3. **Alternative Provider**: Switch to backup service
@@ -354,6 +370,7 @@ The system implements **sophisticated error recovery** mechanisms:
 5. **Partial Success**: Return what's available
 
 **Degradation Hierarchy:**
+
 - Level 1: Full service with retry
 - Level 2: Cached data with warning
 - Level 3: Basic functionality only
@@ -364,6 +381,7 @@ The system implements **sophisticated error recovery** mechanisms:
 **Multi-layer validation** ensures safe processing:
 
 **Validation Layers:**
+
 1. **Schema Validation**: Type and format checking
 2. **Security Validation**: PII and injection detection
 3. **Business Validation**: Domain-specific rules
@@ -371,6 +389,7 @@ The system implements **sophisticated error recovery** mechanisms:
 5. **Rate Limiting**: Request frequency control
 
 **Validation Responses:**
+
 - **Hard Failure**: Reject with clear reason
 - **Soft Failure**: Process with warnings
 - **Transformation**: Clean and continue
@@ -389,6 +408,7 @@ The system provides **comprehensive observability**:
 #### State Tracking System
 
 **Monitoring Components:**
+
 - **Conversation Tracking**: Full request lifecycle monitoring
 - **Agent Performance**: Operation timing and success rates
 - **State Persistence**: Checkpoint health and performance
@@ -398,6 +418,7 @@ The system provides **comprehensive observability**:
 #### Performance Monitoring Patterns
 
 **Metrics Collection:**
+
 1. **Request Metrics**: Latency, throughput, errors
 2. **Agent Metrics**: Processing time, success rate
 3. **Service Metrics**: External API performance
@@ -405,6 +426,7 @@ The system provides **comprehensive observability**:
 5. **System Metrics**: Resource utilization
 
 **Monitoring Strategies:**
+
 - **Distributed Tracing**: Cross-agent request tracking
 - **Metric Aggregation**: Statistical analysis
 - **Anomaly Detection**: Automatic issue identification
@@ -414,6 +436,7 @@ The system provides **comprehensive observability**:
 #### Debugging Architecture
 
 **Debug Support Features:**
+
 - **State Inspection**: Point-in-time state viewing
 - **Replay Capability**: Conversation replay from checkpoints
 - **Trace Analysis**: Detailed execution traces
@@ -437,6 +460,7 @@ The system uses **comprehensive testing patterns** for agent validation:
 #### Test Architecture Components
 
 **Test Infrastructure:**
+
 - **Service Mocking**: Isolated agent testing
 - **State Factories**: Consistent test state creation
 - **Fixture Management**: Reusable test components
@@ -444,6 +468,7 @@ The system uses **comprehensive testing patterns** for agent validation:
 - **Performance Benchmarks**: Baseline comparisons
 
 **Testing Patterns:**
+
 - **Given-When-Then**: Behavior-driven testing
 - **State Transitions**: Valid state change verification
 - **Error Scenarios**: Failure mode testing

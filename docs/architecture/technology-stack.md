@@ -7,6 +7,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ## 🎯 Technology Selection Principles
 
 ### Core Principles
+
 1. **Production-Proven**: Only technologies with demonstrated reliability at scale
 2. **Developer Experience**: Tools that enhance productivity and reduce complexity
 3. **Performance First**: Technologies that deliver measurable performance benefits
@@ -18,6 +19,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Backend Framework: **FastAPI** (Python 3.11+)
 
 **Why FastAPI:**
+
 - **Performance**: Built on Starlette/Uvicorn for async performance
 - **Type Safety**: Native Pydantic integration for validation
 - **Documentation**: Automatic OpenAPI/Swagger generation
@@ -25,6 +27,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - **Developer Experience**: Intuitive API design with modern Python features
 
 **Key Libraries:**
+
 - `pydantic v2`: Data validation and serialization
 - `uvicorn`: ASGI server for production deployment
 - `httpx`: Async HTTP client for external APIs
@@ -33,6 +36,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Database: **Supabase (PostgreSQL 15)**
 
 **Why Supabase:**
+
 - **Unified Platform**: Database, auth, storage, and real-time in one
 - **PostgreSQL Power**: Full SQL capabilities with extensions
 - **Real-time**: Built-in WebSocket support for live updates
@@ -40,6 +44,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - **Cost Efficiency**: 80% reduction vs multi-database architecture
 
 **Key Extensions:**
+
 - `pgvector`: Vector similarity search (471 QPS achieved)
 - `pg_cron`: Scheduled jobs and maintenance
 - `uuid-ossp`: UUID generation
@@ -48,6 +53,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Cache Layer: **DragonflyDB**
 
 **Why DragonflyDB:**
+
 - **Performance**: 25x faster than Redis (6.43M ops/sec)
 - **Memory Efficiency**: 30% better utilization
 - **Redis Compatible**: Drop-in replacement
@@ -57,6 +63,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### AI/ML Framework: **LangGraph**
 
 **Why LangGraph:**
+
 - **Stateful Conversations**: PostgreSQL checkpointing
 - **Production Ready**: Built for scale and reliability
 - **Graph-Based**: Deterministic agent workflows
@@ -66,6 +73,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Memory System: **Mem0**
 
 **Why Mem0:**
+
 - **Performance**: 91% faster context operations
 - **pgvector Backend**: Unified with main database
 - **Intelligent Compression**: Automatic memory optimization
@@ -74,6 +82,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Frontend Framework: **Next.js 15**
 
 **Why Next.js:**
+
 - **Server Components**: Optimal performance with RSC
 - **App Router**: Modern routing architecture
 - **TypeScript First**: Full type safety
@@ -81,6 +90,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - **Developer Experience**: Fast refresh, great tooling
 
 **UI Libraries:**
+
 - `shadcn/ui`: High-quality component library
 - `tailwindcss`: Utility-first styling
 - `zustand`: State management
@@ -101,6 +111,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Authentication & Security
 
 **Supabase Auth:**
+
 - JWT-based authentication
 - OAuth provider support
 - Row Level Security (RLS)
@@ -108,6 +119,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 - Session management
 
 **Additional Security:**
+
 - `bcrypt`: Password hashing
 - `cryptography`: BYOK encryption
 - Rate limiting middleware
@@ -129,12 +141,14 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Monitoring & Observability
 
 **Logging:**
+
 - Structured logging with correlation IDs
 - Log aggregation and search
 - Performance metrics tracking
 - Error tracking and alerting
 
 **Metrics:**
+
 - Application performance monitoring
 - Database query performance
 - Cache hit rates and efficiency
@@ -143,11 +157,13 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Deployment Infrastructure
 
 **Container Platform:**
+
 - Docker for containerization
 - Docker Compose for development
 - Kubernetes ready for scale
 
 **CI/CD Pipeline:**
+
 - GitHub Actions for automation
 - Automated testing on PR
 - Security scanning
@@ -168,6 +184,7 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Cost Optimization
 
 **Infrastructure Savings:**
+
 - 80% reduction in database costs (unified architecture)
 - 70% reduction in cache costs (DragonflyDB efficiency)
 - 60% reduction in API costs (direct SDK integration)
@@ -184,11 +201,13 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Future Technology Considerations
 
 **Short-term (Q3 2025):**
+
 - GraphQL API layer for mobile apps
 - Edge computing for global distribution
 - Advanced caching strategies
 
 **Long-term (2026):**
+
 - Rust services for critical paths
 - WebAssembly for client-side AI
 - Blockchain for secure transactions
@@ -198,16 +217,19 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Vendor Lock-in Mitigation
 
 **Database Layer:**
+
 - PostgreSQL standard (portable)
 - Export capabilities maintained
 - Standard SQL practices
 
 **Cache Layer:**
+
 - Redis protocol compatibility
 - Easy migration path
 - No proprietary features
 
 **AI Framework:**
+
 - Abstraction layer for LLM providers
 - Standard prompt formats
 - Provider-agnostic design
@@ -215,11 +237,13 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ### Technology Deprecation Strategy
 
 **Monitoring:**
+
 - Regular dependency audits
 - Community health checks
 - Security update tracking
 
 **Migration Planning:**
+
 - Alternative technology evaluation
 - Gradual migration support
 - Backward compatibility
@@ -227,11 +251,13 @@ This document provides a comprehensive overview of TripSage's technology stack, 
 ## 📚 Technology Documentation
 
 ### Internal Resources
+
 - [Developer Guide](../developers/): Implementation patterns
 - [API Reference](../api-reference/): Detailed specifications
 - [Configuration Guide](../configuration/): Setup instructions
 
 ### External Resources
+
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Supabase Documentation](https://supabase.com/docs)
 - [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)

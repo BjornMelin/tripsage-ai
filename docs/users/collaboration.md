@@ -10,7 +10,8 @@
 **Quick Invite Methods:**
 
 1. **Share Link** (Fastest)
-   ```
+
+   ```text
    Click "Share" → Copy link → Send to companions
    https://app.tripsage.ai/trip/tokyo-2025?invite=abc123
    ```
@@ -40,6 +41,7 @@
 ### Live Editing
 
 **See Changes As They Happen:**
+
 - Real-time cursor tracking
 - Name labels on active users
 - Color-coded contributions
@@ -47,7 +49,8 @@
 - Conflict resolution
 
 **Collaborative Editing:**
-```
+
+```text
 ┌─────────────────────────────────────┐
 │ 🗾 Tokyo Trip    [👥 3 active]      │
 ├─────────────────────────────────────┤
@@ -63,6 +66,7 @@
 ### Communication Tools
 
 **Built-in Chat:**
+
 - Trip-specific chat room
 - @mentions for notifications
 - File and link sharing
@@ -70,6 +74,7 @@
 - Threaded discussions
 
 **Comments System:**
+
 - Comment on any item
 - Tag team members
 - Resolve/unresolve threads
@@ -81,6 +86,7 @@
 ### Voting Features
 
 **Create Polls:**
+
 ```yaml
 Poll: "Which hotel should we book?"
 Options:
@@ -95,6 +101,7 @@ Status: Open until March 1st
 ```
 
 **Voting Types:**
+
 - Single choice
 - Multiple choice
 - Ranked preference
@@ -105,12 +112,14 @@ Status: Open until March 1st
 
 **AI-Powered Suggestions:**
 "Based on group preferences:
+
 - 3/5 prefer cultural activities
 - 4/5 want local food experiences  
 - Budget range: $150-300/day
 - Morning people: 2, Night owls: 3"
 
 **Compatibility Scores:**
+
 - Activity matches: 85%
 - Budget alignment: 72%
 - Schedule compatibility: 90%
@@ -121,7 +130,8 @@ Status: Open until March 1st
 ### Shared Budget Tracking
 
 **Budget Overview:**
-```
+
+```text
 Total Trip Budget: $10,000
 ├── Flights: $3,000 (booked)
 ├── Hotels: $2,500 (pending)
@@ -135,6 +145,7 @@ Per Person: $2,000 (5 people)
 ### Expense Splitting
 
 **Smart Splitting Options:**
+
 - Equal split (default)
 - Custom percentages
 - By actual usage
@@ -142,7 +153,8 @@ Per Person: $2,000 (5 people)
 - Different currencies
 
 **Example Split:**
-```
+
+```text
 Dinner at Sushi Dai: $300
 ├── Sarah: $60 (equal)
 ├── Jake: $60 (equal)
@@ -154,6 +166,7 @@ Dinner at Sushi Dai: $300
 ### Payment Coordination
 
 **Payment Methods:**
+
 - Individual payments tracked
 - Group payment pool
 - Reimbursement requests
@@ -165,7 +178,8 @@ Dinner at Sushi Dai: $300
 ### Availability Management
 
 **Group Calendar View:**
-```
+
+```text
 March 2025
 ├── Sarah: ✅ 15-25 available
 ├── Jake: ✅ 15-22 available  
@@ -179,6 +193,7 @@ Overlap: March 20-22 (3 days)
 ### Time Zone Handling
 
 **Multi-Zone Coordination:**
+
 - Display all member time zones
 - Convert meeting times
 - Schedule across zones
@@ -190,6 +205,7 @@ Overlap: March 20-22 (3 days)
 ### Family Trips
 
 **Family-Friendly Features:**
+
 - Kid-appropriate filtering
 - Family room searches
 - Age-based activities
@@ -197,7 +213,8 @@ Overlap: March 20-22 (3 days)
 - Child safety notes
 
 **Example Family Setup:**
-```
+
+```text
 The Johnson Family - Disney World
 ├── Parents (2): Full access
 ├── Teens (2): View + suggest
@@ -208,6 +225,7 @@ The Johnson Family - Disney World
 ### Friend Groups
 
 **Social Features:**
+
 - Instagram-worthy spots
 - Nightlife planning
 - Group photo locations
@@ -215,6 +233,7 @@ The Johnson Family - Disney World
 - Memory book creation
 
 **Friend Trip Dynamics:**
+
 - Democratic voting
 - Flexible scheduling
 - Split accommodations
@@ -224,6 +243,7 @@ The Johnson Family - Disney World
 ### Corporate Teams
 
 **Business Features:**
+
 - Approval workflows
 - Policy compliance
 - Receipt management
@@ -231,7 +251,8 @@ The Johnson Family - Disney World
 - Calendar integration
 
 **Corporate Structure:**
-```
+
+```text
 Q3 Sales Conference - Las Vegas
 ├── Manager: Admin access
 ├── Team Leads: Edit access
@@ -245,6 +266,7 @@ Q3 Sales Conference - Las Vegas
 ### Stay Informed
 
 **Notification Types:**
+
 - New member joined
 - Changes to itinerary
 - New comments/mentions
@@ -255,6 +277,7 @@ Q3 Sales Conference - Las Vegas
 ### Notification Settings
 
 **Customize Alerts:**
+
 ```yaml
 Email Notifications:
   - Major changes: ✅ Immediate
@@ -273,6 +296,7 @@ Push Notifications:
 ### Templates for Groups
 
 **Save Group Preferences:**
+
 - Recurring trip templates
 - Member preferences
 - Standard budgets
@@ -282,6 +306,7 @@ Push Notifications:
 ### Automation Rules
 
 **Set Up Auto-Actions:**
+
 ```yaml
 Rule: "Auto-book when all approve"
 Condition: 5/5 votes yes
@@ -297,6 +322,7 @@ Restriction: Pause new bookings
 ### Integration Tools
 
 **Connect External Apps:**
+
 - Google Calendar sync
 - Slack notifications
 - Shared Google Docs
@@ -308,6 +334,7 @@ Restriction: Pause new bookings
 ### On-the-Go Features
 
 **Mobile Optimized:**
+
 - Quick polls
 - Voice comments
 - Photo sharing
@@ -317,6 +344,7 @@ Restriction: Pause new bookings
 ### Real-Time Updates
 
 **During Travel:**
+
 - Live location sharing
 - Meeting point setting
 - Emergency contacts
@@ -358,18 +386,21 @@ Restriction: Pause new bookings
 ### Common Issues
 
 **Sync Problems:**
+
 - Refresh the page
 - Check internet connection
 - Clear browser cache
 - Re-login if needed
 
 **Permission Errors:**
+
 - Verify your role
 - Ask admin for access
 - Check invitation link
 - Contact support
 
 **Notification Issues:**
+
 - Check spam folder
 - Verify email address
 - Update settings
