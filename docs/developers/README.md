@@ -5,60 +5,49 @@
 
 ## 📋 Table of Contents
 
+### **🚀 Getting Started**
 | Document | Purpose | Audience |
 |----------|---------|----------|
+| [**Quick Start Guide**](quick-start-guide.md) | ⚡ 15-minute setup for new developers | New developers |
 | [Code Standards](code-standards.md) | Python/TypeScript coding guidelines & conventions | All developers |
 | [Testing Guide](testing-guide.md) | Comprehensive testing strategies & patterns | All developers |
+
+### **🏗️ Core Development**
+| Document | Purpose | Audience |
+|----------|---------|----------|
 | [API Development](api-development.md) | Backend API development with FastAPI | Backend developers |
 | [Frontend Development](frontend-development.md) | Next.js frontend development guide | Frontend developers |
-| [Database Operations](database-operations.md) | PostgreSQL, migrations, and data management | Backend developers |
+| [**Unified Database Guide**](unified-database-guide.md) | 🗄️ Complete database development reference | Backend developers |
+| [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
+
+### **🎯 Advanced Topics**
+| Document | Purpose | Audience |
+|----------|---------|----------|
 | [Architecture Guide](architecture-guide.md) | System design & database architecture | Senior developers |
+| [**Performance Optimization**](performance-optimization.md) | ⚡ Search, caching, and profiling techniques | Senior developers |
+| [External Integrations](external-integrations.md) | Third-party API integrations | Backend developers |
 | [Debugging Guide](debugging-guide.md) | Debugging techniques & troubleshooting | All developers |
-| [Performance Profiling](performance-profiling.md) | Performance analysis & optimization | Senior developers |
-| [Contributing Guidelines](contributing-guidelines.md) | Git workflow, code review, and contribution standards | All developers |
-| [Local Development Setup](local-development-setup.md) | Environment setup and development workflow | New developers |
 
 ## 🛠️ Quick Start
 
-### **Prerequisites**
+> **New to TripSage?** Start with our [**Quick Start Guide**](quick-start-guide.md) for complete 15-minute setup instructions.
 
-- Python 3.13+
-- Node.js 20+
-- PostgreSQL (via Supabase)
-- Docker (optional)
-
-### **Development Environment Setup**
+### **Essential Commands**
 
 ```bash
-# Clone and setup
-git clone [repository-url]
-cd tripsage-ai
+# Setup (detailed instructions in Quick Start Guide)
+uv install                              # Python dependencies
+cd frontend && pnpm install             # Frontend dependencies
 
-# Python environment
-uv install
+# Development
+uv run python -m tripsage.api.main      # Start API server (localhost:8001)
+cd frontend && pnpm dev                 # Start frontend (localhost:3000)
 
-# Frontend environment  
-cd frontend && pnpm install
-
-# Database setup
-# See local-development-setup.md for complete instructions
-```
-
-### **Development Workflow**
-
-```bash
-# Start services
-docker-compose up -d  # Optional: DragonflyDB cache
-
-# Backend development
-uv run python -m tripsage.api.main
-
-# Frontend development (separate terminal)
-cd frontend && pnpm dev
-
-# Run tests
-uv run pytest --cov=tripsage
-cd frontend && pnpm test
+# Testing & Quality
+uv run pytest --cov=tripsage           # Backend tests with coverage
+cd frontend && pnpm test               # Frontend tests
+ruff check . --fix && ruff format .    # Python linting/formatting
+npx biome lint --apply .               # TypeScript linting/formatting
 ```
 
 ## 🏗️ Architecture Overview
@@ -136,9 +125,11 @@ pnpm test:coverage # Coverage report
 
 ## 🆘 Getting Help
 
+- **New Developer Setup**: Start with [Quick Start Guide](quick-start-guide.md)
+- **Database Questions**: Reference [Unified Database Guide](unified-database-guide.md)
+- **Performance Issues**: Check [Performance Optimization](performance-optimization.md)
 - **Architecture Questions**: See [Architecture Guide](architecture-guide.md)
 - **Code Issues**: Check [Debugging Guide](debugging-guide.md)
-- **Setup Problems**: Follow [Local Development Setup](local-development-setup.md)
 - **API Questions**: Reference [API Development](api-development.md)
 - **Testing Issues**: Consult [Testing Guide](testing-guide.md)
 

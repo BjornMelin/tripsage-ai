@@ -881,7 +881,8 @@ For additional support:
 - **TripSage Support**: Contact your technical lead
 - **Emergency Procedures**: See [Incident Response Guide](../08_USER_GUIDES/INCIDENT_RESPONSE.md)
 
-Remember to regularly review and update your production configuration as your application scales and evolves.
+Remember to regularly review and update your production configuration as your application scales and evolves
+
 ---
 
 ## Extensions and Automation
@@ -1304,7 +1305,7 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 - Implement backup procedures for configuration tables
 - Document all custom job schedules and webhook configurations
 
-## Troubleshooting
+## Troubleshooting (Supabase)
 
 ### Common Issues
 

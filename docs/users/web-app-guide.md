@@ -400,4 +400,108 @@ stops:<=1 airline:Delta,United time:morning
 
 ---
 
-**Master the interface, master your travels!** 🚀 Explore more [advanced features](advanced-features.md) or get [help](support.md) anytime.
+## 📱 Mobile Access
+
+TripSage works seamlessly across all devices:
+
+### Mobile Web Features
+
+- **Responsive Design**: Full functionality on mobile browsers
+- **Touch Optimized**: Gestures for easy navigation
+- **Offline Access**: View trips without internet connection
+- **Quick Actions**: Swipe to access common features
+
+### Progressive Web App (PWA)
+
+Install TripSage on your phone:
+
+1. Visit [app.tripsage.ai](https://app.tripsage.ai) on mobile
+2. Tap browser menu → "Add to Home Screen"
+3. Enjoy native-like experience with:
+   - Push notifications
+   - Offline functionality
+   - Fast loading
+   - Home screen icon
+
+## ⚙️ Account Settings
+
+Manage your TripSage account and preferences:
+
+### Profile Management
+
+- **Personal Info**: Name, email, phone number
+- **Travel Preferences**: Budget, style, interests
+- **Notification Settings**: Email, push, SMS preferences
+- **Privacy Controls**: Data sharing and visibility options
+
+### Security Settings
+
+- **Password**: Change account password
+- **Two-Factor Auth**: Enable for added security
+- **Active Sessions**: View and manage login sessions
+- **API Access**: Generate keys for integrations
+
+## 📧 Notification Settings
+
+Customize when and how you receive updates:
+
+### Types of Notifications
+
+- **Price Alerts**: Flight and hotel price changes
+- **Trip Updates**: Itinerary changes and confirmations
+- **Collaboration**: Comments and shared trip updates
+- **System**: Account and security notifications
+
+### Delivery Preferences
+
+- **Email**: Daily digest or real-time
+- **Push**: Mobile notifications when app is closed
+- **SMS**: Critical updates only (optional)
+- **In-App**: Notifications within TripSage
+
+## 🔒 Privacy Controls
+
+Your data, your control:
+
+### Data Management
+
+- **Export Data**: Download all your trip data
+- **Delete Account**: Permanently remove your account
+- **Data Sharing**: Control what data is used for recommendations
+- **Analytics**: Opt out of usage analytics
+
+### Privacy Settings
+
+- **Trip Visibility**: Public, private, or shared
+- **Profile Visibility**: Control who can find you
+- **Search History**: Auto-delete after time period
+- **Location Sharing**: GPS usage for recommendations
+
+### Security Features
+
+- **Encryption**: All data encrypted in transit and at rest
+- **Bank-Level Security**: Industry standard protection
+- **GDPR Compliant**: Full data protection compliance
+- **Regular Audits**: Security assessments and updates
+
+## 💰 Expense Tracking
+
+Monitor your travel spending:
+
+### Budget Features
+
+- **Trip Budgets**: Set and track spending limits
+- **Category Breakdown**: Flights, hotels, food, activities
+- **Real-Time Updates**: Live spending tracking
+- **Alerts**: Notifications when approaching limits
+
+### Expense Management
+
+- **Receipt Scanning**: Photo capture for expenses
+- **Automatic Categorization**: AI-powered expense sorting
+- **Currency Conversion**: Multi-currency support
+- **Reporting**: Export expenses for tax/business purposes
+
+---
+
+**Master the interface, master your travels!** 🚀 Explore more [advanced features](advanced-features.md) or check our [FAQ](faq.md) for more help.

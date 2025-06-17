@@ -3,6 +3,8 @@
 > **Complete Integration Guide**  
 > Real-world examples, SDKs, webhooks, and step-by-step tutorials for TripSage API
 
+> **🔧 Need quick code snippets?** Check out our [**Quick Reference Examples**](usage-examples.md) for immediate copy-paste solutions.
+
 ## 📋 Table of Contents
 
 - [Quick Start Examples](#quick-start-examples)

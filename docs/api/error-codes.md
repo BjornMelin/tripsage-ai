@@ -86,6 +86,20 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 
 ---
 
+## 🔧 Quick Error Reference
+
+### Most Common Issues
+
+| Error | Quick Fix | Code Example |
+|-------|-----------|--------------|
+| `401 Unauthorized` | Check your Authorization header | `curl -H "Authorization: Bearer your_token"` |
+| `400 Bad Request` | Validate JSON format | Use `JSON.stringify()` or validate with schema |
+| `422 Validation` | Check required fields | Include all required parameters |
+| `429 Rate Limited` | Add retry logic | Wait for `Retry-After` header value |
+| `500 Server Error` | Retry with backoff | Implement exponential backoff |
+
+---
+
 ## Error Types
 
 ### Authentication Errors (`authentication`)
@@ -156,6 +170,228 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 | `DATABASE_ERROR` | Database operation failed | Retry request, contact support |
 | `CACHE_ERROR` | Cache operation failed | Request may be slower |
 | `AI_SERVICE_ERROR` | AI service unavailable | AI features temporarily unavailable |
+
+---
+
+## 🛠️ Practical Troubleshooting Scenarios
+
+### Scenario 1: "My API calls are failing with 401"
+
+**Common Causes:**
+- Missing `Bearer ` prefix in Authorization header
+- Using expired or invalid JWT token
+- API key not properly configured
+
+**Debug Steps:**
+```bash
+# 1. Check your token format
+curl -H "Authorization: Bearer your_token" \
+  https://api.tripsage.ai/api/health
+
+# 2. Verify token expiration
+echo "your_jwt_token" | cut -d. -f2 | base64 -d | jq .exp
+
+# 3. Get a fresh token
+curl -X POST https://api.tripsage.ai/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "your@email.com", "password": "password"}'
+```
+
+### Scenario 2: "Flight searches return empty results"
+
+**Possible Issues:**
+- Invalid airport codes
+- Dates in the past
+- No availability for selected dates
+- External API service down
+
+**Troubleshooting:**
+```javascript
+// 1. Validate airport codes
+const validCodes = await fetch('/api/destinations/search?q=NYC');
+
+// 2. Check date format and future dates
+const searchParams = {
+  origin: "JFK",
+  destination: "LAX",
+  departure_date: "2025-12-01", // YYYY-MM-DD format
+  return_date: "2025-12-08"
+};
+
+// 3. Handle empty results gracefully
+const response = await searchFlights(searchParams);
+if (response.results.length === 0) {
+  // Suggest alternative dates or destinations
+  console.log("No flights found. Try different dates or nearby airports.");
+}
+```
+
+### Scenario 3: "Validation errors on trip creation"
+
+**Example Error Response:**
+```json
+{
+  "error": true,
+  "message": "Request validation failed",
+  "code": "VALIDATION_ERROR",
+  "type": "validation",
+  "errors": [
+    {
+      "field": "start_date",
+      "message": "Date must be in the future",
+      "type": "value_error.date.past"
+    },
+    {
+      "field": "destinations",
+      "message": "At least one destination is required",
+      "type": "value_error.list.min_items"
+    }
+  ]
+}
+```
+
+**Solution:**
+```javascript
+function validateTripData(tripData) {
+  const errors = [];
+  
+  // Check dates
+  const startDate = new Date(tripData.start_date);
+  if (startDate < new Date()) {
+    errors.push("Start date must be in the future");
+  }
+  
+  // Check destinations
+  if (!tripData.destinations || tripData.destinations.length === 0) {
+    errors.push("At least one destination is required");
+  }
+  
+  // Check coordinates if provided
+  tripData.destinations.forEach((dest, index) => {
+    if (dest.coordinates) {
+      const { latitude, longitude } = dest.coordinates;
+      if (latitude < -90 || latitude > 90) {
+        errors.push(`Invalid latitude for destination ${index + 1}`);
+      }
+      if (longitude < -180 || longitude > 180) {
+        errors.push(`Invalid longitude for destination ${index + 1}`);
+      }
+    }
+  });
+  
+  return errors;
+}
+```
+
+### Scenario 4: "WebSocket connection keeps dropping"
+
+**Common Issues:**
+- Network connectivity problems
+- Authentication token expiration
+- Server-side connection limits
+
+**Robust WebSocket Implementation:**
+```javascript
+class TripSageWebSocket {
+  constructor(token) {
+    this.token = token;
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
+    this.reconnectDelay = 1000;
+  }
+  
+  connect() {
+    this.ws = new WebSocket(`wss://api.tripsage.ai/api/chat/ws?token=${this.token}`);
+    
+    this.ws.onopen = () => {
+      console.log('Connected to TripSage WebSocket');
+      this.reconnectAttempts = 0;
+    };
+    
+    this.ws.onclose = (event) => {
+      if (event.code === 1006 && this.reconnectAttempts < this.maxReconnectAttempts) {
+        // Unexpected close, attempt reconnection
+        setTimeout(() => {
+          this.reconnectAttempts++;
+          this.connect();
+        }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
+      }
+    };
+    
+    this.ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+  }
+}
+```
+
+### Scenario 5: "Rate limits being hit unexpectedly"
+
+**Debug Rate Limit Usage:**
+```javascript
+function monitorRateLimit(response) {
+  const limit = response.headers.get('X-RateLimit-Limit');
+  const remaining = response.headers.get('X-RateLimit-Remaining');
+  const reset = response.headers.get('X-RateLimit-Reset');
+  
+  console.log(`Rate limit: ${remaining}/${limit} remaining`);
+  
+  if (remaining < 10) {
+    console.warn('Approaching rate limit!');
+  }
+  
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After');
+    console.log(`Rate limited. Retry after ${retryAfter} seconds`);
+    return retryAfter;
+  }
+  
+  return null;
+}
+
+// Implement request queuing
+class RateLimitedClient {
+  constructor() {
+    this.queue = [];
+    this.processing = false;
+  }
+  
+  async request(url, options) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ url, options, resolve, reject });
+      this.processQueue();
+    });
+  }
+  
+  async processQueue() {
+    if (this.processing || this.queue.length === 0) return;
+    
+    this.processing = true;
+    
+    while (this.queue.length > 0) {
+      const { url, options, resolve, reject } = this.queue.shift();
+      
+      try {
+        const response = await fetch(url, options);
+        const retryAfter = monitorRateLimit(response);
+        
+        if (retryAfter) {
+          // Re-queue the request
+          this.queue.unshift({ url, options, resolve, reject });
+          await new Promise(r => setTimeout(r, retryAfter * 1000));
+          continue;
+        }
+        
+        resolve(response);
+      } catch (error) {
+        reject(error);
+      }
+    }
+    
+    this.processing = false;
+  }
+}
+```
 
 ---
 

@@ -326,6 +326,126 @@ Budget: [AMOUNT]. Starting from [ORIGIN]."
 - Track favorite hotels
 - Create travel wishlist
 
+## 🔍 Search and Booking
+
+TripSage makes finding and booking travel seamless:
+
+### Flight Search
+
+- **Smart Filtering**: Price, duration, airlines, stops
+- **Flexible Dates**: See price calendars for best deals
+- **Price Tracking**: Get alerts when prices drop
+- **Multiple Airports**: Compare nearby airport options
+- **Seat Selection**: Choose your preferred seats
+- **Special Requests**: Meals, assistance, preferences
+
+### Hotel Booking
+
+- **Location Scoring**: Proximity to attractions and transport
+- **Room Types**: From budget to luxury suites
+- **Guest Reviews**: Real traveler feedback and photos
+- **Amenities Filter**: Pool, WiFi, breakfast, pet-friendly
+- **Cancellation Terms**: Flexible vs. non-refundable rates
+- **Price Guarantees**: Best rate guarantees
+
+### Package Deals
+
+- **Flight + Hotel**: Save with bundled bookings
+- **All-Inclusive**: Meals and activities included
+- **Group Rates**: Discounts for 4+ travelers
+- **Extended Stays**: Weekly and monthly rates
+
+### Booking Protection
+
+- **Price Monitoring**: Refund if prices drop
+- **Free Cancellation**: 24-hour grace period
+- **Travel Insurance**: Optional coverage
+- **Customer Support**: 24/7 booking assistance
+
+## 🤖 AI Assistance
+
+Get the most from TripSage's AI travel assistant:
+
+### Natural Language Planning
+
+Describe your trip naturally:
+- "Plan a romantic anniversary weekend somewhere warm"
+- "I need a work-friendly hotel with conference rooms"
+- "Find family activities for teenagers in Tokyo"
+
+### AI Memory System
+
+The AI remembers:
+- **Past Preferences**: Learns your travel style
+- **Budget Patterns**: Understands your spending habits
+- **Favorite Places**: Remembers loved destinations
+- **Travel Companions**: Adapts for different groups
+
+### Smart Suggestions
+
+- **Hidden Gems**: Off-the-beaten-path recommendations
+- **Local Events**: Festivals and seasonal activities
+- **Weather Optimization**: Best times to visit
+- **Cultural Tips**: Local customs and etiquette
+
+### Quick Planning
+
+For fast trip planning:
+- "Book the same as my Paris trip but in Rome"
+- "Weekend getaway under $500"
+- "Business trip with Saturday extension"
+
+## 🏢 Business Travel
+
+Optimize corporate and business travel:
+
+### Business Features
+
+- **Expense Tracking**: Automatic categorization
+- **Receipt Management**: Digital receipt storage
+- **Approval Workflows**: Submit for company approval
+- **Travel Policies**: Company rule compliance
+- **Loyalty Programs**: Corporate account integration
+
+### Meeting-Focused Planning
+
+- **Proximity Booking**: Hotels near meeting locations
+- **Transit Times**: Realistic travel calculations
+- **Backup Options**: Alternative arrangements
+- **Mobile Check-in**: Streamlined arrival process
+
+### Extended Business Trips
+
+- **Weekend Extensions**: Personal time add-ons
+- **Family Visits**: Spouse/family join options
+- **Local Experiences**: Work-life balance activities
+- **Long-stay Amenities**: Kitchen, laundry, workspace
+
+## ⚡ Quick Planning
+
+For last-minute and quick trip planning:
+
+### Weekend Trips
+
+Perfect for spontaneous getaways:
+- "This weekend in [nearby city]"
+- "Quick beach escape for 2 days"
+- "City break leaving tomorrow"
+
+### Same-Day Booking
+
+- **Flight Alerts**: Last-minute availability
+- **Hotel Tonight**: Same-day discounts
+- **Activity Booking**: Instant confirmations
+- **Transportation**: Car rentals and transfers
+
+### Last-Minute Tips
+
+- **Flexible Destinations**: "Surprise me with a warm place"
+- **Package Deals**: Better value for quick booking
+- **Mobile Boarding**: Skip airport check-in lines
+- **Travel Light**: Packing tips for spontaneous trips
+
 ---
 
 **Ready to plan your perfect trip?** Start a conversation with TripSage and watch your travel dreams become reality! 🌟
