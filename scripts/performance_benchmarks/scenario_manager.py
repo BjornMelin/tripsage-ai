@@ -17,10 +17,9 @@ import numpy as np
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
-from tripsage_core.services.infrastructure.pgvector_optimizer import (
+from tripsage_core.services.infrastructure.pgvector_service import (
     OptimizationProfile,
-    PGVectorOptimizer,
-    VectorCompressionConfig,
+    PGVectorService,
 )
 
 from .config import (
@@ -253,7 +252,7 @@ class DatabaseBenchmarkExecutor:
         self.data_generator = TestDataGenerator()
 
         # Optimization components
-        self.vector_optimizer: Optional[PGVectorOptimizer] = None
+        self.vector_optimizer: Optional[PGVectorService] = None
 
         logger.info("Database benchmark executor initialized")
 
@@ -481,21 +480,21 @@ class DatabaseBenchmarkExecutor:
 
         # Initialize vector optimizer if not already done
         if not self.vector_optimizer:
-            self.vector_optimizer = PGVectorOptimizer(self.db)
+            self.vector_optimizer = PGVectorService(self.db)
 
         try:
             # Create HNSW index for destinations
-            await self.vector_optimizer.create_optimized_hnsw_index(
+            await self.vector_optimizer.create_hnsw_index(
                 table_name="test_destinations",
-                vector_column="embedding",
+                column_name="embedding",
                 index_name="test_destinations_embedding_hnsw_idx",
                 profile=OptimizationProfile.BALANCED,
             )
 
             # Create HNSW index for search queries
-            await self.vector_optimizer.create_optimized_hnsw_index(
+            await self.vector_optimizer.create_hnsw_index(
                 table_name="test_search_queries",
-                vector_column="embedding",
+                column_name="embedding",
                 index_name="test_search_queries_embedding_hnsw_idx",
                 profile=OptimizationProfile.BALANCED,
             )
@@ -510,22 +509,12 @@ class DatabaseBenchmarkExecutor:
         logger.info("Applying compression optimizations...")
 
         if not self.vector_optimizer:
-            self.vector_optimizer = PGVectorOptimizer(self.db)
+            self.vector_optimizer = PGVectorService(self.db)
 
         try:
-            # Apply halfvec compression for destinations
-            compression_config = VectorCompressionConfig(
-                source_column="embedding",
-                target_column="embedding_compressed",
-                dimensions=384,
-                preserve_original=True,
-            )
-
-            await self.vector_optimizer.create_halfvec_compressed_column(
-                compression_config
-            )
-
-            logger.info("Compression optimizations applied")
+            # Note: The new service focuses on proven optimizations
+            # Compression has been removed as it's rarely beneficial in practice
+            logger.info("Compression optimizations skipped (using proven defaults)")
 
         except Exception as e:
             logger.warning(f"Failed to apply compression optimizations: {e}")

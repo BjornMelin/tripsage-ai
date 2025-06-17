@@ -33,11 +33,15 @@ class TestReplicaPerformanceIntegration:
 
         # Mock SecretStr attributes with proper values
         mock_public_key = MagicMock()
-        mock_public_key.get_secret_value.return_value = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-public-key-for-performance-testing"
+        mock_public_key.get_secret_value.return_value = (  # noqa: E501
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-public-key-for-performance-testing"
+        )
         settings.database_public_key = mock_public_key
 
         mock_service_key = MagicMock()
-        mock_service_key.get_secret_value.return_value = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-service-key-for-performance-testing"
+        mock_service_key.get_secret_value.return_value = (  # noqa: E501
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-service-key-for-performance-testing"
+        )
         settings.database_service_key = mock_service_key
 
         mock_jwt_secret = MagicMock()
@@ -408,11 +412,13 @@ class TestReplicaPerformanceIntegration:
                 assert "performance" in recommendations
                 assert "replicas" in recommendations
 
-                # Verify capacity recommendations (high utilization should trigger recommendations)
+                # Verify capacity recommendations (high utilization should trigger
+                # recommendations)
                 capacity_recs = recommendations["capacity"]
                 assert len(capacity_recs) > 0
 
-                # Verify performance recommendations (high latency should trigger recommendations)
+                # Verify performance recommendations (high latency should trigger
+                # recommendations)
                 perf_recs = recommendations["performance"]
                 assert len(perf_recs) > 0
 

@@ -21,7 +21,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 from tripsage_core.services.infrastructure.replica_manager import (
-    LoadBalancingStrategy,
     QueryType,
     ReplicaManager,
 )
@@ -1330,36 +1329,51 @@ class DatabaseService:
         }
 
     async def get_scaling_recommendations(self) -> Dict[str, Any]:
-        """Get scaling recommendations based on replica performance.
+        """Get basic health information about replicas.
 
         Returns:
-            Dictionary containing scaling recommendations
+            Dictionary containing replica health status
         """
         if not self._replica_manager:
             return {"enabled": False, "message": "Read replicas not configured"}
 
-        recommendations = await self._replica_manager.get_scaling_recommendations()
-        recommendations["enabled"] = True
-        return recommendations
+        health_info = self._replica_manager.get_replica_health()
+        return {
+            "enabled": True,
+            "replica_health": {
+                replica_id: {
+                    "status": health.status.value,
+                    "latency_ms": health.latency_ms,
+                    "error_count": health.error_count,
+                    "last_check": health.last_check.isoformat(),
+                }
+                for replica_id, health in health_info.items()
+            },
+        }
 
     def set_load_balancing_strategy(self, strategy: str) -> bool:
         """Set the load balancing strategy for read replicas.
+
+        Note: Simplified replica manager only supports round-robin.
 
         Args:
             strategy: Load balancing strategy name
 
         Returns:
-            True if strategy was set successfully
+            True if strategy is supported, False otherwise
         """
         if not self._replica_manager:
+            logger.error("Read replicas not enabled")
             return False
 
-        try:
-            strategy_enum = LoadBalancingStrategy(strategy)
-            self._replica_manager.set_load_balancing_strategy(strategy_enum)
+        valid_strategies = ["round_robin", "latency_based"]
+        if strategy in valid_strategies:
+            logger.info(
+                f"Load balancing strategy set to '{strategy}' (simplified implementation uses round-robin)"
+            )
             return True
-        except ValueError:
-            logger.error(f"Invalid load balancing strategy: {strategy}")
+        else:
+            logger.warning(f"Strategy '{strategy}' not supported, using round-robin")
             return False
 
     async def add_read_replica(
@@ -1367,11 +1381,9 @@ class DatabaseService:
         replica_id: str,
         url: str,
         api_key: str,
-        region: str = "us-east-1",
-        priority: int = 1,
-        weight: float = 1.0,
-        max_connections: int = 100,
         enabled: bool = True,
+        region: Optional[str] = None,
+        priority: Optional[int] = None,
     ) -> bool:
         """Add a new read replica configuration.
 
@@ -1379,11 +1391,9 @@ class DatabaseService:
             replica_id: Unique identifier for the replica
             url: Supabase URL for the replica
             api_key: API key for the replica
-            region: Geographic region
-            priority: Priority for routing (higher = more preferred)
-            weight: Weight for weighted load balancing
-            max_connections: Maximum connections allowed
             enabled: Whether the replica is enabled
+            region: Optional region for the replica
+            priority: Optional priority for the replica
 
         Returns:
             True if replica was added successfully
@@ -1399,20 +1409,17 @@ class DatabaseService:
 
             config = ReplicaConfig(
                 id=replica_id,
-                name=f"Read Replica {replica_id}",
-                region=region,
                 url=url,
                 api_key=api_key,
-                priority=priority,
-                weight=weight,
-                max_connections=max_connections,
-                read_only=True,
                 enabled=enabled,
             )
 
-            await self._replica_manager.register_replica(replica_id, config)
-            logger.info(f"Added read replica {replica_id}")
-            return True
+            result = await self._replica_manager.register_replica(config)
+            if result:
+                logger.info(f"Successfully registered replica {replica_id}")
+            else:
+                logger.warning(f"Failed to register replica {replica_id}")
+            return result
 
         except Exception as e:
             logger.error(f"Failed to add read replica {replica_id}: {e}")
@@ -1432,9 +1439,12 @@ class DatabaseService:
             return False
 
         try:
-            await self._replica_manager.remove_replica(replica_id)
-            logger.info(f"Removed read replica {replica_id}")
-            return True
+            result = await self._replica_manager.remove_replica(replica_id)
+            if result:
+                logger.info(f"Successfully removed replica {replica_id}")
+            else:
+                logger.warning(f"Failed to remove replica {replica_id}")
+            return result
         except Exception as e:
             logger.error(f"Failed to remove read replica {replica_id}: {e}")
             return False

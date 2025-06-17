@@ -10,7 +10,7 @@ to avoid code duplication while providing enhanced search capabilities.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import (
@@ -23,7 +23,6 @@ from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.business.activity_service import get_activity_service
 from tripsage_core.services.business.destination_service import get_destination_service
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
-from tripsage_core.services.infrastructure.search_cache_mixin import SearchCacheMixin
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -59,9 +58,7 @@ class UnifiedSearchServiceError(CoreServiceError):
         self.original_error = original_error
 
 
-class UnifiedSearchService(
-    SearchCacheMixin[UnifiedSearchRequest, UnifiedSearchResponse]
-):
+class UnifiedSearchService:
     """Service for unified search across multiple resource types."""
 
     def __init__(self, cache_service=None):
@@ -93,43 +90,6 @@ class UnifiedSearchService(
         if not self._activity_service:
             self._activity_service = await get_activity_service()
 
-    def get_cache_fields(self, request: UnifiedSearchRequest) -> Dict[str, Any]:
-        """Extract fields for cache key generation."""
-        cache_fields = {
-            "query": request.query,
-            "types": sorted(request.types or DEFAULT_SEARCH_TYPES),
-            "destination": request.destination,
-            "start_date": request.start_date.isoformat()
-            if request.start_date
-            else None,
-            "end_date": request.end_date.isoformat() if request.end_date else None,
-            "origin": request.origin,
-            "adults": request.adults,
-            "children": request.children,
-            "infants": request.infants,
-            "sort_by": request.sort_by,
-            "sort_order": request.sort_order,
-        }
-
-        # Include filters if present
-        if request.filters:
-            cache_fields.update(
-                {
-                    "price_min": request.filters.price_min,
-                    "price_max": request.filters.price_max,
-                    "rating_min": request.filters.rating_min,
-                    "latitude": request.filters.latitude,
-                    "longitude": request.filters.longitude,
-                    "radius_km": request.filters.radius_km,
-                }
-            )
-
-        return cache_fields
-
-    def _get_response_class(self) -> type[UnifiedSearchResponse]:
-        """Get the response class for deserialization."""
-        return UnifiedSearchResponse
-
     @with_error_handling()
     async def unified_search(
         self, request: UnifiedSearchRequest
@@ -155,14 +115,6 @@ class UnifiedSearchService(
             )
 
             start_time = datetime.now()
-
-            # Check cache first
-            cached_result = await self.get_cached_search(request)
-            if cached_result:
-                logger.info(
-                    f"Returning cached unified search results for: {request.query}"
-                )
-                return cached_result
 
             # Determine which types to search
             search_types = request.types or DEFAULT_SEARCH_TYPES
@@ -242,9 +194,6 @@ class UnifiedSearchService(
                 results_by_type=results_by_type,
                 errors=provider_errors if provider_errors else None,
             )
-
-            # Cache the results
-            await self.cache_search_results(request, response)
 
             logger.info(
                 f"Unified search completed: {len(sorted_results)} total results"

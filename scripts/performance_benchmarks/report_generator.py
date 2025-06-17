@@ -212,7 +212,8 @@ HTML_REPORT_TEMPLATE = """
                     {% else %}
                     <div class="metric-improvement improvement-negative">
                     {% endif %}
-                        {% if metric_data.improvement > 0 %}+{% endif %}{{ metric_data.improvement }}{{ metric_data.unit }}
+                        {% if metric_data.improvement > 0 %}+{% endif %}{{ 
+                        metric_data.improvement }}{{ metric_data.unit }}
                     </div>
                     {% endif %}
                 </div>

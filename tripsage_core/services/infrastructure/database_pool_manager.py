@@ -1,68 +1,34 @@
 """
-Supavisor connection pool manager for optimized database connections.
+Simplified Supabase client manager leveraging Supavisor's built-in connection pooling.
 
-Implements transaction mode pooling with automatic health checks and recovery.
-Handles millions of connections with sub-3ms query latency.
+Uses Supavisor's transaction mode (port 6543) for optimal serverless performance.
+Eliminates redundant pooling logic since Supavisor handles connection management.
 """
 
-import asyncio
 import logging
-import time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from urllib.parse import urlparse, urlunparse
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import (
-    CoreDatabaseError,
-    CoreServiceError,
-)
+from tripsage_core.exceptions.exceptions import CoreDatabaseError
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class PoolMetrics:
-    """Connection pool performance metrics."""
-
-    total_connections: int = 0
-    active_connections: int = 0
-    idle_connections: int = 0
-    failed_connections: int = 0
-    total_queries: int = 0
-    failed_queries: int = 0
-    avg_query_time_ms: float = 0.0
-    max_query_time_ms: float = 0.0
-    pool_hits: int = 0
-    pool_misses: int = 0
-    last_reset: datetime = datetime.now(timezone.utc)
-
-
-@dataclass
-class ConnectionHealth:
-    """Connection health status."""
-
-    is_healthy: bool
-    last_check: datetime
-    latency_ms: float
-    error_count: int = 0
-    last_error: Optional[str] = None
-
-
 class DatabasePoolManager:
     """
-    Manages Supavisor connection pooling for optimal performance.
+    Simplified database manager leveraging Supavisor's native connection pooling.
 
-    Features:
-    - Transaction mode pooling (port 6543) for serverless/edge
-    - Automatic connection health monitoring
-    - Connection recycling and recovery
-    - Performance metrics collection
-    - Optimized for <3ms query latency
+    Supavisor (port 6543) automatically handles:
+    - Connection pooling and lifecycle management
+    - Health monitoring and failover
+    - Load balancing across connections
+    - Optimal resource utilization
+
+    This eliminates the need for custom pooling logic.
     """
 
     def __init__(self, settings: Optional[Settings] = None):
@@ -72,139 +38,80 @@ class DatabasePoolManager:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self._pools: Dict[str, List[Client]] = {
-            "transaction": [],  # Transaction mode pool
-            "session": [],  # Session mode pool (for long operations)
-        }
-        self._pool_config = {
-            "transaction": {
-                "min_connections": 5,
-                "max_connections": 20,
-                "idle_timeout": 300,  # 5 minutes
-                "port": 6543,  # Supavisor transaction mode port
-            },
-            "session": {
-                "min_connections": 2,
-                "max_connections": 10,
-                "idle_timeout": 600,  # 10 minutes
-                "port": 5432,  # Direct PostgreSQL port
-            },
-        }
-        self._metrics = PoolMetrics()
-        self._connection_health: Dict[str, ConnectionHealth] = {}
-        self._lock = asyncio.Lock()
-        self._health_check_task: Optional[asyncio.Task] = None
+        self._client: Optional[Client] = None
         self._initialized = False
 
     async def initialize(self) -> None:
-        """Initialize connection pools and start health monitoring."""
+        """Initialize Supabase client with Supavisor transaction mode."""
         if self._initialized:
             return
 
-        async with self._lock:
-            if self._initialized:
-                return
-
-            logger.info("Initializing Supavisor connection pools")
-
-            # Create initial connections for each pool
-            for pool_type in ["transaction", "session"]:
-                config = self._pool_config[pool_type]
-                min_conn = config["min_connections"]
-
-                for _ in range(min_conn):
-                    try:
-                        client = await self._create_connection(pool_type)
-                        self._pools[pool_type].append(client)
-                        self._metrics.total_connections += 1
-                        self._metrics.idle_connections += 1
-                    except Exception as e:
-                        logger.error(f"Failed to create {pool_type} connection: {e}")
-                        self._metrics.failed_connections += 1
-
-            # Start health check task
-            self._health_check_task = asyncio.create_task(self._health_check_loop())
-            self._initialized = True
-
-            logger.info(
-                f"Connection pools initialized: "
-                f"{len(self._pools['transaction'])} transaction, "
-                f"{len(self._pools['session'])} session connections"
-            )
-
-    async def _create_connection(self, pool_type: str = "transaction") -> Client:
-        """Create a new Supabase connection for the pool.
-
-        Args:
-            pool_type: Type of pool ("transaction" or "session")
-
-        Returns:
-            Configured Supabase client
-
-        Raises:
-            CoreDatabaseError: If connection creation fails
-        """
-        config = self._pool_config[pool_type]
-        port = config["port"]
-
-        # Modify URL to use Supavisor port for transaction mode
-        supabase_url = self._get_pooled_url(port)
-        supabase_key = self.settings.database_public_key.get_secret_value()
-
-        # Configure client options for pooling
-        options = ClientOptions(
-            auto_refresh_token=False,  # Disable for pooled connections
-            persist_session=False,  # No session persistence in pool
-            postgrest_client_timeout=30.0,  # Shorter timeout for pooled connections
-        )
+        logger.info("Initializing Supabase client with Supavisor transaction mode")
 
         try:
-            client = create_client(supabase_url, supabase_key, options=options)
+            # Create client configured for Supavisor transaction mode
+            self._client = self._create_supavisor_client()
 
             # Test connection
-            start_time = time.time()
-            await asyncio.to_thread(
-                lambda: client.table("users").select("id").limit(1).execute()
-            )
-            latency_ms = (time.time() - start_time) * 1000
+            await self._test_connection()
+            self._initialized = True
 
-            # Track connection health
-            conn_id = id(client)
-            self._connection_health[str(conn_id)] = ConnectionHealth(
-                is_healthy=True,
-                last_check=datetime.now(timezone.utc),
-                latency_ms=latency_ms,
+            logger.info("Supavisor connection established successfully")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize Supavisor client: {e}")
+            raise CoreDatabaseError(
+                message="Failed to initialize database connection",
+                code="INIT_FAILED",
+                details={"error": str(e)},
+            ) from e
+
+    def _create_supavisor_client(self) -> Client:
+        """Create Supabase client configured for Supavisor transaction mode.
+
+        Returns:
+            Configured Supabase client using Supavisor pooling
+
+        Raises:
+            CoreDatabaseError: If client creation fails
+        """
+        try:
+            # Get Supavisor transaction mode URL (port 6543)
+            supabase_url = self._get_supavisor_url()
+            supabase_key = self.settings.database_public_key.get_secret_value()
+
+            # Configure client options for Supavisor transaction mode
+            options = ClientOptions(
+                auto_refresh_token=False,  # Disable for pooled connections
+                persist_session=False,  # No session persistence needed
+                postgrest_client_timeout=30.0,  # Reasonable timeout for serverless
             )
 
-            logger.debug(
-                f"Created {pool_type} connection with {latency_ms:.2f}ms latency"
-            )
+            client = create_client(supabase_url, supabase_key, options=options)
+            logger.debug("Created Supavisor client for transaction mode")
             return client
 
         except Exception as e:
-            logger.error(f"Failed to create {pool_type} connection: {e}")
+            logger.error(f"Failed to create Supavisor client: {e}")
             raise CoreDatabaseError(
-                message="Failed to create pooled connection",
-                code="POOL_CONNECTION_FAILED",
-                details={"pool_type": pool_type, "error": str(e)},
+                message="Failed to create Supavisor client",
+                code="CLIENT_CREATION_FAILED",
+                details={"error": str(e)},
             ) from e
 
-    def _get_pooled_url(self, port: int) -> str:
-        """Get Supabase URL configured for pooling.
-
-        Args:
-            port: Port number for the connection type
+    def _get_supavisor_url(self) -> str:
+        """Get Supabase URL configured for Supavisor transaction mode.
 
         Returns:
-            Modified URL for pooled connections
+            Modified URL for Supavisor pooled connections (port 6543)
         """
         base_url = self.settings.database_url
-
-        # For Supavisor, we need to use the pooler subdomain
-        # Format: https://[project-ref].pooler.supabase.com
         parsed = urlparse(base_url)
 
-        # Replace supabase.co with pooler.supabase.com
+        # Convert to Supavisor pooler URL format
+        # From: https://project.supabase.co
+        # To: https://project.pooler.supabase.com
+        # (implied port 6543 for transaction mode)
         if ".supabase.co" in parsed.netloc:
             pooler_netloc = parsed.netloc.replace(
                 ".supabase.co", ".pooler.supabase.com"
@@ -222,244 +129,122 @@ class DatabasePoolManager:
 
         return base_url
 
+    async def _test_connection(self) -> None:
+        """Test the Supavisor connection with a simple query."""
+        if not self._client:
+            raise CoreDatabaseError(
+                message="No client available for testing",
+                code="NO_CLIENT",
+            )
+
+        try:
+            # Simple test query to verify connection
+            import asyncio
+
+            await asyncio.to_thread(
+                lambda: self._client.table("users").select("id").limit(1).execute()
+            )
+            logger.debug("Supavisor connection test successful")
+
+        except Exception as e:
+            logger.error(f"Supavisor connection test failed: {e}")
+            raise CoreDatabaseError(
+                message="Connection test failed",
+                code="CONNECTION_TEST_FAILED",
+                details={"error": str(e)},
+            ) from e
+
     @asynccontextmanager
     async def acquire_connection(
         self, pool_type: str = "transaction", timeout: float = 5.0
     ):
-        """Acquire a connection from the pool.
+        """Get Supavisor-managed connection.
 
         Args:
-            pool_type: Type of pool to use
-            timeout: Maximum time to wait for a connection
+            pool_type: Ignored - Supavisor manages connection types automatically
+            timeout: Ignored - Supavisor handles timeouts internally
 
         Yields:
-            Supabase client connection
+            Supabase client connection via Supavisor
 
-        Raises:
-            CoreServiceError: If no connection available within timeout
+        Note:
+            Supavisor automatically handles:
+            - Connection pooling and lifecycle
+            - Health checks and failover
+            - Load balancing
+            - Resource optimization
         """
         await self.initialize()
 
-        start_time = time.time()
-        connection = None
-
-        while time.time() - start_time < timeout:
-            async with self._lock:
-                pool = self._pools[pool_type]
-
-                # Try to get an idle connection
-                for i, client in enumerate(pool):
-                    conn_id = str(id(client))
-                    health = self._connection_health.get(conn_id)
-
-                    if health and health.is_healthy:
-                        # Found healthy connection
-                        connection = pool.pop(i)
-                        self._metrics.idle_connections -= 1
-                        self._metrics.active_connections += 1
-                        self._metrics.pool_hits += 1
-                        break
-
-                # Create new connection if under limit
-                if not connection:
-                    config = self._pool_config[pool_type]
-                    total_in_pool = len(self._pools[pool_type])
-
-                    if total_in_pool < config["max_connections"]:
-                        try:
-                            connection = await self._create_connection(pool_type)
-                            self._metrics.total_connections += 1
-                            self._metrics.active_connections += 1
-                            self._metrics.pool_misses += 1
-                        except Exception as e:
-                            logger.error(f"Failed to create new connection: {e}")
-
-            if connection:
-                break
-
-            # Wait before retry
-            await asyncio.sleep(0.1)
-
-        if not connection:
-            self._metrics.failed_connections += 1
-            raise CoreServiceError(
-                message="No available connections in pool",
-                code="POOL_EXHAUSTED",
-                service="DatabasePoolManager",
-                details={
-                    "pool_type": pool_type,
-                    "timeout": timeout,
-                    "active": self._metrics.active_connections,
-                    "total": self._metrics.total_connections,
-                },
+        if not self._client:
+            raise CoreDatabaseError(
+                message="Supavisor client not initialized",
+                code="CLIENT_NOT_INITIALIZED",
             )
 
-        try:
-            # Track query start time
-            query_start = time.time()
-            yield connection
+        # Supavisor handles all connection management automatically
+        yield self._client
 
-            # Update metrics
-            query_time_ms = (time.time() - query_start) * 1000
-            self._metrics.total_queries += 1
-
-            # Update average query time
-            if self._metrics.avg_query_time_ms == 0:
-                self._metrics.avg_query_time_ms = query_time_ms
-            else:
-                self._metrics.avg_query_time_ms = (
-                    self._metrics.avg_query_time_ms * 0.9 + query_time_ms * 0.1
-                )
-
-            self._metrics.max_query_time_ms = max(
-                self._metrics.max_query_time_ms, query_time_ms
-            )
-
-        except Exception as e:
-            # Mark connection as unhealthy
-            conn_id = str(id(connection))
-            if conn_id in self._connection_health:
-                self._connection_health[conn_id].is_healthy = False
-                self._connection_health[conn_id].error_count += 1
-                self._connection_health[conn_id].last_error = str(e)
-
-            self._metrics.failed_queries += 1
-            raise
-
-        finally:
-            # Return connection to pool
-            async with self._lock:
-                self._pools[pool_type].append(connection)
-                self._metrics.active_connections -= 1
-                self._metrics.idle_connections += 1
-
-    async def _health_check_loop(self) -> None:
-        """Background task to monitor connection health."""
-        while self._initialized:
-            try:
-                await self._check_pool_health()
-                await asyncio.sleep(30)  # Check every 30 seconds
-            except Exception as e:
-                logger.error(f"Health check error: {e}")
-                await asyncio.sleep(60)  # Back off on error
-
-    async def _check_pool_health(self) -> None:
-        """Check health of all connections in pools."""
-        async with self._lock:
-            for pool_type, pool in self._pools.items():
-                healthy_connections = []
-
-                for client in pool:
-                    conn_id = str(id(client))
-
-                    try:
-                        # Test connection with simple query
-                        start_time = time.time()
-                        await asyncio.to_thread(
-                            lambda c=client: c.table("users")
-                            .select("id")
-                            .limit(1)
-                            .execute()
-                        )
-                        latency_ms = (time.time() - start_time) * 1000
-
-                        # Update health status
-                        self._connection_health[conn_id] = ConnectionHealth(
-                            is_healthy=True,
-                            last_check=datetime.now(timezone.utc),
-                            latency_ms=latency_ms,
-                            error_count=0,
-                        )
-
-                        healthy_connections.append(client)
-
-                    except Exception as e:
-                        logger.warning(f"Unhealthy connection in {pool_type} pool: {e}")
-
-                        # Update health status
-                        if conn_id in self._connection_health:
-                            self._connection_health[conn_id].is_healthy = False
-                            self._connection_health[conn_id].error_count += 1
-                            self._connection_health[conn_id].last_error = str(e)
-
-                        # Don't add to healthy connections
-                        self._metrics.failed_connections += 1
-
-                # Replace pool with only healthy connections
-                self._pools[pool_type] = healthy_connections
-
-                # Ensure minimum connections
-                config = self._pool_config[pool_type]
-                while len(self._pools[pool_type]) < config["min_connections"]:
-                    try:
-                        client = await self._create_connection(pool_type)
-                        self._pools[pool_type].append(client)
-                        self._metrics.total_connections += 1
-                    except Exception as e:
-                        logger.error(f"Failed to replenish {pool_type} pool: {e}")
-                        break
-
-    def get_metrics(self) -> Dict[str, Any]:
-        """Get current pool metrics.
+    async def health_check(self) -> bool:
+        """Check Supavisor connection health.
 
         Returns:
-            Dictionary of performance metrics
+            True if connection is healthy, False otherwise
+
+        Note:
+            Supavisor handles internal health monitoring automatically.
+            This is a simple connectivity test for application use.
+        """
+        if not self._initialized or not self._client:
+            return False
+
+        try:
+            await self._test_connection()
+            return True
+        except Exception as e:
+            logger.warning(f"Health check failed: {e}")
+            return False
+
+    def get_metrics(self) -> dict[str, str]:
+        """Get basic status information.
+
+        Returns:
+            Dictionary with connection status
+
+        Note:
+            Detailed metrics are handled by Supavisor internally.
+            For production monitoring, use Supabase's built-in dashboard.
         """
         return {
-            "total_connections": self._metrics.total_connections,
-            "active_connections": self._metrics.active_connections,
-            "idle_connections": self._metrics.idle_connections,
-            "failed_connections": self._metrics.failed_connections,
-            "total_queries": self._metrics.total_queries,
-            "failed_queries": self._metrics.failed_queries,
-            "avg_query_time_ms": round(self._metrics.avg_query_time_ms, 2),
-            "max_query_time_ms": round(self._metrics.max_query_time_ms, 2),
-            "pool_hit_rate": (
-                self._metrics.pool_hits
-                / (self._metrics.pool_hits + self._metrics.pool_misses)
-                if (self._metrics.pool_hits + self._metrics.pool_misses) > 0
-                else 0
-            ),
-            "uptime_seconds": (
-                datetime.now(timezone.utc) - self._metrics.last_reset
-            ).total_seconds(),
+            "status": "connected"
+            if self._initialized and self._client
+            else "disconnected",
+            "pool_type": "supavisor_transaction_mode",
+            "port": "6543",
+            "note": "Detailed metrics available in Supabase dashboard",
         }
 
     async def close(self) -> None:
-        """Close all connections and cleanup resources."""
-        if self._health_check_task:
-            self._health_check_task.cancel()
-            try:
-                await self._health_check_task
-            except asyncio.CancelledError:
-                pass
+        """Clean up resources.
 
-        async with self._lock:
-            for _pool_type, pool in self._pools.items():
-                for _client in pool:
-                    try:
-                        # Supabase clients don't have explicit close
-                        pass
-                    except Exception as e:
-                        logger.error(f"Error closing connection: {e}")
-
-                pool.clear()
-
-            self._connection_health.clear()
-            self._initialized = False
-
-        logger.info("Database pool manager closed")
+        Note:
+            Supavisor manages connection lifecycle automatically.
+            No explicit connection cleanup needed.
+        """
+        self._client = None
+        self._initialized = False
+        logger.info("DatabasePoolManager closed - Supavisor handles connection cleanup")
 
 
-# Global pool manager instance
+# Global pool manager instance (singleton pattern)
 _pool_manager: Optional[DatabasePoolManager] = None
 
 
 async def get_pool_manager() -> DatabasePoolManager:
-    """Get the global pool manager instance.
+    """Get the global Supavisor-managed pool instance.
 
     Returns:
-        Initialized DatabasePoolManager instance
+        Initialized DatabasePoolManager instance using Supavisor
     """
     global _pool_manager
 

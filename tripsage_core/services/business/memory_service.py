@@ -156,6 +156,11 @@ class MemoryService:
             database_service = get_database_service()
 
         self.db = database_service
+
+        # Initialize PGVector service for memory table optimization
+        from tripsage_core.services.infrastructure import PGVectorService
+
+        self.pgvector_service = PGVectorService(self.db)
         self.cache_ttl = cache_ttl
 
         # Initialize secure connection management
@@ -316,6 +321,21 @@ class MemoryService:
 
             self._connected = True
             logger.info("Memory service connected and validated successfully")
+
+            # Optimize memory tables for better performance
+            try:
+                optimization_result = await self.optimize_memory_tables()
+                if optimization_result.get("success"):
+                    optimized_count = optimization_result.get("total_optimized", 0)
+                    logger.info(
+                        f"Memory table optimization completed: {optimized_count} tables optimized"
+                    )
+                else:
+                    logger.warning(
+                        f"Memory table optimization failed: {optimization_result.get('error')}"
+                    )
+            except Exception as e:
+                logger.warning(f"Memory table optimization error during connect: {e}")
 
         except (
             DatabaseURLParsingError,
@@ -565,6 +585,119 @@ class MemoryService:
                 extra={"user_id": user_id, "error": str(e)},
             )
             return UserContextResponse(summary="Error retrieving user context")
+
+    async def optimize_memory_tables(self) -> Dict[str, Any]:
+        """
+        Optimize memory-related vector tables for better query performance.
+
+        This method uses the PGVectorService to optimize all memory tables
+        with appropriate HNSW indexes and settings for memory workloads.
+
+        Returns:
+            Optimization results including actions taken and recommendations
+        """
+        if not await self._ensure_connected():
+            return {"error": "Memory service not available"}
+
+        try:
+            logger.info("Starting memory table optimization")
+
+            # Use the PGVectorService to optimize memory tables
+            optimization_results = await self.pgvector_service.optimize_memory_tables()
+
+            # Log optimization results
+            memory_optimizations = optimization_results.get("memory_optimization", [])
+            errors = optimization_results.get("errors", [])
+
+            if memory_optimizations:
+                logger.info(
+                    "Memory table optimization completed",
+                    extra={
+                        "optimized_tables": len(memory_optimizations),
+                        "errors": len(errors),
+                    },
+                )
+            else:
+                logger.info("No memory tables found to optimize")
+
+            if errors:
+                logger.warning(
+                    "Memory table optimization had some errors",
+                    extra={"errors": errors},
+                )
+
+            return {
+                "success": True,
+                "optimizations": memory_optimizations,
+                "errors": errors,
+                "total_optimized": len(memory_optimizations),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            error_msg = f"Failed to optimize memory tables: {e}"
+            logger.error(error_msg)
+            return {"success": False, "error": error_msg}
+
+    async def check_memory_vector_health(self) -> Dict[str, Any]:
+        """
+        Check the health of vector indexes on memory tables.
+
+        Returns:
+            Health status and recommendations for memory vector indexes
+        """
+        if not await self._ensure_connected():
+            return {"error": "Memory service not available"}
+
+        try:
+            # Get list of vector tables
+            vector_tables = await self.pgvector_service.list_vector_tables()
+
+            health_reports = []
+            for table_info in vector_tables:
+                table_name = table_info["table_name"]
+                column_name = table_info["column_name"]
+
+                # Check health for memory-related tables
+                if any(
+                    memory_term in table_name.lower()
+                    for memory_term in [
+                        "memory",
+                        "memories",
+                        "conversation",
+                        "chat",
+                        "context",
+                        "preference",
+                    ]
+                ):
+                    health_report = await self.pgvector_service.check_index_health(
+                        table_name, column_name
+                    )
+                    health_report["table"] = table_name
+                    health_report["column"] = column_name
+                    health_reports.append(health_report)
+
+            # Summary
+            healthy_count = sum(
+                1 for report in health_reports if report.get("status") == "healthy"
+            )
+            total_count = len(health_reports)
+
+            return {
+                "total_tables": total_count,
+                "healthy_tables": healthy_count,
+                "needs_attention": total_count - healthy_count,
+                "health_reports": health_reports,
+                "overall_status": "healthy"
+                if healthy_count == total_count
+                else "needs_attention",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+        except Exception as e:
+            error_msg = f"Failed to check memory vector health: {e}"
+            logger.error(error_msg)
+            return {"error": error_msg}
 
     async def update_user_preferences(
         self, user_id: str, preferences_request: PreferencesUpdateRequest

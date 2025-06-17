@@ -23,7 +23,8 @@ def mock_settings_with_replicas():
     settings = MagicMock(spec=Settings)
     settings.database_url = "https://primary.supabase.co"
 
-    # Mock SecretStr attributes properly with longer keys (Supabase requires longer keys)
+    # Mock SecretStr attributes properly with longer keys
+    # (Supabase requires longer keys)
     mock_public_key = MagicMock()
     mock_public_key.get_secret_value.return_value = (
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.primary-key-test-value-for-testing-only"
@@ -70,7 +71,8 @@ def mock_settings_without_replicas():
     settings = MagicMock(spec=Settings)
     settings.database_url = "https://primary.supabase.co"
 
-    # Mock SecretStr attributes properly with longer keys (Supabase requires longer keys)
+    # Mock SecretStr attributes properly with longer keys
+    # (Supabase requires longer keys)
     mock_public_key = MagicMock()
     mock_public_key.get_secret_value.return_value = (
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.primary-key-test-value-without-replicas"
@@ -320,9 +322,9 @@ class TestDatabaseServiceReplicaIntegration:
                     with patch.object(
                         self.db_service._replica_manager, "get_load_balancer_stats"
                     ) as mock_stats:
-                        from datetime import datetime, timezone
+                        from datetime import datetime, timezone  # noqa: E501
 
-                        from tripsage_core.services.infrastructure.replica_manager import (
+                        from tripsage_core.services.infrastructure.replica_manager import (  # noqa: E501
                             LoadBalancerStats,
                             ReplicaHealth,
                             ReplicaMetrics,
@@ -417,10 +419,12 @@ class TestDatabaseServiceReplicaIntegration:
 
         if self.db_service._replica_manager:
             with patch.object(
-                self.db_service._replica_manager, "register_replica"
+                self.db_service._replica_manager, "register_replica", return_value=True
             ) as mock_register:
                 with patch.object(
-                    self.db_service._replica_manager, "remove_replica"
+                    self.db_service._replica_manager,
+                    "remove_replica",
+                    return_value=True,
                 ) as mock_remove:
                     # Test adding replica
                     result = await self.db_service.add_read_replica(

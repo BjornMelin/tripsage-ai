@@ -3,7 +3,7 @@ Infrastructure services for TripSage Core.
 
 This module provides core infrastructure services across TripSage:
 - Database operations (Supabase/PostgreSQL)
-- pgvector HNSW optimization and performance tuning
+- pgvector optimization and performance tuning
 - Caching (DragonflyDB)
 - WebSocket management
 - API key monitoring
@@ -17,17 +17,13 @@ from .key_monitoring_service import (
     KeyOperationRateLimitMiddleware,
     monitor_key_operation,
 )
-from .pgvector_optimizer import (
+from .pgvector_service import (
     DistanceFunction,
-    HNSWParameters,
-    IndexBuildProgress,
-    IndexType,
+    IndexConfig,
+    IndexStats,
     OptimizationProfile,
-    ParallelIndexConfig,
-    PGVectorOptimizer,
-    QueryOptimizationStats,
-    VectorCompressionConfig,
-    quick_optimize_table,
+    PGVectorService,
+    optimize_vector_table,
 )
 from .websocket_broadcaster import WebSocketBroadcaster, websocket_broadcaster
 from .websocket_manager import WebSocketManager, websocket_manager
@@ -36,17 +32,13 @@ __all__ = [
     # Database
     "DatabaseService",
     "get_database_service",
-    # pgvector Optimization
-    "PGVectorOptimizer",
-    "HNSWParameters",
-    "VectorCompressionConfig",
-    "ParallelIndexConfig",
-    "IndexBuildProgress",
-    "QueryOptimizationStats",
+    # pgvector Service (Modern, simplified approach)
+    "PGVectorService",
     "DistanceFunction",
-    "IndexType",
     "OptimizationProfile",
-    "quick_optimize_table",
+    "IndexConfig",
+    "IndexStats",
+    "optimize_vector_table",
     # Cache
     "CacheService",
     "get_cache_service",

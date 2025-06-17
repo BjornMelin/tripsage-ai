@@ -29,10 +29,8 @@ class TestCacheService:
         """Create mock settings."""
         settings = Mock(spec=Settings)
         settings.redis_url = "redis://localhost:6379/0"
-        settings.cache_ttl_short = 300
-        settings.cache_ttl_medium = 3600
-        settings.cache_ttl_long = 86400
-        settings.redis_max_connections = 10000
+        settings.redis_password = None
+        settings.redis_max_connections = 10
         return settings
 
     @pytest.fixture
@@ -225,7 +223,7 @@ class TestCacheService:
 
         assert result is True
         call_args = mock_redis_client.set.call_args
-        assert call_args[1]["ex"] == mock_settings.dragonfly.ttl_medium
+        assert call_args[1]["ex"] == 3600  # Default medium TTL
 
     @pytest.mark.asyncio
     async def test_set_json_with_complex_data(self, cache_service, mock_redis_client):
@@ -303,9 +301,7 @@ class TestCacheService:
         result = await cache_service.set("test:string", "Hello World")
 
         assert result is True
-        mock_redis_client.setex.assert_called_with(
-            "test:string", mock_settings.dragonfly.ttl_medium, "Hello World"
-        )
+        mock_redis_client.setex.assert_called_with("test:string", 3600, "Hello World")
 
     @pytest.mark.asyncio
     async def test_get_string_success(self, cache_service, mock_redis_client):
@@ -699,7 +695,7 @@ class TestCacheService:
 
         assert result is True
         call_args = mock_redis_client.set.call_args
-        assert call_args[1]["ex"] == mock_settings.dragonfly.ttl_short
+        assert call_args[1]["ex"] == 300  # Default short TTL
 
     @pytest.mark.asyncio
     async def test_set_medium_ttl(
@@ -712,7 +708,7 @@ class TestCacheService:
 
         assert result is True
         call_args = mock_redis_client.set.call_args
-        assert call_args[1]["ex"] == mock_settings.dragonfly.ttl_medium
+        assert call_args[1]["ex"] == 3600  # Default medium TTL
 
     @pytest.mark.asyncio
     async def test_set_long_ttl(self, cache_service, mock_redis_client, mock_settings):
@@ -723,7 +719,7 @@ class TestCacheService:
 
         assert result is True
         call_args = mock_redis_client.set.call_args
-        assert call_args[1]["ex"] == mock_settings.dragonfly.ttl_long
+        assert call_args[1]["ex"] == 86400  # Default long TTL
 
     # Error Handling Tests
 
@@ -808,11 +804,10 @@ class TestCacheService:
         self, mock_settings, mock_redis_client, mock_connection_pool
     ):
         """Test the get_cache_service dependency function."""
+        # Create a real cache service instance for testing
+        cache_instance = CacheService(settings=mock_settings)
+
         with (
-            patch(
-                "tripsage_core.services.infrastructure.cache_service.get_settings",
-                return_value=mock_settings,
-            ),
             patch(
                 "redis.asyncio.ConnectionPool.from_url",
                 return_value=mock_connection_pool,
@@ -821,6 +816,10 @@ class TestCacheService:
             patch(
                 "tripsage_core.services.infrastructure.cache_service._cache_service",
                 None,
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.cache_service.CacheService",
+                return_value=cache_instance,
             ),
         ):
             service = await get_cache_service()
