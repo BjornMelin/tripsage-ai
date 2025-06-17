@@ -19,7 +19,7 @@ TripSage AI has successfully completed a comprehensive architectural transformat
 
 ### Before: Complex Multi-Service Architecture
 
-```plaintext
+```text
 ┌─────────────┐  ┌──────────────┐  ┌─────────────┐  ┌──────────────┐
 │    Neon     │  │   Supabase   │  │    Redis    │  │   Qdrant     │
 │ PostgreSQL  │  │ PostgreSQL   │  │  Caching    │  │  Vector DB   │

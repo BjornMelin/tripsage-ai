@@ -1,101 +1,82 @@
-# TripSage AI
+# 🌟 TripSage AI
 
-> **Intelligent Travel Planning Platform with AI-Powered Recommendations**  
-> Modern FastAPI backend with Next.js frontend, featuring real-time collaboration and personalized trip planning
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)]
+(<https://python.org>)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)]
+(<https://fastapi.tiangolo.com>)
+[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)]
+(<https://nextjs.org>)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.
+svg)](https://typescriptlang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)]
+(LICENSE)
 
-[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://typescriptlang.org)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+> **Next-Generation AI-Powered Travel Planning Platform**  
+> Modern Architecture | Production Ready | Comprehensive Documentation
+
+TripSage AI is an intelligent travel planning platform that combines the power of
+modern AI agents with comprehensive travel services. Built with FastAPI, Next.js,
+and advanced AI orchestration, it provides personalized travel recommendations,
+real-time booking capabilities, and intelligent memory management.
+
+## ✨ Key Features
+
+- 🤖 **AI-Powered Planning**: LangGraph agents with GPT-4 for intelligent
+  trip recommendations
+- ✈️ **Flight Integration**: Direct Duffel API integration for real-time
+  flight search and booking
+- 🏨 **Accommodation Search**: Comprehensive accommodation discovery and booking
+- 🧠 **Intelligent Memory**: Mem0-powered user preference learning and context
+- ⚡ **Ultra-Fast Caching**: DragonflyDB for sub-millisecond response times
+- 🔒 **Enterprise Security**: Comprehensive RLS policies and JWT authentication
+- 📱 **Modern Frontend**: Next.js 15 with React 19 and TypeScript
+- 🌐 **Real-time Collaboration**: WebSocket-powered trip sharing and updates
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Python 3.12+** with [uv](https://docs.astral.sh/uv/) package manager
-- **Node.js 18+** with [pnpm](https://pnpm.io/)
-- **PostgreSQL** (or Supabase account)
-- **DragonflyDB** (optional, for high-performance caching)
+- **Python 3.12+** with uv package manager
+- **Node.js 20+** with pnpm
+- **PostgreSQL 15+** (or Supabase account)
+- **Redis/DragonflyDB** for caching
 
-### 1. Backend Setup
+### Installation
 
 ```bash
-# Clone and setup environment
+# Clone the repository
 git clone https://github.com/your-org/tripsage-ai.git
 cd tripsage-ai
 
-# Install dependencies with uv
-uv sync
+# Backend setup
+uv sync                                    # Install Python dependencies
+cp .env.example .env                       # Configure environment
+uv run python scripts/database/setup.py   # Initialize database
 
-# Configure environment
-cp .env.example .env.local
-# Edit .env.local with your API keys and database credentials
-
-# Run database migrations
-uv run python scripts/database/run_migrations.py
-
-# Start the API server
-uv run python -m tripsage.api.main
-```
-
-The API will be available at `http://localhost:8000` with interactive docs at `/docs`.
-
-### 2. Frontend Setup
-
-```bash
-# Navigate to frontend directory
+# Frontend setup
 cd frontend
+pnpm install                              # Install Node.js dependencies
+cp .env.local.example .env.local          # Configure frontend environment
 
-# Install dependencies
-pnpm install
-
-# Configure environment
-cp .env.example .env.local
-# Edit .env.local with your API endpoints
-
-# Start development server
-pnpm dev
+# Start development servers
+uv run python -m tripsage.api.main       # Backend (port 8000)
+pnpm dev                                  # Frontend (port 3000)
 ```
 
-The frontend will be available at `http://localhost:3000`.
-
-### 3. Quick Test
+### Verification
 
 ```bash
 # Health check
 curl http://localhost:8000/api/health
 
-# Test trip planning (requires authentication)
-curl -X POST "http://localhost:8000/api/trips" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Tokyo Adventure",
-    "start_date": "2024-07-01",
-    "end_date": "2024-07-07",
-    "destinations": [{"name": "Tokyo, Japan", "country": "Japan", "city": "Tokyo"}]
-  }'
+# Frontend access
+open http://localhost:3000
 ```
 
----
+## 🏗️ Architecture
 
-## 🎯 What is TripSage AI?
-
-TripSage AI is a comprehensive travel planning platform that leverages artificial intelligence to create personalized trip recommendations. It combines flight search, accommodation booking, activity suggestions, and intelligent memory to deliver exceptional travel planning experiences.
-
-### Core Features
-
-- 🧠 **AI-Powered Planning**: LangGraph agents for intelligent trip optimization
-- 🔄 **Real-time Collaboration**: WebSocket-based live trip sharing
-- 💾 **Intelligent Memory**: Mem0 integration for personalized recommendations
-- ✈️ **Flight Integration**: Duffel API for real-time flight search and booking
-- 🏨 **Accommodation Search**: Multi-provider hotel and lodging options
-- 📱 **Modern Frontend**: Next.js 15 with React 19 and App Router
-- 🚀 **High Performance**: DragonflyDB caching (25x faster than Redis)
-- 🔒 **Enterprise Security**: JWT authentication with comprehensive RBAC
-
-### Architecture Highlights
+TripSage is built on a modern, unified architecture optimized for performance
+and scalability:
 
 - **Backend**: FastAPI with Python 3.12+ and async/await patterns
 - **Database**: Supabase PostgreSQL with pgvector for embeddings
@@ -110,12 +91,12 @@ TripSage AI is a comprehensive travel planning platform that leverages artificia
 
 | Guide | Description |
 |-------|-------------|
-| **[📚 Complete Documentation](docs/README.md)** | **NEW: Organized documentation hub** |
+| **[📚 Complete Documentation](docs/README.md)** | **Organized documentation hub** |
 | **[User Guide](docs/08_USER_GUIDES/README.md)** | Complete user manual with API usage examples |
 | **[Developer Guide](docs/04_DEVELOPMENT_GUIDE/README.md)** | Development setup, architecture, and best practices |
 | **[API Reference](docs/06_API_REFERENCE/README.md)** | Complete REST API and WebSocket documentation |
-| **[Testing Guide](TESTING_GUIDE.md)** | Testing framework and coverage guidelines |
-| **[Deployment Guide](DEPLOYMENT_GUIDE.md)** | Production deployment with Docker/Kubernetes |
+| **[Security Guide](docs/07_CONFIGURATION/SECURITY/README.md)** | Security implementation and best practices |
+| **[Architecture Guide](docs/03_ARCHITECTURE/README.md)** | System design and technical architecture |
 
 ### Interactive Documentation
 
@@ -159,7 +140,7 @@ tripsage-ai/
 ```bash
 # Backend Development
 uv run python -m tripsage.api.main     # Start API server
-uv run pytest                          # Run tests (527 currently failing - Pydantic v1→v2)
+uv run pytest                          # Run tests
 ruff check . --fix && ruff format .    # Lint and format
 
 # Frontend Development
@@ -288,7 +269,8 @@ ws.send(JSON.stringify({
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our
+[Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ### Development Workflow
 
@@ -366,7 +348,8 @@ uv run pytest tests/security/
 
 ## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the
+[LICENSE](LICENSE) file for details.
 
 ---
 
@@ -390,6 +373,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<p align="center">
-  <strong>Built with ❤️ for the future of travel planning</strong>
-</p>
+## Built with ❤️ for the future of travel planning
