@@ -47,12 +47,14 @@ This guide provides comprehensive information about testing in the TripSage proj
 **Purpose**: Test individual components in isolation
 
 **Characteristics**:
+
 - Fast execution (<100ms per test)
 - No external dependencies
 - Deterministic results
 - High code coverage
 
 **When to Write**:
+
 - For every new function/class
 - For bug fixes (regression tests)
 - For edge cases and error conditions
@@ -62,12 +64,14 @@ This guide provides comprehensive information about testing in the TripSage proj
 **Purpose**: Test component interactions
 
 **Characteristics**:
+
 - May use real databases (test instances)
 - Test service boundaries
 - Verify data flow between components
 - Slower than unit tests
 
 **When to Write**:
+
 - Testing database operations
 - Testing service interactions
 - Testing external API integrations
@@ -78,12 +82,14 @@ This guide provides comprehensive information about testing in the TripSage proj
 **Purpose**: Test complete user workflows
 
 **Characteristics**:
+
 - Test full application stack
 - Simulate real user behavior
 - Use production-like environment
 - Slowest test category
 
 **When to Write**:
+
 - Critical user journeys
 - Complex multi-step workflows
 - Cross-service operations
@@ -94,12 +100,14 @@ This guide provides comprehensive information about testing in the TripSage proj
 **Purpose**: Ensure acceptable performance
 
 **Characteristics**:
+
 - Measure response times
 - Test under load
 - Identify bottlenecks
 - Benchmark against requirements
 
 **When to Write**:
+
 - Performance-critical operations
 - High-traffic endpoints
 - Resource-intensive algorithms
@@ -110,12 +118,14 @@ This guide provides comprehensive information about testing in the TripSage proj
 **Purpose**: Validate security measures
 
 **Characteristics**:
+
 - Test authentication/authorization
 - Verify data isolation
 - Check for vulnerabilities
 - Test security policies
 
 **When to Write**:
+
 - Authentication flows
 - Authorization rules
 - Data access controls
@@ -157,7 +167,7 @@ uv run pytest --cov=tripsage
 
 ### Understanding Test Output
 
-```
+```text
 ========================= test session starts ==========================
 platform linux -- Python 3.11.0, pytest-8.4.0, pluggy-1.5.0
 rootdir: /path/to/tripsage
@@ -505,7 +515,7 @@ async def test_concurrent_requests(test_client):
 
 ## Security Testing
 
-### Testing Authentication
+### Testing Authentication - Security
 
 ```python
 @pytest.mark.security
@@ -610,6 +620,7 @@ def test_under_development():
 ```
 
 Run only focused tests:
+
 ```bash
 pytest -m focus
 ```
@@ -847,6 +858,7 @@ Testing is a critical part of the TripSage development process. This guide provi
 - Make it maintainable
 
 For more specific information about test categories, see:
+
 - [Unit Tests](unit/README.md)
 - [Integration Tests](integration/README.md)
 - [E2E Tests](e2e/README.md)
