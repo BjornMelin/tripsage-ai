@@ -617,9 +617,6 @@ class WebSocketManager:
 
         # Subscribe to new channels
         if subscribe_request.channels:
-            available_channels = self.auth_service.get_available_channels(
-                connection.user_id
-            )
             allowed_channels, denied_channels = (
                 self.auth_service.validate_channel_access(
                     connection.user_id, subscribe_request.channels

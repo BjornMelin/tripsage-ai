@@ -297,8 +297,11 @@ class TestApiKeyService:
 
         # Mock validation success
         with patch.object(api_key_service, "validate_key") as mock_validate:
-            mock_validate.return_value = ApiKeyValidationResult(
-                is_valid=True, status=ValidationStatus.VALID, message="Key is valid"
+            mock_validate.return_value = ValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                service=ServiceType.OPENAI,
+                message="Key is valid"
             )
 
             # Mock database operations
@@ -319,9 +322,10 @@ class TestApiKeyService:
 
         # Mock validation failure
         with patch.object(api_key_service, "validate_key") as mock_validate:
-            mock_validate.return_value = ApiKeyValidationResult(
+            mock_validate.return_value = ValidationResult(
                 is_valid=False,
                 status=ValidationStatus.INVALID,
+                service=ServiceType.OPENAI,
                 message="Invalid key format",
             )
 
@@ -335,8 +339,11 @@ class TestApiKeyService:
 
         # Mock successful health check
         with patch.object(api_key_service, "validate_key") as mock_validate:
-            mock_validate.return_value = ApiKeyValidationResult(
-                is_valid=True, status=ValidationStatus.VALID, message="Key is healthy"
+            mock_validate.return_value = ValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                service=ServiceType.OPENAI,
+                message="Key is healthy"
             )
 
             mock_db_service.get_api_key.return_value = {
@@ -400,8 +407,11 @@ class TestApiKeyService:
     async def test_cache_operations(self, api_key_service, mock_cache_service):
         """Test cache operations for validation results."""
         key_hash = "test_hash"
-        validation_result = ApiKeyValidationResult(
-            is_valid=True, status=ValidationStatus.VALID, message="Cached result"
+        validation_result = ValidationResult(
+            is_valid=True,
+            status=ValidationStatus.VALID,
+            service=ServiceType.OPENAI,
+            message="Cached result"
         )
 
         # Test cache set
@@ -464,8 +474,11 @@ class TestApiKeyService:
 
         # Mock validation success but database failure
         with patch.object(api_key_service, "validate_key") as mock_validate:
-            mock_validate.return_value = ApiKeyValidationResult(
-                is_valid=True, status=ValidationStatus.VALID, message="Key is valid"
+            mock_validate.return_value = ValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                service=ServiceType.OPENAI,
+                message="Key is valid"
             )
 
             mock_db_service.create_api_key.side_effect = Exception("Database error")
@@ -533,8 +546,11 @@ class TestApiKeyService:
 
         # Test bulk health check
         with patch.object(api_key_service, "check_health") as mock_health:
-            mock_health.return_value = ApiKeyValidationResult(
-                is_valid=True, status=ValidationStatus.VALID, message="Healthy"
+            mock_health.return_value = ValidationResult(
+                is_valid=True,
+                status=ValidationStatus.VALID,
+                service=ServiceType.OPENAI,
+                message="Healthy"
             )
 
             results = await api_key_service.bulk_health_check(user_id)
