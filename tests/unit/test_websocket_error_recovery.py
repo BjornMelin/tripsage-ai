@@ -20,6 +20,7 @@ from tripsage_core.services.infrastructure.websocket_manager import (
     CircuitBreakerState,
     ConnectionState,
     ExponentialBackoff,
+    MonitoredDeque,
     RateLimitConfig,
     RateLimiter,
     WebSocketAuthRequest,
@@ -774,3 +775,146 @@ class TestWebSocketEventSerialization:
         assert "id" in event_dict
         assert "type" in event_dict
         assert "timestamp" in event_dict
+
+
+class TestMonitoredDeque:
+    """Test MonitoredDeque dropped message logging functionality."""
+
+    def test_monitored_deque_creation(self):
+        """Test MonitoredDeque initialization."""
+        queue = MonitoredDeque(
+            maxlen=5, priority_name="high", connection_id="test-conn-123"
+        )
+
+        assert queue.maxlen == 5
+        assert queue.priority_name == "high"
+        assert queue.connection_id == "test-conn-123"
+        assert queue.dropped_count == 0
+
+    def test_normal_append_operations(self):
+        """Test normal append operations without dropping."""
+        queue = MonitoredDeque(
+            maxlen=3, priority_name="medium", connection_id="test-conn-456"
+        )
+
+        # Add items within capacity
+        queue.append("item1")
+        queue.append("item2")
+        queue.append("item3")
+
+        assert len(queue) == 3
+        assert queue.dropped_count == 0
+        assert list(queue) == ["item1", "item2", "item3"]
+
+    def test_append_with_message_dropping(self, caplog):
+        """Test message dropping and logging on append."""
+        import logging
+
+        queue = MonitoredDeque(maxlen=2, priority_name="high", connection_id="conn-789")
+
+        # Fill queue to capacity
+        queue.append("item1")
+        queue.append("item2")
+        assert len(queue) == 2
+        assert queue.dropped_count == 0
+
+        # This should trigger a drop and log warning
+        with caplog.at_level(logging.WARNING):
+            queue.append("item3")
+
+        assert len(queue) == 2  # Queue size stays at maxlen
+        assert queue.dropped_count == 1
+        assert list(queue) == ["item2", "item3"]  # item1 was dropped
+
+        # Check log message
+        assert len(caplog.records) == 1
+        log_record = caplog.records[0]
+        assert log_record.levelname == "WARNING"
+        assert "Message dropped from high priority queue" in log_record.message
+        assert "for connection conn-789" in log_record.message
+        assert "Total dropped: 1" in log_record.message
+
+    def test_appendleft_with_message_dropping(self, caplog):
+        """Test message dropping and logging on appendleft."""
+        import logging
+
+        queue = MonitoredDeque(maxlen=2, priority_name="low", connection_id="conn-abc")
+
+        # Fill queue to capacity
+        queue.append("item1")
+        queue.append("item2")
+
+        # This should trigger a drop and log warning
+        with caplog.at_level(logging.WARNING):
+            queue.appendleft("item0")
+
+        assert len(queue) == 2
+        assert queue.dropped_count == 1
+        assert list(queue) == ["item0", "item1"]  # item2 was dropped
+
+        # Check log message
+        assert len(caplog.records) == 1
+        log_record = caplog.records[0]
+        assert log_record.levelname == "WARNING"
+        assert "Message dropped from low priority queue" in log_record.message
+        assert "for connection conn-abc" in log_record.message
+
+    def test_multiple_drops_counter(self, caplog):
+        """Test dropped message counter increments correctly."""
+        import logging
+
+        queue = MonitoredDeque(
+            maxlen=1, priority_name="critical", connection_id="conn-xyz"
+        )
+
+        # Fill queue
+        queue.append("item1")
+
+        # Drop multiple messages
+        with caplog.at_level(logging.WARNING):
+            queue.append("item2")  # Drops item1
+            queue.append("item3")  # Drops item2
+            queue.append("item4")  # Drops item3
+
+        assert len(queue) == 1
+        assert queue.dropped_count == 3
+        assert list(queue) == ["item4"]
+
+        # Check that all drops were logged
+        assert len(caplog.records) == 3
+        assert "Total dropped: 1" in caplog.records[0].message
+        assert "Total dropped: 2" in caplog.records[1].message
+        assert "Total dropped: 3" in caplog.records[2].message
+
+    def test_no_logging_when_under_capacity(self, caplog):
+        """Test no logging occurs when queue is under capacity."""
+        import logging
+
+        queue = MonitoredDeque(
+            maxlen=5, priority_name="test", connection_id="conn-test"
+        )
+
+        with caplog.at_level(logging.WARNING):
+            queue.append("item1")
+            queue.append("item2")
+            queue.appendleft("item0")
+
+        assert len(queue) == 3
+        assert queue.dropped_count == 0
+        assert len(caplog.records) == 0  # No warnings logged
+
+    def test_unlimited_queue_no_drops(self, caplog):
+        """Test that unlimited queue (maxlen=None) never drops."""
+        import logging
+
+        queue = MonitoredDeque(
+            priority_name="unlimited", connection_id="conn-unlimited"
+        )
+
+        with caplog.at_level(logging.WARNING):
+            for i in range(100):
+                queue.append(f"item{i}")
+
+        assert len(queue) == 100
+        assert queue.dropped_count == 0
+        assert len(caplog.records) == 0  # No warnings logged
