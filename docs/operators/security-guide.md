@@ -234,7 +234,6 @@ USING (
 ---
 
 *This overview provides the foundation for understanding TripSage's comprehensive security implementation. For detailed implementation guidance, see the specific security guides.*
--e
 ---
 
 ## Security Best Practices
@@ -657,7 +656,6 @@ The comprehensive RLS policy fixes address all 8 critical security vulnerabiliti
 5. **Following security best practices** to prevent common RLS mistakes
 
 After applying these fixes, the TripSage database will have enterprise-grade security with proper multi-tenant isolation and collaboration features.
--e
 ---
 
 ## Row Level Security Implementation
@@ -917,7 +915,6 @@ USING (
 - [PostgreSQL RLS Documentation](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
 - Project RLS tests: `tests/database/test_rls_policies.py`
 - Schema files: `supabase/schemas/05_policies*.sql`
--e
 
 ---
 
