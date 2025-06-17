@@ -54,6 +54,9 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )
+from tripsage_core.services.infrastructure.websocket_broadcaster import (
+    websocket_broadcaster,
+)
 from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
 from tripsage_core.services.simple_mcp_service import mcp_manager
 
@@ -80,7 +83,7 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    # Startup: Initialize MCP Manager and WebSocket Manager
+    # Startup: Initialize MCP Manager and WebSocket Services
     logger.info("Initializing MCP Manager on API startup")
     await mcp_manager.initialize_all_enabled()
 
@@ -89,15 +92,23 @@ async def lifespan(app: FastAPI):
     logger.info(f"Available MCPs: {available_mcps}")
     logger.info(f"Initialized MCPs: {initialized_mcps}")
 
-    # Initialize WebSocket Manager
-    logger.info("Starting WebSocket Manager")
+    # Initialize WebSocket Broadcaster first
+    logger.info("Starting WebSocket Broadcaster")
+    await websocket_broadcaster.start()
+
+    # Initialize WebSocket Manager with broadcaster integration
+    logger.info("Starting WebSocket Manager with broadcaster integration")
+    websocket_manager.broadcaster = websocket_broadcaster
     await websocket_manager.start()
 
     yield  # Application runs here
 
-    # Shutdown: Clean up resources
+    # Shutdown: Clean up resources (reverse order)
     logger.info("Stopping WebSocket Manager")
     await websocket_manager.stop()
+
+    logger.info("Stopping WebSocket Broadcaster")
+    await websocket_broadcaster.stop()
 
     logger.info("Shutting down MCP Manager")
     await mcp_manager.shutdown()
