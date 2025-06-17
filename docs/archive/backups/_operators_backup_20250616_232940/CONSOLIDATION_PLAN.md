@@ -119,17 +119,20 @@ touch docs/operators/settings-reference.md
 #### **Step 2: Content Migration Map**
 
 **Target: `installation-guide.md`**
+
 - **Source**: `INSTALLATION_GUIDE.md` (full content)
-- **Source**: `NODEJS_COMPATIBILITY_GUIDE.md` (full content) 
+- **Source**: `NODEJS_COMPATIBILITY_GUIDE.md` (full content)
 - **New Sections**: Prerequisites, Dependencies, Local Development Setup
 
 **Target: `deployment-guide.md`**
+
 - **Source**: `DEPLOYMENT_CONFIGS.md` (platform comparison + cost calculator)
 - **Source**: `DEPLOYMENT_STRATEGY.md` (CI/CD + Kubernetes sections)
 - **Source**: `PRODUCTION_DEPLOYMENT.md` (production setup + monitoring)
 - **New Structure**: Platform Selection → CI/CD → Production → Monitoring
 
 **Target: `environment-configuration.md`**
+
 - **Source**: `ENVIRONMENT_VARIABLES.md` (complete env var reference)
 - **Source**: `README.md` (environment examples - remove duplicates)
 - **Source**: `PRODUCTION_DEPLOYMENT.md` (production env vars - merge)
@@ -137,6 +140,7 @@ touch docs/operators/settings-reference.md
 - **New Organization**: By service (Database, Cache, External APIs, etc.)
 
 **Target: `security-guide.md`**
+
 - **Source**: `SECURITY_OVERVIEW.md` (architecture overview)
 - **Source**: `SECURITY_BEST_PRACTICES.md` (vulnerabilities + fixes)
 - **Source**: `RLS_IMPLEMENTATION.md` (RLS policies)
@@ -144,22 +148,26 @@ touch docs/operators/settings-reference.md
 - **New Structure**: Overview → Implementation → Policies → Testing
 
 **Target: `supabase-configuration.md`**
+
 - **Source**: `SUPABASE_PRODUCTION_SETUP.md` (comprehensive setup)
 - **Source**: `EXTENSIONS_AND_AUTOMATION.md` (extensions config)
 - **New Organization**: Setup → Extensions → Production → Automation
 
 **Target: `authentication-guide.md`**
+
 - **Source**: `OAUTH_SETUP_GUIDE.md` (complete OAuth setup - 1280 lines)
 - **New Sections**: Overview, Provider Setup, Troubleshooting
 
 **Target: `settings-reference.md`**
+
 - **Source**: `SETTINGS_REFERENCE.md` (Pydantic settings - 756 lines)
 - **Source**: `INFRASTRUCTURE_UPGRADE_SUMMARY.md` (historical context)
 - **New Organization**: Current Settings → Migration History → Advanced Configuration
 
 #### **Step 3: Update README.md**
 
-**New README Structure (Clean Navigation Hub)**
+##### **New README Structure (Clean Navigation Hub)**
+
 ```markdown
 # 🎯 TripSage Operators Documentation
 
@@ -234,6 +242,7 @@ rm docs/operators/INFRASTRUCTURE_UPGRADE_SUMMARY.md
 #### **Step 5: Fix Naming Conventions**
 
 **Before → After:**
+
 - ✅ `README.md` (keep)
 - ✅ `SETTINGS_REFERENCE.md` → `settings-reference.md` (content preserved)
 - All new files use lowercase with hyphens
@@ -530,18 +539,21 @@ grep -r "TRIPSAGE_DB_SUPABASE_URL" docs/operators/
 ### **Qualitative Improvements**
 
 #### **🎯 Improved User Experience**
+
 - **Single entry point**: README provides clear navigation
 - **Logical grouping**: Related content grouped by operator workflow
 - **Reduced cognitive load**: No need to search across 22 files
 - **Consistent naming**: All files follow lowercase-with-hyphens convention
 
 #### **🛠️ Enhanced Maintainability**
+
 - **Single source of truth**: Environment variables centralized
 - **Reduced duplication**: 90%+ reduction in duplicate content
 - **Clear ownership**: Each topic has one authoritative file
 - **Easier updates**: Changes need to be made in only one place
 
 #### **📈 Operational Benefits**
+
 - **Faster onboarding**: New team members find information quickly
 - **Reduced errors**: No conflicts between different documentation versions
 - **Better compliance**: Security information centralized and comprehensive
@@ -550,24 +562,28 @@ grep -r "TRIPSAGE_DB_SUPABASE_URL" docs/operators/
 ## ✅ Success Criteria
 
 ### **Content Completeness**
+
 - [ ] All content from original 13 files preserved
 - [ ] No broken internal links
 - [ ] All code examples and commands validated
 - [ ] Environment variable references updated
 
 ### **Organization Quality**
+
 - [ ] Logical file structure matches operator workflows
 - [ ] Clear table of contents in each consolidated file
 - [ ] Consistent formatting and style
 - [ ] Standardized naming conventions
 
 ### **User Experience**
+
 - [ ] README provides clear navigation
 - [ ] Common tasks easily discoverable
 - [ ] Estimated time requirements for each task
 - [ ] Quick reference sections
 
 ### **Maintenance Efficiency**
+
 - [ ] Single source of truth for each topic
 - [ ] Eliminated content duplication
 - [ ] Clear file ownership and responsibility

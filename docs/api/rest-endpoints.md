@@ -733,20 +733,24 @@ X-RateLimit-Window: 3600
 ## 🔗 Related Documentation
 
 ### Getting Started
+
 - **[API Overview](README.md)** - Complete API documentation index
 - **[Getting Started Guide](getting-started.md)** - First steps with the API
 - **[Authentication Guide](authentication.md)** - Setup JWT tokens and API keys
 
 ### Code Examples
+
 - **[Quick Examples](usage-examples.md)** - Copy-paste REST API examples
 - **[Complete Integration Guide](examples.md)** - Full workflow implementations
 - **[Error Handling](error-codes.md)** - Troubleshoot API responses
 
 ### Real-time Features
+
 - **[WebSocket API](websocket-api.md)** - Real-time chat and collaboration
 - **[Real-time Guide](realtime-guide.md)** - Advanced real-time patterns
 
 ### Support
+
 - **[Error Codes Reference](error-codes.md)** - Debug failed requests
 - **Interactive Docs**: `/api/docs` (Swagger UI)
 - **Support**: <api@tripsage.ai>

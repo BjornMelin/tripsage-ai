@@ -6,6 +6,7 @@
 ## 📋 Table of Contents
 
 ### **🚀 Getting Started**
+
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [**Quick Start Guide**](quick-start-guide.md) | ⚡ 15-minute setup for new developers | New developers |
@@ -13,6 +14,7 @@
 | [Testing Guide](testing-guide.md) | Comprehensive testing strategies & patterns | All developers |
 
 ### **🏗️ Core Development**
+
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [API Development](api-development.md) | Backend API development with FastAPI | Backend developers |
@@ -21,6 +23,7 @@
 | [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
 
 ### **🎯 Advanced Topics**
+
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [Architecture Guide](architecture-guide.md) | System design & database architecture | Senior developers |
