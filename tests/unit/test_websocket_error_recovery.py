@@ -180,6 +180,35 @@ class TestCircuitBreaker:
         assert cb.state == CircuitBreakerState.CLOSED
         assert cb.failure_count == 0
 
+    def test_circuit_breaker_half_open_to_open_transition(self):
+        """Test circuit breaker transitions from HALF_OPEN back to OPEN on failure."""
+        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.1)
+
+        # Open the circuit
+        cb.record_failure()
+        cb.record_failure()
+        assert cb.state == CircuitBreakerState.OPEN
+
+        # Wait for recovery timeout to transition to HALF_OPEN
+        time.sleep(0.2)
+        assert cb.can_execute() is True
+        assert cb.state == CircuitBreakerState.HALF_OPEN
+
+        # Record another failure while in HALF_OPEN state
+        cb.record_failure()
+        
+        # Should transition back to OPEN
+        assert cb.state == CircuitBreakerState.OPEN
+        assert cb.can_execute() is False
+
+        # Verify it stays OPEN until recovery timeout
+        assert cb.can_execute() is False
+        
+        # Wait again and verify it can transition back to HALF_OPEN
+        time.sleep(0.2)
+        assert cb.can_execute() is True
+        assert cb.state == CircuitBreakerState.HALF_OPEN
+
 
 class TestExponentialBackoff:
     """Test exponential backoff with jitter."""
@@ -566,6 +595,9 @@ class TestWebSocketManagerIntegration:
             websocket=MagicMock(), connection_id=connection_id, user_id=user_id
         )
         manager.connection_service.connections[connection_id] = connection
+        
+        # Register with messaging service (normally done during authentication)
+        manager.messaging_service.register_connection(connection)
 
         # Subscribe to channels
         request = WebSocketSubscribeRequest(
@@ -600,6 +632,11 @@ class TestWebSocketManagerIntegration:
         connection.subscribe_to_channel("notifications")
 
         manager.connection_service.connections[connection_id] = connection
+        
+        # Register with messaging service (normally done during authentication)
+        manager.messaging_service.register_connection(connection)
+        
+        # Set up existing channel subscriptions
         manager.messaging_service.channel_connections["general"] = {connection_id}
         manager.messaging_service.channel_connections["notifications"] = {connection_id}
 
@@ -623,6 +660,9 @@ class TestWebSocketManagerIntegration:
             websocket=MagicMock(), connection_id=connection_id, user_id=user_id
         )
         manager.connection_service.connections[connection_id] = connection
+        
+        # Register with messaging service (normally done during authentication)
+        manager.messaging_service.register_connection(connection)
 
         # Try to subscribe to admin channel (not in available channels)
         request = WebSocketSubscribeRequest(channels=["admin:secret"])
@@ -645,6 +685,11 @@ class TestWebSocketManagerIntegration:
         conn1.subscribe_to_channel("test-channel")
 
         manager.connection_service.connections["conn1"] = conn1
+        
+        # Register with messaging service (normally done during authentication)
+        manager.messaging_service.register_connection(conn1)
+        
+        # Set up channel subscription manually since we're bypassing normal flow
         manager.messaging_service.channel_connections["test-channel"] = {"conn1"}
 
         # Broadcast message
@@ -657,8 +702,20 @@ class TestWebSocketManagerIntegration:
     def test_performance_metrics_tracking(self, manager):
         """Test performance metrics collection."""
         # Add some connections
-        manager.connection_service.connections["conn1"] = MagicMock()
-        manager.connection_service.connections["conn2"] = MagicMock()
+        from uuid import uuid4
+        conn1 = WebSocketConnection(
+            websocket=MagicMock(), connection_id="conn1", user_id=uuid4()
+        )
+        conn2 = WebSocketConnection(
+            websocket=MagicMock(), connection_id="conn2", user_id=uuid4()
+        )
+        
+        manager.connection_service.connections["conn1"] = conn1
+        manager.connection_service.connections["conn2"] = conn2
+        
+        # Register with messaging service too
+        manager.messaging_service.register_connection(conn1)
+        manager.messaging_service.register_connection(conn2)
 
         stats = manager.get_connection_stats()
         assert stats["total_connections"] == 2
@@ -696,6 +753,10 @@ class TestErrorRecoveryScenarios:
         # Reset state and retry
         connection.state = ConnectionState.CONNECTED
         connection.circuit_breaker.record_success()  # Reset circuit breaker
+        
+        # Reset the mock to succeed on the next call
+        ws.send_text.side_effect = None  # Clear side_effect list
+        ws.send_text.return_value = None  # Make it succeed
 
         # Should eventually succeed
         result2 = await connection.send(event)
@@ -729,14 +790,19 @@ class TestErrorRecoveryScenarios:
         # Create multiple connections
         connections = []
         for i in range(5):
+            mock_ws = MagicMock()
+            mock_ws.send_text = AsyncMock()
             conn = WebSocketConnection(
-                websocket=MagicMock(), connection_id=f"conn{i}", user_id=uuid4()
+                websocket=mock_ws, connection_id=f"conn{i}", user_id=uuid4()
             )
             connections.append(conn)
             manager.connection_service.connections[conn.connection_id] = conn
+            # Also register with messaging service
+            manager.messaging_service.register_connection(conn)
 
         # Simulate one connection having issues
         connections[0].circuit_breaker.state = CircuitBreakerState.OPEN
+        connections[0].circuit_breaker.last_failure_time = time.time()  # Prevent automatic recovery
         connections[0].state = ConnectionState.ERROR
 
         # Broadcast should continue to healthy connections
