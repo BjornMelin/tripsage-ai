@@ -4,6 +4,7 @@ Key management service for BYOK (Bring Your Own Key) functionality.
 This service consolidates API key management including encryption, storage,
 validation, and monitoring. It provides secure handling of user-provided
 API keys for external services while maintaining audit trails and security.
+Includes comprehensive audit logging for all key lifecycle events.
 """
 
 import base64
@@ -25,6 +26,12 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditOutcome,
+    audit_api_key,
+    audit_config_change,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -242,6 +249,19 @@ class KeyManagementService:
                 success=True,
             )
 
+            # Audit log API key creation
+            await audit_api_key(
+                event_type=AuditEventType.API_KEY_CREATED,
+                outcome=AuditOutcome.SUCCESS,
+                key_id=key_id,
+                service=key_data.service,
+                ip_address="127.0.0.1",  # TODO: Get actual IP from request context
+                message=f"API key created for service {key_data.service}",
+                key_name=key_data.name,
+                user_id=user_id,
+                validation_result=validation_result.is_valid,
+            )
+
             logger.info(
                 "API key created",
                 extra={
@@ -374,6 +394,17 @@ class KeyManagementService:
                 success=True,
             )
 
+            # Audit log key retrieval/usage
+            await audit_api_key(
+                event_type=AuditEventType.API_KEY_VALIDATION_SUCCESS,
+                outcome=AuditOutcome.SUCCESS,
+                key_id=result["id"],
+                service=service,
+                ip_address="127.0.0.1",  # TODO: Get actual IP from request context
+                message=f"API key retrieved for service {service}",
+                user_id=user_id,
+            )
+
             return decrypted_key
 
         except Exception as e:
@@ -435,6 +466,25 @@ class KeyManagementService:
                 else validation_result.message,
             )
 
+            # Audit log validation attempt
+            event_type = (AuditEventType.API_KEY_VALIDATION_SUCCESS 
+                         if validation_result.is_valid 
+                         else AuditEventType.API_KEY_VALIDATION_FAILED)
+            outcome = (AuditOutcome.SUCCESS 
+                      if validation_result.is_valid 
+                      else AuditOutcome.FAILURE)
+            
+            await audit_api_key(
+                event_type=event_type,
+                outcome=outcome,
+                key_id=key_id,
+                service=key_data["service"],
+                ip_address="127.0.0.1",  # TODO: Get actual IP from request context
+                message=f"API key validation {'succeeded' if validation_result.is_valid else 'failed'}: {validation_result.message}",
+                user_id=user_id,
+                validation_details=validation_result.details,
+            )
+
             return validation_result
 
         except ValidationError:
@@ -474,6 +524,17 @@ class KeyManagementService:
                     service=key_data["service"],
                     operation="delete",
                     success=True,
+                )
+
+                # Audit log key deletion
+                await audit_api_key(
+                    event_type=AuditEventType.API_KEY_DELETED,
+                    outcome=AuditOutcome.SUCCESS,
+                    key_id=key_id,
+                    service=key_data["service"],
+                    ip_address="127.0.0.1",  # TODO: Get actual IP from request context
+                    message=f"API key deleted for service {key_data['service']}",
+                    user_id=user_id,
                 )
 
                 logger.info(
@@ -543,6 +604,18 @@ class KeyManagementService:
                 service=key_data["service"],
                 operation="rotate",
                 success=True,
+            )
+
+            # Audit log key rotation
+            await audit_api_key(
+                event_type=AuditEventType.API_KEY_ROTATED,
+                outcome=AuditOutcome.SUCCESS,
+                key_id=key_id,
+                service=key_data["service"],
+                ip_address="127.0.0.1",  # TODO: Get actual IP from request context
+                message=f"API key rotated for service {key_data['service']}",
+                user_id=user_id,
+                validation_result=validation_result.is_valid,
             )
 
             logger.info(
