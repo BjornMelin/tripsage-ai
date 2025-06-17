@@ -18,11 +18,11 @@ from tripsage.api.schemas.api_keys import (
     ApiKeyValidateRequest,
     ApiKeyValidateResponse,
 )
-from tripsage_core.services.business.key_management_service import (
-    KeyManagementService as KeyService,
+from tripsage_core.services.business.api_key_service import (
+    ApiKeyService as KeyService,
 )
-from tripsage_core.services.business.key_management_service import (
-    get_key_management_service as get_key_service,
+from tripsage_core.services.business.api_key_service import (
+    get_api_key_service as get_key_service,
 )
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
@@ -57,7 +57,7 @@ async def list_keys(
         List of API keys
     """
     user_id = get_principal_id(principal)
-    return await key_service.list_keys(user_id)
+    return await key_service.list_user_keys(user_id)
 
 
 @router.post(
