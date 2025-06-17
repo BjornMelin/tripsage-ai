@@ -18,16 +18,23 @@ from websockets.exceptions import WebSocketException
 from tripsage_core.services.infrastructure.websocket_manager import (
     CircuitBreaker,
     CircuitBreakerState,
-    ConnectionState,
     ExponentialBackoff,
-    MonitoredDeque,
     RateLimitConfig,
     RateLimiter,
-    WebSocketAuthRequest,
-    WebSocketConnection,
-    WebSocketEvent,
     WebSocketManager,
     WebSocketSubscribeRequest,
+)
+from tripsage_core.services.infrastructure.websocket_connection_service import (
+    ConnectionState,
+    WebSocketConnection,
+    MonitoredDeque,
+    ExponentialBackoffException,
+)
+from tripsage_core.services.infrastructure.websocket_auth_service import (
+    WebSocketAuthRequest,
+)
+from tripsage_core.services.infrastructure.websocket_messaging_service import (
+    WebSocketEvent,
 )
 
 
@@ -218,8 +225,8 @@ class TestExponentialBackoff:
         for _ in range(3):
             backoff.next_attempt()
 
-        # Next attempt should raise exception
-        with pytest.raises(Exception, match="Max reconnection attempts"):
+        # Next attempt should raise custom exception
+        with pytest.raises(ExponentialBackoffException, match="Max reconnection attempts"):
             backoff.get_delay()
 
     def test_backoff_reset(self):
@@ -558,7 +565,7 @@ class TestWebSocketManagerIntegration:
         connection = WebSocketConnection(
             websocket=MagicMock(), connection_id=connection_id, user_id=user_id
         )
-        manager.connections[connection_id] = connection
+        manager.connection_service.connections[connection_id] = connection
 
         # Subscribe to channels
         request = WebSocketSubscribeRequest(
@@ -592,9 +599,9 @@ class TestWebSocketManagerIntegration:
         connection.subscribe_to_channel("general")
         connection.subscribe_to_channel("notifications")
 
-        manager.connections[connection_id] = connection
-        manager.channel_connections["general"] = {connection_id}
-        manager.channel_connections["notifications"] = {connection_id}
+        manager.connection_service.connections[connection_id] = connection
+        manager.messaging_service.channel_connections["general"] = {connection_id}
+        manager.messaging_service.channel_connections["notifications"] = {connection_id}
 
         # Unsubscribe from one, subscribe to another
         request = WebSocketSubscribeRequest(
@@ -615,7 +622,7 @@ class TestWebSocketManagerIntegration:
         connection = WebSocketConnection(
             websocket=MagicMock(), connection_id=connection_id, user_id=user_id
         )
-        manager.connections[connection_id] = connection
+        manager.connection_service.connections[connection_id] = connection
 
         # Try to subscribe to admin channel (not in available channels)
         request = WebSocketSubscribeRequest(channels=["admin:secret"])
@@ -637,8 +644,8 @@ class TestWebSocketManagerIntegration:
         )
         conn1.subscribe_to_channel("test-channel")
 
-        manager.connections["conn1"] = conn1
-        manager.channel_connections["test-channel"] = {"conn1"}
+        manager.connection_service.connections["conn1"] = conn1
+        manager.messaging_service.channel_connections["test-channel"] = {"conn1"}
 
         # Broadcast message
         event = WebSocketEvent(type="broadcast", payload={"msg": "test"})
@@ -650,8 +657,8 @@ class TestWebSocketManagerIntegration:
     def test_performance_metrics_tracking(self, manager):
         """Test performance metrics collection."""
         # Add some connections
-        manager.connections["conn1"] = MagicMock()
-        manager.connections["conn2"] = MagicMock()
+        manager.connection_service.connections["conn1"] = MagicMock()
+        manager.connection_service.connections["conn2"] = MagicMock()
 
         stats = manager.get_connection_stats()
         assert stats["total_connections"] == 2
@@ -726,7 +733,7 @@ class TestErrorRecoveryScenarios:
                 websocket=MagicMock(), connection_id=f"conn{i}", user_id=uuid4()
             )
             connections.append(conn)
-            manager.connections[conn.connection_id] = conn
+            manager.connection_service.connections[conn.connection_id] = conn
 
         # Simulate one connection having issues
         connections[0].circuit_breaker.state = CircuitBreakerState.OPEN
@@ -736,7 +743,7 @@ class TestErrorRecoveryScenarios:
         event = WebSocketEvent(type="broadcast", payload={})
         sent_count = 0
 
-        for conn_id in manager.connections:
+        for conn_id in manager.connection_service.connections:
             if await manager.send_to_connection(conn_id, event):
                 sent_count += 1
 
