@@ -6,7 +6,7 @@ This directory contains GitHub Actions workflows for the TripSage AI project.
 
 ### 1. Frontend CI (`frontend-ci-simple.yml`)
 
-**Primary CI workflow for frontend development**
+#### Primary CI workflow for frontend development
 
 - **Triggers**: Push/PR to main/develop/feat/* branches with frontend changes
 - **Jobs**:
@@ -19,7 +19,7 @@ This directory contains GitHub Actions workflows for the TripSage AI project.
 
 ### 2. Deployment (`deploy.yml`)
 
-**Vercel deployment automation with concurrency control**
+#### Vercel deployment automation with concurrency control
 
 - **Triggers**:
   - Push to main branch
@@ -33,7 +33,7 @@ This directory contains GitHub Actions workflows for the TripSage AI project.
 
 ### 3. Dependabot (`dependabot.yml`)
 
-**Automated dependency updates**
+#### Automated dependency updates
 
 - **Schedule**: Weekly on Mondays at 9:00 AM
 - **Scope**:
@@ -117,19 +117,19 @@ Recommended branch protection rules for `main`:
 
 ### Common Issues
 
-**Build Failures**:
+#### Build Failures
 
 - Check Node.js version compatibility (uses Node 20)
 - Verify pnpm lockfile is up to date
 - Review build logs for specific errors
 
-**Test Failures**:
+#### Test Failures
 
 - Unit tests may fail due to incomplete mocking
 - E2E tests require successful build
 - Check test reports in GitHub Actions artifacts
 
-**Deployment Issues**:
+#### Deployment Issues
 
 - Verify Vercel secrets are configured
 - Check Vercel project settings
