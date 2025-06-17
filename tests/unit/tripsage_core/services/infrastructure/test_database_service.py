@@ -39,6 +39,7 @@ class TestDatabaseService:
         settings.database_auto_refresh_token = True
         settings.database_persist_session = True
         settings.database_timeout = 10
+        settings.enable_read_replicas = False  # Add missing attribute
         return settings
 
     @pytest.fixture
@@ -90,9 +91,7 @@ class TestDatabaseService:
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(
-                    asyncio.coroutine(lambda: func())()
-                ),
+                new=AsyncMock(return_value=None),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -117,9 +116,7 @@ class TestDatabaseService:
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(
-                    asyncio.coroutine(lambda: func())()
-                ),
+                new=AsyncMock(return_value=None),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -132,7 +129,7 @@ class TestDatabaseService:
     @pytest.mark.asyncio
     async def test_connect_invalid_url(self, mock_settings):
         """Test connection with invalid URL."""
-        mock_settings.database.supabase_url = "invalid-url"
+        mock_settings.database_url = "invalid-url"
         service = DatabaseService(settings=mock_settings)
 
         with pytest.raises(CoreDatabaseError, match="Invalid Supabase URL format"):
@@ -141,7 +138,7 @@ class TestDatabaseService:
     @pytest.mark.asyncio
     async def test_connect_invalid_key(self, mock_settings):
         """Test connection with invalid API key."""
-        mock_settings.database.supabase_anon_key.get_secret_value.return_value = "short"
+        mock_settings.database_public_key.get_secret_value.return_value = "short"
         service = DatabaseService(settings=mock_settings)
 
         with pytest.raises(CoreDatabaseError, match="Invalid Supabase API key"):
@@ -639,7 +636,7 @@ class TestDatabaseService:
             destination_data, embedding
         )
 
-        assert result == expected_result[0]
+        assert result == expected_result
         expected_data = {**destination_data, "embedding": embedding}
         mock_supabase_client.upsert.assert_called_with(expected_data)
 
@@ -863,20 +860,44 @@ class TestDatabaseService:
     # Dependency Injection Tests
 
     @pytest.mark.asyncio
-    async def test_get_database_service_function(self):
+    async def test_get_database_service_function(
+        self, mock_settings, mock_supabase_client
+    ):
         """Test the get_database_service dependency function."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_service.get_settings"
+        with (
+            patch(
+                "tripsage_core.services.infrastructure.database_service.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.create_client",
+                return_value=mock_supabase_client,
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
+                new=AsyncMock(return_value=None),
+            ),
         ):
             service = await get_database_service()
             assert isinstance(service, DatabaseService)
 
     @pytest.mark.asyncio
-    async def test_get_database_service_singleton(self):
+    async def test_get_database_service_singleton(
+        self, mock_settings, mock_supabase_client
+    ):
         """Test that get_database_service returns singleton instance."""
         with (
             patch(
-                "tripsage_core.services.infrastructure.database_service.get_settings"
+                "tripsage_core.services.infrastructure.database_service.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.create_client",
+                return_value=mock_supabase_client,
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
+                new=AsyncMock(return_value=None),
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service._database_service",
