@@ -1,4 +1,13 @@
+# TripSage Frontend
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Documentation
+
+For historical development documentation and implementation summaries, see:
+- **Development Summaries**: `/docs/archive/frontend/development-summaries/`
+- **Integration Guides**: `/docs/archive/frontend/integration-guides/`
+- **Test Artifacts**: `/docs/archive/frontend/test-artifacts/`
 
 ## Getting Started
 

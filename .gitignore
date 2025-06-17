@@ -175,12 +175,17 @@ ARCHIVED_DOCS/
 *_ASSESSMENT.md
 *_VALIDATION.md
 *_IMPLEMENTATION.md
+*_INTEGRATION.md
+*_CHECKLIST.md
+*_TEST.md
+*_DEBUG.md
 !README.md
 !TODO.md
 !CLAUDE.md
 !KNOWLEDGE_PACK.md
 # Exception for security documentation
-!docs/07_CONFIGURATION/SECURITY/RLS_IMPLEMENTATION.md
+!docs/operators/RLS_IMPLEMENTATION.md
+!docs/operators/INFRASTRUCTURE_UPGRADE_SUMMARY.md
 
 # Temporary analysis scripts
 analyze_*.py
@@ -206,6 +211,108 @@ analysis_results.md
 # Frontend temporary files
 frontend/lint-*.txt
 frontend/lint-*.json
+frontend/lint-*.log
 frontend/dashboard-*.png
 frontend/*_SUMMARY.md
-frontend/test-debug.test.ts
+frontend/*_REPORT.md
+frontend/*_ANALYSIS.md
+frontend/*_CHECKLIST.md
+frontend/*_INTEGRATION.md
+frontend/*_TEST_*.md
+frontend/test-debug.*
+frontend/*-debug.*
+frontend/*.debug.*
+frontend/debug-*
+frontend/temp-*
+frontend/*.temp.*
+
+# Additional generated/temporary files
+**/consolidate_*.sh
+**/migrate_*.sh
+**/analyze_*.sh
+**/temp_*.py
+**/debug_*.py
+**/test_debug.*
+**/*-temp.*
+**/*.backup.*
+**/*.bak
+**/.temp/
+**/temp/
+**/debug/
+
+# Documentation generation artifacts
+**/CONSOLIDATION_PLAN.md
+**/MIGRATION_PLAN.md
+docs/**/temp/
+docs/**/*.backup
+docs/**/*-backup.*
+
+# Development artifacts
+.development/
+.temp/
+.debug/
+*.development.*
+*.staging.*
+development-*
+staging-*
+
+# Performance and profiling outputs
+*.prof
+*.profile
+flamegraph.*
+perf-*.json
+benchmark-*.json
+
+# IDE and editor temporary files
+**/.history/
+**/*.tmp
+**/*.temp
+**/.scratch/
+**/scratch.*
+
+# Testing artifacts and debug files
+**/test-results/
+**/test-output/
+**/test-artifacts/
+**/*-test-output.*
+**/*-test-results.*
+**/junit.xml
+**/xunit.xml
+**/.pytest_cache/
+**/.vitest/
+**/vitest-*.json
+**/vitest-*.log
+
+# API testing and development
+**/api-test-results.*
+**/postman-test-results.*
+**/insomnia-export.*
+**/thunder-collection.*
+**/rest-client.*
+
+# Documentation tooling artifacts
+**/.markdownlint-cli2.*
+**/markdownlint-report.*
+**/.vale/
+**/vale-report.*
+**/spelling-report.*
+
+# Backup files from consolidation scripts
+**/_backup_*/
+**/backup_*/
+**/*.consolidated.*
+**/*.migrated.*
+
+# Security scanning reports
+bandit_output.json
+final_bandit_report.json
+bandit-report.*
+*-bandit.json
+security-reports/
+scan-results/
+.scannerwork/
+
+# Version control temporary files
+**/*.orig
+**/*.rej
+**/.git/COMMIT_EDITMSG.backup

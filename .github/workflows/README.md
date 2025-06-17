@@ -76,12 +76,14 @@ cd frontend && pnpm audit
 ### Common Fixes
 
 **Backend linting errors**:
+
 ```bash
 ruff check . --fix
 ruff format .
 ```
 
 **Frontend type errors**:
+
 ```bash
 cd frontend
 pnpm type-check
@@ -89,18 +91,21 @@ pnpm type-check
 ```
 
 **Test failures**:
+
 ```bash
 # Run specific test
 uv run pytest tests/path/to/test.py::test_name -v
 ```
 
 **Coverage too low**:
+
 - Add tests for uncovered code
 - Remove dead code that can't be tested
 
 ## Security
 
 The security workflow automatically scans for:
+
 - Exposed secrets and API keys
 - Vulnerable dependencies
 - Code security patterns
@@ -110,7 +115,7 @@ The security workflow automatically scans for:
 
 ## Getting Help
 
-1. **Read the full documentation**: 
+1. **Read the full documentation**:
    - [Repository Setup Guide](../REPOSITORY_SETUP.md) - Complete setup instructions
    - [Branch Conventions](../BRANCH_CONVENTIONS.md) - Branch naming and workflow triggers
 2. **Check existing issues**: Search for similar problems

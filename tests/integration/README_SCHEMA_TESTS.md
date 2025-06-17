@@ -8,7 +8,7 @@ This directory contains comprehensive integration tests for the enhanced Supabas
 
 ### Core Test Files
 
-```
+```text
 tests/integration/
 ├── test_supabase_collaboration_schema.py     # Main integration test suite
 ├── conftest_supabase_schema.py               # Test fixtures and configuration
@@ -22,8 +22,9 @@ tests/performance/
 ### Test Categories
 
 #### 1. RLS Policy Validation (`TestRLSPolicyValidation`)
+
 - **Purpose**: Validate Row Level Security policies for collaborative access
-- **Coverage**: 
+- **Coverage**:
   - Collaborative trip access policies
   - Permission level inheritance
   - View-only permission restrictions
@@ -31,6 +32,7 @@ tests/performance/
   - Memory system user isolation
 
 #### 2. Foreign Key Constraints (`TestForeignKeyConstraints`)
+
 - **Purpose**: Test database integrity and constraint enforcement
 - **Coverage**:
   - Memory-user foreign key relationships
@@ -39,6 +41,7 @@ tests/performance/
   - Constraint violation handling
 
 #### 3. Index Performance (`TestIndexPerformance`)
+
 - **Purpose**: Validate query optimization and indexing strategy
 - **Coverage**:
   - Collaboration index existence and efficiency
@@ -46,6 +49,7 @@ tests/performance/
   - Performance benchmarks for large datasets
 
 #### 4. Database Functions (`TestDatabaseFunctions`)
+
 - **Purpose**: Test correctness of stored procedures and functions
 - **Coverage**:
   - `get_user_accessible_trips()` function
@@ -54,6 +58,7 @@ tests/performance/
   - Bulk operations and maintenance functions
 
 #### 5. Collaboration Workflows (`TestCollaborationWorkflows`)
+
 - **Purpose**: End-to-end testing of collaboration features
 - **Coverage**:
   - Add collaborator workflow
@@ -62,6 +67,7 @@ tests/performance/
   - Complex permission inheritance chains
 
 #### 6. Multi-User Scenarios (`TestMultiUserScenarios`)
+
 - **Purpose**: Test complex scenarios with multiple users and permission levels
 - **Coverage**:
   - Multiple permission levels on single trip
@@ -70,6 +76,7 @@ tests/performance/
   - Bulk collaboration operations
 
 #### 7. Security Isolation (`TestSecurityIsolation`)
+
 - **Purpose**: Validate security boundaries and prevent unauthorized access
 - **Coverage**:
   - Unauthorized collaboration access prevention
@@ -78,6 +85,7 @@ tests/performance/
   - Anonymous user restrictions
 
 #### 8. Performance Optimization (`TestPerformanceOptimization`)
+
 - **Purpose**: Validate performance under various load conditions
 - **Coverage**:
   - Collaboration query performance benchmarks
@@ -86,6 +94,7 @@ tests/performance/
   - Large dataset handling
 
 #### 9. Migration Compatibility (`TestMigrationCompatibility`)
+
 - **Purpose**: Ensure safe database migrations and rollback capabilities
 - **Coverage**:
   - Transaction safety validation
@@ -191,12 +200,13 @@ pytest tests/performance/test_collaboration_performance.py --durations=10
 
 The test runner generates comprehensive reports:
 
-```
+```text
 test_reports/
 └── schema_integration_test_report_20250611_143022.json
 ```
 
 Report contents:
+
 - **Metadata**: Test execution details, configuration, environment
 - **Results**: Detailed results for each test suite  
 - **Analysis**: Performance metrics, failure patterns, recommendations
@@ -349,21 +359,27 @@ jobs:
 ### Common Issues
 
 1. **Schema File Not Found**
-   ```
+
+   ```text
    FileNotFoundError: Required schema file not found: 05_policies.sql
    ```
+
    **Solution**: Ensure all schema files exist in `supabase/schemas/`
 
 2. **Performance Test Failures**
-   ```
+
+   ```text
    AssertionError: Collaboration query took 0.75s, exceeding threshold of 0.5s
    ```
+
    **Solution**: Review query optimization and index usage
 
 3. **RLS Policy Violations**
-   ```
+
+   ```text
    Exception: RLS policy violation: insufficient permissions
    ```
+
    **Solution**: Verify RLS policies allow intended access patterns
 
 ### Debug Mode
@@ -396,7 +412,7 @@ pytest tests/integration/ --cov=tripsage_core --cov-report=html
 4. **Test Edge Cases**: Include boundary conditions and error scenarios
 5. **Performance Awareness**: Set appropriate performance thresholds
 
-### Test Data Management
+### Test Data Management - New Tests
 
 ```python
 # Good: Use fixtures for consistent test data

@@ -18,7 +18,7 @@ The foundational shared library for the TripSage AI travel planning platform. Th
 
 The core follows a clean architecture pattern with clear separation of concerns:
 
-```
+```text
 tripsage_core/
 ├── config/              # Configuration management
 ├── exceptions/          # Error handling system
@@ -40,6 +40,7 @@ settings = get_app_settings()
 ```
 
 **Features:**
+
 - Environment-specific configurations (dev, test, staging, prod)
 - Validation for critical settings
 - Integration with Supabase, DragonflyDB, Mem0, LangGraph
@@ -62,6 +63,7 @@ raise AuthenticationError("Invalid token")  # Returns 401
 ```
 
 **Features:**
+
 - Hierarchical exception structure
 - HTTP status code integration
 - Structured error details with Pydantic validation
@@ -72,6 +74,7 @@ raise AuthenticationError("Invalid token")  # Returns 401
 Three-tier model architecture:
 
 #### Base Models (`base_core_model.py`)
+
 ```python
 from tripsage_core.models.base_core_model import (
     TripSageModel,           # API/Schema models
@@ -81,7 +84,9 @@ from tripsage_core.models.base_core_model import (
 ```
 
 #### Database Models (`db/`)
+
 SQLAlchemy-compatible models for:
+
 - User management and authentication
 - Trip planning and itineraries
 - Flight and accommodation data
@@ -90,13 +95,17 @@ SQLAlchemy-compatible models for:
 - Search parameters and history
 
 #### Domain Models (`domain/`)
+
 Business entities for:
+
 - Accommodation booking and search
 - Flight operations and pricing
 - Memory and context management
 
 #### Shared Schemas (`schemas_common/`)
+
 Common validation and data structures:
+
 - Base models and enums
 - Geographic and temporal types
 - Financial and travel-specific schemas
@@ -121,6 +130,7 @@ from tripsage_core.services.business import (
 ```
 
 **Available Services:**
+
 - **AuthService** - Authentication and authorization
 - **MemoryService** - Context and conversation memory
 - **ChatService** - Chat session management
@@ -147,6 +157,7 @@ from tripsage_core.services.external_apis import (
 ```
 
 **Available Services:**
+
 - **GoogleMapsService** - Location and mapping operations
 - **WeatherService** - Weather data and forecasting
 - **CalendarService** - Calendar integration and scheduling
@@ -169,6 +180,7 @@ from tripsage_core.services.infrastructure import (
 ```
 
 **Available Services:**
+
 - **DatabaseService** - Database operations and transactions
 - **CacheService** - High-performance caching with DragonflyDB
 - **WebSocketManager** - Real-time communication management
@@ -189,6 +201,7 @@ from tripsage_core.utils import (
 ```
 
 **Available Utilities:**
+
 - **cache_utils** - Caching patterns and TTL management
 - **error_handling_utils** - Error recovery and retry logic
 - **logging_utils** - Structured logging and observability
@@ -200,11 +213,13 @@ from tripsage_core.utils import (
 ## Performance Optimizations
 
 ### DragonflyDB Integration
+
 - **25x performance improvement** over Redis
 - Multi-tier TTL strategy for different data types
 - Redis-compatible interface with enhanced features
 
 ### Memory System
+
 - **Mem0 integration** with pgvector backend
 - **91% faster performance** than traditional approaches
 - Vector similarity search for contextual retrieval
@@ -213,12 +228,14 @@ from tripsage_core.utils import (
 ## Security Features
 
 ### Authentication & Authorization
+
 - JWT token management with refresh capabilities
 - API key authentication for service-to-service communication
 - BYOK (Bring Your Own Key) with encryption for user-provided credentials
 - Row Level Security (RLS) in database operations
 
 ### Data Protection
+
 - Automatic encryption of sensitive data
 - Secure key storage and rotation
 - Rate limiting and abuse protection
@@ -227,6 +244,7 @@ from tripsage_core.utils import (
 ## Usage Examples
 
 ### Basic Service Usage
+
 ```python
 from tripsage_core.services.business import FlightService
 from tripsage_core.config import get_app_settings
@@ -243,6 +261,7 @@ results = await flight_service.search_flights(
 ```
 
 ### Database Operations
+
 ```python
 from tripsage_core.services.infrastructure import DatabaseService
 from tripsage_core.models.db import Trip
@@ -256,6 +275,7 @@ async with DatabaseService() as db:
 ```
 
 ### Caching
+
 ```python
 from tripsage_core.services.infrastructure import CacheService
 from tripsage_core.utils.cache_utils import cache_key
@@ -269,6 +289,7 @@ cached_data = await cache.get(key)
 ```
 
 ### Error Handling
+
 ```python
 from tripsage_core.exceptions import ExternalAPIError
 from tripsage_core.utils.error_handling_utils import with_retry
