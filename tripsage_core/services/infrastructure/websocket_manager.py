@@ -874,13 +874,12 @@ class WebSocketManager:
         connection = self.connections.get(connection_id)
         if not connection:
             return WebSocketSubscribeResponse(
-                success=False,
-                error="Connection not found"
+                success=False, error="Connection not found"
             )
-        
+
         subscribed = []
         failed = []
-        
+
         # Subscribe to new channels
         if subscribe_request.channels:
             available_channels = self._get_available_channels(connection.user_id)
@@ -893,7 +892,7 @@ class WebSocketManager:
                     subscribed.append(channel)
                 else:
                     failed.append(channel)
-        
+
         # Unsubscribe from channels
         if subscribe_request.unsubscribe_channels:
             for channel in subscribe_request.unsubscribe_channels:
@@ -902,11 +901,9 @@ class WebSocketManager:
                     self.channel_connections[channel].discard(connection_id)
                     if not self.channel_connections[channel]:
                         del self.channel_connections[channel]
-                        
+
         return WebSocketSubscribeResponse(
-            success=True,
-            subscribed_channels=subscribed,
-            failed_channels=failed
+            success=True, subscribed_channels=subscribed, failed_channels=failed
         )
 
     async def disconnect_connection(self, connection_id: str) -> None:
