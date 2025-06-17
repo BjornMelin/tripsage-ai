@@ -31,7 +31,7 @@ exc = CoreTripSageError(
 
 ### Exception Hierarchy
 
-```
+```text
 CoreTripSageError (base)
 ├── CoreAuthenticationError (401)
 ├── CoreAuthorizationError (403) 
