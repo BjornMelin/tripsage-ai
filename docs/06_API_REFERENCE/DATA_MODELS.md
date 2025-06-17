@@ -614,23 +614,27 @@ AI memory and preferences for personalization.
 ### Common Validation Patterns
 
 #### Date Validation
+
 - **Format**: ISO 8601 (YYYY-MM-DD)
 - **Future dates**: Start date must be >= today
 - **Date range**: End date must be > start date
 - **Max duration**: Trip duration <= 365 days
 
 #### String Validation
+
 - **Trip title**: 1-100 characters, no special chars
 - **Description**: 0-1000 characters
 - **Email**: Valid email format
 - **Phone**: E.164 format (+1234567890)
 
 #### Numeric Validation
+
 - **Budget**: > 0, <= 1,000,000
 - **Coordinates**: Latitude [-90, 90], Longitude [-180, 180]
 - **Passengers**: Adults >= 1, Children >= 0, Total <= 9
 
 #### Array Validation
+
 - **Destinations**: Min 1, Max 10 destinations
 - **Permissions**: Valid permission strings only
 - **Amenities**: From predefined list
@@ -733,6 +737,7 @@ AI memory and preferences for personalization.
 ### Creating a Trip
 
 **Request:**
+
 ```json
 {
   "title": "Tokyo Cherry Blossom Trip",
@@ -762,6 +767,7 @@ AI memory and preferences for personalization.
 ### Searching Flights
 
 **Request:**
+
 ```json
 {
   "origin": "JFK",
@@ -782,6 +788,7 @@ AI memory and preferences for personalization.
 ### Chat with AI
 
 **Request:**
+
 ```json
 {
   "message": "What are the best areas to stay in Tokyo for first-time visitors?",

@@ -45,6 +45,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -59,6 +60,7 @@ Content-Type: application/json
 ```
 
 **Response (201 Created):**
+
 ```json
 {
   "user": {
@@ -82,6 +84,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -90,6 +93,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -120,6 +124,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -127,6 +132,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -155,6 +161,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -162,6 +169,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Successfully logged out"
@@ -183,6 +191,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "name": "Travel App Integration",
@@ -203,6 +212,7 @@ Content-Type: application/json
 ```
 
 **Response (201 Created):**
+
 ```json
 {
   "id": "key_123abc",
@@ -235,6 +245,7 @@ Authorization: Bearer {jwt_token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "keys": [
@@ -263,6 +274,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "name": "Updated Travel App Integration",
@@ -287,6 +299,7 @@ Authorization: Bearer {jwt_token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "API key revoked successfully"
@@ -324,6 +337,7 @@ GET /api/auth/oauth/{provider}/authorize?redirect_uri={your_redirect_uri}
 ```
 
 **Parameters:**
+
 - `provider`: `google`, `github`, or `microsoft`
 - `redirect_uri`: Your application's callback URL
 
@@ -333,7 +347,7 @@ GET /api/auth/oauth/{provider}/authorize?redirect_uri={your_redirect_uri}
 
 After user authorization, the provider redirects to:
 
-```
+```text
 {your_redirect_uri}?code={authorization_code}&state={state}
 ```
 
@@ -345,6 +359,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "code": "authorization_code_from_provider",
@@ -353,6 +368,7 @@ Content-Type: application/json
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -391,6 +407,7 @@ Content-Type: application/json
 ### Scope Inheritance
 
 Some scopes include others:
+
 - `trips:write` includes `trips:read`
 - `trips:delete` includes `trips:read` and `trips:write`
 - `admin:access` includes all other scopes
@@ -405,6 +422,7 @@ Authorization: Bearer {token}
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "permissions": [
@@ -424,11 +442,13 @@ Authorization: Bearer {token}
 ### Token Security
 
 #### 1. Secure Storage
+
 - **Frontend**: Store tokens in httpOnly cookies or secure storage
 - **Mobile**: Use keychain (iOS) or keystore (Android)
 - **Server**: Use environment variables or secure vaults
 
 #### 2. Token Rotation
+
 ```javascript
 // Automatic token refresh
 async function refreshTokenIfNeeded(token) {
@@ -444,6 +464,7 @@ async function refreshTokenIfNeeded(token) {
 ```
 
 #### 3. Secure Transmission
+
 - Always use HTTPS in production
 - Validate SSL certificates
 - Use certificate pinning for mobile apps
@@ -451,12 +472,14 @@ async function refreshTokenIfNeeded(token) {
 ### API Key Security
 
 #### 1. Environment Variables
+
 ```bash
 # .env file
 TRIPSAGE_API_KEY=ts_live_1234567890abcdef
 ```
 
 #### 2. IP Whitelisting
+
 Restrict API key usage to specific IP addresses:
 
 ```json
@@ -470,6 +493,7 @@ Restrict API key usage to specific IP addresses:
 ```
 
 #### 3. Principle of Least Privilege
+
 Grant only necessary permissions:
 
 ```json
@@ -484,6 +508,7 @@ Grant only necessary permissions:
 ### Rate Limiting Protection
 
 #### 1. Implement Backoff
+
 ```javascript
 async function apiRequestWithBackoff(url, options) {
   let delay = 1000;
@@ -504,6 +529,7 @@ async function apiRequestWithBackoff(url, options) {
 ```
 
 #### 2. Monitor Usage
+
 Track API usage to avoid limits:
 
 ```http
@@ -566,6 +592,7 @@ function handleRateLimit(response) {
 #### 1. Invalid Token Format
 
 **Error:**
+
 ```json
 {
   "error": true,
@@ -575,13 +602,15 @@ function handleRateLimit(response) {
 ```
 
 **Solution:**
-- Ensure token starts with `Bearer `
+
+- Ensure token starts with `Bearer`
 - Check for extra spaces or characters
 - Verify token is not truncated
 
 #### 2. Expired Token
 
 **Error:**
+
 ```json
 {
   "error": true,
@@ -591,6 +620,7 @@ function handleRateLimit(response) {
 ```
 
 **Solution:**
+
 - Use refresh token to get new access token
 - Implement automatic token refresh
 - Check system clock synchronization
@@ -598,6 +628,7 @@ function handleRateLimit(response) {
 #### 3. Insufficient Permissions
 
 **Error:**
+
 ```json
 {
   "error": true,
@@ -607,6 +638,7 @@ function handleRateLimit(response) {
 ```
 
 **Solution:**
+
 - Check required scopes for endpoint
 - Update API key permissions
 - Use token with appropriate scopes
@@ -614,6 +646,7 @@ function handleRateLimit(response) {
 #### 4. API Key Not Found
 
 **Error:**
+
 ```json
 {
   "error": true,
@@ -623,6 +656,7 @@ function handleRateLimit(response) {
 ```
 
 **Solution:**
+
 - Verify API key is correct
 - Check if key was revoked
 - Ensure key hasn't expired
@@ -672,4 +706,4 @@ For authentication issues:
 - **Support**: <support@tripsage.ai>
 - **Security Issues**: <security@tripsage.ai>
 
-Include authentication details (without sensitive tokens) when reporting issues. 
+Include authentication details (without sensitive tokens) when reporting issues.
