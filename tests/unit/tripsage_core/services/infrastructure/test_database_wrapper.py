@@ -12,7 +12,7 @@ import pytest
 from tripsage_core.config import Settings
 from tripsage_core.monitoring.database_metrics import DatabaseMetrics
 from tripsage_core.services.infrastructure.database_monitor import (
-    DatabaseConnectionMonitor,
+    ConsolidatedDatabaseMonitor,
 )
 from tripsage_core.services.infrastructure.database_wrapper import (
     DatabaseServiceWrapper,
@@ -46,7 +46,7 @@ class TestDatabaseServiceWrapper:
         "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
     )
     @patch(
-        "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+        "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
     )
     def test_initialization_with_monitoring_enabled(
         self, mock_monitor_class, mock_get_metrics, mock_db_service_class
@@ -54,7 +54,7 @@ class TestDatabaseServiceWrapper:
         """Test wrapper initialization with monitoring enabled."""
         mock_metrics = Mock(spec=DatabaseMetrics)
         mock_get_metrics.return_value = mock_metrics
-        mock_monitor = Mock(spec=DatabaseConnectionMonitor)
+        mock_monitor = Mock(spec=ConsolidatedDatabaseMonitor)
         mock_monitor_class.return_value = mock_monitor
         mock_db_service = Mock()
         mock_db_service_class.return_value = mock_db_service
@@ -126,7 +126,7 @@ class TestDatabaseServiceWrapper:
                 "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
             ) as mock_get_metrics,
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ) as mock_monitor_class,
         ):
             mock_db_service = Mock()
@@ -199,7 +199,7 @@ class TestDatabaseServiceWrapper:
                 "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
             ) as mock_get_metrics,
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ) as mock_monitor_class,
         ):
             mock_db_service = Mock()
@@ -237,7 +237,7 @@ class TestDatabaseServiceWrapper:
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
             ) as mock_db_service_class,
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ) as mock_monitor_class,
         ):
             mock_db_service = Mock()
@@ -266,7 +266,7 @@ class TestDatabaseServiceWrapper:
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
             ) as mock_db_service_class,
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ) as mock_monitor_class,
         ):
             mock_db_service = Mock()
@@ -412,7 +412,7 @@ class TestDatabaseServiceWrapper:
                 "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
             ) as mock_get_metrics,
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ) as mock_monitor_class,
         ):
             mock_metrics = Mock()
@@ -455,7 +455,7 @@ class TestDatabaseServiceWrapper:
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
             ),
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ) as mock_monitor_class,
         ):
             mock_monitor = Mock()

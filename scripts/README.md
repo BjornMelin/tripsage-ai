@@ -38,13 +38,17 @@ Database initialization, migration, and infrastructure management.
 - Applied in chronological order
 - Track applied migrations in `migration_history` table
 
-### `/benchmarks/` - Performance Testing
+### `/benchmarks/` - Comprehensive Performance Testing
 
-Performance benchmarking and load testing utilities.
+Unified performance benchmarking suite for database, vector search, and cache optimization validation.
 
 | Script | Purpose | Metrics |
 |--------|---------|--------|
-| `dragonfly_performance.py` | Benchmark DragonflyDB cache operations | Throughput, latency, memory usage |
+| `run_benchmarks.py` | Complete performance validation suite | Database, vector, cache performance |
+| `benchmark_runner.py` | Core benchmark orchestration | Query latency, throughput, memory |
+| `pgvector_benchmark.py` | Specialized vector search benchmarking | 30x improvement validation |
+| `dragonfly_performance.py` | Cache performance testing | Throughput, latency, memory usage |
+| `regression_detector.py` | Performance regression detection | Statistical analysis, baselines |
 
 ### `/security/` - Security Testing
 
@@ -52,7 +56,8 @@ Security validation and vulnerability testing scripts.
 
 | Script | Purpose | Output |
 |--------|---------|--------|
-| `rls_vulnerability_tests.sql` | Test Row Level Security policies | Security audit report |
+| `security_validation.py` | Comprehensive security audit | Security findings report |
+| `rls_vulnerability_tests.sql` | Test Row Level Security policies | RLS policy audit |
 
 ### `/testing/` - Test Utilities
 
@@ -63,6 +68,8 @@ Test execution and analysis tools. See [Testing README](./testing/README.md) for
 | `run_tests_with_coverage.py` | Run full test suite with coverage | HTML reports, failure analysis |
 | `test_summary.py` | Generate test summary reports | Cross-directory analysis |
 | `test_runner.py` | Quick smoke tests | Import verification, basic checks |
+| `activate-websocket.js` | WebSocket feature activation testing | Real-time connection validation |
+| `test-websocket.js` | WebSocket functionality testing | Connection and message flow tests |
 
 ### `/verification/` - Service Health Checks
 
@@ -76,15 +83,6 @@ Connection verification and health check scripts.
 | `verify_extensions.py` | Validate Supabase extensions | Production deployment |
 | `validate_schema_consistency.py` | Check database schema integrity | CI/CD pipeline |
 
-### Root Level Scripts
-
-| Script | Purpose | Category |
-|--------|---------|---------|
-| `activate-websocket.js` | Enable WebSocket connections | Development |
-| `test-websocket.js` | Test WebSocket functionality | Testing |
-| `deploy_api_key_migration.py` | Migrate API key structure | Migration |
-| `test_schema_migration.py` | Test schema migration process | Testing |
-| `security_validation.py` | Run security audit | Security |
 
 ## 🚀 Common Workflows
 
@@ -114,11 +112,14 @@ python scripts/verification/verify_dragonfly.py
 # Run tests with coverage
 python scripts/testing/run_tests_with_coverage.py
 
-# Check performance
-python scripts/benchmarks/dragonfly_performance.py
+# Check performance (comprehensive)
+python scripts/benchmarks/run_benchmarks.py quick-test
+
+# Check cache performance specifically
+python scripts/benchmarks/dragonfly_performance.py --quick
 
 # Validate security
-python scripts/security_validation.py
+python scripts/security/security_validation.py
 ```
 
 ### Deployment Checklist

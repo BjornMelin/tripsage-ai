@@ -32,7 +32,7 @@ python scripts/verification/verify_connection.py
 python scripts/verification/verify_dragonfly.py
 
 # Security audit
-python scripts/security_validation.py
+python scripts/security/security_validation.py
 ```
 
 ### Script Execution Order
@@ -146,7 +146,7 @@ python scripts/verification/verify_connection.py
 
 # After changes
 python scripts/testing/run_tests_with_coverage.py
-python scripts/security_validation.py --quick
+python scripts/security/security_validation.py --quick
 
 # Before commit
 python scripts/testing/test_summary.py
@@ -156,7 +156,7 @@ python scripts/testing/test_summary.py
 
 ```bash
 # Pre-deployment
-python scripts/security_validation.py --full
+python scripts/security/security_validation.py --full
 python scripts/verification/validate_schema_consistency.py
 
 # Deployment
@@ -168,8 +168,15 @@ python scripts/database/deploy_triggers.py
 
 # Post-deployment
 python scripts/verification/verify_extensions.py
+
+# Run comprehensive benchmarks
+python scripts/benchmarks/run_benchmarks.py quick-test
+
+# Check specific cache performance  
 python scripts/benchmarks/dragonfly_performance.py --quick
-python scripts/security/rls_vulnerability_tests.sql
+
+# Run security tests
+python scripts/security/security_validation.py --quick
 ```
 
 ## Script Categories
@@ -222,8 +229,8 @@ python scripts/verification/verify_connection.py --verbose --test-operations
 **Purpose**: Security validation and vulnerability testing.
 
 **Key Scripts**:
+- `security_validation.py`: Comprehensive security audit
 - `rls_vulnerability_tests.sql`: RLS policy testing
-- `security_validation.py`: Comprehensive audit
 
 **Usage Pattern**:
 ```bash
@@ -231,7 +238,7 @@ python scripts/verification/verify_connection.py --verbose --test-operations
 psql $DATABASE_URL -f scripts/security/rls_vulnerability_tests.sql
 
 # Full security audit
-python scripts/security_validation.py --compliance-report
+python scripts/security/security_validation.py --compliance-report
 ```
 
 ### Testing Scripts (`/testing/`)
@@ -257,17 +264,30 @@ python scripts/testing/test_summary.py
 
 ### Benchmark Scripts (`/benchmarks/`)
 
-**Purpose**: Performance testing and optimization.
+**Purpose**: Comprehensive performance testing and optimization validation.
 
 **Key Scripts**:
-- `dragonfly_performance.py`: Cache benchmarks
+- `run_benchmarks.py`: Complete performance validation suite  
+- `benchmark_runner.py`: Core benchmark orchestration
+- `pgvector_benchmark.py`: Specialized vector search benchmarking
+- `dragonfly_performance.py`: Cache performance testing
+- `regression_detector.py`: Performance regression detection
 
 **Usage Pattern**:
 ```bash
-# Full benchmark
-python scripts/benchmarks/dragonfly_performance.py
+# Complete performance validation
+python scripts/benchmarks/run_benchmarks.py full-validation --verbose
 
-# Quick benchmark
+# Quick benchmark for development
+python scripts/benchmarks/run_benchmarks.py quick-test
+
+# Database performance testing
+python scripts/benchmarks/benchmark_runner.py comparison --verbose
+
+# Vector search performance (30x improvement validation)
+python scripts/benchmarks/pgvector_benchmark.py --quick --verbose
+
+# Cache-specific benchmarks
 python scripts/benchmarks/dragonfly_performance.py --quick
 
 # Compare with baseline

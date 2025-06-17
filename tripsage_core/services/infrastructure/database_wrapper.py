@@ -15,11 +15,10 @@ from tripsage_core.monitoring.database_metrics import (
     DatabaseMetrics,
     get_database_metrics,
 )
-from tripsage_core.services.infrastructure.consolidated_database_monitor import (
-    QueryType,
-)
 from tripsage_core.services.infrastructure.database_monitor import (
-    DatabaseConnectionMonitor,
+    ConsolidatedDatabaseMonitor,
+    MonitoringConfig,
+    QueryType,
 )
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -50,7 +49,7 @@ class DatabaseServiceWrapper:
 
         # Optional monitoring components
         self.metrics: Optional[DatabaseMetrics] = None
-        self.monitor: Optional[DatabaseConnectionMonitor] = None
+        self.monitor: Optional[ConsolidatedDatabaseMonitor] = None
 
         # Initialize monitoring components based on feature flags
         self._initialize_monitoring()
@@ -67,18 +66,17 @@ class DatabaseServiceWrapper:
 
             # Initialize monitor if enabled
             if self.settings.enable_database_monitoring:
-                self.monitor = DatabaseConnectionMonitor(
-                    database_service=self.database_service,
-                    settings=self.settings,
-                    metrics=self.metrics,
-                )
-
-                # Configure monitoring intervals
-                self.monitor.configure_monitoring(
+                monitor_config = MonitoringConfig(
                     health_check_interval=self.settings.db_health_check_interval,
                     security_check_interval=self.settings.db_security_check_interval,
                     max_recovery_attempts=self.settings.db_max_recovery_attempts,
                     recovery_delay=self.settings.db_recovery_delay,
+                )
+
+                self.monitor = ConsolidatedDatabaseMonitor(
+                    database_service=self.database_service,
+                    config=monitor_config,
+                    settings=self.settings,
                 )
 
                 logger.info("Database connection monitoring enabled")

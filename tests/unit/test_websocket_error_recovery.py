@@ -15,6 +15,15 @@ import redis.asyncio as redis
 from fastapi import WebSocket
 from websockets.exceptions import WebSocketException
 
+from tripsage_core.services.infrastructure.websocket_auth_service import (
+    WebSocketAuthRequest,
+)
+from tripsage_core.services.infrastructure.websocket_connection_service import (
+    ConnectionState,
+    ExponentialBackoffException,
+    MonitoredDeque,
+    WebSocketConnection,
+)
 from tripsage_core.services.infrastructure.websocket_manager import (
     CircuitBreaker,
     CircuitBreakerState,
@@ -23,15 +32,6 @@ from tripsage_core.services.infrastructure.websocket_manager import (
     RateLimiter,
     WebSocketManager,
     WebSocketSubscribeRequest,
-)
-from tripsage_core.services.infrastructure.websocket_connection_service import (
-    ConnectionState,
-    WebSocketConnection,
-    MonitoredDeque,
-    ExponentialBackoffException,
-)
-from tripsage_core.services.infrastructure.websocket_auth_service import (
-    WebSocketAuthRequest,
 )
 from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
@@ -196,14 +196,14 @@ class TestCircuitBreaker:
 
         # Record another failure while in HALF_OPEN state
         cb.record_failure()
-        
+
         # Should transition back to OPEN
         assert cb.state == CircuitBreakerState.OPEN
         assert cb.can_execute() is False
 
         # Verify it stays OPEN until recovery timeout
         assert cb.can_execute() is False
-        
+
         # Wait again and verify it can transition back to HALF_OPEN
         time.sleep(0.2)
         assert cb.can_execute() is True
@@ -255,7 +255,9 @@ class TestExponentialBackoff:
             backoff.next_attempt()
 
         # Next attempt should raise custom exception
-        with pytest.raises(ExponentialBackoffException, match="Max reconnection attempts"):
+        with pytest.raises(
+            ExponentialBackoffException, match="Max reconnection attempts"
+        ):
             backoff.get_delay()
 
     def test_backoff_reset(self):
@@ -595,7 +597,7 @@ class TestWebSocketManagerIntegration:
             websocket=MagicMock(), connection_id=connection_id, user_id=user_id
         )
         manager.connection_service.connections[connection_id] = connection
-        
+
         # Register with messaging service (normally done during authentication)
         manager.messaging_service.register_connection(connection)
 
@@ -632,10 +634,10 @@ class TestWebSocketManagerIntegration:
         connection.subscribe_to_channel("notifications")
 
         manager.connection_service.connections[connection_id] = connection
-        
+
         # Register with messaging service (normally done during authentication)
         manager.messaging_service.register_connection(connection)
-        
+
         # Set up existing channel subscriptions
         manager.messaging_service.channel_connections["general"] = {connection_id}
         manager.messaging_service.channel_connections["notifications"] = {connection_id}
@@ -660,7 +662,7 @@ class TestWebSocketManagerIntegration:
             websocket=MagicMock(), connection_id=connection_id, user_id=user_id
         )
         manager.connection_service.connections[connection_id] = connection
-        
+
         # Register with messaging service (normally done during authentication)
         manager.messaging_service.register_connection(connection)
 
@@ -685,10 +687,10 @@ class TestWebSocketManagerIntegration:
         conn1.subscribe_to_channel("test-channel")
 
         manager.connection_service.connections["conn1"] = conn1
-        
+
         # Register with messaging service (normally done during authentication)
         manager.messaging_service.register_connection(conn1)
-        
+
         # Set up channel subscription manually since we're bypassing normal flow
         manager.messaging_service.channel_connections["test-channel"] = {"conn1"}
 
@@ -703,16 +705,17 @@ class TestWebSocketManagerIntegration:
         """Test performance metrics collection."""
         # Add some connections
         from uuid import uuid4
+
         conn1 = WebSocketConnection(
             websocket=MagicMock(), connection_id="conn1", user_id=uuid4()
         )
         conn2 = WebSocketConnection(
             websocket=MagicMock(), connection_id="conn2", user_id=uuid4()
         )
-        
+
         manager.connection_service.connections["conn1"] = conn1
         manager.connection_service.connections["conn2"] = conn2
-        
+
         # Register with messaging service too
         manager.messaging_service.register_connection(conn1)
         manager.messaging_service.register_connection(conn2)
@@ -753,7 +756,7 @@ class TestErrorRecoveryScenarios:
         # Reset state and retry
         connection.state = ConnectionState.CONNECTED
         connection.circuit_breaker.record_success()  # Reset circuit breaker
-        
+
         # Reset the mock to succeed on the next call
         ws.send_text.side_effect = None  # Clear side_effect list
         ws.send_text.return_value = None  # Make it succeed
@@ -802,7 +805,8 @@ class TestErrorRecoveryScenarios:
 
         # Simulate one connection having issues
         connections[0].circuit_breaker.state = CircuitBreakerState.OPEN
-        connections[0].circuit_breaker.last_failure_time = time.time()  # Prevent automatic recovery
+        # Prevent automatic recovery
+        connections[0].circuit_breaker.last_failure_time = time.time()
         connections[0].state = ConnectionState.ERROR
 
         # Broadcast should continue to healthy connections

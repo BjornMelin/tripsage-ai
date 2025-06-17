@@ -1,550 +1,285 @@
 """
-Tests for database connection monitoring functionality.
+Tests for ConsolidatedDatabaseMonitor.
 
-Tests cover health checks, security monitoring, recovery mechanisms,
-and alert generation for database operations.
+This test module verifies the consolidated database monitoring functionality
+that combines health, performance, and security monitoring.
 """
 
 import asyncio
 import time
-from datetime import datetime
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from tripsage_core.config import Settings
-from tripsage_core.monitoring.database_metrics import DatabaseMetrics
 from tripsage_core.services.infrastructure.database_monitor import (
-    DatabaseConnectionMonitor,
-    HealthCheckResult,
+    ConsolidatedDatabaseMonitor,
     HealthStatus,
-    SecurityAlert,
+    MonitoringConfig,
+    QueryStatus,
+    QueryType,
     SecurityEvent,
 )
 
 
-class TestHealthCheckResult:
-    """Test HealthCheckResult dataclass."""
-
-    def test_initialization_with_defaults(self):
-        """Test initialization with default timestamp."""
-        result = HealthCheckResult(
-            status=HealthStatus.HEALTHY, response_time=0.5, message="All good"
-        )
-
-        assert result.status == HealthStatus.HEALTHY
-        assert result.response_time == 0.5
-        assert result.message == "All good"
-        assert result.details is None
-        assert isinstance(result.timestamp, datetime)
-
-    def test_initialization_with_details(self):
-        """Test initialization with custom details."""
-        details = {"connection_count": 5}
-        result = HealthCheckResult(
-            status=HealthStatus.WARNING,
-            response_time=1.0,
-            message="High response time",
-            details=details,
-        )
-
-        assert result.details == details
+@pytest.fixture
+def mock_database_service():
+    """Create mock database service."""
+    service = AsyncMock()
+    service.is_connected = True
+    service.health_check = AsyncMock(return_value=True)
+    service.select = AsyncMock(return_value=[{"id": 1}])
+    service.connect = AsyncMock()
+    service.close = AsyncMock()
+    return service
 
 
-class TestSecurityAlert:
-    """Test SecurityAlert dataclass."""
-
-    def test_initialization_with_defaults(self):
-        """Test initialization with default timestamp."""
-        alert = SecurityAlert(
-            event_type=SecurityEvent.CONNECTION_FAILURE,
-            severity="critical",
-            message="Connection failed",
-            details={"error": "timeout"},
-        )
-
-        assert alert.event_type == SecurityEvent.CONNECTION_FAILURE
-        assert alert.severity == "critical"
-        assert alert.message == "Connection failed"
-        assert alert.details == {"error": "timeout"}
-        assert isinstance(alert.timestamp, datetime)
-        assert alert.user_id is None
-        assert alert.ip_address is None
-
-    def test_initialization_with_user_info(self):
-        """Test initialization with user information."""
-        alert = SecurityAlert(
-            event_type=SecurityEvent.UNAUTHORIZED_ACCESS,
-            severity="warning",
-            message="Unauthorized access attempt",
-            details={},
-            user_id="user123",
-            ip_address="192.168.1.1",
-        )
-
-        assert alert.user_id == "user123"
-        assert alert.ip_address == "192.168.1.1"
+@pytest.fixture
+def monitoring_config():
+    """Create test monitoring configuration."""
+    return MonitoringConfig(
+        health_check_interval=1.0,
+        security_check_interval=2.0,
+        slow_query_threshold=0.1,
+        max_query_history=100,
+        recovery_enabled=True,
+        max_recovery_attempts=2,
+        recovery_delay=0.1,
+    )
 
 
-class TestDatabaseConnectionMonitor:
-    """Test suite for DatabaseConnectionMonitor class."""
+@pytest.fixture
+async def consolidated_monitor(mock_database_service, monitoring_config):
+    """Create consolidated database monitor instance."""
+    monitor = ConsolidatedDatabaseMonitor(
+        database_service=mock_database_service,
+        config=monitoring_config,
+    )
+    yield monitor
+    # Cleanup
+    if monitor._monitoring:
+        await monitor.stop_monitoring()
 
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.mock_db_service = Mock()
-        self.mock_db_service.is_connected = True
-        self.mock_db_service.health_check = AsyncMock(return_value=True)
-        self.mock_db_service.get_database_stats = AsyncMock(
-            return_value={"connections": 5}
-        )
-        self.mock_db_service.select = AsyncMock(return_value=[{"id": "123"}])
-        self.mock_db_service.connect = AsyncMock()
-        self.mock_db_service.close = AsyncMock()
 
-        self.settings = Settings(
-            enable_database_monitoring=True,
-            enable_security_monitoring=True,
-            db_health_check_interval=1.0,
-            db_security_check_interval=2.0,
-        )
+class TestConsolidatedDatabaseMonitor:
+    """Test cases for ConsolidatedDatabaseMonitor."""
 
-        self.mock_metrics = Mock(spec=DatabaseMetrics)
-        self.mock_metrics.record_health_check = Mock()
-        self.mock_metrics.get_metrics_summary = Mock(
-            return_value={"query_errors": {}, "query_total": {}}
-        )
-
-        self.monitor = DatabaseConnectionMonitor(
-            database_service=self.mock_db_service,
-            settings=self.settings,
-            metrics=self.mock_metrics,
-        )
-
-    @pytest.mark.asyncio
-    async def test_initialization(self):
+    async def test_initialization(self, consolidated_monitor):
         """Test monitor initialization."""
-        assert self.monitor.database_service == self.mock_db_service
-        assert self.monitor.settings == self.settings
-        assert self.monitor.metrics == self.mock_metrics
-        assert not self.monitor._monitoring
-        assert self.monitor._monitor_task is None
+        assert consolidated_monitor is not None
+        assert not consolidated_monitor._monitoring
+        assert consolidated_monitor.config.health_check_enabled
+        assert consolidated_monitor.config.query_monitoring_enabled
+        assert consolidated_monitor.config.security_monitoring_enabled
 
-    @pytest.mark.asyncio
-    async def test_start_stop_monitoring(self):
-        """Test starting and stopping monitoring."""
-        # Start monitoring
-        await self.monitor.start_monitoring()
-        assert self.monitor._monitoring
-        assert self.monitor._monitor_task is not None
+    async def test_health_check(self, consolidated_monitor):
+        """Test health check functionality."""
+        result = await consolidated_monitor._perform_health_check()
 
-        # Stop monitoring
-        await self.monitor.stop_monitoring()
-        assert not self.monitor._monitoring
-
-    @pytest.mark.asyncio
-    async def test_start_monitoring_already_started(self):
-        """Test starting monitoring when already started."""
-        await self.monitor.start_monitoring()
-
-        # Try to start again
-        with patch(
-            "tripsage_core.services.infrastructure.database_monitor.logger"
-        ) as mock_logger:
-            await self.monitor.start_monitoring()
-            mock_logger.warning.assert_called_with(
-                "Database monitoring already started"
-            )
-
-    @pytest.mark.asyncio
-    async def test_perform_health_check_success(self):
-        """Test successful health check."""
-        result = await self.monitor._perform_health_check()
-
-        assert isinstance(result, HealthCheckResult)
+        assert result is not None
         assert result.status == HealthStatus.HEALTHY
+        assert result.response_time >= 0
         assert "passed" in result.message
-        assert result.details is not None
-        assert result.details["connected"] is True
 
-        # Verify metrics were updated
-        self.mock_metrics.record_health_check.assert_called_with("supabase", True)
+    async def test_health_check_failure(
+        self, consolidated_monitor, mock_database_service
+    ):
+        """Test health check when database is unhealthy."""
+        mock_database_service.health_check.return_value = False
 
-    @pytest.mark.asyncio
-    async def test_perform_health_check_failure(self):
-        """Test failed health check."""
-        self.mock_db_service.health_check.return_value = False
-
-        result = await self.monitor._perform_health_check()
+        result = await consolidated_monitor._perform_health_check()
 
         assert result.status == HealthStatus.CRITICAL
         assert "failed" in result.message
 
-        # Verify metrics were updated
-        self.mock_metrics.record_health_check.assert_called_with("supabase", False)
+    async def test_query_tracking(self, consolidated_monitor):
+        """Test query execution tracking."""
+        # Start tracking a query
+        query_id = await consolidated_monitor.track_query(QueryType.SELECT, "users")
+        assert query_id != ""
 
-    @pytest.mark.asyncio
-    async def test_perform_health_check_exception(self):
-        """Test health check with exception."""
-        self.mock_db_service.health_check.side_effect = Exception("Connection error")
-
-        result = await self.monitor._perform_health_check()
-
-        assert result.status == HealthStatus.CRITICAL
-        assert "Health check error" in result.message
-        assert "Connection error" in result.details["error"]
-
-    @pytest.mark.asyncio
-    async def test_collect_health_details(self):
-        """Test collecting detailed health information."""
-        details = await self.monitor._collect_health_details()
-
-        assert "connected" in details
-        assert details["connected"] is True
-        assert "database_stats" in details
-        assert "query_response_time" in details
-
-    @pytest.mark.asyncio
-    async def test_collect_health_details_query_error(self):
-        """Test health details collection with query error."""
-        self.mock_db_service.select.side_effect = Exception("Query failed")
-
-        details = await self.monitor._collect_health_details()
-
-        assert "query_error" in details
-        assert "Query failed" in details["query_error"]
-
-    def test_determine_health_status_healthy(self):
-        """Test health status determination for healthy state."""
-        details = {"connected": True, "query_response_time": 0.1}
-
-        status = self.monitor._determine_health_status(details)
-        assert status == HealthStatus.HEALTHY
-
-    def test_determine_health_status_disconnected(self):
-        """Test health status determination for disconnected state."""
-        details = {"connected": False}
-
-        status = self.monitor._determine_health_status(details)
-        assert status == HealthStatus.CRITICAL
-
-    def test_determine_health_status_query_error(self):
-        """Test health status determination with query error."""
-        details = {"connected": True, "query_error": "Some error"}
-
-        status = self.monitor._determine_health_status(details)
-        assert status == HealthStatus.CRITICAL
-
-    def test_determine_health_status_slow_response(self):
-        """Test health status determination with slow response."""
-        details = {
-            "connected": True,
-            "query_response_time": 6.0,  # Exceeds 5 second threshold
-        }
-
-        status = self.monitor._determine_health_status(details)
-        assert status == HealthStatus.WARNING
-
-    @pytest.mark.asyncio
-    async def test_handle_critical_health(self):
-        """Test handling critical health status."""
-        result = HealthCheckResult(
-            status=HealthStatus.CRITICAL, response_time=2.0, message="Critical failure"
+        # Finish tracking
+        execution = await consolidated_monitor.finish_query(
+            query_id, QueryStatus.SUCCESS, None, 5
         )
 
-        self.mock_db_service.is_connected = False
+        assert execution is not None
+        assert execution.query_type == QueryType.SELECT
+        assert execution.table_name == "users"
+        assert execution.status == QueryStatus.SUCCESS
+        assert execution.row_count == 5
+        assert execution.duration is not None
 
-        with (
-            patch.object(self.monitor, "_trigger_alert") as mock_trigger_alert,
-            patch.object(self.monitor, "_attempt_recovery") as mock_recovery,
-        ):
-            await self.monitor._handle_critical_health(result)
+    async def test_slow_query_detection(self, consolidated_monitor):
+        """Test slow query detection."""
+        query_id = await consolidated_monitor.track_query(QueryType.SELECT, "users")
 
-            # Verify alert was triggered
-            mock_trigger_alert.assert_called_once()
-            alert = mock_trigger_alert.call_args[0][0]
-            assert isinstance(alert, SecurityAlert)
-            assert alert.event_type == SecurityEvent.CONNECTION_FAILURE
+        # Simulate slow query
+        time.sleep(0.2)  # Exceeds threshold of 0.1s
 
-            # Verify recovery was attempted
-            mock_recovery.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_attempt_recovery_success(self):
-        """Test successful database recovery."""
-        self.mock_db_service.is_connected = False
-
-        # Mock successful reconnection on first attempt
-        async def mock_connect():
-            self.mock_db_service.is_connected = True
-
-        self.mock_db_service.connect.side_effect = mock_connect
-
-        with patch.object(self.monitor, "_trigger_alert") as mock_trigger_alert:
-            await self.monitor._attempt_recovery()
-
-            # Verify success alert was triggered
-            mock_trigger_alert.assert_called_once()
-            alert = mock_trigger_alert.call_args[0][0]
-            assert "recovered" in alert.message
-
-    @pytest.mark.asyncio
-    async def test_attempt_recovery_failure(self):
-        """Test failed database recovery."""
-        self.mock_db_service.is_connected = False
-        self.mock_db_service.connect.side_effect = Exception("Cannot connect")
-
-        with patch.object(self.monitor, "_trigger_alert") as mock_trigger_alert:
-            await self.monitor._attempt_recovery()
-
-            # Should trigger failure alert after max attempts
-            assert mock_trigger_alert.call_count >= 1
-            final_alert = mock_trigger_alert.call_args[0][0]
-            assert "recovery failed" in final_alert.message
-
-    @pytest.mark.asyncio
-    async def test_perform_security_check(self):
-        """Test security monitoring checks."""
-        with (
-            patch.object(self.monitor, "_check_connection_patterns") as mock_conn_check,
-            patch.object(self.monitor, "_check_query_patterns") as mock_query_check,
-            patch.object(self.monitor, "_check_rate_limits") as mock_rate_check,
-        ):
-            await self.monitor._perform_security_check()
-
-            mock_conn_check.assert_called_once()
-            mock_query_check.assert_called_once()
-            mock_rate_check.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_check_connection_patterns_trigger_alert(self):
-        """Test connection pattern checking triggers alert."""
-        # Set up conditions for alert
-        self.monitor._failed_connection_count = 6
-        self.monitor._last_connection_attempt = time.time()
-
-        with patch.object(self.monitor, "_trigger_alert") as mock_trigger_alert:
-            await self.monitor._check_connection_patterns()
-
-            mock_trigger_alert.assert_called_once()
-            alert = mock_trigger_alert.call_args[0][0]
-            assert alert.event_type == SecurityEvent.CONNECTION_FAILURE
-
-    @pytest.mark.asyncio
-    async def test_check_query_patterns_high_errors(self):
-        """Test query pattern checking with high error rate."""
-        self.mock_metrics.get_metrics_summary.return_value = {
-            "query_errors": {"error1": 5, "error2": 6},  # Total 11 > threshold of 10
-            "query_total": {},
-        }
-
-        with patch.object(self.monitor, "_trigger_alert") as mock_trigger_alert:
-            await self.monitor._check_query_patterns()
-
-            mock_trigger_alert.assert_called_once()
-            alert = mock_trigger_alert.call_args[0][0]
-            assert alert.event_type == SecurityEvent.SUSPICIOUS_QUERY
-
-    @pytest.mark.asyncio
-    async def test_check_rate_limits_high_queries(self):
-        """Test rate limit checking with high query count."""
-        self.mock_metrics.get_metrics_summary.return_value = {
-            "query_total": {
-                "query1": 500,
-                "query2": 600,
-            },  # Total 1100 > threshold of 1000
-            "query_errors": {},
-        }
-
-        with patch.object(self.monitor, "_trigger_alert") as mock_trigger_alert:
-            await self.monitor._check_rate_limits()
-
-            mock_trigger_alert.assert_called_once()
-            alert = mock_trigger_alert.call_args[0][0]
-            assert alert.event_type == SecurityEvent.RATE_LIMIT_EXCEEDED
-
-    @pytest.mark.asyncio
-    async def test_trigger_alert(self):
-        """Test alert triggering and storage."""
-        alert = SecurityAlert(
-            event_type=SecurityEvent.CONNECTION_FAILURE,
-            severity="critical",
-            message="Test alert",
-            details={},
+        execution = await consolidated_monitor.finish_query(
+            query_id, QueryStatus.SUCCESS
         )
 
-        callback_mock = Mock()
-        self.monitor.add_alert_callback(callback_mock)
+        assert execution.is_slow(consolidated_monitor.config.slow_query_threshold)
 
-        with patch(
-            "tripsage_core.services.infrastructure.database_monitor.logger"
-        ) as mock_logger:
-            await self.monitor._trigger_alert(alert)
+    async def test_monitor_query_context_manager(self, consolidated_monitor):
+        """Test query monitoring context manager."""
+        async with consolidated_monitor.monitor_query(QueryType.INSERT, "trips"):
+            # Simulate some work
+            await asyncio.sleep(0.01)
 
-            # Verify alert was logged
-            mock_logger.warning.assert_called_once()
+        # Check that query was tracked
+        history = consolidated_monitor.get_query_history()
+        assert len(history) == 1
+        assert history[0].query_type == QueryType.INSERT
+        assert history[0].table_name == "trips"
 
-            # Verify callback was called
-            callback_mock.assert_called_once_with(alert)
+    async def test_monitor_query_context_manager_with_error(self, consolidated_monitor):
+        """Test query monitoring context manager when an error occurs."""
+        with pytest.raises(ValueError):
+            async with consolidated_monitor.monitor_query(QueryType.UPDATE, "users"):
+                raise ValueError("Test error")
 
-            # Verify alert was stored
-            alerts = self.monitor.get_security_alerts()
-            assert len(alerts) == 1
-            assert alerts[0] == alert
+        # Check that error was tracked
+        history = consolidated_monitor.get_query_history()
+        assert len(history) == 1
+        assert history[0].status == QueryStatus.ERROR
+        assert history[0].error_message == "Test error"
 
-    def test_alert_callback_management(self):
-        """Test adding and removing alert callbacks."""
-        callback1 = Mock()
-        callback2 = Mock()
-
-        # Add callbacks
-        self.monitor.add_alert_callback(callback1)
-        self.monitor.add_alert_callback(callback2)
-        assert len(self.monitor._alert_callbacks) == 2
-
-        # Remove callback
-        self.monitor.remove_alert_callback(callback1)
-        assert len(self.monitor._alert_callbacks) == 1
-        assert callback2 in self.monitor._alert_callbacks
-
-    def test_connection_failure_tracking(self):
+    async def test_connection_failure_tracking(self, consolidated_monitor):
         """Test connection failure tracking."""
-        # Record failures
-        self.monitor.record_connection_failure()
-        self.monitor.record_connection_failure()
+        initial_count = consolidated_monitor._failed_connection_count
 
-        assert self.monitor._failed_connection_count == 2
-        assert self.monitor._last_connection_attempt > 0
+        consolidated_monitor.record_connection_failure()
 
-        # Reset failures
-        self.monitor.reset_connection_failures()
-        assert self.monitor._failed_connection_count == 0
+        assert consolidated_monitor._failed_connection_count == initial_count + 1
 
-    def test_get_current_health(self):
-        """Test getting current health status."""
-        # Initially no health check
-        assert self.monitor.get_current_health() is None
+        consolidated_monitor.reset_connection_failures()
 
-        # After setting health check result
-        result = HealthCheckResult(
-            status=HealthStatus.HEALTHY, response_time=0.5, message="Good"
+        assert consolidated_monitor._failed_connection_count == 0
+
+    async def test_alert_callback(self, consolidated_monitor):
+        """Test alert callback functionality."""
+        alerts_received = []
+
+        def alert_callback(alert):
+            alerts_received.append(alert)
+
+        consolidated_monitor.add_alert_callback(alert_callback)
+
+        # Trigger an alert manually
+        from tripsage_core.services.infrastructure.database_monitor import (  # noqa: E501
+            SecurityAlert,
         )
-        self.monitor._last_health_check = result
 
-        assert self.monitor.get_current_health() == result
+        test_alert = SecurityAlert(
+            event_type=SecurityEvent.CONNECTION_FAILURE,
+            severity="warning",
+            message="Test alert",
+            details={"test": True},
+        )
 
-    def test_get_health_history(self):
-        """Test getting health check history."""
-        # Add some history
-        for i in range(5):
-            result = HealthCheckResult(
-                status=HealthStatus.HEALTHY, response_time=0.1 * i, message=f"Check {i}"
-            )
-            self.monitor._health_history.append(result)
+        await consolidated_monitor._trigger_alert(test_alert)
 
-        # Get all history
-        history = self.monitor.get_health_history()
-        assert len(history) == 5
+        assert len(alerts_received) == 1
+        assert alerts_received[0].message == "Test alert"
 
-        # Get limited history
-        limited_history = self.monitor.get_health_history(limit=3)
-        assert len(limited_history) == 3
-
-    def test_get_security_alerts(self):
-        """Test getting security alerts."""
-        # Add some alerts
-        for i in range(3):
-            alert = SecurityAlert(
-                event_type=SecurityEvent.CONNECTION_FAILURE,
-                severity="warning",
-                message=f"Alert {i}",
-                details={},
-            )
-            self.monitor._security_alerts.append(alert)
-
-        # Get all alerts
-        alerts = self.monitor.get_security_alerts()
-        assert len(alerts) == 3
-
-        # Get limited alerts
-        limited_alerts = self.monitor.get_security_alerts(limit=2)
-        assert len(limited_alerts) == 2
-
-    def test_get_monitoring_status(self):
-        """Test getting monitoring status."""
-        status = self.monitor.get_monitoring_status()
+    async def test_monitoring_status(self, consolidated_monitor):
+        """Test monitoring status reporting."""
+        status = consolidated_monitor.get_monitoring_status()
 
         assert "monitoring_active" in status
-        assert "health_check_interval" in status
-        assert "security_check_interval" in status
-        assert "last_health_check" in status
-        assert "health_history_count" in status
-        assert "security_alerts_count" in status
-        assert "failed_connection_count" in status
-        assert "alert_callbacks_count" in status
+        assert "config" in status
+        assert "statistics" in status
+        assert status["config"]["health_check_enabled"]
+        assert status["config"]["query_monitoring_enabled"]
 
-    @pytest.mark.asyncio
-    async def test_manual_health_check(self):
-        """Test manual health check trigger."""
-        result = await self.monitor.manual_health_check()
+    async def test_start_stop_monitoring(self, consolidated_monitor):
+        """Test starting and stopping monitoring."""
+        await consolidated_monitor.start_monitoring()
+        assert consolidated_monitor._monitoring
 
-        assert isinstance(result, HealthCheckResult)
-        # Verify it was stored in history
-        assert self.monitor._last_health_check == result
+        await consolidated_monitor.stop_monitoring()
+        assert not consolidated_monitor._monitoring
 
-    @pytest.mark.asyncio
-    async def test_manual_security_check(self):
-        """Test manual security check trigger."""
-        with patch.object(
-            self.monitor, "_perform_security_check"
-        ) as mock_security_check:
-            await self.monitor.manual_security_check()
-            mock_security_check.assert_called_once()
+    async def test_security_check(self, consolidated_monitor):
+        """Test security monitoring."""
+        # Add some query history to trigger checks
+        for _i in range(15):
+            query_id = await consolidated_monitor.track_query(QueryType.SELECT, "users")
+            await consolidated_monitor.finish_query(
+                query_id, QueryStatus.ERROR, "Test error"
+            )
 
-    def test_configure_monitoring(self):
-        """Test monitoring configuration updates."""
-        self.monitor.configure_monitoring(
-            health_check_interval=60.0,
-            security_check_interval=120.0,
-            max_recovery_attempts=5,
-            recovery_delay=10.0,
+        await consolidated_monitor._perform_security_check()
+
+        # Should have triggered a high error rate alert
+        alerts = consolidated_monitor.get_security_alerts()
+        assert len(alerts) > 0
+
+        high_error_alerts = [
+            alert
+            for alert in alerts
+            if alert.event_type == SecurityEvent.HIGH_ERROR_RATE
+        ]
+        assert len(high_error_alerts) > 0
+
+    async def test_manual_operations(self, consolidated_monitor):
+        """Test manual health and security checks."""
+        health_result = await consolidated_monitor.manual_health_check()
+        assert health_result is not None
+        assert health_result.status == HealthStatus.HEALTHY
+
+        await consolidated_monitor.manual_security_check()
+        # Should complete without error
+
+    async def test_query_history_limits(self, consolidated_monitor):
+        """Test query history size limiting."""
+        # Set a small history limit
+        consolidated_monitor.config.max_query_history = 5
+
+        # Add more queries than the limit
+        for i in range(10):
+            query_id = await consolidated_monitor.track_query(
+                QueryType.SELECT, f"table_{i}"
+            )
+            await consolidated_monitor.finish_query(query_id, QueryStatus.SUCCESS)
+
+        history = consolidated_monitor.get_query_history()
+        assert len(history) == 5  # Should be limited
+
+    async def test_slow_queries_filter(self, consolidated_monitor):
+        """Test filtering of slow queries."""
+        # Add some fast and slow queries
+        for i in range(3):
+            query_id = await consolidated_monitor.track_query(QueryType.SELECT, "users")
+            if i % 2 == 0:
+                # Simulate slow query
+                time.sleep(0.2)
+            await consolidated_monitor.finish_query(query_id, QueryStatus.SUCCESS)
+
+        slow_queries = consolidated_monitor.get_slow_queries()
+        assert len(slow_queries) >= 1  # At least one slow query
+
+    async def test_disabled_monitoring(self, mock_database_service):
+        """Test monitor with disabled components."""
+        config = MonitoringConfig(
+            health_check_enabled=False,
+            query_monitoring_enabled=False,
+            security_monitoring_enabled=False,
+            metrics_enabled=False,
         )
 
-        assert self.monitor._health_check_interval == 60.0
-        assert self.monitor._security_check_interval == 120.0
-        assert self.monitor._max_recovery_attempts == 5
-        assert self.monitor._recovery_delay == 10.0
+        monitor = ConsolidatedDatabaseMonitor(
+            database_service=mock_database_service,
+            config=config,
+        )
 
-    def test_history_trimming(self):
-        """Test that history collections are trimmed to max size."""
-        # Add more health history than max
-        for i in range(self.monitor._max_health_history + 10):
-            result = HealthCheckResult(
-                status=HealthStatus.HEALTHY, response_time=0.1, message=f"Check {i}"
-            )
-            self.monitor._health_history.append(result)
+        # Query tracking should return empty string when disabled
+        query_id = await monitor.track_query(QueryType.SELECT, "users")
+        assert query_id == ""
 
-        # Simulate trimming (normally done in _perform_health_check)
-        if len(self.monitor._health_history) > self.monitor._max_health_history:
-            self.monitor._health_history = self.monitor._health_history[
-                -self.monitor._max_health_history :
-            ]
-
-        assert len(self.monitor._health_history) == self.monitor._max_health_history
-
-    @pytest.mark.asyncio
-    async def test_monitor_loop_exception_handling(self):
-        """Test that monitor loop handles exceptions gracefully."""
-        self.monitor._monitoring = True
-
-        with patch.object(self.monitor, "_perform_health_check") as mock_health_check:
-            mock_health_check.side_effect = Exception("Test error")
-
-            # Run one iteration of the monitor loop
-            with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-                mock_sleep.side_effect = [None, asyncio.CancelledError()]
-
-                with pytest.raises(asyncio.CancelledError):
-                    await self.monitor._monitor_loop()
-
-                # Verify that sleep was called with error delay (10.0 seconds)
-                mock_sleep.assert_called_with(10.0)
+        # Monitoring status should reflect disabled state
+        status = monitor.get_monitoring_status()
+        assert not status["config"]["health_check_enabled"]
+        assert not status["config"]["query_monitoring_enabled"]

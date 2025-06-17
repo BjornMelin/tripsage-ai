@@ -3,7 +3,7 @@ Infrastructure services for TripSage Core.
 
 This module provides core infrastructure services across TripSage:
 - Database operations (Supabase/PostgreSQL)
-- Consolidated database monitoring (health, performance, security)
+- Database monitoring (health, performance, security)
 - pgvector optimization and performance tuning
 - Caching (DragonflyDB)
 - WebSocket management
@@ -11,14 +11,14 @@ This module provides core infrastructure services across TripSage:
 """
 
 from .cache_service import CacheService, get_cache_service
-from .consolidated_database_monitor import (
+from .database_monitor import (
     ConsolidatedDatabaseMonitor,
     HealthStatus,
     MonitoringConfig,
     QueryStatus,
     QueryType,
     SecurityEvent,
-    get_consolidated_database_monitor,
+    get_database_monitor,
 )
 from .database_service import DatabaseService, get_database_service
 from .key_monitoring_service import (
@@ -42,9 +42,9 @@ __all__ = [
     # Database
     "DatabaseService",
     "get_database_service",
-    # Consolidated Database Monitor
+    # Database Monitor
     "ConsolidatedDatabaseMonitor",
-    "get_consolidated_database_monitor",
+    "get_database_monitor",
     "MonitoringConfig",
     "HealthStatus",
     "QueryType",

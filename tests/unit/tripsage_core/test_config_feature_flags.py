@@ -312,7 +312,7 @@ class TestSettingsIntegration:
                 "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
             ),
             patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
+                "tripsage_core.services.infrastructure.database_wrapper.ConsolidatedDatabaseMonitor"
             ),
         ):
             wrapper = DatabaseServiceWrapper(settings_enabled)
@@ -324,7 +324,7 @@ class TestSettingsIntegration:
         from unittest.mock import Mock
 
         from tripsage_core.services.infrastructure.database_monitor import (
-            DatabaseConnectionMonitor,
+            ConsolidatedDatabaseMonitor,
         )
 
         settings = Settings(
@@ -337,7 +337,7 @@ class TestSettingsIntegration:
         mock_db_service = Mock()
         mock_metrics = Mock()
 
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=mock_db_service,
             settings=settings,
             metrics=mock_metrics,

@@ -16,7 +16,7 @@ from tripsage_core.monitoring.database_metrics import (
     reset_database_metrics,
 )
 from tripsage_core.services.infrastructure.database_monitor import (
-    DatabaseConnectionMonitor,
+    ConsolidatedDatabaseMonitor,
     HealthStatus,
     SecurityEvent,
 )
@@ -59,7 +59,7 @@ class TestDatabaseMonitoringIntegration:
         """Test complete monitoring flow from start to finish."""
         # Create monitoring components
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,
@@ -97,7 +97,7 @@ class TestDatabaseMonitoringIntegration:
         self.mock_db_service.is_connected = False
 
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,
@@ -223,7 +223,7 @@ class TestDatabaseMonitoringIntegration:
         self.mock_db_service.health_check = AsyncMock(return_value=False)
 
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,
@@ -266,7 +266,7 @@ class TestDatabaseMonitoringIntegration:
     async def test_security_monitoring_integration(self):
         """Test security monitoring with high error rates."""
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,
@@ -355,7 +355,7 @@ class TestDatabaseMonitoringIntegration:
     async def test_concurrent_monitoring_operations(self):
         """Test monitoring under concurrent operations."""
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,
@@ -397,7 +397,7 @@ class TestDatabaseMonitoringIntegration:
     async def test_monitoring_configuration_changes(self):
         """Test changing monitoring configuration at runtime."""
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,
@@ -441,7 +441,7 @@ class TestDatabaseMonitoringIntegration:
     async def test_alert_callback_functionality(self):
         """Test alert callback system."""
         metrics = DatabaseMetrics()
-        monitor = DatabaseConnectionMonitor(
+        monitor = ConsolidatedDatabaseMonitor(
             database_service=self.mock_db_service,
             settings=self.settings,
             metrics=metrics,

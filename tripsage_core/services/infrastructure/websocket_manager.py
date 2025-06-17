@@ -71,7 +71,8 @@ def redis_with_fallback(fallback_method: Optional[str] = None):
                     )
                 else:
                     logger.warning(
-                        f"No Redis client and no fallback method {fallback_name} found for {func.__name__}"
+                        f"No Redis client and no fallback method {fallback_name} "
+                        f"found for {func.__name__}"
                     )
                     return None
 
@@ -617,9 +618,7 @@ class WebSocketManager:
 
         # Subscribe to new channels
         if subscribe_request.channels:
-            available_channels = self.auth_service.get_available_channels(
-                connection.user_id
-            )
+            self.auth_service.get_available_channels(connection.user_id)
             allowed_channels, denied_channels = (
                 self.auth_service.validate_channel_access(
                     connection.user_id, subscribe_request.channels
@@ -696,7 +695,8 @@ class WebSocketManager:
     async def broadcast_to_channel(self, channel: str, event: WebSocketEvent) -> int:
         """Broadcast event to channel using integrated broadcaster."""
         if self.broadcaster:
-            # Use broadcaster for distributed broadcasting with centralized serialization
+            # Use broadcaster for distributed broadcasting with centralized
+            # serialization
             event_dict = event.to_dict()
             await self.broadcaster.broadcast_to_channel(
                 channel, event_dict, event.priority
