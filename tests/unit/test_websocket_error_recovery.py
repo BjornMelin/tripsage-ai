@@ -200,13 +200,14 @@ class TestExponentialBackoff:
         """Test maximum delay cap."""
         backoff = ExponentialBackoff(base_delay=1.0, max_delay=5.0, jitter=False)
 
-        # Attempt many times
-        for _ in range(10):
-            backoff.next_attempt()
+        # Attempt many times but stay under max_attempts
+        delays = []
+        for _ in range(5):
+            delay = backoff.next_attempt()
+            delays.append(delay)
 
-        # Should be capped at max_delay
-        delay = backoff.get_delay()
-        assert delay == 5.0
+        # Later delays should be capped at max_delay
+        assert delays[-1] == 5.0
 
     def test_backoff_max_attempts(self):
         """Test maximum attempts exception."""
