@@ -59,7 +59,7 @@ Based on comprehensive research and codebase analysis, critical core service imp
    - **Deliverables**: Secure URL parsing, monitoring infrastructure, comprehensive testing, feature flags
    - **Impact**: Zero security vulnerabilities, <5ms validation overhead, production-ready monitoring
 
-2. **[BJO-211](https://linear.app/bjorn-dev/issue/BJO-211)** - **API Key Validation and Monitoring Infrastructure** 🚨 **URGENT** 
+2. **[BJO-211](https://linear.app/bjorn-dev/issue/BJO-211)** - **API Key Validation and Monitoring Infrastructure** 🚨 **URGENT**
    - **Problem**: No API key validation, health checking, or lifecycle management
    - **Impact**: Production failures, service outages, security vulnerabilities
    - **Scope**: Complete API key validation framework with monitoring and alerting
@@ -93,11 +93,13 @@ Based on comprehensive research and codebase analysis, critical core service imp
    - **Priority**: P1 - Performance and scalability with dramatic simplification
    - **Status**: ✅ **COMPLETED** June 17, 2025 - Production-ready implementation
 
-4. **[BJO-213](https://linear.app/bjorn-dev/issue/BJO-213)** - **WebSocket Integration Error Recovery Framework** 🔄 **HIGH**
-   - **Problem**: Missing integration between broadcaster and manager, no error recovery
-   - **Impact**: Unreliable real-time features, connection failures, poor user experience
-   - **Scope**: Complete integration, automatic recovery, monitoring, rate limiting
-   - **Priority**: P1 - Real-time reliability requirements
+4. **[BJO-213](https://linear.app/bjorn-dev/issue/BJO-213)** - **WebSocket Integration Error Recovery Framework** ✅ **COMPLETED**
+   - **Achievement**: Full integration between broadcaster and manager with comprehensive error recovery
+   - **Delivered**: Exponential backoff with jitter, 20-second heartbeat, 8-state connection management
+   - **Features**: Hierarchical rate limiting, circuit breaker patterns, priority message queuing
+   - **Test Coverage**: ~90% with comprehensive unit and integration tests
+   - **Status**: ✅ **COMPLETED** June 17, 2025
+   - **Technical Debt**: Created 16 follow-up issues (BJO-215 through BJO-230) for security vulnerabilities, performance optimizations, and code quality improvements identified during implementation
 
 5. **[BJO-214](https://linear.app/bjorn-dev/issue/BJO-214)** - **MCP Service Framework and Caching Infrastructure** 🏗️ **HIGH**
    - **Problem**: Only Airbnb MCP exists, no caching, limited error handling, no extensibility
@@ -119,14 +121,14 @@ Based on comprehensive research and codebase analysis, critical core service imp
 - Days 1-2: BJO-210 (Memory service hardening) ✅ **COMPLETED**
 - Days 3-4: BJO-211 (API key infrastructure)
 
-**Weeks 2-5 (Database Performance Optimization - PHASE 1 COMPLETE):**
+**Weeks 2-5 (Database Performance Optimization):**
 - ✅ Week 2: BJO-212 Phase 1 (Create unified pgvector service) - **COMPLETED**
-- Week 3: BJO-212 Phase 2 (Service integration)
-- Week 4: BJO-212 Phase 3 (Remove over-engineered components)
-- Week 5: BJO-212 Phase 4 (Blue-green deployment)
+- ✅ Week 3: BJO-212 Phase 2 (Service integration) - **COMPLETED**
+- ✅ Week 4: BJO-212 Phase 3 (Remove over-engineered components) - **COMPLETED**
+- Week 5: BJO-212 Phase 4 (Blue-green deployment) - Ready when needed
 
 **Week 6 (Other Performance & Reliability):**
-- Days 1-2: BJO-213 (WebSocket integration)
+- Days 1-2: BJO-213 (WebSocket integration) ✅ **COMPLETED**
 - Days 3-4: BJO-214 (MCP framework)
 
 **Total Estimate**: 9-10 development days for complete core service implementation
@@ -220,6 +222,116 @@ ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
 **Estimated Total**: 8-10 development days for V1 MVP launch readiness
 
 ---
+
+## 🔒 WebSocket Infrastructure Technical Debt (NEW - June 17, 2025)
+
+### 🔴 CRITICAL SECURITY ISSUES (P0-P1)
+
+- **[BJO-215](https://linear.app/bjorn-dev/issue/BJO-215)** - fix(websocket): implement CSWSH vulnerability protection 🔴 **CRITICAL**
+  - **Problem**: No Origin header validation in WebSocket authentication flow
+  - **Impact**: Malicious websites can establish WebSocket connections on behalf of authenticated users
+  - **Scope**: Add Origin validation to WebSocket authentication middleware
+  - **Priority**: P0 - Critical security vulnerability
+
+- **[BJO-216](https://linear.app/bjorn-dev/issue/BJO-216)** - fix(websocket): implement message size limits and validation 🔴 **CRITICAL**
+  - **Problem**: No maximum message size validation, enabling memory exhaustion attacks
+  - **Impact**: DoS vulnerability through memory exhaustion
+  - **Scope**: Add 64KB default limit with configurable override, implement proper bounds checking
+  - **Priority**: P0 - Security vulnerability
+
+- **[BJO-217](https://linear.app/bjorn-dev/issue/BJO-217)** - fix(websocket): add comprehensive Pydantic input validation 🔴 **HIGH**
+  - **Problem**: Raw JSON parsing without schema validation
+  - **Impact**: Potential injection attacks and malformed data processing
+  - **Scope**: Implement Pydantic models for all WebSocket message types
+  - **Priority**: P1 - Security best practice
+
+- **[BJO-218](https://linear.app/bjorn-dev/issue/BJO-218)** - fix(websocket): improve session management and invalidation 🟡 **MEDIUM**
+  - **Problem**: Sessions not properly invalidated on disconnect
+  - **Impact**: Potential session hijacking vulnerabilities
+  - **Scope**: Implement proper session lifecycle management and cleanup
+  - **Priority**: P1 - Security enhancement
+
+### 🚀 PERFORMANCE ISSUES (P1-P2)
+
+- **[BJO-219](https://linear.app/bjorn-dev/issue/BJO-219)** - fix(websocket): resolve blocking asyncio.sleep operations 🔴 **CRITICAL**
+  - **Problem**: asyncio.sleep(0.05) blocks entire event loop affecting all connections
+  - **Impact**: Performance degradation for all WebSocket connections
+  - **Scope**: Use asyncio.create_task() for non-blocking delays
+  - **Priority**: P1 - Critical performance issue
+
+- **[BJO-220](https://linear.app/bjorn-dev/issue/BJO-220)** - feat(websocket): implement parallel message broadcasting 🟡 **MEDIUM**
+  - **Problem**: Messages sent sequentially instead of concurrently
+  - **Impact**: Increased latency for multi-client broadcasts
+  - **Scope**: Use asyncio.gather() for parallel message delivery
+  - **Priority**: P2 - Performance optimization
+
+- **[BJO-221](https://linear.app/bjorn-dev/issue/BJO-221)** - fix(websocket): implement message queue bounds and backpressure 🟡 **MEDIUM**
+  - **Problem**: Unbounded message queues can cause memory leaks
+  - **Impact**: Memory exhaustion in high-traffic scenarios
+  - **Scope**: Implement overflow handling and backpressure mechanisms
+  - **Priority**: P2 - Scalability improvement
+
+### 🛠️ CODE QUALITY (P3-P4)
+
+- **[BJO-222](https://linear.app/bjorn-dev/issue/BJO-222)** - refactor(websocket): reduce authenticate_connection method complexity 📝 **LOW**
+  - **Problem**: Method exceeds 100 lines with cyclomatic complexity ~15
+  - **Impact**: Maintainability and testing challenges
+  - **Scope**: Extract JWT validation, rate limiting, and connection setup into separate methods
+  - **Priority**: P3 - Code quality improvement
+
+- **[BJO-223](https://linear.app/bjorn-dev/issue/BJO-223)** - refactor(websocket): create WebSocketEventSerializer helper class 📝 **LOW**
+  - **Problem**: Event serialization duplicated in 4 locations
+  - **Impact**: Code duplication and maintenance burden
+  - **Scope**: Create centralized serialization helper class
+  - **Priority**: P4 - Code quality improvement
+
+- **[BJO-224](https://linear.app/bjorn-dev/issue/BJO-224)** - refactor(websocket): implement redis_with_fallback decorator pattern 📝 **LOW**
+  - **Problem**: Redis fallback pattern duplicated in 3 locations
+  - **Impact**: Code duplication
+  - **Scope**: Create @redis_with_fallback decorator
+  - **Priority**: P4 - Code quality improvement
+
+### ✨ FEATURE ENHANCEMENTS (P3)
+
+- **[BJO-225](https://linear.app/bjorn-dev/issue/BJO-225)** - feat(websocket): implement load shedding and connection limits 🌟 **MEDIUM**
+  - **Problem**: No automatic load shedding or connection limits
+  - **Impact**: System can be overwhelmed under high load
+  - **Scope**: Add configurable connection limits, graceful degradation, backpressure
+  - **Priority**: P3 - Scalability feature
+
+- **[BJO-226](https://linear.app/bjorn-dev/issue/BJO-226)** - feat(websocket): create real-time monitoring dashboard 📊 **MEDIUM**
+  - **Problem**: No monitoring dashboards for WebSocket infrastructure
+  - **Impact**: Limited operational visibility
+  - **Scope**: Security event aggregation, attack detection, performance visualization
+  - **Priority**: P3 - Operations enhancement
+
+### 🧪 TESTING IMPROVEMENTS (P3-P4)
+
+- **[BJO-227](https://linear.app/bjorn-dev/issue/BJO-227)** - test(websocket): add network partition recovery tests 🧪 **MEDIUM**
+  - **Problem**: Missing test coverage for network partition scenarios
+  - **Impact**: Unknown behavior under network failures
+  - **Scope**: Comprehensive network failure and recovery testing
+  - **Priority**: P3 - Test coverage gap
+
+- **[BJO-228](https://linear.app/bjorn-dev/issue/BJO-228)** - test(websocket): implement large-scale load testing suite 🧪 **LOW**
+  - **Problem**: No load testing for 10k+ concurrent connections
+  - **Impact**: Unknown scalability limits
+  - **Scope**: Create comprehensive load testing suite with memory leak detection
+  - **Priority**: P4 - Performance validation
+
+### 📊 MONITORING & OBSERVABILITY (P4)
+
+- **[BJO-229](https://linear.app/bjorn-dev/issue/BJO-229)** - feat(websocket): implement security metrics collection 🔍 **LOW**
+  - **Problem**: No security event metrics collection
+  - **Impact**: Limited security monitoring capabilities
+  - **Scope**: Failed auth attempts, rate limit violations, suspicious patterns
+  - **Priority**: P4 - Security monitoring
+
+- **[BJO-230](https://linear.app/bjorn-dev/issue/BJO-230)** - feat(websocket): add comprehensive performance monitoring 📈 **LOW**
+  - **Problem**: Limited performance metrics collection
+  - **Impact**: Difficult to optimize and troubleshoot performance
+  - **Scope**: Connection latency, message throughput, queue depths, circuit breaker states
+  - **Priority**: P4 - Performance monitoring
 
 ## 🎯 LEGACY: Configurable Complexity Approach
 

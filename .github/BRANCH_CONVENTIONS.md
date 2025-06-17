@@ -19,12 +19,14 @@ on:
 ### 1. Main Branches
 
 #### `main`
+
 - **Purpose:** Production-ready code
 - **Triggers:** All workflows (CI, security, coverage, deployment)
 - **Protection:** Fully protected, requires PR and reviews
 - **Deployment:** Auto-deploys to production (Vercel)
 
 #### `develop`
+
 - **Purpose:** Integration branch for features
 - **Triggers:** All workflows except production deployment
 - **Protection:** Protected, requires PR and CI passes
@@ -35,7 +37,8 @@ on:
 #### Pattern: `feat/*`
 
 **Examples:**
-```
+
+```text
 feat/user-authentication
 feat/trip-collaboration-system
 feat/api-rate-limiting
@@ -44,6 +47,7 @@ feat/accommodation-search
 ```
 
 **Guidelines:**
+
 - Use kebab-case (lowercase with hyphens)
 - Be descriptive but concise
 - Start with `feat/` prefix
@@ -51,6 +55,7 @@ feat/accommodation-search
 - Merge back to `develop` via PR
 
 **Workflow Triggers:**
+
 - ✅ Backend CI (on push)
 - ✅ Frontend CI (on push)
 - ✅ Security Scanning (on push)
@@ -62,7 +67,8 @@ feat/accommodation-search
 #### Pattern: `session/*`
 
 **Examples:**
-```
+
+```text
 session/create-trip-endpoint
 session/fix-authentication-bug
 session/performance-optimization
@@ -70,12 +76,14 @@ session/claude-ai-refactor-components
 ```
 
 **Guidelines:**
+
 - Used for AI-assisted development sessions
 - Include session purpose or ticket reference
 - Temporary branches, delete after merge
 - Can branch from any base (main, develop, feat/*)
 
 **Workflow Triggers:**
+
 - ✅ Backend CI (on push)
 - ✅ Frontend CI (on push)  
 - ✅ Security Scanning (on push)
@@ -87,19 +95,22 @@ session/claude-ai-refactor-components
 #### Pattern: `hotfix/*`
 
 **Examples:**
-```
+
+```text
 hotfix/security-patch-v1.2.1
 hotfix/critical-memory-leak
 hotfix/urgent-auth-fix
 ```
 
 **Guidelines:**
+
 - For critical production fixes
 - Branch directly from `main`
 - Merge to both `main` and `develop`
 - Version number recommended in name
 
 **Workflow Triggers:**
+
 - ⚠️ Currently not in standard triggers
 - Should manually trigger workflows or use workflow_dispatch
 
@@ -108,19 +119,22 @@ hotfix/urgent-auth-fix
 #### Pattern: `release/*`
 
 **Examples:**
-```
+
+```text
 release/v1.2.0
 release/v2.0.0-beta
 release/sprint-23
 ```
 
 **Guidelines:**
+
 - For release preparation
 - Branch from `develop`
 - Only bug fixes and release tasks
 - Merge to `main` when ready
 
 **Workflow Triggers:**
+
 - ⚠️ Currently not in standard triggers
 - Consider adding to workflow patterns for releases
 
@@ -129,18 +143,21 @@ release/sprint-23
 #### Pattern: `docs/*`
 
 **Examples:**
-```
+
+```text
 docs/api-documentation
 docs/deployment-guide
 docs/user-manual-update
 ```
 
 **Guidelines:**
+
 - For documentation-only changes
 - Can branch from any base
 - Lightweight review process
 
 **Workflow Triggers:**
+
 - ⚠️ Currently not in standard triggers
 - May skip some CI checks for docs-only changes
 
@@ -161,20 +178,23 @@ docs/user-manual-update
 
 ### Quality Requirements by Branch
 
-#### For `main` branch:
+#### For `main` branch
+
 - ✅ All CI checks must pass
 - ✅ Security scans must pass (critical vulnerabilities block merge)
 - ✅ Coverage thresholds must be met
 - ✅ At least 1 code review approval required
 - ✅ Branch must be up to date with main
 
-#### For `develop` branch:
+#### For `develop` branch
+
 - ✅ All CI checks must pass
 - ⚠️ Security issues are warnings (not blocking)
 - ⚠️ Coverage below threshold is warning
 - ✅ Code review recommended but may not be required
 
-#### For feature/session branches:
+#### For feature/session branches
+
 - ✅ CI checks should pass for PR merge
 - ℹ️ Work-in-progress commits may have failing checks
 - ℹ️ Draft PRs exempt from strict requirements
@@ -215,6 +235,7 @@ git push origin --delete feat/my-feature
 ### Naming Guidelines
 
 **DO:**
+
 - Use descriptive, meaningful names
 - Follow the established patterns
 - Use kebab-case (lowercase with hyphens)
@@ -222,6 +243,7 @@ git push origin --delete feat/my-feature
 - Include ticket/issue numbers when relevant
 
 **DON'T:**
+
 - Use spaces or special characters
 - Create overly long branch names
 - Use generic names like `fix`, `update`, `new-feature`
@@ -230,7 +252,7 @@ git push origin --delete feat/my-feature
 
 ### Examples of Good Branch Names
 
-```
+```text
 ✅ feat/user-authentication-system
 ✅ feat/trip-collaboration-v2
 ✅ session/fix-websocket-connection
@@ -242,7 +264,7 @@ git push origin --delete feat/my-feature
 
 ### Examples of Poor Branch Names
 
-```
+```text
 ❌ fix-stuff
 ❌ johns-work
 ❌ new_feature
@@ -285,11 +307,13 @@ gh workflow run "Backend CI" --ref hotfix/my-fix
 If you have existing branches that don't follow these conventions:
 
 1. **Rename local branch:**
+
    ```bash
    git branch -m old-name feat/new-name
    ```
 
 2. **Update remote branch:**
+
    ```bash
    git push origin :old-name feat/new-name
    git push --set-upstream origin feat/new-name
