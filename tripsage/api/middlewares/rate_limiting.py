@@ -27,9 +27,9 @@ from tripsage.api.core.config import Settings, get_settings
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
+    AuditSeverity,
     audit_api_key,
     audit_security_event,
-    AuditSeverity,
 )
 
 logger = logging.getLogger(__name__)
@@ -1099,7 +1099,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         # Get client IP for audit logging
         client_ip = self._get_client_ip(request)
-        
+
         # Log rate limit violation to audit system
         try:
             if context["principal_type"] == "agent":

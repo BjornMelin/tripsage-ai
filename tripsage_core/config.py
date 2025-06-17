@@ -88,13 +88,13 @@ class Settings(BaseSettings):
     rate_limit_use_dragonfly: bool = Field(
         default=True, description="Use DragonflyDB for distributed rate limiting"
     )
-    
+
     # Default rate limits (can be overridden per API key/user)
     rate_limit_requests_per_minute: int = Field(
         default=60, description="Default requests per minute"
     )
     rate_limit_requests_per_hour: int = Field(
-        default=1000, description="Default requests per hour" 
+        default=1000, description="Default requests per hour"
     )
     rate_limit_requests_per_day: int = Field(
         default=10000, description="Default requests per day"
@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     rate_limit_burst_size: int = Field(
         default=10, description="Default burst size for token bucket"
     )
-    
+
     # Algorithm configuration
     rate_limit_enable_sliding_window: bool = Field(
         default=True, description="Enable sliding window rate limiting"
@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     rate_limit_enable_burst_protection: bool = Field(
         default=True, description="Enable burst protection"
     )
-    
+
     # Integration with monitoring
     rate_limit_enable_monitoring: bool = Field(
         default=True, description="Enable rate limit monitoring and analytics"

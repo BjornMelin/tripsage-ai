@@ -5,17 +5,20 @@ This package contains FastAPI router modules organized by domain.
 
 __all__ = [
     "accommodations",
-    # "activities",  # Removed with JWT cleanup
+    "activities",
     "attachments",
     "auth",
     "chat",
+    "config",
+    "dashboard",
     "destinations",
     "flights",
     "health",
     "itineraries",
     "keys",
     "memory",
-    # "search",  # Removed with JWT cleanup
+    "search",
     "trips",
+    "users",
     "websocket",
 ]

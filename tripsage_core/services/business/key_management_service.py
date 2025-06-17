@@ -30,7 +30,6 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
     audit_api_key,
-    audit_config_change,
 )
 
 logger = logging.getLogger(__name__)
@@ -467,13 +466,17 @@ class KeyManagementService:
             )
 
             # Audit log validation attempt
-            event_type = (AuditEventType.API_KEY_VALIDATION_SUCCESS 
-                         if validation_result.is_valid 
-                         else AuditEventType.API_KEY_VALIDATION_FAILED)
-            outcome = (AuditOutcome.SUCCESS 
-                      if validation_result.is_valid 
-                      else AuditOutcome.FAILURE)
-            
+            event_type = (
+                AuditEventType.API_KEY_VALIDATION_SUCCESS
+                if validation_result.is_valid
+                else AuditEventType.API_KEY_VALIDATION_FAILED
+            )
+            outcome = (
+                AuditOutcome.SUCCESS
+                if validation_result.is_valid
+                else AuditOutcome.FAILURE
+            )
+
             await audit_api_key(
                 event_type=event_type,
                 outcome=outcome,
