@@ -2,6 +2,13 @@
 
 This document describes the comprehensive dashboard monitoring API endpoints that provide real-time insights into system performance, API key usage, and service health.
 
+> **Related Documentation:**
+> - [Rate Limiting](../developers/rate-limiting.md) - Enhanced rate limiting implementation
+> - [Authentication](authentication.md) - API authentication guide
+> - [WebSocket API](websocket-api.md) - Real-time WebSocket connections
+> - [Error Codes](error-codes.md) - API error reference
+> - [Performance Optimization](../developers/performance-optimization.md) - System performance tuning
+
 ## Overview
 
 The Dashboard API provides monitoring and analytics capabilities for:
@@ -21,6 +28,13 @@ All dashboard endpoints require authenticated access. Only users with appropriat
 - **User Authentication**: JWT tokens for frontend users
 - **Admin Access**: Required for full dashboard functionality
 - **Agent Access**: Not permitted for dashboard endpoints
+
+For detailed authentication information, see the [Authentication Guide](authentication.md).
+
+> **Related Documentation:**
+> - [Authentication Guide](authentication.md) - Complete authentication setup and usage
+> - [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation details
+> - [WebSocket API](websocket-api.md) - Real-time features and WebSocket connections
 
 ## Base URL
 
@@ -422,6 +436,8 @@ Dashboard endpoints are subject to rate limiting:
 - **Admin Users**: 500 requests per minute
 - **WebSocket Connections**: Limited to 5 concurrent connections per user
 
+For complete rate limiting configuration and implementation details, see the [Rate Limiting Guide](../developers/rate-limiting.md).
+
 ## Data Retention
 
 - **Real-time metrics**: 24 hours
@@ -486,3 +502,11 @@ ws.onmessage = function(event) {
 ```
 
 This dashboard API provides comprehensive monitoring capabilities for maintaining system health and performance visibility.
+
+## See Also
+
+- [Error Codes](error-codes.md) - Complete API error reference
+- [REST Endpoints](rest-endpoints.md) - Core API endpoints
+- [WebSocket Guide](websocket-guide.md) - Real-time communication setup
+- [Rate Limiting](../developers/rate-limiting.md) - Rate limiting implementation
+- [Performance Optimization](../developers/performance-optimization.md) - System performance guides

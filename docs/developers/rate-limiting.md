@@ -2,6 +2,12 @@
 
 This document describes the production-ready rate limiting implementation for the TripSage API, featuring per-API-key configurable limits, service-specific thresholds, and comprehensive monitoring integration.
 
+> **Related Documentation:**
+> - [Dashboard API](../api/dashboard-api.md) - Rate limit monitoring and analytics endpoints
+> - [Performance Optimization](performance-optimization.md) - System performance tuning
+> - [Architecture Guide](architecture-guide.md) - Overall system architecture
+> - [API Development](api-development.md) - API development best practices
+
 ## Features
 
 ### Core Capabilities
@@ -202,6 +208,8 @@ The rate limiting middleware integrates with the API Key Monitoring Service to p
 - Service health monitoring
 - Rate limit effectiveness metrics
 
+See the [Dashboard API documentation](../api/dashboard-api.md) for complete monitoring endpoints and real-time rate limit data access.
+
 ## Performance Considerations
 
 ### DragonflyDB Optimizations
@@ -310,3 +318,11 @@ curl -X POST -H "Authorization: Bearer <admin_key>" \
 - **Hot configuration reloading** without restart
 - **Database-backed configuration** for enterprise deployments
 - **A/B testing framework** for rate limit experiments
+
+## See Also
+
+- [Dashboard API](../api/dashboard-api.md) - Monitoring and analytics endpoints for rate limits
+- [Performance Optimization](performance-optimization.md) - System performance best practices
+- [Testing Guide](testing-guide.md) - Testing rate limiting implementations
+- [Architecture Guide](architecture-guide.md) - System architecture overview
+- [Environment Configuration](../operators/environment-configuration.md) - Production configuration setup
