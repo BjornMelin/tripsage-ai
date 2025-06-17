@@ -658,7 +658,7 @@ async def get_user_activity(
             user_activities.append(
                 UserActivity(
                     user_id=user_id,
-                    user_type="user" if not user_id.startswith("agent_") else "agent",
+                    user_type="agent" if user_id.startswith("agent_") else "user",
                     request_count=request_count,
                     error_count=error_count,
                     success_rate=success_rate,
