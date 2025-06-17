@@ -22,6 +22,7 @@ Fixtures in TripSage provide reusable test data, configurations, and setup/teard
 ### What are Fixtures?
 
 Fixtures are functions that:
+
 - Set up test prerequisites
 - Provide test data
 - Clean up after tests
@@ -30,7 +31,7 @@ Fixtures are functions that:
 
 ### Fixture Locations
 
-```
+```text
 tests/
 ├── conftest.py              # Root fixtures (global)
 ├── unit/
@@ -697,7 +698,7 @@ def user_factory(test_db):
 
 ### Scope Hierarchy
 
-```
+```text
 session     # Once per test session
   ↓
 package     # Once per package
@@ -807,6 +808,7 @@ def test_example(fixture_c, fixture_a, fixture_b):
 **Error**: `fixture 'my_fixture' not found`
 
 **Solutions**:
+
 - Check fixture is defined in correct `conftest.py`
 - Verify import path for fixture modules
 - Ensure fixture name matches exactly
@@ -817,6 +819,7 @@ def test_example(fixture_c, fixture_a, fixture_b):
 **Error**: `ScopeMismatch: Cannot use function-scoped fixture in session-scoped fixture`
 
 **Solution**:
+
 ```python
 # Bad
 @pytest.fixture(scope="session")
@@ -834,6 +837,7 @@ def function_fixture(session_fixture):  # OK
 **Error**: `RuntimeError: Event loop is closed`
 
 **Solution**:
+
 ```python
 # Use pytest-asyncio fixtures
 @pytest_asyncio.fixture
@@ -852,6 +856,7 @@ async def bad_async_fixture():
 **Issue**: Cleanup code not running
 
 **Solution**:
+
 ```python
 # Good: Use yield for cleanup
 @pytest.fixture
@@ -935,6 +940,7 @@ def test_with_factory(trip_factory):
 ## Summary
 
 Fixtures are essential for:
+
 - Test isolation
 - Code reuse
 - Clean test setup/teardown
@@ -942,6 +948,7 @@ Fixtures are essential for:
 - Performance optimization
 
 Follow these guidelines for effective fixture usage:
+
 1. Choose appropriate scope
 2. Keep fixtures focused
 3. Document fixture purpose
@@ -951,6 +958,7 @@ Follow these guidelines for effective fixture usage:
 7. Profile performance impact
 
 For more information:
+
 - [pytest fixtures documentation](https://docs.pytest.org/en/stable/fixture.html)
 - [Testing Guide](TESTING_GUIDE.md)
 - [Unit Test Guide](unit/README.md)

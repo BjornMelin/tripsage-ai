@@ -240,7 +240,7 @@ uv run pytest tests/unit/ --cov=tripsage --cov-report=xml
 4. **Mock External Dependencies**: Never hit real services in unit tests
 5. **Test Edge Cases**: Include boundary conditions and error cases
 
-### Test Structure
+### Test Structure - New Tests
 
 ```python
 class TestComponentName:
