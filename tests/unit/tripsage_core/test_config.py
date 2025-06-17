@@ -225,7 +225,7 @@ class TestConfigurationErrorHandling:
         with patch.dict(os.environ, {}, clear=True):
             # Settings should load successfully with default values
             settings = Settings(_env_file=None)
-            
+
             # Verify defaults are used
             assert settings.openai_api_key.get_secret_value() == "sk-test-1234567890"
             assert settings.database_url == "https://test.supabase.com"

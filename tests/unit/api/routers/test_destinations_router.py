@@ -3,8 +3,6 @@
 import pytest
 from fastapi import status
 
-from tests.factories import DestinationFactory
-
 
 class TestDestinationsRouter:
     """Test suite for destinations router endpoints."""
@@ -22,7 +20,7 @@ class TestDestinationsRouter:
         """Test successful destination search."""
         # Debug: print what we're sending
         print(f"Request data: {valid_destination_search}")
-        
+
         # Act
         response = api_test_client.post(
             "/api/destinations/search",
@@ -66,9 +64,7 @@ class TestDestinationsRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
 
-    def test_get_destination_recommendations_success(
-        self, api_test_client
-    ):
+    def test_get_destination_recommendations_success(self, api_test_client):
         """Test successful destination recommendations."""
         # Act
         response = api_test_client.get(

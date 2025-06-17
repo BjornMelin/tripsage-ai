@@ -764,12 +764,15 @@ class TestMemoryRouter:
             # Test GET endpoint
             response = await client.get("/api/memory/context")
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
-            
+
             # Test POST endpoint
-            response = await client.post("/api/memory/conversation", json={
-                "messages": [{"role": "user", "content": "test"}],
-                "context_type": "travel_planning"
-            })
+            response = await client.post(
+                "/api/memory/conversation",
+                json={
+                    "messages": [{"role": "user", "content": "test"}],
+                    "context_type": "travel_planning",
+                },
+            )
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     async def test_memory_endpoints_service_errors(
