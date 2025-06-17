@@ -1,0 +1,153 @@
+# 👥 TripSage User Documentation
+
+> **Complete Guide for TripSage Users**  
+> From first login to advanced trip planning - everything you need to make the most of TripSage AI
+
+## 🚀 Quick Start
+
+### New to TripSage?
+
+| Step | Description | Time | Status |
+|------|-------------|------|--------|
+| 1. [Getting Started](getting-started.md) | Create account and basic setup | 5 min | ✅ |
+| 2. [Your First Trip](travel-planning-guide.md) | Plan your first trip with AI | 10 min | ✅ |
+| 3. [Using the Web App](web-app-guide.md) | Master the interface | 15 min | ✅ |
+| 4. [Advanced Features](advanced-features.md) | Collaboration, preferences, and more | As needed | ✅ |
+
+## 📚 Documentation Sections
+
+### 🌟 Getting Started
+- **[Getting Started Guide](getting-started.md)** - Account setup, preferences, first steps
+- **[Web App Guide](web-app-guide.md)** - Navigate the TripSage interface
+- **[Mobile Access](mobile-guide.md)** - Using TripSage on mobile devices
+
+### ✈️ Planning Your Trips
+- **[Travel Planning Guide](travel-planning-guide.md)** - Complete trip planning walkthrough
+- **[Search & Booking](search-booking.md)** - Find flights, hotels, and activities
+- **[AI Assistant](ai-assistant-guide.md)** - Work effectively with TripSage AI
+- **[Trip Collaboration](collaboration.md)** - Share and plan trips with others
+
+### ⚙️ Account & Settings
+- **[Account Management](account-management.md)** - Profile, preferences, and security
+- **[Notification Settings](notifications.md)** - Alerts, updates, and preferences
+- **[Data & Privacy](privacy-security.md)** - Your data, privacy controls, and security
+
+### 🆘 Support & Help
+- **[FAQ](faq.md)** - Frequently asked questions
+- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
+- **[Getting Help](support.md)** - Contact support and community resources
+
+### 🔗 For Developers
+- **[API Access](../api/getting-started.md)** - Integrate with TripSage
+- **[Developer Resources](../developers/README.md)** - Build on TripSage platform
+
+## 🎯 User Types & Paths
+
+### 🏃‍♂️ Quick User (5 minutes)
+**Goal**: Plan a simple trip quickly
+
+1. **[Getting Started](getting-started.md#quick-setup)** - 2 min account setup
+2. **[AI Planning](ai-assistant-guide.md#quick-planning)** - 3 min trip planning
+
+### 👥 Collaborative Planner (15 minutes)
+**Goal**: Plan a group trip with friends/family
+
+1. **[Getting Started](getting-started.md)** - Basic setup
+2. **[Travel Planning](travel-planning-guide.md)** - Detailed planning
+3. **[Collaboration](collaboration.md)** - Invite and coordinate
+
+### 🧑‍💼 Business Traveler (10 minutes)
+**Goal**: Efficient business trip management
+
+1. **[Getting Started](getting-started.md#business-setup)** - Business preferences
+2. **[Search & Booking](search-booking.md#business-travel)** - Corporate travel features
+3. **[Account Management](account-management.md#expense-tracking)** - Expense tracking
+
+### 🔧 Power User (30 minutes)
+**Goal**: Master all TripSage features
+
+1. Complete all Quick Start steps above
+2. **[Advanced Features](advanced-features.md)** - All capabilities
+3. **[API Access](../api/getting-started.md)** - Integration options
+
+## 💡 Popular Use Cases
+
+### Personal Travel
+- **Weekend Getaways** → [Quick Planning Guide](travel-planning-guide.md#weekend-trips)
+- **Vacation Planning** → [Complete Travel Guide](travel-planning-guide.md)
+- **Last-Minute Trips** → [Quick Planning](ai-assistant-guide.md#last-minute)
+
+### Business Travel
+- **Corporate Trips** → [Business Travel Features](search-booking.md#business-travel)
+- **Conference Travel** → [Group Booking](collaboration.md#group-events)
+- **Client Meetings** → [Professional Planning](travel-planning-guide.md#business-trips)
+
+### Group Travel
+- **Family Vacations** → [Family Planning](collaboration.md#family-trips)
+- **Friend Trips** → [Group Coordination](collaboration.md#friend-groups)
+- **Corporate Retreats** → [Team Travel](collaboration.md#corporate-groups)
+
+## 📱 Platform Access
+
+### Web Application
+- **Desktop**: Full features at [app.tripsage.ai](https://app.tripsage.ai)
+- **Tablet**: Responsive interface with touch optimization
+- **Mobile Web**: Core features accessible on mobile browsers
+
+### Mobile Experience
+- **Progressive Web App**: Install TripSage on your phone
+- **Offline Access**: View trips without internet connection
+- **Native Features**: Push notifications and location services
+
+### API Integration
+- **Personal Use**: Connect your apps → [API Guide](../api/personal-use.md)
+- **Business Integration**: Enterprise features → [Enterprise API](../api/enterprise.md)
+
+## 🌟 Key Features
+
+### AI-Powered Planning
+- **Natural Language**: "Plan a week in Japan for under $2000"
+- **Smart Suggestions**: Personalized recommendations based on preferences
+- **Real-Time Updates**: Live price and availability monitoring
+- **Memory System**: Remembers your preferences across conversations
+
+### Comprehensive Search
+- **Flights**: Direct airline integrations with price tracking
+- **Accommodations**: Hotels, vacation rentals, unique stays
+- **Activities**: Local experiences, tours, and attractions
+- **Destinations**: AI-powered destination recommendations
+
+### Collaboration Tools
+- **Real-Time Sharing**: Plan trips together in real-time
+- **Role-Based Access**: Different permissions for different users
+- **Communication**: Built-in chat and commenting
+- **Voting & Decisions**: Democratic trip planning tools
+
+### Smart Features
+- **Budget Tracking**: Automatic expense categorization
+- **Weather Integration**: Weather-aware planning recommendations
+- **Local Insights**: Currency, customs, and cultural information
+- **Travel Documents**: Visa requirements and travel alerts
+
+## 🆘 Need Help?
+
+### Self-Service
+- **[FAQ](faq.md)** - Quick answers to common questions
+- **[Troubleshooting](troubleshooting.md)** - Solve issues yourself
+- **[Video Tutorials](https://youtube.com/@tripsage)** - Step-by-step guides
+
+### Direct Support
+- **Email**: [support@tripsage.ai](mailto:support@tripsage.ai)
+- **Live Chat**: Available 24/7 in the application
+- **Community**: [Discord Server](https://discord.gg/tripsage)
+
+### Premium Support
+- **Phone Support**: Premium and Enterprise customers
+- **Dedicated Success Manager**: Enterprise customers
+- **24/7 Travel Assistance**: For users currently traveling
+
+---
+
+**Ready to start planning?** Begin with our [Getting Started Guide](getting-started.md) or jump right into [planning your first trip](travel-planning-guide.md)! ✈️
+
+> *Last updated: June 17, 2025*
