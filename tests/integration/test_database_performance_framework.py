@@ -383,8 +383,8 @@ class TestPGVectorOptimizationIntegration:
         """Test query optimization with performance metrics collection."""
         optimizer = PGVectorService(mock_database_service)
 
-        # Sample query vector
-        sample_destinations[0].embedding
+        # Sample query vector (needed for future test logic)
+        _query_vector = sample_destinations[0].embedding
 
         with patch.object(mock_database_service, "execute_sql") as mock_sql:
             # Mock index statistics

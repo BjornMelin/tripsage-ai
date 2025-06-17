@@ -1369,7 +1369,8 @@ class DatabaseService:
         valid_strategies = ["round_robin", "latency_based"]
         if strategy in valid_strategies:
             logger.info(
-                f"Load balancing strategy set to '{strategy}' (simplified implementation uses round-robin)"
+                f"Load balancing strategy set to '{strategy}' "
+                f"(simplified implementation uses round-robin)"
             )
             return True
         else:

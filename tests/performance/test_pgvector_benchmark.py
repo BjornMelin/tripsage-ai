@@ -374,10 +374,10 @@ class TestPGVectorBenchmark:
             benchmark._validate_performance_targets(improvements, memory_reduction)
         )
 
-        assert validation_results["query_latency_target"] == True  # 8ms < 10ms
-        assert validation_results["performance_improvement_target"] == True  # 35x > 30x
-        assert validation_results["memory_reduction_target"] == True  # 30% > 25%
-        assert regression_detected == False  # No regression
+        assert validation_results["query_latency_target"]  # 8ms < 10ms
+        assert validation_results["performance_improvement_target"]  # 35x > 30x
+        assert validation_results["memory_reduction_target"]  # 30% > 25%
+        assert not regression_detected  # No regression
 
     def test_system_info_collection(self, temp_output_dir):
         """Test system information collection."""
@@ -515,10 +515,10 @@ class TestRegressionDetector:
         analysis = detector.analyze_performance("test_benchmark", current_results)
 
         assert isinstance(analysis, RegressionAnalysisResult)
-        assert analysis.overall_regression == False
-        assert analysis.latency_regression == False
-        assert analysis.throughput_regression == False
-        assert analysis.memory_regression == False
+        assert not analysis.overall_regression
+        assert not analysis.latency_regression
+        assert not analysis.throughput_regression
+        assert not analysis.memory_regression
         assert analysis.severity == "none"
 
     def test_latency_regression_detection(self, baseline_manager):
@@ -536,10 +536,10 @@ class TestRegressionDetector:
 
         analysis = detector.analyze_performance("test_benchmark", current_results)
 
-        assert analysis.overall_regression == True
-        assert analysis.latency_regression == True
-        assert analysis.throughput_regression == False
-        assert analysis.memory_regression == False
+        assert analysis.overall_regression
+        assert analysis.latency_regression
+        assert not analysis.throughput_regression
+        assert not analysis.memory_regression
         assert analysis.latency_change_pct > 20.0  # Significant increase
         assert analysis.severity in ["medium", "high", "critical"]
 
@@ -558,10 +558,10 @@ class TestRegressionDetector:
 
         analysis = detector.analyze_performance("test_benchmark", current_results)
 
-        assert analysis.overall_regression == True
-        assert analysis.latency_regression == False
-        assert analysis.throughput_regression == True
-        assert analysis.memory_regression == False
+        assert analysis.overall_regression
+        assert not analysis.latency_regression
+        assert analysis.throughput_regression
+        assert not analysis.memory_regression
         assert analysis.throughput_change_pct < -15.0  # Significant decrease
 
     def test_memory_regression_detection(self, baseline_manager):
@@ -579,10 +579,10 @@ class TestRegressionDetector:
 
         analysis = detector.analyze_performance("test_benchmark", current_results)
 
-        assert analysis.overall_regression == True
-        assert analysis.latency_regression == False
-        assert analysis.throughput_regression == False
-        assert analysis.memory_regression == True
+        assert analysis.overall_regression
+        assert not analysis.latency_regression
+        assert not analysis.throughput_regression
+        assert analysis.memory_regression
         assert analysis.memory_change_pct > 25.0  # Significant increase
 
     def test_critical_regression_detection(self, baseline_manager):
@@ -600,7 +600,7 @@ class TestRegressionDetector:
 
         analysis = detector.analyze_performance("test_benchmark", current_results)
 
-        assert analysis.overall_regression == True
+        assert analysis.overall_regression
         assert analysis.severity == "critical"
         assert len(analysis.recommendations) > 0
         assert any("CRITICAL" in rec for rec in analysis.recommendations)
@@ -619,7 +619,7 @@ class TestRegressionDetector:
 
         analysis = detector.analyze_performance("new_test", current_results)
 
-        assert analysis.overall_regression == False
+        assert not analysis.overall_regression
         assert "No baseline available" in analysis.recommendations[0]
 
 

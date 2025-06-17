@@ -553,9 +553,8 @@ class PerformanceReporter:
 
         # Header
         report.append("# Performance Regression Analysis Report")
-        report.append(
-            f"**Generated:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}"
-        )
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        report.append(f"**Generated:** {timestamp}")
         report.append("")
 
         # Executive Summary
@@ -572,8 +571,10 @@ class PerformanceReporter:
             report.append(f"❌ **{len(regressions)} Performance Regressions Detected**")
 
             if critical_issues:
+                critical_count = len(critical_issues)
                 report.append(
-                    f"🚨 **{len(critical_issues)} Critical Issues Requiring Immediate Attention**"
+                    f"🚨 **{critical_count} Critical Issues "
+                    f"Requiring Immediate Attention**"
                 )
             if high_issues:
                 report.append(f"⚠️ **{len(high_issues)} High Severity Issues**")
@@ -591,8 +592,9 @@ class PerformanceReporter:
             # Status indicator
             if result.overall_regression:
                 status_emoji = "❌" if result.severity in ["critical", "high"] else "⚠️"
+                severity = result.severity.upper()
                 report.append(
-                    f"{status_emoji} **Status:** Regression Detected ({result.severity.upper()})"
+                    f"{status_emoji} **Status:** Regression Detected ({severity})"
                 )
             else:
                 report.append("✅ **Status:** Performance Acceptable")
@@ -629,7 +631,8 @@ class PerformanceReporter:
         report.append("## Summary Table")
         report.append("")
         report.append(
-            "| Test | Status | Latency Change | Throughput Change | Memory Change | Severity |"
+            "| Test | Status | Latency Change | Throughput Change | "
+            "Memory Change | Severity |"
         )
         report.append(
             "|------|--------|----------------|-------------------|---------------|----------|"

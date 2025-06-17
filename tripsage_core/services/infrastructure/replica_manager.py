@@ -322,7 +322,8 @@ class ReplicaManager:
         Args:
             query_type: Type of query to execute
             timeout: Connection timeout
-            user_region: User region for region-aware routing (ignored in simplified version)
+            user_region: User region for region-aware routing
+                (ignored in simplified version)
 
         Yields:
             Tuple of (replica_id, client) for the selected replica
@@ -469,7 +470,7 @@ class ReplicaManager:
                 avg_response_time_ms=health.latency_ms,
                 failed_queries=health.error_count,  # Use error count as failed queries
                 queries_per_second=0.0,  # Simplified - not tracking QPS
-                connection_pool_utilization=0.0,  # Simplified - not tracking pool utilization
+                connection_pool_utilization=0.0,  # Simplified - not tracking pool
                 last_updated=health.last_check,
             )
         return metrics

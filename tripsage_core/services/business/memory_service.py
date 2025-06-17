@@ -328,12 +328,12 @@ class MemoryService:
                 if optimization_result.get("success"):
                     optimized_count = optimization_result.get("total_optimized", 0)
                     logger.info(
-                        f"Memory table optimization completed: {optimized_count} tables optimized"
+                        f"Memory table optimization completed: "
+                        f"{optimized_count} tables optimized"
                     )
                 else:
-                    logger.warning(
-                        f"Memory table optimization failed: {optimization_result.get('error')}"
-                    )
+                    error = optimization_result.get("error")
+                    logger.warning(f"Memory table optimization failed: {error}")
             except Exception as e:
                 logger.warning(f"Memory table optimization error during connect: {e}")
 

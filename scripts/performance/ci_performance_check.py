@@ -249,9 +249,8 @@ class CIPerformanceValidator:
                 summary.append(
                     f"- **Best Query Latency:** {best_metric['avg_latency_ms']:.2f}ms"
                 )
-                summary.append(
-                    f"- **Best Throughput:** {best_metric['queries_per_second']:.1f} QPS"
-                )
+                qps = best_metric["queries_per_second"]
+                summary.append(f"- **Best Throughput:** {qps:.1f} QPS")
                 summary.append(f"- **Success Rate:** {best_metric['success_rate']:.1%}")
                 summary.append("")
 
@@ -270,9 +269,8 @@ class CIPerformanceValidator:
             ci_meta = results["ci_metadata"]
             summary.append("### CI Information")
             summary.append(f"- **Git Commit:** {ci_meta.get('git_commit', 'unknown')}")
-            summary.append(
-                f"- **Test Duration:** {ci_meta.get('ci_duration_seconds', 0):.1f} seconds"
-            )
+            duration = ci_meta.get("ci_duration_seconds", 0)
+            summary.append(f"- **Test Duration:** {duration:.1f} seconds")
             summary.append(f"- **Quick Mode:** {ci_meta.get('quick_mode', False)}")
             summary.append("")
 

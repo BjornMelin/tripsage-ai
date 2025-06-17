@@ -131,7 +131,8 @@ async def demo_index_optimization():
 
         print("\n1. The new service focuses on proven optimization techniques...")
         print(
-            "   (halfvec compression removed as it adds complexity without proven benefits)"
+            "   (halfvec compression removed as it adds complexity "
+            "without proven benefits)"
         )
 
         print("\n2. Memory optimization through proper indexing:")
@@ -150,9 +151,8 @@ async def demo_index_optimization():
         print(f"\n   For {vector_count:,} vectors of {dimensions} dimensions:")
         print(f"   - Without index: {without_index_scans:,} vectors scanned")
         print(f"   - With HNSW index: {with_hnsw_scans:,} vectors scanned")
-        print(
-            f"   - Performance improvement: {without_index_scans // with_hnsw_scans}x faster"
-        )
+        improvement = without_index_scans // with_hnsw_scans
+        print(f"   - Performance improvement: {improvement}x faster")
 
         print("\n3. Creating optimized index...")
 
@@ -265,7 +265,8 @@ async def demo_benchmarking():
         for i, profile in enumerate(test_profiles, 1):
             config = optimizer._profiles[profile]
             print(
-                f"   {i}. {profile.value}: m={config.m}, ef_construction={config.ef_construction}, "
+                f"   {i}. {profile.value}: m={config.m}, "
+                f"ef_construction={config.ef_construction}, "
                 f"ef_search={config.ef_search}"
             )
 

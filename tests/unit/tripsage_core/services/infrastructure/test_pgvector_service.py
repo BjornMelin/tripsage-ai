@@ -225,7 +225,8 @@ class TestPGVectorService:
         # Should have calls for index creation and ef_search setting
         assert len(call_args) >= 2
 
-        # Check that ef_construction parameter is included (quality profile has ef_construction=100)
+        # Check that ef_construction parameter is included
+        # (quality profile has ef_construction=100)
         create_call = call_args[0][0][0]
         assert "WITH (ef_construction = 100)" in create_call
 
@@ -796,7 +797,8 @@ class TestIntegrationScenarios:
         self, pgvector_service, mock_database_service
     ):
         """Test Mem0 memory system integration workflow."""
-        # Mock memory tables exist and get optimized - use return_value for consistent behavior
+        # Mock memory tables exist and get optimized
+        # use return_value for consistent behavior
         mock_database_service.execute_sql.return_value = [
             [True]
         ]  # All queries return table/column exists

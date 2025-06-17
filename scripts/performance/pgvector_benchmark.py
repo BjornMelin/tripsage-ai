@@ -838,7 +838,8 @@ class PGVectorBenchmark:
                 "query_latency_improvement", 0
             )
             report.append(
-                f"❌ **Performance Target Missed:** {improvement:.1f}x improvement (target: 30x)"
+                f"❌ **Performance Target Missed:** {improvement:.1f}x improvement "
+                f"(target: 30x)"
             )
 
         if results.validation_results.get("query_latency_target", False):
@@ -852,12 +853,15 @@ class PGVectorBenchmark:
             )
 
         if results.validation_results.get("memory_reduction_target", False):
+            memory_reduction = results.memory_reduction_achieved
             report.append(
-                f"✅ **Memory Target Met:** {results.memory_reduction_achieved:.1%} reduction achieved"
+                f"✅ **Memory Target Met:** {memory_reduction:.1%} reduction achieved"
             )
         else:
+            memory_reduction = results.memory_reduction_achieved
             report.append(
-                f"❌ **Memory Target Missed:** {results.memory_reduction_achieved:.1%} reduction (target: 30%)"
+                f"❌ **Memory Target Missed:** {memory_reduction:.1%} reduction "
+                f"(target: 30%)"
             )
 
         report.append("")
@@ -879,7 +883,8 @@ class PGVectorBenchmark:
             report.append("## Index Creation Performance")
             report.append("")
             report.append(
-                "| Data Size | Profile | Distance Function | Creation Time (s) | Index Size |"
+                "| Data Size | Profile | Distance Function | Creation Time (s) "
+                "| Index Size |"
             )
             report.append(
                 "|-----------|---------|-------------------|------------------|------------|"
@@ -887,10 +892,11 @@ class PGVectorBenchmark:
 
             for metric in results.optimized_index_metrics:
                 if metric.success:
+                    creation_time = metric.creation_time_seconds
                     report.append(
                         f"| {metric.data_size:,} | {metric.optimization_profile} | "
-                        f"{metric.distance_function} | {metric.creation_time_seconds:.2f} | "
-                        f"{metric.index_size_human} |"
+                        f"{metric.distance_function} | {creation_time:.2f} "
+                        f"| {metric.index_size_human} |"
                     )
             report.append("")
 

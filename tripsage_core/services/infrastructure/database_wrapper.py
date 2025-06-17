@@ -15,6 +15,9 @@ from tripsage_core.monitoring.database_metrics import (
     DatabaseMetrics,
     get_database_metrics,
 )
+from tripsage_core.services.infrastructure.consolidated_database_monitor import (
+    QueryType,
+)
 from tripsage_core.services.infrastructure.database_monitor import (
     DatabaseConnectionMonitor,
 )
@@ -191,7 +194,6 @@ class DatabaseServiceWrapper:
     ) -> List[Dict[str, Any]]:
         """Update data in table with monitoring."""
         if self.monitor and self.monitor.config.query_monitoring_enabled:
-            from tripsage_core.services.infrastructure.consolidated_database_monitor import QueryType
             async with self.monitor.monitor_query(QueryType.UPDATE, table):
                 return await self.database_service.update(table, data, filters)
         else:
@@ -205,7 +207,6 @@ class DatabaseServiceWrapper:
     ) -> List[Dict[str, Any]]:
         """Upsert data in table with monitoring."""
         if self.monitor and self.monitor.config.query_monitoring_enabled:
-            from tripsage_core.services.infrastructure.consolidated_database_monitor import QueryType
             async with self.monitor.monitor_query(QueryType.UPSERT, table):
                 return await self.database_service.upsert(table, data, on_conflict)
         else:
@@ -214,7 +215,6 @@ class DatabaseServiceWrapper:
     async def delete(self, table: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Delete data from table with monitoring."""
         if self.monitor and self.monitor.config.query_monitoring_enabled:
-            from tripsage_core.services.infrastructure.consolidated_database_monitor import QueryType
             async with self.monitor.monitor_query(QueryType.DELETE, table):
                 return await self.database_service.delete(table, filters)
         else:
@@ -223,7 +223,6 @@ class DatabaseServiceWrapper:
     async def count(self, table: str, filters: Optional[Dict[str, Any]] = None) -> int:
         """Count records in table with monitoring."""
         if self.monitor and self.monitor.config.query_monitoring_enabled:
-            from tripsage_core.services.infrastructure.consolidated_database_monitor import QueryType
             async with self.monitor.monitor_query(QueryType.COUNT, table):
                 return await self.database_service.count(table, filters)
         else:
@@ -234,7 +233,6 @@ class DatabaseServiceWrapper:
     async def transaction(self):
         """Context manager for database transactions with monitoring."""
         if self.monitor and self.monitor.config.query_monitoring_enabled:
-            from tripsage_core.services.infrastructure.consolidated_database_monitor import QueryType
             async with self.monitor.monitor_query(QueryType.TRANSACTION, None):
                 async with self.database_service.transaction() as tx:
                     yield tx
@@ -507,7 +505,11 @@ class DatabaseServiceWrapper:
 
     def get_metrics_summary(self) -> Optional[Dict[str, Any]]:
         """Get metrics summary if metrics are enabled."""
-        if self.monitor and self.monitor.metrics and self.settings.enable_prometheus_metrics:
+        if (
+            self.monitor
+            and self.monitor.metrics
+            and self.settings.enable_prometheus_metrics
+        ):
             return self.monitor.metrics.get_metrics_summary()
         return None
 
