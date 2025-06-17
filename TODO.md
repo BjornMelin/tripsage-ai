@@ -58,7 +58,7 @@ Based on comprehensive research and codebase analysis, critical core service imp
    - **Deliverables**: Secure URL parsing, monitoring infrastructure, comprehensive testing, feature flags
    - **Impact**: Zero security vulnerabilities, <5ms validation overhead, production-ready monitoring
 
-2. **[BJO-211](https://linear.app/bjorn-dev/issue/BJO-211)** - **API Key Validation and Monitoring Infrastructure** 🚨 **URGENT** 
+2. **[BJO-211](https://linear.app/bjorn-dev/issue/BJO-211)** - **API Key Validation and Monitoring Infrastructure** 🚨 **URGENT**
    - **Problem**: No API key validation, health checking, or lifecycle management
    - **Impact**: Production failures, service outages, security vulnerabilities
    - **Scope**: Complete API key validation framework with monitoring and alerting
@@ -96,10 +96,12 @@ Based on comprehensive research and codebase analysis, critical core service imp
 ### ⏱️ Estimated Timeline
 
 **Week 1 (Critical Security):**
+
 - Days 1-2: BJO-210 (Memory service hardening)
 - Days 3-4: BJO-211 (API key infrastructure)
 
 **Week 2 (Performance & Reliability):**
+
 - Days 1-2: BJO-212 (Database optimization)
 - Day 3: BJO-213 (WebSocket integration)
 - Day 4: BJO-214 (MCP framework)
