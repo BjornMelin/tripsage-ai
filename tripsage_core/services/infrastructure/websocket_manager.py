@@ -1,40 +1,51 @@
 """
-WebSocket connection manager for TripSage Core.
+WebSocket connection manager with integrated broadcasting and error recovery.
 
-This module provides WebSocket connection management, including authentication,
-connection pooling, message broadcasting, and health monitoring.
+This module provides comprehensive WebSocket connection management including:
+- Integration with Redis-backed broadcasting
+- Automatic error recovery with exponential backoff
+- 20-second heartbeat/keepalive mechanism
+- Connection state management and monitoring
+- Rate limiting and throttling
+- Circuit breaker patterns for fault tolerance
 """
 
 import asyncio
 import json
 import logging
+import random
 import time
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Deque, Dict, List, Optional, Set
+from enum import Enum
+from typing import Any, Deque, Dict, List, Optional, Set
 from uuid import UUID, uuid4
 
 import jwt
+import redis.asyncio as redis
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
+    CoreServiceError,
 )
 
 logger = logging.getLogger(__name__)
 
 
-# WebSocket models
-class ConnectionStatus:
-    """WebSocket connection status constants."""
+class ConnectionState(str, Enum):
+    """Enhanced connection state management."""
 
     CONNECTING = "connecting"
     CONNECTED = "connected"
     AUTHENTICATED = "authenticated"
-    ERROR = "error"
+    RECONNECTING = "reconnecting"
     DISCONNECTED = "disconnected"
+    ERROR = "error"
+    SUSPENDED = "suspended"
+    DEGRADED = "degraded"
 
 
 class WebSocketEventType:
@@ -46,11 +57,15 @@ class WebSocketEventType:
     CONNECTION_ERROR = "connection.error"
     CONNECTION_CLOSED = "connection.closed"
     CONNECTION_HEARTBEAT = "connection.heartbeat"
+    CONNECTION_PONG = "connection.pong"
+    CONNECTION_RECONNECTING = "connection.reconnecting"
+    CONNECTION_RECOVERED = "connection.recovered"
 
     # Message events
     MESSAGE_SENT = "message.sent"
     MESSAGE_RECEIVED = "message.received"
     MESSAGE_BROADCAST = "message.broadcast"
+    MESSAGE_FAILED = "message.failed"
 
     # Subscription events
     SUBSCRIPTION_ADDED = "subscription.added"
@@ -69,16 +84,24 @@ class WebSocketEventType:
     AGENT_RESPONSE = "agent.response"
     AGENT_ERROR = "agent.error"
 
+    # Rate limiting events
+    RATE_LIMIT_WARNING = "rate_limit.warning"
+    RATE_LIMIT_EXCEEDED = "rate_limit.exceeded"
+
 
 class WebSocketEvent(BaseModel):
-    """WebSocket event model."""
+    """Enhanced WebSocket event model."""
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     type: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     user_id: Optional[UUID] = None
     session_id: Optional[UUID] = None
-    payload: Dict = Field(default_factory=dict)
+    connection_id: Optional[str] = None
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    priority: int = Field(default=1, description="1=high, 2=medium, 3=low")
+    retry_count: int = Field(default=0)
+    expires_at: Optional[datetime] = None
 
 
 class WebSocketAuthRequest(BaseModel):
@@ -116,22 +139,268 @@ class WebSocketSubscribeResponse(BaseModel):
     error: Optional[str] = None
 
 
-class WebSocketConnectionInfo(BaseModel):
-    """WebSocket connection information."""
+class ConnectionHealth(BaseModel):
+    """Connection health metrics."""
 
-    connection_id: str
-    user_id: Optional[UUID] = None
-    session_id: Optional[UUID] = None
-    connected_at: datetime
-    last_heartbeat: datetime
-    client_ip: Optional[str] = None
-    user_agent: Optional[str] = None
-    status: str
-    subscribed_channels: List[str] = Field(default_factory=list)
+    latency: float = Field(description="Round-trip time in milliseconds")
+    message_rate: float = Field(description="Messages per second")
+    error_rate: float = Field(description="Errors per minute")
+    reconnect_count: int = Field(description="Total reconnections")
+    last_activity: datetime = Field(description="Last message timestamp")
+    quality: str = Field(description="excellent/good/poor/critical")
+
+
+class RateLimitConfig(BaseModel):
+    """Rate limiting configuration."""
+
+    max_connections_per_user: int = 5
+    max_connections_per_session: int = 3
+    max_messages_per_connection_per_second: int = 10
+    max_messages_per_user_per_minute: int = 100
+    window_seconds: int = 60
+
+
+class CircuitBreakerState(str, Enum):
+    """Circuit breaker states."""
+
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+
+class CircuitBreaker:
+    """Circuit breaker for Redis operations."""
+
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 30):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.failure_count = 0
+        self.last_failure_time = 0
+        self.state = CircuitBreakerState.CLOSED
+
+    def can_execute(self) -> bool:
+        """Check if operation can be executed."""
+        if self.state == CircuitBreakerState.CLOSED:
+            return True
+        elif self.state == CircuitBreakerState.OPEN:
+            if time.time() - self.last_failure_time >= self.recovery_timeout:
+                self.state = CircuitBreakerState.HALF_OPEN
+                return True
+            return False
+        else:  # HALF_OPEN
+            return True
+
+    def record_success(self):
+        """Record successful operation."""
+        self.failure_count = 0
+        self.state = CircuitBreakerState.CLOSED
+
+    def record_failure(self):
+        """Record failed operation."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitBreakerState.OPEN
+
+
+class ExponentialBackoff:
+    """Exponential backoff with jitter for reconnection attempts."""
+
+    def __init__(
+        self,
+        base_delay: float = 0.5,
+        max_delay: float = 30.0,
+        max_attempts: int = 10,
+        jitter: bool = True,
+    ):
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.max_attempts = max_attempts
+        self.jitter = jitter
+        self.attempt_count = 0
+
+    def get_delay(self) -> float:
+        """Calculate delay for current attempt."""
+        if self.attempt_count >= self.max_attempts:
+            raise Exception(f"Max reconnection attempts ({self.max_attempts}) exceeded")
+
+        # Exponential backoff: base_delay * (2 ^ attempt)
+        delay = self.base_delay * (2**self.attempt_count)
+        delay = min(delay, self.max_delay)
+
+        # Add jitter to prevent thundering herd
+        if self.jitter:
+            jitter_amount = random.uniform(-0.1, 0.1) * delay  # ±10% jitter
+            delay += jitter_amount
+
+        return delay
+
+    def next_attempt(self) -> float:
+        """Move to next attempt and return delay."""
+        delay = self.get_delay()
+        self.attempt_count += 1
+        return delay
+
+    def reset(self):
+        """Reset attempt counter on successful connection."""
+        self.attempt_count = 0
+
+
+class RateLimiter:
+    """Hierarchical rate limiter using Redis sliding window."""
+
+    def __init__(self, redis_client: Optional[redis.Redis], config: RateLimitConfig):
+        self.redis = redis_client
+        self.config = config
+        self.local_counters: Dict[str, Dict] = defaultdict(
+            lambda: {"count": 0, "window_start": time.time()}
+        )
+
+    async def check_connection_limit(
+        self, user_id: UUID, session_id: Optional[UUID] = None
+    ) -> bool:
+        """Check if user/session can create new connection."""
+        if not self.redis:
+            return self._check_local_connection_limit(user_id, session_id)
+
+        user_key = f"connections:user:{user_id}"
+        session_key = f"connections:session:{session_id}" if session_id else None
+
+        try:
+            user_count = await self.redis.scard(user_key)
+
+            if user_count >= self.config.max_connections_per_user:
+                return False
+
+            if session_key:
+                session_count = await self.redis.scard(session_key)
+                if session_count >= self.config.max_connections_per_session:
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Rate limit check failed, using local fallback: {e}")
+            return self._check_local_connection_limit(user_id, session_id)
+
+    async def check_message_rate(
+        self, user_id: UUID, connection_id: str
+    ) -> Dict[str, Any]:
+        """Check message rate limits."""
+        if not self.redis:
+            return self._check_local_message_rate(user_id, connection_id)
+
+        user_key = f"messages:user:{user_id}"
+        conn_key = f"messages:connection:{connection_id}"
+        now = time.time()
+        window_start = now - self.config.window_seconds
+
+        try:
+            # Use Redis script for atomic rate limiting
+            script = """
+                local user_key = KEYS[1]
+                local conn_key = KEYS[2]
+                local window_start = tonumber(ARGV[1])
+                local now = tonumber(ARGV[2])
+                local user_limit = tonumber(ARGV[3])
+                local conn_limit = tonumber(ARGV[4])
+                
+                -- Clean old entries
+                redis.call('ZREMRANGEBYSCORE', user_key, 0, window_start)
+                redis.call('ZREMRANGEBYSCORE', conn_key, 0, window_start)
+                
+                -- Check current counts
+                local user_count = redis.call('ZCARD', user_key)
+                local conn_count = redis.call('ZCARD', conn_key)
+                
+                if user_count >= user_limit then
+                    return {0, 'user_limit_exceeded', user_count, conn_count}
+                end
+                
+                if conn_count >= conn_limit then
+                    return {0, 'connection_limit_exceeded', user_count, conn_count}
+                end
+                
+                -- Add current request
+                local score = tostring(now) .. '-' .. math.random()
+                redis.call('ZADD', user_key, now, score)
+                redis.call('ZADD', conn_key, now, score)
+                redis.call('EXPIRE', user_key, 60)
+                redis.call('EXPIRE', conn_key, 60)
+                
+                return {1, 'allowed', user_count + 1, conn_count + 1}
+            """
+
+            result = await self.redis.eval(
+                script,
+                2,
+                user_key,
+                conn_key,
+                window_start,
+                now,
+                self.config.max_messages_per_user_per_minute,
+                self.config.max_messages_per_connection_per_second
+                * self.config.window_seconds,
+            )
+
+            allowed, reason, user_count, conn_count = result
+
+            return {
+                "allowed": bool(allowed),
+                "reason": reason,
+                "user_count": user_count,
+                "connection_count": conn_count,
+                "remaining": max(
+                    0, self.config.max_messages_per_user_per_minute - user_count
+                ),
+            }
+
+        except Exception as e:
+            logger.error(f"Redis rate limit check failed, using local fallback: {e}")
+            return self._check_local_message_rate(user_id, connection_id)
+
+    def _check_local_connection_limit(
+        self, user_id: UUID, session_id: Optional[UUID]
+    ) -> bool:
+        """Fallback local connection limit check."""
+        # Simplified local implementation
+        return True
+
+    def _check_local_message_rate(
+        self, user_id: UUID, connection_id: str
+    ) -> Dict[str, Any]:
+        """Fallback local message rate check."""
+        now = time.time()
+        counter = self.local_counters[f"user:{user_id}"]
+
+        # Reset window if expired
+        if now - counter["window_start"] >= self.config.window_seconds:
+            counter["count"] = 0
+            counter["window_start"] = now
+
+        if counter["count"] >= self.config.max_messages_per_user_per_minute:
+            return {
+                "allowed": False,
+                "reason": "user_limit_exceeded",
+                "user_count": counter["count"],
+                "connection_count": 0,
+                "remaining": 0,
+            }
+
+        counter["count"] += 1
+        return {
+            "allowed": True,
+            "reason": "allowed",
+            "user_count": counter["count"],
+            "connection_count": 0,
+            "remaining": self.config.max_messages_per_user_per_minute
+            - counter["count"],
+        }
 
 
 class WebSocketConnection:
-    """Individual WebSocket connection wrapper."""
+    """Enhanced WebSocket connection wrapper with health monitoring."""
 
     def __init__(
         self,
@@ -146,28 +415,61 @@ class WebSocketConnection:
         self.session_id = session_id
         self.connected_at = datetime.utcnow()
         self.last_heartbeat = datetime.utcnow()
-        self.status = ConnectionStatus.CONNECTED
+        self.last_pong = datetime.utcnow()
+        self.state = ConnectionState.CONNECTED
         self.subscribed_channels: Set[str] = set()
         self.client_ip: Optional[str] = None
-        self.message_queue: Deque[WebSocketEvent] = deque(maxlen=100)
+        self.user_agent: Optional[str] = None
+
+        # Message queue with priority support
+        self.message_queue: Deque[WebSocketEvent] = deque(maxlen=1000)
+        self.priority_queue: Dict[int, Deque[WebSocketEvent]] = {
+            1: deque(maxlen=100),  # High priority
+            2: deque(maxlen=500),  # Medium priority
+            3: deque(maxlen=1000),  # Low priority
+        }
+
+        # Performance metrics
         self.last_activity = time.time()
         self.bytes_sent = 0
         self.bytes_received = 0
         self.message_count = 0
-        self.user_agent: Optional[str] = None
+        self.error_count = 0
+        self.reconnect_count = 0
+
+        # Connection health
+        self.latency_samples: Deque[float] = deque(maxlen=10)
+        self.ping_sent_time: Optional[float] = None
+
+        # Concurrency control
         self._send_lock = asyncio.Lock()
+        self._ping_task: Optional[asyncio.Task] = None
+
+        # Error recovery
+        self.backoff = ExponentialBackoff()
+        self.circuit_breaker = CircuitBreaker()
 
     async def send(self, event: WebSocketEvent) -> bool:
-        """Send event to WebSocket connection.
+        """Send event to WebSocket connection with error handling."""
+        if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
+            logger.warning(
+                f"Cannot send to connection {self.connection_id} in state {self.state}"
+            )
+            return False
 
-        Args:
-            event: WebSocket event to send
+        # Add to priority queue if connection is busy
+        if self._send_lock.locked():
+            self.priority_queue[event.priority].append(event)
+            return True
 
-        Returns:
-            True if sent successfully, False otherwise
-        """
         async with self._send_lock:
             try:
+                if not self.circuit_breaker.can_execute():
+                    logger.warning(
+                        f"Circuit breaker open for connection {self.connection_id}"
+                    )
+                    return False
+
                 message = {
                     "id": event.id,
                     "type": event.type,
@@ -180,60 +482,118 @@ class WebSocketConnection:
                 data = json.dumps(message)
                 await self.websocket.send_text(data)
 
-                # Update performance metrics
+                # Update metrics
                 self.last_activity = time.time()
                 self.bytes_sent += len(data.encode("utf-8"))
                 self.message_count += 1
+                self.circuit_breaker.record_success()
 
                 return True
 
             except Exception as e:
                 logger.error(f"Failed to send message to {self.connection_id}: {e}")
-                self.status = ConnectionStatus.ERROR
+                self.error_count += 1
+                self.circuit_breaker.record_failure()
+                self.state = ConnectionState.ERROR
+
+                # Queue for retry if not permanent error
+                if event.retry_count < 3:
+                    event.retry_count += 1
+                    self.priority_queue[1].append(event)  # High priority retry
+
                 return False
 
-    async def send_raw(self, message: Dict) -> bool:
-        """Send raw message to WebSocket connection.
+    async def send_ping(self) -> bool:
+        """Send ping and track latency."""
+        try:
+            ping_event = WebSocketEvent(
+                type=WebSocketEventType.CONNECTION_HEARTBEAT,
+                payload={"timestamp": datetime.utcnow().isoformat(), "ping": True},
+            )
 
-        Args:
-            message: Raw message dictionary
+            self.ping_sent_time = time.time()
+            success = await self.send(ping_event)
 
-        Returns:
-            True if sent successfully, False otherwise
-        """
-        async with self._send_lock:
-            try:
-                data = json.dumps(message)
-                await self.websocket.send_text(data)
+            if not success:
+                self.state = ConnectionState.ERROR
 
-                # Update performance metrics
-                self.last_activity = time.time()
-                self.bytes_sent += len(data.encode("utf-8"))
-                self.message_count += 1
+            return success
 
-                return True
+        except Exception as e:
+            logger.error(f"Failed to send ping to {self.connection_id}: {e}")
+            self.state = ConnectionState.ERROR
+            return False
 
-            except Exception as e:
-                logger.error(f"Failed to send raw message to {self.connection_id}: {e}")
-                self.status = ConnectionStatus.ERROR
-                return False
+    def handle_pong(self):
+        """Handle pong response and calculate latency."""
+        if self.ping_sent_time:
+            latency = (time.time() - self.ping_sent_time) * 1000  # Convert to ms
+            self.latency_samples.append(latency)
+            self.ping_sent_time = None
+
+        self.last_pong = datetime.utcnow()
+        self.last_heartbeat = datetime.utcnow()
 
     def update_heartbeat(self) -> None:
         """Update last heartbeat timestamp."""
         self.last_heartbeat = datetime.utcnow()
 
-    def is_stale(self, timeout_seconds: int = 300) -> bool:
-        """Check if connection is stale based on last heartbeat.
-
-        Args:
-            timeout_seconds: Timeout in seconds
-
-        Returns:
-            True if connection is stale
-        """
+    def is_stale(self, timeout_seconds: int = 60) -> bool:
+        """Check if connection is stale based on last heartbeat."""
         return (
             datetime.utcnow() - self.last_heartbeat
         ).total_seconds() > timeout_seconds
+
+    def is_ping_timeout(self, timeout_seconds: int = 5) -> bool:
+        """Check if ping response is overdue."""
+        if not self.ping_sent_time:
+            return False
+        return time.time() - self.ping_sent_time > timeout_seconds
+
+    def get_health(self) -> ConnectionHealth:
+        """Get connection health metrics."""
+        avg_latency = (
+            sum(self.latency_samples) / len(self.latency_samples)
+            if self.latency_samples
+            else 0
+        )
+
+        # Determine quality based on latency and error rate
+        if avg_latency > 2000 or self.error_count > 10:
+            quality = "critical"
+        elif avg_latency > 1000 or self.error_count > 5:
+            quality = "poor"
+        elif avg_latency > 500 or self.error_count > 1:
+            quality = "good"
+        else:
+            quality = "excellent"
+
+        return ConnectionHealth(
+            latency=avg_latency,
+            message_rate=self.message_count
+            / max(1, (time.time() - self.connected_at.timestamp())),
+            error_rate=self.error_count
+            / max(1, (time.time() - self.connected_at.timestamp()) / 60),
+            reconnect_count=self.reconnect_count,
+            last_activity=datetime.fromtimestamp(self.last_activity),
+            quality=quality,
+        )
+
+    async def process_priority_queue(self) -> int:
+        """Process queued messages by priority."""
+        sent_count = 0
+
+        # Process high priority first
+        for priority in [1, 2, 3]:
+            queue = self.priority_queue[priority]
+            while queue and sent_count < 10:  # Limit batch size
+                event = queue.popleft()
+                if await self.send(event):
+                    sent_count += 1
+                else:
+                    break  # Stop on failure
+
+        return sent_count
 
     def subscribe_to_channel(self, channel: str) -> None:
         """Subscribe to a channel."""
@@ -249,30 +609,24 @@ class WebSocketConnection:
         """Check if subscribed to a channel."""
         return channel in self.subscribed_channels
 
-    def get_info(self) -> WebSocketConnectionInfo:
-        """Get connection information."""
-        return WebSocketConnectionInfo(
-            connection_id=self.connection_id,
-            user_id=self.user_id,
-            session_id=self.session_id,
-            connected_at=self.connected_at,
-            last_heartbeat=self.last_heartbeat,
-            client_ip=self.client_ip,
-            user_agent=self.user_agent,
-            status=self.status,
-            subscribed_channels=list(self.subscribed_channels),
-        )
-
 
 class WebSocketManager:
-    """WebSocket connection manager."""
+    """Enhanced WebSocket connection manager with broadcasting integration."""
 
-    def __init__(self):
-        # Connection storage
+    def __init__(self, broadcaster=None):
+        # Core storage
         self.connections: Dict[str, WebSocketConnection] = {}
         self.user_connections: Dict[UUID, Set[str]] = {}
         self.session_connections: Dict[UUID, Set[str]] = {}
         self.channel_connections: Dict[str, Set[str]] = {}
+
+        # Redis integration
+        self.redis_client: Optional[redis.Redis] = None
+        self.redis_pubsub: Optional[redis.client.PubSub] = None
+        self.broadcaster = broadcaster
+
+        # Rate limiting
+        self.rate_limiter: Optional[RateLimiter] = None
 
         # Performance monitoring
         self.performance_metrics = {
@@ -280,66 +634,143 @@ class WebSocketManager:
             "total_bytes_sent": 0,
             "active_connections": 0,
             "peak_connections": 0,
-            "connection_pool_hits": 0,
-            "message_queue_size": 0,
+            "failed_connections": 0,
+            "reconnection_attempts": 0,
+            "rate_limit_hits": 0,
         }
-        self.message_batches: Dict[str, List[WebSocketEvent]] = defaultdict(list)
-        self.batch_timer: Optional[asyncio.Task] = None
 
         # Background tasks
         self._cleanup_task: Optional[asyncio.Task] = None
         self._heartbeat_task: Optional[asyncio.Task] = None
         self._performance_task: Optional[asyncio.Task] = None
+        self._redis_listener_task: Optional[asyncio.Task] = None
+        self._priority_processor_task: Optional[asyncio.Task] = None
         self._running = False
 
         # Settings
         self.settings = get_settings()
 
+        # Configuration
+        self.heartbeat_interval = 20  # 20 seconds as per research
+        self.heartbeat_timeout = 5  # 5 second timeout for pong
+        self.cleanup_interval = 60  # 1 minute cleanup cycle
+
+        # Rate limiting configuration
+        self.rate_limit_config = RateLimitConfig(
+            max_connections_per_user=10,
+            max_connections_per_session=3,
+            max_messages_per_connection_per_second=10,
+            max_messages_per_user_per_minute=600,
+            window_seconds=60,
+        )
+
     async def start(self) -> None:
-        """Start the WebSocket manager."""
+        """Start the WebSocket manager with full integration."""
         if self._running:
             return
 
         self._running = True
 
-        # Start background tasks
-        self._cleanup_task = asyncio.create_task(self._cleanup_stale_connections())
-        self._heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
-        self._performance_task = asyncio.create_task(self._performance_monitor())
+        try:
+            # Initialize Redis connection
+            await self._initialize_redis()
 
-        logger.info("WebSocket manager started")
+            # Initialize rate limiter
+            self.rate_limiter = RateLimiter(self.redis_client, self.rate_limit_config)
+
+            # Start broadcaster if provided
+            if self.broadcaster:
+                await self.broadcaster.start()
+                logger.info("WebSocket broadcaster started")
+
+            # Start background tasks
+            self._cleanup_task = asyncio.create_task(self._cleanup_stale_connections())
+            self._heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
+            self._performance_task = asyncio.create_task(self._performance_monitor())
+            self._priority_processor_task = asyncio.create_task(
+                self._process_priority_queues()
+            )
+
+            if self.redis_client:
+                self._redis_listener_task = asyncio.create_task(
+                    self._redis_message_listener()
+                )
+
+            logger.info("Enhanced WebSocket manager started with full integration")
+
+        except Exception as e:
+            logger.error(f"Failed to start WebSocket manager: {e}")
+            self._running = False
+            raise CoreServiceError(
+                message=f"Failed to start WebSocket manager: {str(e)}",
+                code="WEBSOCKET_MANAGER_START_FAILED",
+                service="WebSocketManager",
+            ) from e
 
     async def stop(self) -> None:
         """Stop the WebSocket manager."""
         self._running = False
 
         # Cancel background tasks
-        if self._cleanup_task:
-            self._cleanup_task.cancel()
-        if self._heartbeat_task:
-            self._heartbeat_task.cancel()
-        if self._performance_task:
-            self._performance_task.cancel()
-        if self.batch_timer:
-            self.batch_timer.cancel()
+        tasks = [
+            self._cleanup_task,
+            self._heartbeat_task,
+            self._performance_task,
+            self._redis_listener_task,
+            self._priority_processor_task,
+        ]
+
+        for task in tasks:
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+        # Stop broadcaster
+        if self.broadcaster:
+            await self.broadcaster.stop()
 
         # Close all connections
         await self.disconnect_all()
 
-        logger.info("WebSocket manager stopped")
+        # Close Redis connections
+        if self.redis_pubsub:
+            await self.redis_pubsub.close()
+        if self.redis_client:
+            await self.redis_client.close()
+
+        logger.info("Enhanced WebSocket manager stopped")
+
+    async def _initialize_redis(self) -> None:
+        """Initialize Redis connection for broadcasting."""
+        redis_url = getattr(self.settings, "redis_url", None)
+        if not redis_url:
+            logger.warning(
+                "No Redis URL configured, running without distributed features"
+            )
+            return
+
+        try:
+            self.redis_client = redis.from_url(redis_url, decode_responses=True)
+            await self.redis_client.ping()
+
+            self.redis_pubsub = self.redis_client.pubsub()
+            # Subscribe to broadcast channels
+            await self.redis_pubsub.psubscribe("tripsage:websocket:broadcast:*")
+
+            logger.info("Redis connection initialized for WebSocket broadcasting")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize Redis: {e}")
+            self.redis_client = None
+            self.redis_pubsub = None
 
     async def authenticate_connection(
         self, websocket: WebSocket, auth_request: WebSocketAuthRequest
     ) -> WebSocketAuthResponse:
-        """Authenticate a WebSocket connection.
-
-        Args:
-            websocket: WebSocket instance
-            auth_request: Authentication request
-
-        Returns:
-            Authentication response
-        """
+        """Authenticate a WebSocket connection with rate limiting."""
         try:
             # Verify JWT token
             payload = jwt.decode(
@@ -348,7 +779,6 @@ class WebSocketManager:
                 algorithms=["HS256"],
             )
 
-            # Validate the token data
             if "sub" not in payload or "user_id" not in payload:
                 raise CoreAuthenticationError(
                     message="Invalid token payload",
@@ -356,6 +786,19 @@ class WebSocketManager:
                 )
 
             user_id = UUID(payload["user_id"])
+
+            # Check rate limits
+            if self.rate_limiter:
+                can_connect = await self.rate_limiter.check_connection_limit(
+                    user_id, auth_request.session_id
+                )
+                if not can_connect:
+                    self.performance_metrics["rate_limit_hits"] += 1
+                    return WebSocketAuthResponse(
+                        success=False,
+                        connection_id="",
+                        error="Connection rate limit exceeded",
+                    )
 
             # Create connection
             connection_id = str(uuid4())
@@ -367,8 +810,8 @@ class WebSocketManager:
             )
 
             # Extract client info
-            client_host = websocket.client.host if websocket.client else None
-            connection.client_ip = client_host
+            if websocket.client:
+                connection.client_ip = websocket.client.host
 
             # Add to connection pools
             self.connections[connection_id] = connection
@@ -391,6 +834,18 @@ class WebSocketManager:
                         self.channel_connections[channel] = set()
                     self.channel_connections[channel].add(connection_id)
 
+            # Register with broadcaster
+            if self.broadcaster:
+                await self.broadcaster.register_connection(
+                    connection_id,
+                    user_id,
+                    auth_request.session_id,
+                    auth_request.channels,
+                )
+
+            # Update state
+            connection.state = ConnectionState.AUTHENTICATED
+
             logger.info(
                 f"Authenticated WebSocket connection {connection_id} for user {user_id}"
             )
@@ -405,6 +860,7 @@ class WebSocketManager:
 
         except Exception as e:
             logger.error(f"WebSocket authentication failed: {e}")
+            self.performance_metrics["failed_connections"] += 1
             return WebSocketAuthResponse(
                 success=False,
                 connection_id="",
@@ -412,16 +868,16 @@ class WebSocketManager:
             )
 
     async def disconnect_connection(self, connection_id: str) -> None:
-        """Disconnect a WebSocket connection.
-
-        Args:
-            connection_id: Connection ID to disconnect
-        """
+        """Disconnect a WebSocket connection with cleanup."""
         connection = self.connections.get(connection_id)
         if not connection:
             return
 
         try:
+            # Unregister from broadcaster
+            if self.broadcaster:
+                await self.broadcaster.unregister_connection(connection_id)
+
             # Remove from all pools
             self.connections.pop(connection_id, None)
 
@@ -445,10 +901,136 @@ class WebSocketManager:
                     if not self.channel_connections[channel]:
                         del self.channel_connections[channel]
 
+            connection.state = ConnectionState.DISCONNECTED
             logger.info(f"Disconnected WebSocket connection {connection_id}")
 
         except Exception as e:
             logger.error(f"Error disconnecting connection {connection_id}: {e}")
+
+    async def send_to_connection(
+        self, connection_id: str, event: WebSocketEvent
+    ) -> bool:
+        """Send event to specific connection with rate limiting."""
+        connection = self.connections.get(connection_id)
+        if not connection:
+            return False
+
+        # Check message rate limit
+        if self.rate_limiter and connection.user_id:
+            rate_check = await self.rate_limiter.check_message_rate(
+                connection.user_id, connection_id
+            )
+            if not rate_check["allowed"]:
+                self.performance_metrics["rate_limit_hits"] += 1
+
+                # Send rate limit warning
+                warning_event = WebSocketEvent(
+                    type=WebSocketEventType.RATE_LIMIT_EXCEEDED,
+                    payload={
+                        "reason": rate_check["reason"],
+                        "retry_after": self.rate_limit_config.window_seconds,
+                    },
+                )
+                # Send warning without rate limiting
+                await connection.send(warning_event)
+                return False
+
+        success = await connection.send(event)
+        if success:
+            self.performance_metrics["total_messages_sent"] += 1
+
+        return success
+
+    async def broadcast_to_channel(self, channel: str, event: WebSocketEvent) -> int:
+        """Broadcast event to channel using integrated broadcaster."""
+        if self.broadcaster:
+            # Use broadcaster for distributed broadcasting
+            event_dict = {
+                "id": event.id,
+                "type": event.type,
+                "timestamp": event.timestamp.isoformat(),
+                "user_id": str(event.user_id) if event.user_id else None,
+                "session_id": str(event.session_id) if event.session_id else None,
+                "payload": event.payload,
+            }
+            await self.broadcaster.broadcast_to_channel(
+                channel, event_dict, event.priority
+            )
+
+            # Also send to local connections
+            connection_ids = self.channel_connections.get(channel, set())
+            sent_count = 0
+            for connection_id in connection_ids.copy():
+                if await self.send_to_connection(connection_id, event):
+                    sent_count += 1
+
+            return sent_count
+        else:
+            # Fallback to local broadcasting
+            return await self.send_to_channel(channel, event)
+
+    async def send_to_channel(self, channel: str, event: WebSocketEvent) -> int:
+        """Send event to all connections subscribed to a channel."""
+        connection_ids = self.channel_connections.get(channel, set())
+        sent_count = 0
+
+        for connection_id in connection_ids.copy():
+            if await self.send_to_connection(connection_id, event):
+                sent_count += 1
+
+        return sent_count
+
+    async def send_to_user(self, user_id: UUID, event: WebSocketEvent) -> int:
+        """Send event to all connections for a user."""
+        if self.broadcaster:
+            # Use broadcaster for distributed messaging
+            event_dict = {
+                "id": event.id,
+                "type": event.type,
+                "timestamp": event.timestamp.isoformat(),
+                "user_id": str(event.user_id) if event.user_id else None,
+                "session_id": str(event.session_id) if event.session_id else None,
+                "payload": event.payload,
+            }
+            await self.broadcaster.broadcast_to_user(
+                user_id, event_dict, event.priority
+            )
+
+        # Send to local connections
+        connection_ids = self.user_connections.get(user_id, set())
+        sent_count = 0
+
+        for connection_id in connection_ids.copy():
+            if await self.send_to_connection(connection_id, event):
+                sent_count += 1
+
+        return sent_count
+
+    async def send_to_session(self, session_id: UUID, event: WebSocketEvent) -> int:
+        """Send event to all connections for a session."""
+        if self.broadcaster:
+            # Use broadcaster for distributed messaging
+            event_dict = {
+                "id": event.id,
+                "type": event.type,
+                "timestamp": event.timestamp.isoformat(),
+                "user_id": str(event.user_id) if event.user_id else None,
+                "session_id": str(event.session_id) if event.session_id else None,
+                "payload": event.payload,
+            }
+            await self.broadcaster.broadcast_to_session(
+                session_id, event_dict, event.priority
+            )
+
+        # Send to local connections
+        connection_ids = self.session_connections.get(session_id, set())
+        sent_count = 0
+
+        for connection_id in connection_ids.copy():
+            if await self.send_to_connection(connection_id, event):
+                sent_count += 1
+
+        return sent_count
 
     async def disconnect_all(self) -> None:
         """Disconnect all WebSocket connections."""
@@ -456,173 +1038,32 @@ class WebSocketManager:
         for connection_id in connection_ids:
             await self.disconnect_connection(connection_id)
 
-    async def send_to_connection(
-        self, connection_id: str, event: WebSocketEvent
-    ) -> bool:
-        """Send event to specific connection.
-
-        Args:
-            connection_id: Target connection ID
-            event: Event to send
-
-        Returns:
-            True if sent successfully
-        """
-        connection = self.connections.get(connection_id)
-        if not connection:
-            return False
-
-        return await connection.send(event)
-
-    async def send_to_user(self, user_id: UUID, event: WebSocketEvent) -> int:
-        """Send event to all connections for a user.
-
-        Args:
-            user_id: Target user ID
-            event: Event to send
-
-        Returns:
-            Number of connections successfully sent to
-        """
-        connection_ids = self.user_connections.get(user_id, set())
-        sent_count = 0
-
-        for (
-            connection_id
-        ) in connection_ids.copy():  # Copy to avoid modification during iteration
-            if await self.send_to_connection(connection_id, event):
-                sent_count += 1
-
-        return sent_count
-
-    async def send_to_session(self, session_id: UUID, event: WebSocketEvent) -> int:
-        """Send event to all connections for a session.
-
-        Args:
-            session_id: Target session ID
-            event: Event to send
-
-        Returns:
-            Number of connections successfully sent to
-        """
-        connection_ids = self.session_connections.get(session_id, set())
-        sent_count = 0
-
-        for (
-            connection_id
-        ) in connection_ids.copy():  # Copy to avoid modification during iteration
-            if await self.send_to_connection(connection_id, event):
-                sent_count += 1
-
-        return sent_count
-
-    async def send_to_channel(self, channel: str, event: WebSocketEvent) -> int:
-        """Send event to all connections subscribed to a channel.
-
-        Args:
-            channel: Target channel
-            event: Event to send
-
-        Returns:
-            Number of connections successfully sent to
-        """
-        connection_ids = self.channel_connections.get(channel, set())
-        sent_count = 0
-
-        for (
-            connection_id
-        ) in connection_ids.copy():  # Copy to avoid modification during iteration
-            if await self.send_to_connection(connection_id, event):
-                sent_count += 1
-
-        return sent_count
-
-    async def subscribe_connection(
-        self, connection_id: str, subscribe_request: WebSocketSubscribeRequest
-    ) -> WebSocketSubscribeResponse:
-        """Subscribe connection to channels.
-
-        Args:
-            connection_id: Connection ID
-            subscribe_request: Subscription request
-
-        Returns:
-            Subscription response
-        """
-        connection = self.connections.get(connection_id)
-        if not connection:
-            return WebSocketSubscribeResponse(
-                success=False,
-                error="Connection not found",
-            )
-
-        # Get available channels for this user
-        available_channels = self._get_available_channels(connection.user_id)
-
-        subscribed_channels = []
-        failed_channels = []
-
-        # Subscribe to new channels
-        for channel in subscribe_request.channels:
-            if channel in available_channels:
-                connection.subscribe_to_channel(channel)
-                if channel not in self.channel_connections:
-                    self.channel_connections[channel] = set()
-                self.channel_connections[channel].add(connection_id)
-                subscribed_channels.append(channel)
-            else:
-                failed_channels.append(channel)
-
-        # Unsubscribe from channels
-        for channel in subscribe_request.unsubscribe_channels:
-            connection.unsubscribe_from_channel(channel)
-            if channel in self.channel_connections:
-                self.channel_connections[channel].discard(connection_id)
-                if not self.channel_connections[channel]:
-                    del self.channel_connections[channel]
-
-        return WebSocketSubscribeResponse(
-            success=True,
-            subscribed_channels=subscribed_channels,
-            failed_channels=failed_channels,
+    def get_connection_stats(self) -> Dict[str, Any]:
+        """Get comprehensive connection statistics."""
+        total_queued = sum(
+            len(conn.message_queue) + sum(len(q) for q in conn.priority_queue.values())
+            for conn in self.connections.values()
         )
 
-    def get_connection_info(
-        self, connection_id: str
-    ) -> Optional[WebSocketConnectionInfo]:
-        """Get connection information.
+        health_distribution = {"excellent": 0, "good": 0, "poor": 0, "critical": 0}
+        for conn in self.connections.values():
+            health = conn.get_health()
+            health_distribution[health.quality] += 1
 
-        Args:
-            connection_id: Connection ID
-
-        Returns:
-            Connection information or None
-        """
-        connection = self.connections.get(connection_id)
-        return connection.get_info() if connection else None
-
-    def get_connection_stats(self) -> Dict[str, int]:
-        """Get connection statistics.
-
-        Returns:
-            Connection statistics
-        """
         return {
             "total_connections": len(self.connections),
             "unique_users": len(self.user_connections),
             "active_sessions": len(self.session_connections),
             "subscribed_channels": len(self.channel_connections),
+            "total_queued_messages": total_queued,
+            "health_distribution": health_distribution,
+            "performance_metrics": self.performance_metrics,
+            "redis_connected": self.redis_client is not None,
+            "broadcaster_running": self.broadcaster is not None,
         }
 
     def _get_available_channels(self, user_id: Optional[UUID]) -> List[str]:
-        """Get available channels for a user.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            List of available channels
-        """
+        """Get available channels for a user."""
         if not user_id:
             return []
 
@@ -631,10 +1072,8 @@ class WebSocketManager:
             "general",
             "notifications",
             f"user:{user_id}",
+            f"agent_status:{user_id}",
         ]
-
-        # Add user-specific channels based on permissions/roles
-        # This would be extended based on actual requirements
 
         return channels
 
@@ -645,38 +1084,40 @@ class WebSocketManager:
                 stale_connections = []
 
                 for connection_id, connection in self.connections.items():
-                    if connection.is_stale():
+                    if connection.is_stale() or connection.is_ping_timeout():
                         stale_connections.append(connection_id)
 
                 for connection_id in stale_connections:
                     logger.info(f"Cleaning up stale connection {connection_id}")
                     await self.disconnect_connection(connection_id)
 
-                await asyncio.sleep(60)  # Check every minute
+                await asyncio.sleep(self.cleanup_interval)
 
             except Exception as e:
                 logger.error(f"Error in cleanup task: {e}")
-                await asyncio.sleep(60)
+                await asyncio.sleep(self.cleanup_interval)
 
     async def _heartbeat_monitor(self) -> None:
         """Background task to send heartbeat messages."""
         while self._running:
             try:
-                # Send heartbeat to all connections
-                heartbeat_event = WebSocketEvent(
-                    type=WebSocketEventType.CONNECTION_HEARTBEAT,
-                    payload={"timestamp": datetime.utcnow().isoformat()},
-                )
-
+                tasks = []
                 for connection in self.connections.values():
-                    await connection.send(heartbeat_event)
-                    connection.update_heartbeat()
+                    if connection.state in [
+                        ConnectionState.CONNECTED,
+                        ConnectionState.AUTHENTICATED,
+                    ]:
+                        tasks.append(connection.send_ping())
 
-                await asyncio.sleep(30)  # Send every 30 seconds
+                # Send pings concurrently
+                if tasks:
+                    await asyncio.gather(*tasks, return_exceptions=True)
+
+                await asyncio.sleep(self.heartbeat_interval)
 
             except Exception as e:
                 logger.error(f"Error in heartbeat task: {e}")
-                await asyncio.sleep(30)
+                await asyncio.sleep(self.heartbeat_interval)
 
     async def _performance_monitor(self) -> None:
         """Background task to monitor and log performance metrics."""
@@ -689,127 +1130,83 @@ class WebSocketManager:
                 if active_count > self.performance_metrics["peak_connections"]:
                     self.performance_metrics["peak_connections"] = active_count
 
-                # Calculate message queue size
-                queue_size = sum(
-                    len(conn.message_queue) for conn in self.connections.values()
-                )
-                self.performance_metrics["message_queue_size"] = queue_size
-
                 # Log performance metrics every 5 minutes
                 if int(time.time()) % 300 == 0:
-                    logger.info(
-                        f"WebSocket Performance Metrics: {self.performance_metrics}"
-                    )
+                    stats = self.get_connection_stats()
+                    logger.info(f"WebSocket Performance Metrics: {stats}")
 
-                await asyncio.sleep(30)  # Check every 30 seconds
+                await asyncio.sleep(30)
 
             except Exception as e:
                 logger.error(f"Error in performance monitor: {e}")
                 await asyncio.sleep(30)
 
-    async def send_batched(
-        self, connection_id: str, events: List[WebSocketEvent]
-    ) -> bool:
-        """Send multiple events in an optimized batch to improve throughput."""
-        connection = self.connections.get(connection_id)
-        if not connection:
-            return False
+    async def _redis_message_listener(self) -> None:
+        """Background task to listen for Redis pub/sub messages."""
+        if not self.redis_pubsub:
+            return
 
         try:
-            # Create batch message
-            batch_payload = {
-                "type": "batch",
-                "events": [
-                    {
-                        "id": event.id,
-                        "type": event.type,
-                        "timestamp": event.timestamp.isoformat(),
-                        "payload": event.payload,
-                    }
-                    for event in events
-                ],
-            }
-
-            success = await connection.send_raw(batch_payload)
-            if success:
-                self.performance_metrics["total_messages_sent"] += len(events)
-
-            return success
+            async for message in self.redis_pubsub.listen():
+                if message["type"] == "pmessage":
+                    try:
+                        # Parse broadcast message
+                        data = json.loads(message["data"])
+                        await self._handle_broadcast_message(data)
+                    except Exception as e:
+                        logger.error(f"Failed to handle broadcast message: {e}")
 
         except Exception as e:
-            logger.error(f"Failed to send batched events to {connection_id}: {e}")
-            return False
+            logger.error(f"Error in Redis message listener: {e}")
 
-    async def broadcast_optimized(
-        self,
-        event: WebSocketEvent,
-        channel: Optional[str] = None,
-        exclude_connection: Optional[str] = None,
-    ) -> int:
-        """Optimized broadcast with connection pooling and async batching."""
-        sent_count = 0
+    async def _handle_broadcast_message(self, data: Dict[str, Any]) -> None:
+        """Handle incoming broadcast message from Redis."""
+        try:
+            event = WebSocketEvent(
+                id=data.get("id", str(uuid4())),
+                type=data["type"],
+                timestamp=datetime.fromisoformat(data["timestamp"]),
+                user_id=UUID(data["user_id"]) if data.get("user_id") else None,
+                session_id=UUID(data["session_id"]) if data.get("session_id") else None,
+                payload=data["payload"],
+                priority=data.get("priority", 2),
+            )
 
-        # Determine target connections
-        target_connections = []
-        if channel:
-            connection_ids = self.channel_connections.get(channel, set())
-            target_connections = [
-                conn
-                for conn_id, conn in self.connections.items()
-                if conn_id in connection_ids and conn_id != exclude_connection
-            ]
-        else:
-            target_connections = [
-                conn
-                for conn_id, conn in self.connections.items()
-                if conn_id != exclude_connection
-            ]
+            # Route message based on target type from channel pattern
+            channel = data.get("channel", "")
+            if ":user:" in channel:
+                user_id = UUID(channel.split(":user:")[1])
+                await self.send_to_user(user_id, event)
+            elif ":session:" in channel:
+                session_id = UUID(channel.split(":session:")[1])
+                await self.send_to_session(session_id, event)
+            elif ":channel:" in channel:
+                channel_name = channel.split(":channel:")[1]
+                await self.send_to_channel(channel_name, event)
+            else:
+                # Broadcast to all local connections
+                for connection_id in list(self.connections.keys()):
+                    await self.send_to_connection(connection_id, event)
 
-        # Send to all connections concurrently
-        tasks = []
-        for connection in target_connections:
-            if connection.status == ConnectionStatus.CONNECTED:
-                tasks.append(connection.send(event))
+        except Exception as e:
+            logger.error(f"Failed to handle broadcast message: {e}")
 
-        # Execute all sends concurrently
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+    async def _process_priority_queues(self) -> None:
+        """Background task to process priority message queues."""
+        while self._running:
+            try:
+                for connection in self.connections.values():
+                    if connection.state in [
+                        ConnectionState.CONNECTED,
+                        ConnectionState.AUTHENTICATED,
+                    ]:
+                        await connection.process_priority_queue()
 
-        # Count successful sends
-        sent_count = sum(1 for result in results if result is True)
+                await asyncio.sleep(0.1)  # Process queues frequently
 
-        # Update metrics
-        self.performance_metrics["total_messages_sent"] += sent_count
-        self.performance_metrics["connection_pool_hits"] += len(target_connections)
-
-        return sent_count
-
-    def get_performance_metrics(self) -> Dict:
-        """Get current performance metrics."""
-        # Calculate additional metrics
-        total_bytes = sum(conn.bytes_sent for conn in self.connections.values())
-        total_messages = sum(conn.message_count for conn in self.connections.values())
-
-        return {
-            **self.performance_metrics,
-            "total_bytes_sent": total_bytes,
-            "total_messages_sent": total_messages,
-            "connections_by_status": {
-                status: sum(
-                    1 for conn in self.connections.values() if conn.status == status
-                )
-                for status in [
-                    ConnectionStatus.CONNECTED,
-                    ConnectionStatus.AUTHENTICATED,
-                    ConnectionStatus.ERROR,
-                ]
-            },
-            "average_bytes_per_connection": (
-                total_bytes / len(self.connections) if self.connections else 0
-            ),
-            "average_messages_per_connection": (
-                total_messages / len(self.connections) if self.connections else 0
-            ),
-        }
+            except Exception as e:
+                logger.error(f"Error in priority queue processor: {e}")
+                await asyncio.sleep(1)
 
 
 # Global WebSocket manager instance

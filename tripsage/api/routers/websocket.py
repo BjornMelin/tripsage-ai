@@ -7,6 +7,7 @@ including chat streaming, agent status updates, and live user feedback.
 import asyncio
 import json
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import (
@@ -215,6 +216,32 @@ async def chat_websocket(
                     if connection:
                         connection.update_heartbeat()
 
+                elif message_type == "ping":
+                    # Handle ping from client and send pong response
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.update_heartbeat()
+                        # Send pong response
+                        pong_event = WebSocketEvent(
+                            type=WebSocketEventType.CONNECTION_PONG,
+                            payload={
+                                "timestamp": datetime.utcnow().isoformat(),
+                                "pong": True,
+                            },
+                            user_id=user_id,
+                            session_id=session_id,
+                            connection_id=connection_id,
+                        )
+                        await websocket_manager.send_to_connection(
+                            connection_id, pong_event
+                        )
+
+                elif message_type == "pong":
+                    # Handle pong response from client (in response to our ping)
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.handle_pong()
+
                 elif message_type == "subscribe":
                     # Handle channel subscription
                     try:
@@ -384,6 +411,31 @@ async def agent_status_websocket(
                     connection = websocket_manager.connections.get(connection_id)
                     if connection:
                         connection.update_heartbeat()
+
+                elif message_type == "ping":
+                    # Handle ping from client and send pong response
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.update_heartbeat()
+                        # Send pong response
+                        pong_event = WebSocketEvent(
+                            type=WebSocketEventType.CONNECTION_PONG,
+                            payload={
+                                "timestamp": datetime.utcnow().isoformat(),
+                                "pong": True,
+                            },
+                            user_id=user_id,
+                            connection_id=connection_id,
+                        )
+                        await websocket_manager.send_to_connection(
+                            connection_id, pong_event
+                        )
+
+                elif message_type == "pong":
+                    # Handle pong response from client (in response to our ping)
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.handle_pong()
 
                 elif message_type == "subscribe":
                     # Handle channel subscription
