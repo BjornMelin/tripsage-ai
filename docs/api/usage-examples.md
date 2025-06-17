@@ -2,7 +2,6 @@
 
 > **Quick Reference for TripSage API Integration**  
 > Practical code snippets for REST API, WebSocket, and authentication
-
 > **💡 Looking for complete tutorials?** Check out our [**Complete Integration Guide**](examples.md) for full workflows, SDKs, and advanced patterns.
 
 ## 📋 Table of Contents

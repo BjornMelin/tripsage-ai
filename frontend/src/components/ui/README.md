@@ -9,10 +9,12 @@ Comprehensive loading state management with accessibility support and TypeScript
 ### Components Included
 
 #### Base Components
+
 - **Skeleton** - Configurable skeleton placeholders with animation support
 - **LoadingSpinner** - Various spinner animations (default, dots, bars, pulse)
 
 #### Loading States
+
 - **LoadingOverlay** - Full-screen or container overlay with progress support
 - **LoadingState** - Wrapper component for conditional loading/content display
 - **LoadingButton** - Button with integrated loading state
@@ -20,6 +22,7 @@ Comprehensive loading state management with accessibility support and TypeScript
 - **PageLoading** - Full-page loading component for app router
 
 #### Generic Skeletons
+
 - **AvatarSkeleton** - Circular avatar placeholders
 - **CardSkeleton** - Card layout with optional image/avatar
 - **ListItemSkeleton** - List item with avatar and action support
@@ -28,6 +31,7 @@ Comprehensive loading state management with accessibility support and TypeScript
 - **ChartSkeleton** - Different chart types (bar, line, pie, area)
 
 #### Travel-Specific Skeletons
+
 - **FlightSkeleton** - Flight search result layout
 - **HotelSkeleton** - Hotel/accommodation result layout
 - **TripSkeleton** - Trip card with image and details
@@ -39,6 +43,7 @@ Comprehensive loading state management with accessibility support and TypeScript
 ### Hooks
 
 #### useLoading
+
 ```typescript
 const { isLoading, startLoading, stopLoading, setProgress } = useLoading({
   timeout: 5000,
@@ -47,11 +52,13 @@ const { isLoading, startLoading, stopLoading, setProgress } = useLoading({
 ```
 
 #### useAsyncLoading
+
 ```typescript
 const { data, isLoading, error, execute } = useAsyncLoading(asyncFunction);
 ```
 
 #### useDebouncedLoading
+
 ```typescript
 const loading = useDebouncedLoading(300); // 300ms debounce
 ```
@@ -101,6 +108,7 @@ Loading components are integrated with Next.js App Router:
 ### Testing
 
 Comprehensive test coverage (>90%) includes:
+
 - Component rendering and props
 - Accessibility attributes
 - Animation states
@@ -109,6 +117,7 @@ Comprehensive test coverage (>90%) includes:
 - Edge cases
 
 Run tests with:
+
 ```bash
 pnpm test src/components/ui/__tests__/
 ```

@@ -702,12 +702,14 @@ const client = new TripSageClient({
 ## 🔗 Related Documentation
 
 ### Quick Links
+
 - **[Getting Started Guide](getting-started.md)** - Setup and first API calls
 - **[REST API Endpoints](rest-endpoints.md)** - Complete endpoint reference
 - **[Error Codes](error-codes.md)** - Authentication error troubleshooting
 - **[Quick Examples](usage-examples.md)** - Copy-paste authentication code
 
 ### Common Workflows
+
 - **New to TripSage?** → Start with [Getting Started](getting-started.md)
 - **Building an integration?** → Check [Complete Examples](examples.md)
 - **Authentication failing?** → See [Error Troubleshooting](error-codes.md#authentication-errors)

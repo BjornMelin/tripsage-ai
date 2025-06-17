@@ -43,6 +43,7 @@ curl https://api.tripsage.ai/v1/health \
 ## ⚡ Quick Integration Patterns
 
 ### 5-Minute Setup
+
 ```bash
 # 1. Get your API key at app.tripsage.ai
 # 2. Test connection
@@ -59,6 +60,7 @@ curl -X POST https://api.tripsage.ai/api/trips \
 ### Common Integration Scenarios
 
 #### Travel Agency Dashboard
+
 ```javascript
 // Real-time trip updates for customer dashboard
 const ws = new WebSocket('wss://api.tripsage.ai/api/chat/ws?token=JWT_TOKEN');
@@ -71,6 +73,7 @@ ws.onmessage = (event) => {
 ```
 
 #### Corporate Travel Tool
+
 ```python
 # Batch create trips for team
 import requests
@@ -91,6 +94,7 @@ for trip in team_trips:
 ```
 
 #### Travel Blog Automation
+
 ```javascript
 // Auto-generate content from trip data
 const trip = await fetch(`/api/trips/${tripId}`, {headers});
@@ -292,6 +296,7 @@ Sandbox for development:
 | WebSocket disconnect | Implement reconnection logic | [WebSocket Guide](websocket-api.md#connection-management) |
 
 ### Debug Checklist
+
 ```bash
 # ✅ Verify API key
 curl -H "Authorization: Bearer YOUR_KEY" https://api.tripsage.ai/api/health

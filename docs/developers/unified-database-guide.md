@@ -374,7 +374,7 @@ EXECUTE FUNCTION public.update_chat_session_activity();
 
 #### **3. Cache Invalidation Triggers**
 
-**notify_cache_invalidation**
+##### **notify_cache_invalidation**
 
 - **Tables:** trips, flights, accommodations
 - **Event:** INSERT, UPDATE, DELETE

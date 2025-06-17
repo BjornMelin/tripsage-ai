@@ -456,24 +456,28 @@ git branch -d feature/your-feature-name
 ### **Learning Path (First Month)**
 
 #### **Week 1: Environment & Basics**
+
 - [ ] Complete quick start setup
 - [ ] Read [Database Guide](unified-database-guide.md)
 - [ ] Submit first hello-world PR
 - [ ] Shadow a code review session
 
 #### **Week 2: Core Features**
+
 - [ ] Review [API Development](api-development.md) guide
 - [ ] Study [Frontend Development](frontend-development.md) patterns
 - [ ] Implement a simple CRUD feature
 - [ ] Write comprehensive tests
 
 #### **Week 3: Advanced Topics**
+
 - [ ] Learn [Performance Optimization](performance-optimization.md) techniques
 - [ ] Understand [External Integrations](external-integrations.md)
 - [ ] Contribute to AI/ML features
 - [ ] Practice debugging complex issues
 
 #### **Week 4: Team Integration**
+
 - [ ] Lead a code review
 - [ ] Participate in architecture discussions
 - [ ] Propose and implement improvements
@@ -490,12 +494,14 @@ git branch -d feature/your-feature-name
 ### **Helpful Resources**
 
 #### **Internal Documentation**
+
 - [Testing Guide](testing-guide.md) - Comprehensive testing strategies
 - [Debugging Guide](debugging-guide.md) - Troubleshooting techniques  
 - [Performance Optimization](performance-optimization.md) - Speed & efficiency
 - [External Integrations](external-integrations.md) - Third-party APIs
 
 #### **External Resources**
+
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Supabase Documentation](https://supabase.com/docs)
@@ -503,6 +509,7 @@ git branch -d feature/your-feature-name
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 
 #### **Team Communication**
+
 - **Slack Channels**: #development, #architecture, #questions
 - **Code Reviews**: GitHub/GitLab PR discussions
 - **Documentation**: Internal wiki and architecture docs
@@ -511,6 +518,7 @@ git branch -d feature/your-feature-name
 ### **Common Gotchas & Solutions**
 
 #### **Database Issues**
+
 ```bash
 # Database connection failed
 # Solution: Check Supabase credentials in .env
@@ -522,6 +530,7 @@ supabase db reset
 ```
 
 #### **Cache Issues**
+
 ```bash
 # DragonflyDB connection failed
 # Solution: Verify Docker container is running
@@ -530,6 +539,7 @@ docker restart tripsage-dragonfly
 ```
 
 #### **Frontend Build Issues**
+
 ```bash
 # Node modules issues
 # Solution: Clean install
@@ -542,6 +552,7 @@ cd .. && supabase gen types typescript --local > frontend/types/database.ts
 ```
 
 #### **Python Environment Issues**
+
 ```bash
 # Package conflicts
 # Solution: Clean reinstall

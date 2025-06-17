@@ -178,11 +178,13 @@ All TripSage API errors follow a consistent JSON structure for predictable error
 ### Scenario 1: "My API calls are failing with 401"
 
 **Common Causes:**
-- Missing `Bearer ` prefix in Authorization header
+
+- Missing `Bearer` prefix in Authorization header
 - Using expired or invalid JWT token
 - API key not properly configured
 
 **Debug Steps:**
+
 ```bash
 # 1. Check your token format
 curl -H "Authorization: Bearer your_token" \
@@ -200,12 +202,14 @@ curl -X POST https://api.tripsage.ai/api/auth/login \
 ### Scenario 2: "Flight searches return empty results"
 
 **Possible Issues:**
+
 - Invalid airport codes
 - Dates in the past
 - No availability for selected dates
 - External API service down
 
 **Troubleshooting:**
+
 ```javascript
 // 1. Validate airport codes
 const validCodes = await fetch('/api/destinations/search?q=NYC');
@@ -229,6 +233,7 @@ if (response.results.length === 0) {
 ### Scenario 3: "Validation errors on trip creation"
 
 **Example Error Response:**
+
 ```json
 {
   "error": true,
@@ -251,6 +256,7 @@ if (response.results.length === 0) {
 ```
 
 **Solution:**
+
 ```javascript
 function validateTripData(tripData) {
   const errors = [];
@@ -286,11 +292,13 @@ function validateTripData(tripData) {
 ### Scenario 4: "WebSocket connection keeps dropping"
 
 **Common Issues:**
+
 - Network connectivity problems
 - Authentication token expiration
 - Server-side connection limits
 
 **Robust WebSocket Implementation:**
+
 ```javascript
 class TripSageWebSocket {
   constructor(token) {
@@ -328,6 +336,7 @@ class TripSageWebSocket {
 ### Scenario 5: "Rate limits being hit unexpectedly"
 
 **Debug Rate Limit Usage:**
+
 ```javascript
 function monitorRateLimit(response) {
   const limit = response.headers.get('X-RateLimit-Limit');

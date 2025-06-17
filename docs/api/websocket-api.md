@@ -1959,17 +1959,20 @@ The API supports both chat-based AI interactions and collaborative trip planning
 ## 🔗 Related Documentation
 
 ### Essential Reading
+
 - **[Authentication Guide](authentication.md)** - JWT token setup for WebSocket connections
 - **[REST API Endpoints](rest-endpoints.md)** - REST endpoints that complement WebSocket features
 - **[Error Codes](error-codes.md)** - WebSocket-specific error handling
 - **[Getting Started](getting-started.md)** - Basic API setup before using WebSockets
 
 ### Integration Examples
+
 - **[Quick Examples](usage-examples.md)** - WebSocket connection examples
 - **[Complete Integration Guide](examples.md)** - Full WebSocket implementation patterns
 - **[Real-time Guide](realtime-guide.md)** - Advanced real-time features
 
 ### Troubleshooting
+
 - **[Connection Issues](error-codes.md#scenario-4-websocket-connection-keeps-dropping)** - Debug WebSocket connections
 - **[Authentication Errors](error-codes.md#authentication-errors)** - Token and auth problems
 
