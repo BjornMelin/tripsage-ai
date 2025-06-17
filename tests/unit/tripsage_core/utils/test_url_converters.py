@@ -329,7 +329,7 @@ class TestEdgeCases:
     
     def test_none_url_handling(self, converter):
         """Test handling of None URLs."""
-        with pytest.raises(AttributeError):
+        with pytest.raises(DatabaseURLParsingError):
             converter.supabase_to_postgres(None, "password")
     
     def test_malformed_url_handling(self, converter):

@@ -28,9 +28,9 @@ class DatabaseURLConverter:
     providing secure conversion with validation and error handling.
     """
     
-    # Supabase URL patterns
+    # Supabase URL patterns (allow optional trailing path)
     SUPABASE_URL_PATTERN = re.compile(
-        r'^https://([a-zA-Z0-9\-]+)\.supabase\.(co|com)/?$'
+        r'^https://([a-zA-Z0-9\-]+)\.supabase\.(co|com)(?:/.*)?$'
     )
     
     # Known Supabase regions and their database hosts
@@ -80,6 +80,9 @@ class DatabaseURLConverter:
         Raises:
             DatabaseURLParsingError: If URL is not a valid Supabase URL
         """
+        if not supabase_url:
+            raise DatabaseURLParsingError("URL cannot be None or empty")
+            
         match = self.SUPABASE_URL_PATTERN.match(supabase_url)
         if not match:
             raise DatabaseURLParsingError(
