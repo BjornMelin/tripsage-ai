@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Callable, Optional, Union
 
 from fastapi import Request, Response
+from pydantic import BaseModel, ConfigDict
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import ASGIApp
@@ -21,7 +22,6 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
-from pydantic import BaseModel, ConfigDict
 from tripsage_core.services.business.key_management_service import KeyManagementService
 
 logger = logging.getLogger(__name__)

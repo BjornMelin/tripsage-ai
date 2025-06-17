@@ -1,7 +1,8 @@
 """Debug test for flights router."""
-from fastapi.testclient import TestClient
-from fastapi import status
+
 import json
+
+from fastapi.testclient import TestClient
 
 # Import the app directly
 from tripsage.api.main import app
@@ -25,7 +26,7 @@ flight_search_data = {
 response = client.post(
     "/api/flights/search",
     json=flight_search_data,
-    headers={"Authorization": "Bearer fake-token"}
+    headers={"Authorization": "Bearer fake-token"},
 )
 
 print(f"Status: {response.status_code}")

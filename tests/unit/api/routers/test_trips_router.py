@@ -44,7 +44,11 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
-from tripsage_core.models.schemas_common.enums import TripStatus, TripType, TripVisibility
+from tripsage_core.models.schemas_common.enums import (
+    TripStatus,
+    TripType,
+    TripVisibility,
+)
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.services.business.trip_service import TripService
 
@@ -105,8 +109,12 @@ class TestTripsRouterComprehensive:
     @pytest.fixture
     def sample_shared_trip_response(self):
         """Sample shared trip response from core service."""
+        from tripsage_core.models.trip import (
+            BudgetBreakdown,
+            EnhancedBudget,
+            TripPreferences,
+        )
         from tripsage_core.services.business.trip_service import TripLocation
-        from tripsage_core.models.trip import EnhancedBudget, BudgetBreakdown, TripPreferences
 
         # Create proper TripLocation object instead of mock
         destination = TripLocation(
@@ -124,7 +132,9 @@ class TestTripsRouterComprehensive:
         trip_mock.description = "5-day trip exploring Tokyo"
         trip_mock.start_date = datetime(2024, 5, 1, tzinfo=timezone.utc)
         trip_mock.end_date = datetime(2024, 5, 5, tzinfo=timezone.utc)
-        trip_mock.destination = "Tokyo, Japan"  # Core expects singular destination string
+        trip_mock.destination = (
+            "Tokyo, Japan"  # Core expects singular destination string
+        )
         trip_mock.destinations = [destination]  # Use proper TripLocation object
         trip_mock.budget = EnhancedBudget(
             total=5000.0,

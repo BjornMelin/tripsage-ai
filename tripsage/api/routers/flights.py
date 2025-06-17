@@ -28,11 +28,13 @@ from tripsage_core.exceptions.exceptions import (
 )
 from tripsage_core.models.domain.flight import FlightOffer
 from tripsage_core.services.business.flight_service import (
-    FlightService,
-    get_flight_service,
-    FlightSearchRequest as ServiceFlightSearchRequest,
     FlightPassenger,
+    FlightService,
     PassengerType,
+    get_flight_service,
+)
+from tripsage_core.services.business.flight_service import (
+    FlightSearchRequest as ServiceFlightSearchRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,36 +42,42 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _convert_to_service_request(api_request: FlightSearchRequest) -> ServiceFlightSearchRequest:
+def _convert_to_service_request(
+    api_request: FlightSearchRequest,
+) -> ServiceFlightSearchRequest:
     """Convert API FlightSearchRequest to Service FlightSearchRequest.
-    
+
     Args:
         api_request: API request model
-        
+
     Returns:
         Service request model
     """
     # Create passenger list from counts
     passengers = []
-    
+
     # Add adults
     for _ in range(api_request.adults):
         passengers.append(FlightPassenger(type=PassengerType.ADULT))
-    
+
     # Add children
     for _ in range(api_request.children):
         passengers.append(FlightPassenger(type=PassengerType.CHILD))
-    
+
     # Add infants
     for _ in range(api_request.infants):
         passengers.append(FlightPassenger(type=PassengerType.INFANT_ON_LAP))
-    
+
     # Convert to service model
     return ServiceFlightSearchRequest(
         origin=api_request.origin,
         destination=api_request.destination,
-        departure_date=datetime.combine(api_request.departure_date, datetime.min.time()),
-        return_date=datetime.combine(api_request.return_date, datetime.min.time()) if api_request.return_date else None,
+        departure_date=datetime.combine(
+            api_request.departure_date, datetime.min.time()
+        ),
+        return_date=datetime.combine(api_request.return_date, datetime.min.time())
+        if api_request.return_date
+        else None,
         passengers=passengers,
         cabin_class=api_request.cabin_class,
         max_stops=api_request.max_stops,
@@ -96,11 +104,14 @@ async def search_flights(
     """
     logger.debug(f"Received flight search request: {request}")
     logger.debug(f"Request type: {type(request)}")
-    logger.debug(f"Request fields: {request.model_fields if hasattr(request, 'model_fields') else 'No model_fields'}")
-    
+    logger.debug(
+        "Request fields: %s",
+        request.model_fields if hasattr(request, "model_fields") else "No model_fields",
+    )
+
     # Convert API request to service request
     service_request = _convert_to_service_request(request)
-    
+
     # Search for flights
     results = await flight_service.search_flights(service_request)
     return results

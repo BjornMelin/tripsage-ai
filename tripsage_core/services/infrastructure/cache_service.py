@@ -54,7 +54,9 @@ class CacheService:
 
         # Skip connection if redis_url is None (testing/disabled mode)
         if self.settings.redis_url is None:
-            logger.info("Redis URL not configured, cache service will operate in disabled mode")
+            logger.info(
+                "Redis URL not configured, cache service will operate in disabled mode"
+            )
             self._is_connected = False
             return
 
@@ -158,7 +160,7 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-        
+
         # Return success in disabled mode
         if not self.is_connected:
             return True
@@ -191,7 +193,7 @@ class CacheService:
             Deserialized value or default
         """
         await self.ensure_connected()
-        
+
         # Return default in disabled mode
         if not self.is_connected:
             return default
@@ -227,7 +229,7 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-        
+
         # Return success in disabled mode
         if not self.is_connected:
             return True
@@ -256,7 +258,7 @@ class CacheService:
             The value as string or None if not found
         """
         await self.ensure_connected()
-        
+
         # Return None in disabled mode
         if not self.is_connected:
             return None
@@ -285,7 +287,7 @@ class CacheService:
             Number of keys deleted
         """
         await self.ensure_connected()
-        
+
         # Return length of keys in disabled mode (simulate successful deletion)
         if not self.is_connected:
             return len(keys)
@@ -311,7 +313,7 @@ class CacheService:
             Number of existing keys
         """
         await self.ensure_connected()
-        
+
         # Return 0 in disabled mode (no keys exist)
         if not self.is_connected:
             return 0
@@ -338,7 +340,7 @@ class CacheService:
             True if successful, False otherwise
         """
         await self.ensure_connected()
-        
+
         # Return True in disabled mode (simulate success)
         if not self.is_connected:
             return True
@@ -364,7 +366,7 @@ class CacheService:
             TTL in seconds, -1 if no expiration, -2 if key doesn't exist
         """
         await self.ensure_connected()
-        
+
         # Return -2 in disabled mode (key doesn't exist)
         if not self.is_connected:
             return -2
@@ -387,7 +389,7 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
-        
+
         # Return None in disabled mode (operation not available)
         if not self.is_connected:
             return None
@@ -408,7 +410,7 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
-        
+
         # Return None in disabled mode (operation not available)
         if not self.is_connected:
             return None
@@ -448,7 +450,7 @@ class CacheService:
             List of values (None for missing keys)
         """
         await self.ensure_connected()
-        
+
         # Return list of None values in disabled mode
         if not self.is_connected:
             return [None] * len(keys)
@@ -475,7 +477,7 @@ class CacheService:
             True if successful
         """
         await self.ensure_connected()
-        
+
         # Return True in disabled mode (simulate success)
         if not self.is_connected:
             return True
@@ -503,7 +505,7 @@ class CacheService:
             List of matching keys
         """
         await self.ensure_connected()
-        
+
         # Return empty list in disabled mode
         if not self.is_connected:
             return []
@@ -582,11 +584,11 @@ class CacheService:
         """
         try:
             await self.ensure_connected()
-            
+
             # Return False in disabled mode (not healthy)
             if not self.is_connected:
                 return False
-                
+
             return await self._client.ping()
         except Exception as e:
             logger.error(f"Cache health check failed: {e}")

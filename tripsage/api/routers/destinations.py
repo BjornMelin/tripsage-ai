@@ -11,10 +11,12 @@ from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.destinations import (
     DestinationDetailsResponse,
-    DestinationSearchRequest as APIDestinationSearchRequest,
     DestinationSearchResponse,
     PointOfInterestSearchRequest,
     SavedDestinationResponse,
+)
+from tripsage.api.schemas.destinations import (
+    DestinationSearchRequest as APIDestinationSearchRequest,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
@@ -23,6 +25,8 @@ from tripsage_core.models.schemas_common.geographic import Place as Destination
 from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
 from tripsage_core.services.business.destination_service import (
     DestinationSearchRequest as ServiceDestinationSearchRequest,
+)
+from tripsage_core.services.business.destination_service import (
     DestinationService,
     get_destination_service,
 )
@@ -50,9 +54,9 @@ async def search_destinations(
         include_weather=request.include_weather,
         include_pois=request.include_attractions,  # Map API field to service field
     )
-    
+
     service_response = await destination_service.search_destinations(service_request)
-    
+
     # Convert service response to API response
     return DestinationSearchResponse(
         destinations=service_response.destinations,
