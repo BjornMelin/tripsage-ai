@@ -191,7 +191,7 @@ class AgentConfigRequest(BaseConfigModel):
             f"{self.temperature}_{self.max_tokens}_{self.top_p}"
             f"_{self.timeout_seconds}_{self.model}"
         )
-        return hashlib.md5(config_str.encode()).hexdigest()[:8]
+        return hashlib.md5(config_str.encode(), usedforsecurity=False).hexdigest()[:8]
 
     def get_changed_fields(self, other: "AgentConfigRequest") -> List[str]:
         """Get list of fields that changed compared to another configuration."""
