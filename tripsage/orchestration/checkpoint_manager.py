@@ -1,16 +1,21 @@
 """
-PostgreSQL Checkpoint Manager for LangGraph Integration
+PostgreSQL Checkpoint Manager for LangGraph Integration with Secure URL Handling
 
 This module provides PostgreSQL-based checkpointing for LangGraph using the existing
 Supabase database configuration. It handles checkpoint persistence, recovery, and
-session management.
+session management with enhanced security through validated URL conversion.
 """
 
+import asyncio
 import logging
 from typing import Any, Dict, Optional
-from urllib.parse import urlparse
 
 from tripsage_core.config import get_settings
+from tripsage_core.utils.connection_utils import (
+    DatabaseURLParsingError,
+    SecureDatabaseConnectionManager,
+)
+from tripsage_core.utils.url_converters import DatabaseURLConverter
 
 # Try to import PostgreSQL checkpoint classes, fallback to MemorySaver if not available
 try:
@@ -51,46 +56,54 @@ class SupabaseCheckpointManager:
 
     def _build_connection_string(self) -> str:
         """
-        Build PostgreSQL connection string from Supabase configuration.
+        Build PostgreSQL connection string from Supabase configuration using secure URL
+        conversion.
 
         Returns:
             PostgreSQL connection string compatible with PostgresSaver
+
+        Raises:
+            DatabaseURLParsingError: If URL conversion fails
         """
         if self._connection_string:
             return self._connection_string
 
         try:
-            # Get Supabase configuration (flat structure)
+            # Get Supabase configuration
             settings = get_settings()
-            supabase_url = settings.database_url
-            supabase_key = settings.database_service_key.get_secret_value()
 
-            # Parse Supabase URL to extract connection details
-            # Format: https://[project-ref].supabase.co
-            parsed_url = urlparse(supabase_url)
-            project_ref = (
-                parsed_url.hostname.split(".")[0] if parsed_url.hostname else None
+            # Use secure URL converter
+            converter = DatabaseURLConverter()
+            self._connection_string = converter.supabase_to_postgres(
+                settings.database_url,
+                settings.database_service_key.get_secret_value(),
+                use_pooler=False,  # Direct connection for checkpointing
+                sslmode="require",  # Ensure SSL is required
             )
 
-            if not project_ref:
-                raise ValueError(
-                    "Could not extract project reference from Supabase URL"
+            # Validate connection string with security manager
+            manager = SecureDatabaseConnectionManager()
+            # Run validation in async context if needed
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(
+                    manager.parse_and_validate_url(self._connection_string)
                 )
+            except RuntimeError:
+                # No running loop, create one for validation
+                asyncio.run(manager.parse_and_validate_url(self._connection_string))
 
-            # Build PostgreSQL connection string
-            # Supabase PostgreSQL format: postgresql://postgres:[password]@[project-ref].supabase.co:5432/postgres
-            self._connection_string = (
-                f"postgresql://postgres:{supabase_key}@"
-                f"{project_ref}.supabase.co:5432/postgres"
-                "?sslmode=require"
+            logger.debug(
+                "Built secure connection string for Supabase project",
+                extra={"has_ssl": "sslmode=require" in self._connection_string},
             )
-
-            logger.debug("Built connection string for Supabase project")
             return self._connection_string
 
         except Exception as e:
-            logger.error(f"Failed to build connection string: {e}")
-            raise
+            logger.error(f"Failed to build secure connection string: {e}")
+            raise DatabaseURLParsingError(
+                f"Could not create secure checkpoint connection: {e}"
+            ) from e
 
     def _create_connection_pool(self, async_mode: bool = False) -> None:
         """
