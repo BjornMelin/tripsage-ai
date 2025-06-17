@@ -13,6 +13,7 @@
 ---
 
 ## Security Architecture Overview
+
 - [🛡️ Row Level Security (RLS)](#️-row-level-security-rls)
 - [🌐 API Security](#-api-security)
 - [🗄️ Data Protection](#️-data-protection)
@@ -233,10 +234,11 @@ USING (
 ---
 
 *This overview provides the foundation for understanding TripSage's comprehensive security implementation. For detailed implementation guidance, see the specific security guides.*
--e 
+-e
 ---
 
 ## Security Best Practices
+
 - [Root Causes Analysis](#root-causes-analysis)
 - [Comprehensive Solution](#comprehensive-solution)
 - [Collaboration Permission Hierarchy](#collaboration-permission-hierarchy)
@@ -655,10 +657,11 @@ The comprehensive RLS policy fixes address all 8 critical security vulnerabiliti
 5. **Following security best practices** to prevent common RLS mistakes
 
 After applying these fixes, the TripSage database will have enterprise-grade security with proper multi-tenant isolation and collaboration features.
--e 
+-e
 ---
 
 ## Row Level Security Implementation
+
 - [Table Classification](#table-classification)
 - [Policy Patterns](#policy-patterns)
 - [Performance Optimizations](#performance-optimizations)
@@ -914,10 +917,12 @@ USING (
 - [PostgreSQL RLS Documentation](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
 - Project RLS tests: `tests/database/test_rls_policies.py`
 - Schema files: `supabase/schemas/05_policies*.sql`
--e 
+-e
+
 ---
 
 ## Security Testing
+
 - [📊 Security Testing Status Dashboard](#-security-testing-status-dashboard)
 - [🎯 Quick Start Testing Guide](#-quick-start-testing-guide)
 - [🔐 Row Level Security (RLS) Testing](#-row-level-security-rls-testing)

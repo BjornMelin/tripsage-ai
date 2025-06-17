@@ -13,16 +13,20 @@
 ---
 
 # Environment
+
 ENVIRONMENT=development  # Options: development, staging, production
 
 # API Configuration
+
 API_HOST=0.0.0.0
 API_PORT=8000
 DEBUG=false  # Set to true only for development
 
 # Security
+
 SECRET_KEY=your-secret-key-here  # Use strong random key for production
-CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
+CORS_ORIGINS=<http://localhost:3000,https://yourdomain.com>
+
 ```
 
 ## Database Configuration
