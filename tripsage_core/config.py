@@ -62,6 +62,33 @@ class Settings(BaseSettings):
         description="PostgreSQL connection URL (overrides database_url if provided)",
     )
 
+    # Read Replica Configuration
+    database_region: str = Field(
+        default="us-east-1", description="Primary database region"
+    )
+    enable_read_replicas: bool = Field(
+        default=False, description="Enable read replica load balancing"
+    )
+    read_replica_strategy: Literal[
+        "round_robin",
+        "least_connections",
+        "latency_based",
+        "geographic",
+        "query_type",
+        "weighted_random",
+    ] = Field(
+        default="round_robin", description="Load balancing strategy for read replicas"
+    )
+    read_replica_health_check_interval: float = Field(
+        default=30.0, description="Read replica health check interval in seconds"
+    )
+    read_replica_fallback_to_primary: bool = Field(
+        default=True, description="Fallback to primary when replicas are unhealthy"
+    )
+    read_replica_max_retry_attempts: int = Field(
+        default=3, description="Maximum retry attempts for replica connections"
+    )
+
     # Application Security
     secret_key: SecretStr = Field(
         default="test-application-secret-key-for-testing-only",
@@ -144,6 +171,76 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in test environment."""
         return self.environment == "test"
+
+    @property
+    def read_replicas(self) -> dict[str, dict[str, any]]:
+        """Parse read replica configurations from environment variables.
+
+        Environment variables should follow the pattern:
+        READ_REPLICA_<ID>_URL=https://...
+        READ_REPLICA_<ID>_API_KEY=key
+        READ_REPLICA_<ID>_REGION=us-west-1
+        READ_REPLICA_<ID>_PRIORITY=1
+        READ_REPLICA_<ID>_WEIGHT=1.0
+        READ_REPLICA_<ID>_MAX_CONNECTIONS=100
+        READ_REPLICA_<ID>_ENABLED=true
+
+        Returns:
+            Dictionary of replica configurations keyed by replica ID
+        """
+        import os
+
+        replicas = {}
+
+        # Find all READ_REPLICA_*_URL environment variables
+        for key in os.environ:
+            if key.startswith("READ_REPLICA_") and key.endswith("_URL"):
+                # Extract replica ID from environment variable name
+                # READ_REPLICA_WEST_URL -> WEST
+                replica_id = key[13:-4].lower()  # Remove "READ_REPLICA_" and "_URL"
+
+                url = os.environ[key]
+                api_key_var = f"READ_REPLICA_{replica_id.upper()}_API_KEY"
+                api_key = os.environ.get(api_key_var)
+
+                if url and api_key:
+                    replicas[replica_id] = {
+                        "url": url,
+                        "api_key": api_key,
+                        "name": os.environ.get(
+                            f"READ_REPLICA_{replica_id.upper()}_NAME",
+                            f"Read Replica {replica_id}",
+                        ),
+                        "region": os.environ.get(
+                            f"READ_REPLICA_{replica_id.upper()}_REGION", "us-east-1"
+                        ),
+                        "priority": int(
+                            os.environ.get(
+                                f"READ_REPLICA_{replica_id.upper()}_PRIORITY", "1"
+                            )
+                        ),
+                        "weight": float(
+                            os.environ.get(
+                                f"READ_REPLICA_{replica_id.upper()}_WEIGHT", "1.0"
+                            )
+                        ),
+                        "max_connections": int(
+                            os.environ.get(
+                                f"READ_REPLICA_{replica_id.upper()}_MAX_CONNECTIONS",
+                                "100",
+                            )
+                        ),
+                        "read_only": os.environ.get(
+                            f"READ_REPLICA_{replica_id.upper()}_READ_ONLY", "true"
+                        ).lower()
+                        == "true",
+                        "enabled": os.environ.get(
+                            f"READ_REPLICA_{replica_id.upper()}_ENABLED", "true"
+                        ).lower()
+                        == "true",
+                    }
+
+        return replicas
 
     @property
     def effective_postgres_url(self) -> str:

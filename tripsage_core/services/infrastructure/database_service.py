@@ -20,6 +20,11 @@ from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError,
     CoreServiceError,
 )
+from tripsage_core.services.infrastructure.replica_manager import (
+    LoadBalancingStrategy,
+    QueryType,
+    ReplicaManager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +51,7 @@ class DatabaseService:
         self.settings = settings or get_settings()
         self._client: Optional[Client] = None
         self._connected = False
+        self._replica_manager: Optional[ReplicaManager] = None
 
     @property
     def is_connected(self) -> bool:
@@ -108,6 +114,18 @@ class DatabaseService:
             self._connected = True
             logger.info("Database service connected successfully")
 
+            # Initialize replica manager if read replicas are enabled
+            if self.settings.enable_read_replicas:
+                try:
+                    self._replica_manager = ReplicaManager(self.settings)
+                    await self._replica_manager.initialize()
+                    logger.info("Read replica manager initialized")
+                except Exception as replica_error:
+                    logger.error(
+                        f"Failed to initialize replica manager: {replica_error}"
+                    )
+                    # Continue without replica manager - fall back to primary only
+
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
             self._connected = False
@@ -119,6 +137,15 @@ class DatabaseService:
 
     async def close(self) -> None:
         """Close database connection and cleanup resources."""
+        # Close replica manager first
+        if self._replica_manager:
+            try:
+                await self._replica_manager.close()
+                self._replica_manager = None
+                logger.info("Replica manager closed")
+            except Exception as e:
+                logger.error(f"Error closing replica manager: {e}")
+
         if self._client:
             try:
                 # Supabase client cleanup if needed
@@ -135,6 +162,42 @@ class DatabaseService:
             await self.connect()
 
     # Core database operations
+
+    @asynccontextmanager
+    async def _get_client_for_query(
+        self,
+        query_type: QueryType = QueryType.READ,
+        user_region: Optional[str] = None,
+    ):
+        """Get the appropriate client for a query.
+
+        Args:
+            query_type: Type of query being executed
+            user_region: User's geographic region for geo-routing
+
+        Yields:
+            Tuple of (replica_id, client) for the query
+        """
+        # If replica manager is available and enabled, use it for read queries
+        if self._replica_manager and query_type in [
+            QueryType.READ,
+            QueryType.ANALYTICS,
+            QueryType.VECTOR_SEARCH,
+        ]:
+            try:
+                async with self._replica_manager.acquire_connection(
+                    query_type=query_type,
+                    user_region=user_region,
+                ) as (replica_id, client):
+                    yield replica_id, client
+                    return
+            except Exception as e:
+                logger.warning(
+                    f"Failed to get replica client: {e}, falling back to primary"
+                )
+
+        # Fallback to primary client
+        yield "primary", self.client
 
     async def insert(
         self, table: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]
@@ -176,6 +239,7 @@ class DatabaseService:
         order_by: Optional[str] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
+        user_region: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Select data from table.
 
@@ -186,6 +250,7 @@ class DatabaseService:
             order_by: Order by column (prefix with - for DESC)
             limit: Limit number of results
             offset: Offset for pagination
+            user_region: User's geographic region for geo-routing
 
         Returns:
             List of selected records
@@ -196,33 +261,38 @@ class DatabaseService:
         await self.ensure_connected()
 
         try:
-            query = self.client.table(table).select(columns)
+            async with self._get_client_for_query(
+                query_type=QueryType.READ,
+                user_region=user_region,
+            ) as (replica_id, client):
+                query = client.table(table).select(columns)
 
-            # Apply filters
-            if filters:
-                for key, value in filters.items():
-                    if isinstance(value, dict):
-                        # Support for complex filters like {"gte": 18}
-                        for operator, filter_value in value.items():
-                            query = getattr(query, operator)(key, filter_value)
+                # Apply filters
+                if filters:
+                    for key, value in filters.items():
+                        if isinstance(value, dict):
+                            # Support for complex filters like {"gte": 18}
+                            for operator, filter_value in value.items():
+                                query = getattr(query, operator)(key, filter_value)
+                        else:
+                            query = query.eq(key, value)
+
+                # Apply ordering
+                if order_by:
+                    if order_by.startswith("-"):
+                        query = query.order(order_by[1:], desc=True)
                     else:
-                        query = query.eq(key, value)
+                        query = query.order(order_by)
 
-            # Apply ordering
-            if order_by:
-                if order_by.startswith("-"):
-                    query = query.order(order_by[1:], desc=True)
-                else:
-                    query = query.order(order_by)
+                # Apply pagination
+                if limit:
+                    query = query.limit(limit)
+                if offset:
+                    query = query.offset(offset)
 
-            # Apply pagination
-            if limit:
-                query = query.limit(limit)
-            if offset:
-                query = query.offset(offset)
-
-            result = await asyncio.to_thread(lambda: query.execute())
-            return result.data
+                result = await asyncio.to_thread(lambda: query.execute())
+                logger.debug(f"Query executed on replica {replica_id}")
+                return result.data
         except Exception as e:
             logger.error(f"Database SELECT error for table '{table}': {e}")
             raise CoreDatabaseError(
@@ -619,6 +689,7 @@ class DatabaseService:
         limit: int = 10,
         similarity_threshold: Optional[float] = None,
         filters: Optional[Dict[str, Any]] = None,
+        user_region: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Perform vector similarity search.
 
@@ -629,6 +700,7 @@ class DatabaseService:
             limit: Number of results
             similarity_threshold: Minimum similarity threshold
             filters: Additional filters
+            user_region: User's geographic region for geo-routing
 
         Returns:
             List of similar records with similarity scores
@@ -636,32 +708,37 @@ class DatabaseService:
         await self.ensure_connected()
 
         try:
-            # Convert vector to string format for PostgreSQL
-            vector_str = f"[{','.join(map(str, query_vector))}]"
+            async with self._get_client_for_query(
+                query_type=QueryType.VECTOR_SEARCH,
+                user_region=user_region,
+            ) as (replica_id, client):
+                # Convert vector to string format for PostgreSQL
+                vector_str = f"[{','.join(map(str, query_vector))}]"
 
-            query = self.client.table(table).select(
-                f"*, {vector_column} <-> '{vector_str}' as distance"
-            )
-
-            # Apply filters
-            if filters:
-                for key, value in filters.items():
-                    query = query.eq(key, value)
-
-            # Apply similarity threshold
-            if similarity_threshold:
-                distance_threshold = (
-                    1 - similarity_threshold
-                )  # Convert similarity to distance
-                query = query.lt(
-                    f"{vector_column} <-> '{vector_str}'", distance_threshold
+                query = client.table(table).select(
+                    f"*, {vector_column} <-> '{vector_str}' as distance"
                 )
 
-            # Order by similarity and limit
-            query = query.order(f"{vector_column} <-> '{vector_str}'").limit(limit)
+                # Apply filters
+                if filters:
+                    for key, value in filters.items():
+                        query = query.eq(key, value)
 
-            result = await asyncio.to_thread(lambda: query.execute())
-            return result.data
+                # Apply similarity threshold
+                if similarity_threshold:
+                    distance_threshold = (
+                        1 - similarity_threshold
+                    )  # Convert similarity to distance
+                    query = query.lt(
+                        f"{vector_column} <-> '{vector_str}'", distance_threshold
+                    )
+
+                # Order by similarity and limit
+                query = query.order(f"{vector_column} <-> '{vector_str}'").limit(limit)
+
+                result = await asyncio.to_thread(lambda: query.execute())
+                logger.debug(f"Vector search executed on replica {replica_id}")
+                return result.data
         except Exception as e:
             logger.error(f"Database vector search error for table '{table}': {e}")
             raise CoreDatabaseError(
@@ -1174,6 +1251,193 @@ class DatabaseService:
                 table="trip_collaborators",
                 details={"error": str(e), "trip_id": trip_id, "user_id": user_id},
             ) from e
+
+    # Read Replica Management
+
+    def get_replica_manager(self) -> Optional[ReplicaManager]:
+        """Get the replica manager instance.
+
+        Returns:
+            ReplicaManager instance if initialized, None otherwise
+        """
+        return self._replica_manager
+
+    def is_replica_enabled(self) -> bool:
+        """Check if read replica functionality is enabled.
+
+        Returns:
+            True if read replicas are enabled and configured
+        """
+        return self._replica_manager is not None
+
+    async def get_replica_health(self) -> Dict[str, Any]:
+        """Get health status of all read replicas.
+
+        Returns:
+            Dictionary containing replica health information
+        """
+        if not self._replica_manager:
+            return {"enabled": False, "message": "Read replicas not configured"}
+
+        health_data = self._replica_manager.get_replica_health()
+        return {
+            "enabled": True,
+            "replica_count": len(health_data),
+            "replicas": {
+                replica_id: {
+                    "status": health.status.value,
+                    "latency_ms": health.latency_ms,
+                    "uptime_percentage": health.uptime_percentage,
+                    "last_check": health.last_check.isoformat(),
+                }
+                for replica_id, health in health_data.items()
+            },
+        }
+
+    async def get_replica_metrics(self) -> Dict[str, Any]:
+        """Get performance metrics for all read replicas.
+
+        Returns:
+            Dictionary containing replica performance metrics
+        """
+        if not self._replica_manager:
+            return {"enabled": False, "message": "Read replicas not configured"}
+
+        metrics_data = self._replica_manager.get_replica_metrics()
+        load_balancer_stats = self._replica_manager.get_load_balancer_stats()
+
+        return {
+            "enabled": True,
+            "load_balancer": {
+                "total_requests": load_balancer_stats.total_requests,
+                "successful_requests": load_balancer_stats.successful_requests,
+                "failed_requests": load_balancer_stats.failed_requests,
+                "avg_response_time_ms": load_balancer_stats.avg_response_time_ms,
+                "requests_per_replica": load_balancer_stats.requests_per_replica,
+                "geographic_routes": load_balancer_stats.geographic_routes,
+            },
+            "replicas": {
+                replica_id: {
+                    "total_queries": metrics.total_queries,
+                    "failed_queries": metrics.failed_queries,
+                    "avg_response_time_ms": metrics.avg_response_time_ms,
+                    "queries_per_second": metrics.queries_per_second,
+                    "connection_pool_utilization": metrics.connection_pool_utilization,
+                    "last_updated": metrics.last_updated.isoformat(),
+                }
+                for replica_id, metrics in metrics_data.items()
+            },
+        }
+
+    async def get_scaling_recommendations(self) -> Dict[str, Any]:
+        """Get scaling recommendations based on replica performance.
+
+        Returns:
+            Dictionary containing scaling recommendations
+        """
+        if not self._replica_manager:
+            return {"enabled": False, "message": "Read replicas not configured"}
+
+        recommendations = await self._replica_manager.get_scaling_recommendations()
+        recommendations["enabled"] = True
+        return recommendations
+
+    def set_load_balancing_strategy(self, strategy: str) -> bool:
+        """Set the load balancing strategy for read replicas.
+
+        Args:
+            strategy: Load balancing strategy name
+
+        Returns:
+            True if strategy was set successfully
+        """
+        if not self._replica_manager:
+            return False
+
+        try:
+            strategy_enum = LoadBalancingStrategy(strategy)
+            self._replica_manager.set_load_balancing_strategy(strategy_enum)
+            return True
+        except ValueError:
+            logger.error(f"Invalid load balancing strategy: {strategy}")
+            return False
+
+    async def add_read_replica(
+        self,
+        replica_id: str,
+        url: str,
+        api_key: str,
+        region: str = "us-east-1",
+        priority: int = 1,
+        weight: float = 1.0,
+        max_connections: int = 100,
+        enabled: bool = True,
+    ) -> bool:
+        """Add a new read replica configuration.
+
+        Args:
+            replica_id: Unique identifier for the replica
+            url: Supabase URL for the replica
+            api_key: API key for the replica
+            region: Geographic region
+            priority: Priority for routing (higher = more preferred)
+            weight: Weight for weighted load balancing
+            max_connections: Maximum connections allowed
+            enabled: Whether the replica is enabled
+
+        Returns:
+            True if replica was added successfully
+        """
+        if not self._replica_manager:
+            logger.error("Read replicas not enabled")
+            return False
+
+        try:
+            from tripsage_core.services.infrastructure.replica_manager import (
+                ReplicaConfig,
+            )
+
+            config = ReplicaConfig(
+                id=replica_id,
+                name=f"Read Replica {replica_id}",
+                region=region,
+                url=url,
+                api_key=api_key,
+                priority=priority,
+                weight=weight,
+                max_connections=max_connections,
+                read_only=True,
+                enabled=enabled,
+            )
+
+            await self._replica_manager.register_replica(replica_id, config)
+            logger.info(f"Added read replica {replica_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to add read replica {replica_id}: {e}")
+            return False
+
+    async def remove_read_replica(self, replica_id: str) -> bool:
+        """Remove a read replica configuration.
+
+        Args:
+            replica_id: Replica to remove
+
+        Returns:
+            True if replica was removed successfully
+        """
+        if not self._replica_manager:
+            logger.error("Read replicas not enabled")
+            return False
+
+        try:
+            await self._replica_manager.remove_replica(replica_id)
+            logger.info(f"Removed read replica {replica_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to remove read replica {replica_id}: {e}")
+            return False
 
 
 # Global database service instance
