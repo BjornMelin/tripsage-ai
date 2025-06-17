@@ -481,7 +481,10 @@ class TestWebSocketConnectionAdvanced:
 
         event = WebSocketEvent(type="test", payload={})
         result = await connection.send(event)
-        assert result is False
+        # Circuit breaker now queues messages instead of dropping them
+        assert result is True
+        # Verify event was queued for retry
+        assert len(connection.priority_queue[event.priority]) == 1
 
     @pytest.mark.asyncio
     async def test_message_retry_on_failure(self, connection):
@@ -626,8 +629,10 @@ class TestWebSocketManagerIntegration:
         """Test broadcasting with integrated broadcaster."""
         # Create connections
         user_id = uuid4()
+        mock_ws = MagicMock()
+        mock_ws.send_text = AsyncMock()
         conn1 = WebSocketConnection(
-            websocket=MagicMock(), connection_id="conn1", user_id=user_id
+            websocket=mock_ws, connection_id="conn1", user_id=user_id
         )
         conn1.subscribe_to_channel("test-channel")
 

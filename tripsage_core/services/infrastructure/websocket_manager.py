@@ -35,6 +35,74 @@ from tripsage_core.exceptions.exceptions import (
 logger = logging.getLogger(__name__)
 
 
+class MonitoredDeque(deque):
+    """Deque that logs when items are dropped due to maxlen."""
+
+    def __init__(
+        self, *args, priority_name: str = "", connection_id: str = "", **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        self.priority_name = priority_name
+        self.connection_id = connection_id
+        self.dropped_count = 0
+
+    def append(self, item):
+        if self.maxlen and len(self) >= self.maxlen:
+            self.dropped_count += 1
+            logger.warning(
+                f"Message dropped from {self.priority_name} priority queue "
+                f"for connection {self.connection_id}. "
+                f"Total dropped: {self.dropped_count}"
+            )
+        super().append(item)
+
+    def appendleft(self, item):
+        if self.maxlen and len(self) >= self.maxlen:
+            self.dropped_count += 1
+            logger.warning(
+                f"Message dropped from {self.priority_name} priority queue "
+                f"for connection {self.connection_id}. "
+                f"Total dropped: {self.dropped_count}"
+            )
+        super().appendleft(item)
+
+
+# Lua script for atomic rate limiting
+RATE_LIMIT_LUA_SCRIPT = """
+    local user_key = KEYS[1]
+    local conn_key = KEYS[2]
+    local window_start = tonumber(ARGV[1])
+    local now = tonumber(ARGV[2])
+    local user_limit = tonumber(ARGV[3])
+    local conn_limit = tonumber(ARGV[4])
+    
+    -- Clean old entries
+    redis.call('ZREMRANGEBYSCORE', user_key, 0, window_start)
+    redis.call('ZREMRANGEBYSCORE', conn_key, 0, window_start)
+    
+    -- Check current counts
+    local user_count = redis.call('ZCARD', user_key)
+    local conn_count = redis.call('ZCARD', conn_key)
+    
+    if user_count >= user_limit then
+        return {0, 'user_limit_exceeded', user_count, conn_count}
+    end
+    
+    if conn_count >= conn_limit then
+        return {0, 'connection_limit_exceeded', user_count, conn_count}
+    end
+    
+    -- Add current request
+    local score = tostring(now) .. '-' .. math.random()
+    redis.call('ZADD', user_key, now, score)
+    redis.call('ZADD', conn_key, now, score)
+    redis.call('EXPIRE', user_key, 60)
+    redis.call('EXPIRE', conn_key, 60)
+    
+    return {1, 'allowed', user_count + 1, conn_count + 1}
+"""
+
+
 class ConnectionState(str, Enum):
     """Enhanced connection state management."""
 
@@ -298,42 +366,8 @@ class RateLimiter:
 
         try:
             # Use Redis script for atomic rate limiting
-            script = """
-                local user_key = KEYS[1]
-                local conn_key = KEYS[2]
-                local window_start = tonumber(ARGV[1])
-                local now = tonumber(ARGV[2])
-                local user_limit = tonumber(ARGV[3])
-                local conn_limit = tonumber(ARGV[4])
-                
-                -- Clean old entries
-                redis.call('ZREMRANGEBYSCORE', user_key, 0, window_start)
-                redis.call('ZREMRANGEBYSCORE', conn_key, 0, window_start)
-                
-                -- Check current counts
-                local user_count = redis.call('ZCARD', user_key)
-                local conn_count = redis.call('ZCARD', conn_key)
-                
-                if user_count >= user_limit then
-                    return {0, 'user_limit_exceeded', user_count, conn_count}
-                end
-                
-                if conn_count >= conn_limit then
-                    return {0, 'connection_limit_exceeded', user_count, conn_count}
-                end
-                
-                -- Add current request
-                local score = tostring(now) .. '-' .. math.random()
-                redis.call('ZADD', user_key, now, score)
-                redis.call('ZADD', conn_key, now, score)
-                redis.call('EXPIRE', user_key, 60)
-                redis.call('EXPIRE', conn_key, 60)
-                
-                return {1, 'allowed', user_count + 1, conn_count + 1}
-            """
-
             result = await self.redis.eval(
-                script,
+                RATE_LIMIT_LUA_SCRIPT,
                 2,
                 user_key,
                 conn_key,
@@ -422,11 +456,19 @@ class WebSocketConnection:
         self.user_agent: Optional[str] = None
 
         # Message queue with priority support
-        self.message_queue: Deque[WebSocketEvent] = deque(maxlen=1000)
+        self.message_queue: Deque[WebSocketEvent] = MonitoredDeque(
+            maxlen=1000, priority_name="main", connection_id=connection_id
+        )
         self.priority_queue: Dict[int, Deque[WebSocketEvent]] = {
-            1: deque(maxlen=100),  # High priority
-            2: deque(maxlen=500),  # Medium priority
-            3: deque(maxlen=1000),  # Low priority
+            1: MonitoredDeque(
+                maxlen=100, priority_name="high", connection_id=connection_id
+            ),
+            2: MonitoredDeque(
+                maxlen=500, priority_name="medium", connection_id=connection_id
+            ),
+            3: MonitoredDeque(
+                maxlen=1000, priority_name="low", connection_id=connection_id
+            ),
         }
 
         # Performance metrics
@@ -468,7 +510,9 @@ class WebSocketConnection:
                     logger.warning(
                         f"Circuit breaker open for connection {self.connection_id}"
                     )
-                    return False
+                    # Queue the event for later retry
+                    self.priority_queue[event.priority].append(event)
+                    return True
 
                 message = {
                     "id": event.id,
@@ -773,32 +817,17 @@ class WebSocketManager:
         """Authenticate a WebSocket connection with rate limiting."""
         try:
             # Verify JWT token
-            payload = jwt.decode(
-                auth_request.token,
-                self.settings.jwt_secret_key.get_secret_value(),
-                algorithms=["HS256"],
-            )
-
-            if "sub" not in payload or "user_id" not in payload:
-                raise CoreAuthenticationError(
-                    message="Invalid token payload",
-                    details={"reason": "Missing required fields"},
-                )
-
-            user_id = UUID(payload["user_id"])
+            user_id = await self._verify_jwt_token(auth_request.token)
 
             # Check rate limits
-            if self.rate_limiter:
-                can_connect = await self.rate_limiter.check_connection_limit(
-                    user_id, auth_request.session_id
+            if not await self._check_connection_rate_limit(
+                user_id, auth_request.session_id
+            ):
+                return WebSocketAuthResponse(
+                    success=False,
+                    connection_id="",
+                    error="Connection rate limit exceeded",
                 )
-                if not can_connect:
-                    self.performance_metrics["rate_limit_hits"] += 1
-                    return WebSocketAuthResponse(
-                        success=False,
-                        connection_id="",
-                        error="Connection rate limit exceeded",
-                    )
 
             # Create connection
             connection_id = str(uuid4())
@@ -905,6 +934,62 @@ class WebSocketManager:
         return WebSocketSubscribeResponse(
             success=True, subscribed_channels=subscribed, failed_channels=failed
         )
+
+    async def _verify_jwt_token(self, token: str) -> UUID:
+        """Verify JWT token and extract user ID.
+
+        Args:
+            token: JWT token to verify
+
+        Returns:
+            User ID from token
+
+        Raises:
+            CoreAuthenticationError: If token is invalid
+        """
+        try:
+            payload = jwt.decode(
+                token,
+                self.settings.jwt_secret_key.get_secret_value(),
+                algorithms=["HS256"],
+            )
+
+            if "sub" not in payload or "user_id" not in payload:
+                raise CoreAuthenticationError(
+                    message="Invalid token payload",
+                    details={"reason": "Missing required fields"},
+                )
+
+            return UUID(payload["user_id"])
+        except jwt.InvalidTokenError as e:
+            raise CoreAuthenticationError(
+                message="Invalid token",
+                details={"reason": str(e)},
+            ) from e
+
+    async def _check_connection_rate_limit(
+        self, user_id: UUID, session_id: Optional[UUID] = None
+    ) -> bool:
+        """Check if connection is allowed under rate limits.
+
+        Args:
+            user_id: User ID
+            session_id: Optional session ID
+
+        Returns:
+            True if connection is allowed
+        """
+        if not self.rate_limiter:
+            return True
+
+        can_connect = await self.rate_limiter.check_connection_limit(
+            user_id, session_id
+        )
+
+        if not can_connect:
+            self.performance_metrics["rate_limit_hits"] += 1
+
+        return can_connect
 
     async def disconnect_connection(self, connection_id: str) -> None:
         """Disconnect a WebSocket connection with cleanup."""
@@ -1234,14 +1319,30 @@ class WebSocketManager:
         """Background task to process priority message queues."""
         while self._running:
             try:
+                # Only process connections with non-empty queues
+                connections_to_process = []
                 for connection in self.connections.values():
                     if connection.state in [
                         ConnectionState.CONNECTED,
                         ConnectionState.AUTHENTICATED,
                     ]:
-                        await connection.process_priority_queue()
+                        # Check if any priority queue has messages
+                        has_messages = any(
+                            len(queue) > 0
+                            for queue in connection.priority_queue.values()
+                        )
+                        if has_messages:
+                            connections_to_process.append(connection)
 
-                await asyncio.sleep(0.1)  # Process queues frequently
+                # Process connections with messages
+                for connection in connections_to_process:
+                    await connection.process_priority_queue()
+
+                # Sleep longer if no messages to process
+                if connections_to_process:
+                    await asyncio.sleep(0.1)  # Process queues frequently
+                else:
+                    await asyncio.sleep(0.5)  # Sleep longer when idle
 
             except Exception as e:
                 logger.error(f"Error in priority queue processor: {e}")
