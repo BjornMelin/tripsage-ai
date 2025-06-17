@@ -451,7 +451,9 @@ class TestConcurrentOperations:
                     mock_settings.return_value.secret_key = "test-secret"
                     # Authenticate
                     try:
-                        response = await manager.authenticate_connection(mock_ws, auth_request)
+                        response = await manager.authenticate_connection(
+                            mock_ws, auth_request
+                        )
                         if response.success:
                             # Disconnect after short delay
                             await asyncio.sleep(0.01)
