@@ -12,10 +12,12 @@ This comprehensive guide walks you through setting up OAuth providers for TripSa
 6. [Testing and Validation](#testing-and-validation)
 7. [Troubleshooting](#troubleshooting)
 8. [Advanced Configuration](#advanced-configuration)
+9. [Summary](#summary)
 
 ## Prerequisites
 
 **Required Access:**
+
 - ✅ Supabase project with authentication enabled
 - ✅ Google Cloud Console account with admin permissions
 - ✅ GitHub account with developer access
@@ -23,12 +25,14 @@ This comprehensive guide walks you through setting up OAuth providers for TripSa
 - ✅ Domain ownership (for production setup)
 
 **Technical Requirements:**
+
 - ✅ HTTPS-enabled domain for production
 - ✅ Valid SSL certificate
 - ✅ TripSage frontend deployed and accessible
 - ✅ Environment variable management system
 
 **Supported Providers:**
+
 - ✅ Google OAuth 2.0 (Recommended)
 - ✅ GitHub OAuth (Recommended)
 - 🔄 Facebook OAuth (Available)
@@ -54,7 +58,8 @@ Google OAuth 2.0 integration allows users to sign in using their Google accounts
    - **New Project**: Click "New Project"
 
 **For New Project:**
-```
+
+```text
 Project Name: TripSage
 Project ID: tripsage-[random-id] (auto-generated)
 Organization: [Your Organization] (optional)
@@ -73,6 +78,7 @@ Location: [Your Organization] (optional)
 5. **Wait** for API activation (usually 1-2 minutes)
 
 **Alternative APIs (Recommended for new projects):**
+
 - **Google Identity API** (preferred)
 - **People API** (for profile data)
 
@@ -82,6 +88,7 @@ Location: [Your Organization] (optional)
 
 1. **Navigate** to **APIs & Services** → **OAuth consent screen**
 2. **Select** user type:
+
    - **Internal**: If using Google Workspace (recommended for organizations)
    - **External**: For public applications (recommended for TripSage)
 
@@ -90,29 +97,33 @@ Location: [Your Organization] (optional)
 #### 2.2 OAuth Consent Screen Details
 
 **App Information:**
-```
+
+```text
 App name: TripSage
 User support email: support@your-domain.com
 App logo: [Upload TripSage logo - 120x120px PNG]
 ```
 
 **App Domain Information:**
-```
+
+```text
 Application home page: https://your-domain.com
 Application privacy policy link: https://your-domain.com/privacy
 Application terms of service link: https://your-domain.com/terms
 ```
 
 **Authorized Domains:**
-```
+
+```text
 your-domain.com
 [your-domain].vercel.app (if using Vercel)
 localhost (for development)
 ```
 
 **Developer Contact Information:**
-```
-Email addresses: 
+
+```text
+Email addresses:
 - developer@your-domain.com
 - admin@your-domain.com
 ```
@@ -123,7 +134,8 @@ Email addresses:
 
 1. **Click** "Add or Remove Scopes"
 2. **Select** the following scopes:
-   ```
+
+   ```text
    ../auth/userinfo.email    (Required)
    ../auth/userinfo.profile  (Required)
    openid                    (Required)
@@ -135,8 +147,10 @@ Email addresses:
 #### 2.4 Test Users (External Apps Only)
 
 For development and testing with external user type:
+
 1. **Add** test user emails:
-   ```
+
+   ```text
    developer@your-domain.com
    tester@your-domain.com
    your-personal@gmail.com
@@ -155,12 +169,14 @@ For development and testing with external user type:
 #### 3.2 Configure Application Details
 
 **Application Details:**
-```
+
+```text
 Name: TripSage Web Client
 ```
 
 **Authorized JavaScript Origins:**
-```
+
+```text
 https://your-domain.com
 https://www.[your-domain].com
 http://localhost:3000 (development)
@@ -168,24 +184,27 @@ http://localhost:3001 (development backup)
 ```
 
 **Authorized Redirect URIs:**
-```
+
+```text
 https://[project-ref].supabase.co/auth/v1/callback
 https://your-domain.com/auth/callback
 http://localhost:3000/auth/callback (development)
 ```
 
 **To find your Supabase project reference:**
+
 1. Go to your Supabase dashboard
 2. Select your project
 3. Go to Settings → API
 4. Copy the "Reference ID"
 
-4. **Click** "Create"
+5. **Click** "Create"
 
 #### 3.3 Save Credentials
 
 1. **Copy** the generated credentials:
-   ```
+
+   ```text
    Client ID: [long-string].apps.googleusercontent.com
    Client Secret: [secret-string]
    ```
@@ -206,19 +225,22 @@ http://localhost:3000/auth/callback (development)
 #### 4.2 Configure Provider Settings
 
 **Client ID and Secret:**
-```
+
+```text
 Client ID: [paste-your-client-id]
 Client Secret: [paste-your-client-secret]
 ```
 
 **Additional Settings:**
-```
+
+```text
 Redirect URL: https://[project-ref].supabase.co/auth/v1/callback
 Skip nonce check: false (recommended)
 ```
 
 **Scopes (Advanced):**
-```
+
+```text
 Default: email profile
 Custom: email profile openid
 ```
@@ -235,7 +257,7 @@ Custom: email profile openid
 
 ## GitHub OAuth Setup
 
-### Overview
+### GitHub Overview
 
 GitHub OAuth integration allows users to sign in using their GitHub accounts. This is particularly useful for developer-focused applications and provides access to user profile information and public repositories.
 
@@ -255,19 +277,22 @@ GitHub OAuth integration allows users to sign in using their GitHub accounts. Th
 2. **Fill** in the application details:
 
 **Application Information:**
-```
+
+```text
 Application name: TripSage
 Homepage URL: https://your-domain.com
 Application description: AI-powered travel planning platform
 ```
 
 **Authorization callback URL:**
-```
+
+```text
 https://[project-ref].supabase.co/auth/v1/callback
 ```
 
 **For development, you may also need:**
-```
+
+```text
 http://localhost:3000/auth/callback
 ```
 
@@ -276,13 +301,15 @@ http://localhost:3000/auth/callback
 #### 1.3 Configure Application Settings
 
 **Optional Settings:**
-```
+
+```text
 ✅ Enable Device Flow: false (not needed for web apps)
 ✅ Request user authorization (OAuth): true
 ✅ Expire user authorization tokens: false (optional)
 ```
 
 **Upload Application Logo:**
+
 1. **Click** "Upload new logo"
 2. **Upload** TripSage logo (minimum 200x200px)
 3. **Adjust** logo positioning if needed
@@ -296,6 +323,7 @@ http://localhost:3000/auth/callback
 3. **Copy** the generated secret immediately (it won't be shown again)
 
 **Save the following credentials:**
+
 ```
 Client ID: [alphanumeric-string]
 Client Secret: [secret-string]
@@ -306,6 +334,7 @@ Client Secret: [secret-string]
 #### 2.2 Configure Webhook (Optional)
 
 For advanced integrations:
+
 1. **Click** "Add webhook"
 2. **Set** Payload URL: `https://your-domain.com/api/webhooks/github`
 3. **Select** Content type: `application/json`
@@ -324,24 +353,28 @@ For advanced integrations:
 #### 3.2 Configure Provider Settings
 
 **Basic Configuration:**
-```
+
+```text
 Client ID: [paste-github-client-id]
 Client Secret: [paste-github-client-secret]
 ```
 
 **Advanced Settings:**
-```
+
+```text
 Redirect URL: https://[project-ref].supabase.co/auth/v1/callback
 ```
 
 **Scopes Configuration:**
-```
+
+```text
 Default: user:email
 Recommended: user:email read:user
 ```
 
 **Additional Scopes (Optional):**
-```
+
+```text
 user:email        (Required - email access)
 read:user         (Recommended - profile info)
 public_repo       (Optional - public repository access)
@@ -401,11 +434,13 @@ NEXTAUTH_URL=https://your-domain.com
 #### Environment Variable Security
 
 **Development:**
+
 - Use `.env.local` (automatically ignored by Git)
 - Never commit OAuth secrets to version control
 - Use different secrets for development and production
 
 **Production:**
+
 - Use secure environment variable management (Vercel, AWS Secrets Manager, etc.)
 - Enable secret rotation policies
 - Monitor secret access logs
@@ -417,13 +452,14 @@ NEXTAUTH_URL=https://your-domain.com
 The OAuth functionality is already implemented in TripSage. Here's how it works:
 
 **Login Component (`src/components/auth/login-form.tsx`):**
+
 ```typescript
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from "@/contexts/auth-context";
 
 export function LoginForm() {
   const { signInWithOAuth, isLoading, error } = useAuth();
 
-  const handleOAuthSignIn = async (provider: 'google' | 'github') => {
+  const handleOAuthSignIn = async (provider: "google" | "github") => {
     try {
       await signInWithOAuth(provider);
     } catch (error) {
@@ -433,8 +469,8 @@ export function LoginForm() {
 
   return (
     <div className="oauth-buttons">
-      <Button 
-        onClick={() => handleOAuthSignIn('google')}
+      <Button
+        onClick={() => handleOAuthSignIn("google")}
         disabled={isLoading}
         variant="outline"
         className="w-full"
@@ -442,9 +478,9 @@ export function LoginForm() {
         <GoogleIcon className="mr-2 h-4 w-4" />
         Continue with Google
       </Button>
-      
-      <Button 
-        onClick={() => handleOAuthSignIn('github')}
+
+      <Button
+        onClick={() => handleOAuthSignIn("github")}
         disabled={isLoading}
         variant="outline"
         className="w-full"
@@ -460,8 +496,9 @@ export function LoginForm() {
 #### OAuth Flow Implementation
 
 **Auth Context (`src/contexts/auth-context.tsx`):**
+
 ```typescript
-const signInWithOAuth = async (provider: 'google' | 'github') => {
+const signInWithOAuth = async (provider: "google" | "github") => {
   try {
     setAuthState({ isLoading: true, error: null });
 
@@ -470,8 +507,8 @@ const signInWithOAuth = async (provider: 'google' | 'github') => {
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+          access_type: "offline",
+          prompt: "consent",
         },
       },
     });
@@ -484,7 +521,10 @@ const signInWithOAuth = async (provider: 'google' | 'github') => {
     // Redirect happens automatically
   } catch (error) {
     setAuthState({
-      error: error instanceof Error ? error.message : `Failed to sign in with ${provider}`,
+      error:
+        error instanceof Error
+          ? error.message
+          : `Failed to sign in with ${provider}`,
       isLoading: false,
     });
   }
@@ -494,12 +534,13 @@ const signInWithOAuth = async (provider: 'google' | 'github') => {
 #### OAuth Callback Handler
 
 **Callback Page (`src/app/auth/callback/page.tsx`):**
-```typescript
-'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSupabase } from '@/lib/supabase/client';
+```typescript
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSupabase } from "@/lib/supabase/client";
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -508,17 +549,17 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       const { data, error } = await supabase.auth.getSession();
-      
+
       if (error) {
-        console.error('Auth callback error:', error);
-        router.push('/login?error=oauth_callback_failed');
+        console.error("Auth callback error:", error);
+        router.push("/login?error=oauth_callback_failed");
         return;
       }
 
       if (data?.session) {
-        router.push('/dashboard');
+        router.push("/dashboard");
       } else {
-        router.push('/login');
+        router.push("/login");
       }
     };
 
@@ -545,12 +586,14 @@ export default function AuthCallback() {
 #### 1. Secure Credential Management
 
 **Do:**
+
 - ✅ Store credentials in secure environment variables
 - ✅ Use different secrets for development and production
 - ✅ Implement secret rotation policies
 - ✅ Monitor secret access and usage
 
 **Don't:**
+
 - ❌ Commit OAuth secrets to version control
 - ❌ Share secrets in plain text communications
 - ❌ Use the same secrets across environments
@@ -559,7 +602,8 @@ export default function AuthCallback() {
 #### 2. Redirect URI Security
 
 **Best Practices:**
-```
+
+```text
 ✅ Use HTTPS in production
 ✅ Whitelist specific domains only
 ✅ Avoid wildcard patterns
@@ -567,7 +611,8 @@ export default function AuthCallback() {
 ```
 
 **Secure Redirect URI Examples:**
-```
+
+```text
 Production:
 https://your-domain.com/auth/callback
 https://api.your-domain.com/auth/callback
@@ -580,7 +625,8 @@ http://127.0.0.1:3000/auth/callback
 #### 3. OAuth Scope Management
 
 **Principle of Least Privilege:**
-```
+
+```text
 Google Scopes:
 - email (required)
 - profile (recommended)
@@ -592,7 +638,8 @@ GitHub Scopes:
 ```
 
 **Avoid Over-Privileged Scopes:**
-```
+
+```text
 ❌ Avoid: repo, admin:*, delete:*
 ✅ Use: read:user, user:email
 ```
@@ -600,7 +647,8 @@ GitHub Scopes:
 #### 4. Session Security
 
 **Configuration in Supabase:**
-```
+
+```text
 JWT Expiry: 3600 seconds (1 hour)
 Refresh Token Rotation: Enabled
 Auto Refresh Token: Enabled
@@ -608,17 +656,18 @@ JWT Secret: Secure random string
 ```
 
 **Client-Side Security:**
+
 ```typescript
 // Implement automatic token refresh
 useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    (event, session) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
-      }
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "TOKEN_REFRESHED") {
+      console.log("Token refreshed successfully");
     }
-  );
-  
+  });
+
   return () => subscription.unsubscribe();
 }, []);
 ```
@@ -628,20 +677,26 @@ useEffect(() => {
 #### 1. Audit Logging
 
 **Enable in Supabase:**
+
 - Authentication events logging
 - Failed login attempt monitoring
 - Unusual access pattern detection
 
 **Custom Logging:**
+
 ```typescript
-const logAuthEvent = async (event: string, provider: string, userId?: string) => {
-  await supabase.from('auth_logs').insert({
+const logAuthEvent = async (
+  event: string,
+  provider: string,
+  userId?: string
+) => {
+  await supabase.from("auth_logs").insert({
     event_type: event,
     provider: provider,
     user_id: userId,
     timestamp: new Date().toISOString(),
     ip_address: req.ip,
-    user_agent: req.headers['user-agent']
+    user_agent: req.headers["user-agent"],
   });
 };
 ```
@@ -649,12 +704,13 @@ const logAuthEvent = async (event: string, provider: string, userId?: string) =>
 #### 2. Rate Limiting
 
 **Implement OAuth rate limiting:**
+
 ```typescript
 // In your API middleware
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 OAuth attempts per window
-  message: 'Too many OAuth attempts, please try again later',
+  message: "Too many OAuth attempts, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -669,6 +725,7 @@ const rateLimiter = rateLimit({
 #### 1. Local Testing Setup
 
 **Prerequisites:**
+
 ```bash
 # Start development server
 cd frontend && pnpm dev
@@ -679,7 +736,8 @@ echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 
 **Test Checklist:**
-```
+
+```text
 ✅ Google OAuth flow works locally
 ✅ GitHub OAuth flow works locally
 ✅ User profile data is correctly retrieved
@@ -690,6 +748,7 @@ echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
 #### 2. OAuth Flow Testing
 
 **Google OAuth Test:**
+
 1. Navigate to `http://localhost:3000/login`
 2. Click "Continue with Google"
 3. Complete Google authorization
@@ -697,6 +756,7 @@ echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
 5. Check user profile data in Supabase
 
 **GitHub OAuth Test:**
+
 1. Navigate to `http://localhost:3000/login`
 2. Click "Continue with GitHub"
 3. Complete GitHub authorization
@@ -706,37 +766,38 @@ echo $NEXT_PUBLIC_SUPABASE_ANON_KEY
 #### 3. Automated Testing
 
 **OAuth Integration Tests:**
+
 ```typescript
 // tests/auth/oauth.test.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('OAuth Authentication', () => {
-  test('Google OAuth flow completes successfully', async ({ page }) => {
-    await page.goto('/login');
-    
+test.describe("OAuth Authentication", () => {
+  test("Google OAuth flow completes successfully", async ({ page }) => {
+    await page.goto("/login");
+
     // Mock OAuth provider response
-    await page.route('**/auth/v1/authorize**', (route) => {
+    await page.route("**/auth/v1/authorize**", (route) => {
       route.fulfill({
         status: 200,
-        body: JSON.stringify({ access_token: 'mock-token' })
+        body: JSON.stringify({ access_token: "mock-token" }),
       });
     });
-    
+
     await page.click('[data-testid="google-oauth-button"]');
-    await expect(page).toHaveURL('/dashboard');
+    await expect(page).toHaveURL("/dashboard");
   });
-  
-  test('handles OAuth errors gracefully', async ({ page }) => {
-    await page.goto('/login');
-    
+
+  test("handles OAuth errors gracefully", async ({ page }) => {
+    await page.goto("/login");
+
     // Mock OAuth error
-    await page.route('**/auth/v1/authorize**', (route) => {
+    await page.route("**/auth/v1/authorize**", (route) => {
       route.fulfill({
         status: 400,
-        body: JSON.stringify({ error: 'invalid_request' })
+        body: JSON.stringify({ error: "invalid_request" }),
       });
     });
-    
+
     await page.click('[data-testid="google-oauth-button"]');
     await expect(page.locator('[data-testid="error-message"]')).toBeVisible();
   });
@@ -748,7 +809,8 @@ test.describe('OAuth Authentication', () => {
 #### 1. Pre-Production Checklist
 
 **OAuth Provider Configuration:**
-```
+
+```text
 ✅ Production redirect URIs configured
 ✅ OAuth consent screen approved (Google)
 ✅ Application verified (GitHub)
@@ -757,7 +819,8 @@ test.describe('OAuth Authentication', () => {
 ```
 
 **Supabase Configuration:**
-```
+
+```text
 ✅ Production OAuth credentials configured
 ✅ Rate limiting enabled
 ✅ Email verification enabled
@@ -767,12 +830,15 @@ test.describe('OAuth Authentication', () => {
 #### 2. Production Deployment Testing
 
 **Test Scenarios:**
+
 1. **New User Registration:**
+
    - OAuth sign-up creates user account
    - User profile data correctly stored
    - Welcome email sent (if configured)
 
 2. **Existing User Sign-In:**
+
    - OAuth sign-in works for existing users
    - Profile data updated if changed
    - Session restored properly
@@ -785,7 +851,8 @@ test.describe('OAuth Authentication', () => {
 #### 3. Monitoring and Alerts
 
 **Set up monitoring for:**
-```
+
+```text
 ✅ OAuth success/failure rates
 ✅ Provider response times
 ✅ Authentication errors
@@ -801,8 +868,9 @@ test.describe('OAuth Authentication', () => {
 
 #### 1. Google OAuth Issues
 
-**Issue: "Error 400: invalid_request"**
-```
+##### **Issue: "Error 400: invalid_request"**
+
+```text
 Causes:
 - Incorrect redirect URI configuration
 - Missing required OAuth scopes
@@ -814,8 +882,9 @@ Solutions:
 3. Ensure OAuth consent screen is published
 ```
 
-**Issue: "Access blocked: This app's request is invalid"**
-```
+##### **Issue: "Access blocked: This app's request is invalid"**
+
+```text
 Causes:
 - OAuth consent screen not configured
 - App not verified for production use
@@ -827,8 +896,9 @@ Solutions:
 3. Add domain to authorized list in Google Workspace
 ```
 
-**Issue: "Error 403: access_denied"**
-```
+##### **Issue: "Error 403: access_denied"**
+
+```text
 Causes:
 - User denied OAuth permission
 - App not approved for requested scopes
@@ -842,8 +912,9 @@ Solutions:
 
 #### 2. GitHub OAuth Issues
 
-**Issue: "The redirect_uri MUST match the registered callback URL"**
-```
+##### **Issue: "The redirect_uri MUST match the registered callback URL"**
+
+```text
 Causes:
 - Redirect URI mismatch between GitHub app and Supabase
 - HTTP vs HTTPS protocol mismatch
@@ -855,8 +926,9 @@ Solutions:
 3. Update GitHub app callback URL if needed
 ```
 
-**Issue: "Bad verification code"**
-```
+##### **Issue: "Bad verification code"**
+
+```text
 Causes:
 - Expired authorization code
 - Code reuse attempt
@@ -870,8 +942,9 @@ Solutions:
 
 #### 3. Supabase Integration Issues
 
-**Issue: "OAuth provider not configured"**
-```
+##### **Issue: "OAuth provider not configured"**
+
+```text
 Causes:
 - Provider not enabled in Supabase dashboard
 - Incorrect client credentials
@@ -883,8 +956,9 @@ Solutions:
 3. Check environment variable setup
 ```
 
-**Issue: "Invalid JWT token"**
-```
+##### **Issue: "Invalid JWT token"**
+
+```text
 Causes:
 - Expired or malformed JWT
 - JWT secret mismatch
@@ -901,7 +975,8 @@ Solutions:
 #### 1. Browser Developer Tools
 
 **Network Tab Analysis:**
-```
+
+```text
 1. Open Developer Tools → Network tab
 2. Filter by "Auth" or "XHR"
 3. Look for OAuth redirect requests
@@ -910,11 +985,12 @@ Solutions:
 ```
 
 **Console Debugging:**
+
 ```typescript
 // Add debug logging to auth context
-const signInWithOAuth = async (provider: 'google' | 'github') => {
+const signInWithOAuth = async (provider: "google" | "github") => {
   console.log(`Starting OAuth flow for ${provider}`);
-  
+
   try {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -922,14 +998,14 @@ const signInWithOAuth = async (provider: 'google' | 'github') => {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
-    
-    console.log('OAuth response:', { data, error });
-    
+
+    console.log("OAuth response:", { data, error });
+
     if (error) {
-      console.error('OAuth error:', error);
+      console.error("OAuth error:", error);
     }
   } catch (error) {
-    console.error('OAuth exception:', error);
+    console.error("OAuth exception:", error);
   }
 };
 ```
@@ -937,41 +1013,44 @@ const signInWithOAuth = async (provider: 'google' | 'github') => {
 #### 2. Supabase Debugging
 
 **Auth Logs Analysis:**
+
 1. Go to Supabase Dashboard → Authentication → Users
 2. Check recent authentication events
 3. Look for error messages and failure patterns
 4. Review user metadata and provider information
 
 **SQL Query Debugging:**
+
 ```sql
 -- Check user authentication events
-SELECT 
+SELECT
   email,
   provider,
   created_at,
   last_sign_in_at,
   raw_user_meta_data
-FROM auth.users 
+FROM auth.users
 WHERE provider IN ('google', 'github')
-ORDER BY created_at DESC 
+ORDER BY created_at DESC
 LIMIT 10;
 
 -- Check authentication audit logs
-SELECT 
+SELECT
   event_type,
   error_message,
   ip_address,
   created_at
-FROM auth.audit_log_entries 
+FROM auth.audit_log_entries
 WHERE event_type LIKE '%oauth%'
-ORDER BY created_at DESC 
+ORDER BY created_at DESC
 LIMIT 20;
 ```
 
 #### 3. Provider-Specific Debugging
 
 **Google OAuth Debugging:**
-```
+
+```text
 1. Check Google Cloud Console → APIs & Services → Credentials
 2. Review OAuth 2.0 client IDs usage statistics
 3. Check OAuth consent screen status
@@ -979,7 +1058,8 @@ LIMIT 20;
 ```
 
 **GitHub OAuth Debugging:**
-```
+
+```text
 1. Check GitHub Developer Settings → OAuth Apps
 2. Review application usage statistics
 3. Check webhook delivery logs (if configured)
@@ -991,11 +1071,13 @@ LIMIT 20;
 #### 1. Documentation Links
 
 **Official Documentation:**
+
 - [Supabase Auth Documentation](https://supabase.com/docs/guides/auth)
 - [Google OAuth 2.0 Documentation](https://developers.google.com/identity/protocols/oauth2)
 - [GitHub OAuth Documentation](https://docs.github.com/en/developers/apps/building-oauth-apps)
 
 **Community Resources:**
+
 - [Supabase Community Discord](https://discord.supabase.com/)
 - [Stack Overflow - Supabase Auth](https://stackoverflow.com/questions/tagged/supabase+authentication)
 - [GitHub Issues - Supabase](https://github.com/supabase/supabase/issues)
@@ -1003,6 +1085,7 @@ LIMIT 20;
 #### 2. Getting Help
 
 **Before Reaching Out:**
+
 1. Check this troubleshooting guide
 2. Review Supabase dashboard logs
 3. Test with provider's OAuth playground tools
@@ -1010,6 +1093,7 @@ LIMIT 20;
 
 **When Contacting Support:**
 Include the following information:
+
 - OAuth provider (Google/GitHub)
 - Error messages (exact text)
 - Browser and version
@@ -1029,30 +1113,35 @@ For advanced use cases, you can implement custom OAuth callback logic:
 
 ```typescript
 // pages/api/auth/callback.ts
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createServerSupabaseClient } from "@supabase/auth-helpers-nextjs";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const supabase = createServerSupabaseClient({ req, res });
-  
+
   const { code, state } = req.query;
-  
+
   if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(String(code));
-    
+    const { data, error } = await supabase.auth.exchangeCodeForSession(
+      String(code)
+    );
+
     if (error) {
-      return res.redirect('/login?error=oauth_callback_failed');
+      return res.redirect("/login?error=oauth_callback_failed");
     }
-    
+
     // Custom logic after successful OAuth
     const { user } = data;
-    
+
     // Update user profile, create welcome data, etc.
     await updateUserProfile(user);
-    
-    return res.redirect('/dashboard');
+
+    return res.redirect("/dashboard");
   }
-  
-  return res.redirect('/login');
+
+  return res.redirect("/login");
 }
 ```
 
@@ -1066,12 +1155,14 @@ const getOAuthConfig = (tenantId: string) => {
   return {
     google: {
       clientId: process.env[`GOOGLE_CLIENT_ID_${tenantId.toUpperCase()}`],
-      clientSecret: process.env[`GOOGLE_CLIENT_SECRET_${tenantId.toUpperCase()}`],
+      clientSecret:
+        process.env[`GOOGLE_CLIENT_SECRET_${tenantId.toUpperCase()}`],
     },
     github: {
       clientId: process.env[`GITHUB_CLIENT_ID_${tenantId.toUpperCase()}`],
-      clientSecret: process.env[`GITHUB_CLIENT_SECRET_${tenantId.toUpperCase()}`],
-    }
+      clientSecret:
+        process.env[`GITHUB_CLIENT_SECRET_${tenantId.toUpperCase()}`],
+    },
   };
 };
 ```
@@ -1084,26 +1175,23 @@ Add custom claims to OAuth tokens:
 // Supabase Edge Function for custom claims
 export default async function handler(req: Request) {
   const { user, provider } = await req.json();
-  
+
   // Add custom claims based on provider
   const customClaims = {
-    role: 'user',
+    role: "user",
     provider: provider,
-    plan: 'free',
-    features: ['trip_planning', 'basic_search']
+    plan: "free",
+    features: ["trip_planning", "basic_search"],
   };
-  
+
   // Update user metadata
-  const { error } = await supabase.auth.admin.updateUserById(
-    user.id,
-    { 
-      user_metadata: { 
-        ...user.user_metadata, 
-        ...customClaims 
-      } 
-    }
-  );
-  
+  const { error } = await supabase.auth.admin.updateUserById(user.id, {
+    user_metadata: {
+      ...user.user_metadata,
+      ...customClaims,
+    },
+  });
+
   return new Response(JSON.stringify({ success: !error }));
 }
 ```
@@ -1119,17 +1207,17 @@ const oauthCache = new Map();
 
 const getCachedUserInfo = async (provider: string, accessToken: string) => {
   const cacheKey = `${provider}:${accessToken}`;
-  
+
   if (oauthCache.has(cacheKey)) {
     return oauthCache.get(cacheKey);
   }
-  
+
   const userInfo = await fetchUserInfo(provider, accessToken);
-  
+
   // Cache for 5 minutes
   oauthCache.set(cacheKey, userInfo);
   setTimeout(() => oauthCache.delete(cacheKey), 5 * 60 * 1000);
-  
+
   return userInfo;
 };
 ```
@@ -1140,15 +1228,15 @@ Load multiple OAuth providers in parallel:
 
 ```typescript
 const initializeOAuthProviders = async () => {
-  const providers = ['google', 'github'];
-  
+  const providers = ["google", "github"];
+
   const providerConfigs = await Promise.all(
     providers.map(async (provider) => {
       const config = await loadProviderConfig(provider);
       return { provider, config };
     })
   );
-  
+
   return providerConfigs.reduce((acc, { provider, config }) => {
     acc[provider] = config;
     return acc;
@@ -1163,6 +1251,7 @@ const initializeOAuthProviders = async () => {
 This comprehensive OAuth setup guide provides everything needed to implement secure Google and GitHub authentication in TripSage:
 
 ### Key Achievements
+
 - ✅ **Detailed Provider Setup**: Step-by-step Google and GitHub OAuth configuration
 - ✅ **Security Best Practices**: Comprehensive security guidelines and monitoring
 - ✅ **Testing Framework**: Development and production testing procedures
@@ -1170,12 +1259,14 @@ This comprehensive OAuth setup guide provides everything needed to implement sec
 - ✅ **Advanced Features**: Custom flows and performance optimizations
 
 ### Next Steps
+
 1. **Complete Provider Setup**: Follow the step-by-step instructions for both Google and GitHub
 2. **Implement Security Measures**: Apply all recommended security practices
 3. **Test Thoroughly**: Use the provided testing framework
 4. **Monitor and Maintain**: Set up monitoring and regular security reviews
 
 ### Quick Reference
+
 - **Google Console**: [console.cloud.google.com](https://console.cloud.google.com/)
 - **GitHub Settings**: [github.com/settings/developers](https://github.com/settings/developers)
 - **Supabase Dashboard**: Your project's authentication settings
@@ -1183,6 +1274,6 @@ This comprehensive OAuth setup guide provides everything needed to implement sec
 
 ---
 
-*Last updated: 2025-11-06*  
-*OAuth Setup Guide: Complete*  
-*Covers: Google OAuth 2.0, GitHub OAuth, Security, Testing, Troubleshooting*
+_Last updated: 2025-11-06_  
+_OAuth Setup Guide: Complete_  
+_Covers: Google OAuth 2.0, GitHub OAuth, Security, Testing, Troubleshooting_

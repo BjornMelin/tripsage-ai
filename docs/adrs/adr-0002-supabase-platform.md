@@ -60,7 +60,8 @@ We will specifically migrate from custom JWT authentication to Supabase Auth imm
 
 Self-hosted PostgreSQL with custom authentication layer.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Security risk of custom JWT implementation
 - High maintenance burden (~$19,000/year)
 - Missing critical features (MFA, OAuth)
@@ -70,7 +71,8 @@ Self-hosted PostgreSQL with custom authentication layer.
 
 Google's Backend-as-a-Service platform.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - NoSQL doesn't fit our relational data model
 - More expensive at scale
 - Less flexibility for complex queries
@@ -80,7 +82,8 @@ Google's Backend-as-a-Service platform.
 
 Amazon's managed PostgreSQL and authentication services.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - More complex setup and integration
 - Higher operational overhead
 - More expensive for our use case

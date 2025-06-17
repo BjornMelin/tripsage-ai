@@ -11,13 +11,15 @@ This document describes TripSage's storage architecture, security model, and fil
 **Purpose**: Store trip-related documents and chat attachments
 
 **Configuration**:
+
 - **Access**: Private (authentication required)
 - **Size Limit**: 50MB per file
 - **Allowed Types**: PDF, Word docs, Excel files, images, text files
 - **Security**: RLS policies based on trip ownership/collaboration
 
 **File Organization**:
-```
+
+```text
 attachments/
 ├── trip_123/
 │   ├── documents/
@@ -36,13 +38,15 @@ attachments/
 **Purpose**: Store user profile images
 
 **Configuration**:
+
 - **Access**: Public (anyone can view)
 - **Size Limit**: 5MB per file
 - **Allowed Types**: JPEG, PNG, GIF, WebP, AVIF
 - **Security**: Users can only upload/modify their own avatar
 
 **File Organization**:
-```
+
+```text
 avatars/
 ├── user_uuid_1.jpg
 ├── user_uuid_2.png
@@ -54,13 +58,15 @@ avatars/
 **Purpose**: Store trip-related photos and media
 
 **Configuration**:
+
 - **Access**: Private (controlled by RLS)
 - **Size Limit**: 20MB per file
 - **Allowed Types**: All image formats including HEIC/HEIF
 - **Security**: Trip collaboration permissions apply
 
 **File Organization**:
-```
+
+```text
 trip-images/
 ├── trip_123/
 │   ├── destinations/
@@ -77,6 +83,7 @@ trip-images/
 **Purpose**: Store auto-generated thumbnails
 
 **Configuration**:
+
 - **Access**: Private (auto-generated)
 - **Size Limit**: 10MB per file
 - **Allowed Types**: JPEG, PNG, WebP, AVIF
@@ -87,6 +94,7 @@ trip-images/
 **Purpose**: Isolate files flagged by virus scanning
 
 **Configuration**:
+
 - **Access**: Service role only
 - **Size Limit**: 100MB per file
 - **Allowed Types**: Any (for quarantine purposes)
@@ -132,18 +140,21 @@ graph TD
 ### 2. Processing Operations
 
 #### Virus Scanning
+
 - **Trigger**: On upload completion
 - **Service**: ClamAV integration
 - **Action**: Quarantine infected files
 - **Status**: Tracked in `virus_scan_status`
 
 #### Thumbnail Generation
+
 - **Trigger**: Image uploads
 - **Output**: Multiple sizes (150x150, 300x300, 600x600)
 - **Format**: WebP for efficiency
 - **Storage**: Thumbnails bucket
 
 #### Metadata Extraction
+
 - **Documents**: Page count, word count, language
 - **Images**: EXIF data, dimensions, GPS coordinates
 - **Storage**: JSON metadata in `file_attachments.metadata`
@@ -164,7 +175,7 @@ The system maintains **comprehensive version history**:
 
 The system provides **multiple upload patterns** for flexibility:
 
-#### Upload Patterns
+#### Upload Patterns - Storage
 
 1. **Signed URL Upload**: Pre-authenticated URLs for direct client upload
 2. **Direct Upload**: Server-mediated upload with validation
@@ -193,11 +204,13 @@ The system provides **multiple upload patterns** for flexibility:
 ## Storage Quotas
 
 ### User Quotas
+
 - **Attachments**: 5GB per user
 - **Avatars**: 50MB per user
 - **Trip Images**: 2GB per user
 
 ### Trip Quotas
+
 - **Documents**: 10GB per trip
 - **Images**: 20GB per trip
 - **Collaborators**: Shared quota pool
@@ -226,7 +239,7 @@ The system implements **automated maintenance** procedures:
 - **Temporary File Cleanup**: Session-based file removal
 - **Failed Upload Cleanup**: Incomplete upload recovery
 
-#### Performance Optimization
+#### Performance Optimization - Storage
 
 **Storage performance** maintained through:
 
@@ -263,18 +276,21 @@ The system uses **serverless functions** for file processing:
 ## Error Handling
 
 ### Upload Failures
+
 - Automatic retry for network issues
 - Size/type validation before upload
 - Quota checking with user feedback
 - Partial upload cleanup
 
 ### Processing Failures
+
 - Retry mechanism with exponential backoff
 - Error logging with context
 - Manual retry capability
 - Fallback processing modes
 
 ### Security Incidents
+
 - Automatic quarantine for infected files
 - Admin notification system
 - Audit trail for all file operations

@@ -12,6 +12,7 @@
 - [🏗️ Architecture Patterns](#️-architecture-patterns)
 - [🔒 Security Guidelines](#-security-guidelines)
 - [📊 Performance Guidelines](#-performance-guidelines)
+- [🎯 Code Review Checklist](#-code-review-checklist)
 
 ---
 
@@ -381,13 +382,13 @@ Detailed explanation of the component's role in the system.
 
 ## Usage
 
-```python
-# Basic usage example
-from module import Component
+    ```python
+    # Basic usage example
+    from module import Component
 
-component = Component(config)
-result = await component.process(data)
-```
+    component = Component(config)
+    result = await component.process(data)
+    ```
 
 ## Configuration
 
@@ -403,9 +404,9 @@ result = await component.process(data)
 
 ## Testing
 
-```bash
-pytest tests/test_component.py -v
-```
+    ```bash
+    pytest tests/test_component.py -v
+    ```
 
 ## Related
 

@@ -8,13 +8,16 @@ This document describes TripSage's real-time communication architecture and WebS
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [Backend Implementation](#backend-implementation)
-4. [Frontend Implementation](#frontend-implementation)
+3. [Architecture Components](#architecture-components)
+4. [Client Architecture](#client-architecture)
 5. [Performance Optimizations](#performance-optimizations)
-6. [API Reference](#api-reference)
-7. [Testing](#testing)
-8. [Troubleshooting](#troubleshooting)
-9. [Best Practices](#best-practices)
+6. [API Architecture](#api-architecture)
+7. [Scalability Architecture](#scalability-architecture)
+8. [Security Architecture](#security-architecture)
+9. [Architectural Patterns](#architectural-patterns)
+10. [Performance Benchmarks](#performance-benchmarks)
+11. [Future Architecture Considerations](#future-architecture-considerations)
+12. [Architecture Summary](#architecture-summary)
 
 ## Overview
 

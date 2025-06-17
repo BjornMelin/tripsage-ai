@@ -9,7 +9,7 @@
 
 When you log in, you'll see:
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │  🧳 TripSage    [Search...]   [+New Trip]  [👤]     │
 ├─────────────────────────────────────────────────────┤
@@ -30,6 +30,7 @@ When you log in, you'll see:
 ### Navigation Elements
 
 **Top Navigation Bar:**
+
 - 🏠 **Home**: Return to dashboard
 - 🔍 **Search**: Global search for trips, destinations, bookings
 - ➕ **New Trip**: Start planning a new adventure
@@ -37,6 +38,7 @@ When you log in, you'll see:
 - 👤 **Profile**: Account settings and preferences
 
 **Side Panel (Desktop):**
+
 - 📅 My Trips
 - ✈️ Flights
 - 🏨 Hotels
@@ -58,7 +60,7 @@ When you log in, you'll see:
 
 ### Trip Workspace Layout
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │ ✈️ Tokyo Adventure     Mar 15-25, 2025    [Share] [⋮]  │
 ├────────────────────────────────────────────────────────┤
@@ -79,6 +81,7 @@ When you log in, you'll see:
 ### Key Features by Tab
 
 **Overview Tab:**
+
 - Trip summary and stats
 - Weather forecast
 - Quick actions
@@ -86,6 +89,7 @@ When you log in, you'll see:
 - Export options
 
 **Itinerary Tab:**
+
 - Drag-and-drop scheduling
 - Day-by-day view
 - Map integration
@@ -93,6 +97,7 @@ When you log in, you'll see:
 - Activity details
 
 **Flights Tab:**
+
 - Booked flights
 - Alternative options
 - Price tracking
@@ -100,6 +105,7 @@ When you log in, you'll see:
 - Seat selection
 
 **Hotels Tab:**
+
 - Confirmed bookings
 - Saved options
 - Comparison view
@@ -107,6 +113,7 @@ When you log in, you'll see:
 - Cancellation policies
 
 **Budget Tab:**
+
 - Expense tracking
 - Category breakdown
 - Currency conversion
@@ -120,12 +127,14 @@ When you log in, you'll see:
 The AI Assistant is always available:
 
 **Quick Commands:**
+
 - "Find flights to Paris in May"
 - "Show me hotels near Central Park"
 - "Add a day trip to Mount Fuji"
 - "What's the weather like in Bali in December?"
 
 **Context-Aware Suggestions:**
+
 - Remembers your conversation history
 - Understands current trip context
 - Learns from your preferences
@@ -134,12 +143,14 @@ The AI Assistant is always available:
 ### Smart Features
 
 **Natural Language Processing:**
+
 - Understands complex requests
 - Handles follow-up questions
 - Supports multiple languages
 - Clarifies ambiguous requests
 
 **Visual Responses:**
+
 - Interactive cards for flights/hotels
 - Embedded maps for locations
 - Weather widgets
@@ -152,6 +163,7 @@ The AI Assistant is always available:
 Access via search bar or Ctrl/Cmd + K:
 
 **Search Capabilities:**
+
 - 🏙️ Destinations: "Beaches in Thailand"
 - ✈️ Flights: "NYC to LAX under $300"
 - 🏨 Hotels: "Pet-friendly hotels in Portland"
@@ -161,6 +173,7 @@ Access via search bar or Ctrl/Cmd + K:
 ### Filters & Sorting
 
 **Flight Filters:**
+
 - Price range
 - Airlines
 - Stops
@@ -169,6 +182,7 @@ Access via search bar or Ctrl/Cmd + K:
 - Cabin class
 
 **Hotel Filters:**
+
 - Price per night
 - Star rating
 - Amenities
@@ -177,6 +191,7 @@ Access via search bar or Ctrl/Cmd + K:
 - Property type
 
 **Smart Sorting:**
+
 - Best value
 - Recommended
 - Price (low to high)
@@ -187,6 +202,7 @@ Access via search bar or Ctrl/Cmd + K:
 ## 📱 Responsive Design
 
 ### Desktop Experience (1200px+)
+
 - Full sidebar navigation
 - Multi-column layouts
 - Hover interactions
@@ -194,6 +210,7 @@ Access via search bar or Ctrl/Cmd + K:
 - Drag-and-drop
 
 ### Tablet Experience (768px-1199px)
+
 - Collapsible sidebar
 - Touch-optimized
 - Swipe gestures
@@ -201,6 +218,7 @@ Access via search bar or Ctrl/Cmd + K:
 - Portrait/landscape modes
 
 ### Mobile Experience (<768px)
+
 - Bottom navigation
 - Single column
 - Touch gestures
@@ -212,12 +230,14 @@ Access via search bar or Ctrl/Cmd + K:
 ### Keyboard Shortcuts
 
 **Navigation:**
+
 - `Cmd/Ctrl + K`: Global search
 - `Cmd/Ctrl + N`: New trip
 - `Cmd/Ctrl + /`: AI chat focus
 - `Esc`: Close modals
 
 **Trip Planning:**
+
 - `Tab`: Navigate between fields
 - `Enter`: Confirm selection
 - `Space`: Toggle checkboxes
@@ -226,6 +246,7 @@ Access via search bar or Ctrl/Cmd + K:
 ### Bulk Actions
 
 **Multi-Select Operations:**
+
 - Select multiple flights to compare
 - Bulk delete activities
 - Group expense categorization
@@ -234,7 +255,8 @@ Access via search bar or Ctrl/Cmd + K:
 ### Advanced Filters
 
 **Complex Queries:**
-```
+
+```text
 flights:NYC→LAX date:March budget:<$400 
 stops:<=1 airline:Delta,United time:morning
 ```
@@ -242,6 +264,7 @@ stops:<=1 airline:Delta,United time:morning
 ### Custom Views
 
 **Personalization:**
+
 - Save filter combinations
 - Create custom dashboards
 - Set default views
@@ -250,12 +273,14 @@ stops:<=1 airline:Delta,United time:morning
 ## 🎨 Customization Options
 
 ### Theme Settings
+
 - 🌞 Light mode
 - 🌙 Dark mode
 - 🎨 Auto (follows system)
 - 🎯 High contrast
 
 ### Display Preferences
+
 - Currency display
 - Date formats
 - Distance units
@@ -263,6 +288,7 @@ stops:<=1 airline:Delta,United time:morning
 - Language selection
 
 ### Notification Settings
+
 - Price drop alerts
 - Booking reminders
 - Trip updates
@@ -274,12 +300,14 @@ stops:<=1 airline:Delta,United time:morning
 ### Sharing Trips
 
 **Permission Levels:**
+
 - 👁️ **View Only**: See trip details
 - 💬 **Comment**: Add suggestions
 - ✏️ **Edit**: Make changes
 - 👑 **Admin**: Full control
 
 ### Real-Time Collaboration
+
 - Live cursor tracking
 - Instant updates
 - Change history
@@ -287,6 +315,7 @@ stops:<=1 airline:Delta,United time:morning
 - @mentions
 
 ### Group Features
+
 - Polls for decisions
 - Task assignments
 - Shared expenses
@@ -296,6 +325,7 @@ stops:<=1 airline:Delta,United time:morning
 ## 📊 Data Management
 
 ### Import Options
+
 - Email confirmations
 - Calendar events
 - Previous trips
@@ -303,6 +333,7 @@ stops:<=1 airline:Delta,United time:morning
 - Other travel apps
 
 ### Export Formats
+
 - PDF itinerary
 - Calendar files (.ics)
 - Spreadsheet (.xlsx)
@@ -310,6 +341,7 @@ stops:<=1 airline:Delta,United time:morning
 - Print-friendly
 
 ### Backup & Sync
+
 - Automatic cloud backup
 - Multi-device sync
 - Offline access
@@ -319,6 +351,7 @@ stops:<=1 airline:Delta,United time:morning
 ## 🛠️ Troubleshooting Common Issues
 
 ### Performance Tips
+
 - Clear browser cache
 - Update browser
 - Disable extensions
@@ -326,6 +359,7 @@ stops:<=1 airline:Delta,United time:morning
 - Use recommended browsers
 
 ### Display Issues
+
 - Zoom level (100%)
 - Screen resolution
 - Browser compatibility
@@ -333,6 +367,7 @@ stops:<=1 airline:Delta,United time:morning
 - Cookies allowed
 
 ### Sync Problems
+
 - Check connection
 - Refresh page
 - Log out/in
@@ -342,18 +377,21 @@ stops:<=1 airline:Delta,United time:morning
 ## 🎯 Tips for Efficiency
 
 ### Quick Actions
+
 1. **Star** favorite hotels for quick access
 2. **Pin** important trips to dashboard
 3. **Template** common trip types
 4. **Shortcut** frequent searches
 
 ### Workflow Optimization
+
 1. Plan in AI chat first
 2. Refine in detailed views
 3. Book with confidence
 4. Track in real-time
 
 ### Best Practices
+
 - Regular saves (auto-saved)
 - Descriptive trip names
 - Organized documents

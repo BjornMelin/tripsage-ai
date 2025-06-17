@@ -4,7 +4,7 @@ This document consolidates reports on significant database migration efforts wit
 
 ## Report 1: Migration from `src/db/` to MCP-Based Approach
 
-**Date of Completion**: Approximately January 16, 2025 (as per original report)  
+**Date of Completion**: Approximately June 16, 2025 (as per original report)  
 **Status**: COMPLETE ✅
 
 ### 1.1. Summary
@@ -407,7 +407,8 @@ supabase db inspect
 ### Migration File Organization
 
 **Current Structure:**
-```
+
+```text
 supabase/
 ├── config.toml
 ├── migrations/
@@ -419,7 +420,8 @@ supabase/
 ```
 
 **Legacy Structure (Deprecated):**
-```
+
+```text
 migrations/ (REMOVED)
 ├── 20250508_01_initial_schema_core_tables.sql
 ├── 20250508_02_dependent_tables.sql

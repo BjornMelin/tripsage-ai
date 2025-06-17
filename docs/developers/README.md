@@ -21,6 +21,7 @@
 ## 🛠️ Quick Start
 
 ### **Prerequisites**
+
 - Python 3.13+
 - Node.js 20+
 - PostgreSQL (via Supabase)
@@ -82,6 +83,7 @@ cd frontend && pnpm test
 ## 🔧 Development Tools
 
 ### **Python Development**
+
 ```bash
 # Linting and formatting
 ruff check . --fix
@@ -95,6 +97,7 @@ uv run mypy tripsage
 ```
 
 ### **TypeScript Development**
+
 ```bash
 # Linting and formatting
 npx biome lint --apply .
@@ -109,6 +112,7 @@ pnpm test:coverage # Coverage report
 ## 📊 Development Metrics
 
 ### **Current Status**
+
 - **Backend Tests**: 2,444 tests (79.9% passing)
 - **Frontend Tests**: 1,443 tests (64.1% passing)  
 - **E2E Tests**: Comprehensive Playwright suite
@@ -116,6 +120,7 @@ pnpm test:coverage # Coverage report
 - **Performance**: Sub-1.5s load times, >95 Lighthouse score
 
 ### **Success Metrics**
+
 - ✅ Zero critical security vulnerabilities
 - ✅ 90%+ test coverage maintained
 - ✅ All linting rules pass

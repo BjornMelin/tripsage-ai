@@ -23,6 +23,7 @@ The travel planning domain involves numerous interconnected decisions and constr
 We will use LangGraph as our primary agent orchestration framework.
 
 LangGraph provides:
+
 - A graph-based approach to defining agent workflows
 - Built-in state management with checkpointing
 - Native support for cycles and conditional branching

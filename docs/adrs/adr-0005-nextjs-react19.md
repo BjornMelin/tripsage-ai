@@ -24,6 +24,7 @@ Based on comprehensive frontend research, we need a framework that supports the 
 We will use Next.js 15 with React 19 for our frontend application.
 
 This technology stack provides:
+
 - React 19's automatic optimization compiler
 - Next.js 15's App Router with streaming SSR
 - Built-in performance optimizations (Turbopack)
@@ -61,7 +62,8 @@ This technology stack provides:
 
 Modern build tool with React.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Lacks built-in SSR/SSG capabilities
 - No integrated routing solution
 - Would require assembling many tools manually
@@ -71,7 +73,8 @@ Modern build tool with React.
 
 Full-stack React framework.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Smaller ecosystem compared to Next.js
 - Less focus on static optimization
 - Different philosophy that doesn't align with our needs
@@ -81,7 +84,8 @@ Full-stack React framework.
 
 Alternative framework ecosystem.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Would require team to learn new framework
 - Smaller ecosystem for AI/agent UI patterns
 - React 19's features are compelling for our use case

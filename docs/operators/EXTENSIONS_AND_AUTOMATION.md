@@ -5,6 +5,7 @@ This document provides comprehensive guidance for configuring and managing Supab
 ## Overview
 
 TripSage utilizes several Supabase extensions to enable advanced functionality including:
+
 - **pg_cron**: Automated scheduled jobs for maintenance and data processing
 - **pg_net**: HTTP requests from database for webhook notifications
 - **Realtime**: Live updates for collaborative features
@@ -15,9 +16,11 @@ TripSage utilizes several Supabase extensions to enable advanced functionality i
 ### Core Extensions
 
 #### 1. pg_cron (Scheduled Jobs)
+
 Enables automated database maintenance and scheduled tasks.
 
 **Configuration:**
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pg_cron";
 GRANT USAGE ON SCHEMA cron TO postgres;
@@ -25,6 +28,7 @@ ALTER SYSTEM SET cron.database_name = 'postgres';
 ```
 
 **Scheduled Jobs:**
+
 - **Daily Cache Cleanup** (2:00 AM): Removes expired search cache entries
 - **Memory Cleanup** (3:00 AM): Archives old session memories
 - **Trip Archival** (4:00 AM Sunday): Archives completed trips older than 1 year
@@ -32,9 +36,11 @@ ALTER SYSTEM SET cron.database_name = 'postgres';
 - **API Key Monitoring** (9:00 AM): Alerts for expiring API keys
 
 #### 2. pg_net (HTTP Requests)
+
 Enables webhook notifications and external API calls from the database.
 
 **Configuration:**
+
 ```sql
 CREATE EXTENSION IF NOT EXISTS "pg_net";
 ALTER SYSTEM SET pg_net.batch_size = 200;
@@ -42,15 +48,18 @@ ALTER SYSTEM SET pg_net.ttl = '1 hour';
 ```
 
 **Use Cases:**
+
 - Trip collaboration notifications
 - Booking status webhooks
 - External service integrations
 - Edge Function triggers
 
 #### 3. Supabase Realtime
+
 Provides live database updates for collaborative features.
 
 **Tables with Realtime:**
+
 - `trips` - Trip updates and collaboration
 - `chat_messages` - Live chat functionality
 - `chat_sessions` - Session status updates
@@ -61,6 +70,7 @@ Provides live database updates for collaborative features.
 ### Performance Extensions
 
 #### pg_stat_statements
+
 Monitors query performance for optimization.
 
 ```sql
@@ -70,6 +80,7 @@ ALTER SYSTEM SET pg_stat_statements.max = 10000;
 ```
 
 #### btree_gist
+
 Provides advanced indexing for complex queries.
 
 ```sql
@@ -79,6 +90,7 @@ CREATE EXTENSION IF NOT EXISTS "btree_gist";
 ### Security Extensions
 
 #### pgcrypto
+
 Handles encryption for sensitive data like API keys.
 
 ```sql
@@ -90,6 +102,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 ### Daily Jobs
 
 #### Cache Cleanup (2:00 AM)
+
 ```sql
 SELECT cron.schedule(
     'cleanup-expired-search-cache',
@@ -104,6 +117,7 @@ SELECT cron.schedule(
 ```
 
 #### Memory Management (3:00 AM)
+
 ```sql
 SELECT cron.schedule(
     'cleanup-old-session-memories',
@@ -116,6 +130,7 @@ SELECT cron.schedule(
 ```
 
 #### Performance Optimization (1:00 AM)
+
 ```sql
 SELECT cron.schedule(
     'update-table-statistics',
@@ -129,6 +144,7 @@ SELECT cron.schedule(
 ### Weekly Jobs
 
 #### Trip Archival (Sunday 4:00 AM)
+
 ```sql
 SELECT cron.schedule(
     'archive-old-completed-trips',
@@ -143,6 +159,7 @@ SELECT cron.schedule(
 ```
 
 #### Database Maintenance (Sunday 5:00 AM)
+
 ```sql
 SELECT cron.schedule(
     'vacuum-tables',
@@ -156,6 +173,7 @@ SELECT cron.schedule(
 ### High-Frequency Jobs
 
 #### Memory Embedding Generation (Every 30 minutes)
+
 ```sql
 SELECT cron.schedule(
     'generate-memory-embeddings',
@@ -169,6 +187,7 @@ SELECT cron.schedule(
 ```
 
 #### Health Monitoring (Every 5 minutes)
+
 ```sql
 SELECT cron.schedule(
     'monitor-database-health',
@@ -187,7 +206,9 @@ SELECT cron.schedule(
 ### Configuration Tables
 
 #### webhook_configs
+
 Stores webhook endpoint configurations:
+
 ```sql
 CREATE TABLE webhook_configs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -204,7 +225,9 @@ CREATE TABLE webhook_configs (
 ```
 
 #### webhook_logs
+
 Tracks webhook execution history:
+
 ```sql
 CREATE TABLE webhook_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -223,27 +246,32 @@ CREATE TABLE webhook_logs (
 ### Event Types
 
 #### Trip Events
+
 - `trip.collaborator.added`
-- `trip.collaborator.updated` 
+- `trip.collaborator.updated`
 - `trip.collaborator.removed`
 
 #### Chat Events
+
 - `chat.message.created`
 - `chat.session.started`
 - `chat.session.ended`
 
 #### Booking Events
+
 - `booking.flights.booked`
 - `booking.accommodations.booked`
 - `booking.*.cancelled`
 
 #### Processing Events
+
 - `chat.message.process`
 - `memory.generate.embedding`
 
 ### Webhook Functions
 
 #### Core Webhook Sender
+
 ```sql
 CREATE OR REPLACE FUNCTION send_webhook_with_retry(
     p_webhook_name TEXT,
@@ -255,6 +283,7 @@ RETURNS BIGINT
 ```
 
 #### Event-Specific Triggers
+
 - `webhook_trip_collaboration()` - Handles collaboration events
 - `webhook_chat_message()` - Processes chat messages
 - `webhook_booking_status()` - Manages booking updates
@@ -262,21 +291,25 @@ RETURNS BIGINT
 ## Edge Functions
 
 ### trip-events
+
 Handles trip collaboration notifications and external integrations.
 
 **Endpoint:** `/functions/v1/trip-events`
 **Events:** Trip collaboration changes
-**Actions:** 
+**Actions:**
+
 - Send user notifications
 - Email alerts for collaborators
 - External calendar sync triggers
 
 ### ai-processing
+
 Manages AI-related tasks like embedding generation and preference extraction.
 
 **Endpoint:** `/functions/v1/ai-processing`
 **Events:** Chat message processing, memory embedding
 **Actions:**
+
 - Generate embeddings for new content
 - Extract user preferences from messages
 - Update long-term memory patterns
@@ -286,16 +319,19 @@ Manages AI-related tasks like embedding generation and preference extraction.
 ### Job Management Functions
 
 #### List Scheduled Jobs
+
 ```sql
 SELECT * FROM list_scheduled_jobs();
 ```
 
 #### Get Job History
+
 ```sql
 SELECT * FROM get_job_history('cleanup-expired-search-cache', 50);
 ```
 
 #### Test Webhook
+
 ```sql
 SELECT test_webhook('trip_events', '{"test": true, "timestamp": "now"}'::JSONB);
 ```
@@ -303,16 +339,19 @@ SELECT test_webhook('trip_events', '{"test": true, "timestamp": "now"}'::JSONB);
 ### Health Verification
 
 #### Extension Status
+
 ```sql
 SELECT * FROM verify_extensions();
 ```
 
 #### Automation Setup
+
 ```sql
 SELECT * FROM verify_automation_setup();
 ```
 
 #### Webhook Statistics
+
 ```sql
 SELECT * FROM get_webhook_stats('trip_events', 7);
 ```
@@ -320,13 +359,17 @@ SELECT * FROM get_webhook_stats('trip_events', 7);
 ### Monitoring Tables
 
 #### notifications
+
 User notifications from automated processes:
+
 - API key expiration alerts
 - Trip collaboration invites
 - Booking confirmations
 
 #### system_metrics
+
 Database performance and health metrics:
+
 - Connection counts
 - Query performance
 - Resource utilization
@@ -334,6 +377,7 @@ Database performance and health metrics:
 ## Configuration Best Practices
 
 ### 1. Environment Setup
+
 ```bash
 # Required environment variables
 SUPABASE_URL=your-project-url
@@ -343,18 +387,21 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 ```
 
 ### 2. Security Considerations
+
 - Use service role key only in Edge Functions
 - Implement webhook signature verification
 - Encrypt sensitive configuration data
 - Monitor webhook logs for security events
 
 ### 3. Performance Optimization
+
 - Schedule maintenance jobs during low-traffic periods
 - Implement retry logic with exponential backoff
 - Monitor job execution times and adjust schedules
 - Use connection pooling for external API calls
 
 ### 4. Error Handling
+
 - Implement comprehensive logging for all automated tasks
 - Set up alerts for failed jobs or webhooks
 - Maintain rollback procedures for critical operations
@@ -363,6 +410,7 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 ## Migration and Deployment
 
 ### Applying Extensions
+
 1. Run the migration file: `20250611_02_enable_automation_extensions.sql`
 2. Verify extension installation with `verify_automation_setup()`
 3. Configure webhook endpoints in the `webhook_configs` table
@@ -370,6 +418,7 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 5. Test automation with `test_webhook()` function
 
 ### Production Considerations
+
 - Enable pg_stat_statements for query monitoring
 - Configure appropriate log retention policies
 - Set up external monitoring for job failures
@@ -381,21 +430,25 @@ EMAIL_SERVICE_URL=your-email-service-url (optional)
 ### Common Issues
 
 #### pg_cron not working
+
 - Verify extension is installed: `SELECT * FROM pg_extension WHERE extname = 'pg_cron';`
 - Check database configuration: `SHOW cron.database_name;`
 - Review job logs: `SELECT * FROM cron.job_run_details ORDER BY start_time DESC;`
 
 #### Webhooks failing
+
 - Check webhook configuration: `SELECT * FROM webhook_configs WHERE is_active = true;`
 - Review webhook logs: `SELECT * FROM webhook_logs WHERE response_status >= 400;`
 - Test connectivity: `SELECT test_webhook('webhook_name');`
 
 #### Realtime not updating
+
 - Verify publication exists: `SELECT * FROM pg_publication WHERE pubname = 'supabase_realtime';`
 - Check table inclusion: `SELECT * FROM pg_publication_tables WHERE pubname = 'supabase_realtime';`
 - Confirm client subscription settings in frontend
 
 ### Debugging Tools
+
 - `verify_automation_setup()` - Overall system health
 - `list_scheduled_jobs()` - View all cron jobs
 - `get_webhook_stats()` - Webhook performance metrics

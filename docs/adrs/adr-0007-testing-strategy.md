@@ -17,6 +17,7 @@ TripSage requires a comprehensive testing strategy that:
 - Focuses on behavior over implementation details
 
 Our current test suite has significant issues:
+
 - Legacy patterns incompatible with modern React
 - Poor coverage (~45% frontend, ~60% backend)
 - Slow execution times
@@ -27,17 +28,20 @@ Our current test suite has significant issues:
 We will adopt a modern testing strategy:
 
 **Frontend Testing Stack:**
+
 - **Unit/Component**: Vitest with browser mode
 - **Integration**: React Testing Library
 - **E2E**: Playwright
 - **Visual Regression**: Playwright screenshots
 
 **Backend Testing Stack:**
+
 - **Unit/Integration**: Pytest with async support
 - **API Testing**: FastAPI test client
 - **Property-Based**: Hypothesis for complex logic
 
 **Key Principles:**
+
 - Behavior-driven testing (what users see/do)
 - Real browser testing for components
 - API mocking with MSW
@@ -73,7 +77,8 @@ We will adopt a modern testing strategy:
 
 Traditional React testing setup.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Slower execution, especially with JSDOM
 - No native browser testing support
 - Configuration complexity with modern tools
@@ -83,7 +88,8 @@ Traditional React testing setup.
 
 Popular E2E testing framework.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Slower than Playwright
 - Less flexible architecture
 - Separate toolchain from unit tests
@@ -93,7 +99,8 @@ Popular E2E testing framework.
 
 Maintain and fix existing test suite.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Would require extensive refactoring anyway
 - Legacy patterns don't support new features
 - Poor ROI on fixing fundamentally flawed tests

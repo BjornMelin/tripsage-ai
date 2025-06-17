@@ -11,6 +11,7 @@ This document details all database triggers implemented in the TripSage system f
 Automatically update `updated_at` timestamps on record modifications.
 
 **Tables with `updated_at` triggers:**
+
 - trips
 - flights
 - accommodations
@@ -29,11 +30,13 @@ Automatically update `updated_at` timestamps on record modifications.
 ### 2. Collaboration Event Triggers
 
 #### notify_trip_collaboration_changes
+
 - **Event:** INSERT, UPDATE, DELETE on `trip_collaborators`
 - **Function:** `notify_collaboration_change()`
 - **Purpose:** Send real-time notifications via pg_notify when collaborators are added, updated, or removed
 - **Notification Channel:** `trip_collaboration`
 - **Payload:**
+
   ```json
   {
     "event_type": "collaborator_added|collaborator_updated|collaborator_removed",
@@ -50,6 +53,7 @@ Automatically update `updated_at` timestamps on record modifications.
   ```
 
 #### validate_collaboration_permissions_trigger
+
 - **Event:** BEFORE INSERT or UPDATE on `trip_collaborators`
 - **Function:** `validate_collaboration_permissions()`
 - **Purpose:** Enforce permission hierarchy rules
@@ -60,6 +64,7 @@ Automatically update `updated_at` timestamps on record modifications.
   - Admins cannot grant admin permissions to others
 
 #### audit_trip_collaboration_changes
+
 - **Event:** AFTER UPDATE on `trip_collaborators`
 - **Function:** `audit_collaboration_changes()`
 - **Purpose:** Create audit trail for collaboration changes
@@ -68,10 +73,12 @@ Automatically update `updated_at` timestamps on record modifications.
 ### 3. Cache Invalidation Triggers
 
 #### notify_cache_invalidation
+
 - **Tables:** trips, flights, accommodations
 - **Event:** INSERT, UPDATE, DELETE
 - **Notification Channel:** `cache_invalidation`
 - **Payload:**
+
   ```json
   {
     "event_type": "cache_invalidation",
@@ -83,6 +90,7 @@ Automatically update `updated_at` timestamps on record modifications.
   ```
 
 #### cleanup_related_search_cache
+
 - **Tables:** trips, accommodations, flights
 - **Event:** INSERT, UPDATE
 - **Purpose:** Automatically clean up related search cache entries
@@ -94,6 +102,7 @@ Automatically update `updated_at` timestamps on record modifications.
 ### 4. Business Logic Triggers
 
 #### auto_expire_inactive_sessions
+
 - **Table:** chat_sessions
 - **Event:** BEFORE UPDATE when updated_at changes
 - **Function:** `auto_expire_chat_session()`
@@ -101,6 +110,7 @@ Automatically update `updated_at` timestamps on record modifications.
 - **Notification Channel:** `chat_session_expired`
 
 #### cleanup_message_attachments
+
 - **Table:** chat_messages
 - **Event:** AFTER DELETE
 - **Function:** `cleanup_orphaned_attachments()`
@@ -108,6 +118,7 @@ Automatically update `updated_at` timestamps on record modifications.
 - **Behavior:** Sets `metadata.orphaned = true` on related attachments
 
 #### update_trip_status_from_bookings
+
 - **Tables:** flights, accommodations
 - **Event:** INSERT or UPDATE when booking_status changes
 - **Function:** `update_trip_status_from_bookings()`
@@ -122,6 +133,7 @@ Automatically update `updated_at` timestamps on record modifications.
 ### Daily Jobs
 
 #### daily_cleanup_job
+
 - **Schedule:** 2 AM UTC daily
 - **Tasks:**
   - Expire inactive chat sessions (24h timeout)
@@ -133,6 +145,7 @@ Automatically update `updated_at` timestamps on record modifications.
 ### Weekly Jobs
 
 #### weekly_maintenance_job
+
 - **Schedule:** 3 AM UTC every Sunday
 - **Tasks:**
   - Run database performance maintenance
@@ -143,6 +156,7 @@ Automatically update `updated_at` timestamps on record modifications.
 ### Monthly Jobs
 
 #### monthly_cleanup_job
+
 - **Schedule:** 4 AM UTC on the 1st of each month
 - **Tasks:**
   - Deep clean old memories (keep last 365 days, max 1000 per user)
@@ -153,11 +167,13 @@ Automatically update `updated_at` timestamps on record modifications.
 ### Recurring Jobs
 
 #### search_cache_cleanup
+
 - **Schedule:** Every 6 hours
 - **Function:** `cleanup_expired_search_cache()`
 - **Purpose:** Remove expired search results from cache tables
 
 #### expire_sessions
+
 - **Schedule:** Every hour
 - **Function:** `expire_inactive_sessions(24)`
 - **Purpose:** Mark inactive sessions as expired
@@ -230,6 +246,7 @@ LIMIT 10;
 ## Error Handling
 
 All trigger functions include proper error handling:
+
 - Permission violations raise exceptions with descriptive messages
 - Audit failures are logged but don't block operations
 - Notification failures don't affect core functionality

@@ -28,6 +28,7 @@ We will implement WebSocket-based real-time communication with:
 4. **Scaling**: Redis pub/sub for multi-instance coordination
 
 The architecture supports:
+
 - Automatic reconnection and connection management
 - Room-based broadcasting for collaboration
 - Message queuing and delivery guarantees
@@ -62,7 +63,8 @@ The architecture supports:
 
 One-way real-time communication from server to client.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Unidirectional only (server to client)
 - Less suitable for interactive features
 - Limited browser support compared to WebSockets
@@ -72,7 +74,8 @@ One-way real-time communication from server to client.
 
 Traditional polling with long-held connections.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Higher latency and overhead
 - More resource intensive
 - Not truly real-time
@@ -82,7 +85,8 @@ Traditional polling with long-held connections.
 
 GraphQL-based real-time updates.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Would require adopting GraphQL for entire API
 - Additional complexity for our use case
 - Less flexible for arbitrary message types

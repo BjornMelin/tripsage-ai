@@ -62,25 +62,29 @@ curl https://api.tripsage.ai/v1/health \
 
 ### Core Services
 
-**Travel Planning**
+#### Travel Planning
+
 - `POST /v1/trips` - Create a new trip
 - `GET /v1/trips/{id}` - Get trip details
 - `PUT /v1/trips/{id}` - Update trip
 - `DELETE /v1/trips/{id}` - Delete trip
 
-**Flight Search**
+#### Flight Search
+
 - `POST /v1/flights/search` - Search flights
 - `GET /v1/flights/{id}` - Get flight details
 - `POST /v1/flights/book` - Book flight
 - `POST /v1/flights/track` - Track prices
 
-**Accommodations**
+#### Accommodations
+
 - `POST /v1/hotels/search` - Search hotels
 - `GET /v1/hotels/{id}` - Get hotel details
 - `POST /v1/hotels/book` - Book hotel
 - `GET /v1/hotels/availability` - Check availability
 
-**AI Assistant**
+#### AI Assistant
+
 - `POST /v1/chat` - Send message to AI
 - `GET /v1/chat/history` - Get conversation
 - `POST /v1/chat/plan` - AI trip planning
@@ -100,6 +104,7 @@ curl https://api.tripsage.ai/v1/health \
 ### Usage Monitoring
 
 Track your API usage:
+
 - Dashboard: [app.tripsage.ai/api/usage](https://app.tripsage.ai/api/usage)
 - API: `GET /v1/usage`
 - Headers: `X-RateLimit-*` in responses
@@ -123,6 +128,7 @@ curl https://api.tripsage.ai/v1/user/trips \
 ### JWT Tokens
 
 For user-specific operations:
+
 1. Obtain JWT via `/v1/auth/login`
 2. Include in Authorization header
 3. Refresh before expiration
@@ -132,6 +138,7 @@ For user-specific operations:
 ### API Explorer
 
 Interactive API testing:
+
 - Swagger UI: [api.tripsage.ai/docs](https://api.tripsage.ai/docs)
 - GraphQL Playground: [api.tripsage.ai/graphql](https://api.tripsage.ai/graphql)
 - Postman Collection: [Download](https://api.tripsage.ai/postman)
@@ -139,6 +146,7 @@ Interactive API testing:
 ### Testing Environment
 
 Sandbox for development:
+
 - Base URL: `https://sandbox.tripsage.ai/v1`
 - Test API Key: Provided on signup
 - Reset: Daily at 00:00 UTC
@@ -192,19 +200,22 @@ Sandbox for development:
 
 ### Popular Use Cases
 
-**Travel Agencies**
+#### Travel Agencies
+
 - White-label booking platform
 - Custom travel planning tools
 - Client management systems
 - Revenue optimization
 
-**Corporate Travel**
+#### Corporate Travel
+
 - Expense management integration
 - Policy enforcement
 - Approval workflows
 - Reporting dashboards
 
-**Content Creators**
+#### Content Creators
+
 - Travel blog automation
 - Social media integration
 - Itinerary visualization
@@ -221,17 +232,20 @@ Sandbox for development:
 
 ### Support Levels
 
-**Community Support**
+#### Community Support
+
 - Discord community
 - Stack Overflow tag: `tripsage-api`
 - GitHub discussions
 
-**Developer Support** 
+#### Developer Support
+
 - Email response within 24h
 - Code review assistance
 - Integration guidance
 
-**Enterprise Support**
+#### Enterprise Support
+
 - Dedicated Slack channel
 - Phone support
 - Custom training

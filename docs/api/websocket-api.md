@@ -1552,7 +1552,7 @@ class WebSocketManager {
 }
 ```
 
-#### Performance Monitoring
+#### Performance Monitoring - WebSocket
 
 ```typescript
 class WebSocketPerformanceMonitor {

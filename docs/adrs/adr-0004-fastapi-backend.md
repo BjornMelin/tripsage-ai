@@ -23,6 +23,7 @@ The backend needs to coordinate multiple external APIs (flights, hotels, weather
 We will use FastAPI as our primary backend framework.
 
 FastAPI provides:
+
 - Native async/await support for high concurrency
 - Automatic OpenAPI/Swagger documentation generation
 - Pydantic integration for data validation
@@ -60,7 +61,8 @@ FastAPI provides:
 
 Django with Django REST Framework.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Heavier framework with features we don't need (admin, ORM)
 - Synchronous by default, async support is secondary
 - More complex for pure API services
@@ -70,7 +72,8 @@ Django with Django REST Framework.
 
 Lightweight Python web framework.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Requires many extensions for features FastAPI includes
 - No built-in async support
 - Manual API documentation
@@ -80,7 +83,8 @@ Lightweight Python web framework.
 
 JavaScript/TypeScript backend frameworks.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Would split our backend language from Python AI/ML ecosystem
 - Less mature libraries for AI/ML integration
 - Team expertise is primarily in Python

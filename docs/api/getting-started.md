@@ -33,6 +33,7 @@ TRIPSAGE_API_KEY=your_api_key_here
 ```
 
 **Security Tips:**
+
 - Never commit API keys to version control
 - Use environment variables
 - Rotate keys regularly
@@ -48,6 +49,7 @@ curl https://api.tripsage.ai/v1/health \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -78,6 +80,7 @@ curl -X POST https://api.tripsage.ai/v1/trips/search \
 ### Option A: Direct HTTP (Any Language)
 
 **Python Example:**
+
 ```python
 import requests
 
@@ -101,6 +104,7 @@ flights = response.json()
 ```
 
 **JavaScript Example:**
+
 ```javascript
 const response = await fetch('https://api.tripsage.ai/v1/flights/search', {
   method: 'POST',
@@ -122,6 +126,7 @@ const flights = await response.json();
 ### Option B: Official SDKs (Recommended)
 
 **Python SDK:**
+
 ```bash
 pip install tripsage
 ```
@@ -146,6 +151,7 @@ trip = client.ai.plan_trip(
 ```
 
 **JavaScript/TypeScript SDK:**
+
 ```bash
 npm install @tripsage/sdk
 ```
@@ -174,14 +180,16 @@ const trip = await client.ai.planTrip({
 ### Base URL
 
 All API requests use this base URL:
-```
+
+```text
 https://api.tripsage.ai/v1
 ```
 
 ### Authentication
 
 Include your API key in the Authorization header:
-```
+
+```text
 Authorization: Bearer YOUR_API_KEY
 ```
 
@@ -197,6 +205,7 @@ Authorization: Bearer YOUR_API_KEY
 All responses follow this structure:
 
 **Success Response:**
+
 ```json
 {
   "success": true,
@@ -212,6 +221,7 @@ All responses follow this structure:
 ```
 
 **Error Response:**
+
 ```json
 {
   "success": false,
@@ -235,6 +245,7 @@ All responses follow this structure:
 ### Searching Resources
 
 **Flights Search:**
+
 ```bash
 POST /v1/flights/search
 {
@@ -251,6 +262,7 @@ POST /v1/flights/search
 ```
 
 **Hotels Search:**
+
 ```bash
 POST /v1/hotels/search
 {
@@ -266,6 +278,7 @@ POST /v1/hotels/search
 ### Creating Resources
 
 **Create Trip:**
+
 ```bash
 POST /v1/trips
 {
@@ -284,6 +297,7 @@ POST /v1/trips
 ### Updating Resources
 
 **Update Trip:**
+
 ```bash
 PUT /v1/trips/{trip_id}
 {
@@ -331,13 +345,15 @@ ws.send(JSON.stringify({
 ### Rate Limiting
 
 Monitor rate limit headers:
-```
+
+```text
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
 X-RateLimit-Reset: 1623456789
 ```
 
 Handle rate limits gracefully:
+
 ```python
 if response.status_code == 429:
     retry_after = response.headers.get('Retry-After', 60)
@@ -365,11 +381,13 @@ try {
 ### Pagination
 
 For endpoints that return lists:
+
 ```bash
 GET /v1/trips?page=1&per_page=20
 ```
 
 Response includes pagination info:
+
 ```json
 {
   "data": [...],
@@ -389,6 +407,7 @@ Response includes pagination info:
 ### Use the Sandbox
 
 Test without real charges:
+
 ```bash
 # Use sandbox URL
 https://sandbox.tripsage.ai/v1
@@ -403,6 +422,7 @@ curl https://sandbox.tripsage.ai/v1/flights/search \
 ### Test Scenarios
 
 Common test cases:
+
 - Valid requests → Success responses
 - Invalid data → Validation errors
 - Missing auth → 401 Unauthorized
@@ -421,16 +441,19 @@ Now that you've made your first API calls:
 ### Quick Project Ideas
 
 **Beginner:**
+
 - Trip cost calculator
 - Flight price tracker
 - Destination explorer
 
 **Intermediate:**
+
 - Travel expense dashboard
 - Itinerary generator
 - Group trip planner
 
 **Advanced:**
+
 - Full travel booking app
 - AI travel assistant bot
 - Multi-platform integration
@@ -439,22 +462,26 @@ Now that you've made your first API calls:
 
 ### Common Issues
 
-**401 Unauthorized**
+#### 401 Unauthorized
+
 - Check API key is correct
 - Ensure "Bearer " prefix
 - Verify key hasn't expired
 
-**400 Bad Request**
+#### 400 Bad Request
+
 - Validate JSON format
 - Check required fields
 - Verify date formats
 
-**429 Rate Limited**
+#### 429 Rate Limited
+
 - Check rate limit headers
 - Implement backoff strategy
 - Consider upgrading plan
 
-**500 Server Error**
+#### 500 Server Error
+
 - Retry with exponential backoff
 - Check status page
 - Contact support if persistent

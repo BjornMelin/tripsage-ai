@@ -19,48 +19,48 @@ This document provides comprehensive research findings on resolving TypeScript c
 
 1. **Hook Signature Updates**:
 
-```typescript
-// Old (v4)
-useQuery(key, fn, options)
+   ```typescript
+   // Old (v4)
+   useQuery(key, fn, options);
 
-// New (v5)
-useQuery({ queryKey, queryFn, ...options })
-```
+   // New (v5)
+   useQuery({ queryKey, queryFn, ...options });
+   ```
 
 2. **Callback Replacement Pattern**:
 
-```typescript
-// Old (v4)
-useQuery({
-  queryKey: ['todos'],
-  queryFn: fetchTodos,
-  onSuccess: (data) => {
-    console.log(data);
-  }
-})
+   ```typescript
+   // Old (v4)
+   useQuery({
+     queryKey: ["todos"],
+     queryFn: fetchTodos,
+     onSuccess: (data) => {
+       console.log(data);
+     },
+   });
 
-// New (v5)
-const query = useQuery({
-  queryKey: ['todos'],
-  queryFn: fetchTodos
-})
+   // New (v5)
+   const query = useQuery({
+     queryKey: ["todos"],
+     queryFn: fetchTodos,
+   });
 
-useEffect(() => {
-  if (query.data) {
-    console.log(query.data);
-  }
-}, [query.data])
-```
+   useEffect(() => {
+     if (query.data) {
+       console.log(query.data);
+     }
+   }, [query.data]);
+   ```
 
 3. **QueryKey Type Fix**:
 
-```typescript
-// For mixed array types
-type ApiQueryOptions<TData, TError> = Omit<
-  UseQueryOptions<TData, TError, TData, (string | Record<string, any>)[]>,
-  "queryKey" | "queryFn"
->;
-```
+   ```typescript
+   // For mixed array types
+   type ApiQueryOptions<TData, TError> = Omit<
+     UseQueryOptions<TData, TError, TData, (string | Record<string, any>)[]>,
+     "queryKey" | "queryFn"
+   >;
+   ```
 
 ### 2. Common TypeScript Compilation Errors
 
@@ -76,26 +76,27 @@ type ApiQueryOptions<TData, TError> = Omit<
 
 1. **Missing Radix UI Packages**:
 
-```bash
-pnpm add @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu
-```
+   ```bash
+   pnpm add @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu
+   ```
 
 2. **Type Conflict Resolution**:
 
-```typescript
-// Use Omit to exclude conflicting properties
-interface LoadingSpinnerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'color'> {
-  color?: string;
-}
-```
+   ```typescript
+   // Use Omit to exclude conflicting properties
+   interface LoadingSpinnerProps
+     extends Omit<React.HTMLAttributes<HTMLDivElement>, "color"> {
+     color?: string;
+   }
+   ```
 
 3. **useOptimistic Hook Update**:
 
-```typescript
-// React 19 pattern
-const [optimisticState, setOptimisticState] = useOptimistic(initialState);
-// Then use setOptimisticState separately
-```
+   ```typescript
+   // React 19 pattern
+   const [optimisticState, setOptimisticState] = useOptimistic(initialState);
+   // Then use setOptimisticState separately
+   ```
 
 ### 3. Next.js 15 + React 19 Considerations
 
@@ -117,16 +118,19 @@ const [optimisticState, setOptimisticState] = useOptimistic(initialState);
 #### Recommended Task Distribution
 
 1. **Task 1: React Query v5 Migration**
+
    - Update all `useQuery` hooks to object syntax
    - Replace callbacks with `useEffect` patterns
    - Fix queryKey type definitions
 
 2. **Task 2: Dependency Installation**
+
    - Install all missing Radix UI packages
    - Update package versions for React 19 compatibility
    - Resolve peer dependency conflicts
 
 3. **Task 3: Type Error Fixes**
+
    - Fix component prop type conflicts
    - Update hook usage patterns
    - Resolve import/export issues
@@ -175,37 +179,37 @@ pnpm add @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdow
 
 1. **React Query v5 Codemod**:
 
-```bash
-npx jscodeshift@latest ./src/ \
-  --extensions=ts,tsx \
-  --parser=tsx \
-  --transform=./node_modules/@tanstack/react-query/build/codemods/src/v5/remove-overloads/remove-overloads.cjs
-```
+   ```bash
+   npx jscodeshift@latest ./src/ \
+     --extensions=ts,tsx \
+     --parser=tsx \
+     --transform=./node_modules/@tanstack/react-query/build/codemods/src/v5/remove-overloads/remove-overloads.cjs
+   ```
 
 2. **TypeScript Compiler Options**:
 
-```json
-{
-  "compilerOptions": {
-    "strict": true,
-    "skipLibCheck": true,
-    "noEmit": true
-  }
-}
-```
+   ```json
+   {
+     "compilerOptions": {
+       "strict": true,
+       "skipLibCheck": true,
+       "noEmit": true
+     }
+   }
+   ```
 
 3. **Useful Commands**:
 
-```bash
-# Type check only
-pnpm tsc --noEmit
+   ```bash
+   # Type check only
+   pnpm tsc --noEmit
 
-# Find React Query usage
-grep -r "useQuery\|useMutation" src/
+   # Find React Query usage
+   grep -r "useQuery\|useMutation" src/
 
-# Check for missing imports
-pnpm ls @radix-ui
-```
+   # Check for missing imports
+   pnpm ls @radix-ui
+   ```
 
 ## Conclusion
 

@@ -17,6 +17,7 @@ TripSage's backend currently uses Pydantic v1 for data validation and serializat
 - Modern Python patterns require v2 features
 
 The migration is blocking our ability to:
+
 - Update dependencies
 - Use modern validation patterns
 - Achieve optimal performance
@@ -27,6 +28,7 @@ The migration is blocking our ability to:
 We will migrate completely to Pydantic v2, removing all v1 patterns.
 
 Migration approach:
+
 1. Use `bump-pydantic` tool for automated migration
 2. Manually fix remaining issues
 3. Update all models to use v2 patterns
@@ -34,6 +36,7 @@ Migration approach:
 5. Optimize for v2 performance features
 
 Key changes:
+
 - Replace `Config` classes with `model_config`
 - Update validator decorators to v2 syntax
 - Use new serialization methods
@@ -69,7 +72,8 @@ Key changes:
 
 Continue using the current version.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - No longer maintained
 - Blocking dependency updates
 - Missing performance improvements
@@ -79,7 +83,8 @@ Continue using the current version.
 
 Support both v1 and v2 simultaneously.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Increases complexity significantly
 - Compatibility layers add overhead
 - Extends migration timeline
@@ -89,7 +94,8 @@ Support both v1 and v2 simultaneously.
 
 Switch to attrs, marshmallow, or other libraries.
 
-**Why not chosen**: 
+**Why not chosen**:
+
 - Would require complete rewrite
 - Less FastAPI integration
 - Smaller ecosystem
