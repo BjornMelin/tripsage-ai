@@ -55,6 +55,7 @@ Branch name pattern: main
 ### 2. Repository Settings
 
 **General Settings:**
+
 - ☑️ Allow merge commits
 - ☑️ Allow squash merging (recommended for feature branches)
 - ☑️ Allow rebase merging (recommended for hotfixes)
@@ -62,6 +63,7 @@ Branch name pattern: main
 - ☑️ Automatically delete head branches
 
 **Security & Analysis:**
+
 - ☑️ Enable Dependency graph
 - ☑️ Enable Dependabot alerts
 - ☑️ Enable Dependabot security updates
@@ -85,6 +87,7 @@ Our CI/CD workflows are configured to trigger on specific branch patterns:
 ### Branch Naming Guidelines
 
 **Feature Branches:**
+
 ```bash
 feat/user-authentication
 feat/trip-collaboration
@@ -92,6 +95,7 @@ feat/api-rate-limiting
 ```
 
 **Session Branches (for AI-assisted development):**
+
 ```bash
 session/create-trip-endpoint
 session/fix-auth-bug
@@ -99,12 +103,14 @@ session/performance-optimization
 ```
 
 **Hotfix Branches:**
+
 ```bash
 hotfix/security-patch-v1.2.1
 hotfix/critical-memory-leak
 ```
 
 **Release Branches:**
+
 ```bash
 release/v1.2.0
 release/v2.0.0-beta
@@ -163,6 +169,7 @@ The `quality-gates.yml` workflow aggregates results from all CI workflows:
 ### Development Environment Setup
 
 **Backend:**
+
 ```bash
 # Install dependencies
 uv sync --group dev
@@ -176,6 +183,7 @@ ruff format .
 ```
 
 **Frontend:**
+
 ```bash
 cd frontend
 
@@ -193,12 +201,14 @@ npx biome format . --write
 ### Vercel Deployment Setup
 
 1. **Link Project to Vercel:**
+
    ```bash
    cd frontend
    npx vercel link
    ```
 
 2. **Extract Project Configuration:**
+
    ```bash
    # Check .vercel/project.json for:
    cat .vercel/project.json
@@ -222,21 +232,26 @@ npx biome format . --write
 ### Common Issues
 
 **"ruff: command not found" in Backend CI:**
+
 - ✅ Fixed: Added explicit ruff installation step
 
 **Inconsistent branch triggers:**
+
 - ✅ Fixed: Standardized all workflows to use `[main, develop, feat/*, "session/*"]`
 
 **Missing Codecov token:**
+
 - Add `CODECOV_TOKEN` secret to repository settings
 - Token can be found in Codecov dashboard after connecting repository
 
 **Vercel deployment fails:**
+
 - Verify all three Vercel secrets are correctly configured
 - Check that `vercel.json` configuration is valid
 - Ensure build command succeeds locally
 
 **Quality gates always fail:**
+
 - Check that all required workflows are completing successfully
 - Verify coverage thresholds are achievable
 - Review security scan results for critical issues
@@ -244,6 +259,7 @@ npx biome format . --write
 ### Workflow Debugging
 
 **Check workflow runs:**
+
 ```bash
 # Using GitHub CLI
 gh run list --workflow="Backend CI"
@@ -251,6 +267,7 @@ gh run view <run-id> --log
 ```
 
 **Local testing:**
+
 ```bash
 # Test backend locally
 uv run pytest tests/unit/ --cov=tripsage --cov=tripsage_core
@@ -262,6 +279,7 @@ cd frontend && pnpm test:coverage
 ## Support
 
 For additional help:
+
 - Review workflow logs in GitHub Actions tab
 - Check individual job outputs for specific error messages
 - Verify all secrets are correctly configured
