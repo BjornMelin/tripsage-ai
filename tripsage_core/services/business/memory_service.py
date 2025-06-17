@@ -20,6 +20,13 @@ from tripsage_core.exceptions import (
     CoreServiceError as ServiceError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.utils.connection_utils import (
+    DatabaseConnectionError,
+    DatabaseURLParser,
+    DatabaseURLParsingError,
+    DatabaseValidationError,
+    SecureDatabaseConnectionManager,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -129,14 +136,18 @@ class MemoryService:
         database_service=None,
         memory_backend_config: Optional[Dict[str, Any]] = None,
         cache_ttl: int = 300,
+        connection_max_retries: int = 3,
+        connection_validation_timeout: float = 10.0,
     ):
         """
-        Initialize the memory service.
+        Initialize the memory service with enhanced connection management.
 
         Args:
             database_service: Database service for persistence
             memory_backend_config: Mem0 configuration
             cache_ttl: Cache TTL in seconds
+            connection_max_retries: Maximum connection retry attempts
+            connection_validation_timeout: Connection validation timeout in seconds
         """
         # Import here to avoid circular imports
         if database_service is None:
@@ -146,6 +157,12 @@ class MemoryService:
 
         self.db = database_service
         self.cache_ttl = cache_ttl
+
+        # Initialize secure connection management
+        self.connection_manager = SecureDatabaseConnectionManager(
+            max_retries=connection_max_retries,
+            validation_timeout=connection_validation_timeout,
+        )
 
         # Initialize memory backend
         self._initialize_memory_backend(memory_backend_config)
@@ -183,68 +200,135 @@ class MemoryService:
 
     def _get_default_config(self) -> Dict[str, Any]:
         """
-        Get default Mem0 configuration optimized for TripSage.
+        Get default Mem0 configuration optimized for TripSage with secure URL parsing.
 
         Returns:
             Mem0 configuration dictionary
+
+        Raises:
+            ServiceError: If database URL parsing or validation fails
         """
         # Get settings for API keys
         from tripsage_core.config import get_settings
 
         settings = get_settings()
 
-        return {
-            "vector_store": {
-                "provider": "pgvector",
-                "config": {
-                    "host": settings.database_url.split("@")[1]
-                    .split("/")[0]
-                    .split(":")[0],
-                    "port": 5432,
-                    "dbname": "postgres",
-                    "user": "postgres",
-                    "password": settings.database_password,
-                    "collection_name": "memories",
+        try:
+            # Parse database URL securely
+            url_parser = DatabaseURLParser()
+            credentials = url_parser.parse_url(settings.database_url)
+
+            logger.info(
+                "Database configuration parsed successfully",
+                extra={
+                    "hostname": credentials.hostname,
+                    "database": credentials.database,
+                    "port": credentials.port,
                 },
-            },
-            "llm": {
-                "provider": "openai",
-                "config": {
-                    "model": "gpt-4o-mini",
-                    "temperature": 0.1,
-                    "max_tokens": 500,
-                    "api_key": settings.openai_api_key,
+            )
+
+            return {
+                "vector_store": {
+                    "provider": "pgvector",
+                    "config": {
+                        "host": credentials.hostname,
+                        "port": credentials.port,
+                        "dbname": credentials.database,
+                        "user": credentials.username,
+                        "password": credentials.password,
+                        "collection_name": "memories",
+                        # Add SSL configuration from parsed query params
+                        **{
+                            k: v
+                            for k, v in credentials.query_params.items()
+                            if k in ["sslmode", "connect_timeout", "application_name"]
+                        },
+                    },
                 },
-            },
-            "embedder": {
-                "provider": "openai",
-                "config": {
-                    "model": "text-embedding-3-small",
-                    "api_key": settings.openai_api_key,
+                "llm": {
+                    "provider": "openai",
+                    "config": {
+                        "model": "gpt-4o-mini",
+                        "temperature": 0.1,
+                        "max_tokens": 500,
+                        "api_key": settings.openai_api_key,
+                    },
                 },
-            },
-            "version": "v1.1",
-        }
+                "embedder": {
+                    "provider": "openai",
+                    "config": {
+                        "model": "text-embedding-3-small",
+                        "api_key": settings.openai_api_key,
+                    },
+                },
+                "version": "v1.1",
+            }
+
+        except DatabaseURLParsingError as e:
+            error_msg = f"Failed to parse database URL: {e}"
+            logger.error(error_msg)
+            raise ServiceError(error_msg) from e
+        except Exception as e:
+            error_msg = f"Failed to create Mem0 configuration: {e}"
+            logger.error(error_msg)
+            raise ServiceError(error_msg) from e
 
     async def connect(self) -> None:
-        """Initialize service connection."""
+        """
+        Initialize service connection with comprehensive validation and retry logic.
+
+        This method now includes:
+        - Database connection validation
+        - Retry logic with exponential backoff
+        - Circuit breaker protection
+        - Health checks for pgvector extension
+
+        Raises:
+            ServiceError: If connection cannot be established after retries
+        """
         if self._connected or not self.memory:
             return
 
         try:
-            # Test connection with a simple operation
-            await asyncio.to_thread(
-                self.memory.search,
-                query="health_check_test",
-                user_id="health_check_user",
-                limit=1,
-            )
-            self._connected = True
-            logger.info("Memory service connected successfully")
+            # Get database URL for validation
+            from tripsage_core.config import get_settings
 
+            settings = get_settings()
+
+            # Validate database connection before testing Mem0
+            logger.info("Validating database connection for memory service")
+            await self.connection_manager.parse_and_validate_url(settings.database_url)
+
+            # Test Mem0 memory backend with retry logic
+            async def test_memory_operation():
+                return await asyncio.to_thread(
+                    self.memory.search,
+                    query="health_check_test",
+                    user_id="health_check_user",
+                    limit=1,
+                )
+
+            # Execute with circuit breaker and retry protection
+            await self.connection_manager.circuit_breaker.call(
+                self.connection_manager.retry_handler.execute_with_retry,
+                test_memory_operation,
+            )
+
+            self._connected = True
+            logger.info("Memory service connected and validated successfully")
+
+        except (
+            DatabaseURLParsingError,
+            DatabaseValidationError,
+            DatabaseConnectionError,
+        ) as e:
+            error_msg = f"Database connection validation failed: {e}"
+            logger.error(error_msg)
+            raise ServiceError(error_msg) from e
         except Exception as e:
-            logger.error(f"Failed to connect memory service: {str(e)}")
-            raise ServiceError("Memory service connection failed") from e
+            error_msg = f"Failed to connect memory service: {e}"
+            logger.error(error_msg)
+            raise ServiceError(error_msg) from e
 
     async def close(self) -> None:
         """Close service connection."""

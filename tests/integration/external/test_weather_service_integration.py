@@ -20,13 +20,17 @@ def weather_service(monkeypatch):
     monkeypatch.setenv("OPENWEATHERMAP_API_KEY", "test_api_key")
 
     # Mock the settings to bypass validation
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
+
     from pydantic import SecretStr
-    
+
     mock_settings = MagicMock()
     mock_settings.openweathermap_api_key = SecretStr("test_api_key")
-    
-    with patch('tripsage_core.services.external_apis.weather_service.get_settings', return_value=mock_settings):
+
+    with patch(
+        "tripsage_core.services.external_apis.weather_service.get_settings",
+        return_value=mock_settings,
+    ):
         service = WeatherService()
         # Mock the internal HTTP request method
         service._make_request = AsyncMock()
