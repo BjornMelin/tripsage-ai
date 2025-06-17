@@ -183,7 +183,9 @@ class TestDragonflyMigrationPerformance:
 class TestSupabaseMigrationPerformance:
     """Test performance improvements from Supabase SDK migration."""
 
-    async def test_supabase_connection_performance(self, supabase_service, performance_benchmark):
+    async def test_supabase_connection_performance(
+        self, supabase_service, performance_benchmark
+    ):
         """Test Supabase connection establishment performance."""
         # Test connection performance
         connection_stats = await performance_benchmark.benchmark_operation(
@@ -201,7 +203,9 @@ class TestSupabaseMigrationPerformance:
             f"Connection too slow: {connection_stats['mean']:.2f}ms"
         )
 
-    async def test_supabase_query_performance(self, supabase_service, performance_benchmark):
+    async def test_supabase_query_performance(
+        self, supabase_service, performance_benchmark
+    ):
         """Test basic Supabase query performance."""
         # Simple query that should work on any Supabase instance
         query_stats = await performance_benchmark.benchmark_operation(
@@ -294,7 +298,7 @@ async def run_comprehensive_benchmark():
 
     try:
         # DragonflyDB SET performance
-        set_stats = await performance_benchmark.benchmark_operation(
+        set_stats = await benchmark.benchmark_operation(
             "dragonfly_set",
             dragonfly_service.set_json,
             "benchmark:test",
@@ -303,7 +307,7 @@ async def run_comprehensive_benchmark():
         )
 
         # DragonflyDB GET performance
-        get_stats = await performance_benchmark.benchmark_operation(
+        get_stats = await benchmark.benchmark_operation(
             "dragonfly_get", dragonfly_service.get_json, "benchmark:test"
         )
 
@@ -326,7 +330,7 @@ async def run_comprehensive_benchmark():
     # Core database service auto-connects
 
     try:
-        connection_stats = await performance_benchmark.benchmark_operation(
+        connection_stats = await benchmark.benchmark_operation(
             "supabase_connection", supabase_service.ensure_connected
         )
 

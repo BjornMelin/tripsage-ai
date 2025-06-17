@@ -225,7 +225,7 @@ class TestConfigurationErrorHandling:
         with patch.dict(os.environ, {}, clear=True):
             # Settings should load successfully with default values
             settings = Settings(_env_file=None)
-            
+
             # Verify defaults are used
             assert settings.openai_api_key.get_secret_value() == "sk-test-1234567890"
             assert settings.database_url == "https://test.supabase.com"
@@ -299,3 +299,112 @@ class TestModernBestPractices:
             assert hasattr(settings, "api_title")  # API config
             assert hasattr(settings, "cors_origins")  # API config
             assert hasattr(settings, "environment")  # App config
+
+
+class TestPostgresURLConfiguration:
+    """Test PostgreSQL URL configuration and conversion."""
+
+    def test_postgres_url_field_default(self):
+        """Test postgres_url field defaults to None."""
+        settings = Settings(_env_file=None)
+        assert settings.postgres_url is None
+
+    def test_postgres_url_from_environment(self):
+        """Test loading postgres_url from environment variable."""
+        with patch.dict(
+            os.environ,
+            {
+                "POSTGRES_URL": "postgresql://user:pass@localhost:5432/mydb",
+                "DATABASE_URL": "https://test.supabase.co",
+                "DATABASE_PUBLIC_KEY": "test-public-key",
+                "DATABASE_SERVICE_KEY": "test-service-key",
+            },
+        ):
+            settings = Settings(_env_file=None)
+            assert settings.postgres_url == "postgresql://user:pass@localhost:5432/mydb"
+
+    def test_effective_postgres_url_with_explicit_postgres_url(self):
+        """Test effective_postgres_url returns postgres_url when explicitly set."""
+        settings = Settings(
+            postgres_url="postgresql://user:pass@localhost:5432/mydb",
+            database_url="https://test.supabase.co",
+            database_public_key=SecretStr("test-public-key"),
+            database_service_key=SecretStr("test-service-key"),
+            _env_file=None,
+        )
+
+        # Should return the postgres_url with asyncpg driver
+        assert (
+            settings.effective_postgres_url
+            == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
+        )
+
+    def test_effective_postgres_url_converts_postgres_scheme(self):
+        """Test effective_postgres_url converts postgres:// to postgresql+asyncpg://."""
+        settings = Settings(
+            postgres_url="postgres://user:pass@localhost:5432/mydb",
+            _env_file=None,
+        )
+
+        assert (
+            settings.effective_postgres_url
+            == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
+        )
+
+    def test_effective_postgres_url_with_supabase_url(self):
+        """Test effective_postgres_url converts Supabase URL to PostgreSQL URL."""
+        settings = Settings(
+            database_url="https://xyzcompanyabc.supabase.co",
+            database_public_key=SecretStr("test-public-key"),
+            database_service_key=SecretStr("test-service-key"),
+            _env_file=None,
+        )
+
+        url = settings.effective_postgres_url
+        # Should convert to PostgreSQL URL format
+        assert "postgresql+asyncpg://" in url
+        assert "xyzcompanyabc" in url
+        assert "pooler.supabase.com" in url
+
+    def test_effective_postgres_url_fallback_to_database_url(self):
+        """Test effective_postgres_url falls back to database_url if not Supabase."""
+        settings = Settings(
+            database_url="postgresql://user:pass@custom-host:5432/db",
+            database_public_key=SecretStr("test-public-key"),
+            database_service_key=SecretStr("test-service-key"),
+            _env_file=None,
+        )
+
+        # Should add asyncpg driver to the existing URL
+        assert (
+            settings.effective_postgres_url
+            == "postgresql+asyncpg://user:pass@custom-host:5432/db"
+        )
+
+    def test_effective_postgres_url_preserves_asyncpg_driver(self):
+        """Test effective_postgres_url preserves existing asyncpg driver."""
+        settings = Settings(
+            postgres_url="postgresql+asyncpg://user:pass@localhost:5432/mydb",
+            _env_file=None,
+        )
+
+        # Should not double-add the driver
+        assert (
+            settings.effective_postgres_url
+            == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
+        )
+
+    def test_postgres_url_validation_alias(self):
+        """Test postgres_url uses POSTGRES_URL as validation alias."""
+        # Test that POSTGRES_URL env var maps to postgres_url field
+        with patch.dict(
+            os.environ,
+            {
+                "POSTGRES_URL": "postgresql://test:test@localhost/testdb",
+                "DATABASE_URL": "https://test.supabase.co",
+                "DATABASE_PUBLIC_KEY": "test-public-key",
+                "DATABASE_SERVICE_KEY": "test-service-key",
+            },
+        ):
+            settings = Settings(_env_file=None)
+            assert settings.postgres_url == "postgresql://test:test@localhost/testdb"

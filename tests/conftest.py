@@ -17,6 +17,7 @@ from pydantic import SecretStr
 # Configure pytest-asyncio - updated for pytest-asyncio 1.0
 # No longer need event_loop fixture with pytest-asyncio 1.0
 
+
 # Global mock for cache service to prevent Redis connection errors in tests
 @pytest.fixture(scope="session", autouse=True)
 def mock_cache_globally():
@@ -32,10 +33,18 @@ def mock_cache_globally():
     mock_cache.health_check = AsyncMock(return_value=True)
     mock_cache.is_connected = True
     mock_cache._connected = True
-    
+
     # Patch the service getter AND the CacheService class itself
-    with patch('tripsage_core.services.infrastructure.cache_service.get_cache_service', return_value=mock_cache), \
-         patch('tripsage_core.services.infrastructure.cache_service.CacheService', return_value=mock_cache):
+    with (
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+            return_value=mock_cache,
+        ),
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.CacheService",
+            return_value=mock_cache,
+        ),
+    ):
         yield mock_cache
 
 

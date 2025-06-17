@@ -19,10 +19,10 @@ from tripsage_core.services.external_apis.weather_service import WeatherService
 def mock_database():
     """Create a mock database service."""
     from uuid import uuid4
-    
+
     trip_id = str(uuid4())
     user_id = str(uuid4())
-    
+
     db = MagicMock()
     db.execute = AsyncMock()
     db.fetch_all = AsyncMock(return_value=[])
@@ -46,7 +46,12 @@ def mock_database():
             "destination": "Paris, France",
             "destinations": [],
             "budget": None,
-            "budget_breakdown": {"total": 5000, "currency": "USD", "spent": 0.0, "breakdown": {}},
+            "budget_breakdown": {
+                "total": 5000,
+                "currency": "USD",
+                "spent": 0.0,
+                "breakdown": {},
+            },
             "status": "planning",
             "visibility": "private",
             "tags": [],
@@ -150,15 +155,19 @@ def weather_service(mock_cache, monkeypatch):
     """Create WeatherService with mocked dependencies."""
     # Set environment variable before importing/initializing the service
     monkeypatch.setenv("OPENWEATHERMAP_API_KEY", "test_key")
-    
+
     # Mock the settings to bypass validation
-    from unittest.mock import patch, MagicMock
+    from unittest.mock import MagicMock, patch
+
     from pydantic import SecretStr
-    
+
     mock_settings = MagicMock()
     mock_settings.openweathermap_api_key = SecretStr("test_key")
-    
-    with patch('tripsage_core.services.external_apis.weather_service.get_settings', return_value=mock_settings):
+
+    with patch(
+        "tripsage_core.services.external_apis.weather_service.get_settings",
+        return_value=mock_settings,
+    ):
         service = WeatherService()
         service.cache = mock_cache
         service._make_request = AsyncMock()
@@ -169,6 +178,7 @@ def weather_service(mock_cache, monkeypatch):
 def sample_trip_data():
     """Sample trip planning data."""
     from uuid import uuid4
+
     return {
         "user_id": str(uuid4()),
         "destination": "Paris, France",
@@ -234,6 +244,7 @@ class TestTripPlanningJourney:
         }
 
         # Act - Create trip and search for options
+        from tripsage_core.models.trip import EnhancedBudget
         from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
         )
@@ -242,8 +253,6 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
-        from tripsage_core.models.trip import EnhancedBudget
-        
         trip_request = TripCreateRequest(
             title=f"Trip to {sample_trip_data['destination']}",
             description="Test trip",
@@ -315,6 +324,7 @@ class TestTripPlanningJourney:
         }
 
         # Act
+        from tripsage_core.models.trip import EnhancedBudget
         from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
         )
@@ -323,8 +333,6 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
-        from tripsage_core.models.trip import EnhancedBudget
-        
         trip_request = TripCreateRequest(
             title=f"Trip to {sample_trip_data['destination']}",
             description="Test trip with preferences",
@@ -402,6 +410,7 @@ class TestTripPlanningJourney:
         ]
 
         # Act
+        from tripsage_core.models.trip import EnhancedBudget
         from tripsage_core.services.business.accommodation_service import (
             AccommodationSearchRequest,
         )
@@ -410,8 +419,6 @@ class TestTripPlanningJourney:
             TripLocation,
         )
 
-        from tripsage_core.models.trip import EnhancedBudget
-        
         trip_request = TripCreateRequest(
             title=f"Budget Trip to {sample_trip_data['destination']}",
             description="Budget-constrained test trip",
@@ -477,6 +484,7 @@ class TestTripPlanningJourney:
         """Test modifying an existing trip."""
         # Arrange
         from uuid import uuid4
+
         trip_id = str(uuid4())  # Use proper UUID format
         user_id = sample_trip_data["user_id"]
         modifications = {
@@ -504,12 +512,13 @@ class TestTripPlanningJourney:
         }
 
         # Act
-        from tripsage_core.services.business.trip_service import TripUpdateRequest
         from datetime import datetime
-        
+
+        from tripsage_core.services.business.trip_service import TripUpdateRequest
+
         # Convert date to datetime for the update request
         new_end_date = datetime.combine(modifications["end_date"], datetime.min.time())
-        
+
         # Set the mock for this specific test case after new_end_date is defined
         mock_database.update_trip.return_value = {
             "id": trip_id,
@@ -521,7 +530,12 @@ class TestTripPlanningJourney:
             "destination": "Paris, France",
             "destinations": [],
             "budget": None,
-            "budget_breakdown": {"total": 5000, "currency": "USD", "spent": 0.0, "breakdown": {}},
+            "budget_breakdown": {
+                "total": 5000,
+                "currency": "USD",
+                "spent": 0.0,
+                "breakdown": {},
+            },
             "status": "planning",
             "visibility": "private",
             "tags": [],
@@ -531,7 +545,7 @@ class TestTripPlanningJourney:
             "created_at": "2024-01-01T00:00:00+00:00",
             "updated_at": "2024-01-01T00:00:00+00:00",
         }
-        
+
         update_request = TripUpdateRequest(
             end_date=new_end_date
             # Note: travelers and budget might not be part of standard trip updates
@@ -547,6 +561,7 @@ class TestTripPlanningJourney:
         """Test cancelling a trip."""
         # Arrange
         from uuid import uuid4
+
         trip_id = str(uuid4())  # Use proper UUID format
         user_id = str(uuid4())  # Use proper UUID format
 
@@ -588,13 +603,12 @@ class TestTripPlanningJourney:
         mock_mcp_manager.invoke.side_effect = Exception("External service unavailable")
 
         # Act & Assert
+        from tripsage_core.models.trip import EnhancedBudget
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest,
             TripLocation,
         )
 
-        from tripsage_core.models.trip import EnhancedBudget
-        
         trip_request = TripCreateRequest(
             title=f"Trip to {sample_trip_data['destination']}",
             description="Test trip for error handling",

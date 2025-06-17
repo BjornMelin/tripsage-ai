@@ -120,10 +120,10 @@ async def create_trip(
                         total=float(pref_budget.total_budget.amount),
                         currency=str(pref_budget.total_budget.currency),
                         breakdown=BudgetBreakdown(
-                            accommodation=300.0, 
-                            transportation=400.0, 
-                            food=200.0, 
-                            activities=100.0
+                            accommodation=300.0,
+                            transportation=400.0,
+                            food=200.0,
+                            activities=100.0,
                         ),
                     )
                 elif hasattr(pref_budget, "total"):
@@ -148,11 +148,11 @@ async def create_trip(
             tags=[],  # Default empty tags
             preferences=None,  # Will be converted below if present
         )
-        
+
         # Convert common TripPreferences to core TripPreferences if present
         if trip_request.preferences:
             from tripsage_core.models.trip import TripPreferences as CoreTripPreferences
-            
+
             # Extract preferences from common model and convert to core model
             common_prefs = trip_request.preferences
             core_preferences = CoreTripPreferences(
@@ -163,30 +163,38 @@ async def create_trip(
                 transportation_preferences={},
                 activity_preferences=[],
                 dietary_restrictions=[],
-                accessibility_needs=[]
+                accessibility_needs=[],
             )
-            
+
             # Map common preferences to core preferences
             if common_prefs.accommodation:
                 core_preferences.accommodation_preferences = {
-                    "type": common_prefs.accommodation.type.value if common_prefs.accommodation.type else None,
+                    "type": common_prefs.accommodation.type.value
+                    if common_prefs.accommodation.type
+                    else None,
                     "min_rating": common_prefs.accommodation.min_rating,
                     "amenities": common_prefs.accommodation.amenities or [],
-                    "location_preference": common_prefs.accommodation.location_preference
+                    "location_preference": (
+                        common_prefs.accommodation.location_preference
+                    ),
                 }
-            
+
             if common_prefs.transportation:
-                core_preferences.transportation_preferences = common_prefs.transportation.flight_preferences or {}
-                
+                core_preferences.transportation_preferences = (
+                    common_prefs.transportation.flight_preferences or {}
+                )
+
             if common_prefs.activities:
                 core_preferences.activity_preferences = common_prefs.activities
-                
+
             if common_prefs.dietary_restrictions:
-                core_preferences.dietary_restrictions = common_prefs.dietary_restrictions
-                
+                core_preferences.dietary_restrictions = (
+                    common_prefs.dietary_restrictions
+                )
+
             if common_prefs.accessibility_needs:
                 core_preferences.accessibility_needs = common_prefs.accessibility_needs
-            
+
             core_request.preferences = core_preferences
 
         # Create trip via core service
@@ -581,19 +589,20 @@ async def duplicate_trip(
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest as CoreTripCreateRequest,
         )
-        
+
         duplicate_request = CoreTripCreateRequest(
             title=f"Copy of {original_trip.title}",
             description=original_trip.description,
             start_date=original_trip.start_date,
             end_date=original_trip.end_date,
-            destination=original_trip.destination,  # Core expects "destination" not "destinations"
+            # Core expects "destination" not "destinations"
+            destination=original_trip.destination,
             destinations=original_trip.destinations,
             budget=original_trip.budget,  # Core requires budget
             travelers=original_trip.travelers,
             trip_type=original_trip.trip_type,
             visibility=original_trip.visibility,
-            tags=original_trip.tags if hasattr(original_trip, 'tags') else [],
+            tags=original_trip.tags if hasattr(original_trip, "tags") else [],
             preferences=original_trip.preferences,
         )
 
@@ -988,13 +997,6 @@ def _adapt_trip_response(core_response) -> TripResponse:
     # Convert core TripPreferences to common TripPreferences if needed
     api_preferences = None
     if core_response.preferences:
-        from tripsage_core.models.schemas_common.travel import (
-            TripPreferences as CommonTripPreferences,
-            Budget,
-            Price,
-        )
-        from tripsage_core.models.schemas_common.financial import CurrencyCode
-        
         # The core preferences is already a TripPreferences from core models
         # We need to convert it to common TripPreferences
         # For now, we'll just pass None since the test doesn't check preferences
