@@ -303,6 +303,15 @@ benchmark-*.json
 **/*.consolidated.*
 **/*.migrated.*
 
+# Security scanning reports
+bandit_output.json
+final_bandit_report.json
+bandit-report.*
+*-bandit.json
+security-reports/
+scan-results/
+.scannerwork/
+
 # Version control temporary files
 **/*.orig
 **/*.rej
