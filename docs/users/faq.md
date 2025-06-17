@@ -353,6 +353,7 @@ To help us assist you quickly:
 
 **Issue**: Can't log in to TripSage  
 **Solutions**:
+
 - Clear browser cache and cookies
 - Try incognito/private browsing mode  
 - Check if email is verified
@@ -363,6 +364,7 @@ To help us assist you quickly:
 
 **Issue**: AI not understanding my requests  
 **Solutions**:
+
 - Be more specific with dates, budget, location
 - Use simple, clear language
 - Break complex requests into steps
@@ -370,6 +372,7 @@ To help us assist you quickly:
 
 **Issue**: No flight results showing  
 **Solutions**:
+
 - Check dates are in the future
 - Try flexible date ranges
 - Consider nearby airports
@@ -380,6 +383,7 @@ To help us assist you quickly:
 
 **Issue**: Payment not processing  
 **Solutions**:
+
 - Verify card details and billing address
 - Check for sufficient funds
 - Try a different payment method
@@ -390,6 +394,7 @@ To help us assist you quickly:
 
 **Issue**: App loading slowly  
 **Solutions**:
+
 - Check internet connection
 - Clear browser cache
 - Disable browser extensions
@@ -400,6 +405,7 @@ To help us assist you quickly:
 
 **Issue**: Push notifications not working  
 **Solutions**:
+
 - Enable notifications in device settings
 - Update the app to latest version
 - Check notification preferences in app
@@ -408,6 +414,7 @@ To help us assist you quickly:
 
 **Issue**: Offline mode not working  
 **Solutions**:
+
 - Download trip data while online
 - Check storage space on device
 - Update to latest app version
@@ -425,16 +432,19 @@ To help us assist you quickly:
 ### **Direct Support**
 
 **Email Support**: [support@tripsage.ai](mailto:support@tripsage.ai)
+
 - Response time: Within 24 hours
 - Include account email and trip details
 - Attach screenshots if helpful
 
 **Live Chat**: Available 24/7 in the app
+
 - Instant responses during business hours
 - AI assistant for common questions
 - Escalate to human agents when needed
 
 **Phone Support**: Premium and Enterprise customers
+
 - Dedicated support line
 - Escalation for urgent issues
 - Travel assistance while on trip
@@ -442,12 +452,14 @@ To help us assist you quickly:
 ### **Business Support**
 
 **Enterprise Customers**:
+
 - Dedicated account manager
 - Priority support queue
 - Custom integration assistance
 - Training and onboarding sessions
 
 **Developer Support**:
+
 - Technical documentation
 - API support forum
 - Integration assistance
@@ -456,12 +468,14 @@ To help us assist you quickly:
 ### **Emergency Support**
 
 **Travel Emergencies**:
+
 - 24/7 rebooking assistance
 - Flight cancellation help
 - Hotel overbooking resolution
 - Travel insurance claims support
 
 **Security Issues**:
+
 - Account security concerns
 - Suspicious activity reports
 - Data privacy questions
@@ -470,12 +484,14 @@ To help us assist you quickly:
 ### **Refunds and Cancellations**
 
 **Refund Policy**:
+
 - Free cancellation within 24 hours
 - Refunds processed within 5-7 business days
 - Service fee may apply for some bookings
 - Travel insurance available for protection
 
 **How to Request Refunds**:
+
 1. Go to "My Trips" in your account
 2. Select the booking to cancel
 3. Follow cancellation workflow
