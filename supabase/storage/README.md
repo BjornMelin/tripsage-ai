@@ -5,19 +5,23 @@ This directory contains the complete file storage infrastructure configuration f
 ## Files
 
 ### Core Configuration
+
 - `buckets.sql` - Storage bucket definitions with size limits and MIME type restrictions
 - `policies.sql` - Row Level Security policies for storage access control
 - `config.sql` - Additional storage configuration, webhooks, and utility functions
 
 ### Edge Functions
+
 - `../functions/file-processor/` - Edge Function for asynchronous file processing
 
 ### Deployment
+
 - `../../scripts/database/deploy_storage_infrastructure.py` - Automated deployment script
 
 ## Quick Start
 
 ### 1. Deploy Storage Infrastructure
+
 ```bash
 # Set environment variables
 export SUPABASE_URL="https://your-project.supabase.co"
@@ -29,6 +33,7 @@ python scripts/database/deploy_storage_infrastructure.py
 ```
 
 ### 2. Deploy Edge Function
+
 ```bash
 # Deploy file processor function
 supabase functions deploy file-processor
@@ -39,6 +44,7 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ### 3. Configure CORS (via Supabase Dashboard)
+
 ```json
 {
   "allowedOrigins": ["http://localhost:3000", "https://your-domain.com"],
@@ -61,17 +67,20 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ## Security Features
 
 ### Access Control
+
 - **Trip-based permissions**: Users can only access files from trips they own or collaborate on
 - **User ownership**: Users can only modify files they uploaded
 - **Collaboration respect**: File access follows trip collaboration permissions
 
 ### File Processing
+
 - **Virus scanning**: All uploads are scanned for malware
 - **Automatic quarantine**: Infected files are moved to secure quarantine bucket
 - **Metadata extraction**: Document and image metadata is automatically extracted
 - **Thumbnail generation**: Images get auto-generated thumbnails in multiple sizes
 
 ### Quotas
+
 - **Per-user limits**: Prevent storage abuse with configurable quotas
 - **Per-trip limits**: Manage storage costs at the trip level
 - **Real-time checking**: Quota validation before upload acceptance
@@ -79,6 +88,7 @@ supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ## API Usage
 
 ### Upload File
+
 ```typescript
 // Validate upload first
 const validation = await supabase.rpc('validate_file_upload', {
@@ -106,6 +116,7 @@ const { error: uploadError } = await supabase.storage
 ```
 
 ### Download File
+
 ```typescript
 // For private files, create signed URL
 const { data, error } = await supabase.storage
@@ -119,6 +130,7 @@ const { data } = supabase.storage
 ```
 
 ### Check Storage Usage
+
 ```typescript
 // Get user storage usage by bucket
 const { data } = await supabase.rpc('get_user_storage_usage', {
@@ -131,6 +143,7 @@ console.log('Storage usage:', data);
 ## Monitoring
 
 ### Health Checks
+
 ```sql
 -- Check bucket status
 SELECT * FROM storage_configuration ORDER BY bucket_id;
@@ -148,6 +161,7 @@ GROUP BY bucket_name;
 ```
 
 ### Cleanup
+
 ```sql
 -- Clean up orphaned files (run daily)
 SELECT cleanup_orphaned_files();
@@ -167,6 +181,7 @@ WHERE status = 'completed' AND completed_at < NOW() - INTERVAL '7 days';
 4. **Virus scan failures**: Verify antivirus service configuration
 
 ### Debug Queries
+
 ```sql
 -- Check failed uploads
 SELECT * FROM file_attachments 

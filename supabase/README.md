@@ -27,12 +27,14 @@ supabase/
 ### Automated Deployment (Recommended)
 
 **For Local Development:**
+
 ```bash
 # Run automated deployment with validation
 python3 supabase/deploy_database_schema.py local
 ```
 
 **For Production:**
+
 ```bash
 # Deploy to production with project reference
 python3 supabase/deploy_database_schema.py production --project-ref your-project-ref
@@ -43,6 +45,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
 **Local Development Setup:**
 
 1. **Prerequisites:**
+
    ```bash
    # Install Supabase CLI
    npm install -g supabase
@@ -52,6 +55,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
    ```
 
 2. **Initialize and validate:**
+
    ```bash
    # Validate schema before deployment
    python3 supabase/validate_database_schema.py
@@ -62,6 +66,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
    ```
 
 3. **Apply schema:**
+
    ```bash
    # Apply consolidated schema
    supabase db reset
@@ -71,6 +76,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
    ```
 
 4. **Load development data (optional):**
+
    ```bash
    psql postgres://postgres:postgres@localhost:54322/postgres < supabase/seed.sql
    ```
@@ -78,6 +84,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
 **Production Deployment:**
 
 1. **Pre-deployment validation:**
+
    ```bash
    # Validate schema integrity
    python3 supabase/validate_database_schema.py
@@ -87,6 +94,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
    ```
 
 2. **Deploy to production:**
+
    ```bash
    # Link to production project
    supabase link --project-ref your-project-ref
@@ -101,6 +109,7 @@ python3 supabase/deploy_database_schema.py production --project-ref your-project
 ### Environment Setup
 
 **Required Environment Variables:**
+
 ```bash
 # Copy and configure environment
 cp .env.example .env
@@ -355,6 +364,7 @@ erDiagram
 | **Performance Optimization** | Efficient collaboration queries | Composite indexes and optimized permission lookup patterns |
 
 **Advanced Collaboration Functions:**
+
 - `get_user_accessible_trips(user_id, include_role)` - Get owned + shared trips with role information
 - `check_trip_permission(user_id, trip_id, permission)` - Validate user access with permission hierarchy
 - `get_trip_permission_details(user_id, trip_id)` - Detailed permission information and capabilities

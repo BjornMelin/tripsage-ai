@@ -27,7 +27,7 @@ The TripSage API provides a unified interface that supports:
 
 The API implements a dual-consumer architecture serving both frontend and agent clients:
 
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   AI Agents     │
 │   (Next.js)     │    │   (LangGraph)   │
@@ -56,12 +56,14 @@ The API implements a dual-consumer architecture serving both frontend and agent 
 The API automatically adapts responses based on the consumer type:
 
 #### Frontend Consumers
+
 - **User-friendly error messages** - Simplified, actionable error descriptions
 - **Rich response metadata** - UI state information and display hints
 - **Rate limiting** - Standard user-based limits
 - **Sanitized data** - Secure, filtered data appropriate for frontend display
 
 #### Agent Consumers
+
 - **Detailed error context** - Technical error information for agent decision-making
 - **Raw data access** - Unfiltered data for AI processing
 - **Enhanced rate limits** - Higher limits for agent operations
@@ -69,7 +71,7 @@ The API automatically adapts responses based on the consumer type:
 
 ## Directory Structure
 
-```
+```text
 tripsage/api/
 ├── core/                    # Core configuration and framework
 │   ├── config.py           # Application settings and environment config
@@ -117,6 +119,7 @@ tripsage/api/
 The API supports multiple authentication methods optimized for different consumers:
 
 #### JWT Authentication (Primary for Frontend)
+
 ```bash
 # Registration
 POST /api/v1/auth/register
@@ -137,6 +140,7 @@ Authorization: Bearer <jwt_token>
 ```
 
 #### API Key Authentication (Primary for Agents)
+
 ```bash
 # Create API key
 POST /api/v1/keys
@@ -165,6 +169,7 @@ GET /api/v1/flights/search
 ```
 
 **Security Features:**
+
 - **AES-256 encryption** for stored API keys
 - **User-specific salt** for additional security
 - **Key validation** before storage
@@ -176,17 +181,20 @@ GET /api/v1/flights/search
 ### Core Endpoints
 
 #### Health & Monitoring
+
 - `GET /api/health` - Basic health check
 - `GET /api/health/detailed` - Detailed system status
 - `GET /api/metrics` - Performance metrics (admin only)
 
 #### Authentication
+
 - `POST /api/v1/auth/register` - User registration
 - `POST /api/v1/auth/token` - Login and token generation
 - `POST /api/v1/auth/refresh` - Token refresh
 - `DELETE /api/v1/auth/logout` - Logout and token invalidation
 
 #### API Key Management
+
 - `GET /api/v1/keys` - List user's API keys
 - `POST /api/v1/keys` - Create/store new API key
 - `PUT /api/v1/keys/{key_id}` - Update API key
@@ -195,6 +203,7 @@ GET /api/v1/flights/search
 ### Travel Planning Endpoints
 
 #### Trip Management
+
 - `GET /api/v1/trips` - List user trips
 - `POST /api/v1/trips` - Create new trip
 - `GET /api/v1/trips/{trip_id}` - Get trip details
@@ -202,23 +211,27 @@ GET /api/v1/flights/search
 - `DELETE /api/v1/trips/{trip_id}` - Delete trip
 
 #### Flight Operations
+
 - `POST /api/v1/flights/search` - Search flights
 - `GET /api/v1/flights/{flight_id}` - Get flight details
 - `POST /api/v1/flights/{flight_id}/book` - Book flight
 - `GET /api/v1/flights/bookings` - List user bookings
 
 #### Accommodation Operations
+
 - `POST /api/v1/accommodations/search` - Search accommodations
 - `GET /api/v1/accommodations/{accommodation_id}` - Get details
 - `POST /api/v1/accommodations/{accommodation_id}/book` - Book accommodation
 
 #### Destination Research
+
 - `GET /api/v1/destinations/search` - Search destinations
 - `GET /api/v1/destinations/{destination_id}` - Get destination details
 - `GET /api/v1/destinations/{destination_id}/insights` - AI-powered insights
 - `GET /api/v1/destinations/{destination_id}/weather` - Weather information
 
 #### Itinerary Building
+
 - `GET /api/v1/itineraries/{trip_id}` - Get trip itinerary
 - `POST /api/v1/itineraries/{trip_id}/optimize` - Optimize itinerary
 - `PUT /api/v1/itineraries/{trip_id}/items` - Update itinerary items
@@ -226,18 +239,21 @@ GET /api/v1/flights/search
 ### AI Agent Endpoints
 
 #### Chat & Conversation
+
 - `POST /api/v1/chat/message` - Send chat message to agent
 - `GET /api/v1/chat/sessions` - List chat sessions
 - `GET /api/v1/chat/sessions/{session_id}` - Get chat history
 - `DELETE /api/v1/chat/sessions/{session_id}` - Clear chat session
 
 #### Memory & Context
+
 - `GET /api/v1/memory/search` - Search user memories
 - `POST /api/v1/memory/store` - Store new memory
 - `GET /api/v1/memory/context/{session_id}` - Get conversation context
 - `DELETE /api/v1/memory/{memory_id}` - Delete specific memory
 
 #### File Processing
+
 - `POST /api/v1/attachments/upload` - Upload and process files
 - `GET /api/v1/attachments/{file_id}` - Get file details
 - `GET /api/v1/attachments/{file_id}/analysis` - Get AI analysis results
@@ -245,6 +261,7 @@ GET /api/v1/flights/search
 ### Real-time Communication
 
 #### WebSocket Endpoints
+
 - `WS /api/v1/ws/chat/{session_id}` - Real-time chat communication
 - `WS /api/v1/ws/trip/{trip_id}` - Trip planning collaboration
 - `WS /api/v1/ws/status` - Agent status and progress updates
@@ -254,6 +271,7 @@ GET /api/v1/flights/search
 ### Frontend Optimization
 
 **UI-Friendly Responses:**
+
 ```json
 {
   "data": [...],
@@ -273,6 +291,7 @@ GET /api/v1/flights/search
 ```
 
 **Error Handling:**
+
 ```json
 {
   "error": {
@@ -287,6 +306,7 @@ GET /api/v1/flights/search
 ### Agent Optimization
 
 **Rich Context Responses:**
+
 ```json
 {
   "data": [...],
@@ -300,6 +320,7 @@ GET /api/v1/flights/search
 ```
 
 **Detailed Error Information:**
+
 ```json
 {
   "error": {
@@ -316,16 +337,19 @@ GET /api/v1/flights/search
 ## Performance Features
 
 ### Caching Strategy
+
 - **Multi-tier caching** with DragonflyDB (25x performance improvement)
 - **Intelligent TTL** based on data volatility
 - **Consumer-specific cache keys** for optimized retrieval
 
 ### Rate Limiting
+
 - **Consumer-aware limits** - Higher limits for agents
 - **Principal-based tracking** - Per-user and per-API key limits
 - **Graceful degradation** - Progressive limiting with warnings
 
 ### Database Optimization
+
 - **Connection pooling** with async operations
 - **Query optimization** with indexed searches
 - **Transaction management** with rollback support
@@ -408,6 +432,7 @@ The API leverages `tripsage_core` for:
 - **Infrastructure** - Database, caching, and communication services
 
 Example service integration:
+
 ```python
 from tripsage_core.services.business import FlightService
 from tripsage_core.config import get_app_settings
@@ -424,18 +449,21 @@ async def search_flights(criteria: FlightSearchRequest):
 ## Monitoring & Observability
 
 ### Logging
+
 - **Structured logging** with JSON format
 - **Request tracing** with correlation IDs
 - **Performance metrics** collection
 - **Error tracking** with context
 
 ### Metrics
+
 - **Request/response times** per endpoint
 - **Error rates** by consumer type
 - **Cache hit/miss ratios**
 - **External API latencies**
 
 ### Health Checks
+
 - **Database connectivity**
 - **Cache service status**
 - **External API availability**
