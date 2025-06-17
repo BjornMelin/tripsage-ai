@@ -12,20 +12,20 @@
 
 ---
 
-# Environment
+## Environment Variable Reference
 
+```bash
+# Environment
 ENVIRONMENT=development  # Options: development, staging, production
 
 # API Configuration
-
 API_HOST=0.0.0.0
 API_PORT=8000
 DEBUG=false  # Set to true only for development
 
 # Security
-
 SECRET_KEY=your-secret-key-here  # Use strong random key for production
-CORS_ORIGINS=<http://localhost:3000,https://yourdomain.com>
+CORS_ORIGINS=http://localhost:3000,https://yourdomain.com
 
 ```
 
@@ -411,3 +411,50 @@ This unified architecture represents the complete migration from the previous MC
 - **BYOK Security**: User-provided API keys stored encrypted in database
 
 The migration is complete and production-ready.
+
+## Configuration by Service
+
+### Database Services
+- **Supabase**: Primary database with pgvector extensions
+- **DragonflyDB**: High-performance caching layer
+
+### External APIs
+- **Duffel**: Flight booking and search
+- **Google Maps/Calendar**: Location and calendar services
+- **OpenWeatherMap/Visual Crossing**: Weather data
+- **Crawl4AI**: Web scraping capabilities
+- **Mem0**: Memory and embedding services
+
+### MCP Integrations
+- **Airbnb**: Accommodation search (unofficial API)
+
+## Development vs Production
+
+### Development Environment
+- Use `.env.development` for local development
+- Enable DEBUG mode for detailed logging
+- Use test API keys where possible
+- Local DragonflyDB instance via Docker
+
+### Production Environment
+- Use `.env.production` with real credentials
+- Disable DEBUG mode
+- Use production Supabase instance
+- Enable all security features
+
+## Validation and Testing
+
+### Environment Validation
+```bash
+# Validate all required environment variables are set
+uv run python -c "from tripsage.core.settings import get_settings; print('✅ All env vars validated')"
+```
+
+### Connection Testing
+```bash
+# Test database connection
+uv run python scripts/verification/verify_supabase_connection.py
+
+# Test cache connection  
+uv run python scripts/verification/verify_dragonfly.py
+```

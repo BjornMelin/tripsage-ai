@@ -394,7 +394,6 @@ pnpm build
 - **Rotate API keys** regularly
 - **Enable HTTPS** in production
 - **Configure CORS** appropriately for your domain
--e
 
 ---
 
