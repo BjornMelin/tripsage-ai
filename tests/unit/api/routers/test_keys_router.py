@@ -25,7 +25,7 @@ from tripsage.api.schemas.api_keys import (
     ApiKeyRotateRequest,
     ApiKeyValidateRequest,
 )
-from tripsage_core.services.business.key_management_service import KeyManagementService
+from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
 )
@@ -44,9 +44,9 @@ class TestKeysRouter:
     @pytest.fixture
     def mock_key_service(self):
         """Mock key management service."""
-        service = MagicMock(spec=KeyManagementService)
+        service = MagicMock(spec=ApiKeyService)
         # Configure common async methods
-        service.list_keys = AsyncMock()
+        service.list_user_keys = AsyncMock()
         service.create_key = AsyncMock()
         service.get_key = AsyncMock()
         service.delete_key = AsyncMock()
@@ -80,21 +80,21 @@ class TestKeysRouter:
                 "status": "active",
             }
         ]
-        mock_key_service.list_keys.return_value = expected_keys
+        mock_key_service.list_user_keys.return_value = expected_keys
 
         result = await list_keys(mock_principal, mock_key_service)
 
-        mock_key_service.list_keys.assert_called_once_with("user123")
+        mock_key_service.list_user_keys.assert_called_once_with("user123")
         assert result == expected_keys
 
     async def test_list_keys_empty(self, mock_principal, mock_key_service):
         """Test listing keys when user has no keys."""
-        mock_key_service.list_keys.return_value = []
+        mock_key_service.list_user_keys.return_value = []
 
         result = await list_keys(mock_principal, mock_key_service)
 
         assert result == []
-        mock_key_service.list_keys.assert_called_once_with("user123")
+        mock_key_service.list_user_keys.assert_called_once_with("user123")
 
     async def test_create_key_success(
         self, mock_principal, mock_key_service, sample_key_data

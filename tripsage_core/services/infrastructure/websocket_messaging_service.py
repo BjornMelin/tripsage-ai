@@ -191,7 +191,8 @@ class WebSocketMessagingService:
     ) -> bool:
         """Send event to specific connection with rate limiting.
 
-        Consolidated send logic to address code review comment about duplicate send_to_* logic.
+        Consolidated send logic to address code review comment about duplicate
+        send_to_* logic.
         """
         connection = self.connections.get(connection_id)
         if not connection:

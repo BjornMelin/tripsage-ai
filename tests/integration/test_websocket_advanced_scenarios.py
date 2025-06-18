@@ -459,7 +459,7 @@ class TestConcurrentOperations:
                             await asyncio.sleep(0.01)
                             await manager.disconnect_connection(response.connection_id)
                     except Exception:
-                        # Authentication might fail due to missing config, that's OK for this test
+                        # Authentication might fail due to missing config, that's OK
                         pass
 
         # Run multiple concurrent connections
