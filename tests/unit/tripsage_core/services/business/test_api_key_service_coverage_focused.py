@@ -122,7 +122,9 @@ class TestApiKeyServiceCoverageFocused:
         """Test encryption when data cipher creation fails - targets lines 652-667."""
         with patch("cryptography.fernet.Fernet") as mock_fernet_class:
             # Mock generate_key to succeed, but constructor to fail
-            mock_fernet_class.generate_key.return_value = b"fake_key_value_32_bytes_length!"
+            mock_fernet_class.generate_key.return_value = (
+                b"fake_key_value_32_bytes_length!"
+            )
             mock_fernet_class.side_effect = Exception("Invalid key format")
 
             with pytest.raises(ServiceError, match="Encryption failed"):
@@ -133,8 +135,10 @@ class TestApiKeyServiceCoverageFocused:
         """Test encryption when data encryption itself fails - targets lines 655-667."""
         with patch("cryptography.fernet.Fernet") as mock_fernet_class:
             # Mock generate_key to succeed
-            mock_fernet_class.generate_key.return_value = b"fake_key_value_32_bytes_length!"
-            
+            mock_fernet_class.generate_key.return_value = (
+                b"fake_key_value_32_bytes_length!"
+            )
+
             # Mock cipher instance with failing encrypt method
             mock_cipher = Mock()
             mock_cipher.encrypt.side_effect = Exception("Encryption operation failed")

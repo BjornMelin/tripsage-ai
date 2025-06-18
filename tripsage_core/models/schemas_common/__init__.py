@@ -46,7 +46,6 @@ from .financial import (
 from .flight_schemas import (
     AirportSearchRequest,
     AirportSearchResponse,
-    FlightOffer,
     FlightPassenger,
     FlightSearchRequest,
     FlightSearchResponse,
