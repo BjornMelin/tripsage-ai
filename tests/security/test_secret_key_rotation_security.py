@@ -404,7 +404,8 @@ class TestSecretKeyRotationSecurity:
         # Test that salt manipulation would break decryption
         # (This tests that the salt is properly integrated into key derivation)
         for _malicious_salt in malicious_salts:
-            # Create service with manipulated salt (simulated by different master secret)
+            # Create service with manipulated salt (simulated by different master
+            # secret)
             try:
                 salt_affected_settings = Mock()
                 # Different secret would derive different key due to salt integration

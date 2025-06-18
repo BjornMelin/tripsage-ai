@@ -624,7 +624,8 @@ class TestMultiVectorAttackScenarios:
                         if hasattr(result, "status_code"):
                             # Should not allow unauthorized business operations
                             assert result.status_code in [401, 403, 405, 422], (
-                                f"Business logic vulnerability in {attack_scenario['name']}"
+                                f"Business logic vulnerability in "
+                                f"{attack_scenario['name']}"
                             )
 
             except Exception as e:
@@ -824,7 +825,10 @@ class TestAdvancedBypassTechniques:
             # Multipart in JSON context
             {
                 "content_type": "application/json",
-                "payload": '--boundary\r\nContent-Disposition: form-data; name="admin"\r\n\r\ntrue\r\n--boundary--',
+                "payload": (
+                    '--boundary\r\nContent-Disposition: form-data; name="admin"'
+                    '\r\n\r\ntrue\r\n--boundary--'
+                ),
                 "expected_parsing": "json",
             },
         ]
@@ -1037,11 +1041,16 @@ class TestSecurityMisconfigurationExploitation:
             {"filename": "shell.php", "content": "<?php system($_GET['cmd']); ?>"},
             {
                 "filename": "script.jsp",
-                "content": "<% Runtime.getRuntime().exec(request.getParameter('cmd')); %>",
+                "content": (
+                    "<% Runtime.getRuntime().exec(request.getParameter('cmd')); %>"
+                ),
             },
             {
                 "filename": "backdoor.aspx",
-                "content": "<%@ Page Language='C#' %><script runat='server'>void Page_Load(object sender, EventArgs e){}</script>",
+                "content": (
+                    "<%@ Page Language='C#' %><script runat='server'>"
+                    "void Page_Load(object sender, EventArgs e){}</script>"
+                ),
             },
             # Double extension
             {"filename": "image.jpg.php", "content": "<?php phpinfo(); ?>"},

@@ -325,7 +325,10 @@ class TestApiKeyServiceComprehensive:
             mock_cache.set.assert_called()
 
             # Mock cache hit for second call
-            cache_response = '{"is_valid": true, "status": "valid", "service": "openai", "message": "Cached"}'
+            cache_response = (
+                '{"is_valid": true, "status": "valid", "service": "openai", '
+                '"message": "Cached"}'
+            )
             mock_cache.get.return_value = cache_response
 
             # Second validation should use cache
