@@ -607,7 +607,7 @@ class AsyncMemoryService:
         cached_values = await cache_service.mget(cache_keys)
 
         # Process cached results
-        for i, (user_id, search_request, cache_key) in enumerate(cache_checks):
+        for i, (user_id, search_request, _cache_key) in enumerate(cache_checks):
             cached_value = cached_values[i]
             if cached_value is not None:
                 try:
@@ -628,7 +628,7 @@ class AsyncMemoryService:
             search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
 
             # Process results
-            for i, (user_id, search_request) in enumerate(uncached_queries):
+            for i, (user_id, _search_request) in enumerate(uncached_queries):
                 if isinstance(search_results[i], Exception):
                     logger.error(
                         f"Batch search failed for user {user_id}: {search_results[i]}"

@@ -248,7 +248,7 @@ class DatabaseService:
     def _initialize_metrics(self):
         """Initialize Prometheus metrics for monitoring."""
         try:
-            from prometheus_client import Counter, Gauge, Histogram, Summary
+            from prometheus_client import Counter, Gauge, Histogram
 
             # Create metrics container
             self._metrics = type("Metrics", (), {})()

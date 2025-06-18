@@ -375,7 +375,9 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         endpoint=request.url.path,
                         method=request.method,
                     )
-                    auth_audit_logger.log_auth_attempt(request, "jwt", True, principal.id)
+                    auth_audit_logger.log_auth_attempt(
+                        request, "jwt", True, principal.id
+                    )
 
             except AuthenticationError as e:
                 auth_error = e

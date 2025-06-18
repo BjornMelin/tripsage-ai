@@ -8,6 +8,7 @@ management of services while enabling easy testing through dependency injection.
 from typing import Optional
 
 from tripsage_core.config import get_settings
+from tripsage_core.services.business import MemoryService
 from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import ChatService
@@ -17,7 +18,6 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
-from tripsage_core.services.business import MemoryService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.external_apis import (

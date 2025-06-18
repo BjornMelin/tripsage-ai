@@ -35,6 +35,8 @@ from tripsage_core.services.business.itinerary_service import (
 )
 from tripsage_core.services.business.memory_service_async import (
     AsyncMemoryService as MemoryService,
+)
+from tripsage_core.services.business.memory_service_async import (
     get_async_memory_service as get_memory_service,
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service

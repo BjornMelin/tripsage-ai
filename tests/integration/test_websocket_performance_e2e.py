@@ -106,7 +106,7 @@ class TestWebSocketPerformanceE2E:
                 )
 
                 # Verify no artificial delays
-                assert all(l < 200 for l in latencies), (
+                assert all(latency < 200 for latency in latencies), (
                     "Individual message latency too high"
                 )
 

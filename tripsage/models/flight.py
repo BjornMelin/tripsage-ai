@@ -10,12 +10,6 @@ from typing import Any, Dict, List
 from pydantic import Field
 
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
-from tripsage_core.models.domain.flight import (
-    Airport,
-    FlightOffer,
-    FlightSegment,
-)
-from tripsage_core.models.schemas_common.enums import CabinClass
 
 # CabinClass consolidated to tripsage_core.models.schemas_common.enums
 
