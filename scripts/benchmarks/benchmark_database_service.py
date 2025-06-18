@@ -21,7 +21,7 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List
 
-import numpy as np
+import random
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -412,7 +412,7 @@ class DatabaseBenchmark:
 
             # Vector search is typically slower
             for _ in range(min(5, self.iterations)):
-                query_vector = np.random.rand(vector_dim).tolist()
+                query_vector = [random.random() for _ in range(vector_dim)]
 
                 start = time.time()
                 try:

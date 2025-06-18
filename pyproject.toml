@@ -141,6 +141,33 @@ dev = [
     "bandit>=1.8.3",
 ]
 
+# Scripts and benchmarking dependencies
+benchmark = [
+    # CLI interface for benchmark scripts
+    "click>=8.1.0",
+    # System monitoring (psutil already in main dependencies)
+    # Database connectivity (asyncpg, supabase already in main dependencies)
+]
+
+# Optional visualization capabilities (install only when needed)
+visualization = [
+    "matplotlib>=3.7.0",
+    "plotly>=5.17.0",
+]
+
+# Optional profiling capabilities (install only when needed)  
+profiling = [
+    "memory-profiler>=0.61.0",
+    "line-profiler>=4.1.0",
+]
+
+# Optional data analysis environment
+analysis = [
+    "jupyter>=1.1.1",
+    "ipython>=8.0.0",
+    "pandas>=2.1.0",
+]
+
 [tool.coverage.run]
 branch = true
 source = ["tripsage", "tripsage_core"]

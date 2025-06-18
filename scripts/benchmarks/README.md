@@ -30,7 +30,7 @@ scripts/benchmarks/
 ├── ci_performance_check.py       # CI/CD integration script
 ├── dragonfly_performance.py      # Cache performance benchmarking
 ├── example_usage.py              # Usage examples
-└── requirements.txt              # Python dependencies
+# Dependencies managed in main pyproject.toml
 ```
 
 ## 🚀 Quick Start
@@ -43,8 +43,8 @@ Run the full validation suite to verify all optimization claims:
 # Navigate to the benchmarks directory
 cd scripts/benchmarks
 
-# Install dependencies
-uv pip install -r requirements.txt
+# Install benchmark dependencies
+uv sync --group benchmark
 
 # Run complete validation (recommended)
 python run_benchmarks.py full-validation --output-dir ./results --verbose
