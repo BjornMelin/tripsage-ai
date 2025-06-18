@@ -289,8 +289,9 @@ class ApiKeyService:
             iterations=300000,  # Modern security standard
         )
 
-        # Derive master key
-        key_bytes = kdf.derive(master_secret.encode())
+        # Derive master key - handle SecretStr objects properly
+        secret_value = master_secret.get_secret_value() if hasattr(master_secret, 'get_secret_value') else master_secret
+        key_bytes = kdf.derive(secret_value.encode())
         self.master_key = base64.urlsafe_b64encode(key_bytes)
         self.master_cipher = Fernet(self.master_key)
 
