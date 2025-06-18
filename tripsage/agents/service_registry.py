@@ -30,10 +30,12 @@ from tripsage_core.services.external_apis import (
 )
 from tripsage_core.services.infrastructure import (
     CacheService,
-    DatabaseService,
     KeyMonitoringService,
     WebSocketBroadcaster,
     WebSocketManager,
+)
+from tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring import (
+    EnhancedDatabaseService,
 )
 
 
@@ -67,7 +69,7 @@ class ServiceRegistry:
         webcrawl_service: Optional[WebCrawlService] = None,
         # Infrastructure services
         cache_service: Optional[CacheService] = None,
-        database_service: Optional[DatabaseService] = None,
+        database_service: Optional[EnhancedDatabaseService] = None,
         key_monitoring_service: Optional[KeyMonitoringService] = None,
         websocket_broadcaster: Optional[WebSocketBroadcaster] = None,
         websocket_manager: Optional[WebSocketManager] = None,
@@ -106,7 +108,7 @@ class ServiceRegistry:
         self.websocket_manager = websocket_manager
 
     @classmethod
-    async def create_default(cls, db_service: DatabaseService) -> "ServiceRegistry":
+    async def create_default(cls, db_service: EnhancedDatabaseService) -> "ServiceRegistry":
         """Create a service registry with default service implementations.
 
         This factory method initializes all services with their default configurations
