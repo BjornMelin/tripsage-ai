@@ -827,7 +827,7 @@ class TestAdvancedBypassTechniques:
                 "content_type": "application/json",
                 "payload": (
                     '--boundary\r\nContent-Disposition: form-data; name="admin"'
-                    '\r\n\r\ntrue\r\n--boundary--'
+                    "\r\n\r\ntrue\r\n--boundary--"
                 ),
                 "expected_parsing": "json",
             },
