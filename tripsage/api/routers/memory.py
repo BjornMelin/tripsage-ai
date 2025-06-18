@@ -11,12 +11,10 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import (
-    get_memory_service_dep,
+    MemoryServiceDep,
+    RequiredPrincipalDep,
     get_principal_id,
-    require_principal_dep,
 )
-from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.services.memory import MemoryService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
@@ -46,8 +44,8 @@ class UpdatePreferencesRequest(BaseModel):
 @router.post("/conversation")
 async def add_conversation_memory(
     request: ConversationMemoryRequest,
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Add conversation messages to user memory.
 
@@ -61,9 +59,23 @@ async def add_conversation_memory(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.add_conversation_memory(
-            user_id, request.messages, request.session_id
+
+        # Import the core ConversationMemoryRequest model
+        from tripsage_core.services.business.memory_service import (
+            ConversationMemoryRequest as CoreMemoryRequest,
         )
+
+        # Convert API request to core request
+        core_request = CoreMemoryRequest(
+            messages=request.messages,
+            session_id=request.session_id,
+            # context_type is not in the core model, add to metadata if needed
+            metadata=(
+                {"context_type": request.context_type} if request.context_type else None
+            ),
+        )
+
+        result = await memory_service.add_conversation_memory(user_id, core_request)
         return result
 
     except Exception as e:
@@ -76,8 +88,8 @@ async def add_conversation_memory(
 
 @router.get("/context")
 async def get_user_context(
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Get user context and preferences.
 
@@ -104,8 +116,8 @@ async def get_user_context(
 @router.post("/search")
 async def search_memories(
     request: SearchMemoryRequest,
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Search user memories.
 
@@ -135,8 +147,8 @@ async def search_memories(
 @router.put("/preferences")
 async def update_preferences(
     request: UpdatePreferencesRequest,
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Update user preferences.
 
@@ -167,9 +179,9 @@ async def update_preferences(
 async def add_preference(
     key: str,
     value: str,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
     category: str = "general",
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
 ):
     """Add or update a single user preference.
 
@@ -199,8 +211,8 @@ async def add_preference(
 @router.delete("/memory/{memory_id}")
 async def delete_memory(
     memory_id: str,
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Delete a specific memory.
 
@@ -235,8 +247,8 @@ async def delete_memory(
 
 @router.get("/stats")
 async def get_memory_stats(
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
 ):
     """Get memory statistics for the user.
 
@@ -262,9 +274,9 @@ async def get_memory_stats(
 
 @router.delete("/clear")
 async def clear_user_memory(
+    principal: RequiredPrincipalDep,
+    memory_service: MemoryServiceDep,
     confirm: bool = False,
-    principal: Principal = require_principal_dep,
-    memory_service: MemoryService = get_memory_service_dep,
 ):
     """Clear all memories for the user.
 

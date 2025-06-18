@@ -11,14 +11,11 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.core.dependencies import (
-    get_chat_service_dep,
+    ChatServiceDep,
+    RequiredPrincipalDep,
     get_principal_id,
-    require_principal_dep,
 )
-from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.chat import ChatRequest
-from tripsage.api.schemas.responses.chat import ChatResponse
-from tripsage.api.services.chat import ChatService
+from tripsage.api.schemas.chat import ChatRequest, ChatResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -27,8 +24,8 @@ router = APIRouter()
 @router.post("/", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
 ):
     """Handle chat requests with optional streaming and session persistence.
 
@@ -58,8 +55,8 @@ async def chat(
 @router.post("/sessions", response_model=dict)
 async def create_session(
     title: str,
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
 ):
     """Create a new chat session.
 
@@ -74,7 +71,7 @@ async def create_session(
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.requests.chat import SessionCreateRequest
+        from tripsage.api.schemas.chat import SessionCreateRequest
 
         session_request = SessionCreateRequest(title=title)
 
@@ -91,8 +88,8 @@ async def create_session(
 
 @router.get("/sessions", response_model=List[dict])
 async def list_sessions(
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
 ):
     """List chat sessions for the current user.
 
@@ -119,8 +116,8 @@ async def list_sessions(
 @router.get("/sessions/{session_id}", response_model=dict)
 async def get_session(
     session_id: UUID,
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
 ):
     """Get a specific chat session.
 
@@ -156,8 +153,8 @@ async def get_session(
 @router.get("/sessions/{session_id}/messages", response_model=List[dict])
 async def get_session_messages(
     session_id: UUID,
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
     limit: int = 50,
 ):
     """Get messages from a chat session.
@@ -188,9 +185,9 @@ async def get_session_messages(
 async def create_message(
     session_id: UUID,
     content: str,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
     role: str = "user",
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
 ):
     """Create a new message in a session.
 
@@ -207,7 +204,7 @@ async def create_message(
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.requests.chat import CreateMessageRequest
+        from tripsage.api.schemas.chat import CreateMessageRequest
 
         message_request = CreateMessageRequest(content=content, role=role)
 
@@ -227,8 +224,8 @@ async def create_message(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: UUID,
-    principal: Principal = require_principal_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    principal: RequiredPrincipalDep,
+    chat_service: ChatServiceDep,
 ):
     """Delete a chat session.
 

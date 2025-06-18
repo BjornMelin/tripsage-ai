@@ -12,7 +12,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
-from tripsage_core.mcp_abstraction.manager import MCPManager
+
+# MCPManager removed as part of BJO-161 MCP abstraction removal
+# from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.services.business.error_handling_service import (
     ErrorRecoveryService,
 )
@@ -105,14 +107,17 @@ class ToolCallService:
     with proper validation, error handling, and result formatting.
     """
 
-    def __init__(self, mcp_manager: MCPManager):
+    def __init__(self, mcp_manager=None):
         """Initialize tool calling service.
 
         Args:
-            mcp_manager: MCP manager instance for tool execution
+            mcp_manager: MCP manager instance (deprecated - removed in BJO-161)
         """
-        self.mcp_manager = mcp_manager
-        self.error_recovery = ErrorRecoveryService(mcp_manager)
+        # MCP manager removed as part of BJO-161 MCP abstraction removal
+        if mcp_manager is not None:
+            logger.warning("MCP manager parameter is deprecated and will be ignored")
+        self.mcp_manager = None
+        self.error_recovery = ErrorRecoveryService()
         self.execution_history: List[ToolCallResponse] = []
         self.rate_limits: Dict[str, List[float]] = {}
 
@@ -381,47 +386,11 @@ class ToolCallService:
         self, request: ToolCallRequest, params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Execute tool call with comprehensive error recovery."""
-        try:
-            # Execute with timeout
-            result = await asyncio.wait_for(
-                self.mcp_manager.invoke(method_name=request.method, params=params),
-                timeout=request.timeout,
-            )
-
-            # Store successful result for future fallback use
-            await self.error_recovery.store_successful_result(
-                request.service, request.method, params, result
-            )
-
-            return result
-
-        except Exception as e:
-            logger.warning(
-                f"Tool call {request.id} failed, attempting error recovery: {str(e)}"
-            )
-
-            # Use error recovery service for comprehensive fallback handling
-            fallback_result = await self.error_recovery.handle_mcp_error(
-                e,  # Pass error as first positional argument
-                request.service,
-                request.method,
-                params,
-                request.retry_count,
-            )
-
-            if fallback_result.success and fallback_result.result:
-                logger.info(
-                    f"Error recovery succeeded using "
-                    f"{fallback_result.strategy_used.value}"
-                )
-                return fallback_result.result
-            else:
-                # All recovery attempts failed
-                error_msg = (
-                    f"Tool call failed after error recovery: "
-                    f"{fallback_result.error or str(e)}"
-                )
-                raise ToolCallError(error_msg) from e
+        # MCP abstraction removed - direct service calls should be used
+        raise NotImplementedError(
+            f"Direct service integration needed for {request.service}.{request.method} "
+            f"after MCP removal"
+        )
 
     async def _check_rate_limit(self, service: str) -> bool:
         """Check if service is within rate limits."""
@@ -543,15 +512,6 @@ async def get_tool_calling_service() -> ToolCallService:
     Returns:
         ToolCallService instance
     """
-    # Import here to avoid circular imports
-    try:
-        from tripsage_core.mcp_abstraction.manager import MCPManager
-
-        mcp_manager = MCPManager()
-    except ImportError:
-        # Create a minimal mock for testing
-        from unittest.mock import MagicMock
-
-        mcp_manager = MagicMock()
-
-    return ToolCallService(mcp_manager=mcp_manager)
+    # MCP abstraction removed as part of BJO-161
+    # Direct service integrations should be used instead
+    return ToolCallService()
