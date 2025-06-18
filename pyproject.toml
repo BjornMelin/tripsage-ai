@@ -20,6 +20,8 @@ dependencies = [
     "pydantic-settings>=2.9.1",
     "email-validator>=2.2.0",
     "python-dotenv>=1.1.0",
+    # Performance optimizations
+    "msgpack>=1.1.0",  # Binary serialization for WebSocket performance
     # Database and caching
     "sqlalchemy[asyncio]>=2.0.41",
     "greenlet>=3.2.3",

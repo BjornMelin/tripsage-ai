@@ -1,11 +1,14 @@
 """Unit tests for WebSocket security features."""
 
-import pytest
-from unittest.mock import Mock, MagicMock
-from typing import Dict, Any
+from unittest.mock import MagicMock, Mock
 
+import pytest
 from fastapi import WebSocket
-from tripsage.api.routers.websocket import validate_websocket_origin, get_allowed_origins
+
+from tripsage.api.routers.websocket import (
+    get_allowed_origins,
+    validate_websocket_origin,
+)
 
 
 @pytest.fixture
@@ -37,7 +40,7 @@ class TestWebSocketOriginValidation:
         # Test exact match
         mock_websocket.headers = {"origin": "https://app.tripsage.com"}
         assert await validate_websocket_origin(mock_websocket) is True
-        
+
         # Test localhost
         mock_websocket.headers = {"origin": "http://localhost:3000"}
         assert await validate_websocket_origin(mock_websocket) is True
@@ -48,7 +51,7 @@ class TestWebSocketOriginValidation:
         # Test malicious origin
         mock_websocket.headers = {"origin": "https://evil.com"}
         assert await validate_websocket_origin(mock_websocket) is False
-        
+
         # Test different port
         mock_websocket.headers = {"origin": "http://localhost:8080"}
         assert await validate_websocket_origin(mock_websocket) is False
@@ -59,7 +62,7 @@ class TestWebSocketOriginValidation:
         # No origin header
         mock_websocket.headers = {}
         assert await validate_websocket_origin(mock_websocket) is False
-        
+
         # Empty origin header
         mock_websocket.headers = {"origin": ""}
         assert await validate_websocket_origin(mock_websocket) is False
@@ -70,7 +73,7 @@ class TestWebSocketOriginValidation:
         # Test uppercase origin
         mock_websocket.headers = {"origin": "HTTPS://APP.TRIPSAGE.COM"}
         assert await validate_websocket_origin(mock_websocket) is True
-        
+
         # Test mixed case
         mock_websocket.headers = {"origin": "Http://LocalHost:3000"}
         assert await validate_websocket_origin(mock_websocket) is True
@@ -81,22 +84,22 @@ class TestWebSocketOriginValidation:
         # This should pass if the allowed origin starts with the provided origin
         mock_websocket.headers = {"origin": "https://app.tripsage.com"}
         assert await validate_websocket_origin(mock_websocket) is True
-        
+
         # But arbitrary subdomains should not pass
         mock_websocket.headers = {"origin": "https://evil.app.tripsage.com"}
         assert await validate_websocket_origin(mock_websocket) is False
 
     def test_get_allowed_origins_from_settings(self, monkeypatch, mock_settings):
         """Test that allowed origins are loaded from settings."""
+
         # Mock get_settings to return our mock settings
         def mock_get_settings():
             return mock_settings
-        
+
         monkeypatch.setattr(
-            "tripsage.api.routers.websocket.get_settings",
-            mock_get_settings
+            "tripsage.api.routers.websocket.get_settings", mock_get_settings
         )
-        
+
         origins = get_allowed_origins()
         assert "https://app.tripsage.com" in origins
         assert "http://localhost:3000" in origins
@@ -107,15 +110,14 @@ class TestWebSocketOriginValidation:
         # Mock settings without websocket_allowed_origins
         settings = MagicMock()
         delattr(settings, "websocket_allowed_origins")
-        
+
         def mock_get_settings():
             return settings
-        
+
         monkeypatch.setattr(
-            "tripsage.api.routers.websocket.get_settings",
-            mock_get_settings
+            "tripsage.api.routers.websocket.get_settings", mock_get_settings
         )
-        
+
         origins = get_allowed_origins()
         # Should return default origins
         assert "https://app.tripsage.com" in origins
@@ -144,8 +146,9 @@ class TestWebSocketOriginValidation:
             "https://app.tripsage.com@attacker.com",  # URL confusion
             "https://127.0.0.1:3000",  # IP instead of localhost (not in default list)
         ]
-        
+
         for origin in attack_origins:
             mock_websocket.headers = {"origin": origin}
-            assert await validate_websocket_origin(mock_websocket) is False, \
+            assert await validate_websocket_origin(mock_websocket) is False, (
                 f"Origin '{origin}' should have been rejected"
+            )

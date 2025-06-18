@@ -23,7 +23,7 @@ For shared types from tripsage_core:
 """
 
 # Re-export commonly used shared types for convenience
-from tripsage_core.models.schemas_common import (
+from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
     BookingStatus,
     CabinClass,

@@ -11,16 +11,13 @@ This module provides core infrastructure services across TripSage:
 """
 
 from .cache_service import CacheService, get_cache_service
-from .database_monitor import (
-    ConsolidatedDatabaseMonitor,
+from .database_service import (
+    DatabaseService,
     HealthStatus,
-    MonitoringConfig,
-    QueryStatus,
     QueryType,
     SecurityEvent,
-    get_database_monitor,
+    get_database_service,
 )
-from .database_service import DatabaseService, get_database_service
 from .key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
@@ -42,13 +39,8 @@ __all__ = [
     # Database
     "DatabaseService",
     "get_database_service",
-    # Database Monitor
-    "ConsolidatedDatabaseMonitor",
-    "get_database_monitor",
-    "MonitoringConfig",
     "HealthStatus",
     "QueryType",
-    "QueryStatus",
     "SecurityEvent",
     # pgvector Service (Modern, simplified approach)
     "PGVectorService",

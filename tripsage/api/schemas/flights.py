@@ -10,7 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from tripsage_core.models.domain.flight import CabinClass
+from tripsage_core.models.schemas_common.enums import CabinClass
 
 # ===== Request Schemas =====
 

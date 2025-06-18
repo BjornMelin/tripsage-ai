@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     # Redis/Cache (DragonflyDB)
     redis_url: str | None = None
     redis_password: str | None = None
-    
+
     # WebSocket Configuration
     websocket_allowed_origins: list[str] = Field(
         default=[

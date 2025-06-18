@@ -77,7 +77,6 @@ from .domain import (
     AccommodationListing,
     AccommodationLocation,
     Airport,
-    CabinClass,
     Entity,
     FlightOffer,
     FlightSegment,
@@ -103,7 +102,6 @@ __all__ = [
     "FlightOffer",
     "Airport",
     "FlightSegment",
-    "CabinClass",
     # Domain models - Memory
     "Entity",
     "Relation",

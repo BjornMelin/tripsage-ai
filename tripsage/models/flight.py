@@ -13,12 +13,10 @@ from pydantic import Field, field_validator, model_validator
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
 from tripsage_core.models.domain.flight import (
     Airport,
-    CabinClass,
     FlightOffer,
     FlightSegment,
 )
-
-# CabinClass moved to tripsage_core.models.domain.flight
+from tripsage_core.models.schemas_common.enums import CabinClass
 
 
 class FlightSearchRequest(MCPRequestBase):

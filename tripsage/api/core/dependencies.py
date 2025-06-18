@@ -39,10 +39,11 @@ from tripsage_core.services.business.memory_service import (
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.services.business.user_service import UserService, get_user_service
-from tripsage_core.services.infrastructure import CacheService, get_cache_service
-from tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring import (
-    EnhancedDatabaseService,
-    get_enhanced_database_service,
+from tripsage_core.services.infrastructure import (
+    CacheService,
+    DatabaseService,
+    get_cache_service,
+    get_database_service,
 )
 from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
 from tripsage_core.services.simple_mcp_service import mcp_manager
@@ -57,12 +58,12 @@ def get_settings_dependency() -> Settings:
 
 # Database dependency
 async def get_db():
-    """Get enhanced database service as a dependency.
+    """Get database service as a dependency.
 
-    Note: This returns EnhancedDatabaseService with LIFO pooling and monitoring.
-    The name is kept for compatibility but now uses the enhanced version.
+    Note: This returns the consolidated DatabaseService with LIFO pooling,
+    monitoring, and security features.
     """
-    return await get_enhanced_database_service()
+    return await get_database_service()
 
 
 # Session memory dependency
@@ -166,7 +167,7 @@ def get_mcp_manager() -> MCPManager:
 
 # Modern Annotated dependency types for 2025 best practices
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
-DatabaseDep = Annotated[EnhancedDatabaseService, Depends(get_db)]
+DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
 CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
 SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
 MCPManagerDep = Annotated[MCPManager, Depends(get_mcp_manager)]

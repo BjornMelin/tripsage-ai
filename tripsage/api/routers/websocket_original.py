@@ -1,29 +1,22 @@
-"""WebSocket router for TripSage API with performance optimizations.
+"""WebSocket router for TripSage API.
 
 This module provides WebSocket endpoints for real-time communication,
 including chat streaming, agent status updates, and live user feedback.
-
-Performance optimizations include:
-- Message batching and compression
-- Connection pooling
-- Concurrent message handling
-- Zero artificial delays
-- Binary protocol support with MessagePack
-- Adaptive heartbeat mechanism
-- Backpressure handling
 """
 
 import asyncio
-import gzip
 import json
 import logging
-import time
-from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from pydantic import Field, ValidationError
 
 from tripsage.agents.chat import ChatAgent
@@ -34,7 +27,9 @@ from tripsage.api.schemas.websocket import (
     WebSocketSubscribeRequest,
 )
 from tripsage_core.config import get_settings
-from tripsage_core.models.schemas_common.chat import ChatMessage as WebSocketMessage
+from tripsage_core.models.schemas_common.chat import (
+    ChatMessage as WebSocketMessage,
+)
 from tripsage_core.services.business.chat_service import (
     ChatService as CoreChatService,
 )
@@ -47,44 +42,6 @@ from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
     WebSocketEventType,
 )
-
-# Optional MessagePack support
-try:
-    import msgpack
-
-    MSGPACK_AVAILABLE = True
-except ImportError:
-    MSGPACK_AVAILABLE = False
-    msgpack = None
-
-
-# Performance configuration
-class PerformanceConfig:
-    """WebSocket performance configuration."""
-
-    # Message batching
-    BATCH_SIZE = 20  # Messages per batch
-    BATCH_TIMEOUT_MS = 10  # Max wait time for batch
-
-    # Compression
-    COMPRESSION_THRESHOLD = 1024  # Compress messages larger than 1KB
-    COMPRESSION_LEVEL = 6  # gzip compression level (1-9)
-
-    # Connection pooling
-    MAX_POOL_SIZE = 1000  # Maximum concurrent connections
-    POOL_CLEANUP_INTERVAL = 60  # Seconds between cleanup cycles
-
-    # Heartbeat configuration
-    HEARTBEAT_INTERVAL = 30  # Seconds between heartbeats
-    HEARTBEAT_TIMEOUT = 5  # Seconds to wait for pong
-
-    # Message processing
-    CONCURRENT_HANDLERS = 10  # Max concurrent message handlers per connection
-    MESSAGE_TIMEOUT = 30  # Seconds timeout for message processing
-
-    # Backpressure
-    MAX_QUEUE_SIZE = 10000  # Max messages in queue before backpressure
-    BACKPRESSURE_THRESHOLD = 0.8  # Trigger backpressure at 80% capacity
 
 
 # WebSocket Security Configuration
@@ -169,218 +126,6 @@ router = APIRouter()
 _chat_agent = None
 _service_registry = None
 
-# Performance monitoring
-performance_metrics = {
-    "total_messages_processed": 0,
-    "total_batches_sent": 0,
-    "compression_ratio": 0.0,
-    "average_batch_size": 0.0,
-    "concurrent_connections": 0,
-    "message_processing_time_ms": deque(maxlen=1000),
-}
-
-
-# Message batching system
-class MessageBatcher:
-    """Handles message batching for efficient transmission."""
-
-    def __init__(self, connection_id: str, websocket: WebSocket):
-        self.connection_id = connection_id
-        self.websocket = websocket
-        self.batch_queue: deque = deque()
-        self.batch_task: Optional[asyncio.Task] = None
-        self.last_send_time = time.time()
-        self._running = True
-        self._send_lock = asyncio.Lock()
-
-    async def add_message(self, message: Dict[str, Any]) -> None:
-        """Add message to batch queue."""
-        self.batch_queue.append(message)
-
-        # Start batch processor if not running
-        if not self.batch_task or self.batch_task.done():
-            self.batch_task = asyncio.create_task(self._process_batch())
-
-    async def _process_batch(self) -> None:
-        """Process and send batched messages."""
-        while self._running:
-            try:
-                # Wait for batch to fill or timeout
-                await asyncio.sleep(PerformanceConfig.BATCH_TIMEOUT_MS / 1000)
-
-                if not self.batch_queue:
-                    continue
-
-                # Collect batch
-                batch = []
-                while len(batch) < PerformanceConfig.BATCH_SIZE and self.batch_queue:
-                    batch.append(self.batch_queue.popleft())
-
-                if batch:
-                    await self._send_batch(batch)
-
-            except Exception as e:
-                logger.error(f"Error processing batch for {self.connection_id}: {e}")
-
-    async def _send_batch(self, batch: List[Dict[str, Any]]) -> None:
-        """Send a batch of messages with optional compression."""
-        async with self._send_lock:
-            try:
-                # Prepare batch payload
-                payload = {
-                    "type": "batch",
-                    "messages": batch,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "count": len(batch),
-                }
-
-                # Serialize
-                if MSGPACK_AVAILABLE and self.supports_binary:
-                    data = msgpack.packb(payload)
-                    is_binary = True
-                else:
-                    data = json.dumps(payload).encode("utf-8")
-                    is_binary = False
-
-                # Compress if beneficial
-                if len(data) > PerformanceConfig.COMPRESSION_THRESHOLD:
-                    compressed = gzip.compress(
-                        data, PerformanceConfig.COMPRESSION_LEVEL
-                    )
-                    if len(compressed) < len(data) * 0.9:  # Only use if >10% reduction
-                        data = compressed
-                        payload["compressed"] = True
-
-                # Send
-                if is_binary:
-                    await self.websocket.send_bytes(data)
-                else:
-                    await self.websocket.send_text(data.decode("utf-8"))
-
-                # Update metrics
-                performance_metrics["total_batches_sent"] += 1
-                performance_metrics["average_batch_size"] = (
-                    performance_metrics["average_batch_size"]
-                    * (performance_metrics["total_batches_sent"] - 1)
-                    + len(batch)
-                ) / performance_metrics["total_batches_sent"]
-
-            except Exception as e:
-                logger.error(f"Failed to send batch to {self.connection_id}: {e}")
-
-    async def close(self) -> None:
-        """Close the batcher and flush remaining messages."""
-        self._running = False
-
-        # Flush remaining messages
-        if self.batch_queue:
-            batch = list(self.batch_queue)
-            self.batch_queue.clear()
-            await self._send_batch(batch)
-
-        if self.batch_task:
-            self.batch_task.cancel()
-
-    @property
-    def supports_binary(self) -> bool:
-        """Check if connection supports binary messages."""
-        # This would be determined during handshake
-        return getattr(self.websocket, "_supports_binary", False)
-
-
-# Connection pool manager
-class ConnectionPool:
-    """Manages WebSocket connections with pooling."""
-
-    def __init__(self):
-        self.connections: Dict[str, MessageBatcher] = {}
-        self.user_connections: Dict[UUID, Set[str]] = defaultdict(set)
-        self.session_connections: Dict[UUID, Set[str]] = defaultdict(set)
-        self._lock = asyncio.Lock()
-        self._cleanup_task: Optional[asyncio.Task] = None
-
-    async def add_connection(
-        self,
-        connection_id: str,
-        websocket: WebSocket,
-        user_id: UUID,
-        session_id: Optional[UUID] = None,
-    ) -> MessageBatcher:
-        """Add connection to pool."""
-        async with self._lock:
-            if len(self.connections) >= PerformanceConfig.MAX_POOL_SIZE:
-                raise ValueError("Connection pool at capacity")
-
-            batcher = MessageBatcher(connection_id, websocket)
-            self.connections[connection_id] = batcher
-            self.user_connections[user_id].add(connection_id)
-
-            if session_id:
-                self.session_connections[session_id].add(connection_id)
-
-            performance_metrics["concurrent_connections"] = len(self.connections)
-
-            # Start cleanup task if needed
-            if not self._cleanup_task or self._cleanup_task.done():
-                self._cleanup_task = asyncio.create_task(self._cleanup_stale())
-
-            return batcher
-
-    async def remove_connection(self, connection_id: str) -> None:
-        """Remove connection from pool."""
-        async with self._lock:
-            if connection_id in self.connections:
-                batcher = self.connections[connection_id]
-                await batcher.close()
-                del self.connections[connection_id]
-
-                # Clean up indices
-                for connections in self.user_connections.values():
-                    connections.discard(connection_id)
-                for connections in self.session_connections.values():
-                    connections.discard(connection_id)
-
-                performance_metrics["concurrent_connections"] = len(self.connections)
-
-    async def get_connection(self, connection_id: str) -> Optional[MessageBatcher]:
-        """Get connection batcher."""
-        return self.connections.get(connection_id)
-
-    async def broadcast_to_user(self, user_id: UUID, message: Dict[str, Any]) -> int:
-        """Broadcast message to all user connections."""
-        count = 0
-        for conn_id in self.user_connections.get(user_id, set()).copy():
-            if batcher := self.connections.get(conn_id):
-                await batcher.add_message(message)
-                count += 1
-        return count
-
-    async def broadcast_to_session(
-        self, session_id: UUID, message: Dict[str, Any]
-    ) -> int:
-        """Broadcast message to all session connections."""
-        count = 0
-        for conn_id in self.session_connections.get(session_id, set()).copy():
-            if batcher := self.connections.get(conn_id):
-                await batcher.add_message(message)
-                count += 1
-        return count
-
-    async def _cleanup_stale(self) -> None:
-        """Periodic cleanup of stale connections."""
-        while True:
-            try:
-                await asyncio.sleep(PerformanceConfig.POOL_CLEANUP_INTERVAL)
-                # Cleanup logic would go here
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in connection pool cleanup: {e}")
-
-
-# Global connection pool
-connection_pool = ConnectionPool()
-
 
 def get_service_registry() -> ServiceRegistry:
     """Get or create the service registry singleton."""
@@ -427,32 +172,18 @@ async def chat_websocket(
         chat_service: CoreChatService instance from dependency injection
     """
     connection_id = None
-    batcher = None
-    message_handlers = set()
 
     try:
         # Validate Origin header before accepting connection
         if not await validate_websocket_origin(websocket):
             await websocket.close(code=1008, reason="Invalid origin")
             logger.warning(
-                "WebSocket connection rejected for chat session "
-                f"{session_id}: Invalid origin"
+                f"WebSocket connection rejected for chat session {session_id}: Invalid origin"
             )
             return
 
-        # Accept WebSocket connection with subprotocol negotiation
-        subprotocols = websocket.headers.get("sec-websocket-protocol", "").split(", ")
-        selected_protocol = None
-
-        # Check for binary protocol support
-        if "msgpack" in subprotocols and MSGPACK_AVAILABLE:
-            selected_protocol = "msgpack"
-            websocket._supports_binary = True
-        elif "json" in subprotocols:
-            selected_protocol = "json"
-            websocket._supports_binary = False
-
-        await websocket.accept(subprotocol=selected_protocol)
+        # Accept WebSocket connection
+        await websocket.accept()
         logger.info(f"WebSocket connection accepted for chat session {session_id}")
 
         # Wait for authentication message
@@ -494,23 +225,6 @@ async def chat_websocket(
         connection_id = auth_response.connection_id
         user_id = auth_response.user_id
 
-        # Add to connection pool
-        try:
-            batcher = await connection_pool.add_connection(
-                connection_id, websocket, user_id, session_id
-            )
-        except ValueError:
-            await websocket.send_text(
-                json.dumps(
-                    {
-                        "type": "error",
-                        "message": "Server at capacity. Please try again later.",
-                    }
-                )
-            )
-            await websocket.close(code=1013)
-            return
-
         # Send authentication success response
         await websocket.send_text(json.dumps(auth_response.model_dump()))
 
@@ -531,51 +245,25 @@ async def chat_websocket(
             f"user_id={user_id}",
         )
 
-        # Message handling loop with concurrent processing
+        # Message handling loop
         while True:
             try:
-                # Receive message from client (support both text and binary)
-                try:
-                    if websocket._supports_binary:
-                        message_bytes = await websocket.receive_bytes()
-                        message_json = msgpack.unpackb(message_bytes)
-                    else:
-                        message_data = await websocket.receive_text()
-                        message_json = json.loads(message_data)
-                except WebSocketDisconnect:
-                    raise
-                except Exception:
-                    # Try text if binary fails
-                    message_data = await websocket.receive_text()
-                    message_json = json.loads(message_data)
+                # Receive message from client
+                message_data = await websocket.receive_text()
+                message_json = json.loads(message_data)
 
                 message_type = message_json.get("type", "")
 
-                # Clean up completed handlers
-                message_handlers = {h for h in message_handlers if not h.done()}
-
-                # Check concurrent handler limit
-                if len(message_handlers) >= PerformanceConfig.CONCURRENT_HANDLERS:
-                    # Wait for at least one to complete
-                    if message_handlers:
-                        done, message_handlers = await asyncio.wait(
-                            message_handlers, return_when=asyncio.FIRST_COMPLETED
-                        )
-                        message_handlers = set(message_handlers)
-
                 if message_type == "chat_message":
-                    # Handle chat message concurrently
-                    handler_task = asyncio.create_task(
-                        handle_chat_message(
-                            connection_id=connection_id,
-                            user_id=user_id,
-                            session_id=session_id,
-                            message_data=message_json.get("payload", {}),
-                            chat_service=chat_service,
-                            chat_agent=chat_agent,
-                        )
+                    # Handle chat message
+                    await handle_chat_message(
+                        connection_id=connection_id,
+                        user_id=user_id,
+                        session_id=session_id,
+                        message_data=message_json.get("payload", {}),
+                        chat_service=chat_service,
+                        chat_agent=chat_agent,
                     )
-                    message_handlers.add(handler_task)
 
                 elif message_type == "heartbeat":
                     # Handle heartbeat
@@ -683,7 +371,7 @@ async def chat_websocket(
                 handler.cancel()
 
         # Clean up connection pool
-        if connection_id and batcher:
+        if connection_id:
             await connection_pool.remove_connection(connection_id)
 
         # Clean up from websocket manager
@@ -703,14 +391,14 @@ async def agent_status_websocket(
         user_id: User ID for agent status updates
     """
     connection_id = None
+    message_handlers = set()
 
     try:
         # Validate Origin header before accepting connection
         if not await validate_websocket_origin(websocket):
             await websocket.close(code=1008, reason="Invalid origin")
             logger.warning(
-                "WebSocket connection rejected for agent status user "
-                f"{user_id}: Invalid origin"
+                f"WebSocket connection rejected for agent status user {user_id}: Invalid origin"
             )
             return
 
@@ -877,7 +565,16 @@ async def agent_status_websocket(
         logger.error(f"Agent status WebSocket error: {e}")
 
     finally:
-        # Clean up connection
+        # Cancel pending handlers
+        for handler in message_handlers:
+            if not handler.done():
+                handler.cancel()
+
+        # Clean up connection pool
+        if connection_id:
+            await connection_pool.remove_connection(connection_id)
+
+        # Clean up from websocket manager
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
 
@@ -976,96 +673,39 @@ async def handle_chat_message(
         typing_event.type = WebSocketEventType.CHAT_TYPING_START
         await websocket_manager.send_to_session(session_id, typing_event)
 
-        # Process message concurrently
-        start_time = time.time()
-
-        # Get agent response with concurrent processing
-        response_task = asyncio.create_task(chat_agent.run(content, context))
-
-        # Process other tasks while waiting for response
-        try:
-            response = await asyncio.wait_for(
-                response_task, timeout=PerformanceConfig.MESSAGE_TIMEOUT
-            )
-            response_content = response.get("content", "")
-        except asyncio.TimeoutError:
-            logger.error(f"Chat agent timeout for session {session_id}")
-            response_content = (
-                "I apologize, but I'm taking longer than expected to "
-                "process your request. Please try again."
-            )
+        # Get agent response (this will be streaming in the future)
+        response = await chat_agent.run(content, context)
+        response_content = response.get("content", "")
 
         # Send stop typing indicator
         typing_event.type = WebSocketEventType.CHAT_TYPING_STOP
         await websocket_manager.send_to_session(session_id, typing_event)
 
-        # Stream response in optimized chunks (no artificial delays)
+        # Simulate streaming by splitting response into chunks
         words = response_content.split()
+        chunk_size = 3  # Send 3 words at a time
 
-        # Dynamic chunk size based on response length
-        if len(words) < 50:
-            chunk_size = 5  # Smaller chunks for short responses
-        elif len(words) < 200:
-            chunk_size = 10  # Medium chunks
-        else:
-            chunk_size = 20  # Larger chunks for long responses
+        for i in range(0, len(words), chunk_size):
+            chunk = " ".join(words[i : i + chunk_size])
+            if i + chunk_size < len(words):
+                chunk += " "
 
-        # Use connection pool for efficient message delivery
-        if batcher := await connection_pool.get_connection(connection_id):
-            # Send chunks without delay
-            chunks_to_send = []
+            full_content += chunk
 
-            for i in range(0, len(words), chunk_size):
-                chunk = " ".join(words[i : i + chunk_size])
-                if i + chunk_size < len(words):
-                    chunk += " "
+            # Send chunk event
+            chunk_event = ChatMessageChunkEvent(
+                content=chunk,
+                chunk_index=chunk_index,
+                is_final=(i + chunk_size >= len(words)),
+                user_id=user_id,
+                session_id=session_id,
+            )
+            await websocket_manager.send_to_session(session_id, chunk_event)
 
-                full_content += chunk
+            chunk_index += 1
 
-                # Prepare chunk event
-                chunk_event = ChatMessageChunkEvent(
-                    content=chunk,
-                    chunk_index=chunk_index,
-                    is_final=(i + chunk_size >= len(words)),
-                    user_id=user_id,
-                    session_id=session_id,
-                )
-
-                chunks_to_send.append(chunk_event.to_dict())
-                chunk_index += 1
-
-            # Send all chunks as a batch for maximum efficiency
-            if chunks_to_send:
-                await batcher.add_message(
-                    {
-                        "type": "stream_batch",
-                        "chunks": chunks_to_send,
-                        "session_id": str(session_id),
-                    }
-                )
-        else:
-            # Fallback to individual sends if batcher not available
-            for i in range(0, len(words), chunk_size):
-                chunk = " ".join(words[i : i + chunk_size])
-                if i + chunk_size < len(words):
-                    chunk += " "
-
-                full_content += chunk
-
-                chunk_event = ChatMessageChunkEvent(
-                    content=chunk,
-                    chunk_index=chunk_index,
-                    is_final=(i + chunk_size >= len(words)),
-                    user_id=user_id,
-                    session_id=session_id,
-                )
-                await websocket_manager.send_to_session(session_id, chunk_event)
-                chunk_index += 1
-
-        # Track performance metrics
-        processing_time = (time.time() - start_time) * 1000  # Convert to ms
-        performance_metrics["message_processing_time_ms"].append(processing_time)
-        performance_metrics["total_messages_processed"] += 1
+            # Small delay to simulate streaming
+            await asyncio.sleep(0.05)
 
         # Send final complete message event
         assistant_message = WebSocketMessage(
@@ -1115,27 +755,11 @@ async def websocket_health():
     """
     stats = websocket_manager.get_connection_stats()
 
-    # Calculate average message processing time
-    avg_processing_time = 0
-    if performance_metrics["message_processing_time_ms"]:
-        avg_processing_time = sum(
-            performance_metrics["message_processing_time_ms"]
-        ) / len(performance_metrics["message_processing_time_ms"])
-
     return {
         "status": "healthy",
         "websocket_manager_running": websocket_manager._running,
         "connection_stats": stats,
-        "performance_metrics": {
-            "total_messages_processed": performance_metrics["total_messages_processed"],
-            "total_batches_sent": performance_metrics["total_batches_sent"],
-            "average_batch_size": performance_metrics["average_batch_size"],
-            "concurrent_connections": performance_metrics["concurrent_connections"],
-            "average_processing_time_ms": avg_processing_time,
-            "compression_enabled": True,
-            "msgpack_available": MSGPACK_AVAILABLE,
-        },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": "2024-01-01T00:00:00Z",  # This would be current timestamp
     }
 
 

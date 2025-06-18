@@ -24,6 +24,7 @@ from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.enums import CabinClass
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +35,6 @@ class FlightType(str, Enum):
     ROUND_TRIP = "round_trip"
     ONE_WAY = "one_way"
     MULTI_CITY = "multi_city"
-
-
-class CabinClass(str, Enum):
-    """Cabin class enumeration."""
-
-    ECONOMY = "economy"
-    PREMIUM_ECONOMY = "premium_economy"
-    BUSINESS = "business"
-    FIRST = "first"
 
 
 class BookingStatus(str, Enum):

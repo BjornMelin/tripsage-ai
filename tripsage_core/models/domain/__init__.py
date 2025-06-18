@@ -37,7 +37,6 @@ from .accommodation import (
 # Flight domain models
 from .flight import (
     Airport,
-    CabinClass,
     FlightOffer,
     FlightSegment,
 )
@@ -71,7 +70,6 @@ __all__ = [
     "FlightOffer",
     "Airport",
     "FlightSegment",
-    "CabinClass",
     # Transportation models
     "TransportationOffer",
     "TransportationProvider",

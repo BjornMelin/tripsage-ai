@@ -29,6 +29,7 @@ curl https://api.tripsage.ai/v1/health \
 | **[REST API Reference](rest-endpoints.md)** | Complete endpoint documentation | 📖 Reference |
 | **[WebSocket API](websocket-api.md)** | Real-time communication | 🔄 Reference |
 | **[Authentication](authentication.md)** | Auth flows and security | 🔐 Reference |
+| **[API Key Management](../developers/api-key-service.md)** | BYOK functionality and key management | 🔑 Reference |
 | **[Complete Integration Guide](examples.md)** | Full tutorials, workflows & SDKs | 📚 Tutorial |
 | **[Error Codes](error-codes.md)** | Error handling guide | ⚠️ Reference |
 

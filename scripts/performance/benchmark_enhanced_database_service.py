@@ -24,9 +24,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 from tripsage_core.config import get_settings
-from tripsage_core.services.infrastructure.database_service import DatabaseService
-from tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring import (
-    EnhancedDatabaseService,
+from tripsage_core.services.infrastructure import (
+    get_database_service,
 )
 
 # Configure logging
@@ -99,37 +98,16 @@ class DatabaseServiceBenchmark:
         for config in test_configs:
             logger.info(f"Running benchmark: {config['name']}")
 
-            # Test enhanced service with LIFO
-            enhanced_result = await self._benchmark_service(
-                service_type="enhanced_lifo",
+            # Test consolidated service (always LIFO now)
+            result = await self._benchmark_service(
+                service_type="consolidated",
                 test_name=config["name"],
                 concurrent_operations=config["concurrent_ops"],
                 operations_per_worker=config["operations_per_worker"],
                 use_enhanced=True,
                 lifo_enabled=True,
             )
-            self.results.append(enhanced_result)
-
-            # Test enhanced service with FIFO for comparison
-            enhanced_fifo_result = await self._benchmark_service(
-                service_type="enhanced_fifo",
-                test_name=config["name"],
-                concurrent_operations=config["concurrent_ops"],
-                operations_per_worker=config["operations_per_worker"],
-                use_enhanced=True,
-                lifo_enabled=False,
-            )
-            self.results.append(enhanced_fifo_result)
-
-            # Test original service for baseline
-            original_result = await self._benchmark_service(
-                service_type="original",
-                test_name=config["name"],
-                concurrent_operations=config["concurrent_ops"],
-                operations_per_worker=config["operations_per_worker"],
-                use_enhanced=False,
-            )
-            self.results.append(original_result)
+            self.results.append(result)
 
         # Run specialized tests
         await self._benchmark_lifo_vs_fifo()
@@ -152,20 +130,11 @@ class DatabaseServiceBenchmark:
             f"Benchmarking {service_type} service with {concurrent_operations} concurrent operations"
         )
 
-        # Create service
-        if use_enhanced:
-            service = EnhancedDatabaseService(
-                settings=self.settings,
-                pool_size=max(10, concurrent_operations),
-                max_overflow=concurrent_operations * 2,
-                lifo_enabled=lifo_enabled,
-                enable_regression_detection=True,
-            )
-        else:
-            service = DatabaseService(self.settings)
+        # Create service (always use consolidated service now)
+        service = await get_database_service()
 
         try:
-            await service.connect()
+            # Service is already connected
 
             # Warm up the service
             await self._warmup_service(service, 10)
@@ -369,15 +338,11 @@ class DatabaseServiceBenchmark:
         """Benchmark performance regression detection overhead."""
         logger.info("Benchmarking regression detection overhead")
 
-        # Create service with regression detection
-        service = EnhancedDatabaseService(
-            settings=self.settings,
-            pool_size=10,
-            enable_regression_detection=True,
-        )
+        # Create service (always uses consolidated service)
+        service = await get_database_service()
 
         try:
-            await service.connect()
+            # Service is already connected
 
             # Record baseline performance
             logger.info("Establishing baseline performance")

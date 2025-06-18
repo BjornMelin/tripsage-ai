@@ -31,8 +31,8 @@ from tripsage_core.config import get_settings  # noqa: E402
 from tripsage_core.monitoring.enhanced_database_metrics import (  # noqa: E402
     get_enhanced_database_metrics,
 )
-from tripsage_core.services.infrastructure.enhanced_database_pool_manager import (  # noqa: E402
-    EnhancedDatabasePoolManager,
+from tripsage_core.services.infrastructure import (  # noqa: E402
+    get_database_service,
 )
 
 # Configure logging
@@ -50,7 +50,7 @@ class PerformanceBenchmark:
         self.iterations = iterations
         self.verbose = verbose
         self.results = {}
-        self.pool_manager = None
+        self.db_service = None
         self.metrics = None
 
     async def setup(self):
@@ -61,16 +61,8 @@ class PerformanceBenchmark:
             # Get settings
             settings = get_settings()
 
-            # Create enhanced pool manager
-            self.pool_manager = EnhancedDatabasePoolManager(
-                settings=settings,
-                enable_metrics=True,
-                enable_lifo=True,
-                enable_pre_ping=True,
-            )
-
-            # Initialize pool manager
-            await self.pool_manager.initialize()
+            # Get consolidated database service
+            self.db_service = await get_database_service()
 
             # Get metrics instance
             self.metrics = get_enhanced_database_metrics()
@@ -84,8 +76,8 @@ class PerformanceBenchmark:
 
     async def cleanup(self):
         """Cleanup benchmark resources."""
-        if self.pool_manager:
-            await self.pool_manager.close()
+        if self.db_service:
+            await self.db_service.close()
         logger.info("🧹 Benchmark cleanup completed")
 
     async def benchmark_connection_acquisition(self) -> Dict[str, Any]:
@@ -99,10 +91,7 @@ class PerformanceBenchmark:
             try:
                 start_time = time.perf_counter()
 
-                async with self.pool_manager.acquire_connection("query") as (
-                    conn_type,
-                    conn,
-                ):
+                async with self.db_service.get_session() as session:
                     # Minimal work to simulate real usage
                     await asyncio.sleep(0.001)
 
@@ -179,21 +168,9 @@ class PerformanceBenchmark:
                     start_time = time.perf_counter()
 
                     # Simulate database operation
-                    async with self.pool_manager.acquire_connection(operation) as (
-                        conn_type,
-                        conn,
-                    ):
-                        # Record in metrics
+                    async with self.db_service.get_session() as session:
                         # Simulate increasing load
                         operation_latency = 0.010 + (i * 0.0001)
-                        self.metrics.record_query_duration(
-                            duration=operation_latency,
-                            operation=operation,
-                            table=table,
-                            database="supabase",
-                            status="success",
-                        )
-
                         # Simulate work
                         await asyncio.sleep(operation_latency)
 
@@ -275,10 +252,7 @@ class PerformanceBenchmark:
                 """Single concurrent task."""
                 start_time = time.perf_counter()
                 try:
-                    async with self.pool_manager.acquire_connection("query") as (
-                        conn_type,
-                        conn,
-                    ):
+                    async with self.db_service.get_session() as session:
                         await asyncio.sleep(0.005)  # Simulate work
                     end_time = time.perf_counter()
                     return {
@@ -338,17 +312,16 @@ class PerformanceBenchmark:
         """Benchmark connection pool efficiency."""
         logger.info("📈 Benchmarking pool efficiency...")
 
-        # Get current pool statistics
-        pool_stats = self.pool_manager.get_pool_statistics()
+        # Get current pool statistics from metrics
+        pool_stats = await self.db_service.get_pool_stats()
 
         # Simulate various utilization scenarios
         utilization_tests = []
 
         for load_factor in [0.5, 0.7, 0.8, 0.9]:
             # Calculate number of concurrent connections for this load factor
-            max_connections = (
-                pool_stats["configuration"]["pool_size"]
-                + pool_stats["configuration"]["max_overflow"]
+            max_connections = pool_stats.get("pool_size", 100) + pool_stats.get(
+                "max_overflow", 500
             )
             target_connections = int(max_connections * load_factor)
 
@@ -359,10 +332,7 @@ class PerformanceBenchmark:
 
             async def load_task():
                 """Task to maintain load on the pool."""
-                async with self.pool_manager.acquire_connection("load_test") as (
-                    conn_type,
-                    conn,
-                ):
+                async with self.db_service.get_session() as session:
                     await asyncio.sleep(0.1)  # Hold connection briefly
 
             # Execute load test
@@ -372,20 +342,16 @@ class PerformanceBenchmark:
             end_time = time.perf_counter()
 
             # Get updated pool statistics
-            updated_stats = self.pool_manager.get_pool_statistics()
+            updated_stats = await self.db_service.get_pool_stats()
 
             test_result = {
                 "load_factor": load_factor,
                 "target_connections": target_connections,
                 "test_duration_sec": end_time - start_time,
-                "pool_utilization_percent": updated_stats["current_status"][
-                    "utilization_percent"
-                ],
-                "avg_checkout_time_ms": updated_stats["performance"][
-                    "avg_checkout_time_ms"
-                ],
-                "checkout_count": updated_stats["performance"]["checkout_count"],
-                "connection_errors": updated_stats["performance"]["connection_errors"],
+                "pool_utilization_percent": updated_stats.get("utilization_percent", 0),
+                "avg_checkout_time_ms": updated_stats.get("avg_wait_time_ms", 0),
+                "checkout_count": updated_stats.get("connections_created", 0),
+                "connection_errors": updated_stats.get("connection_errors", 0),
             }
 
             utilization_tests.append(test_result)
@@ -509,7 +475,7 @@ class PerformanceBenchmark:
             await self.benchmark_metrics_accuracy()
 
             # Health check
-            health_status = await self.pool_manager.health_check()
+            health_status = await self.db_service.health_check()
 
             end_time = time.time()
             total_duration = end_time - start_time

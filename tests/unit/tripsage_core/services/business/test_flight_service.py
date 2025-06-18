@@ -16,9 +16,9 @@ from hypothesis import strategies as st
 from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
+from tripsage_core.models.schemas_common.enums import CabinClass
 from tripsage_core.services.business.flight_service import (
     BookingStatus,
-    CabinClass,
     FlightBooking,
     FlightBookingRequest,
     FlightOffer,

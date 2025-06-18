@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from tripsage_core.models.schemas_common.enums import CabinClass
 from tripsage_core.services.business.flight_service import (
-    CabinClass,
     FlightPassenger,
     FlightSearchRequest,
     FlightService,
