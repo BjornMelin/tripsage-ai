@@ -220,9 +220,8 @@ class MemoryServiceBenchmark:
         print(f"   - Search time: {original_results['search_time']:.2f}s")
         print(f"   - Context retrieval time: {original_results['context_time']:.2f}s")
         print(f"   Operations completed: {original_results['total_operations']}")
-        print(
-            f"   Throughput: {original_results['total_operations'] / original_time:.1f} ops/sec"
-        )
+        throughput = original_results["total_operations"] / original_time
+        print(f"   Throughput: {throughput:.1f} ops/sec")
 
         print("\n2. ASYNC-OPTIMIZED SERVICE:")
         print(f"   Total time: {async_time:.2f}s")
@@ -231,9 +230,8 @@ class MemoryServiceBenchmark:
         print(f"   - Batch search time: {async_results['batch_search_time']:.2f}s")
         print(f"   - Context retrieval time: {async_results['context_time']:.2f}s")
         print(f"   Operations completed: {async_results['total_operations']}")
-        print(
-            f"   Throughput: {async_results['total_operations'] / async_time:.1f} ops/sec"
-        )
+        async_throughput = async_results["total_operations"] / async_time
+        print(f"   Throughput: {async_throughput:.1f} ops/sec")
 
         print("\n3. PERFORMANCE IMPROVEMENTS:")
         speedup = original_time / async_time
@@ -245,9 +243,9 @@ class MemoryServiceBenchmark:
 
         print(f"   - Overall speedup: {speedup:.2f}x")
         print(f"   - Throughput increase: {throughput_increase:.1f}%")
-        print(
-            f"   - Time saved: {original_time - async_time:.2f}s ({(1 - async_time / original_time) * 100:.1f}%)"
-        )
+        time_saved = original_time - async_time
+        time_saved_pct = (1 - async_time / original_time) * 100
+        print(f"   - Time saved: {time_saved:.2f}s ({time_saved_pct:.1f}%)")
 
         print("\n4. KEY OPTIMIZATIONS:")
         print("   ✓ Eliminated asyncio.to_thread overhead (~20-30ms per call)")

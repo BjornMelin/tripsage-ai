@@ -15,12 +15,17 @@ Validates ULTRATHINK consolidation performance improvements.
 
 import asyncio
 import json
+import logging
 import statistics
 import time
 from datetime import datetime
 from typing import Any, Dict, List
 
 import numpy as np
+
+from tripsage_core.config import get_settings
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+
 
 # Simple table formatting function if tabulate is not available
 def simple_table(data, headers):
@@ -30,21 +35,24 @@ def simple_table(data, headers):
     for row in data:
         for i, cell in enumerate(row):
             col_widths[i] = max(col_widths[i], len(str(cell)))
-    
+
     # Format rows
     lines = []
-    
+
     # Header
     header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
     lines.append(header_line)
     lines.append("-" * len(header_line))
-    
+
     # Data rows
     for row in data:
-        row_line = " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
+        row_line = " | ".join(
+            str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)
+        )
         lines.append(row_line)
-    
+
     return "\n".join(lines)
+
 
 try:
     from tabulate import tabulate
@@ -53,16 +61,16 @@ except ImportError:
     def tabulate(data, headers=None, tablefmt="grid"):
         return simple_table(data, headers)
 
-from tripsage_core.config import get_settings
-from tripsage_core.services.infrastructure.database_service import DatabaseService
-
 # Note: We now use the unified DatabaseService (consolidates 7 previous services)
 # This benchmark compares different usage patterns within the same service
 
 # Check if old service is available for comparison
 OLD_SERVICE_AVAILABLE = False
 try:
-    from tripsage_core.services.infrastructure.old_database_service import OldDatabaseService
+    from tripsage_core.services.infrastructure.old_database_service import (
+        OldDatabaseService,
+    )
+
     OLD_SERVICE_AVAILABLE = True
 except ImportError:
     pass
@@ -256,7 +264,7 @@ class DatabaseBenchmark:
                 try:
                     await service.execute_sql(
                         "INSERT INTO test_benchmark (name) VALUES ($1)",
-                        (f"Benchmark {i}",)
+                        (f"Benchmark {i}",),
                     )
                     duration = (time.time() - start) * 1000
                     result.add_result(duration)
@@ -272,7 +280,7 @@ class DatabaseBenchmark:
                 try:
                     await service.execute_sql(
                         "UPDATE test_benchmark SET name = $1 WHERE id = $2",
-                        (f"Updated {i}", i + 1)
+                        (f"Updated {i}", i + 1),
                     )
                     duration = (time.time() - start) * 1000
                     result.add_result(duration)
@@ -287,8 +295,8 @@ class DatabaseBenchmark:
     async def _benchmark_transactions(self, service: DatabaseService):
         """Benchmark transaction performance."""
         result = BenchmarkResult("Unified - Transactions")
-        
-        for i in range(min(5, self.iterations)):
+
+        for _ in range(min(5, self.iterations)):
             start = time.time()
             try:
                 async with service.transaction():
@@ -316,7 +324,7 @@ class DatabaseBenchmark:
             try:
                 await service.execute_sql(
                     "SELECT * FROM information_schema.tables WHERE table_name = $1",
-                    (f"table_{i % 5}",)  # Vary queries slightly
+                    (f"table_{i % 5}",),  # Vary queries slightly
                 )
                 duration = (time.time() - start) * 1000
                 result_first_run.add_result(duration)
@@ -332,7 +340,7 @@ class DatabaseBenchmark:
             try:
                 await service.execute_sql(
                     "SELECT * FROM information_schema.tables WHERE table_name = $1",
-                    (f"table_{i % 5}",)  # Same queries to test cache hits
+                    (f"table_{i % 5}",),  # Same queries to test cache hits
                 )
                 duration = (time.time() - start) * 1000
                 result_repeat_run.add_result(duration)
@@ -361,8 +369,7 @@ class DatabaseBenchmark:
                 start = time.time()
                 try:
                     await service.execute_sql(
-                        "SELECT $1 as user_id, NOW() as timestamp",
-                        (user_id,)
+                        "SELECT $1 as user_id, NOW() as timestamp", (user_id,)
                     )
                     duration = (time.time() - start) * 1000
                     durations.append(duration)
@@ -396,12 +403,15 @@ class DatabaseBenchmark:
 
         # Check if pgvector extension is available
         try:
-            await service.execute_sql("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
-            
+            await service.execute_sql(
+                "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
+            )
+
             # Generate random vectors for testing
             vector_dim = 384  # Common embedding dimension
 
-            for _ in range(min(5, self.iterations)):  # Vector search is typically slower
+            # Vector search is typically slower
+            for _ in range(min(5, self.iterations)):
                 query_vector = np.random.rand(vector_dim).tolist()
 
                 start = time.time()
@@ -409,7 +419,7 @@ class DatabaseBenchmark:
                     # Test basic vector operations if available
                     await service.execute_sql(
                         "SELECT $1::vector <-> $2::vector as distance",
-                        (query_vector, query_vector)
+                        (query_vector, query_vector),
                     )
                     duration = (time.time() - start) * 1000
                     result.add_result(duration)
@@ -420,7 +430,7 @@ class DatabaseBenchmark:
 
         except Exception as e:
             result.metadata["note"] = "pgvector extension not available"
-            logger.info(f"Vector search benchmark skipped: {e}")
+            logging.info(f"Vector search benchmark skipped: {e}")
 
         self.results[result.name] = result
 
@@ -442,9 +452,9 @@ class DatabaseBenchmark:
 
                 self.results[result.name] = result
             else:
-                logger.info("Old service doesn't have expected interface")
+                logging.info("Old service doesn't have expected interface")
         except Exception as e:
-            logger.info(f"Could not benchmark old service: {e}")
+            logging.info(f"Could not benchmark old service: {e}")
 
     def generate_report(self):
         """Generate and display benchmark report."""
