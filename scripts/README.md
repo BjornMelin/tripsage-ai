@@ -1,270 +1,235 @@
-# TripSage Scripts Documentation
+# TripSage Scripts
 
-> **⚡ Quick Start:** Run `python scripts/testing/test_runner.py` to verify your environment is set up correctly.
+> **⚡ Quick Start:** `python scripts/testing/test_runner.py` to verify environment setup.
 
-## Overview
+Automation scripts and utilities for TripSage development, deployment, and operations. Organized by functional area for easy discovery and maintenance.
 
-This directory contains automation scripts and utilities for managing the TripSage platform. Scripts are organized by functional area to support development, deployment, testing, and operations.
+## Directory Structure
 
-### 🎯 Purpose
-- **Automation**: Reduce manual tasks and ensure consistency
-- **Operations**: Database management, service deployment, and monitoring
-- **Development**: Testing utilities, benchmarking, and verification tools
-- **Security**: Vulnerability testing and security validations
-
-## 📁 Directory Structure
-
-### `/automation/` - Deployment & Configuration Scripts
-
-Automated deployment and configuration management tools.
-
-| Script | Purpose | Requirements |
-|--------|---------|-------------|
-| `deploy_extensions.py` | Deploy Supabase extensions and automation features | `asyncpg`, Supabase access |
+### `/automation/` - Deployment Scripts
+- **`deploy_extensions.py`** - Deploy Supabase extensions and automation features
 
 ### `/database/` - Database Management
+- **`init_database.py`** - Initialize database schema and seed data
+- **`run_migrations.py`** - Apply pending SQL migrations (supports `--dry-run`)
+- **`deploy_storage_infrastructure.py`** - Deploy storage buckets and policies
+- **`deploy_triggers.py`** - Deploy database triggers and functions
+- **`migrations/`** - SQL migration files with timestamp prefixes
 
-Database initialization, migration, and infrastructure management.
+### `/benchmarks/` - Performance Testing
+- **`benchmark.py`** - Unified performance testing suite
+- **`config.py`** - Benchmark configuration and settings
+- **`collectors.py`** - Metrics collection and reporting
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
-| `init_database.py` | Initialize database schema and base data | `python scripts/database/init_database.py` |
-| `run_migrations.py` | Apply pending SQL migrations | `python scripts/database/run_migrations.py [--dry-run]` |
-| `deploy_storage_infrastructure.py` | Deploy storage buckets and policies | `python scripts/database/deploy_storage_infrastructure.py` |
-| `deploy_triggers.py` | Deploy database triggers and functions | `python scripts/database/deploy_triggers.py` |
-
-**Migrations Directory**: `/database/migrations/`
-- SQL files with timestamp prefixes (e.g., `20250615_remove_bigint_add_uuid_only.sql`)
-- Applied in chronological order
-- Track applied migrations in `migration_history` table
-
-### `/benchmarks/` - Comprehensive Performance Testing
-
-Unified performance benchmarking suite for database, vector search, and cache optimization validation.
-
-| Script | Purpose | Metrics |
-|--------|---------|--------|
-| `run_benchmarks.py` | Complete performance validation suite | Database, vector, cache performance |
-| `benchmark_runner.py` | Core benchmark orchestration | Query latency, throughput, memory |
-| `pgvector_benchmark.py` | Specialized vector search benchmarking | 30x improvement validation |
-| `dragonfly_performance.py` | Cache performance testing | Throughput, latency, memory usage |
-| `regression_detector.py` | Performance regression detection | Statistical analysis, baselines |
-
-### `/security/` - Security Testing
-
-Security validation and vulnerability testing scripts.
-
-| Script | Purpose | Output |
-|--------|---------|--------|
-| `security_validation.py` | Comprehensive security audit | Security findings report |
-| `rls_vulnerability_tests.sql` | Test Row Level Security policies | RLS policy audit |
+### `/security/` - Security Validation
+- **`security_validation.py`** - Vulnerability testing and security audits
+- **`rls_vulnerability_tests.sql`** - RLS policy validation tests
 
 ### `/testing/` - Test Utilities
+- **`test_runner.py`** - Main test execution and environment validation
+- **`run_tests_with_coverage.py`** - Test execution with coverage reporting
 
-Test execution and analysis tools. See [Testing README](./testing/README.md) for details.
+### `/verification/` - Connection & Health Checks
+- **`verify_connection.py`** - Database connection validation
+- **`verify_dragonfly.py`** - DragonflyDB connection and performance testing
+- **`verify_extensions.py`** - Extension functionality verification
+- **`validate_schema_consistency.py`** - Schema validation across environments
 
-| Script | Purpose | Features |
-|--------|---------|----------|
-| `run_tests_with_coverage.py` | Run full test suite with coverage | HTML reports, failure analysis |
-| `test_summary.py` | Generate test summary reports | Cross-directory analysis |
-| `test_runner.py` | Quick smoke tests | Import verification, basic checks |
-| `activate-websocket.js` | WebSocket feature activation testing | Real-time connection validation |
-| `test-websocket.js` | WebSocket functionality testing | Connection and message flow tests |
+## Common Workflows
 
-### `/verification/` - Service Health Checks
-
-Connection verification and health check scripts.
-
-| Script | Purpose | Environment |
-|--------|---------|-------------|
-| `verify_connection.py` | Verify database connectivity (Python) | Production/Development |
-| `verify_connection.js` | Verify database connectivity (Node.js) | Frontend development |
-| `verify_dragonfly.py` | Test DragonflyDB cache connection | All environments |
-| `verify_extensions.py` | Validate Supabase extensions | Production deployment |
-| `validate_schema_consistency.py` | Check database schema integrity | CI/CD pipeline |
-
-
-## 🚀 Common Workflows
-
-### Initial Setup
-
+### Environment Setup
 ```bash
-# 1. Verify environment
-python scripts/testing/test_runner.py
-
-# 2. Initialize database
+# 1. Initialize database
 python scripts/database/init_database.py
 
-# 3. Run migrations
+# 2. Apply migrations
 python scripts/database/run_migrations.py
 
-# 4. Deploy extensions
+# 3. Deploy extensions
 python scripts/automation/deploy_extensions.py
 
-# 5. Verify all connections
+# 4. Verify setup
 python scripts/verification/verify_connection.py
 python scripts/verification/verify_dragonfly.py
 ```
 
 ### Development Workflow
-
 ```bash
 # Run tests with coverage
 python scripts/testing/run_tests_with_coverage.py
 
-# Check performance (comprehensive)
-python scripts/benchmarks/run_benchmarks.py quick-test
-
-# Check cache performance specifically
-python scripts/benchmarks/dragonfly_performance.py --quick
-
 # Validate security
 python scripts/security/security_validation.py
+
+# Performance benchmarking
+python scripts/benchmarks/benchmark.py --quick
 ```
 
-### Deployment Checklist
-
+### Performance Testing
 ```bash
-# 1. Run migrations (dry run first)
+# Quick benchmark suite
+python scripts/benchmarks/benchmark.py --iterations=50 --concurrent=5
+
+# Comprehensive benchmarks
+python scripts/benchmarks/benchmark.py --full-suite
+
+# Specific benchmark types
+python scripts/benchmarks/benchmark.py --database-only
+python scripts/benchmarks/benchmark.py --vector-only
+```
+
+### Database Operations
+```bash
+# Dry-run migrations (safe preview)
 python scripts/database/run_migrations.py --dry-run
+
+# Apply migrations
 python scripts/database/run_migrations.py
 
-# 2. Deploy infrastructure
-python scripts/database/deploy_storage_infrastructure.py
-python scripts/database/deploy_triggers.py
-
-# 3. Verify deployment
+# Validate schema consistency
 python scripts/verification/validate_schema_consistency.py
-python scripts/verification/verify_extensions.py
 ```
 
-## 📋 Prerequisites
+## Environment Variables
 
-### Environment Setup
+Core environment variables used across scripts:
 
-1. **Python 3.12+** with virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-   pip install -r requirements.txt
-   ```
+```bash
+# Database Configuration
+DATABASE_URL=postgresql://user:pass@host:port/db
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-2. **Node.js 18+** for JavaScript scripts:
-   ```bash
-   npm install
-   ```
+# Cache Configuration
+REDIS_URL=redis://localhost:6379
+DRAGONFLY_PASSWORD=your-dragonfly-password
 
-3. **Environment Variables** (`.env` file):
-   ```env
-   DATABASE_URL=postgresql://user:pass@localhost:5432/tripsage
-   REDIS_URL=redis://localhost:6379
-   SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_ANON_KEY=your-anon-key
-   ```
+# Security Settings
+ENABLE_RLS_VALIDATION=true
+SECURITY_SCAN_DEPTH=comprehensive
+```
 
-### Required Services
+## Dependencies
 
-- **PostgreSQL 15+** (via Supabase or local)
-- **DragonflyDB** or Redis 7+
-- **Supabase Project** (for production features)
+Scripts require Python 3.13+ and the following core packages:
 
-## 🔒 Security Considerations
+```bash
+# Install with uv (recommended)
+uv add asyncpg supabase click pydantic pytest
 
-1. **Credentials**: Never commit credentials. Use environment variables.
-2. **Permissions**: Scripts require appropriate database permissions:
-   - Migration scripts need DDL permissions
-   - Verification scripts need read permissions
-   - Deployment scripts need admin permissions
-3. **Audit**: Run `security_validation.py` before deployments
-4. **RLS Testing**: Use `security/rls_vulnerability_tests.sql` to validate policies
+# Or with pip
+pip install asyncpg supabase click pydantic pytest
+```
 
-## 🐛 Troubleshooting
+## Safety Guidelines
+
+### Before Running Scripts
+1. **Backup data** before running migration or database scripts
+2. **Use dry-run flags** when available to preview changes
+3. **Test in development** environment first
+4. **Review script output** for warnings or errors
+
+### Environment-Specific Considerations
+- **Development**: Safe to run all scripts
+- **Staging**: Use dry-run flags for database operations
+- **Production**: Coordinate with team, use maintenance windows
+
+## Performance Expectations
+
+### Benchmark Targets
+- **API Response Time**: <100ms (95th percentile)
+- **Database Operations**: <50ms (complex queries)
+- **Vector Search**: <10ms (with HNSW indexing)
+- **Cache Operations**: <5ms (DragonflyDB)
+
+### Coverage Requirements
+- **Test Coverage**: ≥90% for critical paths
+- **Benchmark Coverage**: All major service operations
+- **Security Coverage**: All authentication and authorization flows
+
+## Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**:
-   - Ensure you're running from project root
-   - Verify virtual environment is activated
-   - Check `PYTHONPATH` includes project root
-
-2. **Connection Failures**:
-   - Verify environment variables are set
-   - Check service is running (PostgreSQL, DragonflyDB)
-   - Test with verification scripts first
-
-3. **Migration Failures**:
-   - Always run with `--dry-run` first
-   - Check migration history table
-   - Review migration SQL for conflicts
-
-### Debug Mode
-
-Most scripts support verbose/debug output:
+**Connection Failures**
 ```bash
-# Enable debug logging
-export LOG_LEVEL=DEBUG
-python scripts/database/run_migrations.py
+# Check database connectivity
+python scripts/verification/verify_connection.py
+
+# Check cache connectivity  
+python scripts/verification/verify_dragonfly.py
 ```
 
-## 📚 Related Documentation
+**Migration Errors**
+```bash
+# View pending migrations
+python scripts/database/run_migrations.py --status
 
-- [Database Schema Documentation](../docs/database/schema.md)
-- [API Documentation](../docs/api/README.md)
-- [Testing Guide](./testing/README.md)
-- [Deployment Guide](../docs/deployment/README.md)
+# Dry-run to check for issues
+python scripts/database/run_migrations.py --dry-run
+```
 
-## 🤝 Contributing
+**Performance Issues**
+```bash
+# Run diagnostic benchmarks
+python scripts/benchmarks/benchmark.py --diagnostics
+
+# Check resource usage
+python scripts/verification/validate_schema_consistency.py
+```
+
+### Getting Help
+
+1. **Check script help**: Most scripts support `--help` flag
+2. **Review logs**: Scripts output detailed logging for debugging
+3. **Environment validation**: Run `scripts/testing/test_runner.py` first
+4. **Documentation**: Each subdirectory has specific README with details
+
+## Contributing
 
 When adding new scripts:
 
-1. Follow the established directory structure
-2. Include comprehensive docstrings
-3. Add error handling and logging
-4. Update this README with script details
-5. Add corresponding tests in `/tests/`
-6. Consider security implications
+1. **Follow naming conventions**: Use snake_case, descriptive names
+2. **Add error handling**: Comprehensive error messages and recovery
+3. **Include documentation**: Docstrings and README updates
+4. **Add tests**: Minimum 90% test coverage for new functionality
+5. **Use type hints**: Full typing for maintainability
 
 ### Script Template
 
 ```python
 #!/usr/bin/env python3
-"""Script purpose and description.
+"""
+Brief description of script purpose.
 
 Usage:
-    python scripts/category/script_name.py [options]
-
-Requirements:
-    - List required services
-    - List required permissions
-    - List environment variables
+    python script_name.py [options]
 """
 
-import argparse
+import asyncio
 import logging
-import sys
-from pathlib import Path
+from typing import Optional
 
-# Add project root to path
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
+import click
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def main():
-    """Main script logic."""
-    parser = argparse.ArgumentParser(description=__doc__)
-    # Add arguments
-    args = parser.parse_args()
-    
+
+@click.command()
+@click.option("--dry-run", is_flag=True, help="Preview changes without executing")
+def main(dry_run: bool) -> None:
+    """Script main function."""
     try:
-        # Script logic here
-        logger.info("Script completed successfully")
+        # Implementation
+        pass
     except Exception as e:
         logger.error(f"Script failed: {e}")
-        sys.exit(1)
+        raise click.ClickException(str(e))
+
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()
 ```
+
+This consolidated documentation provides essential information while eliminating redundancy and over-engineering. For detailed implementation specifics, refer to individual script docstrings and subdirectory READMEs.
