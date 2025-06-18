@@ -2,12 +2,31 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
 import "@testing-library/jest-dom";
 
+// Mock useToast hook BEFORE anything else
+const mockToast = vi.fn((props: any) => ({
+  id: `toast-${Date.now()}`,
+  dismiss: vi.fn(),
+  update: vi.fn(),
+}));
+
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: vi.fn(() => ({
+    toast: mockToast,
+    dismiss: vi.fn(),
+    toasts: [],
+  })),
+  toast: mockToast,
+}));
+
+// Setup Supabase mocks before any tests run
+import "./test/setup-supabase-mocks";
+
 // Mock zustand middleware
 vi.mock("zustand/middleware", () => ({
-  persist: vi.fn((fn: any) => fn),
-  devtools: vi.fn((fn: any) => fn),
-  subscribeWithSelector: vi.fn((fn: any) => fn),
-  combine: vi.fn((fn: any) => fn),
+  persist: vi.fn((fn: unknown) => fn),
+  devtools: vi.fn((fn: unknown) => fn),
+  subscribeWithSelector: vi.fn((fn: unknown) => fn),
+  combine: vi.fn((fn: unknown) => fn),
 }));
 
 // Clean up after each test
@@ -62,5 +81,24 @@ global.console = {
   info: vi.fn(),
 };
 
+// Make test utils available globally
+import * as testUtils from "./test/test-utils";
+global.renderWithProviders = testUtils.renderWithProviders;
+
 // Mock environment variables for testing
-process.env.NODE_ENV = "test";
+// Create a proxy for process.env to avoid descriptor errors
+if (typeof process !== 'undefined' && process.env) {
+  const originalEnv = process.env;
+  process.env = new Proxy(originalEnv, {
+    get(target, prop) {
+      if (prop === 'NODE_ENV' && !target.NODE_ENV) {
+        return 'test';
+      }
+      return target[prop as string];
+    },
+    set(target, prop, value) {
+      target[prop as string] = value;
+      return true;
+    }
+  });
+}

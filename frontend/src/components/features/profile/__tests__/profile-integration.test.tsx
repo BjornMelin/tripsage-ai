@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@/test/test-utils";
+import { screen } from "@testing-library/react";
 import type React from "react";
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSettingsSection } from "../account-settings-section";
 import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
@@ -47,7 +48,7 @@ vi.mock("@/components/ui/use-toast", () => ({
 
 // Mock react-hook-form
 vi.mock("react-hook-form", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = (await importOriginal()) as any;
   return {
     ...actual,
     useForm: () => ({

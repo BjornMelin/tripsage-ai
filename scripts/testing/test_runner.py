@@ -28,14 +28,13 @@ os.environ.update(
 def test_config_imports():
     """Test that config module can be imported and instantiated."""
     try:
-        from tripsage.api.core.config import Settings, get_settings
-        from tripsage_core.config.base_app_settings import CoreAppSettings
+        from tripsage.api.core.config import get_settings
+        from tripsage_core.config import Settings
 
         # Test basic instantiation
         settings = Settings()
 
         # Test inheritance
-        assert isinstance(settings, CoreAppSettings)
         assert isinstance(settings, Settings)
 
         # Test agent-specific attributes
@@ -149,7 +148,7 @@ def test_cors_validation():
 
 
 def test_inheritance():
-    """Test inheritance from CoreAppSettings works correctly."""
+    """Test inheritance from Settings works correctly."""
     try:
         from tripsage.api.core.config import Settings
 

@@ -1,0 +1,292 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { UseQueryResult } from "@tanstack/react-query";
+/**
+ * Comprehensive mock helpers for TypeScript compliance
+ */
+import { type Mock, vi } from "vitest";
+
+// Complete Supabase Query Builder Mock
+export const createCompleteQueryBuilder = (
+  mockData: unknown = null,
+  mockError: unknown = null
+) => {
+  const builder = {
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: mockData, error: mockError }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: mockData, error: mockError }),
+  };
+  
+  // Make the builder itself a thenable for direct await
+  (builder as any).then = (onFulfilled: any) => {
+    return Promise.resolve({ data: mockData, error: mockError }).then(onFulfilled);
+  };
+  
+  return builder;
+};
+
+// Helper to generate trip data
+const generateTripData = (data: any) => {
+  const id = Date.now();
+  const now = new Date().toISOString();
+  return {
+    id,
+    uuid_id: `uuid-${id}`,
+    user_id: "test-user-id",
+    title: data.title || data.name || "Untitled Trip",
+    name: data.title || data.name || "Untitled Trip",
+    description: data.description || "",
+    start_date: data.startDate || data.start_date || null,
+    end_date: data.endDate || data.end_date || null,
+    destination: data.destination || null,
+    budget: data.budget || null,
+    currency: data.currency || "USD",
+    spent_amount: data.spent_amount || 0,
+    visibility: data.visibility || "private",
+    tags: data.tags || [],
+    preferences: data.preferences || {},
+    status: data.status || "planning",
+    budget_breakdown: data.enhanced_budget || null,
+    created_at: now,
+    updated_at: now,
+  };
+};
+
+// Complete Supabase Client Mock
+export const createMockSupabaseClient = (): Partial<SupabaseClient> => {
+  const mockData: Record<string, any[]> = {
+    trips: [],
+  };
+
+  return {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+      signUp: vi.fn().mockResolvedValue({ data: null, error: null }),
+      signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: null }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ data: null, error: null }),
+      updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
+    } as SupabaseClient["auth"],
+    from: vi.fn((table: string) => {
+      const builder: any = {
+        select: vi.fn().mockReturnThis(),
+        insert: vi.fn((data: any[]) => {
+          // Handle insert operations
+          const insertedData = data.map(item => generateTripData(item));
+          mockData[table] = [...mockData[table], ...insertedData];
+          builder._insertedData = insertedData;
+          return builder;
+        }).mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        range: vi.fn().mockReturnThis(),
+        single: vi.fn().mockImplementation(() => {
+          if (builder._insertedData && builder._insertedData.length === 1) {
+            return Promise.resolve({ data: builder._insertedData[0], error: null });
+          }
+          return Promise.resolve({ data: mockData[table]?.[0] || null, error: null });
+        }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: mockData[table]?.[0] || null, error: null }),
+      };
+      
+      // Make the builder itself a thenable
+      builder.then = (onFulfilled: any) => {
+        return Promise.resolve({ data: mockData[table] || [], error: null }).then(onFulfilled);
+      };
+      
+      return builder;
+    }),
+    channel: vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnValue({
+        unsubscribe: vi.fn(),
+      }),
+    }),
+    removeChannel: vi.fn(),
+  };
+};
+
+// Complete UseQueryResult Mock
+export const createMockUseQueryResult = <T, E = Error>(
+  data: T | null = null,
+  error: E | null = null,
+  isLoading = false,
+  isError = false
+): UseQueryResult<T, E> =>
+  ({
+    data,
+    error,
+    isLoading,
+    isError,
+    isSuccess: !isLoading && !isError && data !== null,
+    isPending: isLoading,
+    isFetching: false,
+    isFetched: !isLoading,
+    isFetchedAfterMount: !isLoading,
+    isRefetching: false,
+    isLoadingError: false,
+    isRefetchError: false,
+    isPlaceholderData: false,
+    isPaused: false,
+    isStale: false,
+    dataUpdatedAt: Date.now(),
+    errorUpdatedAt: error ? Date.now() : 0,
+    failureCount: error ? 1 : 0,
+    failureReason: error,
+    errorUpdateCount: error ? 1 : 0,
+    status: isLoading ? "pending" : isError ? "error" : "success",
+    fetchStatus: "idle",
+    refetch: vi.fn().mockResolvedValue({ data, error }),
+    isInitialLoading: isLoading,
+    promise: Promise.resolve({ data, error }),
+  }) as UseQueryResult<T, E>;
+
+// Enhanced error mock
+export class MockApiError extends Error {
+  constructor(message: string, public status = 500) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+// Export actual ApiError for compatibility
+export const ApiError = MockApiError;
+
+// Complete auth state change mock
+export const createMockAuthStateChange = () =>
+  vi.fn().mockImplementation((callback: (event: string, session: unknown) => void) => ({
+    data: { subscription: { unsubscribe: vi.fn() } },
+  }));
+
+// Complete table builder mock that returns complete query builder
+export const createMockTableBuilder = (
+  mockResponse: { data: unknown; error: unknown } = { data: null, error: null }
+) =>
+  vi
+    .fn()
+    .mockImplementation(() =>
+      createCompleteQueryBuilder(mockResponse.data, mockResponse.error)
+    );
+
+// For functions that need table-specific logic
+export const createMockTableBuilderWithTable = (
+  mockResponse: { data: unknown; error: unknown } = { data: null, error: null }
+) =>
+  vi
+    .fn()
+    .mockImplementation((table: string) =>
+      createCompleteQueryBuilder(mockResponse.data, mockResponse.error)
+    );
+
+// Create a test wrapper with QueryClient
+import { QueryClient } from "@tanstack/react-query";
+
+export const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+        staleTime: 0,
+      },
+      mutations: {
+        retry: false,
+      },
+    },
+  });
+
+// Enhanced toast mock factory
+export const createMockToast = () => {
+  const mockToast = vi.fn((props: any) => ({
+    id: `toast-${Date.now()}`,
+    dismiss: vi.fn(),
+    update: vi.fn(),
+  }));
+
+  return {
+    toast: mockToast,
+    useToast: vi.fn(() => ({
+      toast: mockToast,
+      dismiss: vi.fn(),
+      toasts: [],
+    })),
+  };
+};
+
+// Enhanced search store mock factory
+export const createMockSearchStore = () => ({
+  currentSearchType: null,
+  currentParams: null,
+  hasActiveFilters: false,
+  hasResults: false,
+  isSearching: false,
+  initializeSearch: vi.fn(),
+  executeSearch: vi.fn().mockResolvedValue('search-123'),
+  resetSearch: vi.fn(),
+  loadSavedSearch: vi.fn().mockResolvedValue(true),
+  duplicateCurrentSearch: vi.fn().mockResolvedValue('new-saved-123'),
+  validateAndExecuteSearch: vi.fn().mockResolvedValue(null),
+  applyFiltersAndSearch: vi.fn().mockResolvedValue('filtered-search-123'),
+  retryLastSearch: vi.fn().mockResolvedValue('new-search-id'),
+  syncStores: vi.fn(),
+  getSearchSummary: vi.fn(() => ({
+    searchType: 'flight',
+    params: { origin: 'NYC', destination: 'LAX' },
+    hasResults: true,
+    resultCount: 10,
+    isSearching: true,
+    hasActiveFilters: true,
+  })),
+});
+
+// Enhanced user store mock factory
+export const createMockUserStore = (overrides = {}) => ({
+  profile: {
+    id: "test-user-id",
+    email: "test@example.com",
+    name: "Test User",
+    twoFactorEnabled: false,
+    settings: {
+      notifications: true,
+      privacy: "public",
+    },
+    ...overrides,
+  },
+  preferences: {
+    theme: "light",
+    language: "en",
+  },
+  insights: null,
+  isLoading: false,
+  error: null,
+  updateProfile: vi.fn().mockResolvedValue({}),
+  updatePreferences: vi.fn().mockResolvedValue({}),
+  refreshInsights: vi.fn().mockResolvedValue({}),
+  clearError: vi.fn(),
+});
+
+// Environment variable mock helper
+export const mockProcessEnv = (env: Record<string, string>) => {
+  const originalEnv = process.env;
+  Object.entries(env).forEach(([key, value]) => {
+    Object.defineProperty(process.env, key, {
+      value,
+      writable: true,
+      configurable: true,
+    });
+  });
+  
+  return () => {
+    process.env = originalEnv;
+  };
+};

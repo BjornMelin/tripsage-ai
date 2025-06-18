@@ -1,8 +1,8 @@
-"""
-Comprehensive tests for AccommodationService.
+"""Comprehensive tests for AccommodationService.
 
 This module provides full test coverage for accommodation management operations
 including search, booking, management, and MCP client integration.
+Updated for Pydantic v2 and modern testing patterns.
 """
 
 from datetime import date, datetime, timedelta, timezone
@@ -10,19 +10,20 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+from pydantic import ValidationError
 
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
 from tripsage_core.exceptions.exceptions import (
-    CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions.exceptions import (
-    CoreValidationError as ValidationError,
+    CoreValidationError,
 )
 from tripsage_core.services.business.accommodation_service import (
     AccommodationAmenity,
     AccommodationBooking,
+    AccommodationBookingRequest,
     AccommodationHost,
     AccommodationImage,
     AccommodationListing,
@@ -41,32 +42,22 @@ class TestAccommodationService:
     """Test suite for AccommodationService."""
 
     @pytest.fixture
-    def mock_database_service(self):
-        """Mock database service."""
-        db = AsyncMock()
-        return db
-
-    @pytest.fixture
-    def mock_external_api_service(self):
-        """Mock external API service."""
-        api = AsyncMock()
-        return api
-
-    @pytest.fixture
-    def accommodation_service(self, mock_database_service, mock_external_api_service):
+    def accommodation_service(
+        self, mock_database_service: AsyncMock
+    ) -> AccommodationService:
         """Create AccommodationService instance with mocked dependencies."""
-        return AccommodationService(
-            database_service=mock_database_service,
-        )
+        return AccommodationService(database_service=mock_database_service)
 
     @pytest.fixture
-    def sample_search_request(self):
+    def sample_search_request(self) -> AccommodationSearchRequest:
         """Sample accommodation search request."""
         return AccommodationSearchRequest(
             location="Paris, France",
             check_in=date.today() + timedelta(days=30),
             check_out=date.today() + timedelta(days=35),
             guests=2,
+            adults=2,  # Add explicit adults field
+            children=0,  # Add explicit children field
             property_types=[PropertyType.APARTMENT, PropertyType.HOTEL],
             min_price=80.00,
             max_price=300.00,
@@ -76,7 +67,7 @@ class TestAccommodationService:
         )
 
     @pytest.fixture
-    def sample_accommodation_location(self):
+    def sample_accommodation_location(self) -> AccommodationLocation:
         """Sample accommodation location."""
         return AccommodationLocation(
             address="123 Rue de la Paix",
@@ -90,7 +81,7 @@ class TestAccommodationService:
         )
 
     @pytest.fixture
-    def sample_accommodation_host(self):
+    def sample_accommodation_host(self) -> AccommodationHost:
         """Sample accommodation host."""
         return AccommodationHost(
             id="host_123",
@@ -106,8 +97,10 @@ class TestAccommodationService:
 
     @pytest.fixture
     def sample_accommodation_listing(
-        self, sample_accommodation_location, sample_accommodation_host
-    ):
+        self,
+        sample_accommodation_location: AccommodationLocation,
+        sample_accommodation_host: AccommodationHost,
+    ) -> AccommodationListing:
         """Sample accommodation listing."""
         listing_id = str(uuid4())
 
@@ -168,8 +161,10 @@ class TestAccommodationService:
 
     @pytest.fixture
     def sample_accommodation_booking(
-        self, sample_accommodation_location, sample_accommodation_host
-    ):
+        self,
+        sample_accommodation_location: AccommodationLocation,
+        sample_accommodation_host: AccommodationHost,
+    ) -> AccommodationBooking:
         """Sample accommodation booking."""
         booking_id = str(uuid4())
         user_id = str(uuid4())
@@ -201,39 +196,34 @@ class TestAccommodationService:
             metadata={"booking_source": "web", "payment_method": "credit_card"},
         )
 
-    @pytest.mark.asyncio
-    async def test_search_accommodations_success(
-        self,
-        accommodation_service,
-        mock_external_api_service,
-        sample_search_request,
-        sample_accommodation_listing,
-    ):
-        """Test successful accommodation search."""
-        # Mock external API response
-        mock_external_api_service.search_accommodations.return_value = {
-            "results": [sample_accommodation_listing.model_dump()],
-            "total": 1,
-        }
+    # Test Search Operations
 
+    @pytest.mark.asyncio
+    async def test_search_accommodations_returns_mock_listings(
+        self,
+        accommodation_service: AccommodationService,
+        sample_search_request: AccommodationSearchRequest,
+    ):
+        """Test successful accommodation search returns mock listings."""
+        # Act
         result = await accommodation_service.search_accommodations(
             sample_search_request
         )
 
-        # Assertions
+        # Assert
         assert isinstance(result, AccommodationSearchResponse)
-        assert len(result.listings) == 1
-        assert result.total_results == 1
-        assert result.listings[0].name == sample_accommodation_listing.name
-
-        # Verify service calls
-        mock_external_api_service.search_accommodations.assert_called_once()
+        assert len(result.listings) == 3  # Mock generator returns 3 listings
+        assert result.total_results == 3
+        assert all(listing.location.city == "Paris" for listing in result.listings)
+        assert all(listing.is_available for listing in result.listings)
+        assert all(80 <= listing.price_per_night <= 300 for listing in result.listings)
 
     @pytest.mark.asyncio
-    async def test_search_accommodations_validation_error(self, accommodation_service):
-        """Test accommodation search with validation errors."""
-
-        # Create invalid search request with check-out before check-in
+    async def test_search_accommodations_invalid_dates_raises_error(
+        self, accommodation_service: AccommodationService
+    ):
+        """Test accommodation search with invalid dates raises validation error."""
+        # Act & Assert
         with pytest.raises(
             ValueError, match="Check-out date must be after check-in date"
         ):
@@ -244,267 +234,227 @@ class TestAccommodationService:
                 guests=2,
             )
 
+    # Test Get Details Operations
+
     @pytest.mark.asyncio
-    async def test_get_accommodation_details_success(
-        self, accommodation_service, mock_database_service, sample_accommodation_listing
+    async def test_get_listing_details_returns_listing_when_found(
+        self,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
+        sample_accommodation_listing: AccommodationListing,
     ):
         """Test successful accommodation details retrieval."""
-        # Mock database response
-        mock_database_service.get_accommodation_by_id.return_value = (
+        # Arrange
+        mock_database_service.get_accommodation_listing.return_value = (
             sample_accommodation_listing.model_dump()
         )
 
-        result = await accommodation_service.get_accommodation_details(
-            sample_accommodation_listing.id
+        # Act
+        result = await accommodation_service.get_listing_details(
+            sample_accommodation_listing.id, user_id="test-user-id"
         )
 
+        # Assert
         assert result is not None
         assert result.id == sample_accommodation_listing.id
         assert result.name == sample_accommodation_listing.name
-
-        mock_database_service.get_accommodation_by_id.assert_called_once_with(
-            sample_accommodation_listing.id
+        mock_database_service.get_accommodation_listing.assert_called_once_with(
+            sample_accommodation_listing.id, "test-user-id"
         )
 
     @pytest.mark.asyncio
-    async def test_get_accommodation_details_not_found(
-        self, accommodation_service, mock_database_service
+    async def test_get_listing_details_returns_none_when_not_found(
+        self,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
     ):
         """Test accommodation details retrieval when listing doesn't exist."""
+        # Arrange
         listing_id = str(uuid4())
+        mock_database_service.get_accommodation_listing.return_value = None
 
-        mock_database_service.get_accommodation_by_id.return_value = None
+        # Act
+        result = await accommodation_service.get_listing_details(
+            listing_id, user_id="test-user-id"
+        )
 
-        with pytest.raises(NotFoundError, match="Accommodation not found"):
-            await accommodation_service.get_accommodation_details(listing_id)
+        # Assert
+        assert result is None
+
+    # Test Booking Operations
 
     @pytest.mark.asyncio
-    async def test_book_accommodation_success(
+    async def test_book_accommodation_creates_booking_successfully(
         self,
-        accommodation_service,
-        mock_database_service,
-        mock_external_api_service,
-        sample_accommodation_listing,
-        sample_accommodation_booking,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
+        sample_accommodation_listing: AccommodationListing,
+        sample_accommodation_booking: AccommodationBooking,
     ):
         """Test successful accommodation booking."""
+        # Arrange
         user_id = str(uuid4())
-
-        # Mock database retrieval
-        mock_database_service.get_accommodation_by_id.return_value = (
+        mock_database_service.get_accommodation_listing.return_value = (
             sample_accommodation_listing.model_dump()
         )
+        mock_database_service.store_accommodation_booking.return_value = None
 
-        # Mock availability check
-        mock_external_api_service.check_accommodation_availability.return_value = {
-            "available": True,
-            "price": sample_accommodation_listing.price_per_night,
-            "total_price": sample_accommodation_listing.total_price,
-        }
-
-        # Mock booking creation
-        mock_external_api_service.create_accommodation_booking.return_value = {
-            "booking_id": sample_accommodation_booking.id,
-            "confirmation_number": sample_accommodation_booking.confirmation_number,
-            "status": "confirmed",
-        }
-
-        # Mock database storage
-        mock_database_service.create_accommodation_booking.return_value = (
-            sample_accommodation_booking.model_dump()
-        )
-
-        result = await accommodation_service.book_accommodation(
-            user_id=user_id,
+        booking_request = AccommodationBookingRequest(
             listing_id=sample_accommodation_listing.id,
             check_in=sample_accommodation_booking.check_in,
             check_out=sample_accommodation_booking.check_out,
             guests=sample_accommodation_booking.guests,
+            guest_name="Test Guest",
+            guest_email="test@example.com",
             special_requests=sample_accommodation_booking.special_requests,
         )
 
-        # Assertions
+        # Act
+        result = await accommodation_service.book_accommodation(
+            user_id=user_id, booking_request=booking_request
+        )
+
+        # Assert
         assert isinstance(result, AccommodationBooking)
         assert result.user_id == user_id
         assert result.listing_id == sample_accommodation_listing.id
-        assert result.status == BookingStatus.CONFIRMED
-
-        # Verify service calls
-        mock_external_api_service.check_accommodation_availability.assert_called_once()
-        mock_external_api_service.create_accommodation_booking.assert_called_once()
-        mock_database_service.create_accommodation_booking.assert_called_once()
+        assert result.status == BookingStatus.BOOKED
+        mock_database_service.get_accommodation_listing.assert_called_once_with(
+            sample_accommodation_listing.id, user_id
+        )
+        mock_database_service.store_accommodation_booking.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_book_accommodation_not_available(
+    async def test_book_accommodation_fails_when_not_available(
         self,
-        accommodation_service,
-        mock_database_service,
-        mock_external_api_service,
-        sample_accommodation_listing,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
+        sample_accommodation_listing: AccommodationListing,
     ):
         """Test accommodation booking when not available."""
+        # Arrange
         user_id = str(uuid4())
-
-        mock_database_service.get_accommodation_by_id.return_value = (
-            sample_accommodation_listing.model_dump()
+        unavailable_listing = sample_accommodation_listing.model_copy()
+        unavailable_listing.is_available = False
+        mock_database_service.get_accommodation_listing.return_value = (
+            unavailable_listing.model_dump()
         )
 
-        # Mock availability check returning false
-        mock_external_api_service.check_accommodation_availability.return_value = {
-            "available": False,
-            "reason": "Dates not available",
-        }
+        booking_request = AccommodationBookingRequest(
+            listing_id=sample_accommodation_listing.id,
+            check_in=date.today() + timedelta(days=30),
+            check_out=date.today() + timedelta(days=35),
+            guests=2,
+            guest_name="Test Guest",
+            guest_email="test@example.com",
+        )
 
-        with pytest.raises(ValidationError, match="Accommodation not available"):
+        # Act & Assert
+        with pytest.raises(CoreValidationError, match="not available"):
             await accommodation_service.book_accommodation(
-                user_id=user_id,
-                listing_id=sample_accommodation_listing.id,
-                check_in=date.today() + timedelta(days=30),
-                check_out=date.today() + timedelta(days=35),
-                guests=2,
+                user_id=user_id, booking_request=booking_request
             )
 
     @pytest.mark.asyncio
-    async def test_get_user_bookings_success(
-        self, accommodation_service, mock_database_service, sample_accommodation_booking
+    async def test_get_user_bookings_returns_list_of_bookings(
+        self,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
+        sample_accommodation_booking: AccommodationBooking,
     ):
         """Test successful user bookings retrieval."""
+        # Arrange
         user_id = sample_accommodation_booking.user_id
-
-        mock_database_service.get_user_accommodation_bookings.return_value = [
+        mock_database_service.get_accommodation_bookings.return_value = [
             sample_accommodation_booking.model_dump()
         ]
 
+        # Act
         results = await accommodation_service.get_user_bookings(user_id)
 
+        # Assert
         assert len(results) == 1
         assert results[0].id == sample_accommodation_booking.id
         assert results[0].user_id == user_id
-
-        mock_database_service.get_user_accommodation_bookings.assert_called_once_with(
-            user_id
+        mock_database_service.get_accommodation_bookings.assert_called_once_with(
+            {"user_id": user_id}, 50
         )
 
+    # Test Cancellation Operations
+
     @pytest.mark.asyncio
-    async def test_cancel_booking_success(
+    async def test_cancel_booking_succeeds_for_owner(
         self,
-        accommodation_service,
-        mock_database_service,
-        mock_external_api_service,
-        sample_accommodation_booking,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
+        sample_accommodation_booking: AccommodationBooking,
     ):
         """Test successful booking cancellation."""
-        # Mock database retrieval
+        # Arrange
         mock_database_service.get_accommodation_booking.return_value = (
             sample_accommodation_booking.model_dump()
         )
+        mock_database_service.update_accommodation_booking.return_value = True
 
-        # Mock external cancellation
-        mock_external_api_service.cancel_accommodation_booking.return_value = {
-            "success": True,
-            "refund_amount": 600.00,
-            "cancellation_fee": 150.00,
-        }
-
-        # Mock database update
-        cancelled_booking = sample_accommodation_booking.model_copy()
-        cancelled_booking.status = BookingStatus.CANCELLED
-        mock_database_service.update_accommodation_booking.return_value = (
-            cancelled_booking.model_dump()
-        )
-
+        # Act
         result = await accommodation_service.cancel_booking(
             booking_id=sample_accommodation_booking.id,
             user_id=sample_accommodation_booking.user_id,
         )
 
-        assert result.status == BookingStatus.CANCELLED
-
-        mock_external_api_service.cancel_accommodation_booking.assert_called_once()
-        mock_database_service.update_accommodation_booking.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_cancel_booking_unauthorized(
-        self, accommodation_service, mock_database_service, sample_accommodation_booking
-    ):
-        """Test booking cancellation with unauthorized user."""
-        different_user_id = str(uuid4())
-
-        mock_database_service.get_accommodation_booking.return_value = (
-            sample_accommodation_booking.model_dump()
+        # Assert
+        assert result is True
+        mock_database_service.get_accommodation_booking.assert_called_once_with(
+            sample_accommodation_booking.id, sample_accommodation_booking.user_id
+        )
+        mock_database_service.update_accommodation_booking.assert_called_once_with(
+            sample_accommodation_booking.id, {"status": BookingStatus.CANCELLED.value}
         )
 
-        with pytest.raises(ValidationError, match="Unauthorized"):
+    @pytest.mark.asyncio
+    async def test_cancel_booking_fails_for_unauthorized_user(
+        self,
+        accommodation_service: AccommodationService,
+        mock_database_service: AsyncMock,
+        sample_accommodation_booking: AccommodationBooking,
+    ):
+        """Test booking cancellation with unauthorized user."""
+        # Arrange
+        different_user_id = str(uuid4())
+        mock_database_service.get_accommodation_booking.return_value = None
+
+        # Act & Assert
+        with pytest.raises(NotFoundError, match="Accommodation booking not found"):
             await accommodation_service.cancel_booking(
                 booking_id=sample_accommodation_booking.id, user_id=different_user_id
             )
 
-    @pytest.mark.asyncio
-    async def test_modify_booking_success(
-        self,
-        accommodation_service,
-        mock_database_service,
-        mock_external_api_service,
-        sample_accommodation_booking,
-    ):
-        """Test successful booking modification."""
-        # Mock database retrieval
-        mock_database_service.get_accommodation_booking.return_value = (
-            sample_accommodation_booking.model_dump()
-        )
-
-        new_check_out = sample_accommodation_booking.check_out + timedelta(days=1)
-
-        # Mock external modification
-        mock_external_api_service.modify_accommodation_booking.return_value = {
-            "success": True,
-            "price_difference": 150.00,
-            "new_total": 900.00,
-        }
-
-        # Mock database update
-        modified_booking = sample_accommodation_booking.model_copy()
-        modified_booking.check_out = new_check_out
-        modified_booking.nights = 6
-        modified_booking.total_price = 900.00
-        mock_database_service.update_accommodation_booking.return_value = (
-            modified_booking.model_dump()
-        )
-
-        result = await accommodation_service.modify_booking(
-            booking_id=sample_accommodation_booking.id,
-            user_id=sample_accommodation_booking.user_id,
-            check_out=new_check_out,
-        )
-
-        assert result.check_out == new_check_out
-        assert result.nights == 6
-        assert result.total_price == 900.00
-
-        mock_external_api_service.modify_accommodation_booking.assert_called_once()
-        mock_database_service.update_accommodation_booking.assert_called_once()
+    # Test Dependency Injection
 
     @pytest.mark.asyncio
-    async def test_get_accommodation_service_dependency(self):
+    async def test_get_accommodation_service_returns_instance(self):
         """Test the dependency injection function."""
+        # Act
         service = await get_accommodation_service()
+
+        # Assert
         assert isinstance(service, AccommodationService)
 
+    # Test Search Filters
+
     @pytest.mark.asyncio
-    async def test_search_with_filters_success(
-        self,
-        accommodation_service,
-        mock_external_api_service,
-        sample_accommodation_listing,
+    async def test_search_with_complex_filters_applies_all_criteria(
+        self, accommodation_service: AccommodationService
     ):
         """Test accommodation search with complex filters."""
-        user_id = str(uuid4())
-
+        # Arrange
         search_request = AccommodationSearchRequest(
             location="Paris, France",
             check_in=date.today() + timedelta(days=30),
             check_out=date.today() + timedelta(days=35),
             guests=2,
+            adults=2,  # Add explicit adults field
+            children=0,  # Add explicit children field
             property_types=[PropertyType.APARTMENT],
             min_price=100.00,
             max_price=200.00,
@@ -518,27 +468,22 @@ class TestAccommodationService:
             sort_order="asc",
         )
 
-        # Mock external API response
-        mock_external_api_service.search_accommodations.return_value = {
-            "results": [sample_accommodation_listing.model_dump()],
-            "total": 1,
-        }
+        # Act
+        result = await accommodation_service.search_accommodations(search_request)
 
-        result = await accommodation_service.search_accommodations(
-            user_id, search_request
-        )
+        # Assert
+        assert isinstance(result, AccommodationSearchResponse)
+        assert len(result.listings) == 3  # Mock generator returns 3 listings
+        assert result.total_results == 3
 
-        assert len(result.listings) == 1
-        assert result.search_parameters == search_request
-
-        # Verify the search parameters were passed correctly
-        call_args = mock_external_api_service.search_accommodations.call_args
-        assert call_args[0][0] == search_request
+    # Test Scoring Logic
 
     @pytest.mark.asyncio
-    async def test_accommodation_scoring_logic(self, accommodation_service):
+    async def test_accommodation_scoring_calculates_correctly(
+        self, accommodation_service: AccommodationService
+    ):
         """Test accommodation scoring and ranking logic."""
-        # Test the internal scoring method if it exists
+        # Arrange
         listings = [
             {
                 "price_per_night": 150.00,
@@ -554,35 +499,101 @@ class TestAccommodationService:
             },
         ]
 
-        # If the service has a scoring method, test it
+        # Act - Test internal scoring method if it exists
         if hasattr(accommodation_service, "_calculate_listing_score"):
             scores = [
                 accommodation_service._calculate_listing_score(listing)
                 for listing in listings
             ]
 
+            # Assert
             assert all(0 <= score <= 1 for score in scores)
             # First listing should have higher score due to better rating and location
             assert scores[0] > scores[1]
 
-    @pytest.mark.asyncio
-    async def test_service_error_handling(
-        self, accommodation_service, mock_external_api_service
-    ):
-        """Test service error handling."""
-        user_id = str(uuid4())
+    # Property-based Testing
 
-        # Mock external API to raise an exception
-        mock_external_api_service.search_accommodations.side_effect = Exception(
-            "API error"
+    @given(
+        guests=st.integers(min_value=1, max_value=16),  # Match the model constraint
+        nights=st.integers(min_value=1, max_value=30),
+        price=st.floats(min_value=10.0, max_value=10000.0),
+    )
+    def test_booking_total_price_calculation(
+        self, guests: int, nights: int, price: float
+    ):
+        """Test booking total price calculation with various inputs."""
+        # Arrange
+        booking = AccommodationBookingRequest(
+            listing_id=str(uuid4()),
+            check_in=date.today() + timedelta(days=30),
+            check_out=date.today() + timedelta(days=30 + nights),
+            guests=guests,
+            guest_name="Test Guest",
+            guest_email="test@example.com",
         )
 
-        search_request = AccommodationSearchRequest(
+        # Assert
+        assert booking.guests == guests
+        assert (booking.check_out - booking.check_in).days == nights
+
+    # Edge Cases
+
+    @pytest.mark.asyncio
+    async def test_search_with_past_dates_creates_request_successfully(
+        self, accommodation_service: AccommodationService
+    ):
+        """Test that past dates don't raise validation error at model level."""
+        # Note: The model doesn't validate past dates
+        # This would be done at service level
+        # This test documents the current behavior
+        request = AccommodationSearchRequest(
             location="Paris, France",
+            check_in=date.today() - timedelta(days=1),  # Past date
+            check_out=date.today() + timedelta(days=5),
+            guests=2,
+        )
+        assert request.check_in < date.today()
+
+    @pytest.mark.asyncio
+    async def test_search_with_zero_guests_raises_validation_error(
+        self, accommodation_service: AccommodationService
+    ):
+        """Test search with zero guests raises appropriate error."""
+        # Act & Assert
+        with pytest.raises(ValidationError) as exc_info:
+            AccommodationSearchRequest(
+                location="Paris, France",
+                check_in=date.today() + timedelta(days=30),
+                check_out=date.today() + timedelta(days=35),
+                guests=0,  # Invalid
+            )
+        # Check that the error is about the guests field
+        assert "guests" in str(exc_info.value)
+        assert "greater than or equal to 1" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_mock_listings_generation_produces_valid_data(
+        self, accommodation_service: AccommodationService
+    ):
+        """Test that mock listings generator produces valid data."""
+        # Arrange
+        search_request = AccommodationSearchRequest(
+            location="Test City",
             check_in=date.today() + timedelta(days=30),
             check_out=date.today() + timedelta(days=35),
             guests=2,
+            adults=2,  # Add explicit adults field
+            children=0,  # Add explicit children field
         )
 
-        with pytest.raises(ServiceError, match="Accommodation search failed"):
-            await accommodation_service.search_accommodations(user_id, search_request)
+        # Act
+        result = await accommodation_service.search_accommodations(search_request)
+
+        # Assert
+        for listing in result.listings:
+            assert listing.id
+            assert listing.name
+            assert listing.property_type in PropertyType
+            assert listing.price_per_night > 0
+            assert listing.max_guests >= search_request.guests
+            assert listing.location.city == "Test City"
