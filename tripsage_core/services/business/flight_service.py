@@ -27,6 +27,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.enums import (
     BookingStatus,
     CabinClass,
+    PassengerType,
 )
 from tripsage_core.models.schemas_common.flight_schemas import (
     FlightPassenger,
@@ -45,6 +46,22 @@ class FlightType(str, Enum):
 
 
 # Note: Using BookingStatus, CabinClass, PassengerType from schemas_common.enums
+# Re-export for convenience
+__all__ = [
+    "FlightService",
+    "FlightType",
+    "FlightSegment",
+    "FlightOffer",
+    "FlightBooking",
+    "FlightBookingRequest",
+    "FlightSearchResponse",
+    "BookingStatus",
+    "CabinClass",
+    "PassengerType",
+    "FlightPassenger",
+    "FlightSearchRequest",
+    "get_flight_service",
+]
 
 
 class FlightSegment(TripSageModel):

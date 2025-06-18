@@ -98,7 +98,6 @@ class ApiKeyCreateRequest(TripSageModel):
     model_config = ConfigDict(
         str_strip_whitespace=True,
         validate_assignment=True,
-        use_enum_values=True,
         frozen=False,
     )
 
@@ -290,7 +289,11 @@ class ApiKeyService:
         )
 
         # Derive master key - handle SecretStr objects properly
-        secret_value = master_secret.get_secret_value() if hasattr(master_secret, 'get_secret_value') else master_secret
+        secret_value = (
+            master_secret.get_secret_value()
+            if hasattr(master_secret, "get_secret_value")
+            else master_secret
+        )
         key_bytes = kdf.derive(secret_value.encode())
         self.master_key = base64.urlsafe_b64encode(key_bytes)
         self.master_cipher = Fernet(self.master_key)
@@ -398,6 +401,19 @@ class ApiKeyService:
         """
         results = await self.db.get_user_api_keys(user_id)
         return [self._db_result_to_response(result) for result in results]
+
+    async def get_api_key(self, key_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a specific API key by ID.
+
+        Args:
+            key_id: API key ID
+            user_id: User ID for ownership verification
+
+        Returns:
+            API key data if found and owned by user, None otherwise
+        """
+        return await self.db.get_api_key_by_id(key_id, user_id)
 
     async def get_key_for_service(
         self, user_id: str, service: ServiceType

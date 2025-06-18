@@ -48,6 +48,16 @@ from .websocket_messaging_service import (
 logger = logging.getLogger(__name__)
 
 
+class ConnectionStatus(str, Enum):
+    """WebSocket connection status."""
+
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    ERROR = "error"
+    RECONNECTING = "reconnecting"
+
+
 def redis_with_fallback(fallback_method: Optional[str] = None):
     """Decorator to handle Redis operations with fallback to local methods.
 
@@ -71,7 +81,8 @@ def redis_with_fallback(fallback_method: Optional[str] = None):
                     )
                 else:
                     logger.warning(
-                        f"No Redis client and no fallback method {fallback_name} found for {func.__name__}"
+                        f"No Redis client and no fallback method {fallback_name} "
+                        f"found for {func.__name__}"
                     )
                     return None
 
@@ -693,7 +704,8 @@ class WebSocketManager:
     async def broadcast_to_channel(self, channel: str, event: WebSocketEvent) -> int:
         """Broadcast event to channel using integrated broadcaster."""
         if self.broadcaster:
-            # Use broadcaster for distributed broadcasting with centralized serialization
+            # Use broadcaster for distributed broadcasting with
+            # centralized serialization
             event_dict = event.to_dict()
             await self.broadcaster.broadcast_to_channel(
                 channel, event_dict, event.priority

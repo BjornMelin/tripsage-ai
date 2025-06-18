@@ -16,6 +16,10 @@ from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
     get_accommodation_service,
 )
+from tripsage_core.services.business.api_key_service import (
+    ApiKeyService,
+    get_api_key_service,
+)
 from tripsage_core.services.business.chat_service import ChatService, get_chat_service
 from tripsage_core.services.business.destination_service import (
     DestinationService,
@@ -28,10 +32,6 @@ from tripsage_core.services.business.flight_service import (
 from tripsage_core.services.business.itinerary_service import (
     ItineraryService,
     get_itinerary_service,
-)
-from tripsage_core.services.business.key_management_service import (
-    KeyManagementService,
-    get_key_management_service,
 )
 from tripsage_core.services.business.memory_service import (
     MemoryService,
@@ -133,7 +133,7 @@ def get_principal_id(principal: Principal) -> str:
 async def verify_service_access(
     principal: Principal,
     service: str = "openai",
-    key_service=Depends(get_key_management_service),
+    key_service=Depends(get_api_key_service),
 ) -> bool:
     """Verify that the principal has access to a specific service."""
     # Agents with API keys already have service access
@@ -143,8 +143,8 @@ async def verify_service_access(
     # For users, check they have the required service key
     if principal.type == "user":
         try:
-            keys = await key_service.list_api_keys(principal.id)
-            service_key = next((k for k in keys if k.service == service), None)
+            keys = await key_service.get_user_api_keys(principal.id)
+            service_key = next((k for k in keys if k.service.value == service), None)
             return service_key is not None
         except Exception:
             return False
@@ -162,6 +162,15 @@ async def get_cache_service_dep():
 def get_mcp_manager() -> MCPManager:
     """Get the MCP Manager instance."""
     return mcp_manager
+
+
+# API Key service dependency
+async def get_api_key_service() -> ApiKeyService:
+    """Get the API key service instance as a dependency."""
+    db = await get_database_service()
+    cache = await get_cache_service()
+    settings = get_settings()
+    return ApiKeyService(db=db, cache=cache, settings=settings)
 
 
 # Modern Annotated dependency types for 2025 best practices
@@ -185,9 +194,7 @@ ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service)]
 ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
-KeyManagementServiceDep = Annotated[
-    KeyManagementService, Depends(get_key_management_service)
-]
+ApiKeyServiceDep = Annotated[ApiKeyService, Depends(get_api_key_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 UserServiceDep = Annotated[UserService, Depends(get_user_service)]

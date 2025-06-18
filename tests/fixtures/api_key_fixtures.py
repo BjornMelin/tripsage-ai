@@ -240,7 +240,9 @@ def multiple_db_results():
             "created_at": (base_time + timedelta(hours=i)).isoformat(),
             "updated_at": (base_time + timedelta(hours=i)).isoformat(),
             "expires_at": (base_time + timedelta(days=365)).isoformat(),
-            "last_used": None if i % 3 == 0 else (base_time + timedelta(hours=i)).isoformat(),
+            "last_used": None
+            if i % 3 == 0
+            else (base_time + timedelta(hours=i)).isoformat(),
             "last_validated": (base_time + timedelta(hours=i)).isoformat(),
             "usage_count": i * 10,
         }
@@ -252,7 +254,7 @@ def multiple_db_results():
 async def mock_api_key_service():
     """Create comprehensive mock API key service."""
     service = MagicMock(spec=ApiKeyService)
-    
+
     # Configure async methods
     service.initialize = AsyncMock()
     service.create_key = AsyncMock()
@@ -264,7 +266,7 @@ async def mock_api_key_service():
     service.check_health = AsyncMock()
     service.bulk_health_check = AsyncMock(return_value=[])
     service.monitor_key = AsyncMock(return_value={})
-    
+
     # Configure internal methods
     service._encrypt_key = MagicMock(return_value="encrypted_data")
     service._decrypt_key = MagicMock(return_value="decrypted_key")
@@ -272,7 +274,7 @@ async def mock_api_key_service():
     service._log_usage = AsyncMock()
     service._cache_validation_result = AsyncMock()
     service._get_cached_validation = AsyncMock(return_value=None)
-    
+
     await service.initialize()
     return service
 
@@ -281,14 +283,14 @@ async def mock_api_key_service():
 async def mock_key_monitoring_service():
     """Create comprehensive mock key monitoring service."""
     service = MagicMock(spec=KeyMonitoringService)
-    
+
     # Configure async methods
     service.get_audit_log = AsyncMock(return_value=[])
     service.get_metrics = AsyncMock(return_value={})
     service.track_usage = AsyncMock()
     service.track_validation = AsyncMock()
     service.get_health_status = AsyncMock(return_value="healthy")
-    
+
     return service
 
 
@@ -296,7 +298,7 @@ async def mock_key_monitoring_service():
 def mock_database_service():
     """Create mock database service for testing."""
     db = AsyncMock()
-    
+
     # Configure common database operations
     db.create_api_key = AsyncMock()
     db.get_api_key = AsyncMock(return_value=None)
@@ -304,7 +306,7 @@ def mock_database_service():
     db.update_api_key = AsyncMock()
     db.delete_api_key = AsyncMock(return_value=True)
     db.log_api_key_usage = AsyncMock()
-    
+
     return db
 
 
@@ -312,7 +314,7 @@ def mock_database_service():
 def mock_cache_service():
     """Create mock cache service for testing."""
     cache = AsyncMock()
-    
+
     # Configure common cache operations
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock(return_value=True)
@@ -321,7 +323,7 @@ def mock_cache_service():
     cache.set_json = AsyncMock(return_value=True)
     cache.exists = AsyncMock(return_value=False)
     cache.expire = AsyncMock(return_value=True)
-    
+
     return cache
 
 
@@ -329,13 +331,13 @@ def mock_cache_service():
 def mock_audit_service():
     """Create mock audit service for testing."""
     audit = AsyncMock()
-    
+
     # Configure audit operations
     audit.log_operation = AsyncMock()
     audit.log_access = AsyncMock()
     audit.log_error = AsyncMock()
     audit.get_logs = AsyncMock(return_value=[])
-    
+
     return audit
 
 
@@ -350,7 +352,7 @@ async def api_key_service_with_mocks(
     service.db = mock_database_service
     service.cache = mock_cache_service
     service.audit = mock_audit_service
-    
+
     await service.initialize()
     return service
 
@@ -358,9 +360,7 @@ async def api_key_service_with_mocks(
 @pytest.fixture
 def sample_rotate_request():
     """Create sample key rotation request."""
-    return ApiKeyRotateRequest(
-        new_key="sk-rotated_key_for_testing_67890"
-    )
+    return ApiKeyRotateRequest(new_key="sk-rotated_key_for_testing_67890")
 
 
 @pytest.fixture
@@ -420,13 +420,15 @@ def audit_log_samples():
             "details": {"service": "openai", "operation": action},
             "success": True,
         }
-        for i, action in enumerate([
-            "key_created",
-            "key_validated",
-            "key_rotated",
-            "key_deleted",
-            "key_health_checked",
-        ])
+        for i, action in enumerate(
+            [
+                "key_created",
+                "key_validated",
+                "key_rotated",
+                "key_deleted",
+                "key_health_checked",
+            ]
+        )
     ]
 
 

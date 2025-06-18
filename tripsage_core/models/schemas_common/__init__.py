@@ -137,7 +137,7 @@ __all__ = [
     "TripSummary",
     # Flight schemas
     "Airport",
-    "AirportSearchRequest", 
+    "AirportSearchRequest",
     "AirportSearchResponse",
     "FlightOffer",
     "FlightPassenger",

@@ -209,7 +209,9 @@ class SecurityMonitoringService:
             ActivityPattern(
                 pattern_id="rate_limit_evasion",
                 name="Rate Limit Evasion",
-                description="Multiple rate limit violations suggesting evasion attempts",
+                description=(
+                    "Multiple rate limit violations suggesting evasion attempts"
+                ),
                 threat_category=ThreatCategory.RATE_LIMIT_EVASION,
                 threat_level=ThreatLevel.MEDIUM,
                 event_types=[AuditEventType.RATE_LIMIT_EXCEEDED],
@@ -406,7 +408,10 @@ class SecurityMonitoringService:
                 threat_category=pattern.threat_category,
                 threat_level=pattern.threat_level,
                 confidence=confidence,
-                description=f"{pattern.name}: {len(relevant_events)} occurrences in {pattern.time_window_minutes} minutes",
+                description=(
+                    f"{pattern.name}: {len(relevant_events)} occurrences in "
+                    f"{pattern.time_window_minutes} minutes"
+                ),
                 affected_entities=[event.actor.actor_id, event.source.ip_address],
                 source_events=[
                     e.event_id for e in relevant_events[-10:]
@@ -431,12 +436,16 @@ class SecurityMonitoringService:
 
         # Detect unusual timing patterns
         if await self._is_unusual_time(event.actor.actor_id, hour_of_day, day_of_week):
+            weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             threats.append(
                 ThreatIndicator(
                     threat_category=ThreatCategory.UNUSUAL_PATTERN,
                     threat_level=ThreatLevel.LOW,
                     confidence=0.4,
-                    description=f"Unusual activity time: {hour_of_day}:00 on {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][day_of_week]}",
+                    description=(
+                        f"Unusual activity time: {hour_of_day}:00 on "
+                        f"{weekdays[day_of_week]}"
+                    ),
                     affected_entities=[event.actor.actor_id],
                     source_events=[event.event_id],
                     metadata={
@@ -579,8 +588,9 @@ class SecurityMonitoringService:
                 return incident
 
         # Create new incident
+        category_name = threat.threat_category.value.replace("_", " ").title()
         incident = SecurityIncident(
-            title=f"{threat.threat_category.value.replace('_', ' ').title()} - {threat.description}",
+            title=f"{category_name} - {threat.description}",
             description=f"Security incident involving {threat.threat_category.value}",
             threat_level=threat.threat_level,
             threat_categories=[threat.threat_category],

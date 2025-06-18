@@ -554,7 +554,8 @@ class TestApiKeyPerformance:
             print(f"Services checked: {len(health_checks)}")
             print(f"Total time: {total_time:.3f}s")
             print(
-                f"Average time per service: {total_time / len(health_checks) * 1000:.2f}ms"
+                f"Average time per service: "
+                f"{total_time / len(health_checks) * 1000:.2f}ms"
             )
 
             # Performance assertions
@@ -601,13 +602,16 @@ class TestApiKeyPerformance:
 
             print("\nPerformance Baseline Results:")
             print(
-                f"Encryption time: {encryption_time * 1000:.2f}ms (baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
+                f"Encryption time: {encryption_time * 1000:.2f}ms "
+                f"(baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
             )
             print(
-                f"Decryption time: {decryption_time * 1000:.2f}ms (baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
+                f"Decryption time: {decryption_time * 1000:.2f}ms "
+                f"(baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
             )
             print(
-                f"Creation time: {creation_time * 1000:.2f}ms (baseline: {BASELINE_CREATION_TIME * 1000:.2f}ms)"
+                f"Creation time: {creation_time * 1000:.2f}ms "
+                f"(baseline: {BASELINE_CREATION_TIME * 1000:.2f}ms)"
             )
 
             # Regression assertions (allow 50% variance from baseline)
@@ -902,7 +906,8 @@ class TestApiKeyPerformance:
         print(f"  Creation Time: {results['creation_time_ms']:.2f}ms (25 concurrent)")
         print(f"  Retrieval Time: {results['retrieval_time_ms']:.2f}ms (50 concurrent)")
         print(
-            f"  Mixed Operations: {results['mixed_operations_time_ms']:.2f}ms (30 concurrent)"
+            f"  Mixed Operations: {results['mixed_operations_time_ms']:.2f}ms "
+            f"(30 concurrent)"
         )
         print(f"  Average Query Time: {results['avg_query_time_ms']:.2f}ms")
         print(f"  Max Query Time: {results['max_query_time_ms']:.2f}ms")
@@ -1328,7 +1333,9 @@ class TestApiKeyPerformance:
                         "user_id": str(uuid.uuid4()),
                         "name": f"Memory Test Key {i}",
                         "service": "openai",
-                        "encrypted_key": f"encrypted_{'z' * 500}_{i}",  # Large encrypted values
+                        "encrypted_key": (
+                            f"encrypted_{'z' * 500}_{i}"
+                        ),  # Large encrypted values
                     }
                     concurrent_tasks.append(mock_db.insert("api_keys", key_data))
                 else:
@@ -1739,23 +1746,29 @@ class TestApiKeyPerformance:
 
         print("\nComprehensive Performance Regression Results:")
         print(
-            f"  Encryption Max Time: {results['encryption_performance']['max_time_ms']:.2f}ms"
+            f"  Encryption Max Time: "
+            f"{results['encryption_performance']['max_time_ms']:.2f}ms"
         )
         print(
-            f"  Decryption Max Time: {results['decryption_performance']['max_time_ms']:.2f}ms"
+            f"  Decryption Max Time: "
+            f"{results['decryption_performance']['max_time_ms']:.2f}ms"
         )
         print(
-            f"  Validation Max Time: {results['validation_performance']['max_time_ms']:.2f}ms"
+            f"  Validation Max Time: "
+            f"{results['validation_performance']['max_time_ms']:.2f}ms"
         )
         print(
-            f"  Validation Throughput: {results['throughput_metrics']['validation_ops_per_sec']:.2f} ops/sec"
+            f"  Validation Throughput: "
+            f"{results['throughput_metrics']['validation_ops_per_sec']:.2f} ops/sec"
         )
         print(
-            f"  Creation Throughput: {results['throughput_metrics']['creation_ops_per_sec']:.2f} ops/sec"
+            f"  Creation Throughput: "
+            f"{results['throughput_metrics']['creation_ops_per_sec']:.2f} ops/sec"
         )
         print(f"  Cache Hit Ratio: {results['cache_performance']['hit_ratio']:.2%}")
         print(
-            f"  Validation Error Rate: {results['validation_performance']['error_rate']:.2%}"
+            f"  Validation Error Rate: "
+            f"{results['validation_performance']['error_rate']:.2%}"
         )
         print(f"  Regression Detected: {results['regression_detected']}")
 
@@ -1763,7 +1776,8 @@ class TestApiKeyPerformance:
             print("  Failed Baselines:")
             for failure in results["failed_baselines"]:
                 print(
-                    f"    {failure['metric']}: {failure['actual']:.2f} (baseline: {failure['baseline']:.2f})"
+                    f"    {failure['metric']}: {failure['actual']:.2f} "
+                    f"(baseline: {failure['baseline']:.2f})"
                 )
 
         return results

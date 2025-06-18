@@ -61,12 +61,12 @@ class TestApiKeyServiceModern:
         db = AsyncMock()
         cache = AsyncMock()
         audit = AsyncMock()
-        
+
         # Set up common return values
         db.create_api_key.return_value = self._sample_db_result()
         cache.get_json.return_value = None
         cache.set_json.return_value = True
-        
+
         return {
             "db": db,
             "cache": cache,
@@ -112,10 +112,10 @@ class TestApiKeyServiceModern:
     ):
         """Property-based test for key creation with various inputs."""
         assume(name.strip())  # Ensure name is not empty/whitespace-only
-        
+
         user_id = str(uuid.uuid4())
         key_value = f"sk-test_key_{uuid.uuid4().hex[:20]}"
-        
+
         request = ApiKeyCreateRequest(
             name=name,
             service=service,
@@ -151,9 +151,9 @@ class TestApiKeyServiceModern:
     ):
         """Property-based test for key format validation."""
         user_id = str(uuid.uuid4())
-        
+
         result = await api_service.validate_api_key(service, api_key, user_id)
-        
+
         # Basic invariants that should always hold
         assert isinstance(result, ValidationResult)
         assert result.service == service
@@ -179,7 +179,7 @@ class TestApiKeyServiceModern:
             }
             for name in names_list
         ]
-        
+
         mock_dependencies["db"].list_user_keys.return_value = mock_keys
 
         with patch.object(api_service, "check_health") as mock_health:
@@ -204,7 +204,7 @@ class TestApiKeyServiceModern:
             service.db = mock_dependencies["db"]
             service.cache = mock_dependencies["cache"]
             service.audit = mock_dependencies["audit"]
-            
+
             # Verify service is properly initialized
             assert service.db is not None
             assert service.cache is not None
@@ -239,7 +239,7 @@ class TestApiKeyServiceModern:
     async def test_network_error_recovery(self, api_service):
         """Test recovery from network errors with exponential backoff."""
         user_id = str(uuid.uuid4())
-        
+
         with patch("httpx.AsyncClient.get") as mock_get:
             # Simulate intermittent network failures
             mock_get.side_effect = [
@@ -260,7 +260,7 @@ class TestApiKeyServiceModern:
     async def test_circuit_breaker_behavior(self, api_service, mock_dependencies):
         """Test circuit breaker pattern for database failures."""
         user_id = str(uuid.uuid4())
-        
+
         # Simulate repeated database failures
         mock_dependencies["db"].create_api_key.side_effect = [
             Exception("Database connection failed"),
@@ -307,7 +307,7 @@ class TestApiKeyServiceModern:
             mock_dependencies["db"].get_api_key.return_value = mock_key
 
             result = await api_service.get_key(mock_key["id"])
-            
+
             # Data consistency checks
             assert result["user_id"] == user_id
             assert result["created_at"] == timestamp.isoformat()
@@ -327,12 +327,12 @@ class TestApiKeyServiceModern:
             if key:  # Skip empty string for encryption
                 encrypted = api_service._encrypt_key(key)
                 decrypted = api_service._decrypt_key(encrypted)
-                
+
                 # Security properties
                 assert encrypted != key  # Encrypted value differs
                 assert len(encrypted) > 0  # Encryption produces output
                 assert decrypted == key  # Decryption is inverse
-                
+
                 # No sensitive data in encrypted form
                 assert key not in encrypted
 
@@ -340,7 +340,7 @@ class TestApiKeyServiceModern:
     async def test_rate_limiting_enforcement(self, api_service, mock_dependencies):
         """Test rate limiting enforcement across multiple requests."""
         user_id = str(uuid.uuid4())
-        
+
         # Simulate rate limit tracking
         request_counts = [str(i) for i in range(1, 12)]  # 1-11 requests
         mock_dependencies["cache"].get.side_effect = request_counts
@@ -384,7 +384,7 @@ class TestApiKeyServiceModern:
     async def test_validation_timeout_handling(self, api_service):
         """Test proper handling of validation timeouts."""
         user_id = str(uuid.uuid4())
-        
+
         with patch("httpx.AsyncClient.get") as mock_get:
             # Simulate timeout
             mock_get.side_effect = asyncio.TimeoutError("Request timeout")
@@ -403,21 +403,21 @@ class TestApiKeyServiceModern:
         """Test proper async resource cleanup."""
         # Simulate operations that require cleanup
         user_id = str(uuid.uuid4())
-        
+
         try:
             # Perform operation that might fail
             mock_dependencies["db"].create_api_key.side_effect = Exception("Test error")
-            
+
             request = ApiKeyCreateRequest(
                 name="Test",
                 service=ServiceType.OPENAI,
                 key_value="sk-test",
                 description="Test",
             )
-            
+
             with pytest.raises(ServiceError):
                 await api_service.create_key(user_id, request)
-                
+
         finally:
             # Verify cleanup occurred (audit logging should still happen)
             mock_dependencies["audit"].log_operation.assert_called()
@@ -435,12 +435,12 @@ class TestApiKeyServiceModern:
     async def test_edge_case_inputs(self, api_service, edge_case_inputs):
         """Test handling of edge case inputs."""
         user_id = str(uuid.uuid4())
-        
+
         # Test key validation with edge cases
         result = await api_service.validate_api_key(
             ServiceType.OPENAI, edge_case_inputs, user_id
         )
-        
+
         # Should handle gracefully without crashing
         assert isinstance(result, ValidationResult)
         assert isinstance(result.is_valid, bool)

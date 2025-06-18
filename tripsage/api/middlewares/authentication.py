@@ -23,6 +23,7 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
+from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
     AuditOutcome,
@@ -31,7 +32,6 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_authentication,
     audit_security_event,
 )
-from tripsage_core.services.business.key_management_service import KeyManagementService
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         settings: Optional[Settings] = None,
-        key_service: Optional[KeyManagementService] = None,
+        key_service: Optional[ApiKeyService] = None,
     ):
         """Initialize AuthenticationMiddleware.
 
@@ -95,11 +95,21 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         """Ensure services are initialized (lazy loading)."""
         if not self._services_initialized:
             if self.key_service is None:
-                from tripsage_core.services.business.key_management_service import (
-                    get_key_management_service,
+                from tripsage_core.config import get_settings
+                from tripsage_core.services.business.api_key_service import (
+                    ApiKeyService,
+                )
+                from tripsage_core.services.infrastructure.cache_service import (
+                    get_cache_service,
+                )
+                from tripsage_core.services.infrastructure.database_service import (
+                    get_database_service,
                 )
 
-                self.key_service = await get_key_management_service()
+                db = await get_database_service()
+                cache = await get_cache_service()
+                settings = get_settings()
+                self.key_service = ApiKeyService(db=db, cache=cache, settings=settings)
 
             self._services_initialized = True
 
@@ -443,8 +453,15 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 full_key = f"sk_{service}_{key_id}_{secret}"
 
                 # Validate the key with the appropriate service
+                from tripsage_core.services.business.api_key_service import ServiceType
+
+                service_type = (
+                    ServiceType(service)
+                    if service in [e.value for e in ServiceType]
+                    else ServiceType.OPENAI
+                )
                 validation_result = await self.key_service.validate_api_key(
-                    service=service, key_value=full_key
+                    service=service_type, key_value=full_key
                 )
 
                 if not validation_result.is_valid:
@@ -453,7 +470,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     )
 
                 # Retrieve key metadata if available
-                key_metadata = validation_result.details or {}
+                key_metadata = validation_result.details
 
                 # Create principal for validated API key
                 return Principal(

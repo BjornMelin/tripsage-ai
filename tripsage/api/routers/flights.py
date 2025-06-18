@@ -59,7 +59,7 @@ async def search_flights(
         request.model_fields if hasattr(request, "model_fields") else "No model_fields",
     )
 
-    # Search for flights using unified schema  
+    # Search for flights using unified schema
     results = await flight_service.search_flights(request)
     return results
 
