@@ -1,382 +1,376 @@
-# TripSage AI: Unified Travel Planning Platform
+# 🌟 TripSage AI
 
-🚀 **Production-Ready** AI-powered travel planning platform with intelligent agents, unified API, and real-time collaboration. Built with modern architecture achieving 4-25x performance improvements.
+[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)]
+(<https://python.org>)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)]
+(<https://fastapi.tiangolo.com>)
+[![Next.js](https://img.shields.io/badge/Next.js-15+-black.svg)]
+(<https://nextjs.org>)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.
+svg)](https://typescriptlang.org)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)]
+(LICENSE)
 
-## Platform Overview
+> **Next-Generation AI-Powered Travel Planning Platform**  
+> Modern Architecture | Production Ready | Comprehensive Documentation
 
-TripSage is an intelligent travel planning platform that seamlessly integrates flight, accommodation, and location data through a unified architecture serving both web applications and AI agents. The platform uses advanced AI orchestration with LangGraph, unified data storage with Supabase, and high-performance caching with DragonflyDB.
+TripSage AI is an intelligent travel planning platform that combines the power of
+modern AI agents with comprehensive travel services. Built with FastAPI, Next.js,
+and advanced AI orchestration, it provides personalized travel recommendations,
+real-time booking capabilities, and intelligent memory management.
 
-### 🎯 **Core Value Propositions**
+## ✨ Key Features
 
-- **🤖 AI-First Design**: LangGraph-based agents with intelligent planning and optimization
-- **⚡ High Performance**: 25x cache performance, 91% faster memory operations
-- **🔄 Unified Architecture**: Single API serving both frontend and AI agent consumers
-- **💰 Cost Optimized**: 80% infrastructure cost reduction with simplified stack
-- **🔒 Enterprise Security**: Multi-layer security with BYOK and encryption
-- **📱 Real-time Collaboration**: WebSocket-based live updates and planning
+- 🤖 **AI-Powered Planning**: LangGraph agents with GPT-4 for intelligent
+  trip recommendations
+- ✈️ **Flight Integration**: Direct Duffel API integration for real-time
+  flight search and booking
+- 🏨 **Accommodation Search**: Comprehensive accommodation discovery and booking
+- 🧠 **Intelligent Memory**: Mem0-powered user preference learning and context
+- ⚡ **Ultra-Fast Caching**: DragonflyDB for sub-millisecond response times
+- 🔒 **Enterprise Security**: Comprehensive RLS policies and JWT authentication
+- 📱 **Modern Frontend**: Next.js 15 with React 19 and TypeScript
+- 🌐 **Real-time Collaboration**: WebSocket-powered trip sharing and updates
 
-## 🏗️ **Architecture Overview**
+## 🚀 Quick Start
 
-TripSage implements a modern 4-layer architecture:
+### Prerequisites
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Presentation Layer                      │
-│  Frontend (Next.js 15) ←→ AI Agents (LangGraph) ←→ APIs   │
-├─────────────────────────────────────────────────────────────┤
-│                   Unified API Layer                        │
-│     FastAPI with Dual Consumer Support (Frontend/Agents)   │
-├─────────────────────────────────────────────────────────────┤
-│                  Business Logic Layer                      │
-│           TripSage Core (Shared Services & Models)         │
-├─────────────────────────────────────────────────────────────┤
-│                  Infrastructure Layer                      │
-│  Supabase (DB) + DragonflyDB (Cache) + External Services   │
-└─────────────────────────────────────────────────────────────┘
-```
+- **Python 3.12+** with uv package manager
+- **Node.js 20+** with pnpm
+- **PostgreSQL 15+** (or Supabase account)
+- **Redis/DragonflyDB** for caching
 
-For detailed architecture information, see [ARCHITECTURE_OVERVIEW.md](./ARCHITECTURE_OVERVIEW.md).
+### Installation
 
-## ✨ **Key Features**
-
-### **Intelligent Travel Planning**
-- **Smart Budget Optimization**: AI-powered budget allocation across flights, hotels, and activities
-- **Multi-Provider Search**: Unified search across multiple travel service providers
-- **Personalized Recommendations**: ML-driven suggestions based on preferences and history
-- **Dynamic Price Tracking**: Real-time monitoring and alerting for price changes
-- **Comprehensive Itineraries**: AI-generated day-by-day plans with optimization
-
-### **Advanced AI Capabilities**
-- **LangGraph Orchestration**: Sophisticated agent workflows with checkpointing
-- **Persistent Memory**: 91% faster context management with Mem0 integration
-- **Conversation Continuity**: Seamless chat experiences across sessions
-- **Tool Integration**: Rich external service integration for enhanced capabilities
-- **Error Recovery**: Intelligent error handling and retry mechanisms
-
-### **Real-time Collaboration**
-- **Live Planning**: WebSocket-based real-time trip collaboration
-- **Shared Workspaces**: Multi-user trip planning and editing
-- **Status Updates**: Real-time agent progress and completion notifications
-- **Chat Integration**: Built-in communication with AI planning assistants
-
-## 🚀 **Technology Stack**
-
-### **Production Architecture (2025)**
-
-#### **Core Infrastructure**
-- **Database**: Supabase PostgreSQL with pgvector extensions
-- **Cache**: DragonflyDB (25x faster than Redis - 6.43M ops/sec)
-- **Memory System**: Mem0 with Supabase backend (91% performance improvement)
-- **API Framework**: FastAPI with dual consumer support
-
-#### **AI & Orchestration**
-- **Agent Framework**: LangGraph with PostgreSQL checkpointing
-- **AI Models**: OpenAI GPT-4 with structured outputs
-- **Vector Search**: pgvector with 471 QPS (11x faster than Qdrant)
-- **Memory Management**: Advanced context compression and retrieval
-
-#### **Frontend & Integration**
-- **Web Application**: Next.js 15 with App Router and React Server Components
-- **Real-time Communication**: WebSocket with connection management
-- **Direct Integrations**: 7 direct SDK integrations + 1 MCP server (Airbnb)
-- **External Services**: Duffel (Flights), Google Maps/Calendar, Weather, Crawl4AI
-
-### **Performance Achievements**
-- **🚀 25x Cache Performance**: DragonflyDB vs Redis
-- **⚡ 91% Faster Memory**: Mem0 vs traditional context approaches
-- **🔍 11x Vector Search**: pgvector vs Qdrant performance
-- **🌐 6x Web Crawling**: Crawl4AI vs Firecrawl performance
-- **💾 4x Database**: Unified Supabase vs multi-database complexity
-
-## 📋 **Development Status**
-
-### **✅ Production Ready (Phase 3 Complete)**
-- [x] **LangGraph Agent Orchestration**: Full implementation with 100% test coverage
-- [x] **Unified Database Architecture**: Supabase with pgvector extensions
-- [x] **High-Performance Caching**: DragonflyDB integration
-- [x] **Memory System**: Mem0 with PostgreSQL backend
-- [x] **Web Crawling**: Direct Crawl4AI SDK integration
-- [x] **Core API Structure**: FastAPI with dual consumer support
-
-### **🔄 In Progress (SDK Migration - Weeks 2-4)**
-- [ ] **Direct SDK Completion**: Google Maps, Calendar, Weather, Time services
-- [ ] **Frontend Core Setup**: Next.js 15 application structure
-- [ ] **Testing Infrastructure**: Comprehensive test suite setup
-- [ ] **Production Deployment**: Docker and orchestration setup
-
-### **📅 Next Phase**
-- [ ] **Monitoring & Observability**: Performance metrics and alerting
-- [ ] **Advanced AI Features**: Enhanced agent capabilities
-- [ ] **Mobile Applications**: Native iOS and Android apps
-- [ ] **Enterprise Features**: Advanced security and compliance
-
-## 🚀 **Quick Start**
-
-### **Prerequisites**
-- **Node.js** (v18+) - Any installation method (nvm, fnm, volta, etc.)
-- **Python** (v3.12+) with pip
-- **uv** (recommended) - Modern Python package manager for faster installs
-- **Supabase Account** for database
-- **API Keys** for external services
-
-### **Installation**
-
-1. **Clone and Setup**:
-   ```bash
-   git clone https://github.com/BjornMelin/tripsage-ai.git
-   cd tripsage-ai
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   # Install Python dependencies (choose one method):
-   
-   # Option 1: Using uv with pyproject.toml (Recommended - Fastest)
-   uv sync                    # Core dependencies only
-   uv sync --group dev       # All dependencies including dev tools
-   
-   # Option 2: Using uv with requirements.txt
-   uv pip install -r requirements.txt      # Core dependencies only
-   uv pip install -r requirements-dev.txt  # All dependencies including dev tools
-   
-   # Option 3: Using pip directly (Traditional method)
-   # First create a virtual environment:
-   python -m venv .venv
-   source .venv/bin/activate               # On Windows: .venv\Scripts\activate
-   # Then install dependencies:
-   pip install -r requirements.txt         # Core dependencies only
-   pip install -r requirements-dev.txt     # All dependencies including dev tools
-   # Or install as editable package:
-   pip install -e .                        # Editable install with core deps
-   
-   # Install Frontend dependencies  
-   cd frontend && pnpm install && cd ..
-   ```
-
-3. **Environment Configuration**:
-   ```bash
-   # Copy environment templates
-   cp .env.example .env
-   cp frontend/.env.example frontend/.env.local
-   
-   # Configure your API keys (see Environment Variables section)
-   ```
-
-4. **Database Setup**:
-   ```bash
-   # Run database migrations
-   uv run python scripts/database/run_migrations.py
-   
-   # Verify connection
-   uv run python scripts/verification/verify_connection.py
-   ```
-
-5. **Start Development Servers**:
-   ```bash
-   # Start API server
-   uv run python -m tripsage.api.main
-   
-   # Start Frontend (new terminal)
-   cd frontend && pnpm dev
-   ```
-
-6. **Try the AI Agents**:
-   ```bash
-   # Test LangGraph agent workflow
-   uv run python examples/agent_handoffs_example.py
-   ```
-
-### **Environment Variables**
-
-#### **Core Services**
 ```bash
-# Database (Required)
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Clone the repository
+git clone https://github.com/your-org/tripsage-ai.git
+cd tripsage-ai
 
-# Cache (Required)
-DRAGONFLY_URL=redis://localhost:6379
+# Backend setup
+uv sync                                    # Install Python dependencies
+cp .env.example .env                       # Configure environment
+uv run python scripts/database/setup.py   # Initialize database
 
-# AI (Required)
-OPENAI_API_KEY=your-openai-api-key
-
-# Authentication (Required)
-JWT_SECRET_KEY=your-jwt-secret-key
-```
-
-#### **External APIs (Optional - BYOK Supported)**
-```bash
-# Flight Search
-DUFFEL_API_TOKEN=your-duffel-api-token
-
-# Maps & Location
-GOOGLE_MAPS_API_KEY=your-google-maps-key
-
-# Calendar Integration
-GOOGLE_CALENDAR_CREDENTIALS=your-calendar-credentials
-
-# Weather Data
-OPENWEATHERMAP_API_KEY=your-weather-key
-```
-
-> **Note**: All external API keys are optional when using BYOK (Bring Your Own Key). Users can securely provide their own API keys through the application interface.
-
-## 📚 **Documentation**
-
-### **Architecture & Design**
-- [**Architecture Overview**](./ARCHITECTURE_OVERVIEW.md) - Complete platform architecture
-- [**TripSage Core**](./tripsage_core/README.md) - Shared services and components
-- [**Unified API**](./tripsage/api/README.md) - API documentation and usage
-- [**Agent Design**](./docs/02_SYSTEM_ARCHITECTURE_AND_DESIGN/AGENT_DESIGN_AND_OPTIMIZATION.md) - AI agent patterns
-
-### **Development Guides**
-- [**Installation Guide**](./docs/07_INSTALLATION_AND_SETUP/INSTALLATION_GUIDE.md) - Detailed setup instructions
-- [**Database Setup**](./docs/03_DATABASE_AND_STORAGE/README.md) - Database configuration and schema
-- [**Frontend Guide**](./docs/06_FRONTEND/README.md) - Frontend development and components
-
-### **Reference**
-- [**API Reference**](./docs/08_REFERENCE/KEY_API_INTEGRATIONS.md) - External service integrations
-- [**Environment Variables**](./docs/ENVIRONMENT_VARIABLES.md) - Complete configuration reference
-- [**Migration Summary**](./docs/MIGRATION_SUMMARY.md) - Architecture evolution and changes
-
-## 🧪 **Development & Testing**
-
-### **Development Workflow**
-```bash
-# Create feature branch
-git checkout -b feature/your-feature-name
-
-# Make changes and test
-uv run pytest --cov=tripsage
-cd frontend && pnpm test
-
-# Lint and format
-uv run ruff check . --fix && uv run ruff format .
-cd frontend && pnpm biome lint --apply && pnpm biome format . --write
-
-# Commit with conventional commits
-git commit -m "feat: add new feature"
-```
-
-### **Testing**
-```bash
-# Run all tests
-uv run pytest --cov=tripsage --cov-report=html
-
-# Run specific test categories
-uv run pytest tests/unit/           # Unit tests
-uv run pytest tests/integration/   # Integration tests
-uv run pytest tests/e2e/          # End-to-end tests
-
-# Frontend testing
+# Frontend setup
 cd frontend
-pnpm test                  # Unit tests
-pnpm test:e2e             # E2E tests with Playwright
+pnpm install                              # Install Node.js dependencies
+cp .env.local.example .env.local          # Configure frontend environment
+
+# Start development servers
+uv run python -m tripsage.api.main       # Backend (port 8000)
+pnpm dev                                  # Frontend (port 3000)
 ```
 
-### **Performance Monitoring**
+### Verification
+
 ```bash
-# Run performance tests
-uv run pytest tests/performance/
+# Health check
+curl http://localhost:8000/api/health
 
-# Memory system benchmarks
-uv run python tests/performance/test_memory_performance.py
-
-# Cache performance tests
-uv run python tests/performance/test_cache_performance.py
+# Frontend access
+open http://localhost:3000
 ```
 
-## 🏭 **Production Deployment**
+## 🏗️ Architecture
 
-### **Docker Deployment**
+TripSage is built on a modern, unified architecture optimized for performance
+and scalability:
+
+- **Backend**: FastAPI with Python 3.12+ and async/await patterns
+- **Database**: Supabase PostgreSQL with pgvector for embeddings
+- **AI**: OpenAI GPT-4 with LangGraph for agent orchestration
+- **Cache**: DragonflyDB for sub-millisecond response times
+- **Memory**: Mem0 for intelligent user preference learning
+- **Frontend**: Next.js 15 with TypeScript and Tailwind CSS
+
+---
+
+## 📚 Documentation
+
+| Guide | Description |
+|-------|-------------|
+| **[📚 Complete Documentation](docs/README.md)** | **Organized documentation hub** |
+| **[User Guide](docs/08_USER_GUIDES/README.md)** | Complete user manual with API usage examples |
+| **[Developer Guide](docs/04_DEVELOPMENT_GUIDE/README.md)** | Development setup, architecture, and best practices |
+| **[API Reference](docs/06_API_REFERENCE/README.md)** | Complete REST API and WebSocket documentation |
+| **[Security Guide](docs/07_CONFIGURATION/SECURITY/README.md)** | Security implementation and best practices |
+| **[Architecture Guide](docs/03_ARCHITECTURE/README.md)** | System design and technical architecture |
+
+### Interactive Documentation
+
+- **API Docs**: `http://localhost:8000/docs` (Swagger UI)
+- **ReDoc**: `http://localhost:8000/redoc` (Alternative API documentation)
+- **Health Check**: `http://localhost:8000/api/health`
+
+---
+
+## 🏗️ Project Structure
+
+```text
+tripsage-ai/
+├── tripsage/                    # API application
+│   ├── api/                     # FastAPI routers and middleware
+│   │   ├── routers/            # API endpoints (trips, flights, chat)
+│   │   ├── middlewares/        # Authentication and CORS
+│   │   └── core/               # Dependencies and configuration
+│   └── tools/                  # AI agent tools and utilities
+├── tripsage_core/              # Core business logic
+│   ├── services/               # Business and infrastructure services
+│   ├── models/                 # Pydantic models and schemas
+│   └── exceptions/             # Custom exception handling
+├── frontend/                   # Next.js application
+│   ├── app/                    # App Router pages and layouts
+│   ├── components/             # Reusable React components
+│   └── lib/                    # Utilities and API clients
+├── tests/                      # Comprehensive test suite
+│   ├── unit/                   # Unit tests with 90%+ coverage
+│   ├── integration/            # Service integration tests
+│   └── e2e/                    # End-to-end Playwright tests
+└── scripts/                    # Database and deployment scripts
+```
+
+---
+
+## 🛠️ Development
+
+### Essential Commands
+
+```bash
+# Backend Development
+uv run python -m tripsage.api.main     # Start API server
+uv run pytest                          # Run tests
+ruff check . --fix && ruff format .    # Lint and format
+
+# Frontend Development
+cd frontend
+pnpm dev                               # Start Next.js development server
+pnpm test                              # Run Vitest tests (85-90% coverage)
+pnpm test:e2e                         # Run Playwright E2E tests
+npx biome lint --apply .               # Format TypeScript
+
+# Database Operations
+uv run python scripts/database/run_migrations.py    # Run migrations
+uv run python scripts/verification/verify_setup.py  # Verify installation
+```
+
+### Testing
+
+The project maintains high testing standards with comprehensive coverage:
+
+- **Unit Tests**: 90%+ coverage with pytest and modern fixtures
+- **Integration Tests**: Service-level testing with real dependencies
+- **E2E Tests**: Playwright browser automation for user workflows
+- **Performance Tests**: Load testing for API endpoints
+
+```bash
+# Run specific test suites
+uv run pytest tests/unit/           # Unit tests only
+uv run pytest tests/integration/    # Integration tests
+uv run pytest --cov=tripsage_core   # Coverage report
+```
+
+### Code Quality
+
+- **Python**: PEP-8 compliant with ruff formatting (≤88 char lines)
+- **TypeScript**: Biome for linting and formatting
+- **Type Safety**: Full type hints for Python, strict TypeScript
+- **Documentation**: Google-style docstrings for all public APIs
+
+---
+
+## 🚢 Deployment
+
+### Docker Deployment
+
 ```bash
 # Build and run with Docker Compose
 docker-compose up -d
 
-# Scale services
-docker-compose up -d --scale api=3 --scale frontend=2
+# Production build
+docker build -t tripsage-ai .
+docker run -p 8000:8000 --env-file .env.production tripsage-ai
 ```
 
-### **Kubernetes Deployment**
+### Kubernetes Deployment
+
 ```bash
-# Deploy to Kubernetes
+# Apply Kubernetes manifests
 kubectl apply -f k8s/
 
-# Check status
-kubectl get pods -l app=tripsage
+# Check deployment status
+kubectl get pods -l app=tripsage-ai
 ```
 
-See [Production Deployment Guide](./docs/deployment/comprehensive-guide.md) for detailed instructions.
+### Environment Configuration
 
-## 📊 **Performance & Metrics**
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | ✅ |
+| `SUPABASE_URL` | Supabase project URL | ✅ |
+| `SUPABASE_ANON_KEY` | Supabase anonymous key | ✅ |
+| `OPENAI_API_KEY` | OpenAI API key for AI features | ✅ |
+| `DUFFEL_ACCESS_TOKEN` | Duffel API token for flights | ⚠️ |
+| `DRAGONFLY_URL` | DragonflyDB connection string | ⚠️ |
+| `MEM0_API_KEY` | Mem0 API key for memory features | ⚠️ |
 
-### **Achieved Performance Improvements**
-- **Cache Operations**: 6.43M ops/sec (25x improvement with DragonflyDB)
-- **Vector Search**: 471 QPS with pgvector (11x faster than Qdrant)
-- **Memory Operations**: 91% faster with Mem0 vs traditional approaches
-- **Web Crawling**: 6x faster with Crawl4AI vs Firecrawl
-- **API Response Times**: 50-70% improvement with direct SDK integrations
-
-### **Cost Optimization**
-- **Infrastructure**: $150-250/month (vs $1000+ originally)
-- **Licensing**: $700-1200/year saved (eliminated Firecrawl)
-- **Total Savings**: 80% reduction in operational costs
-
-### **Scalability Metrics**
-- **Database**: Handles 10K+ concurrent connections
-- **API**: Supports 1M+ requests/day with auto-scaling
-- **WebSocket**: 10K+ concurrent real-time connections
-- **Cache**: 99.9% hit rate with intelligent TTL strategies
-
-## 🔗 **API Documentation**
-
-The TripSage API provides comprehensive endpoints for both frontend applications and AI agents:
-
-- **Interactive Documentation**: http://localhost:8000/docs
-- **Alternative Documentation**: http://localhost:8000/redoc
-- **OpenAPI Schema**: http://localhost:8000/openapi.json
-
-### **Key Endpoints**
-- `POST /api/v1/auth/token` - Authentication
-- `POST /api/v1/trips` - Create travel plans
-- `POST /api/v1/flights/search` - Flight search
-- `POST /api/v1/accommodations/search` - Hotel search
-- `POST /api/v1/chat/message` - AI agent chat
-- `WS /api/v1/ws/chat/{session_id}` - Real-time chat
-
-## 🤝 **Contributing**
-
-We welcome contributions! Please see our contributing guidelines:
-
-1. **Fork** the repository
-2. **Create** a feature branch from `dev`
-3. **Make** your changes with tests
-4. **Ensure** all tests pass and code is formatted
-5. **Submit** a pull request with a clear description
-
-### **Code Style**
-- **Python**: Follow PEP-8 with 88-character lines, use Ruff for formatting
-- **TypeScript**: Use Biome for linting and formatting
-- **Commits**: Use conventional commit format
-- **Documentation**: Update relevant docs with changes
-
-## 📄 **License**
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 **Acknowledgements**
-
-- **OpenAI** for GPT-4 and AI capabilities
-- **Supabase** for unified database infrastructure
-- **LangGraph** for agent orchestration framework
-- **DragonflyDB** for high-performance caching
-- **Mem0** for advanced memory management
-- **Next.js Team** for the excellent React framework
-- **FastAPI** for the high-performance API framework
+✅ Required | ⚠️ Optional (fallback available)
 
 ---
 
-**TripSage AI** - Transforming travel planning with intelligent automation and real-time collaboration.
+## 🔌 API Overview
 
-For questions, issues, or feature requests, please visit our [GitHub Issues](https://github.com/BjornMelin/tripsage-ai/issues) page.
+### Core Endpoints
+
+```bash
+# Authentication
+POST /api/auth/login              # User login
+POST /api/auth/register           # User registration
+POST /api/auth/refresh            # Token refresh
+
+# Trip Management
+GET  /api/trips                   # List user trips
+POST /api/trips                   # Create new trip
+GET  /api/trips/{id}              # Get trip details
+PUT  /api/trips/{id}              # Update trip
+DELETE /api/trips/{id}            # Delete trip
+
+# Flight Services
+GET  /api/flights/search          # Search flights
+POST /api/flights/book            # Book selected flight
+GET  /api/flights/bookings        # List user bookings
+
+# AI Chat & Memory
+POST /api/chat/completions        # AI chat interface
+POST /api/memory/conversation     # Store conversation
+GET  /api/memory/context          # Get user context
+```
+
+### WebSocket Connection
+
+```javascript
+// Real-time trip collaboration
+const ws = new WebSocket('ws://localhost:8000/ws/trip/123e4567-e89b-12d3-a456-426614174000');
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log('Trip update:', message);
+};
+
+// Send trip updates
+ws.send(JSON.stringify({
+  type: 'trip_update',
+  data: { title: 'Updated Trip Name' }
+}));
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our
+[Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Write** tests for your changes
+4. **Ensure** all tests pass (`uv run pytest`)
+5. **Format** code (`ruff format . && npx biome format . --write`)
+6. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+7. **Push** to your branch (`git push origin feature/amazing-feature`)
+8. **Open** a Pull Request
+
+### Code Standards
+
+- Follow TDD (Test-Driven Development) principles
+- Maintain 90%+ test coverage
+- Use conventional commit messages
+- Write comprehensive documentation
+
+---
+
+## 📈 Performance
+
+TripSage AI is optimized for high performance and scalability:
+
+- **Response Times**: Sub-200ms for cached requests
+- **Throughput**: 1000+ requests/second on standard hardware
+- **Caching**: DragonflyDB provides 25x faster performance than Redis
+- **Database**: pgvector enables fast similarity search for recommendations
+- **AI**: Optimized LangGraph agents with streaming responses
+
+### Benchmarks
+
+```bash
+# Performance testing
+uv run python scripts/performance/benchmark_api.py
+uv run python scripts/performance/load_test.py
+
+# Cache performance verification
+uv run python scripts/verification/verify_dragonfly.py
+```
+
+---
+
+## 🔒 Security
+
+Security is a top priority for TripSage AI:
+
+- **Authentication**: JWT tokens with configurable expiration
+- **Authorization**: Role-based access control (RBAC)
+- **Data Protection**: Encrypted sensitive data at rest
+- **API Security**: Rate limiting and request validation
+- **Dependency Security**: Automated vulnerability scanning
+
+### Security Testing
+
+```bash
+# Security verification (ensure no hardcoded secrets)
+git grep -i "fallback-secret\|development-only" .  # Should return empty
+
+# Run security tests
+uv run pytest tests/security/
+```
+
+---
+
+## 📊 Monitoring & Observability
+
+- **Health Checks**: Comprehensive endpoint monitoring
+- **Logging**: Structured logging with correlation IDs
+- **Metrics**: Custom business metrics and performance tracking
+- **Error Tracking**: Detailed error reporting and alerting
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the
+[LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **FastAPI** for the excellent async web framework
+- **Next.js** for the modern React framework
+- **Supabase** for the PostgreSQL backend and authentication
+- **OpenAI** for the AI capabilities
+- **Duffel** for flight search and booking integration
+- **Mem0** for intelligent memory management
+
+---
+
+## 📞 Support
+
+- **Documentation**: Check our comprehensive guides above
+- **Issues**: [GitHub Issues](https://github.com/your-org/tripsage-ai/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-org/tripsage-ai/discussions)
+- **Email**: <support@tripsage.ai>
+
+---
+
+## Built with ❤️ for the future of travel planning
