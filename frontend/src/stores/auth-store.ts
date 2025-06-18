@@ -804,8 +804,7 @@ export const useAuth = () =>
 
 export const useUser = () => useAuthStore((state) => state.user);
 export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated);
-export const useUserDisplayName = () =>
-  useAuthStore((state) => getUserDisplayName(state.user));
+// Removed useUserDisplayName - now only exported from user-store.ts
 export const useIsTokenExpired = () =>
   useAuthStore((state) => isTokenExpired(state.tokenInfo));
 export const useSessionTimeRemaining = () =>
