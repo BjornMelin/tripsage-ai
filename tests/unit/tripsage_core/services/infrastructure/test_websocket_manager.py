@@ -43,10 +43,12 @@ class WebSocketConnectionInfo:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+
 class WebSocketSubscribeRequest:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+
 
 class WebSocketSubscribeResponse:
     def __init__(self, **kwargs):

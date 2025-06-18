@@ -825,5 +825,3 @@ def reset_consolidated_monitor():
     """Reset global consolidated monitor instance (for testing)."""
     global _consolidated_monitor
     _consolidated_monitor = None
-
-
