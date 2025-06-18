@@ -219,9 +219,9 @@ class MemoryService:
         settings = get_settings()
 
         try:
-            # Parse database URL securely
+            # Parse database URL securely using effective PostgreSQL URL
             url_parser = DatabaseURLParser()
-            credentials = url_parser.parse_url(settings.database_url)
+            credentials = url_parser.parse_url(settings.effective_postgres_url())
 
             logger.info(
                 "Database configuration parsed successfully",
@@ -256,14 +256,14 @@ class MemoryService:
                         "model": "gpt-4o-mini",
                         "temperature": 0.1,
                         "max_tokens": 500,
-                        "api_key": settings.openai_api_key,
+                        "api_key": settings.openai_api_key.get_secret_value(),
                     },
                 },
                 "embedder": {
                     "provider": "openai",
                     "config": {
                         "model": "text-embedding-3-small",
-                        "api_key": settings.openai_api_key,
+                        "api_key": settings.openai_api_key.get_secret_value(),
                     },
                 },
                 "version": "v1.1",
@@ -302,7 +302,9 @@ class MemoryService:
 
             # Validate database connection before testing Mem0
             logger.info("Validating database connection for memory service")
-            await self.connection_manager.parse_and_validate_url(settings.database_url)
+            await self.connection_manager.parse_and_validate_url(
+                settings.effective_postgres_url()
+            )
 
             # Test Mem0 memory backend with retry logic
             async def test_memory_operation():

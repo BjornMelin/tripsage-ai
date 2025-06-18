@@ -11,37 +11,29 @@ This test suite validates:
 """
 
 import asyncio
-import pytest
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime, timezone
-from typing import Dict, Any
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring import (
-    EnhancedDatabaseService,
-    get_enhanced_database_service,
-    close_enhanced_database_service,
-)
-from tripsage_core.services.infrastructure.enhanced_database_pool_manager import (
-    EnhancedDatabasePoolManager,
-    ConnectionInfo,
-    ConnectionStatus,
-    PoolStatistics,
-)
+import pytest
+
+from tripsage_core.config import get_settings
+from tripsage_core.exceptions.exceptions import CoreDatabaseError
 from tripsage_core.monitoring.enhanced_database_metrics import (
-    EnhancedDatabaseMetrics,
-    PerformanceBaseline,
-    PerformanceAlert,
     AlertSeverity,
+    EnhancedDatabaseMetrics,
 )
 from tripsage_core.monitoring.performance_regression_detector import (
     PerformanceRegressionDetector,
-    RegressionSeverity,
-    StatisticalBaseline,
     RegressionAlert,
+    RegressionSeverity,
 )
-from tripsage_core.exceptions.exceptions import CoreDatabaseError
-from tripsage_core.config import get_settings
+from tripsage_core.services.infrastructure.enhanced_database_pool_manager import (
+    ConnectionInfo,
+    EnhancedDatabasePoolManager,
+)
+from tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring import (
+    EnhancedDatabaseService,
+)
 
 
 class TestEnhancedDatabaseService:
@@ -60,11 +52,11 @@ class TestEnhancedDatabaseService:
     async def mock_supabase_client(self):
         """Mock Supabase client for testing."""
         client = MagicMock()
-        
+
         # Mock table operations
         table_mock = MagicMock()
         client.table.return_value = table_mock
-        
+
         # Mock query operations
         query_mock = MagicMock()
         table_mock.select.return_value = query_mock
@@ -72,13 +64,13 @@ class TestEnhancedDatabaseService:
         table_mock.update.return_value = query_mock
         table_mock.upsert.return_value = query_mock
         table_mock.delete.return_value = query_mock
-        
+
         # Mock query execution
         result_mock = MagicMock()
         result_mock.data = [{"id": 1, "name": "test"}]
         result_mock.count = 1
         query_mock.execute.return_value = result_mock
-        
+
         # Mock query chaining
         query_mock.eq.return_value = query_mock
         query_mock.gte.return_value = query_mock
@@ -87,7 +79,7 @@ class TestEnhancedDatabaseService:
         query_mock.limit.return_value = query_mock
         query_mock.offset.return_value = query_mock
         query_mock.on_conflict.return_value = query_mock
-        
+
         return client
 
     @pytest.fixture
@@ -100,12 +92,19 @@ class TestEnhancedDatabaseService:
             lifo_enabled=True,
             enable_regression_detection=True,
         )
-        
+
         # Mock the pool manager and metrics
-        with patch('tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring.get_enhanced_pool_manager') as mock_pool, \
-             patch('tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring.get_enhanced_database_metrics') as mock_metrics, \
-             patch('tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring.get_regression_detector') as mock_detector:
-            
+        with (
+            patch(
+                "tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring.get_enhanced_pool_manager"
+            ) as mock_pool,
+            patch(
+                "tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring.get_enhanced_database_metrics"
+            ) as mock_metrics,
+            patch(
+                "tripsage_core.services.infrastructure.enhanced_database_service_with_monitoring.get_regression_detector"
+            ) as mock_detector,
+        ):
             # Mock pool manager
             pool_manager = AsyncMock()
             pool_manager.health_check.return_value = True
@@ -118,25 +117,25 @@ class TestEnhancedDatabaseService:
                 }
             }
             mock_pool.return_value = pool_manager
-            
+
             # Mock metrics
             metrics = MagicMock()
             mock_metrics.return_value = metrics
-            
+
             # Mock regression detector
             detector = AsyncMock()
             detector.record_performance = MagicMock()
             detector.get_recent_alerts.return_value = []
             detector.get_metrics_summary.return_value = {"tracked_metrics": 5}
             mock_detector.return_value = detector
-            
+
             yield service
 
     @pytest.mark.asyncio
     async def test_service_initialization(self, enhanced_service):
         """Test enhanced service initialization."""
         await enhanced_service.connect()
-        
+
         assert enhanced_service.is_connected
         assert enhanced_service.lifo_enabled
         assert enhanced_service.enable_regression_detection
@@ -144,71 +143,87 @@ class TestEnhancedDatabaseService:
         assert enhanced_service._metrics is not None
 
     @pytest.mark.asyncio
-    async def test_lifo_connection_behavior(self, enhanced_service, mock_supabase_client):
+    async def test_lifo_connection_behavior(
+        self, enhanced_service, mock_supabase_client
+    ):
         """Test LIFO connection pool behavior."""
         await enhanced_service.connect()
-        
+
         # Mock the client acquisition to track LIFO behavior
-        with patch.object(enhanced_service._pool_manager, 'acquire_connection') as mock_acquire:
+        with patch.object(
+            enhanced_service._pool_manager, "acquire_connection"
+        ) as mock_acquire:
             mock_acquire.return_value.__aenter__.return_value = mock_supabase_client
             mock_acquire.return_value.__aexit__.return_value = None
-            
+
             # Perform multiple operations
             await enhanced_service.select("users", columns="id,name")
             await enhanced_service.select("posts", columns="id,title")
-            
+
             # Verify pool manager was used
             assert mock_acquire.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_select_operation_with_monitoring(self, enhanced_service, mock_supabase_client):
+    async def test_select_operation_with_monitoring(
+        self, enhanced_service, mock_supabase_client
+    ):
         """Test SELECT operation with performance monitoring."""
         await enhanced_service.connect()
-        
-        with patch.object(enhanced_service._pool_manager, 'acquire_connection') as mock_acquire:
+
+        with patch.object(
+            enhanced_service._pool_manager, "acquire_connection"
+        ) as mock_acquire:
             mock_acquire.return_value.__aenter__.return_value = mock_supabase_client
             mock_acquire.return_value.__aexit__.return_value = None
-            
+
             # Execute select operation
             result = await enhanced_service.select(
                 table="users",
                 columns="id,name,email",
                 filters={"active": True},
                 order_by="created_at",
-                limit=10
+                limit=10,
             )
-            
+
             # Verify result
             assert result == [{"id": 1, "name": "test"}]
-            
+
             # Verify metrics recording
             assert enhanced_service._metrics.record_query_duration.called
 
     @pytest.mark.asyncio
-    async def test_insert_operation_with_monitoring(self, enhanced_service, mock_supabase_client):
+    async def test_insert_operation_with_monitoring(
+        self, enhanced_service, mock_supabase_client
+    ):
         """Test INSERT operation with performance monitoring."""
         await enhanced_service.connect()
-        
-        with patch.object(enhanced_service._pool_manager, 'acquire_connection') as mock_acquire:
+
+        with patch.object(
+            enhanced_service._pool_manager, "acquire_connection"
+        ) as mock_acquire:
             mock_acquire.return_value.__aenter__.return_value = mock_supabase_client
             mock_acquire.return_value.__aexit__.return_value = None
-            
+
             # Execute insert operation
             test_data = {"name": "John Doe", "email": "john@example.com"}
             result = await enhanced_service.insert("users", test_data)
-            
+
             # Verify result
             assert result == [{"id": 1, "name": "test"}]
 
     @pytest.mark.asyncio
-    async def test_vector_search_with_monitoring(self, enhanced_service, mock_supabase_client):
+    async def test_vector_search_with_monitoring(
+        self, enhanced_service, mock_supabase_client
+    ):
         """Test vector search operation with performance monitoring."""
         await enhanced_service.connect()
-        
-        with patch.object(enhanced_service._pool_manager, 'acquire_connection') as mock_acquire:
+
+        with patch.object(
+            enhanced_service._pool_manager, "acquire_connection"
+        ) as mock_acquire:
             mock_acquire.return_value.__aenter__.return_value = mock_supabase_client
             mock_acquire.return_value.__aexit__.return_value = None
-            
+
             # Execute vector search
             query_vector = [0.1, 0.2, 0.3, 0.4, 0.5]
             result = await enhanced_service.vector_search(
@@ -216,9 +231,9 @@ class TestEnhancedDatabaseService:
                 vector_column="embedding",
                 query_vector=query_vector,
                 limit=5,
-                similarity_threshold=0.8
+                similarity_threshold=0.8,
             )
-            
+
             # Verify result
             assert result == [{"id": 1, "name": "test"}]
 
@@ -226,16 +241,16 @@ class TestEnhancedDatabaseService:
     async def test_performance_regression_detection(self, enhanced_service):
         """Test performance regression detection integration."""
         await enhanced_service.connect()
-        
+
         # Simulate slow operation that should trigger regression
-        with patch.object(enhanced_service, '_execute_with_monitoring') as mock_execute:
+        with patch.object(enhanced_service, "_execute_with_monitoring") as mock_execute:
             mock_execute.return_value = [{"id": 1}]
-            
+
             # Mock regression detector to simulate alert
             enhanced_service._regression_detector.record_performance = MagicMock()
-            
+
             await enhanced_service.select("users", columns="id")
-            
+
             # Verify regression detector was called
             assert enhanced_service._regression_detector.record_performance.called
 
@@ -243,32 +258,36 @@ class TestEnhancedDatabaseService:
     async def test_health_check(self, enhanced_service):
         """Test database health check functionality."""
         await enhanced_service.connect()
-        
+
         # Test successful health check
         health_status = await enhanced_service.health_check()
         assert health_status is True
-        
+
         # Test failed health check
         enhanced_service._pool_manager.health_check.return_value = False
         health_status = await enhanced_service.health_check()
         assert health_status is False
 
     @pytest.mark.asyncio
-    async def test_error_handling_and_metrics(self, enhanced_service, mock_supabase_client):
+    async def test_error_handling_and_metrics(
+        self, enhanced_service, mock_supabase_client
+    ):
         """Test error handling and error metrics collection."""
         await enhanced_service.connect()
-        
+
         # Mock database error
         mock_supabase_client.table.side_effect = Exception("Database connection failed")
-        
-        with patch.object(enhanced_service._pool_manager, 'acquire_connection') as mock_acquire:
+
+        with patch.object(
+            enhanced_service._pool_manager, "acquire_connection"
+        ) as mock_acquire:
             mock_acquire.return_value.__aenter__.return_value = mock_supabase_client
             mock_acquire.return_value.__aexit__.return_value = None
-            
+
             # Execute operation that should fail
             with pytest.raises(CoreDatabaseError):
                 await enhanced_service.select("users", columns="id")
-            
+
             # Verify error was counted
             assert enhanced_service._error_count == 1
 
@@ -276,16 +295,16 @@ class TestEnhancedDatabaseService:
     async def test_connection_pool_metrics(self, enhanced_service):
         """Test connection pool metrics collection."""
         await enhanced_service.connect()
-        
+
         # Get performance metrics
         metrics = enhanced_service.get_performance_metrics()
-        
+
         # Verify metrics structure
         assert "service" in metrics
         assert "pool" in metrics
         assert "regression_detection" in metrics
         assert "enhanced_metrics" in metrics
-        
+
         # Verify service metrics
         service_metrics = metrics["service"]
         assert "uptime_seconds" in service_metrics
@@ -299,7 +318,7 @@ class TestEnhancedDatabaseService:
     async def test_performance_alerts_retrieval(self, enhanced_service):
         """Test retrieval of performance regression alerts."""
         await enhanced_service.connect()
-        
+
         # Mock some alerts
         mock_alerts = [
             RegressionAlert(
@@ -312,11 +331,13 @@ class TestEnhancedDatabaseService:
                 timestamp=datetime.now(timezone.utc),
             )
         ]
-        enhanced_service._regression_detector.get_recent_alerts.return_value = mock_alerts
-        
+        enhanced_service._regression_detector.get_recent_alerts.return_value = (
+            mock_alerts
+        )
+
         # Get recent alerts
         alerts = enhanced_service.get_recent_performance_alerts(limit=10)
-        
+
         # Verify alerts structure
         assert len(alerts) == 1
         alert = alerts[0]
@@ -329,13 +350,13 @@ class TestEnhancedDatabaseService:
     async def test_service_cleanup(self, enhanced_service):
         """Test proper cleanup of service resources."""
         await enhanced_service.connect()
-        
+
         # Verify service is connected
         assert enhanced_service.is_connected
-        
+
         # Close service
         await enhanced_service.close()
-        
+
         # Verify service is properly closed
         assert not enhanced_service.is_connected
         assert enhanced_service._pool_manager is None
@@ -345,11 +366,13 @@ class TestEnhancedDatabaseService:
     async def test_concurrent_operations(self, enhanced_service, mock_supabase_client):
         """Test concurrent database operations with LIFO pooling."""
         await enhanced_service.connect()
-        
-        with patch.object(enhanced_service._pool_manager, 'acquire_connection') as mock_acquire:
+
+        with patch.object(
+            enhanced_service._pool_manager, "acquire_connection"
+        ) as mock_acquire:
             mock_acquire.return_value.__aenter__.return_value = mock_supabase_client
             mock_acquire.return_value.__aexit__.return_value = None
-            
+
             # Execute multiple concurrent operations
             tasks = [
                 enhanced_service.select("users", columns="id"),
@@ -357,9 +380,9 @@ class TestEnhancedDatabaseService:
                 enhanced_service.count("users"),
                 enhanced_service.select("comments", columns="id"),
             ]
-            
+
             results = await asyncio.gather(*tasks)
-            
+
             # Verify all operations completed successfully
             assert len(results) == 4
             for result in results:
@@ -391,7 +414,9 @@ class TestEnhancedDatabasePoolManager:
     @pytest.fixture
     async def pool_manager(self, mock_settings):
         """Create enhanced pool manager for testing."""
-        with patch('tripsage_core.services.infrastructure.enhanced_database_pool_manager.create_client'):
+        with patch(
+            "tripsage_core.services.infrastructure.enhanced_database_pool_manager.create_client"
+        ):
             manager = EnhancedDatabasePoolManager(
                 settings=mock_settings,
                 pool_size=3,
@@ -404,11 +429,11 @@ class TestEnhancedDatabasePoolManager:
     @pytest.mark.asyncio
     async def test_pool_initialization(self, pool_manager):
         """Test pool manager initialization."""
-        with patch.object(pool_manager, '_create_connection') as mock_create:
+        with patch.object(pool_manager, "_create_connection") as mock_create:
             mock_create.return_value = MagicMock(spec=ConnectionInfo)
-            
+
             await pool_manager.initialize()
-            
+
             assert pool_manager._initialized
             assert mock_create.call_count == pool_manager.pool_size
 
@@ -419,7 +444,7 @@ class TestEnhancedDatabasePoolManager:
         conn1 = ConnectionInfo("conn1", MagicMock())
         conn2 = ConnectionInfo("conn2", MagicMock())
         conn3 = ConnectionInfo("conn3", MagicMock())
-        
+
         # Add connections to pool
         pool_manager._available_connections.extend([conn1, conn2, conn3])
         pool_manager._all_connections = {
@@ -427,8 +452,8 @@ class TestEnhancedDatabasePoolManager:
             "conn2": conn2,
             "conn3": conn3,
         }
-        
-        with patch.object(pool_manager, '_check_connection_health', return_value=True):
+
+        with patch.object(pool_manager, "_check_connection_health", return_value=True):
             # Get connection - should return conn3 (LIFO)
             result = await pool_manager._get_pooled_connection()
             assert result.connection_id == "conn3"
@@ -439,7 +464,7 @@ class TestEnhancedDatabasePoolManager:
         # Create connection with age exceeding recycle time
         old_conn = ConnectionInfo("old_conn", MagicMock())
         old_conn.created_at = datetime.now(timezone.utc).replace(year=2020)
-        
+
         # Test health check
         is_healthy = await pool_manager._check_connection_health(old_conn)
         assert not is_healthy  # Should be unhealthy due to age
@@ -448,16 +473,16 @@ class TestEnhancedDatabasePoolManager:
     async def test_pool_metrics_collection(self, pool_manager):
         """Test pool metrics collection."""
         await pool_manager.initialize()
-        
+
         # Get metrics
         metrics = pool_manager.get_metrics()
-        
+
         # Verify metrics structure
         assert "pool_config" in metrics
         assert "statistics" in metrics
         assert "connection_details" in metrics
         assert "performance" in metrics
-        
+
         # Verify pool config
         config = metrics["pool_config"]
         assert config["lifo_enabled"] is True
@@ -474,11 +499,11 @@ class TestEnhancedDatabasePoolManager:
         mock_table.select.return_value = mock_query
         mock_query.limit.return_value = mock_query
         mock_query.execute.return_value = MagicMock()
-        
+
         # Test successful validation
         is_valid = await pool_manager._validate_connection(mock_client)
         assert is_valid
-        
+
         # Test failed validation
         mock_query.execute.side_effect = Exception("Connection failed")
         is_valid = await pool_manager._validate_connection(mock_client)
@@ -501,15 +526,12 @@ class TestEnhancedDatabaseMetrics:
         """Test query duration recording and percentile calculation."""
         # Record multiple query durations
         durations = [0.1, 0.2, 0.15, 0.3, 0.25, 0.18, 0.22, 0.12, 0.28, 0.19]
-        
+
         for duration in durations:
             metrics.record_query_duration(
-                duration=duration,
-                operation="SELECT",
-                table="users",
-                status="success"
+                duration=duration, operation="SELECT", table="users", status="success"
             )
-        
+
         # Get percentiles
         percentiles = metrics.get_percentiles("query_duration_SELECT_users")
         assert percentiles is not None
@@ -526,21 +548,21 @@ class TestEnhancedDatabaseMetrics:
                 duration=0.1,  # Fast baseline
                 operation="SELECT",
                 table="users",
-                status="success"
+                status="success",
             )
-        
+
         # Record regression (slow query)
         metrics.record_query_duration(
             duration=0.5,  # Much slower
             operation="SELECT",
             table="users",
-            status="success"
+            status="success",
         )
-        
+
         # Check for alerts
         alerts = metrics.get_recent_alerts()
         assert len(alerts) > 0
-        
+
         alert = alerts[-1]
         assert alert.severity in [AlertSeverity.WARNING, AlertSeverity.CRITICAL]
         assert alert.current_value == 0.5
@@ -553,7 +575,7 @@ class TestEnhancedDatabaseMetrics:
             idle_connections=1,
             total_connections=4,
         )
-        
+
         # Verify metrics were recorded (would be tracked by Prometheus if available)
         # This test mainly ensures no exceptions are raised
 
@@ -563,9 +585,9 @@ class TestEnhancedDatabaseMetrics:
             connection_id="conn_1",
             health_score=0.95,
             validation_duration=0.05,
-            validation_result="success"
+            validation_result="success",
         )
-        
+
         # Verify metrics were recorded (would be tracked by Prometheus if available)
         # This test mainly ensures no exceptions are raised
 
@@ -577,12 +599,12 @@ class TestEnhancedDatabaseMetrics:
                 duration=0.1 + (i * 0.01),
                 operation="SELECT",
                 table="users",
-                status="success" if i < 8 else "error"
+                status="success" if i < 8 else "error",
             )
-        
+
         # Get summary
         summary = metrics.get_summary_stats()
-        
+
         # Verify summary structure
         assert "uptime_seconds" in summary
         assert "total_queries" in summary
@@ -618,9 +640,9 @@ class TestPerformanceRegressionDetector:
             metric_name="query_duration_test",
             value=0.1,
             operation="SELECT",
-            table="users"
+            table="users",
         )
-        
+
         # Verify data was recorded
         assert "query_duration_test" in detector._data_points
         assert len(detector._data_points["query_duration_test"]) == 1
@@ -631,13 +653,13 @@ class TestPerformanceRegressionDetector:
         # Record enough data for baseline
         metric_name = "test_metric"
         values = [0.1, 0.12, 0.11, 0.13, 0.09, 0.14, 0.10, 0.15, 0.08, 0.16, 0.12]
-        
+
         for value in values:
             detector.record_performance(metric_name, value, "SELECT", "users")
-        
+
         # Force baseline update
         detector._update_baseline(metric_name)
-        
+
         # Verify baseline was created
         baseline = detector.get_baseline(metric_name)
         assert baseline is not None
@@ -648,20 +670,20 @@ class TestPerformanceRegressionDetector:
     async def test_regression_detection(self, detector):
         """Test regression detection and alerting."""
         metric_name = "test_regression"
-        
+
         # Establish baseline with fast queries
         for _ in range(20):
             detector.record_performance(metric_name, 0.1, "SELECT", "users")
-        
+
         # Force baseline update
         detector._update_baseline(metric_name)
-        
+
         # Clear existing alerts
         detector._alerts.clear()
-        
+
         # Record slow query that should trigger regression
         detector.record_performance(metric_name, 0.5, "SELECT", "users")
-        
+
         # Check for alerts
         alerts = detector.get_recent_alerts()
         if alerts:  # Regression should be detected
@@ -681,9 +703,9 @@ class TestPerformanceRegressionDetector:
             z_score=2.5,
             message="Test regression",
         )
-        
+
         detector._alerts.append(alert)
-        
+
         # Test acknowledgment
         alert_id = alert.timestamp.isoformat()
         success = detector.acknowledge_alert(alert_id, "test_user", "Investigating")
@@ -697,10 +719,10 @@ class TestPerformanceRegressionDetector:
         # Record some data
         detector.record_performance("test1", 0.1, "SELECT", "users")
         detector.record_performance("test2", 0.2, "INSERT", "posts")
-        
+
         # Get summary
         summary = detector.get_metrics_summary()
-        
+
         # Verify summary structure
         assert "tracked_metrics" in summary
         assert "active_baselines" in summary

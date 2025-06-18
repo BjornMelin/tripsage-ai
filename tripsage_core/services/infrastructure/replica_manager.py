@@ -40,6 +40,14 @@ class ReplicaStatus(Enum):
     UNHEALTHY = "unhealthy"
 
 
+class LoadBalancingStrategy(Enum):
+    """Load balancing strategies for read replicas."""
+
+    ROUND_ROBIN = "round_robin"
+    LEAST_CONNECTIONS = "least_connections"
+    WEIGHTED_ROUND_ROBIN = "weighted_round_robin"
+
+
 @dataclass
 class ReplicaConfig:
     """Configuration for a read replica."""

@@ -17,7 +17,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import numpy as np
 import pytest
 
-from scripts.performance.pgvector_benchmark import (
+# Skip the entire module if benchmark dependencies aren't available
+pytest.importorskip("scipy")
+pytest.importorskip("matplotlib")
+
+from scripts.benchmarks.pgvector_benchmark import (
     BenchmarkConfig,
     BenchmarkResults,
     IndexCreationMetrics,
@@ -26,7 +30,7 @@ from scripts.performance.pgvector_benchmark import (
     QueryPerformanceMetrics,
     run_benchmark,
 )
-from scripts.performance.regression_detector import (
+from scripts.benchmarks.regression_detector import (
     BaselineManager,
     RegressionAnalysisResult,
     RegressionDetector,

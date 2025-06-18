@@ -108,7 +108,9 @@ class ServiceRegistry:
         self.websocket_manager = websocket_manager
 
     @classmethod
-    async def create_default(cls, db_service: EnhancedDatabaseService) -> "ServiceRegistry":
+    async def create_default(
+        cls, db_service: EnhancedDatabaseService
+    ) -> "ServiceRegistry":
         """Create a service registry with default service implementations.
 
         This factory method initializes all services with their default configurations

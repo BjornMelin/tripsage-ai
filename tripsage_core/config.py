@@ -108,9 +108,47 @@ class Settings(BaseSettings):
     )
     openai_model: str = "gpt-4o"
 
-    # Rate Limiting
+    # Rate Limiting & Security
     rate_limit_requests: int = 100
     rate_limit_window: int = 60
+
+    # Enhanced Security Configuration
+    enable_security_monitoring: bool = Field(
+        default=True, description="Enable comprehensive security event monitoring"
+    )
+    enable_timing_attack_protection: bool = Field(
+        default=True, description="Enable timing attack protection for auth operations"
+    )
+    enable_audit_logging: bool = Field(
+        default=True, description="Enable detailed audit logging for security events"
+    )
+    enable_threat_detection: bool = Field(
+        default=True, description="Enable automated threat detection and response"
+    )
+
+    # Security Thresholds
+    max_failed_auth_attempts: int = Field(
+        default=5, description="Maximum failed authentication attempts before blocking"
+    )
+    auth_attempt_window: int = Field(
+        default=3600,
+        description="Time window for tracking failed auth attempts (seconds)",
+    )
+    suspicious_ip_threshold: int = Field(
+        default=10, description="Rate limit violations before marking IP as suspicious"
+    )
+
+    # Security Headers Configuration
+    enable_security_headers: bool = Field(
+        default=True, description="Enable comprehensive security headers"
+    )
+    csp_policy: str = Field(
+        default="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+        description="Content Security Policy",
+    )
+    hsts_max_age: int = Field(
+        default=31536000, description="HTTP Strict Transport Security max age"
+    )
 
     # Feature Flags for Database Hardening
     enable_database_monitoring: bool = Field(
@@ -253,18 +291,22 @@ class Settings(BaseSettings):
         if self.postgres_url:
             url = self.postgres_url
         else:
-            # Convert Supabase URL to PostgreSQL URL
-            import re
-
-            match = re.match(r"https://([^.]+)\.supabase\.co", self.database_url)
-            if match:
-                project_ref = match.group(1)
-                # Construct PostgreSQL URL from Supabase project reference
-                # Format: postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
-                url = f"postgresql://postgres.{project_ref}:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres"
+            # In test environment, return a mock PostgreSQL URL
+            if self.environment in ["test", "testing"]:
+                url = "postgresql://test_user:test_pass@localhost:5432/test_db"
             else:
-                # Fallback: assume database_url is already a PostgreSQL URL
-                url = self.database_url
+                # Convert Supabase URL to PostgreSQL URL
+                import re
+
+                match = re.match(r"https://([^.]+)\.supabase\.co", self.database_url)
+                if match:
+                    project_ref = match.group(1)
+                    # Construct PostgreSQL URL from Supabase project reference
+                    # Format: postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+                    url = f"postgresql://postgres.{project_ref}:[YOUR-PASSWORD]@aws-0-[region].pooler.supabase.com:6543/postgres"
+                else:
+                    # Fallback: assume database_url is already a PostgreSQL URL
+                    url = self.database_url
 
         # Ensure URL uses asyncpg driver
         if url.startswith("postgres://"):

@@ -17,12 +17,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from supabase import Client, create_client
-from supabase.lib.client_options import ClientOptions
+from supabase import Client
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
-    CoreResourceNotFoundError,
     CoreServiceError,
 )
 from tripsage_core.monitoring.enhanced_database_metrics import (
@@ -48,7 +46,7 @@ logger = logging.getLogger(__name__)
 class EnhancedDatabaseService:
     """
     Enhanced database service with LIFO pooling and comprehensive monitoring.
-    
+
     This service provides:
     - LIFO connection pool for optimal cache locality
     - Real-time performance monitoring and metrics
@@ -59,7 +57,7 @@ class EnhancedDatabaseService:
     - Resource utilization tracking
     - Automatic performance optimization
     """
-    
+
     def __init__(
         self,
         settings: Optional[Settings] = None,
@@ -74,7 +72,7 @@ class EnhancedDatabaseService:
         regression_threshold: float = 1.5,
     ):
         """Initialize enhanced database service.
-        
+
         Args:
             settings: Application settings
             metrics_registry: Prometheus metrics registry
@@ -97,31 +95,31 @@ class EnhancedDatabaseService:
         self.lifo_enabled = lifo_enabled
         self.enable_regression_detection = enable_regression_detection
         self.regression_threshold = regression_threshold
-        
+
         # Service state
         self._connected = False
         self._pool_manager: Optional[EnhancedDatabasePoolManager] = None
         self._replica_manager: Optional[ReplicaManager] = None
         self._metrics: Optional[EnhancedDatabaseMetrics] = None
         self._regression_detector: Optional[PerformanceRegressionDetector] = None
-        
+
         # Performance tracking
         self._query_count = 0
         self._error_count = 0
         self._start_time = time.time()
-    
+
     @property
     def is_connected(self) -> bool:
         """Check if the service is connected to the database."""
         return self._connected and self._pool_manager is not None
-    
+
     async def connect(self) -> None:
         """Initialize database service with enhanced monitoring."""
         if self._connected:
             return
-        
+
         logger.info("Connecting enhanced database service with monitoring")
-        
+
         try:
             # Initialize enhanced metrics
             self._metrics = get_enhanced_database_metrics(
@@ -129,13 +127,13 @@ class EnhancedDatabaseService:
                 enable_regression_detection=self.enable_regression_detection,
                 regression_threshold=self.regression_threshold,
             )
-            
+
             # Initialize performance regression detector
             if self.enable_regression_detection:
                 self._regression_detector = await get_regression_detector(
                     regression_threshold=self.regression_threshold,
                 )
-                
+
                 # Add alert callback for logging
                 self._regression_detector.add_alert_callback(
                     lambda alert: logger.warning(
@@ -143,7 +141,7 @@ class EnhancedDatabaseService:
                         f"(severity: {alert.severity.value})"
                     )
                 )
-            
+
             # Initialize enhanced pool manager
             self._pool_manager = await get_enhanced_pool_manager(
                 settings=self.settings,
@@ -155,7 +153,7 @@ class EnhancedDatabaseService:
                 lifo_enabled=self.lifo_enabled,
                 metrics_registry=self.metrics_registry,
             )
-            
+
             # Test connection
             is_healthy = await self._pool_manager.health_check()
             if not is_healthy:
@@ -163,7 +161,7 @@ class EnhancedDatabaseService:
                     message="Pool manager health check failed",
                     code="POOL_HEALTH_CHECK_FAILED",
                 )
-            
+
             # Initialize replica manager if enabled
             if self.settings.enable_read_replicas:
                 try:
@@ -175,9 +173,9 @@ class EnhancedDatabaseService:
                         f"Failed to initialize replica manager: {replica_error}"
                     )
                     # Continue without replica manager
-            
+
             self._connected = True
-            
+
             # Set build info in metrics
             if self._metrics:
                 self._metrics.set_build_info(
@@ -186,13 +184,13 @@ class EnhancedDatabaseService:
                     build_date=datetime.now().isoformat(),
                     python_version="3.13+",
                 )
-            
+
             logger.info(
                 f"Enhanced database service connected successfully "
                 f"(pool_size={self.pool_size}, lifo={self.lifo_enabled}, "
                 f"regression_detection={self.enable_regression_detection})"
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to connect enhanced database service: {e}")
             self._connected = False
@@ -201,11 +199,11 @@ class EnhancedDatabaseService:
                 code="DATABASE_CONNECTION_FAILED",
                 details={"error": str(e)},
             ) from e
-    
+
     async def close(self) -> None:
         """Close database service and cleanup resources."""
         logger.info("Closing enhanced database service")
-        
+
         # Close replica manager first
         if self._replica_manager:
             try:
@@ -214,7 +212,7 @@ class EnhancedDatabaseService:
                 logger.info("Replica manager closed")
             except Exception as e:
                 logger.error(f"Error closing replica manager: {e}")
-        
+
         # Close regression detector
         if self._regression_detector:
             try:
@@ -223,7 +221,7 @@ class EnhancedDatabaseService:
                 logger.info("Regression detector stopped")
             except Exception as e:
                 logger.error(f"Error stopping regression detector: {e}")
-        
+
         # Close pool manager
         if self._pool_manager:
             try:
@@ -232,15 +230,15 @@ class EnhancedDatabaseService:
                 logger.info("Pool manager closed")
             except Exception as e:
                 logger.error(f"Error closing pool manager: {e}")
-        
+
         self._connected = False
         logger.info("Enhanced database service closed")
-    
+
     async def ensure_connected(self) -> None:
         """Ensure database connection is established."""
         if not self.is_connected:
             await self.connect()
-    
+
     @asynccontextmanager
     async def _get_client_for_query(
         self,
@@ -265,20 +263,20 @@ class EnhancedDatabaseService:
                 logger.warning(
                     f"Failed to get replica client: {e}, falling back to primary"
                 )
-        
+
         # Use enhanced pool manager for primary connections
         await self.ensure_connected()
-        
+
         if not self._pool_manager:
             raise CoreServiceError(
                 message="Pool manager not initialized",
                 code="POOL_MANAGER_NOT_INITIALIZED",
                 service="EnhancedDatabaseService",
             )
-        
+
         async with self._pool_manager.acquire_connection() as client:
             yield "primary", client
-    
+
     async def _execute_with_monitoring(
         self,
         operation: str,
@@ -291,7 +289,7 @@ class EnhancedDatabaseService:
         query_type = self._get_query_type(operation)
         success = False
         error_message = None
-        
+
         try:
             async with self._get_client_for_query(
                 query_type=query_type,
@@ -300,16 +298,16 @@ class EnhancedDatabaseService:
                 result = await query_func(client)
                 success = True
                 return result
-                
+
         except Exception as e:
             error_message = str(e)
             self._error_count += 1
             raise
-        
+
         finally:
             duration = time.perf_counter() - start_time
             self._query_count += 1
-            
+
             # Record metrics
             if self._metrics:
                 self._metrics.record_query_duration(
@@ -320,12 +318,12 @@ class EnhancedDatabaseService:
                     pool_id="enhanced",
                     status="success" if success else "error",
                 )
-                
+
                 # Update pool utilization metrics
                 if self._pool_manager:
                     pool_metrics = self._pool_manager.get_metrics()
                     stats = pool_metrics["statistics"]
-                    
+
                     self._metrics.record_pool_utilization(
                         utilization_percent=stats["pool_utilization"],
                         active_connections=stats["active_connections"],
@@ -334,7 +332,7 @@ class EnhancedDatabaseService:
                         pool_id="enhanced",
                         database="supabase",
                     )
-            
+
             # Record for regression detection
             if self._regression_detector and success:
                 metric_name = f"{operation}_{table}_duration"
@@ -343,18 +341,22 @@ class EnhancedDatabaseService:
                     value=duration,
                     operation=operation,
                     table=table,
-                    metadata={"replica_id": replica_id if 'replica_id' in locals() else "primary"},
+                    metadata={
+                        "replica_id": replica_id
+                        if "replica_id" in locals()
+                        else "primary"
+                    },
                 )
-            
+
             logger.debug(
                 f"Query {operation} on {table}: {duration:.3f}s "
                 f"({'success' if success else 'error'})"
             )
-    
+
     def _get_query_type(self, operation: str) -> QueryType:
         """Map operation string to QueryType enum."""
         operation_upper = operation.upper()
-        
+
         mapping = {
             "SELECT": QueryType.READ,
             "INSERT": QueryType.WRITE,
@@ -364,22 +366,22 @@ class EnhancedDatabaseService:
             "COUNT": QueryType.READ,
             "VECTOR_SEARCH": QueryType.VECTOR_SEARCH,
         }
-        
+
         return mapping.get(operation_upper, QueryType.READ)
-    
+
     # Core database operations with monitoring
-    
+
     async def insert(
         self, table: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]
     ) -> List[Dict[str, Any]]:
         """Insert data into table with monitoring."""
-        
+
         async def _insert_query(client: Client):
             result = await asyncio.to_thread(
                 lambda: client.table(table).insert(data).execute()
             )
             return result.data
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="INSERT",
@@ -395,7 +397,7 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     async def select(
         self,
         table: str,
@@ -407,10 +409,10 @@ class EnhancedDatabaseService:
         user_region: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Select data from table with monitoring."""
-        
+
         async def _select_query(client: Client):
             query = client.table(table).select(columns)
-            
+
             # Apply filters
             if filters:
                 for key, value in filters.items():
@@ -420,23 +422,23 @@ class EnhancedDatabaseService:
                             query = getattr(query, operator)(key, filter_value)
                     else:
                         query = query.eq(key, value)
-            
+
             # Apply ordering
             if order_by:
                 if order_by.startswith("-"):
                     query = query.order(order_by[1:], desc=True)
                 else:
                     query = query.order(order_by)
-            
+
             # Apply pagination
             if limit:
                 query = query.limit(limit)
             if offset:
                 query = query.offset(offset)
-            
+
             result = await asyncio.to_thread(lambda: query.execute())
             return result.data
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="SELECT",
@@ -453,22 +455,22 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     async def update(
         self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Update data in table with monitoring."""
-        
+
         async def _update_query(client: Client):
             query = client.table(table).update(data)
-            
+
             # Apply filters
             for key, value in filters.items():
                 query = query.eq(key, value)
-            
+
             result = await asyncio.to_thread(lambda: query.execute())
             return result.data
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="UPDATE",
@@ -484,7 +486,7 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     async def upsert(
         self,
         table: str,
@@ -492,16 +494,16 @@ class EnhancedDatabaseService:
         on_conflict: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Upsert data in table with monitoring."""
-        
+
         async def _upsert_query(client: Client):
             query = client.table(table).upsert(data)
-            
+
             if on_conflict:
                 query = query.on_conflict(on_conflict)
-            
+
             result = await asyncio.to_thread(lambda: query.execute())
             return result.data
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="UPSERT",
@@ -517,20 +519,20 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     async def delete(self, table: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Delete data from table with monitoring."""
-        
+
         async def _delete_query(client: Client):
             query = client.table(table).delete()
-            
+
             # Apply filters
             for key, value in filters.items():
                 query = query.eq(key, value)
-            
+
             result = await asyncio.to_thread(lambda: query.execute())
             return result.data
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="DELETE",
@@ -546,21 +548,21 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     async def count(self, table: str, filters: Optional[Dict[str, Any]] = None) -> int:
         """Count records in table with monitoring."""
-        
+
         async def _count_query(client: Client):
             query = client.table(table).select("*", count="exact")
-            
+
             # Apply filters
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
-            
+
             result = await asyncio.to_thread(lambda: query.execute())
             return result.count
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="COUNT",
@@ -576,9 +578,9 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     # Vector search operations with monitoring
-    
+
     async def vector_search(
         self,
         table: str,
@@ -590,20 +592,20 @@ class EnhancedDatabaseService:
         user_region: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Perform vector similarity search with monitoring."""
-        
+
         async def _vector_search_query(client: Client):
             # Convert vector to string format for PostgreSQL
             vector_str = f"[{','.join(map(str, query_vector))}]"
-            
+
             query = client.table(table).select(
                 f"*, {vector_column} <-> '{vector_str}' as distance"
             )
-            
+
             # Apply filters
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
-            
+
             # Apply similarity threshold
             if similarity_threshold:
                 distance_threshold = (
@@ -612,13 +614,13 @@ class EnhancedDatabaseService:
                 query = query.lt(
                     f"{vector_column} <-> '{vector_str}'", distance_threshold
                 )
-            
+
             # Order by similarity and limit
             query = query.order(f"{vector_column} <-> '{vector_str}'").limit(limit)
-            
+
             result = await asyncio.to_thread(lambda: query.execute())
             return result.data
-        
+
         try:
             return await self._execute_with_monitoring(
                 operation="VECTOR_SEARCH",
@@ -635,28 +637,28 @@ class EnhancedDatabaseService:
                 table=table,
                 details={"error": str(e)},
             ) from e
-    
+
     # Health and monitoring
-    
+
     async def health_check(self) -> bool:
         """Check database connectivity with enhanced monitoring."""
         try:
             await self.ensure_connected()
-            
+
             # Use pool manager's health check
             if self._pool_manager:
                 return await self._pool_manager.health_check()
-            
+
             return False
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
             return False
-    
+
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get comprehensive performance metrics."""
         uptime = time.time() - self._start_time
         error_rate = self._error_count / max(self._query_count, 1)
-        
+
         metrics = {
             "service": {
                 "uptime_seconds": uptime,
@@ -668,28 +670,30 @@ class EnhancedDatabaseService:
                 "regression_detection_enabled": self.enable_regression_detection,
             }
         }
-        
+
         # Add pool metrics
         if self._pool_manager:
             metrics["pool"] = self._pool_manager.get_metrics()
-        
+
         # Add regression detector metrics
         if self._regression_detector:
-            metrics["regression_detection"] = self._regression_detector.get_metrics_summary()
-        
+            metrics["regression_detection"] = (
+                self._regression_detector.get_metrics_summary()
+            )
+
         # Add enhanced metrics summary
         if self._metrics:
             metrics["enhanced_metrics"] = self._metrics.get_summary_stats()
-        
+
         return metrics
-    
+
     def get_recent_performance_alerts(self, limit: int = 20) -> List[Dict[str, Any]]:
         """Get recent performance regression alerts."""
         if not self._regression_detector:
             return []
-        
+
         alerts = self._regression_detector.get_recent_alerts(limit=limit)
-        
+
         return [
             {
                 "metric_name": alert.metric_name,
@@ -713,26 +717,26 @@ _enhanced_database_service: Optional[EnhancedDatabaseService] = None
 
 async def get_enhanced_database_service(**kwargs) -> EnhancedDatabaseService:
     """Get the global enhanced database service instance.
-    
+
     Args:
         **kwargs: Arguments to pass to EnhancedDatabaseService constructor
-    
+
     Returns:
         Connected EnhancedDatabaseService instance
     """
     global _enhanced_database_service
-    
+
     if _enhanced_database_service is None:
         _enhanced_database_service = EnhancedDatabaseService(**kwargs)
         await _enhanced_database_service.connect()
-    
+
     return _enhanced_database_service
 
 
 async def close_enhanced_database_service() -> None:
     """Close the global enhanced database service instance."""
     global _enhanced_database_service
-    
+
     if _enhanced_database_service:
         await _enhanced_database_service.close()
         _enhanced_database_service = None

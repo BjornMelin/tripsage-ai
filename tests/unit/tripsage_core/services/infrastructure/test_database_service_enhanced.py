@@ -21,19 +21,16 @@ Modern testing patterns:
 """
 
 import asyncio
-import json
-import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from hypothesis import given, strategies as st
-from pydantic import ValidationError
-from supabase import Client
+from hypothesis import given
+from hypothesis import strategies as st
 
+from supabase import Client
 from tripsage_core.config import Settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
@@ -46,8 +43,6 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 from tripsage_core.services.infrastructure.replica_manager import (
-    QueryType,
-    ReplicaConfig,
     ReplicaManager,
 )
 
@@ -61,7 +56,9 @@ class TestDatabaseServiceConnectionManagement:
         settings = Mock(spec=Settings)
         settings.database_url = "https://test-project.supabase.co"
         settings.database_public_key = Mock()
-        settings.database_public_key.get_secret_value.return_value = "test-api-key-1234567890"
+        settings.database_public_key.get_secret_value.return_value = (
+            "test-api-key-1234567890"
+        )
         settings.enable_read_replicas = False
         return settings
 
@@ -86,7 +83,7 @@ class TestDatabaseServiceConnectionManagement:
         """Test database service initialization."""
         # Arrange & Act
         service = DatabaseService(mock_settings)
-        
+
         # Assert
         assert service.settings == mock_settings
         assert service._client is None
@@ -98,14 +95,16 @@ class TestDatabaseServiceConnectionManagement:
     async def test_connect_success(self, database_service, mock_supabase_client):
         """Test successful database connection."""
         # Arrange
-        with patch('tripsage_core.services.infrastructure.database_service.create_client') as mock_create:
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.create_client"
+        ) as mock_create:
             mock_create.return_value = mock_supabase_client
-            with patch('asyncio.to_thread') as mock_to_thread:
+            with patch("asyncio.to_thread") as mock_to_thread:
                 mock_to_thread.return_value = Mock(data=[])
-                
+
                 # Act
                 await database_service.connect()
-                
+
                 # Assert
                 assert database_service.is_connected
                 assert database_service._client == mock_supabase_client
@@ -117,11 +116,11 @@ class TestDatabaseServiceConnectionManagement:
         # Arrange
         mock_settings.database_url = "invalid-url"
         service = DatabaseService(mock_settings)
-        
+
         # Act & Assert
         with pytest.raises(CoreDatabaseError) as exc_info:
             await service.connect()
-        
+
         assert "Invalid Supabase URL format" in str(exc_info.value)
         assert exc_info.value.code == "INVALID_DATABASE_URL"
 
@@ -131,40 +130,46 @@ class TestDatabaseServiceConnectionManagement:
         # Arrange
         mock_settings.database_public_key.get_secret_value.return_value = "short"
         service = DatabaseService(mock_settings)
-        
+
         # Act & Assert
         with pytest.raises(CoreDatabaseError) as exc_info:
             await service.connect()
-        
+
         assert "Invalid Supabase API key" in str(exc_info.value)
         assert exc_info.value.code == "INVALID_DATABASE_KEY"
 
     @pytest.mark.asyncio
-    async def test_connect_connection_failure(self, database_service, mock_supabase_client):
+    async def test_connect_connection_failure(
+        self, database_service, mock_supabase_client
+    ):
         """Test connection failure during health check."""
         # Arrange
-        with patch('tripsage_core.services.infrastructure.database_service.create_client') as mock_create:
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.create_client"
+        ) as mock_create:
             mock_create.return_value = mock_supabase_client
-            with patch('asyncio.to_thread') as mock_to_thread:
+            with patch("asyncio.to_thread") as mock_to_thread:
                 mock_to_thread.side_effect = Exception("Connection failed")
-                
+
                 # Act & Assert
                 with pytest.raises(CoreDatabaseError) as exc_info:
                     await database_service.connect()
-                
+
                 assert "Failed to connect to database" in str(exc_info.value)
                 assert exc_info.value.code == "DATABASE_CONNECTION_FAILED"
 
     @pytest.mark.asyncio
-    async def test_connect_already_connected(self, database_service, mock_supabase_client):
+    async def test_connect_already_connected(
+        self, database_service, mock_supabase_client
+    ):
         """Test connecting when already connected."""
         # Arrange
         database_service._connected = True
         database_service._client = mock_supabase_client
-        
+
         # Act
         await database_service.connect()
-        
+
         # Assert - should not raise error and remain connected
         assert database_service.is_connected
 
@@ -177,10 +182,10 @@ class TestDatabaseServiceConnectionManagement:
         mock_replica_manager = Mock()
         mock_replica_manager.close = AsyncMock()
         database_service._replica_manager = mock_replica_manager
-        
+
         # Act
         await database_service.close()
-        
+
         # Assert
         assert not database_service._connected
         assert database_service._client is None
@@ -192,10 +197,10 @@ class TestDatabaseServiceConnectionManagement:
         """Test ensure_connected when not connected."""
         # Arrange
         database_service.connect = AsyncMock()
-        
+
         # Act
         await database_service.ensure_connected()
-        
+
         # Assert
         database_service.connect.assert_called_once()
 
@@ -206,10 +211,10 @@ class TestDatabaseServiceConnectionManagement:
         database_service._connected = True
         database_service._client = Mock()
         database_service.connect = AsyncMock()
-        
+
         # Act
         await database_service.ensure_connected()
-        
+
         # Assert
         database_service.connect.assert_not_called()
 
@@ -220,7 +225,7 @@ class TestDatabaseServiceConnectionManagement:
         mock_client = Mock()
         database_service._connected = True
         database_service._client = mock_client
-        
+
         # Act & Assert
         assert database_service.client == mock_client
 
@@ -229,11 +234,11 @@ class TestDatabaseServiceConnectionManagement:
         """Test client property when not connected."""
         # Arrange
         database_service._connected = False
-        
+
         # Act & Assert
         with pytest.raises(CoreServiceError) as exc_info:
             _ = database_service.client
-        
+
         assert exc_info.value.code == "DATABASE_NOT_CONNECTED"
 
 
@@ -255,13 +260,13 @@ class TestDatabaseServiceCRUDOperations:
         # Arrange
         test_data = {"name": "Test User", "email": "test@example.com"}
         expected_result = [{"id": 1, **test_data}]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.insert("users", test_data)
-            
+
             # Assert
             assert result == expected_result
             mock_to_thread.assert_called_once()
@@ -272,19 +277,16 @@ class TestDatabaseServiceCRUDOperations:
         # Arrange
         test_data = [
             {"name": "User 1", "email": "user1@example.com"},
-            {"name": "User 2", "email": "user2@example.com"}
+            {"name": "User 2", "email": "user2@example.com"},
         ]
-        expected_result = [
-            {"id": 1, **test_data[0]},
-            {"id": 2, **test_data[1]}
-        ]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+        expected_result = [{"id": 1, **test_data[0]}, {"id": 2, **test_data[1]}]
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.insert("users", test_data)
-            
+
             # Assert
             assert result == expected_result
 
@@ -293,14 +295,14 @@ class TestDatabaseServiceCRUDOperations:
         """Test insert operation failure."""
         # Arrange
         test_data = {"invalid": "data"}
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.side_effect = Exception("Insert failed")
-            
+
             # Act & Assert
             with pytest.raises(CoreDatabaseError) as exc_info:
                 await connected_service.insert("users", test_data)
-            
+
             assert exc_info.value.code == "INSERT_FAILED"
             assert exc_info.value.table == "users"
 
@@ -308,17 +310,14 @@ class TestDatabaseServiceCRUDOperations:
     async def test_select_all_records(self, connected_service):
         """Test selecting all records."""
         # Arrange
-        expected_result = [
-            {"id": 1, "name": "User 1"},
-            {"id": 2, "name": "User 2"}
-        ]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+        expected_result = [{"id": 1, "name": "User 1"}, {"id": 2, "name": "User 2"}]
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.select("users")
-            
+
             # Assert
             assert result == expected_result
 
@@ -328,13 +327,13 @@ class TestDatabaseServiceCRUDOperations:
         # Arrange
         filters = {"status": "active", "age": {"gte": 18}}
         expected_result = [{"id": 1, "name": "Adult User"}]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.select("users", filters=filters)
-            
+
             # Assert
             assert result == expected_result
 
@@ -343,15 +342,15 @@ class TestDatabaseServiceCRUDOperations:
         """Test selecting with pagination."""
         # Arrange
         expected_result = [{"id": 11, "name": "User 11"}]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.select(
                 "users", limit=10, offset=10, order_by="-created_at"
             )
-            
+
             # Assert
             assert result == expected_result
 
@@ -362,13 +361,13 @@ class TestDatabaseServiceCRUDOperations:
         update_data = {"name": "Updated Name"}
         filters = {"id": 1}
         expected_result = [{"id": 1, "name": "Updated Name"}]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.update("users", update_data, filters)
-            
+
             # Assert
             assert result == expected_result
 
@@ -378,13 +377,15 @@ class TestDatabaseServiceCRUDOperations:
         # Arrange
         upsert_data = {"id": 1, "name": "Test User", "email": "test@example.com"}
         expected_result = [upsert_data]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
-            result = await connected_service.upsert("users", upsert_data, on_conflict="id")
-            
+            result = await connected_service.upsert(
+                "users", upsert_data, on_conflict="id"
+            )
+
             # Assert
             assert result == expected_result
 
@@ -394,13 +395,13 @@ class TestDatabaseServiceCRUDOperations:
         # Arrange
         filters = {"id": 1}
         expected_result = [{"id": 1, "name": "Deleted User"}]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.delete("users", filters)
-            
+
             # Assert
             assert result == expected_result
 
@@ -410,13 +411,13 @@ class TestDatabaseServiceCRUDOperations:
         # Arrange
         filters = {"status": "active"}
         expected_count = 42
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(count=expected_count)
-            
+
             # Act
             result = await connected_service.count("users", filters)
-            
+
             # Assert
             assert result == expected_count
 
@@ -440,17 +441,17 @@ class TestDatabaseServiceVectorOperations:
         query_vector = [0.1, 0.2, 0.3, 0.4, 0.5]
         expected_result = [
             {"id": 1, "name": "Similar Item", "distance": 0.2},
-            {"id": 2, "name": "Another Item", "distance": 0.3}
+            {"id": 2, "name": "Another Item", "distance": 0.3},
         ]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.vector_search(
                 "destinations", "embedding", query_vector, limit=10
             )
-            
+
             # Assert
             assert result == expected_result
 
@@ -461,18 +462,18 @@ class TestDatabaseServiceVectorOperations:
         query_vector = [0.1, 0.2, 0.3]
         similarity_threshold = 0.8
         expected_result = [{"id": 1, "name": "Highly Similar", "distance": 0.1}]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=expected_result)
-            
+
             # Act
             result = await connected_service.vector_search(
-                "destinations", 
-                "embedding", 
-                query_vector, 
-                similarity_threshold=similarity_threshold
+                "destinations",
+                "embedding",
+                query_vector,
+                similarity_threshold=similarity_threshold,
             )
-            
+
             # Assert
             assert result == expected_result
 
@@ -482,19 +483,23 @@ class TestDatabaseServiceVectorOperations:
         # Arrange
         query_vector = [0.1, 0.2, 0.3]
         expected_result = [{"id": 1, "name": "Paris", "distance": 0.15}]
-        
-        with patch.object(connected_service, 'vector_search') as mock_vector_search:
+
+        with patch.object(connected_service, "vector_search") as mock_vector_search:
             mock_vector_search.return_value = expected_result
-            
+
             # Act
             result = await connected_service.vector_search_destinations(
                 query_vector, limit=5, similarity_threshold=0.7
             )
-            
+
             # Assert
             assert result == expected_result
             mock_vector_search.assert_called_once_with(
-                "destinations", "embedding", query_vector, limit=5, similarity_threshold=0.7
+                "destinations",
+                "embedding",
+                query_vector,
+                limit=5,
+                similarity_threshold=0.7,
             )
 
     @pytest.mark.asyncio
@@ -504,15 +509,15 @@ class TestDatabaseServiceVectorOperations:
         destination_data = {"name": "Tokyo", "country": "Japan"}
         embedding = [0.1, 0.2, 0.3, 0.4]
         expected_result = [{"id": 1, **destination_data, "embedding": embedding}]
-        
-        with patch.object(connected_service, 'upsert') as mock_upsert:
+
+        with patch.object(connected_service, "upsert") as mock_upsert:
             mock_upsert.return_value = expected_result
-            
+
             # Act
             result = await connected_service.save_destination_embedding(
                 destination_data, embedding
             )
-            
+
             # Assert
             assert result == expected_result
             mock_upsert.assert_called_once()
@@ -538,16 +543,16 @@ class TestDatabaseServiceBusinessOperations:
         trip_data = {
             "name": "European Adventure",
             "destination": "Europe",
-            "user_id": str(uuid4())
+            "user_id": str(uuid4()),
         }
         expected_result = [{"id": str(uuid4()), **trip_data}]
-        
-        with patch.object(connected_service, 'insert') as mock_insert:
+
+        with patch.object(connected_service, "insert") as mock_insert:
             mock_insert.return_value = expected_result
-            
+
             # Act
             result = await connected_service.create_trip(trip_data)
-            
+
             # Assert
             assert result == expected_result[0]
             mock_insert.assert_called_once_with("trips", trip_data)
@@ -558,13 +563,13 @@ class TestDatabaseServiceBusinessOperations:
         # Arrange
         trip_id = str(uuid4())
         expected_trip = {"id": trip_id, "name": "Test Trip"}
-        
-        with patch.object(connected_service, 'select') as mock_select:
+
+        with patch.object(connected_service, "select") as mock_select:
             mock_select.return_value = [expected_trip]
-            
+
             # Act
             result = await connected_service.get_trip(trip_id)
-            
+
             # Assert
             assert result == expected_trip
             mock_select.assert_called_once_with("trips", "*", {"id": trip_id})
@@ -574,14 +579,14 @@ class TestDatabaseServiceBusinessOperations:
         """Test trip not found scenario."""
         # Arrange
         trip_id = str(uuid4())
-        
-        with patch.object(connected_service, 'select') as mock_select:
+
+        with patch.object(connected_service, "select") as mock_select:
             mock_select.return_value = []
-            
+
             # Act & Assert
             with pytest.raises(CoreResourceNotFoundError) as exc_info:
                 await connected_service.get_trip(trip_id)
-            
+
             assert f"Trip {trip_id} not found" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -591,15 +596,15 @@ class TestDatabaseServiceBusinessOperations:
         user_id = str(uuid4())
         expected_trips = [
             {"id": str(uuid4()), "name": "Trip 1", "user_id": user_id},
-            {"id": str(uuid4()), "name": "Trip 2", "user_id": user_id}
+            {"id": str(uuid4()), "name": "Trip 2", "user_id": user_id},
         ]
-        
-        with patch.object(connected_service, 'select') as mock_select:
+
+        with patch.object(connected_service, "select") as mock_select:
             mock_select.return_value = expected_trips
-            
+
             # Act
             result = await connected_service.get_user_trips(user_id)
-            
+
             # Assert
             assert result == expected_trips
             mock_select.assert_called_once_with(
@@ -613,13 +618,13 @@ class TestDatabaseServiceBusinessOperations:
         # Arrange
         user_data = {"email": "test@example.com", "name": "Test User"}
         expected_result = [{"id": str(uuid4()), **user_data}]
-        
-        with patch.object(connected_service, 'insert') as mock_insert:
+
+        with patch.object(connected_service, "insert") as mock_insert:
             mock_insert.return_value = expected_result
-            
+
             # Act
             result = await connected_service.create_user(user_data)
-            
+
             # Assert
             assert result == expected_result[0]
 
@@ -629,13 +634,13 @@ class TestDatabaseServiceBusinessOperations:
         # Arrange
         email = "test@example.com"
         expected_user = {"id": str(uuid4()), "email": email, "name": "Test User"}
-        
-        with patch.object(connected_service, 'select') as mock_select:
+
+        with patch.object(connected_service, "select") as mock_select:
             mock_select.return_value = [expected_user]
-            
+
             # Act
             result = await connected_service.get_user_by_email(email)
-            
+
             # Assert
             assert result == expected_user
 
@@ -658,26 +663,26 @@ class TestDatabaseServiceTransactions:
         # Arrange & Act
         async with connected_service.transaction() as tx:
             # Assert
-            assert hasattr(tx, 'insert')
-            assert hasattr(tx, 'update')
-            assert hasattr(tx, 'delete')
-            assert hasattr(tx, 'execute')
+            assert hasattr(tx, "insert")
+            assert hasattr(tx, "update")
+            assert hasattr(tx, "delete")
+            assert hasattr(tx, "execute")
 
     @pytest.mark.asyncio
     async def test_transaction_operations(self, connected_service):
         """Test transaction operations."""
         # Arrange
-        with patch.object(connected_service, 'insert') as mock_insert:
-            with patch.object(connected_service, 'update') as mock_update:
+        with patch.object(connected_service, "insert") as mock_insert:
+            with patch.object(connected_service, "update") as mock_update:
                 mock_insert.return_value = [{"id": 1}]
                 mock_update.return_value = [{"id": 1, "updated": True}]
-                
+
                 # Act
                 async with connected_service.transaction() as tx:
                     tx.insert("users", {"name": "Test"})
                     tx.update("users", {"active": True}, {"id": 1})
                     results = await tx.execute()
-                
+
                 # Assert
                 assert len(results) == 2
                 mock_insert.assert_called_once()
@@ -702,7 +707,7 @@ class TestDatabaseServiceErrorHandling:
         # Arrange
         service = DatabaseService(mock_settings)
         service.ensure_connected = AsyncMock()
-        
+
         # Act & Assert
         await service.insert("users", {"name": "test"})
         service.ensure_connected.assert_called_once()
@@ -711,26 +716,26 @@ class TestDatabaseServiceErrorHandling:
     async def test_network_timeout_handling(self, connected_service):
         """Test network timeout handling."""
         # Arrange
-        with patch('asyncio.to_thread') as mock_to_thread:
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.side_effect = asyncio.TimeoutError("Connection timeout")
-            
+
             # Act & Assert
             with pytest.raises(CoreDatabaseError) as exc_info:
                 await connected_service.select("users")
-            
+
             assert "SELECT_FAILED" in str(exc_info.value.code)
 
     @pytest.mark.asyncio
     async def test_invalid_sql_handling(self, connected_service):
         """Test invalid SQL handling."""
         # Arrange
-        with patch('asyncio.to_thread') as mock_to_thread:
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.side_effect = Exception("Invalid SQL syntax")
-            
+
             # Act & Assert
             with pytest.raises(CoreDatabaseError) as exc_info:
                 await connected_service.execute_sql("INVALID SQL")
-            
+
             assert exc_info.value.code == "SQL_EXECUTION_FAILED"
 
 
@@ -744,14 +749,14 @@ class TestDatabaseServiceReplicaManagement:
         service = DatabaseService(mock_settings)
         service._connected = True
         service._client = mock_supabase_client
-        
+
         # Mock replica manager
         mock_replica_manager = Mock(spec=ReplicaManager)
         mock_replica_manager.initialize = AsyncMock()
         mock_replica_manager.close = AsyncMock()
         mock_replica_manager.acquire_connection = AsyncMock()
         service._replica_manager = mock_replica_manager
-        
+
         yield service
         await service.close()
 
@@ -760,7 +765,7 @@ class TestDatabaseServiceReplicaManagement:
         """Test replica manager initialization."""
         # Arrange & Act
         replica_manager = replica_enabled_service.get_replica_manager()
-        
+
         # Assert
         assert replica_manager is not None
         assert replica_enabled_service.is_replica_enabled()
@@ -774,14 +779,16 @@ class TestDatabaseServiceReplicaManagement:
                 status=Mock(value="healthy"),
                 latency_ms=50,
                 uptime_percentage=99.9,
-                last_check=datetime.now(timezone.utc)
+                last_check=datetime.now(timezone.utc),
             )
         }
-        replica_enabled_service._replica_manager.get_replica_health.return_value = mock_health_data
-        
+        replica_enabled_service._replica_manager.get_replica_health.return_value = (
+            mock_health_data
+        )
+
         # Act
         health = await replica_enabled_service.get_replica_health()
-        
+
         # Assert
         assert health["enabled"] is True
         assert "replicas" in health
@@ -791,13 +798,15 @@ class TestDatabaseServiceReplicaManagement:
     async def test_add_read_replica(self, replica_enabled_service):
         """Test adding a read replica."""
         # Arrange
-        replica_enabled_service._replica_manager.register_replica = AsyncMock(return_value=True)
-        
+        replica_enabled_service._replica_manager.register_replica = AsyncMock(
+            return_value=True
+        )
+
         # Act
         result = await replica_enabled_service.add_read_replica(
             "test-replica", "https://replica.supabase.co", "test-key"
         )
-        
+
         # Assert
         assert result is True
         replica_enabled_service._replica_manager.register_replica.assert_called_once()
@@ -806,11 +815,13 @@ class TestDatabaseServiceReplicaManagement:
     async def test_remove_read_replica(self, replica_enabled_service):
         """Test removing a read replica."""
         # Arrange
-        replica_enabled_service._replica_manager.remove_replica = AsyncMock(return_value=True)
-        
+        replica_enabled_service._replica_manager.remove_replica = AsyncMock(
+            return_value=True
+        )
+
         # Act
         result = await replica_enabled_service.remove_read_replica("test-replica")
-        
+
         # Assert
         assert result is True
         replica_enabled_service._replica_manager.remove_replica.assert_called_once()
@@ -832,12 +843,12 @@ class TestDatabaseServiceHealthMonitoring:
     async def test_health_check_success(self, connected_service):
         """Test successful health check."""
         # Arrange
-        with patch('asyncio.to_thread') as mock_to_thread:
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=[])
-            
+
             # Act
             result = await connected_service.health_check()
-            
+
             # Assert
             assert result is True
 
@@ -845,12 +856,12 @@ class TestDatabaseServiceHealthMonitoring:
     async def test_health_check_failure(self, connected_service):
         """Test health check failure."""
         # Arrange
-        with patch('asyncio.to_thread') as mock_to_thread:
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.side_effect = Exception("Health check failed")
-            
+
             # Act
             result = await connected_service.health_check()
-            
+
             # Assert
             assert result is False
 
@@ -860,13 +871,13 @@ class TestDatabaseServiceHealthMonitoring:
         # Arrange
         mock_table_stats = [{"schemaname": "public", "tablename": "users"}]
         mock_connection_stats = [{"active_connections": 5}]
-        
-        with patch.object(connected_service, 'execute_sql') as mock_execute:
+
+        with patch.object(connected_service, "execute_sql") as mock_execute:
             mock_execute.side_effect = [mock_table_stats, mock_connection_stats]
-            
+
             # Act
             result = await connected_service.get_database_stats()
-            
+
             # Assert
             assert "tables" in result
             assert "connections" in result
@@ -878,15 +889,15 @@ class TestDatabaseServiceHealthMonitoring:
         # Arrange
         mock_columns = [
             {"column_name": "id", "data_type": "uuid", "is_nullable": "NO"},
-            {"column_name": "name", "data_type": "text", "is_nullable": "YES"}
+            {"column_name": "name", "data_type": "text", "is_nullable": "YES"},
         ]
-        
-        with patch.object(connected_service, 'execute_sql') as mock_execute:
+
+        with patch.object(connected_service, "execute_sql") as mock_execute:
             mock_execute.return_value = mock_columns
-            
+
             # Act
             result = await connected_service.get_table_info("users")
-            
+
             # Assert
             assert "columns" in result
             assert result["columns"] == mock_columns
@@ -899,14 +910,16 @@ class TestDatabaseServiceGlobalInstance:
     async def test_get_database_service_singleton(self):
         """Test global database service singleton behavior."""
         # Arrange & Act
-        with patch('tripsage_core.services.infrastructure.database_service.DatabaseService') as MockClass:
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.DatabaseService"
+        ) as MockClass:
             mock_instance = Mock()
             mock_instance.connect = AsyncMock()
             MockClass.return_value = mock_instance
-            
+
             service1 = await get_database_service()
             service2 = await get_database_service()
-            
+
             # Assert
             assert service1 == service2  # Same instance
             MockClass.assert_called_once()  # Only created once
@@ -915,14 +928,15 @@ class TestDatabaseServiceGlobalInstance:
     async def test_close_database_service_global(self):
         """Test closing global database service."""
         # Arrange
-        with patch('tripsage_core.services.infrastructure.database_service._database_service') as mock_global:
+        with patch(
+            "tripsage_core.services.infrastructure.database_service._database_service"
+        ):
             mock_service = Mock()
             mock_service.close = AsyncMock()
-            mock_global = mock_service
-            
+
             # Act
             await close_database_service()
-            
+
             # Assert would need better global state management
             # This is a simplified test
 
@@ -941,27 +955,33 @@ class TestDatabaseServicePropertyBased:
         await service.close()
 
     @given(
-        table_name=st.text(min_size=1, max_size=50, alphabet=st.characters(whitelist_categories=['Ll', 'Lu', 'Nd'])),
-        record_count=st.integers(min_value=1, max_value=100)
+        table_name=st.text(
+            min_size=1,
+            max_size=50,
+            alphabet=st.characters(whitelist_categories=["Ll", "Lu", "Nd"]),
+        ),
+        record_count=st.integers(min_value=1, max_value=100),
     )
     @pytest.mark.asyncio
-    async def test_insert_select_consistency(self, connected_service, table_name, record_count):
+    async def test_insert_select_consistency(
+        self, connected_service, table_name, record_count
+    ):
         """Property test: inserted records should be retrievable."""
         # This is a simplified example - in practice you'd need more sophisticated
         # property testing for database operations
-        
+
         # Arrange
         test_records = [{"id": i, "value": f"test_{i}"} for i in range(record_count)]
-        
-        with patch.object(connected_service, 'insert') as mock_insert:
-            with patch.object(connected_service, 'select') as mock_select:
+
+        with patch.object(connected_service, "insert") as mock_insert:
+            with patch.object(connected_service, "select") as mock_select:
                 mock_insert.return_value = test_records
                 mock_select.return_value = test_records
-                
+
                 # Act
                 inserted = await connected_service.insert(table_name, test_records)
                 selected = await connected_service.select(table_name)
-                
+
                 # Assert
                 assert len(inserted) == record_count
                 assert len(selected) == record_count
@@ -984,20 +1004,17 @@ class TestDatabaseServicePerformance:
     async def test_concurrent_operations_performance(self, connected_service):
         """Test performance of concurrent database operations."""
         # Arrange
-        with patch('asyncio.to_thread') as mock_to_thread:
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=[{"id": 1}])
-            
+
             # Act
             start_time = asyncio.get_event_loop().time()
-            
-            tasks = [
-                connected_service.select("users", limit=10)
-                for _ in range(10)
-            ]
+
+            tasks = [connected_service.select("users", limit=10) for _ in range(10)]
             results = await asyncio.gather(*tasks)
-            
+
             end_time = asyncio.get_event_loop().time()
-            
+
             # Assert
             assert len(results) == 10
             execution_time = end_time - start_time
@@ -1009,15 +1026,15 @@ class TestDatabaseServicePerformance:
         """Test performance of large batch inserts."""
         # Arrange
         large_dataset = [{"id": i, "value": f"test_{i}"} for i in range(1000)]
-        
-        with patch('asyncio.to_thread') as mock_to_thread:
+
+        with patch("asyncio.to_thread") as mock_to_thread:
             mock_to_thread.return_value = Mock(data=large_dataset)
-            
+
             # Act
             start_time = asyncio.get_event_loop().time()
             result = await connected_service.insert("test_table", large_dataset)
             end_time = asyncio.get_event_loop().time()
-            
+
             # Assert
             assert len(result) == 1000
             execution_time = end_time - start_time

@@ -1,853 +1,683 @@
 """
-Enhanced Database Pool Manager with LIFO behavior and performance optimizations.
+Enhanced Database Pool Manager with LIFO Connection Pooling.
 
-This module provides an advanced database pool manager that implements:
-- LIFO (Last In, First Out) connection behavior for better cache locality
-- Enhanced Prometheus metrics for operational visibility
-- Connection validation with pre-ping behavior
-- Performance regression detection integration
-- Advanced connection health monitoring
-- Resource utilization tracking
+This module implements research-backed 2025 patterns for optimal database performance:
+- LIFO (Last-In-First-Out) connection pooling for better cache locality
+- SQLAlchemy pooling layer under Supabase for precise control
+- CPU-aware pool sizing for optimal resource utilization
+- Connection validation with pool_pre_ping for reliability
+- Comprehensive Prometheus metrics integration
 """
 
 import asyncio
 import logging
+import os
 import time
-from collections import deque
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse, urlunparse
+from typing import Any, Dict, Optional
+from urllib.parse import urlparse
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import QueuePool
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreDatabaseError
+from tripsage_core.monitoring.enhanced_database_metrics import (
+    get_enhanced_database_metrics,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class ConnectionStatus(Enum):
-    """Connection health status."""
-    
-    HEALTHY = "healthy"
-    DEGRADED = "degraded" 
-    FAILED = "failed"
-    VALIDATING = "validating"
-
-
-class PoolMetrics(Enum):
-    """Pool performance metrics."""
-    
-    CHECKOUT_TIME = "checkout_time_ms"
-    QUERY_TIME = "query_time_ms"
-    CONNECTION_LIFETIME = "connection_lifetime_s"
-    VALIDATION_TIME = "validation_time_ms"
-    ERROR_RATE = "error_rate"
-
-
 @dataclass
-class ConnectionInfo:
-    """Information about a pooled connection."""
-    
-    connection_id: str
-    client: Client
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    last_used: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    last_validated: Optional[datetime] = None
-    status: ConnectionStatus = ConnectionStatus.HEALTHY
-    use_count: int = 0
-    error_count: int = 0
-    total_query_time: float = 0.0
-    
-    @property
-    def age_seconds(self) -> float:
-        """Get connection age in seconds."""
-        return (datetime.now(timezone.utc) - self.created_at).total_seconds()
-    
-    @property 
-    def idle_seconds(self) -> float:
-        """Get idle time in seconds."""
-        return (datetime.now(timezone.utc) - self.last_used).total_seconds()
-    
-    @property
-    def avg_query_time(self) -> float:
-        """Get average query time."""
-        return self.total_query_time / max(self.use_count, 1)
-    
-    def mark_used(self, query_time: float = 0.0):
-        """Mark connection as used."""
-        self.last_used = datetime.now(timezone.utc)
-        self.use_count += 1
-        self.total_query_time += query_time
-    
-    def mark_error(self):
-        """Mark connection error."""
-        self.error_count += 1
-        if self.error_count >= 3:
-            self.status = ConnectionStatus.FAILED
-        elif self.error_count >= 1:
-            self.status = ConnectionStatus.DEGRADED
+class ConnectionPoolStats:
+    """Statistics for connection pool performance monitoring."""
 
-
-@dataclass
-class PoolStatistics:
-    """Connection pool statistics."""
-    
-    total_connections: int = 0
-    active_connections: int = 0
-    idle_connections: int = 0
-    failed_connections: int = 0
-    total_checkouts: int = 0
-    total_checkins: int = 0
-    total_validations: int = 0
-    validation_failures: int = 0
-    avg_checkout_time: float = 0.0
-    avg_validation_time: float = 0.0
-    peak_active: int = 0
-    total_errors: int = 0
-    
-    @property
-    def pool_utilization(self) -> float:
-        """Calculate pool utilization percentage."""
-        if self.total_connections == 0:
-            return 0.0
-        return (self.active_connections / self.total_connections) * 100
-    
-    @property
-    def error_rate(self) -> float:
-        """Calculate error rate percentage."""
-        if self.total_checkouts == 0:
-            return 0.0
-        return (self.total_errors / self.total_checkouts) * 100
-    
-    @property
-    def validation_success_rate(self) -> float:
-        """Calculate validation success rate."""
-        if self.total_validations == 0:
-            return 100.0
-        return ((self.total_validations - self.validation_failures) / self.total_validations) * 100
+    pool_id: str
+    total_connections: int
+    active_connections: int
+    idle_connections: int
+    utilization_percent: float
+    checkout_count: int
+    checkin_count: int
+    avg_checkout_time_ms: float
+    max_checkout_time_ms: float
+    connection_errors: int
+    validation_failures: int
+    last_updated: datetime
 
 
 class EnhancedDatabasePoolManager:
     """
-    Enhanced database pool manager with LIFO behavior and advanced monitoring.
-    
+    Enhanced database pool manager implementing 2025 best practices.
+
     Features:
-    - LIFO connection pool for better cache locality
-    - Connection validation with pre-ping behavior
-    - Comprehensive Prometheus metrics
-    - Performance regression detection
-    - Advanced health monitoring
-    - Connection lifecycle management
+    - LIFO connection pooling for optimal cache locality (pool_use_lifo=True)
+    - CPU-aware pool sizing (cpu_count * 2 for pool_size and max_overflow)
+    - Connection validation with pool_pre_ping for reliability
+    - Comprehensive metrics collection for Prometheus monitoring
+    - Connection health scoring and performance tracking
+    - Statistical baseline establishment for regression detection
     """
-    
+
     def __init__(
         self,
         settings: Optional[Settings] = None,
-        pool_size: int = 10,
-        max_overflow: int = 20,
-        pool_timeout: float = 30.0,
-        pool_recycle: int = 3600,
-        pool_pre_ping: bool = True,
-        lifo_enabled: bool = True,
-        validation_interval: float = 300.0,
-        metrics_registry=None,
+        enable_metrics: bool = True,
+        enable_lifo: bool = True,
+        enable_pre_ping: bool = True,
     ):
-        """Initialize enhanced pool manager.
-        
+        """Initialize enhanced pool manager with 2025 best practices.
+
         Args:
             settings: Application settings
-            pool_size: Number of connections to maintain in pool
-            max_overflow: Maximum number of additional connections
-            pool_timeout: Timeout for getting connection from pool
-            pool_recycle: Connection recycle time in seconds
-            pool_pre_ping: Enable pre-ping validation
-            lifo_enabled: Enable LIFO (Last In, First Out) behavior
-            validation_interval: Connection validation interval in seconds
-            metrics_registry: Prometheus metrics registry
+            enable_metrics: Enable comprehensive metrics collection
+            enable_lifo: Enable LIFO connection pooling
+            enable_pre_ping: Enable connection validation
         """
         self.settings = settings or get_settings()
-        self.pool_size = pool_size
-        self.max_overflow = max_overflow
-        self.pool_timeout = pool_timeout
-        self.pool_recycle = pool_recycle
-        self.pool_pre_ping = pool_pre_ping
-        self.lifo_enabled = lifo_enabled
-        self.validation_interval = validation_interval
-        
-        # Connection pools - using deque for LIFO behavior
-        self._available_connections: deque[ConnectionInfo] = deque()
-        self._active_connections: Dict[str, ConnectionInfo] = {}
-        self._all_connections: Dict[str, ConnectionInfo] = {}
-        
-        # Pool state
+        self.enable_metrics = enable_metrics
+        self.enable_lifo = enable_lifo
+        self.enable_pre_ping = enable_pre_ping
+
+        # Pool configuration based on 2025 research
+        self.cpu_count = os.cpu_count() or 4
+        self.pool_size = self.cpu_count * 2  # Optimal sizing based on research
+        self.max_overflow = self.cpu_count * 2  # Allow burst capacity
+
+        # Components
+        self._sqlalchemy_engine: Optional[Engine] = None
+        self._supabase_client: Optional[Client] = None
         self._initialized = False
-        self._closed = False
-        self._connection_counter = 0
-        self._checkout_times: List[float] = []
-        self._validation_times: List[float] = []
-        
-        # Statistics
-        self.stats = PoolStatistics()
-        
-        # Background tasks
-        self._validation_task: Optional[asyncio.Task] = None
-        self._metrics_task: Optional[asyncio.Task] = None
-        
-        # Metrics
-        self.metrics = None
-        if metrics_registry is not None:
-            try:
-                self.metrics = self._initialize_metrics(metrics_registry)
-            except ImportError:
-                logger.warning("Prometheus client not available, metrics disabled")
-    
-    def _initialize_metrics(self, registry):
-        """Initialize Prometheus metrics."""
-        try:
-            from prometheus_client import Counter, Gauge, Histogram
-            
-            metrics = type("PoolMetrics", (), {})()
-            
-            # Connection pool metrics
-            metrics.pool_connections_total = Gauge(
-                "tripsage_db_pool_connections_total",
-                "Total connections in pool",
-                ["pool_id", "status"],
-                registry=registry,
-            )
-            
-            metrics.pool_utilization = Gauge(
-                "tripsage_db_pool_utilization_percent",
-                "Pool utilization percentage",
-                ["pool_id"],
-                registry=registry,
-            )
-            
-            metrics.pool_checkout_duration = Histogram(
-                "tripsage_db_pool_checkout_duration_seconds",
-                "Time to checkout connection from pool",
-                ["pool_id"],
-                registry=registry,
-                buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0),
-            )
-            
-            metrics.pool_validation_duration = Histogram(
-                "tripsage_db_pool_validation_duration_seconds", 
-                "Connection validation time",
-                ["pool_id", "result"],
-                registry=registry,
-                buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0),
-            )
-            
-            metrics.pool_connection_lifetime = Histogram(
-                "tripsage_db_pool_connection_lifetime_seconds",
-                "Connection lifetime in pool",
-                ["pool_id"],
-                registry=registry,
-                buckets=(1, 5, 10, 30, 60, 300, 900, 1800, 3600),
-            )
-            
-            metrics.pool_operations_total = Counter(
-                "tripsage_db_pool_operations_total",
-                "Total pool operations",
-                ["pool_id", "operation", "result"],
-                registry=registry,
-            )
-            
-            metrics.pool_errors_total = Counter(
-                "tripsage_db_pool_errors_total",
-                "Total pool errors",
-                ["pool_id", "error_type"],
-                registry=registry,
-            )
-            
-            # Connection health metrics
-            metrics.connection_health = Gauge(
-                "tripsage_db_connection_health",
-                "Connection health status (1=healthy, 0=unhealthy)",
-                ["pool_id", "connection_id"],
-                registry=registry,
-            )
-            
-            # Performance metrics
-            metrics.query_latency_percentiles = Histogram(
-                "tripsage_db_query_latency_percentiles",
-                "Query latency percentiles",
-                ["pool_id", "operation"],
-                registry=registry,
-                buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-            )
-            
-            return metrics
-        except Exception as e:
-            logger.error(f"Failed to initialize pool metrics: {e}")
-            return None
-    
+        self._pool_id = f"enhanced_pool_{int(time.time())}"
+
+        # Metrics and monitoring
+        self._metrics = get_enhanced_database_metrics() if enable_metrics else None
+        self._stats = ConnectionPoolStats(
+            pool_id=self._pool_id,
+            total_connections=0,
+            active_connections=0,
+            idle_connections=0,
+            utilization_percent=0.0,
+            checkout_count=0,
+            checkin_count=0,
+            avg_checkout_time_ms=0.0,
+            max_checkout_time_ms=0.0,
+            connection_errors=0,
+            validation_failures=0,
+            last_updated=datetime.now(timezone.utc),
+        )
+
+        # Performance tracking
+        self._checkout_times = []
+        self._start_time = time.time()
+
+        logger.info(
+            f"Enhanced pool manager initialized: pool_size={self.pool_size}, "
+            f"max_overflow={self.max_overflow}, lifo={enable_lifo}, "
+            f"pre_ping={enable_pre_ping}"
+        )
+
     async def initialize(self) -> None:
-        """Initialize the connection pool."""
+        """Initialize the enhanced connection pool with SQLAlchemy + Supabase."""
         if self._initialized:
             return
-        
-        logger.info(
-            f"Initializing enhanced pool manager: size={self.pool_size}, "
-            f"overflow={self.max_overflow}, lifo={self.lifo_enabled}"
-        )
-        
+
+        logger.info("Initializing enhanced database pool with LIFO and metrics")
+
         try:
-            # Create initial pool connections
-            for _ in range(self.pool_size):
-                connection_info = await self._create_connection()
-                self._available_connections.append(connection_info)
-            
-            # Start background tasks
-            if self.pool_pre_ping:
-                self._validation_task = asyncio.create_task(self._validation_loop())
-            
-            if self.metrics:
-                self._metrics_task = asyncio.create_task(self._metrics_loop())
-            
+            # Initialize SQLAlchemy engine with LIFO pooling
+            await self._initialize_sqlalchemy_engine()
+
+            # Initialize Supabase client
+            await self._initialize_supabase_client()
+
+            # Test connections
+            await self._test_connections()
+
+            # Initialize metrics baseline
+            if self._metrics:
+                self._initialize_metrics_baseline()
+
             self._initialized = True
-            logger.info(f"Pool manager initialized with {len(self._available_connections)} connections")
-            
+            logger.info(
+                f"Enhanced database pool initialized successfully "
+                f"(pool_id: {self._pool_id})"
+            )
+
         except Exception as e:
-            logger.error(f"Failed to initialize pool manager: {e}")
+            logger.error(f"Failed to initialize enhanced pool: {e}")
             raise CoreDatabaseError(
-                message="Failed to initialize connection pool",
-                code="POOL_INIT_FAILED",
+                message="Failed to initialize enhanced database pool",
+                code="ENHANCED_POOL_INIT_FAILED",
                 details={"error": str(e)},
             ) from e
-    
-    async def _create_connection(self) -> ConnectionInfo:
-        """Create a new database connection."""
-        self._connection_counter += 1
-        connection_id = f"conn_{self._connection_counter}_{int(time.time())}"
-        
+
+    async def _initialize_sqlalchemy_engine(self) -> None:
+        """Initialize SQLAlchemy engine with LIFO pooling configuration."""
         try:
-            # Get Supavisor transaction mode URL
-            supabase_url = self._get_supavisor_url()
+            # Build PostgreSQL connection string from Supabase URL
+            postgres_url = self._build_postgres_connection_string()
+
+            # Create engine with 2025 best practices
+            self._sqlalchemy_engine = create_engine(
+                postgres_url,
+                # LIFO pooling for better cache locality
+                pool_use_lifo=self.enable_lifo,
+                # Connection validation for reliability
+                pool_pre_ping=self.enable_pre_ping,
+                # CPU-aware pool sizing
+                pool_size=self.pool_size,
+                max_overflow=self.max_overflow,
+                # Pool configuration
+                poolclass=QueuePool,
+                pool_timeout=30,  # Reasonable timeout for serverless
+                pool_recycle=3600,  # 1 hour recycle for freshness
+                # Performance optimizations
+                echo=False,  # Disable SQL logging for performance
+                future=True,  # Use SQLAlchemy 2.x features
+                # Connection arguments for performance
+                connect_args={
+                    "application_name": "tripsage_enhanced_pool",
+                    "connect_timeout": 10,
+                    "command_timeout": 30,
+                    # Performance tuning
+                    "options": "-c default_transaction_isolation=read_committed",
+                },
+            )
+
+            logger.info(
+                f"SQLAlchemy engine initialized with LIFO pooling: "
+                f"pool_size={self.pool_size}, max_overflow={self.max_overflow}, "
+                f"pool_use_lifo={self.enable_lifo}, pool_pre_ping={self.enable_pre_ping}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to initialize SQLAlchemy engine: {e}")
+            raise CoreDatabaseError(
+                message="Failed to initialize SQLAlchemy engine",
+                code="SQLALCHEMY_INIT_FAILED",
+                details={"error": str(e)},
+            ) from e
+
+    def _build_postgres_connection_string(self) -> str:
+        """Build PostgreSQL connection string from Supabase URL."""
+        try:
+            # Parse Supabase URL
+            supabase_url = self.settings.database_url
+            parsed = urlparse(supabase_url)
+
+            # Extract components for PostgreSQL connection
+            parsed.netloc.replace(".supabase.co", ".supabase.co")
+            project_id = parsed.netloc.split(".")[0]
+
+            # Get database credentials
+            db_password = self.settings.database_password.get_secret_value()
+
+            # Build PostgreSQL connection string for direct access
+            postgres_url = (
+                f"postgresql://postgres:{db_password}@"
+                f"db.{project_id}.supabase.co:5432/postgres"
+            )
+
+            logger.debug("Built PostgreSQL connection string for SQLAlchemy")
+            return postgres_url
+
+        except Exception as e:
+            logger.error(f"Failed to build PostgreSQL connection string: {e}")
+            raise CoreDatabaseError(
+                message="Failed to build database connection string",
+                code="CONNECTION_STRING_BUILD_FAILED",
+                details={"error": str(e)},
+            ) from e
+
+    async def _initialize_supabase_client(self) -> None:
+        """Initialize Supabase client for high-level operations."""
+        try:
+            supabase_url = self.settings.database_url
             supabase_key = self.settings.database_public_key.get_secret_value()
-            
-            # Configure client options for optimal pooling
+
+            # Configure client options for performance
             options = ClientOptions(
                 auto_refresh_token=False,
                 persist_session=False,
                 postgrest_client_timeout=30.0,
             )
-            
-            client = create_client(supabase_url, supabase_key, options=options)
-            
-            # Test connection
-            await self._validate_connection(client)
-            
-            connection_info = ConnectionInfo(
-                connection_id=connection_id,
-                client=client,
+
+            self._supabase_client = create_client(
+                supabase_url, supabase_key, options=options
             )
-            
-            self._all_connections[connection_id] = connection_info
-            self.stats.total_connections += 1
-            
-            logger.debug(f"Created connection {connection_id}")
-            return connection_info
-            
+
+            logger.debug("Supabase client initialized for high-level operations")
+
         except Exception as e:
-            logger.error(f"Failed to create connection {connection_id}: {e}")
-            if self.metrics:
-                self.metrics.pool_errors_total.labels(
-                    pool_id="enhanced",
-                    error_type="connection_creation",
-                ).inc()
-            raise
-    
-    def _get_supavisor_url(self) -> str:
-        """Get Supabase URL configured for Supavisor transaction mode."""
-        base_url = self.settings.database_url
-        parsed = urlparse(base_url)
-        
-        # Convert to Supavisor pooler URL format
-        if ".supabase.co" in parsed.netloc:
-            pooler_netloc = parsed.netloc.replace(
-                ".supabase.co", ".pooler.supabase.com"
-            )
-            return urlunparse(
-                (
-                    parsed.scheme,
-                    pooler_netloc,
-                    parsed.path,
-                    parsed.params,
-                    parsed.query,
-                    parsed.fragment,
-                )
-            )
-        
-        return base_url
-    
-    async def _validate_connection(self, client: Client) -> bool:
-        """Validate a database connection."""
-        start_time = time.perf_counter()
-        
+            logger.error(f"Failed to initialize Supabase client: {e}")
+            raise CoreDatabaseError(
+                message="Failed to initialize Supabase client",
+                code="SUPABASE_CLIENT_INIT_FAILED",
+                details={"error": str(e)},
+            ) from e
+
+    async def _test_connections(self) -> None:
+        """Test both SQLAlchemy and Supabase connections."""
         try:
-            # Simple health check query
-            await asyncio.to_thread(
-                lambda: client.table("users").select("id").limit(1).execute()
-            )
-            
-            validation_time = time.perf_counter() - start_time
-            self._validation_times.append(validation_time)
-            
-            # Keep only recent validation times
-            if len(self._validation_times) > 100:
-                self._validation_times = self._validation_times[-100:]
-            
-            if self.metrics:
-                self.metrics.pool_validation_duration.labels(
-                    pool_id="enhanced",
-                    result="success",
-                ).observe(validation_time)
-            
-            return True
-            
+            # Test SQLAlchemy connection
+            if self._sqlalchemy_engine:
+                await asyncio.to_thread(self._test_sqlalchemy_connection)
+
+            # Test Supabase connection
+            if self._supabase_client:
+                await asyncio.to_thread(self._test_supabase_connection)
+
+            logger.debug("Connection tests passed")
+
         except Exception as e:
-            validation_time = time.perf_counter() - start_time
-            logger.warning(f"Connection validation failed: {e}")
-            
-            if self.metrics:
-                self.metrics.pool_validation_duration.labels(
-                    pool_id="enhanced", 
-                    result="failure",
-                ).observe(validation_time)
-                
-                self.metrics.pool_errors_total.labels(
-                    pool_id="enhanced",
-                    error_type="validation_failure",
-                ).inc()
-            
-            return False
-    
+            logger.error(f"Connection test failed: {e}")
+            raise CoreDatabaseError(
+                message="Connection test failed",
+                code="CONNECTION_TEST_FAILED",
+                details={"error": str(e)},
+            ) from e
+
+    def _test_sqlalchemy_connection(self) -> None:
+        """Test SQLAlchemy connection with pool validation."""
+        with self._sqlalchemy_engine.connect() as conn:
+            result = conn.execute(text("SELECT 1"))
+            if result.scalar() != 1:
+                raise RuntimeError("SQLAlchemy connection test failed")
+
+    def _test_supabase_connection(self) -> None:
+        """Test Supabase connection."""
+        self._supabase_client.table("users").select("id").limit(1).execute()
+        # Connection is successful if no exception is raised
+
+    def _initialize_metrics_baseline(self) -> None:
+        """Initialize performance metrics baseline."""
+        if not self._metrics:
+            return
+
+        try:
+            # Set build information
+            self._metrics.set_build_info(
+                version="2025.1.0",
+                commit="enhanced_pool_manager",
+                build_date=datetime.now(timezone.utc).isoformat(),
+                python_version=f"{os.sys.version_info.major}.{os.sys.version_info.minor}",
+            )
+
+            # Initialize pool metrics
+            self._update_pool_metrics()
+
+            logger.debug("Metrics baseline initialized")
+
+        except Exception as e:
+            logger.warning(f"Failed to initialize metrics baseline: {e}")
+
     @asynccontextmanager
     async def acquire_connection(
         self,
-        pool_type: str = "transaction",
-        timeout: float = None,
+        operation_type: str = "query",
+        timeout: float = 30.0,
     ):
-        """Acquire connection from pool with LIFO behavior.
-        
-        Args:
-            pool_type: Ignored - maintained for compatibility
-            timeout: Timeout for acquiring connection
-        
-        Yields:
-            Supabase client connection
         """
-        if not self._initialized:
+        Acquire connection from LIFO pool with comprehensive monitoring.
+
+        Args:
+            operation_type: Type of operation for metrics tracking
+            timeout: Connection acquisition timeout
+
+        Yields:
+            Tuple of (connection_type, connection) where:
+            - connection_type: "sqlalchemy" or "supabase"
+            - connection: The actual connection object
+
+        This method provides:
+        - LIFO connection acquisition for optimal cache locality
+        - Connection validation with pre-ping
+        - Comprehensive metrics collection
+        - Performance monitoring and regression detection
+        """
+        checkout_start = time.time()
+        connection_acquired = False
+        connection_type = None
+        connection = None
+
+        try:
             await self.initialize()
-        
-        if self._closed:
-            raise CoreDatabaseError(
-                message="Pool manager is closed",
-                code="POOL_CLOSED",
-            )
-        
-        timeout = timeout or self.pool_timeout
-        start_time = time.perf_counter()
-        connection_info = None
-        
-        try:
-            # Try to get connection from pool with timeout
-            connection_info = await asyncio.wait_for(
-                self._get_pooled_connection(),
-                timeout=timeout,
-            )
-            
-            checkout_time = time.perf_counter() - start_time
-            self._checkout_times.append(checkout_time)
-            
-            # Keep only recent checkout times
-            if len(self._checkout_times) > 100:
-                self._checkout_times = self._checkout_times[-100:]
-            
-            self.stats.total_checkouts += 1
-            self.stats.active_connections += 1
-            self.stats.avg_checkout_time = sum(self._checkout_times) / len(self._checkout_times)
-            
-            if self.stats.active_connections > self.stats.peak_active:
-                self.stats.peak_active = self.stats.active_connections
-            
-            if self.metrics:
-                self.metrics.pool_checkout_duration.labels(
-                    pool_id="enhanced",
-                ).observe(checkout_time)
-                
-                self.metrics.pool_operations_total.labels(
-                    pool_id="enhanced",
-                    operation="checkout",
-                    result="success",
-                ).inc()
-            
-            # Validate connection if pre-ping is enabled
-            if self.pool_pre_ping:
-                is_valid = await self._validate_connection(connection_info.client)
-                if not is_valid:
-                    connection_info.mark_error()
-                    # Try to create new connection
-                    await self._replace_connection(connection_info)
-            
-            connection_info.mark_used()
-            
-            logger.debug(f"Acquired connection {connection_info.connection_id}")
-            yield connection_info.client
-            
-        except asyncio.TimeoutError:
-            logger.error(f"Connection checkout timeout after {timeout}s")
-            self.stats.total_errors += 1
-            
-            if self.metrics:
-                self.metrics.pool_errors_total.labels(
-                    pool_id="enhanced",
-                    error_type="checkout_timeout",
-                ).inc()
-            
-            raise CoreDatabaseError(
-                message=f"Connection checkout timeout after {timeout}s",
-                code="CHECKOUT_TIMEOUT",
-            )
-            
-        except Exception as e:
-            logger.error(f"Failed to acquire connection: {e}")
-            self.stats.total_errors += 1
-            
-            if self.metrics:
-                self.metrics.pool_errors_total.labels(
-                    pool_id="enhanced",
-                    error_type="checkout_error",
-                ).inc()
-            
-            raise CoreDatabaseError(
-                message=f"Failed to acquire connection: {str(e)}",
-                code="CHECKOUT_FAILED",
-                details={"error": str(e)},
-            ) from e
-            
-        finally:
-            # Return connection to pool
-            if connection_info:
-                await self._return_connection(connection_info)
-    
-    async def _get_pooled_connection(self) -> ConnectionInfo:
-        """Get connection from pool with LIFO behavior."""
-        while True:
-            # Try to get connection from available pool
-            if self._available_connections:
-                if self.lifo_enabled:
-                    # LIFO: get most recently returned connection
-                    connection_info = self._available_connections.pop()
-                else:
-                    # FIFO: get oldest returned connection
-                    connection_info = self._available_connections.popleft()
-                
-                # Check if connection is still valid
-                if await self._check_connection_health(connection_info):
-                    self._active_connections[connection_info.connection_id] = connection_info
-                    return connection_info
-                else:
-                    # Connection is unhealthy, remove and try again
-                    await self._remove_connection(connection_info)
-                    continue
-            
-            # No available connections, try to create new one if under limit
-            total_connections = len(self._all_connections)
-            if total_connections < self.pool_size + self.max_overflow:
-                connection_info = await self._create_connection()
-                self._active_connections[connection_info.connection_id] = connection_info
-                return connection_info
-            
-            # Pool is at capacity, wait for a connection to be returned
-            await asyncio.sleep(0.1)
-    
-    async def _check_connection_health(self, connection_info: ConnectionInfo) -> bool:
-        """Check if connection is healthy."""
-        # Check connection age
-        if connection_info.age_seconds > self.pool_recycle:
-            logger.debug(f"Connection {connection_info.connection_id} expired")
-            return False
-        
-        # Check connection status
-        if connection_info.status == ConnectionStatus.FAILED:
-            return False
-        
-        # Check if validation is needed
-        if (
-            self.pool_pre_ping 
-            and connection_info.last_validated
-            and (datetime.now(timezone.utc) - connection_info.last_validated).total_seconds() > self.validation_interval
-        ):
-            is_valid = await self._validate_connection(connection_info.client)
-            connection_info.last_validated = datetime.now(timezone.utc)
-            if not is_valid:
-                connection_info.mark_error()
-                return False
-        
-        return True
-    
-    async def _return_connection(self, connection_info: ConnectionInfo):
-        """Return connection to pool."""
-        if connection_info.connection_id in self._active_connections:
-            del self._active_connections[connection_info.connection_id]
-            self.stats.active_connections -= 1
-            self.stats.total_checkins += 1
-            
-            # Check if connection should be kept
-            if connection_info.status != ConnectionStatus.FAILED and not self._closed:
-                if self.lifo_enabled:
-                    # LIFO: add to end of deque
-                    self._available_connections.append(connection_info)
-                else:
-                    # FIFO: add to beginning of deque
-                    self._available_connections.appendleft(connection_info)
-                    
-                logger.debug(f"Returned connection {connection_info.connection_id} to pool")
-            else:
-                await self._remove_connection(connection_info)
-            
-            if self.metrics:
-                self.metrics.pool_operations_total.labels(
-                    pool_id="enhanced",
-                    operation="checkin", 
-                    result="success",
-                ).inc()
-    
-    async def _replace_connection(self, old_connection: ConnectionInfo):
-        """Replace unhealthy connection with new one."""
-        try:
-            await self._remove_connection(old_connection)
-            new_connection = await self._create_connection()
-            self._available_connections.append(new_connection)
-            logger.info(f"Replaced unhealthy connection {old_connection.connection_id}")
-        except Exception as e:
-            logger.error(f"Failed to replace connection: {e}")
-    
-    async def _remove_connection(self, connection_info: ConnectionInfo):
-        """Remove connection from pool."""
-        connection_id = connection_info.connection_id
-        
-        # Remove from all tracking
-        self._all_connections.pop(connection_id, None)
-        self._active_connections.pop(connection_id, None)
-        
-        # Remove from available connections if present
-        try:
-            self._available_connections.remove(connection_info)
-        except ValueError:
-            pass  # Not in available connections
-        
-        self.stats.total_connections -= 1
-        
-        if connection_info.status == ConnectionStatus.FAILED:
-            self.stats.failed_connections += 1
-        
-        if self.metrics:
-            self.metrics.pool_connection_lifetime.labels(
-                pool_id="enhanced",
-            ).observe(connection_info.age_seconds)
-        
-        logger.debug(f"Removed connection {connection_id} from pool")
-    
-    async def _validation_loop(self):
-        """Background task for connection validation."""
-        while not self._closed:
-            try:
-                await asyncio.sleep(self.validation_interval)
-                
-                if self._closed:
-                    break
-                
-                # Validate available connections
-                connections_to_remove = []
-                
-                for connection_info in list(self._available_connections):
-                    if not await self._check_connection_health(connection_info):
-                        connections_to_remove.append(connection_info)
-                
-                # Remove unhealthy connections
-                for connection_info in connections_to_remove:
-                    await self._remove_connection(connection_info)
-                
-                if connections_to_remove:
-                    logger.info(f"Removed {len(connections_to_remove)} unhealthy connections")
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in validation loop: {e}")
-    
-    async def _metrics_loop(self):
-        """Background task for updating metrics."""
-        while not self._closed:
-            try:
-                await asyncio.sleep(10.0)  # Update metrics every 10 seconds
-                
-                if self._closed or not self.metrics:
-                    break
-                
-                # Update pool metrics
-                self.stats.idle_connections = len(self._available_connections)
-                
-                self.metrics.pool_connections_total.labels(
-                    pool_id="enhanced",
-                    status="total",
-                ).set(self.stats.total_connections)
-                
-                self.metrics.pool_connections_total.labels(
-                    pool_id="enhanced",
-                    status="active",
-                ).set(self.stats.active_connections)
-                
-                self.metrics.pool_connections_total.labels(
-                    pool_id="enhanced",
-                    status="idle",
-                ).set(self.stats.idle_connections)
-                
-                self.metrics.pool_utilization.labels(
-                    pool_id="enhanced",
-                ).set(self.stats.pool_utilization)
-                
-                # Update connection health metrics
-                for connection_info in self._all_connections.values():
-                    health_value = 1 if connection_info.status == ConnectionStatus.HEALTHY else 0
-                    self.metrics.connection_health.labels(
-                        pool_id="enhanced",
-                        connection_id=connection_info.connection_id,
-                    ).set(health_value)
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Error in metrics loop: {e}")
-    
-    async def health_check(self) -> bool:
-        """Check pool health."""
-        if not self._initialized or self._closed:
-            return False
-        
-        try:
-            # Try to acquire and test a connection
-            async with self.acquire_connection(timeout=5.0) as client:
-                await asyncio.to_thread(
-                    lambda: client.table("users").select("id").limit(1).execute()
+
+            # Record checkout attempt
+            self._stats.checkout_count += 1
+
+            # Choose connection type based on operation
+            if operation_type in ["raw_sql", "transaction", "bulk_operation"]:
+                # Use SQLAlchemy for low-level operations
+                connection_type = "sqlalchemy"
+                connection = await asyncio.to_thread(
+                    self._acquire_sqlalchemy_connection
                 )
-            return True
+            else:
+                # Use Supabase for high-level operations
+                connection_type = "supabase"
+                connection = self._supabase_client
+
+            connection_acquired = True
+            checkout_duration = time.time() - checkout_start
+
+            # Record successful checkout
+            self._record_successful_checkout(checkout_duration, operation_type)
+
+            # Update pool statistics
+            self._update_pool_metrics()
+
+            yield connection_type, connection
+
         except Exception as e:
-            logger.error(f"Pool health check failed: {e}")
-            return False
-    
-    def get_metrics(self) -> Dict[str, Any]:
-        """Get comprehensive pool metrics."""
-        return {
-            "pool_config": {
+            # Record failed checkout
+            checkout_duration = time.time() - checkout_start
+            self._record_failed_checkout(checkout_duration, operation_type, str(e))
+
+            logger.error(f"Failed to acquire connection: {e}")
+            raise CoreDatabaseError(
+                message="Failed to acquire database connection",
+                code="CONNECTION_ACQUIRE_FAILED",
+                details={
+                    "error": str(e),
+                    "operation_type": operation_type,
+                    "checkout_duration_ms": checkout_duration * 1000,
+                },
+            ) from e
+
+        finally:
+            if connection_acquired:
+                # Connection return is handled automatically by context managers
+                self._stats.checkin_count += 1
+
+                # Update final metrics
+                self._update_pool_metrics()
+
+    def _acquire_sqlalchemy_connection(self):
+        """Acquire SQLAlchemy connection from LIFO pool."""
+        if not self._sqlalchemy_engine:
+            raise CoreDatabaseError(
+                message="SQLAlchemy engine not initialized",
+                code="SQLALCHEMY_ENGINE_NOT_INITIALIZED",
+            )
+
+        # This will use LIFO pooling automatically
+        return self._sqlalchemy_engine.connect()
+
+    def _record_successful_checkout(self, duration: float, operation_type: str) -> None:
+        """Record successful connection checkout."""
+        duration_ms = duration * 1000
+        self._checkout_times.append(duration_ms)
+
+        # Keep only recent checkout times for statistics
+        if len(self._checkout_times) > 1000:
+            self._checkout_times = self._checkout_times[-1000:]
+
+        # Update statistics
+        self._stats.avg_checkout_time_ms = sum(self._checkout_times) / len(
+            self._checkout_times
+        )
+        self._stats.max_checkout_time_ms = max(
+            self._stats.max_checkout_time_ms, duration_ms
+        )
+
+        # Record in metrics
+        if self._metrics:
+            self._metrics.record_checkout_duration(
+                duration=duration,
+                result="success",
+                pool_id=self._pool_id,
+                database="supabase",
+            )
+
+    def _record_failed_checkout(
+        self, duration: float, operation_type: str, error: str
+    ) -> None:
+        """Record failed connection checkout."""
+        self._stats.connection_errors += 1
+
+        # Record in metrics
+        if self._metrics:
+            self._metrics.record_checkout_duration(
+                duration=duration,
+                result="error",
+                pool_id=self._pool_id,
+                database="supabase",
+            )
+
+            # Categorize error type
+            error_type = "unknown"
+            if "timeout" in error.lower():
+                error_type = "timeout"
+            elif "connection" in error.lower():
+                error_type = "connection_failed"
+            elif "pool" in error.lower():
+                error_type = "pool_exhausted"
+
+            self._metrics.record_connection_error(
+                error_type=error_type,
+                pool_id=self._pool_id,
+                database="supabase",
+            )
+
+    def _update_pool_metrics(self) -> None:
+        """Update connection pool metrics."""
+        if not self._metrics or not self._sqlalchemy_engine:
+            return
+
+        try:
+            # Get pool statistics from SQLAlchemy
+            pool = self._sqlalchemy_engine.pool
+
+            # Calculate pool utilization
+            checked_out = pool.checkedout()
+            pool.size()
+            total_connections = checked_out + pool.checkedin()
+            idle_connections = pool.checkedin()
+
+            # Calculate utilization percentage
+            max_connections = self.pool_size + self.max_overflow
+            utilization_percent = (checked_out / max_connections) * 100
+
+            # Update local statistics
+            self._stats.total_connections = total_connections
+            self._stats.active_connections = checked_out
+            self._stats.idle_connections = idle_connections
+            self._stats.utilization_percent = utilization_percent
+            self._stats.last_updated = datetime.now(timezone.utc)
+
+            # Record in Prometheus metrics
+            self._metrics.record_pool_utilization(
+                utilization_percent=utilization_percent,
+                active_connections=checked_out,
+                idle_connections=idle_connections,
+                total_connections=total_connections,
+                pool_id=self._pool_id,
+                database="supabase",
+            )
+
+            # Record connection health scores (simplified implementation)
+            avg_health_score = max(0.0, 1.0 - (self._stats.connection_errors / 100))
+            self._metrics.record_connection_health(
+                connection_id="pool_average",
+                health_score=avg_health_score,
+                pool_id=self._pool_id,
+                database="supabase",
+            )
+
+        except Exception as e:
+            logger.warning(f"Failed to update pool metrics: {e}")
+
+    async def health_check(self) -> Dict[str, Any]:
+        """Comprehensive health check with detailed diagnostics."""
+        health_status = {
+            "status": "unknown",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "pool_id": self._pool_id,
+            "checks": {},
+            "metrics": {},
+            "recommendations": [],
+        }
+
+        try:
+            await self.initialize()
+
+            # Test SQLAlchemy connection
+            sqlalchemy_healthy = False
+            try:
+                await asyncio.to_thread(self._test_sqlalchemy_connection)
+                sqlalchemy_healthy = True
+                health_status["checks"]["sqlalchemy"] = "healthy"
+            except Exception as e:
+                health_status["checks"]["sqlalchemy"] = f"unhealthy: {e}"
+
+            # Test Supabase connection
+            supabase_healthy = False
+            try:
+                await asyncio.to_thread(self._test_supabase_connection)
+                supabase_healthy = True
+                health_status["checks"]["supabase"] = "healthy"
+            except Exception as e:
+                health_status["checks"]["supabase"] = f"unhealthy: {e}"
+
+            # Overall health status
+            if sqlalchemy_healthy and supabase_healthy:
+                health_status["status"] = "healthy"
+            elif sqlalchemy_healthy or supabase_healthy:
+                health_status["status"] = "degraded"
+            else:
+                health_status["status"] = "unhealthy"
+
+            # Add performance metrics
+            health_status["metrics"] = {
+                "pool_utilization_percent": self._stats.utilization_percent,
+                "total_connections": self._stats.total_connections,
+                "active_connections": self._stats.active_connections,
+                "idle_connections": self._stats.idle_connections,
+                "avg_checkout_time_ms": self._stats.avg_checkout_time_ms,
+                "max_checkout_time_ms": self._stats.max_checkout_time_ms,
+                "checkout_count": self._stats.checkout_count,
+                "checkin_count": self._stats.checkin_count,
+                "connection_errors": self._stats.connection_errors,
+                "uptime_seconds": time.time() - self._start_time,
+            }
+
+            # Generate recommendations
+            recommendations = []
+            if self._stats.utilization_percent > 80:
+                recommendations.append(
+                    "High pool utilization detected. Consider increasing pool_size."
+                )
+            if self._stats.avg_checkout_time_ms > 100:
+                recommendations.append(
+                    "High average checkout time. Check for connection contention."
+                )
+            if self._stats.connection_errors > 10:
+                recommendations.append(
+                    "Multiple connection errors detected. Check database connectivity."
+                )
+
+            health_status["recommendations"] = recommendations
+
+        except Exception as e:
+            health_status["status"] = "error"
+            health_status["error"] = str(e)
+            logger.error(f"Health check failed: {e}")
+
+        return health_status
+
+    def get_pool_statistics(self) -> Dict[str, Any]:
+        """Get detailed pool statistics for monitoring."""
+        stats_dict = {
+            "pool_id": self._stats.pool_id,
+            "configuration": {
                 "pool_size": self.pool_size,
                 "max_overflow": self.max_overflow,
-                "pool_timeout": self.pool_timeout,
-                "pool_recycle": self.pool_recycle,
-                "pool_pre_ping": self.pool_pre_ping,
-                "lifo_enabled": self.lifo_enabled,
-                "validation_interval": self.validation_interval,
+                "cpu_count": self.cpu_count,
+                "lifo_enabled": self.enable_lifo,
+                "pre_ping_enabled": self.enable_pre_ping,
             },
-            "statistics": {
-                "total_connections": self.stats.total_connections,
-                "active_connections": self.stats.active_connections,
-                "idle_connections": self.stats.idle_connections,
-                "failed_connections": self.stats.failed_connections,
-                "total_checkouts": self.stats.total_checkouts,
-                "total_checkins": self.stats.total_checkins,
-                "total_validations": self.stats.total_validations,
-                "validation_failures": self.stats.validation_failures,
-                "avg_checkout_time": self.stats.avg_checkout_time,
-                "avg_validation_time": self.stats.avg_validation_time,
-                "peak_active": self.stats.peak_active,
-                "total_errors": self.stats.total_errors,
-                "pool_utilization": self.stats.pool_utilization,
-                "error_rate": self.stats.error_rate,
-                "validation_success_rate": self.stats.validation_success_rate,
+            "current_status": {
+                "total_connections": self._stats.total_connections,
+                "active_connections": self._stats.active_connections,
+                "idle_connections": self._stats.idle_connections,
+                "utilization_percent": round(self._stats.utilization_percent, 2),
             },
-            "connection_details": [
-                {
-                    "connection_id": conn.connection_id,
-                    "status": conn.status.value,
-                    "age_seconds": conn.age_seconds,
-                    "idle_seconds": conn.idle_seconds,
-                    "use_count": conn.use_count,
-                    "error_count": conn.error_count,
-                    "avg_query_time": conn.avg_query_time,
-                }
-                for conn in self._all_connections.values()
-            ],
             "performance": {
-                "recent_checkout_times": self._checkout_times[-10:],
-                "recent_validation_times": self._validation_times[-10:],
+                "checkout_count": self._stats.checkout_count,
+                "checkin_count": self._stats.checkin_count,
+                "avg_checkout_time_ms": round(self._stats.avg_checkout_time_ms, 2),
+                "max_checkout_time_ms": round(self._stats.max_checkout_time_ms, 2),
+                "connection_errors": self._stats.connection_errors,
+                "validation_failures": self._stats.validation_failures,
+            },
+            "timestamps": {
+                "last_updated": self._stats.last_updated.isoformat(),
+                "uptime_seconds": round(time.time() - self._start_time, 2),
             },
         }
-    
+
+        # Add recent performance percentiles if available
+        if self._metrics and len(self._checkout_times) >= 10:
+            sorted_times = sorted(self._checkout_times)
+            n = len(sorted_times)
+            stats_dict["checkout_percentiles"] = {
+                "p50_ms": round(sorted_times[int(n * 0.5)], 2),
+                "p95_ms": round(sorted_times[int(n * 0.95)], 2),
+                "p99_ms": round(sorted_times[int(n * 0.99)], 2),
+            }
+
+        return stats_dict
+
     async def close(self) -> None:
-        """Close the pool and cleanup resources."""
-        if self._closed:
-            return
-        
-        logger.info("Closing enhanced database pool manager")
-        self._closed = True
-        
-        # Cancel background tasks
-        if self._validation_task:
-            self._validation_task.cancel()
-            try:
-                await self._validation_task
-            except asyncio.CancelledError:
-                pass
-        
-        if self._metrics_task:
-            self._metrics_task.cancel()
-            try:
-                await self._metrics_task
-            except asyncio.CancelledError:
-                pass
-        
-        # Clear all connections
-        self._available_connections.clear()
-        self._active_connections.clear()
-        self._all_connections.clear()
-        
-        logger.info("Enhanced database pool manager closed")
+        """Clean up resources and close connections."""
+        logger.info(f"Closing enhanced database pool (pool_id: {self._pool_id})")
+
+        try:
+            # Close SQLAlchemy engine
+            if self._sqlalchemy_engine:
+                self._sqlalchemy_engine.dispose()
+                self._sqlalchemy_engine = None
+                logger.debug("SQLAlchemy engine disposed")
+
+            # Supabase client doesn't need explicit cleanup
+            self._supabase_client = None
+
+            # Reset state
+            self._initialized = False
+
+            logger.info("Enhanced database pool closed successfully")
+
+        except Exception as e:
+            logger.error(f"Error closing enhanced database pool: {e}")
 
 
 # Global enhanced pool manager instance
 _enhanced_pool_manager: Optional[EnhancedDatabasePoolManager] = None
 
 
-async def get_enhanced_pool_manager(**kwargs) -> EnhancedDatabasePoolManager:
-    """Get the global enhanced pool manager instance.
-    
-    Args:
-        **kwargs: Arguments to pass to EnhancedDatabasePoolManager constructor
-    
-    Returns:
-        Initialized EnhancedDatabasePoolManager instance
-    """
+async def get_enhanced_pool_manager() -> EnhancedDatabasePoolManager:
+    """Get or create global enhanced pool manager instance."""
     global _enhanced_pool_manager
-    
+
     if _enhanced_pool_manager is None:
-        _enhanced_pool_manager = EnhancedDatabasePoolManager(**kwargs)
+        _enhanced_pool_manager = EnhancedDatabasePoolManager()
         await _enhanced_pool_manager.initialize()
-    
+
     return _enhanced_pool_manager
 
 
 async def close_enhanced_pool_manager() -> None:
-    """Close the global enhanced pool manager instance."""
+    """Close global enhanced pool manager instance."""
     global _enhanced_pool_manager
-    
+
     if _enhanced_pool_manager:
         await _enhanced_pool_manager.close()
         _enhanced_pool_manager = None

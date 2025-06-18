@@ -1,11 +1,15 @@
-"""Enhanced authentication middleware for FastAPI.
+"""Enhanced authentication middleware for FastAPI with timing attack protection.
 
 This module provides robust authentication middleware supporting both JWT tokens
-(for frontend) and API Keys (for agents), populating request.state.principal
-with authenticated entity information.
+(for frontend) and API Keys (for agents), with timing attack protection,
+enhanced security monitoring, and Pydantic v2 migration.
 """
 
+import hashlib
+import hmac
 import logging
+import secrets
+import time
 from datetime import datetime, timezone
 from typing import Callable, Optional, Union
 
@@ -25,6 +29,199 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.services.business.key_management_service import KeyManagementService
 
 logger = logging.getLogger(__name__)
+
+
+def constant_time_compare(a: str, b: str) -> bool:
+    """Constant-time string comparison to prevent timing attacks.
+
+    Uses hmac.compare_digest for cryptographically secure constant-time comparison.
+
+    Args:
+        a: First string to compare
+        b: Second string to compare
+
+    Returns:
+        True if strings are equal, False otherwise
+    """
+    if not isinstance(a, str) or not isinstance(b, str):
+        return False
+
+    # Use hmac.compare_digest for constant-time comparison
+    return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
+
+
+def secure_token_validation(token: str, expected_format: str = "jwt") -> bool:
+    """Secure token format validation with timing attack protection.
+
+    Args:
+        token: Token to validate
+        expected_format: Expected token format ("jwt" or "api_key")
+
+    Returns:
+        True if token format is valid, False otherwise
+    """
+    if not token or not isinstance(token, str):
+        # Add small random delay to prevent timing analysis
+        time.sleep(secrets.randbelow(10) / 10000)  # 0-1ms random delay
+        return False
+
+    # Perform validation with consistent timing
+    start_time = time.time()
+
+    try:
+        if expected_format == "jwt":
+            # JWT format validation
+            result = _validate_jwt_format(token)
+        elif expected_format == "api_key":
+            # API key format validation
+            result = _validate_api_key_format(token)
+        else:
+            result = False
+
+        # Ensure minimum processing time to prevent timing analysis
+        elapsed = time.time() - start_time
+        min_time = 0.001  # 1ms minimum processing time
+        if elapsed < min_time:
+            time.sleep(min_time - elapsed)
+
+        return result
+
+    except Exception:
+        # Always sleep on exception to maintain consistent timing
+        time.sleep(0.001)
+        return False
+
+
+def _validate_jwt_format(token: str) -> bool:
+    """Internal JWT format validation."""
+    if len(token) < 20 or len(token) > 4096:
+        return False
+
+    # Check for dangerous characters
+    if any(c in token for c in ["\x00", "\n", "\r", "\t"]):
+        return False
+
+    # Basic JWT structure check (3 parts separated by dots)
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+
+    # Each part should be base64url encoded
+    base64url_chars = set(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+    )
+    for part in parts:
+        if not part or not all(c in base64url_chars for c in part):
+            return False
+
+    return True
+
+
+def _validate_api_key_format(api_key: str) -> bool:
+    """Internal API key format validation."""
+    if len(api_key) < 10 or len(api_key) > 512:
+        return False
+
+    # Check for dangerous characters
+    if any(ord(c) < 32 for c in api_key):
+        return False
+
+    # Check for our specific format: sk_service_keyid_secret
+    if api_key.startswith("sk_"):
+        parts = api_key.split("_")
+        if len(parts) >= 4:
+            # Additional validation for proper format
+            service = parts[1]
+            key_id = parts[2]
+            secret = "_".join(parts[3:])
+
+            # Service and key_id should be alphanumeric
+            if not service.isalnum() or not key_id.isalnum():
+                return False
+
+            # Secret should be long enough
+            if len(secret) < 20:
+                return False
+
+            return True
+        return False
+
+    # For non-sk_ format, require minimum length and printable ASCII
+    return len(api_key) >= 20 and all(32 <= ord(c) <= 126 for c in api_key)
+
+
+class AuthenticationAuditLogger:
+    """Enhanced audit logging for authentication events."""
+
+    def __init__(self):
+        self.failed_attempts = {}
+        self.suspicious_patterns = set()
+
+    def log_auth_attempt(
+        self,
+        request: Request,
+        auth_type: str,
+        success: bool,
+        principal_id: Optional[str] = None,
+        error: Optional[str] = None,
+    ):
+        """Log authentication attempt with enhanced security context."""
+        client_ip = self._get_client_ip(request)
+        user_agent = request.headers.get("User-Agent", "Unknown")[:200]
+
+        # Track failed attempts
+        if not success:
+            current_time = time.time()
+            if client_ip not in self.failed_attempts:
+                self.failed_attempts[client_ip] = []
+
+            self.failed_attempts[client_ip].append(current_time)
+
+            # Clean old attempts (older than 1 hour)
+            cutoff_time = current_time - 3600
+            self.failed_attempts[client_ip] = [
+                t for t in self.failed_attempts[client_ip] if t > cutoff_time
+            ]
+
+            # Mark as suspicious if too many failed attempts
+            if len(self.failed_attempts[client_ip]) > 5:
+                self.suspicious_patterns.add(client_ip)
+
+        # Enhanced logging
+        log_data = {
+            "event": "authentication_attempt",
+            "auth_type": auth_type,
+            "success": success,
+            "ip_address": client_ip,
+            "user_agent": user_agent,
+            "path": request.url.path,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "principal_id": principal_id,
+            "failed_attempts_count": len(self.failed_attempts.get(client_ip, [])),
+            "is_suspicious": client_ip in self.suspicious_patterns,
+        }
+
+        if error:
+            log_data["error"] = str(error)
+
+        if success:
+            logger.info("Authentication successful", extra=log_data)
+        else:
+            logger.warning("Authentication failed", extra=log_data)
+
+    def _get_client_ip(self, request: Request) -> str:
+        """Extract client IP with proper header precedence."""
+        # Check forwarded headers in order of preference
+        for header in ["CF-Connecting-IP", "X-Real-IP", "X-Forwarded-For"]:
+            ip = request.headers.get(header)
+            if ip:
+                return ip.split(",")[0].strip()
+
+        return request.client.host if request.client else "unknown"
+
+
+# Global audit logger instance
+auth_audit_logger = AuthenticationAuditLogger()
 
 
 class Principal(BaseModel):
@@ -130,42 +327,31 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if authorization_header and authorization_header.startswith("Bearer "):
             try:
                 token = authorization_header.replace("Bearer ", "")
-                # Enhanced security: validate token format
-                if not self._validate_token_format(token):
+                # Enhanced security: validate token format with timing attack protection
+                if not secure_token_validation(token, "jwt"):
                     raise AuthenticationError("Invalid token format")
                 principal = await self._authenticate_jwt(token)
+                auth_audit_logger.log_auth_attempt(request, "jwt", True, principal.id)
             except AuthenticationError as e:
                 auth_error = e
-                logger.warning(
-                    f"JWT authentication failed: {e}",
-                    extra={
-                        "ip_address": self._get_client_ip(request),
-                        "user_agent": request.headers.get("User-Agent", "Unknown")[
-                            :200
-                        ],
-                        "path": request.url.path,
-                    },
-                )
+                auth_audit_logger.log_auth_attempt(request, "jwt", False, error=str(e))
 
         # Try API key authentication if JWT failed
         if not principal:
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
-                    # Enhanced security: validate API key format
-                    if not self._validate_api_key_format(api_key_header):
+                    # Enhanced security: validate API key format with timing attack protection
+                    if not secure_token_validation(api_key_header, "api_key"):
                         raise KeyValidationError("Invalid API key format")
                     principal = await self._authenticate_api_key(api_key_header)
+                    auth_audit_logger.log_auth_attempt(
+                        request, "api_key", True, principal.id
+                    )
                 except (AuthenticationError, KeyValidationError) as e:
                     auth_error = e
-                    user_agent = request.headers.get("User-Agent", "Unknown")[:200]
-                    logger.warning(
-                        f"API key authentication failed: {e}",
-                        extra={
-                            "ip_address": self._get_client_ip(request),
-                            "user_agent": user_agent,
-                            "path": request.url.path,
-                        },
+                    auth_audit_logger.log_auth_attempt(
+                        request, "api_key", False, error=str(e)
                     )
 
         # If no authentication succeeded
@@ -247,7 +433,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         return False
 
     async def _authenticate_jwt(self, token: str) -> Principal:
-        """Authenticate using JWT token.
+        """Authenticate using JWT token with timing attack protection.
 
         Args:
             token: JWT token
@@ -258,6 +444,9 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         Raises:
             AuthenticationError: If authentication fails
         """
+        # Start timing for consistent response time
+        start_time = time.time()
+
         try:
             # Use the new Supabase auth validation
             import jwt
@@ -275,13 +464,20 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 leeway=30,  # Allow 30 seconds clock skew
             )
 
-            # Extract user data from token
-            user_id = payload["sub"]
+            # Extract user data from token with validation
+            user_id = payload.get("sub")
+            if not user_id:
+                raise AuthenticationError("Invalid token: missing subject")
+
             email = payload.get("email")
             role = payload.get("role", "authenticated")
 
+            # Validate critical fields
+            if not isinstance(user_id, str) or len(user_id) < 1:
+                raise AuthenticationError("Invalid token: invalid user ID")
+
             # Create principal from token data
-            return Principal(
+            principal = Principal(
                 id=user_id,
                 type="user",
                 email=email,
@@ -290,20 +486,32 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 metadata={
                     "role": role,
                     "aud": payload.get("aud", "authenticated"),
+                    "iat": payload.get("iat"),
+                    "exp": payload.get("exp"),
                 },
             )
 
+            # Ensure minimum processing time for timing attack protection
+            self._ensure_minimum_processing_time(start_time)
+            return principal
+
         except jwt.ExpiredSignatureError:
+            self._ensure_minimum_processing_time(start_time)
             raise AuthenticationError("Token has expired") from None
         except jwt.InvalidTokenError as e:
+            self._ensure_minimum_processing_time(start_time)
             logger.error(f"JWT InvalidTokenError: {e}")
             raise AuthenticationError("Invalid token") from None
+        except AuthenticationError:
+            self._ensure_minimum_processing_time(start_time)
+            raise
         except Exception as e:
+            self._ensure_minimum_processing_time(start_time)
             logger.error(f"JWT authentication error: {e}")
             raise AuthenticationError("Invalid authentication token") from e
 
     async def _authenticate_api_key(self, api_key: str) -> Principal:
-        """Authenticate using API key.
+        """Authenticate using API key with timing attack protection.
 
         Args:
             api_key: API key value
@@ -315,17 +523,26 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             AuthenticationError: If authentication fails
             KeyValidationError: If key validation fails
         """
+        # Start timing for consistent response time
+        start_time = time.time()
+
         try:
             # Extract key ID and service from the API key format
             # Format: "sk_<service>_<key_id>_<secret>"
             parts = api_key.split("_")
-            if len(parts) < 4 or parts[0] != "sk":
+            if len(parts) < 4 or not constant_time_compare(parts[0], "sk"):
+                self._ensure_minimum_processing_time(start_time)
                 raise KeyValidationError("Invalid API key format")
 
             service = parts[1]
             key_id = parts[2]
             # The rest is the secret
             secret = "_".join(parts[3:])
+
+            # Validate service and key_id format
+            if not service or not key_id or len(secret) < 20:
+                self._ensure_minimum_processing_time(start_time)
+                raise KeyValidationError("Invalid API key structure")
 
             # Validate the API key using the key management service
             if self.key_service:
@@ -338,6 +555,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 )
 
                 if not validation_result.is_valid:
+                    self._ensure_minimum_processing_time(start_time)
                     raise KeyValidationError(
                         validation_result.message or "Invalid API key"
                     )
@@ -346,7 +564,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 key_metadata = validation_result.details or {}
 
                 # Create principal for validated API key
-                return Principal(
+                principal = Principal(
                     id=f"agent_{service}_{key_id}",
                     type="agent",
                     service=service,
@@ -361,11 +579,14 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 )
             else:
                 # Fallback validation if key service is not available
-                if len(secret) < 20:
+                # Still apply constant-time checks
+                secret_hash = hashlib.sha256(secret.encode()).hexdigest()
+                if len(secret_hash) < 32:  # Always false, but maintains timing
+                    self._ensure_minimum_processing_time(start_time)
                     raise KeyValidationError("Invalid API key")
 
                 # Create principal with limited validation
-                return Principal(
+                principal = Principal(
                     id=f"agent_{service}_{key_id}",
                     type="agent",
                     service=service,
@@ -378,11 +599,29 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     },
                 )
 
+            self._ensure_minimum_processing_time(start_time)
+            return principal
+
         except (AuthenticationError, KeyValidationError):
+            self._ensure_minimum_processing_time(start_time)
             raise
         except Exception as e:
+            self._ensure_minimum_processing_time(start_time)
             logger.error(f"API key authentication error: {e}")
             raise AuthenticationError("Invalid API key") from e
+
+    def _ensure_minimum_processing_time(
+        self, start_time: float, min_time: float = 0.002
+    ):
+        """Ensure minimum processing time to prevent timing attacks.
+
+        Args:
+            start_time: When processing started
+            min_time: Minimum processing time in seconds (default 2ms)
+        """
+        elapsed = time.time() - start_time
+        if elapsed < min_time:
+            time.sleep(min_time - elapsed)
 
     def _create_auth_error_response(
         self, error: Union[AuthenticationError, KeyValidationError]

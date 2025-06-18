@@ -52,6 +52,7 @@ dependencies = [
     "prometheus-client>=0.20.0",
     "psutil>=7.0.0",
     "asyncpg>=0.30.0",
+    "slowapi>=0.1.9",
 ]
 
 [tool.setuptools.packages.find]
