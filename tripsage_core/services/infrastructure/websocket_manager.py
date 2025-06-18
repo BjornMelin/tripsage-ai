@@ -48,6 +48,16 @@ from .websocket_messaging_service import (
 logger = logging.getLogger(__name__)
 
 
+class ConnectionStatus(str, Enum):
+    """WebSocket connection status."""
+
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    DISCONNECTED = "disconnected"
+    ERROR = "error"
+    RECONNECTING = "reconnecting"
+
+
 def redis_with_fallback(fallback_method: Optional[str] = None):
     """Decorator to handle Redis operations with fallback to local methods.
 
@@ -618,7 +628,6 @@ class WebSocketManager:
 
         # Subscribe to new channels
         if subscribe_request.channels:
-            self.auth_service.get_available_channels(connection.user_id)
             allowed_channels, denied_channels = (
                 self.auth_service.validate_channel_access(
                     connection.user_id, subscribe_request.channels

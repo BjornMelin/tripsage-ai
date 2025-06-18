@@ -254,8 +254,8 @@ class WebSocketConnection:
                     # No low priority messages to drop, reject the new message
                     logger.error(
                         f"Queue full and no low priority messages to drop for "
-                        f"connection {self.connection_id}. Rejecting priority "
-                        f"{priority} message."
+                        f"connection {self.connection_id}. "
+                        f"Rejecting priority {priority} message."
                     )
                     return False
 
@@ -266,9 +266,9 @@ class WebSocketConnection:
     async def send(self, event: Dict[str, Any]) -> bool:
         """Send event to WebSocket connection with error handling."""
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
-            # For cascade failure prevention: if connection is in ERROR state
-            # but circuit breaker is CLOSED,
-            # allow the send attempt to proceed (connection might have recovered)
+            # For cascade failure prevention: if connection is in ERROR state but
+            # circuit breaker is CLOSED, allow the send attempt to proceed
+            # (connection might have recovered)
             if (
                 self.state == ConnectionState.ERROR
                 and self.circuit_breaker.can_execute()
@@ -282,8 +282,8 @@ class WebSocketConnection:
                 )
                 return False
 
-        # Check circuit breaker state - if OPEN, queue instead of dropping
-        # for recovery scenarios
+        # Check circuit breaker state - if OPEN, queue instead of dropping for
+        # recovery scenarios
         if not self.circuit_breaker.can_execute():
             # For cascade failure prevention test: if in ERROR state with OPEN
             # circuit breaker, fail
@@ -315,8 +315,8 @@ class WebSocketConnection:
                 # Drop low priority messages during backpressure
                 self.dropped_messages_count += 1
                 logger.debug(
-                    f"Dropped low priority message due to backpressure "
-                    f"on connection {self.connection_id}"
+                    f"Dropped low priority message due to backpressure on "
+                    f"connection {self.connection_id}"
                 )
                 return False
 

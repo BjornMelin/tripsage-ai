@@ -28,6 +28,8 @@ from tripsage.api.routers import (
     auth,
     chat,
     config,
+    dashboard,
+    dashboard_realtime,
     destinations,
     flights,
     health,
@@ -341,6 +343,8 @@ def create_app() -> FastAPI:
 
     app.include_router(users.router, prefix="/api/users", tags=["users"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
+    app.include_router(dashboard.router, tags=["dashboard"])
+    app.include_router(dashboard_realtime.router, tags=["dashboard-realtime"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)

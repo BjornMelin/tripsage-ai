@@ -43,14 +43,26 @@ from .financial import (
     PriceBreakdown,
     PriceRange,
 )
+from .flight_schemas import (
+    AirportSearchRequest,
+    AirportSearchResponse,
+    FlightPassenger,
+    FlightSearchRequest,
+    FlightSearchResponse,
+    MultiCityFlightSearchRequest,
+    MultiCityFlightSegment,
+    SavedFlightRequest,
+    SavedFlightResponse,
+    UpcomingFlightResponse,
+)
 from .geographic import (
     Address,
-    Airport,
     BoundingBox,
     Coordinates,
     Place,
     Region,
     Route,
+    # Airport is available here but we use domain model for consistency
 )
 from .temporal import (
     Availability,
@@ -103,7 +115,6 @@ __all__ = [
     "PriceRange",
     # Geographic
     "Address",
-    "Airport",
     "BoundingBox",
     "Coordinates",
     "Place",
@@ -122,6 +133,17 @@ __all__ = [
     "TripDestination",
     "TripPreferences",
     "TripSummary",
+    # Flight schemas
+    "AirportSearchRequest",
+    "AirportSearchResponse",
+    "FlightPassenger",
+    "FlightSearchRequest",
+    "FlightSearchResponse",
+    "MultiCityFlightSearchRequest",
+    "MultiCityFlightSegment",
+    "SavedFlightRequest",
+    "SavedFlightResponse",
+    "UpcomingFlightResponse",
     # Validators
     "CommonValidators",
 ]

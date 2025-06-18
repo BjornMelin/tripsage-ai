@@ -7,7 +7,7 @@
 
 - [Authentication Overview](#authentication-overview)
 - [JWT Authentication](#jwt-authentication)
-- [API Key Authentication](#api-key-authentication)
+- [API Key Authentication (BYOK)](#api-key-authentication)
 - [OAuth 2.0 Integration](#oauth-20-integration)
 - [Permission Scopes](#permission-scopes)
 - [Security Best Practices](#security-best-practices)
@@ -180,14 +180,48 @@ Content-Type: application/json
 
 ## API Key Authentication
 
-> **📖 For comprehensive API key management including BYOK functionality, validation, and monitoring, see the [API Key Service Guide](../developers/api-key-service.md)**
+### BYOK (Bring Your Own Key) Support
 
-### Generate API Key
+TripSage supports storing and managing your third-party API keys securely. You can add API keys for services like Duffel (flights), Google Maps, and weather services to enhance your travel planning experience.
 
-Create a new API key with specific permissions.
+### Manage Your API Keys
+
+#### List Your API Keys
+
+Get all API keys you've stored in TripSage.
 
 ```http
-POST /api/user/keys
+GET /api/keys
+Authorization: Bearer {jwt_token}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "api_keys": [
+    {
+      "id": "key_123abc",
+      "name": "My Duffel API Key",
+      "service": "duffel",
+      "description": "For flight search integration",
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T10:30:00Z",
+      "expires_at": "2026-01-15T10:30:00Z",
+      "is_valid": true,
+      "last_used": "2025-06-17T12:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+#### Add a New API Key
+
+Store a new third-party API key securely.
+
+```http
+POST /api/keys
 Authorization: Bearer {jwt_token}
 Content-Type: application/json
 ```
@@ -196,20 +230,11 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Travel App Integration",
-  "description": "API key for mobile app backend",
-  "permissions": [
-    "trips:read",
-    "trips:write",
-    "flights:read",
-    "accommodations:read",
-    "chat:access"
-  ],
-  "expires_in_days": 365,
-  "ip_whitelist": [
-    "192.168.1.0/24",
-    "10.0.0.1"
-  ]
+  "name": "My Duffel API Key",
+  "service": "duffel",
+  "key": "duffel_test_your_actual_api_key_here",
+  "description": "For flight search and booking",
+  "expires_at": "2026-01-15T10:30:00Z"
 }
 ```
 
@@ -218,59 +243,31 @@ Content-Type: application/json
 ```json
 {
   "id": "key_123abc",
-  "name": "Travel App Integration",
-  "key": "ts_live_1234567890abcdef",
-  "permissions": [
-    "trips:read",
-    "trips:write",
-    "flights:read",
-    "accommodations:read",
-    "chat:access"
-  ],
-  "created_at": "2025-01-15T10:30:00Z",
+  "name": "My Duffel API Key",
+  "service": "duffel",
+  "description": "For flight search and booking",
+  "created_at": "2025-06-17T10:30:00Z",
+  "updated_at": "2025-06-17T10:30:00Z",
   "expires_at": "2026-01-15T10:30:00Z",
-  "last_used": null,
-  "ip_whitelist": [
-    "192.168.1.0/24",
-    "10.0.0.1"
-  ]
+  "is_valid": true,
+  "last_used": null
 }
 ```
 
-### List API Keys
+**Supported Services:**
 
-Get all API keys for the authenticated user.
+| Service | Description | Key Format |
+|---------|-------------|------------|
+| `duffel` | Flight search and booking | `duffel_test_*` or `duffel_live_*` |
+| `google_maps` | Maps and location services | Google Cloud API key |
+| `openweather` | Weather information | OpenWeatherMap API key |
 
-```http
-GET /api/user/keys
-Authorization: Bearer {jwt_token}
-```
+#### Validate an API Key
 
-**Response (200 OK):**
-
-```json
-{
-  "keys": [
-    {
-      "id": "key_123abc",
-      "name": "Travel App Integration",
-      "key_preview": "ts_live_1234...cdef",
-      "permissions": ["trips:read", "trips:write"],
-      "created_at": "2025-01-15T10:30:00Z",
-      "expires_at": "2026-01-15T10:30:00Z",
-      "last_used": "2025-01-15T12:00:00Z",
-      "usage_count": 1247
-    }
-  ]
-}
-```
-
-### Update API Key
-
-Modify API key permissions or settings.
+Test if your API key is working with the external service.
 
 ```http
-PUT /api/user/keys/{key_id}
+POST /api/keys/validate
 Authorization: Bearer {jwt_token}
 Content-Type: application/json
 ```
@@ -279,44 +276,156 @@ Content-Type: application/json
 
 ```json
 {
-  "name": "Updated Travel App Integration",
-  "permissions": [
-    "trips:read",
-    "trips:write",
-    "flights:read"
-  ],
-  "ip_whitelist": [
-    "192.168.1.0/24"
-  ]
+  "key": "duffel_test_your_actual_api_key_here",
+  "service": "duffel"
 }
-```
-
-### Revoke API Key
-
-Delete an API key.
-
-```http
-DELETE /api/user/keys/{key_id}
-Authorization: Bearer {jwt_token}
 ```
 
 **Response (200 OK):**
 
 ```json
 {
-  "message": "API key revoked successfully"
+  "is_valid": true,
+  "service": "duffel",
+  "message": "Valid Duffel API key"
 }
 ```
 
-### Using API Keys
+**Response (400 Bad Request) - Invalid Key:**
 
-Include the API key in the Authorization header:
+```json
+{
+  "is_valid": false,
+  "service": "duffel",
+  "message": "Invalid or expired Duffel API key"
+}
+```
+
+#### Update/Rotate an API Key
+
+Replace an existing API key with a new one.
 
 ```http
-GET /api/flights/search
-Authorization: Bearer ts_live_1234567890abcdef
+POST /api/keys/{key_id}/rotate
+Authorization: Bearer {jwt_token}
 Content-Type: application/json
 ```
+
+**Request Body:**
+
+```json
+{
+  "new_key": "duffel_live_your_new_api_key_here"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "id": "key_123abc",
+  "name": "My Duffel API Key",
+  "service": "duffel",
+  "description": "For flight search and booking",
+  "created_at": "2025-06-17T10:30:00Z",
+  "updated_at": "2025-06-17T15:45:00Z",
+  "expires_at": "2026-01-15T10:30:00Z",
+  "is_valid": true,
+  "last_used": null
+}
+```
+
+#### Remove an API Key
+
+Delete a stored API key.
+
+```http
+DELETE /api/keys/{key_id}
+Authorization: Bearer {jwt_token}
+```
+
+**Response (204 No Content)**
+
+### Security & Best Practices
+
+#### Secure Storage
+
+- **Envelope Encryption**: Your API keys are encrypted using industry-standard envelope encryption
+- **Key Hashing**: Deduplication without storing plaintext keys
+- **Audit Logging**: All key operations are logged for security monitoring
+
+#### API Key Management Tips
+
+1. **Use Descriptive Names**: Help identify keys later
+   ```json
+   {
+     "name": "Production Duffel Key - Main Account",
+     "description": "Primary flight search for production environment"
+   }
+   ```
+
+2. **Set Expiration Dates**: Regularly rotate your keys
+   ```json
+   {
+     "expires_at": "2026-01-15T10:30:00Z"
+   }
+   ```
+
+3. **Monitor Usage**: Check the `last_used` field to identify unused keys
+
+4. **Validate Before Storing**: Always validate keys before adding them
+   ```bash
+   # Test your key first
+   curl -X POST https://api.tripsage.ai/api/keys/validate \
+     -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"key": "your_api_key", "service": "duffel"}'
+   ```
+
+#### Getting API Keys from Providers
+
+**Duffel (Flights)**
+1. Sign up at [duffel.com](https://duffel.com)
+2. Navigate to API Settings
+3. Generate a new API key
+4. Use the test key format: `duffel_test_*`
+
+**Google Maps**
+1. Visit [Google Cloud Console](https://console.cloud.google.com)
+2. Enable Maps JavaScript API
+3. Create credentials → API Key
+4. Restrict to your domains for security
+
+**OpenWeatherMap**
+1. Register at [openweathermap.org](https://openweathermap.org/api)
+2. Get your free API key
+3. Note: Free tier has rate limits
+
+### Example Integration
+
+#### Using Your Stored API Keys
+
+Once you've stored your API keys, TripSage will automatically use them for enhanced features:
+
+```javascript
+// Your frontend code remains the same
+const flights = await fetch('/api/flights/search', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    origin: 'JFK',
+    destination: 'LAX',
+    departure_date: '2025-07-01'
+  })
+});
+
+// TripSage automatically uses your stored Duffel API key
+// No need to include it in the request
+```
+
 
 ---
 
@@ -706,15 +815,14 @@ const client = new TripSageClient({
 ### Quick Links
 
 - **[Getting Started Guide](getting-started.md)** - Setup and first API calls
-- **[API Key Service](../developers/api-key-service.md)** - Comprehensive BYOK management guide
 - **[REST API Endpoints](rest-endpoints.md)** - Complete endpoint reference
 - **[Error Codes](error-codes.md)** - Authentication error troubleshooting
 - **[Quick Examples](usage-examples.md)** - Copy-paste authentication code
+- **[Internal API Key Service Guide](../developers/api-key-service.md)** - Implementation details for developers
 
 ### Common Workflows
 
 - **New to TripSage?** → Start with [Getting Started](getting-started.md)
-- **Managing API keys?** → Use [API Key Service Guide](../developers/api-key-service.md)
 - **Building an integration?** → Check [Complete Examples](examples.md)
 - **Authentication failing?** → See [Error Troubleshooting](error-codes.md#authentication-errors)
 - **Need real-time features?** → Explore [WebSocket API](websocket-api.md)

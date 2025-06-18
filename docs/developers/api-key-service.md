@@ -1,822 +1,820 @@
-# 🔑 TripSage API Key Management Service
+# 🔑 API Key Service - Internal Implementation Guide
 
-> **Comprehensive API Key Service Reference**  
-> BYOK (Bring Your Own Key) functionality, validation, rotation, and monitoring for TripSage developers
+> **Internal Development Documentation**  
+> Complete implementation guide for the TripSage API Key Service architecture, patterns, and best practices
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [API Key Management](#api-key-management)
-- [Validation & Monitoring](#validation--monitoring)
-- [Security Features](#security-features)
-- [Integration Examples](#integration-examples)
-- [Troubleshooting](#troubleshooting)
-- [Best Practices](#best-practices)
+- [Service Overview](#service-overview)
+- [Architecture & Design](#architecture--design)
+- [Implementation Details](#implementation-details)
+- [Database Schema](#database-schema)
+- [Security Implementation](#security-implementation)
+- [Performance Considerations](#performance-considerations)
+- [Testing Strategy](#testing-strategy)
+- [Monitoring & Debugging](#monitoring--debugging)
+- [Development Workflow](#development-workflow)
+- [Migration Notes](#migration-notes)
 
 ---
 
-## Overview
+## Service Overview
 
-The TripSage API Key Management Service provides comprehensive BYOK (Bring Your Own Key) functionality, allowing users to securely store, validate, and manage third-party API keys for external service integrations.
+The API Key Service provides secure management of third-party API keys (BYOK - Bring Your Own Key) for TripSage platform integrations. This service follows KISS principles while maintaining enterprise-grade security and reliability.
 
-### Key Features
+### Core Capabilities
 
-- **🔐 Secure Storage**: Encrypted API key storage with user isolation
-- **✅ Real-time Validation**: Automatic validation against external services
-- **🔄 Key Rotation**: Safe key rotation with validation
-- **📊 Monitoring**: Usage tracking and health metrics
-- **🛡️ Security**: Audit logging and access controls
+- **Secure Storage**: Envelope encryption with rotation capability
+- **Validation**: Service-specific API key validation
+- **Health Monitoring**: Proactive health checking and alerting
+- **Audit Logging**: Comprehensive usage tracking and audit trails
+- **Lifecycle Management**: Full CRUD operations with expiration handling
 
-### Supported Services
-
-| Service | Validation Method | Key Format |
-|---------|------------------|------------|
-| OpenAI | API call to `/models` | `sk-...` |
-| Anthropic | API call to `/models` | `sk-ant-...` |
-| Google | Vertex AI validation | `AIza...` |
-| Azure | OpenAI compatibility | Custom |
-
----
-
-## API Key Management
-
-### Base Endpoint
-
-All API key operations are available under:
-
-```
-/api/keys
-```
-
-**Authentication Required**: JWT Bearer token
-
-### List API Keys
-
-Retrieve all API keys for the authenticated user.
-
-```http
-GET /api/keys
-Authorization: Bearer {jwt_token}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "api_keys": [
-    {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "name": "OpenAI Production Key",
-      "service": "openai",
-      "description": "Primary OpenAI key for chat completions",
-      "created_at": "2025-01-15T10:30:00Z",
-      "updated_at": "2025-01-15T10:30:00Z",
-      "expires_at": "2026-01-15T10:30:00Z",
-      "is_valid": true,
-      "last_used": "2025-01-15T12:00:00Z"
-    }
-  ],
-  "count": 1
-}
-```
-
-### Create API Key
-
-Add a new API key with automatic validation.
-
-```http
-POST /api/keys
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-```
-
-**Request Body:**
-
-```json
-{
-  "name": "OpenAI Production Key",
-  "service": "openai",
-  "key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-  "description": "Primary OpenAI key for chat completions",
-  "expires_at": "2026-01-15T10:30:00Z"
-}
-```
-
-**Response (201 Created):**
-
-```json
-{
-  "id": "123e4567-e89b-12d3-a456-426614174000",
-  "name": "OpenAI Production Key",
-  "service": "openai",
-  "description": "Primary OpenAI key for chat completions",
-  "created_at": "2025-01-15T10:30:00Z",
-  "updated_at": "2025-01-15T10:30:00Z",
-  "expires_at": "2026-01-15T10:30:00Z",
-  "is_valid": true,
-  "last_used": null
-}
-```
-
-**Error Response (400 Bad Request):**
-
-```json
-{
-  "detail": "Invalid API key for openai: Authentication failed"
-}
-```
-
-### Validate API Key
-
-Test an API key without storing it.
-
-```http
-POST /api/keys/validate
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-```
-
-**Request Body:**
-
-```json
-{
-  "key": "sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-  "service": "openai"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "is_valid": true,
-  "service": "openai",
-  "message": "API key validated successfully"
-}
-```
-
-**Response (200 OK - Invalid Key):**
-
-```json
-{
-  "is_valid": false,
-  "service": "openai",
-  "message": "Authentication failed: Invalid API key"
-}
-```
-
-### Rotate API Key
-
-Update an existing API key with a new value.
-
-```http
-POST /api/keys/{key_id}/rotate
-Authorization: Bearer {jwt_token}
-Content-Type: application/json
-```
-
-**Request Body:**
-
-```json
-{
-  "new_key": "sk-new1234567890abcdef1234567890abcdef1234567890abcdef"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "id": "123e4567-e89b-12d3-a456-426614174000",
-  "name": "OpenAI Production Key",
-  "service": "openai",
-  "description": "Primary OpenAI key for chat completions",
-  "created_at": "2025-01-15T10:30:00Z",
-  "updated_at": "2025-01-15T16:45:00Z",
-  "expires_at": "2026-01-15T10:30:00Z",
-  "is_valid": true,
-  "last_used": null
-}
-```
-
-### Delete API Key
-
-Remove an API key permanently.
-
-```http
-DELETE /api/keys/{key_id}
-Authorization: Bearer {jwt_token}
-```
-
-**Response (204 No Content)**
-
-**Error Response (404 Not Found):**
-
-```json
-{
-  "detail": "API key not found"
-}
-```
-
-**Error Response (403 Forbidden):**
-
-```json
-{
-  "detail": "You do not have permission to delete this API key"
-}
-```
-
----
-
-## Validation & Monitoring
-
-### Key Health Metrics
-
-Get system-wide API key health metrics (admin access required).
-
-```http
-GET /api/keys/metrics
-Authorization: Bearer {jwt_token}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "total_keys": 1247,
-  "valid_keys": 1198,
-  "invalid_keys": 49,
-  "services": {
-    "openai": {
-      "total": 856,
-      "valid": 823,
-      "invalid": 33
-    },
-    "anthropic": {
-      "total": 391,
-      "valid": 375,
-      "invalid": 16
-    }
-  },
-  "last_validation_run": "2025-01-15T12:00:00Z"
-}
-```
-
-### Audit Log
-
-Get audit trail for API key operations.
-
-```http
-GET /api/keys/audit?limit=50
-Authorization: Bearer {jwt_token}
-```
-
-**Response (200 OK):**
-
-```json
-[
-  {
-    "timestamp": "2025-01-15T12:00:00Z",
-    "action": "key_created",
-    "key_id": "123e4567-e89b-12d3-a456-426614174000",
-    "service": "openai",
-    "user_id": "user_123",
-    "ip_address": "192.168.1.100",
-    "user_agent": "TripSage-Client/1.0"
-  },
-  {
-    "timestamp": "2025-01-15T11:45:00Z",
-    "action": "key_validated",
-    "key_id": "123e4567-e89b-12d3-a456-426614174000",
-    "service": "openai",
-    "result": "valid",
-    "response_time_ms": 145
-  }
-]
-```
-
----
-
-## Security Features
-
-### Authentication Integration
-
-API key operations require valid JWT authentication:
+### Service Dependencies
 
 ```mermaid
-graph LR
-    A[Client Request] --> B[JWT Validation]
-    B --> C[Principal Extraction]
-    C --> D[User ID Check]
-    D --> E[Resource Access Control]
-    E --> F[API Key Operation]
-    F --> G[Audit Logging]
-```
-
-### Access Control
-
-- **User Isolation**: Users can only access their own API keys
-- **Principal Validation**: JWT tokens validated on every request
-- **Resource Ownership**: Key ownership verified before operations
-- **Audit Trail**: All operations logged for security monitoring
-
-### Data Protection
-
-```python
-# Example of secure key handling
-async def create_key(user_id: str, key_data: ApiKeyCreate):
-    # 1. Validate key with external service
-    validation = await validate_external_key(key_data.key, key_data.service)
+graph TB
+    subgraph "Core Services"
+        A[API Key Service] --> B[Database Service]
+        A --> C[Cache Service]
+        A --> D[Audit Service]
+    end
     
-    # 2. Encrypt key before storage
-    encrypted_key = encrypt_key(key_data.key)
+    subgraph "External Services"
+        A --> E[Duffel API]
+        A --> F[Google Maps API]
+        A --> G[Weather API]
+    end
     
-    # 3. Store with user association
-    stored_key = await store_key(user_id, encrypted_key, key_data)
-    
-    # 4. Log creation event
-    await audit_log("key_created", stored_key.id, user_id)
-    
-    return stored_key
+    subgraph "Infrastructure"
+        A --> H[Key Monitoring Service]
+        A --> I[Encryption Service]
+    end
 ```
 
 ---
 
-## Integration Examples
+## Architecture & Design
 
-### Python Client
+### Simplified Architecture
+
+The service has been refactored to follow KISS principles:
+
+#### Before (Over-engineered)
+- Late imports and optional dependency resolution
+- Complex retry mechanisms with circuit breakers
+- Unnecessary validation attempt tracking
+- Over-engineered exception handling that masked errors
+
+#### After (Simplified)
+- **Explicit Dependencies**: Constructor injection for testability
+- **Atomic Operations**: Database transactions for consistency
+- **Clean Error Handling**: Let ServiceError bubble to FastAPI
+- **Modern Patterns**: Pydantic V2 and FastAPI dependency injection
+
+### Service Layer Pattern
 
 ```python
-import httpx
-from typing import Dict, List, Optional
-
-class TripSageAPIKeyClient:
-    def __init__(self, jwt_token: str, base_url: str = "https://api.tripsage.ai"):
-        self.jwt_token = jwt_token
-        self.base_url = base_url
-        self.headers = {"Authorization": f"Bearer {jwt_token}"}
+# tripsage_core/services/business/api_key_service.py
+class ApiKeyService:
+    """Simplified API Key Service with explicit dependencies."""
     
-    async def create_api_key(
+    def __init__(
+        self,
+        db: "DatabaseService",
+        cache: Optional["CacheService"] = None,
+        settings: Optional["Settings"] = None,
+        validation_timeout: int = 10,
+    ):
+        self.db = db
+        self.cache = cache
+        self.settings = settings or get_settings()
+        self.validation_timeout = validation_timeout
+        self._setup_http_client()
+    
+    async def create_key(
         self, 
-        name: str, 
-        service: str, 
-        key: str,
-        description: Optional[str] = None,
-        expires_at: Optional[str] = None
-    ) -> Dict:
-        """Create a new API key."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/api/keys",
-                headers=self.headers,
-                json={
-                    "name": name,
-                    "service": service,
-                    "key": key,
-                    "description": description,
-                    "expires_at": expires_at
-                }
-            )
-            response.raise_for_status()
-            return response.json()
-    
-    async def list_api_keys(self) -> List[Dict]:
-        """List all API keys for the user."""
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.base_url}/api/keys",
-                headers=self.headers
-            )
-            response.raise_for_status()
-            return response.json()["api_keys"]
-    
-    async def validate_key(self, key: str, service: str) -> Dict:
-        """Validate an API key without storing it."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/api/keys/validate",
-                headers=self.headers,
-                json={"key": key, "service": service}
-            )
-            response.raise_for_status()
-            return response.json()
-    
-    async def rotate_key(self, key_id: str, new_key: str) -> Dict:
-        """Rotate an existing API key."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self.base_url}/api/keys/{key_id}/rotate",
-                headers=self.headers,
-                json={"new_key": new_key}
-            )
-            response.raise_for_status()
-            return response.json()
-    
-    async def delete_key(self, key_id: str) -> None:
-        """Delete an API key."""
-        async with httpx.AsyncClient() as client:
-            response = await client.delete(
-                f"{self.base_url}/api/keys/{key_id}",
-                headers=self.headers
-            )
-            response.raise_for_status()
-
-# Usage example
-async def main():
-    client = TripSageAPIKeyClient("your-jwt-token")
-    
-    # Validate a key before storing
-    validation = await client.validate_key(
-        "sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-        "openai"
-    )
-    
-    if validation["is_valid"]:
-        # Create the key
-        api_key = await client.create_api_key(
-            name="My OpenAI Key",
-            service="openai",
-            key="sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-            description="Production OpenAI key for chat features"
+        user_id: str, 
+        key_data: ApiKeyCreate
+    ) -> ApiKeyResponse:
+        """Create API key with atomic transaction."""
+        # Atomic transaction: create key + log operation
+        async with self.db.transaction() as tx:
+            # Store encrypted key
+            db_key_data = {
+                "user_id": user_id,
+                "name": key_data.name,
+                "service": key_data.service,
+                "encrypted_key": await self._encrypt_key(key_data.key),
+                "description": key_data.description,
+                "expires_at": key_data.expires_at,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+            
+            key_result = tx.insert("api_keys", db_key_data)
+            
+            # Log creation event
+            usage_log_data = {
+                "key_id": key_result["id"],
+                "user_id": user_id,
+                "operation": "create",
+                "success": True,
+                "timestamp": datetime.utcnow(),
+            }
+            
+            tx.insert("api_key_usage_logs", usage_log_data)
+            
+            # Execute transaction
+            results = await tx.execute()
+        
+        # Fire-and-forget audit logging
+        asyncio.create_task(
+            self._audit_key_creation(user_id, results[0]["id"], key_data.service)
         )
-        print(f"Created API key: {api_key['id']}")
-    else:
-        print(f"Invalid key: {validation['message']}")
+        
+        return ApiKeyResponse.model_validate(results[0])
 ```
 
-### TypeScript/JavaScript Client
+### FastAPI Integration
 
-```typescript
-interface APIKey {
-  id: string;
-  name: string;
-  service: string;
-  description?: string;
-  created_at: string;
-  updated_at: string;
-  expires_at?: string;
-  is_valid: boolean;
-  last_used?: string;
-}
+Modern dependency injection pattern:
 
-interface ValidationResult {
-  is_valid: boolean;
-  service: string;
-  message: string;
-}
+```python
+# Dependency provider
+ApiKeyServiceDep = Annotated[
+    ApiKeyService, 
+    Depends(get_api_key_service)
+]
 
-class TripSageAPIKeyClient {
-  private jwtToken: string;
-  private baseUrl: string;
-
-  constructor(jwtToken: string, baseUrl: string = "https://api.tripsage.ai") {
-    this.jwtToken = jwtToken;
-    this.baseUrl = baseUrl;
-  }
-
-  private get headers() {
-    return {
-      "Authorization": `Bearer ${this.jwtToken}`,
-      "Content-Type": "application/json"
-    };
-  }
-
-  async createAPIKey(data: {
-    name: string;
-    service: string;
-    key: string;
-    description?: string;
-    expires_at?: string;
-  }): Promise<APIKey> {
-    const response = await fetch(`${this.baseUrl}/api/keys`, {
-      method: "POST",
-      headers: this.headers,
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to create API key");
-    }
-
-    return response.json();
-  }
-
-  async listAPIKeys(): Promise<APIKey[]> {
-    const response = await fetch(`${this.baseUrl}/api/keys`, {
-      headers: this.headers
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to list API keys");
-    }
-
-    const data = await response.json();
-    return data.api_keys;
-  }
-
-  async validateKey(key: string, service: string): Promise<ValidationResult> {
-    const response = await fetch(`${this.baseUrl}/api/keys/validate`, {
-      method: "POST",
-      headers: this.headers,
-      body: JSON.stringify({ key, service })
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to validate API key");
-    }
-
-    return response.json();
-  }
-
-  async rotateKey(keyId: string, newKey: string): Promise<APIKey> {
-    const response = await fetch(`${this.baseUrl}/api/keys/${keyId}/rotate`, {
-      method: "POST",
-      headers: this.headers,
-      body: JSON.stringify({ new_key: newKey })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to rotate API key");
-    }
-
-    return response.json();
-  }
-
-  async deleteKey(keyId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/api/keys/${keyId}`, {
-      method: "DELETE",
-      headers: this.headers
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to delete API key");
-    }
-  }
-}
-
-// Usage example
-async function manageAPIKeys() {
-  const client = new TripSageAPIKeyClient("your-jwt-token");
-
-  try {
-    // List existing keys
-    const keys = await client.listAPIKeys();
-    console.log("Existing keys:", keys);
-
-    // Validate a new key
-    const validation = await client.validateKey(
-      "sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-      "openai"
-    );
-
-    if (validation.is_valid) {
-      // Create the key
-      const newKey = await client.createAPIKey({
-        name: "My OpenAI Key",
-        service: "openai",
-        key: "sk-1234567890abcdef1234567890abcdef1234567890abcdef",
-        description: "Production OpenAI key for chat features"
-      });
-      console.log("Created API key:", newKey.id);
-    } else {
-      console.error("Invalid key:", validation.message);
-    }
-  } catch (error) {
-    console.error("Error managing API keys:", error);
-  }
-}
+# Router usage
+@router.post("/api/keys", response_model=ApiKeyResponse)
+async def create_key(
+    key_data: ApiKeyCreate,
+    principal: Principal = Depends(require_principal),
+    key_service: ApiKeyServiceDep,  # Clean injection
+):
+    user_id = get_principal_id(principal)
+    return await key_service.create_key(user_id, key_data)
 ```
 
 ---
 
-## Troubleshooting
+## Implementation Details
 
-### Common Issues
+### Current Router Endpoints
 
-#### 1. API Key Validation Fails
+The API Key router is located at `tripsage/api/routers/keys.py` with these endpoints:
 
-**Symptoms:**
-- 400 Bad Request when creating keys
-- `is_valid: false` in validation responses
-
-**Solutions:**
 ```python
-# Check key format for each service
-SERVICE_KEY_PATTERNS = {
-    "openai": r"^sk-[a-zA-Z0-9]{48}$",
-    "anthropic": r"^sk-ant-[a-zA-Z0-9]+$",
-    "google": r"^AIza[a-zA-Z0-9_-]{35}$"
-}
-
-def validate_key_format(key: str, service: str) -> bool:
-    pattern = SERVICE_KEY_PATTERNS.get(service)
-    if not pattern:
-        return False
-    return bool(re.match(pattern, key))
+# Endpoint mapping
+GET    /api/keys           -> list_keys()      # List user's API keys
+POST   /api/keys           -> create_key()     # Create new API key
+DELETE /api/keys/{key_id}  -> delete_key()     # Delete API key
+POST   /api/keys/validate  -> validate_key()   # Validate API key
+POST   /api/keys/{key_id}/rotate -> rotate_key() # Rotate API key
+GET    /api/keys/metrics   -> get_metrics()    # Health metrics (admin)
+GET    /api/keys/audit     -> get_audit_log()  # Audit logs
 ```
 
-#### 2. Permission Denied Errors
+### Pydantic V2 Schemas
 
-**Symptoms:**
-- 403 Forbidden when accessing keys
-- "You do not have permission" messages
+Located at `tripsage/api/schemas/api_keys.py`:
 
-**Solutions:**
-- Verify JWT token is valid and not expired
-- Ensure you're only accessing your own keys
-- Check that the key ID exists and belongs to your user
-
-#### 3. Service Validation Timeouts
-
-**Symptoms:**
-- Slow validation responses
-- Timeout errors during key creation
-
-**Solutions:**
 ```python
-# Implement validation with timeout
-async def validate_with_timeout(key: str, service: str, timeout: int = 10):
-    try:
-        async with asyncio.timeout(timeout):
-            return await external_service_validate(key, service)
-    except asyncio.TimeoutError:
-        return ValidationResult(
+class ApiKeyCreate(BaseModel):
+    """API key creation request model."""
+    name: str = Field(min_length=1, max_length=255)
+    service: str = Field(min_length=1, max_length=255)
+    key: str
+    description: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+class ApiKeyResponse(BaseModel):
+    """API key response model."""
+    id: str
+    name: str
+    service: str
+    description: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    expires_at: Optional[datetime] = None
+    is_valid: bool = True
+    last_used: Optional[datetime] = None
+
+class ApiKeyValidateResponse(BaseModel):
+    """API key validation response model."""
+    is_valid: bool
+    service: str
+    message: str
+```
+
+### Service Validation Logic
+
+```python
+async def validate_key(
+    self, 
+    key: str, 
+    service: str, 
+    user_id: Optional[str] = None
+) -> ApiKeyValidateResponse:
+    """Validate API key with service-specific logic."""
+    
+    # Service-specific validation patterns
+    validators = {
+        "duffel": self._validate_duffel_key,
+        "google_maps": self._validate_google_maps_key,
+        "openweather": self._validate_openweather_key,
+    }
+    
+    validator = validators.get(service.lower())
+    if not validator:
+        return ApiKeyValidateResponse(
             is_valid=False,
             service=service,
-            message="Validation timeout - service may be unavailable"
+            message=f"Unsupported service: {service}"
         )
-```
+    
+    try:
+        # Use cached result if available
+        cache_key = f"api_key_validation:{service}:{hashlib.sha256(key.encode()).hexdigest()}"
+        
+        if self.cache:
+            cached_result = await self.cache.get(cache_key)
+            if cached_result:
+                return ApiKeyValidateResponse.model_validate(cached_result)
+        
+        # Perform validation
+        is_valid, message = await validator(key)
+        
+        result = ApiKeyValidateResponse(
+            is_valid=is_valid,
+            service=service,
+            message=message
+        )
+        
+        # Cache result for 5 minutes
+        if self.cache:
+            await self.cache.set(cache_key, result.model_dump(), ttl=300)
+        
+        # Log validation attempt (fire-and-forget)
+        if user_id:
+            asyncio.create_task(
+                self._log_validation_attempt(user_id, service, is_valid)
+            )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Validation failed for service {service}: {e}")
+        return ApiKeyValidateResponse(
+            is_valid=False,
+            service=service,
+            message=f"Validation error: {str(e)}"
+        )
 
-### Debug Mode
-
-Enable detailed logging for API key operations:
-
-```python
-import logging
-
-# Configure detailed logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("tripsage.api_keys")
-
-# This will show validation steps, encryption operations, and audit events
-```
-
-### Testing Endpoints
-
-```bash
-# Test key validation
-curl -X POST "https://api.tripsage.ai/api/keys/validate" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"key": "sk-test123", "service": "openai"}'
-
-# Test key creation
-curl -X POST "https://api.tripsage.ai/api/keys" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test Key",
-    "service": "openai",
-    "key": "sk-test123",
-    "description": "Testing key creation"
-  }'
-
-# List user keys
-curl -X GET "https://api.tripsage.ai/api/keys" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+async def _validate_duffel_key(self, key: str) -> tuple[bool, str]:
+    """Validate Duffel API key."""
+    try:
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Duffel-Version": "v1",
+            "Accept": "application/json"
+        }
+        
+        async with self.http_client.get(
+            "https://api.duffel.com/air/airlines",
+            headers=headers,
+            timeout=self.validation_timeout
+        ) as response:
+            if response.status == 200:
+                return True, "Valid Duffel API key"
+            elif response.status == 401:
+                return False, "Invalid or expired Duffel API key"
+            else:
+                return False, f"Duffel API returned status {response.status}"
+                
+    except asyncio.TimeoutError:
+        return False, "Duffel API validation timed out"
+    except Exception as e:
+        return False, f"Duffel API validation failed: {str(e)}"
 ```
 
 ---
 
-## Best Practices
+## Database Schema
 
-### Security Guidelines
+### Core Tables
 
-#### 1. Key Storage
-```python
-# ✅ Good: Store keys in environment variables
-import os
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+```sql
+-- API Keys table
+CREATE TABLE api_keys (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    service VARCHAR(100) NOT NULL,
+    encrypted_key TEXT NOT NULL,
+    key_hash VARCHAR(64) NOT NULL, -- SHA-256 for deduplication
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_used TIMESTAMPTZ,
+    usage_count INTEGER DEFAULT 0,
+    
+    CONSTRAINT unique_user_service_name UNIQUE(user_id, service, name),
+    CONSTRAINT unique_key_hash UNIQUE(key_hash)
+);
 
-# ❌ Bad: Hardcode keys in source code
-OPENAI_API_KEY = "sk-1234567890abcdef..."
+-- Usage logs for audit trail
+CREATE TABLE api_key_usage_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_id UUID REFERENCES api_keys(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    operation VARCHAR(50) NOT NULL, -- 'create', 'validate', 'rotate', 'delete'
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    ip_address INET,
+    user_agent TEXT
+);
+
+-- Health check results
+CREATE TABLE api_key_health_checks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    key_id UUID REFERENCES api_keys(id) ON DELETE CASCADE,
+    service VARCHAR(100) NOT NULL,
+    status VARCHAR(20) NOT NULL, -- 'healthy', 'unhealthy', 'timeout'
+    response_time_ms INTEGER,
+    error_message TEXT,
+    checked_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
-#### 2. Key Rotation
-```python
-# Implement regular key rotation
-async def rotate_keys_if_needed():
-    keys = await client.list_api_keys()
-    
-    for key in keys:
-        # Rotate keys older than 90 days
-        if days_since_creation(key["created_at"]) > 90:
-            new_key = generate_new_key_from_service(key["service"])
-            await client.rotate_key(key["id"], new_key)
-            logger.info(f"Rotated key {key['id']} for {key['service']}")
+### Indexes for Performance
+
+```sql
+-- Performance indexes
+CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
+CREATE INDEX idx_api_keys_service ON api_keys(service);
+CREATE INDEX idx_api_keys_expires_at ON api_keys(expires_at) WHERE expires_at IS NOT NULL;
+CREATE INDEX idx_api_keys_active ON api_keys(is_active) WHERE is_active = TRUE;
+
+CREATE INDEX idx_usage_logs_key_id ON api_key_usage_logs(key_id);
+CREATE INDEX idx_usage_logs_timestamp ON api_key_usage_logs(timestamp);
+CREATE INDEX idx_usage_logs_user_operation ON api_key_usage_logs(user_id, operation);
+
+CREATE INDEX idx_health_checks_key_service ON api_key_health_checks(key_id, service);
+CREATE INDEX idx_health_checks_status ON api_key_health_checks(status, checked_at);
 ```
 
-#### 3. Validation Before Storage
+---
+
+## Security Implementation
+
+### Envelope Encryption
+
 ```python
-# Always validate before creating
-async def safe_key_creation(name: str, service: str, key: str):
-    # 1. Validate format
-    if not validate_key_format(key, service):
-        raise ValueError(f"Invalid key format for {service}")
+class KeyEncryption:
+    """Envelope encryption for API keys."""
     
-    # 2. Test with service
-    validation = await client.validate_key(key, service)
-    if not validation["is_valid"]:
-        raise ValueError(f"Key validation failed: {validation['message']}")
+    def __init__(self, master_key: str):
+        self.master_key = master_key.encode()
     
-    # 3. Create key
-    return await client.create_api_key(name, service, key)
+    async def encrypt_key(self, plaintext_key: str) -> str:
+        """Encrypt API key using envelope encryption."""
+        # Generate data encryption key (DEK)
+        dek = os.urandom(32)  # 256-bit key
+        
+        # Encrypt the actual API key with DEK
+        cipher = Fernet(base64.urlsafe_b64encode(dek))
+        encrypted_key = cipher.encrypt(plaintext_key.encode())
+        
+        # Encrypt DEK with master key
+        master_cipher = Fernet(base64.urlsafe_b64encode(self.master_key[:32]))
+        encrypted_dek = master_cipher.encrypt(dek)
+        
+        # Combine encrypted DEK + encrypted key
+        envelope = {
+            "dek": base64.b64encode(encrypted_dek).decode(),
+            "key": base64.b64encode(encrypted_key).decode(),
+            "version": "v1"
+        }
+        
+        return base64.b64encode(json.dumps(envelope).encode()).decode()
+    
+    async def decrypt_key(self, encrypted_envelope: str) -> str:
+        """Decrypt API key from envelope."""
+        # Parse envelope
+        envelope_data = json.loads(base64.b64decode(encrypted_envelope))
+        
+        # Decrypt DEK with master key
+        master_cipher = Fernet(base64.urlsafe_b64encode(self.master_key[:32]))
+        encrypted_dek = base64.b64decode(envelope_data["dek"])
+        dek = master_cipher.decrypt(encrypted_dek)
+        
+        # Decrypt API key with DEK
+        cipher = Fernet(base64.urlsafe_b64encode(dek))
+        encrypted_key = base64.b64decode(envelope_data["key"])
+        plaintext_key = cipher.decrypt(encrypted_key)
+        
+        return plaintext_key.decode()
 ```
 
-### Performance Tips
+### Key Hashing for Deduplication
 
-#### 1. Batch Operations
 ```python
-# Validate multiple keys concurrently
-async def validate_multiple_keys(keys: List[Dict]):
-    tasks = []
-    for key_data in keys:
-        task = client.validate_key(key_data["key"], key_data["service"])
-        tasks.append(task)
-    
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    return results
+def generate_key_hash(self, key: str) -> str:
+    """Generate SHA-256 hash for key deduplication."""
+    return hashlib.sha256(key.encode()).hexdigest()
 ```
 
-#### 2. Caching Validation Results
+---
+
+## Performance Considerations
+
+### Caching Strategy
+
 ```python
-from functools import lru_cache
-from datetime import datetime, timedelta
+# Validation result caching (5 minutes)
+cache_key = f"api_key_validation:{service}:{key_hash}"
+await self.cache.set(cache_key, validation_result, ttl=300)
 
-# Cache validation results for short periods
-validation_cache = {}
-
-async def cached_validate_key(key: str, service: str):
-    cache_key = f"{service}:{key[:10]}..."  # Don't cache full key
-    
-    if cache_key in validation_cache:
-        cached_result, timestamp = validation_cache[cache_key]
-        if datetime.now() - timestamp < timedelta(minutes=5):
-            return cached_result
-    
-    result = await client.validate_key(key, service)
-    validation_cache[cache_key] = (result, datetime.now())
-    return result
+# Health check caching (1 hour)
+health_cache_key = f"api_key_health:{service}:{key_id}"
+await self.cache.set(health_cache_key, health_status, ttl=3600)
 ```
 
-#### 3. Error Handling Patterns
-```python
-from tenacity import retry, stop_after_attempt, wait_exponential
+### Connection Pooling
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=4, max=10)
+```python
+# HTTP client with connection pooling
+self.http_client = aiohttp.ClientSession(
+    timeout=aiohttp.ClientTimeout(total=self.validation_timeout),
+    connector=aiohttp.TCPConnector(
+        limit=100,          # Total connection pool size
+        limit_per_host=30,  # Connections per host
+        ttl_dns_cache=300,  # DNS cache TTL
+        use_dns_cache=True,
+    )
 )
-async def resilient_key_operation(operation_func, *args, **kwargs):
-    """Retry key operations with exponential backoff."""
-    try:
-        return await operation_func(*args, **kwargs)
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code in [500, 502, 503, 504]:
-            # Retry on server errors
-            raise
-        else:
-            # Don't retry on client errors
-            raise e
 ```
+
+### Database Optimization
+
+- **Atomic Transactions**: Batch related operations
+- **Prepared Statements**: Reuse query plans
+- **Connection Pooling**: Efficient connection management
+- **Selective Indexes**: Query-specific performance optimization
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+
+```python
+# tests/unit/services/test_api_key_service.py
+async def test_create_api_key():
+    """Test API key creation with atomic transaction."""
+    mock_db = Mock(spec=DatabaseService)
+    mock_cache = Mock(spec=CacheService)
+    
+    service = ApiKeyService(db=mock_db, cache=mock_cache)
+    
+    # Test data
+    user_id = "user-123"
+    key_data = ApiKeyCreate(
+        name="Test Key",
+        service="duffel",
+        key="test-api-key-123"
+    )
+    
+    # Execute
+    result = await service.create_key(user_id, key_data)
+    
+    # Assertions
+    mock_db.transaction.assert_called_once()
+    assert result.name == "Test Key"
+    assert result.service == "duffel"
+```
+
+### Integration Tests
+
+```python
+# tests/integration/test_api_key_service_integration.py
+@pytest.mark.integration
+async def test_api_key_full_workflow():
+    """Test complete API key lifecycle."""
+    async with get_database_service() as db:
+        service = ApiKeyService(db=db)
+        
+        # Create user
+        user_id = await create_test_user()
+        
+        # Create API key
+        key_data = ApiKeyCreate(
+            name="Integration Test Key",
+            service="duffel",
+            key=os.getenv("TEST_DUFFEL_API_KEY")
+        )
+        
+        created_key = await service.create_key(user_id, key_data)
+        assert created_key.id is not None
+        
+        # Validate key
+        validation = await service.validate_key(
+            key_data.key, 
+            key_data.service, 
+            user_id
+        )
+        assert validation.is_valid is True
+        
+        # List keys
+        user_keys = await service.list_user_keys(user_id)
+        assert len(user_keys) == 1
+        assert user_keys[0].id == created_key.id
+        
+        # Delete key
+        await service.delete_key(created_key.id)
+        
+        # Verify deletion
+        user_keys_after = await service.list_user_keys(user_id)
+        assert len(user_keys_after) == 0
+```
+
+### Performance Tests
+
+```python
+# tests/performance/test_api_key_performance.py
+@pytest.mark.performance
+async def test_concurrent_validations():
+    """Test concurrent API key validations."""
+    service = ApiKeyService(db=await get_database_service())
+    
+    async def validate_key_task():
+        return await service.validate_key("test-key", "duffel")
+    
+    # Run 100 concurrent validations
+    tasks = [validate_key_task() for _ in range(100)]
+    start_time = time.time()
+    
+    results = await asyncio.gather(*tasks)
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    # Performance assertions
+    assert duration < 5.0  # Should complete within 5 seconds
+    assert all(isinstance(r, ApiKeyValidateResponse) for r in results)
+```
+
+---
+
+## Monitoring & Debugging
+
+### Health Check Implementation
+
+```python
+async def check_service_health(self, service: str) -> dict:
+    """Check health of external service."""
+    health_checks = {
+        "duffel": self._check_duffel_health,
+        "google_maps": self._check_google_maps_health,
+        "openweather": self._check_openweather_health,
+    }
+    
+    checker = health_checks.get(service.lower())
+    if not checker:
+        return {"status": "unknown", "message": "Unsupported service"}
+    
+    try:
+        start_time = time.time()
+        is_healthy, message = await checker()
+        response_time = int((time.time() - start_time) * 1000)
+        
+        return {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "message": message,
+            "response_time_ms": response_time,
+            "checked_at": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Health check failed: {str(e)}",
+            "checked_at": datetime.utcnow().isoformat()
+        }
+```
+
+### Metrics Collection
+
+```python
+async def get_key_health_metrics() -> dict:
+    """Get aggregated API key health metrics."""
+    # Query health check results from last 24 hours
+    query = """
+    SELECT 
+        service,
+        status,
+        COUNT(*) as count,
+        AVG(response_time_ms) as avg_response_time,
+        MAX(response_time_ms) as max_response_time
+    FROM api_key_health_checks 
+    WHERE checked_at > NOW() - INTERVAL '24 hours'
+    GROUP BY service, status
+    ORDER BY service, status
+    """
+    
+    results = await db.fetch_all(query)
+    
+    # Aggregate metrics
+    metrics = {}
+    for row in results:
+        service = row["service"]
+        if service not in metrics:
+            metrics[service] = {"healthy": 0, "unhealthy": 0, "error": 0}
+        
+        metrics[service][row["status"]] = {
+            "count": row["count"],
+            "avg_response_time": row["avg_response_time"],
+            "max_response_time": row["max_response_time"]
+        }
+    
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "services": metrics,
+        "summary": {
+            "total_services": len(metrics),
+            "total_checks": sum(
+                sum(status["count"] for status in service.values()) 
+                for service in metrics.values()
+            )
+        }
+    }
+```
+
+### Logging Configuration
+
+```python
+# Structured logging for API key operations
+logger = logging.getLogger("tripsage.api_key_service")
+
+async def _log_operation(
+    self,
+    operation: str,
+    user_id: str,
+    key_id: Optional[str] = None,
+    service: Optional[str] = None,
+    success: bool = True,
+    error_message: Optional[str] = None
+):
+    """Log API key operation with structured data."""
+    log_data = {
+        "operation": operation,
+        "user_id": user_id,
+        "key_id": key_id,
+        "service": service,
+        "success": success,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    if error_message:
+        log_data["error_message"] = error_message
+    
+    if success:
+        logger.info(f"API key {operation} successful", extra=log_data)
+    else:
+        logger.error(f"API key {operation} failed", extra=log_data)
+```
+
+---
+
+## Development Workflow
+
+### Local Development Setup
+
+```bash
+# 1. Install dependencies
+uv install
+
+# 2. Set up environment variables
+cp tripsage/config/env_example .env
+
+# Required environment variables
+export TRIPSAGE_MASTER_SECRET_KEY="your-32-char-secret-key"
+export DUFFEL_API_KEY="your-test-duffel-key"  # For testing
+export GOOGLE_MAPS_API_KEY="your-test-maps-key"  # For testing
+
+# 3. Run database migrations
+uv run python scripts/database/run_migrations.py
+
+# 4. Run tests
+uv run pytest tests/unit/services/test_api_key_service.py -v
+uv run pytest tests/integration/test_api_key_service_integration.py -v
+
+# 5. Start development server
+uv run python -m tripsage.api.main
+```
+
+### Code Quality Checks
+
+```bash
+# Linting and formatting
+ruff check . --fix
+ruff format .
+
+# Type checking
+mypy tripsage_core/services/business/api_key_service.py
+
+# Security scanning
+bandit -r tripsage_core/services/business/api_key_service.py
+```
+
+### Testing Commands
+
+```bash
+# Unit tests only
+uv run pytest tests/unit/services/test_api_key_service.py
+
+# Integration tests (requires database)
+uv run pytest tests/integration/test_api_key_service_integration.py
+
+# Performance tests
+uv run pytest tests/performance/test_api_key_performance.py -v
+
+# Full test suite with coverage
+uv run pytest --cov=tripsage_core.services.business.api_key_service \
+  --cov-report=html tests/
+```
+
+---
+
+## Migration Notes
+
+### From Legacy Implementation
+
+The service has been simplified from the previous over-engineered version:
+
+#### Key Changes Made
+
+1. **Constructor Simplification**
+   - Removed late imports and optional dependency resolution
+   - Explicit dependency injection for better testability
+   - Clear initialization without complex setup logic
+
+2. **Atomic Operations**
+   - Database transactions ensure consistency
+   - Combined operations (create + log) in single transaction
+   - Fire-and-forget audit logging to avoid blocking
+
+3. **Error Handling**
+   - Removed complex exception masking
+   - Let ServiceError bubble up to FastAPI exception handlers
+   - Clear error messages with proper HTTP status codes
+
+4. **Performance Improvements**
+   - Connection pooling for HTTP clients
+   - Intelligent caching of validation results
+   - Optimized database queries with proper indexing
+
+#### Migration Checklist
+
+- [ ] Update dependency injection in router endpoints
+- [ ] Replace old exception handling patterns
+- [ ] Update test cases to use explicit dependencies
+- [ ] Verify database schema matches current implementation
+- [ ] Update monitoring dashboards for new metrics structure
+
+### Breaking Changes
+
+- **Constructor signature changed**: Requires explicit dependencies
+- **Exception types updated**: Uses ServiceError consistently
+- **Database schema updated**: Added new audit and health tables
+- **API responses standardized**: Consistent response models
 
 ---
 
 ## 🔗 Related Documentation
 
-### Core References
+### Internal References
 
-- **[Authentication Guide](../api/authentication.md)** - JWT token management and auth flows
-- **[REST API Endpoints](../api/rest-endpoints.md)** - Complete API reference
-- **[Security Guide](../operators/security-guide.md)** - Production security best practices
-- **[External Integrations](external-integrations.md)** - Third-party service integration patterns
+- **[API Development Guide](api-development.md)** - FastAPI patterns and best practices
+- **[Database Guide](unified-database-guide.md)** - Database connection and migration patterns
+- **[Testing Guide](testing-guide.md)** - Testing strategies and fixtures
+- **[Security Guide](../operators/security-guide.md)** - Security implementation details
 
-### Development Guides
+### External API Documentation
 
-- **[API Development](api-development.md)** - Backend development with FastAPI
-- **[Testing Guide](testing-guide.md)** - Testing API key functionality
-- **[Debugging Guide](debugging-guide.md)** - Troubleshooting API key issues
+- **[External Authentication Guide](../api/authentication.md)** - How to use API keys from client perspective
+- **[API Examples](../api/usage-examples.md)** - Code examples for API integration
 
-### Common Workflows
+### Architecture References
 
-- **New to API keys?** → Start with [Authentication Guide](../api/authentication.md#api-key-authentication)
-- **Integrating services?** → Check [External Integrations](external-integrations.md)
-- **Security concerns?** → Review [Security Guide](../operators/security-guide.md)
-- **Testing integration?** → Use [Testing Guide](testing-guide.md#testing-api-keys)
+- **[System Overview](../architecture/system-overview.md)** - High-level architecture context
+- **[Security Architecture](../architecture/security-architecture.md)** - Security design patterns
 
 ---
 
-*This documentation covers the complete API key management service functionality. For additional support or feature requests, refer to the main [Developer Documentation](README.md).*
+**Next Steps**: Review the [External Authentication Guide](../api/authentication.md) to understand the client-side usage patterns, then explore the [Testing Guide](testing-guide.md) for comprehensive testing strategies.
