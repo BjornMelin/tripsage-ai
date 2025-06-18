@@ -805,9 +805,8 @@ class TestErrorRecoveryScenarios:
 
         # Simulate one connection having issues
         connections[0].circuit_breaker.state = CircuitBreakerState.OPEN
-        connections[
-            0
-        ].circuit_breaker.last_failure_time = time.time()  # Prevent automatic recovery
+        # Prevent automatic recovery
+        connections[0].circuit_breaker.last_failure_time = time.time()
         connections[0].state = ConnectionState.ERROR
 
         # Broadcast should continue to healthy connections

@@ -266,8 +266,8 @@ class WebSocketConnection:
     async def send(self, event: Dict[str, Any]) -> bool:
         """Send event to WebSocket connection with error handling."""
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
-            # For cascade failure prevention: if connection is in ERROR state
-            # but circuit breaker is CLOSED, allow the send attempt to proceed
+            # For cascade failure prevention: if connection is in ERROR state but
+            # circuit breaker is CLOSED, allow the send attempt to proceed
             # (connection might have recovered)
             if (
                 self.state == ConnectionState.ERROR
@@ -282,11 +282,11 @@ class WebSocketConnection:
                 )
                 return False
 
-        # Check circuit breaker state - if OPEN, queue instead of dropping
-        # for recovery scenarios
+        # Check circuit breaker state - if OPEN, queue instead of dropping for
+        # recovery scenarios
         if not self.circuit_breaker.can_execute():
-            # For cascade failure prevention test: if in ERROR state with
-            # OPEN circuit breaker, fail
+            # For cascade failure prevention test: if in ERROR state with OPEN
+            # circuit breaker, fail
             if self.state == ConnectionState.ERROR:
                 logger.warning(
                     f"Cannot send to connection {self.connection_id} - "
@@ -294,8 +294,8 @@ class WebSocketConnection:
                 )
                 return False
 
-            # Circuit breaker is OPEN but connection is healthy - queue the
-            # message instead of failing
+            # Circuit breaker is OPEN but connection is healthy - queue the message
+            # instead of failing
             priority = (
                 getattr(event, "priority", 2)
                 if hasattr(event, "priority")

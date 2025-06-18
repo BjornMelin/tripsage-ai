@@ -704,8 +704,8 @@ class WebSocketManager:
     async def broadcast_to_channel(self, channel: str, event: WebSocketEvent) -> int:
         """Broadcast event to channel using integrated broadcaster."""
         if self.broadcaster:
-            # Use broadcaster for distributed broadcasting with
-            # centralized serialization
+            # Use broadcaster for distributed broadcasting with centralized
+            # serialization
             event_dict = event.to_dict()
             await self.broadcaster.broadcast_to_channel(
                 channel, event_dict, event.priority
