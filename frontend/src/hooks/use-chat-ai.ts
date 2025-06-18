@@ -3,6 +3,7 @@
 import { useApiKeyStore } from "@/stores/api-key-store";
 import { useChatStore } from "@/stores/chat-store";
 import type {
+  Attachment,
   ChatSession,
   Message,
   MessageRole,
@@ -59,13 +60,13 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Access chat store functions
   const {
     sessions,
-    activeSessionId,
-    setActiveSessionId,
+    currentSessionId,
+    setCurrentSession,
     createSession,
     addMessage,
     updateMessage,
-    setAgentStatus,
-    cancelStream,
+    updateAgentStatus,
+    stopStreaming,
   } = useChatStore();
 
   // Initialize authentication and validate API keys
@@ -115,31 +116,33 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     const existingSession = sessions.find((s) => s.id === sessionId);
 
     if (!existingSession) {
-      // Create a new session
-      const newSession: ChatSession = {
-        id: sessionId,
-        title: "New Chat",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        messages: initialMessages,
-      };
+      // Create a new session using the store method
+      const createdSessionId = createSession("New Chat");
 
-      createSession(newSession);
-
+      // Note: The onNewSession callback will be called when the session is available
+      // since sessions is a derived state that might not be immediately updated
       if (onNewSession) {
-        onNewSession(newSession);
+        // Create a temporary session object for the callback
+        const tempSession: ChatSession = {
+          id: createdSessionId,
+          title: "New Chat",
+          messages: initialMessages,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        onNewSession(tempSession);
       }
     }
 
     // Set as active session
-    if (activeSessionId !== sessionId) {
-      setActiveSessionId(sessionId);
+    if (currentSessionId !== sessionId) {
+      setCurrentSession(sessionId);
     }
   }, [
     isInitialized,
     sessions,
-    activeSessionId,
-    setActiveSessionId,
+    currentSessionId,
+    setCurrentSession,
     createSession,
     initialMessages,
     onNewSession,
@@ -275,19 +278,17 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       const retryAfter = response.headers.get("X-RateLimit-Reset");
       if (response.status === 429 && retryAfter) {
         const resetTime = new Date(Number.parseInt(retryAfter) * 1000);
-        setAgentStatus({
-          sessionId: sessionIdRef.current,
-          status: "error",
-          message: `Rate limited. Try again after ${resetTime.toLocaleTimeString()}`,
+        updateAgentStatus(sessionIdRef.current, {
+          isActive: false,
+          statusMessage: `Rate limited. Try again after ${resetTime.toLocaleTimeString()}`,
         });
         return;
       }
 
       // Set agent to processing when we get a response
-      setAgentStatus({
-        sessionId: sessionIdRef.current,
-        status: "processing",
-        message: "Processing your request...",
+      updateAgentStatus(sessionIdRef.current, {
+        isActive: true,
+        statusMessage: "Processing your request...",
       });
 
       // Handle streaming tool calls
@@ -322,24 +323,25 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     onFinish: (message) => {
       // Update message with tool call information
       if (activeToolCalls.size > 0) {
-        const toolCallsArray = Array.from(activeToolCalls.values());
-        const toolResultsArray = Array.from(toolResults.values());
+        const toolCallsArray = Array.from(activeToolCalls.values()).map((toolCall) => ({
+          ...toolCall,
+          state: toolCall.status, // Map status to state for compatibility
+        }));
+        const toolResultsArray = Array.from(toolResults.values()).map((toolResult) => ({
+          ...toolResult,
+          result: toolResult.result || null, // Ensure result is present
+        }));
 
-        updateMessage({
-          sessionId: sessionIdRef.current,
-          messageId: message.id,
-          updates: {
-            toolCalls: toolCallsArray,
-            toolResults: toolResultsArray,
-          },
+        updateMessage(sessionIdRef.current, message.id, {
+          toolCalls: toolCallsArray as ToolCall[],
+          toolResults: toolResultsArray as ToolResult[],
         });
       }
 
       // Set agent to idle when message is complete
-      setAgentStatus({
-        sessionId: sessionIdRef.current,
-        status: "idle",
-        message: "",
+      updateAgentStatus(sessionIdRef.current, {
+        isActive: false,
+        statusMessage: "",
       });
 
       // Clear active tool calls for next message
@@ -386,10 +388,9 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         }
       }
 
-      setAgentStatus({
-        sessionId: sessionIdRef.current,
-        status: errorStatus as any,
-        message: errorMessage,
+      updateAgentStatus(sessionIdRef.current, {
+        isActive: false,
+        statusMessage: errorMessage,
       });
     },
   });
@@ -407,33 +408,24 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     if (existingMessage) {
       // Update existing message
       if (existingMessage.content !== lastMessage.content) {
-        updateMessage({
-          sessionId: sessionIdRef.current,
-          messageId: lastMessage.id,
-          updates: {
-            content: lastMessage.content,
-          },
+        updateMessage(sessionIdRef.current, lastMessage.id, {
+          content: lastMessage.content,
         });
       }
     } else {
       // Add new message
-      const role = lastMessage.role.toUpperCase() as MessageRole;
+      const role = lastMessage.role as MessageRole;
 
-      addMessage({
-        sessionId: sessionIdRef.current,
-        message: {
-          id: lastMessage.id,
-          role,
-          content: lastMessage.content,
-          createdAt: new Date(),
-        },
+      addMessage(sessionIdRef.current, {
+        role,
+        content: lastMessage.content,
       });
     }
   }, [aiSdkMessages, sessions, addMessage, updateMessage]);
 
   // Handle sending a user message
   const sendMessage = useCallback(
-    (content: string, attachments: string[] = []) => {
+    (content: string, attachments: Attachment[] = []) => {
       // Check if initialized and authenticated
       if (!isInitialized || !isAuthenticated) {
         setAuthError("Please authenticate before sending messages");
@@ -447,25 +439,19 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       }
 
       // Set agent status to thinking
-      setAgentStatus({
-        sessionId: sessionIdRef.current,
-        status: "thinking",
-        message: "Thinking...",
+      updateAgentStatus(sessionIdRef.current, {
+        isActive: true,
+        statusMessage: "Thinking...",
       });
 
       // Create a unique ID for this message
       const messageId = uuidv4();
 
       // Add the user message to our store
-      addMessage({
-        sessionId: sessionIdRef.current,
-        message: {
-          id: messageId,
-          role: "USER",
-          content,
-          attachments,
-          createdAt: new Date(),
-        },
+      addMessage(sessionIdRef.current, {
+        role: "user",
+        content,
+        attachments,
       });
 
       // Submit the message through AI SDK
@@ -487,7 +473,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     [
       addMessage,
       handleSubmit,
-      setAgentStatus,
+      updateAgentStatus,
       isInitialized,
       isAuthenticated,
       isApiKeyValid,
@@ -497,13 +483,12 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Handle stopping the generation
   const stopGeneration = useCallback(() => {
     stop();
-    cancelStream(sessionIdRef.current);
-    setAgentStatus({
-      sessionId: sessionIdRef.current,
-      status: "idle",
-      message: "",
+    stopStreaming();
+    updateAgentStatus(sessionIdRef.current, {
+      isActive: false,
+      statusMessage: "",
     });
-  }, [stop, cancelStream, setAgentStatus]);
+  }, [stop, stopStreaming, updateAgentStatus]);
 
   return {
     // Chat state

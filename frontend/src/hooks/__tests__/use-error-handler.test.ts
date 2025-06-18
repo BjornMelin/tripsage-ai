@@ -88,8 +88,9 @@ describe("useErrorHandler", () => {
     });
 
     it("should log error in development mode", async () => {
+      // Mock the environment check
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "development";
+      (process.env as any).NODE_ENV = "development";
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -105,12 +106,14 @@ describe("useErrorHandler", () => {
         additionalInfo
       );
 
-      process.env.NODE_ENV = originalEnv;
+      // Restore original env
+      (process.env as any).NODE_ENV = originalEnv;
     });
 
     it("should not log error in production mode", async () => {
+      // Mock the environment check
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "production";
+      (process.env as any).NODE_ENV = "production";
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -121,7 +124,8 @@ describe("useErrorHandler", () => {
 
       expect(consoleErrorSpy).not.toHaveBeenCalled();
 
-      process.env.NODE_ENV = originalEnv;
+      // Restore original env
+      (process.env as any).NODE_ENV = originalEnv;
     });
 
     it("should generate session ID when not present", async () => {
@@ -180,11 +184,11 @@ describe("useErrorHandler", () => {
       );
 
       // Cleanup
-      delete (window as any).__USER_STORE__;
+      (window as any).__USER_STORE__ = undefined;
     });
 
     it("should handle missing user store gracefully", async () => {
-      delete (window as any).__USER_STORE__;
+      (window as any).__USER_STORE__ = undefined;
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -322,8 +326,14 @@ describe("useErrorHandler", () => {
     });
 
     it("should handle window access errors gracefully", async () => {
-      const originalWindow = global.window;
-      delete (global as any).window;
+      // Mock window.__USER_STORE__ to throw error
+      const originalUserStore = window.__USER_STORE__;
+      Object.defineProperty(window, "__USER_STORE__", {
+        get: () => {
+          throw new Error("Window access error");
+        },
+        configurable: true,
+      });
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -333,8 +343,19 @@ describe("useErrorHandler", () => {
       });
 
       expect(errorService.createErrorReport).toHaveBeenCalled();
+      expect(errorService.createErrorReport).toHaveBeenCalledWith(
+        testError,
+        undefined,
+        expect.not.objectContaining({
+          userId: expect.anything(),
+        })
+      );
 
-      global.window = originalWindow;
+      // Restore original
+      Object.defineProperty(window, "__USER_STORE__", {
+        value: originalUserStore,
+        configurable: true,
+      });
     });
   });
 });

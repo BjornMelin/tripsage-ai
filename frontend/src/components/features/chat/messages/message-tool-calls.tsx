@@ -165,11 +165,9 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
     // Simulate execution delay
     setTimeout(() => {
       setLocalStatus("completed");
-      addToolResult({
-        sessionId: toolCall.sessionId!,
-        messageId: toolCall.messageId!,
-        callId: toolCall.id,
-        result: { success: true, data: "Tool action completed successfully" },
+      addToolResult(toolCall.sessionId!, toolCall.messageId!, toolCall.id, {
+        success: true,
+        data: "Tool action completed successfully",
       });
     }, 1500);
   };

@@ -151,7 +151,14 @@ function MessageInput({
           "h-[44px] flex items-center justify-center"
         )}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          role="img"
+          aria-label="Send message"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -246,9 +253,9 @@ export function ChatInterface({
             <div className="bg-muted border rounded-lg px-4 py-3 text-sm">
               <div className="flex items-center gap-2">
                 <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]" />
+                  <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]" />
+                  <div className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" />
                 </div>
                 <span className="text-muted-foreground">AI is typing...</span>
               </div>

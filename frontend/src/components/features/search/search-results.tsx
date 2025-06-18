@@ -17,7 +17,7 @@ interface SearchResultsProps {
   type?: SearchType;
   results: SearchResultsType | Flight[] | Accommodation[] | Activity[];
   loading?: boolean;
-  onFilter?: (filters: Record<string, any>) => void;
+  onFilter?: (filters: Record<string, unknown>) => void;
   onSort?: (sortBy: string, direction: "asc" | "desc") => void;
   onSelectResult?: (result: SearchResult) => void;
 }
@@ -157,7 +157,7 @@ export function SearchResults({
 
         {loading ? (
           <div className="py-8 flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
         ) : resultsArray.length === 0 ? (
           <div className="py-8 text-center">
@@ -336,7 +336,7 @@ function AccommodationResultCard({
               <div className="flex flex-wrap gap-1 mb-2">
                 {accommodation.amenities.slice(0, 3).map((amenity, index) => (
                   <span
-                    key={index}
+                    key={`amenity-${amenity}-${index}`}
                     className="text-xs bg-muted px-2 py-0.5 rounded-full"
                   >
                     {amenity}
@@ -369,7 +369,7 @@ function AccommodationResultCard({
               <div className="flex flex-wrap gap-1 mb-2">
                 {accommodation.amenities.slice(0, 2).map((amenity, index) => (
                   <span
-                    key={index}
+                    key={`amenity-${amenity}-${index}`}
                     className="text-xs bg-muted px-2 py-0.5 rounded-full"
                   >
                     {amenity}

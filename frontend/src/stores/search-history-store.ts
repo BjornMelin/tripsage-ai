@@ -343,7 +343,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
           const newSearch: SearchHistoryItem = {
             id: generateId(),
             searchType,
-            params,
+            params: params as Record<string, unknown>,
             timestamp,
             ...metadata,
           };
@@ -409,7 +409,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               name,
               description: options.description,
               searchType,
-              params,
+              params: params as Record<string, unknown>,
               tags: options.tags || [],
               isPublic: options.isPublic || false,
               isFavorite: options.isFavorite || false,
@@ -430,9 +430,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               }));
 
               return searchId;
-            } else {
-              throw new Error("Invalid saved search data");
             }
+            throw new Error("Invalid saved search data");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to save search";
@@ -569,9 +568,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               }));
 
               return collectionId;
-            } else {
-              throw new Error("Invalid collection data");
             }
+            throw new Error("Invalid collection data");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to create collection";
@@ -672,7 +670,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               id: quickSearchId,
               label,
               searchType,
-              params,
+              params: params as Record<string, unknown>,
               icon: options.icon,
               color: options.color,
               sortOrder: options.sortOrder || get().quickSearches.length,
@@ -687,9 +685,8 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               }));
 
               return quickSearchId;
-            } else {
-              throw new Error("Invalid quick search data");
             }
+            throw new Error("Invalid quick search data");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Failed to create quick search";
@@ -842,14 +839,13 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
               const updatedTerms = [...state.popularSearchTerms];
               updatedTerms[existingIndex].count += 1;
               return { popularSearchTerms: updatedTerms };
-            } else {
-              return {
-                popularSearchTerms: [
-                  ...state.popularSearchTerms,
-                  { term, count: 1, searchType },
-                ].slice(0, 200), // Keep top 200 terms
-              };
             }
+            return {
+              popularSearchTerms: [
+                ...state.popularSearchTerms,
+                { term, count: 1, searchType },
+              ].slice(0, 200), // Keep top 200 terms
+            };
           });
         },
 
@@ -881,7 +877,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             if (importData.savedSearches) {
               const validatedSearches = importData.savedSearches.filter(
-                (search: any) => {
+                (search: unknown) => {
                   const result = SavedSearchSchema.safeParse(search);
                   return result.success;
                 }
@@ -894,7 +890,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             if (importData.searchCollections) {
               const validatedCollections = importData.searchCollections.filter(
-                (collection: any) => {
+                (collection: unknown) => {
                   const result = SearchCollectionSchema.safeParse(collection);
                   return result.success;
                 }
@@ -910,7 +906,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             if (importData.quickSearches) {
               const validatedQuickSearches = importData.quickSearches.filter(
-                (quickSearch: any) => {
+                (quickSearch: unknown) => {
                   const result = QuickSearchSchema.safeParse(quickSearch);
                   return result.success;
                 }
@@ -966,8 +962,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
             filtered = filtered.filter(
               (search) =>
                 search.name.toLowerCase().includes(queryLower) ||
-                (search.description &&
-                  search.description.toLowerCase().includes(queryLower)) ||
+                search.description?.toLowerCase().includes(queryLower) ||
                 search.tags.some((tag) => tag.toLowerCase().includes(queryLower))
             );
           }
@@ -980,7 +975,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
           if (filters.tags && filters.tags.length > 0) {
             filtered = filtered.filter((search) =>
-              filters.tags!.some((tag) => search.tags.includes(tag))
+              filters.tags?.some((tag) => search.tags.includes(tag))
             );
           }
 

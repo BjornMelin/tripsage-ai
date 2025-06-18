@@ -1,14 +1,24 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Destination, type Trip, useTripStore } from "../trip-store";
+import { createTripStoreMockClient, resetTripStoreMockData } from "@/test/trip-store-test-helpers";
 
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({
   setTimeout: vi.fn((fn) => fn()),
 }));
 
+// Mock the Supabase client for trip store
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: vi.fn(() => createTripStoreMockClient()),
+}));
+
 describe("Trip Store", () => {
   beforeEach(() => {
+    // Reset mock data
+    resetTripStoreMockData();
+    
+    // Reset store state
     act(() => {
       useTripStore.setState({
         trips: [],
@@ -183,7 +193,8 @@ describe("Trip Store", () => {
         await result.current.createTrip({ name: "Current Trip" });
       });
 
-      const tripId = result.current.currentTrip!.id;
+      const tripId = result.current.currentTrip?.id;
+      if (!tripId) throw new Error("No current trip");
 
       // Update the trip
       await act(async () => {
@@ -254,7 +265,8 @@ describe("Trip Store", () => {
         await result.current.createTrip({ name: "Current Trip" });
       });
 
-      const currentTripId = result.current.currentTrip!.id;
+      const currentTripId = result.current.currentTrip?.id;
+      if (!currentTripId) throw new Error("No current trip");
 
       // Delete the current trip
       await act(async () => {
@@ -273,7 +285,8 @@ describe("Trip Store", () => {
         await result.current.createTrip({ name: "Trip 1" });
       });
 
-      const trip1Id = result.current.currentTrip!.id;
+      const trip1Id = result.current.currentTrip?.id;
+      if (!trip1Id) throw new Error("No current trip");
 
       await act(async () => {
         await result.current.createTrip({ name: "Trip 2" });

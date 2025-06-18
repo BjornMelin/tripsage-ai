@@ -1,6 +1,6 @@
 import * as apiHooks from "@/hooks/use-api-keys";
 import { useApiKeyStore } from "@/stores/api-key-store";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyForm } from "../api-key-form";
@@ -37,16 +37,7 @@ describe("API Key Management Components", () => {
 
   describe("ApiKeyInput Component", () => {
     it("renders correctly with default props", () => {
-      render(
-        <ApiKeyInput
-          value=""
-          onChange={() => {}}
-          onBlur={() => {}}
-          isVisible={false}
-          onVisibilityToggle={() => {}}
-          error=""
-        />
-      );
+      renderWithProviders(<ApiKeyInput value="" onChange={() => {}} onBlur={() => {}} error="" />);
 
       expect(screen.getByPlaceholderText("Enter API key")).toBeInTheDocument();
       expect(
@@ -55,36 +46,34 @@ describe("API Key Management Components", () => {
     });
 
     it("toggles visibility when button is clicked", async () => {
-      const mockToggle = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithProviders(
         <ApiKeyInput
           value="test-api-key"
           onChange={() => {}}
           onBlur={() => {}}
-          isVisible={false}
-          onVisibilityToggle={mockToggle}
           error=""
         />
       );
 
+      const input = screen.getByDisplayValue("test-api-key");
+      expect(input).toHaveAttribute("type", "password");
+
       const toggleButton = screen.getByRole("button", {
-        name: /toggle visibility/i,
+        name: /show api key/i,
       });
       await user.click(toggleButton);
 
-      expect(mockToggle).toHaveBeenCalledTimes(1);
+      expect(input).toHaveAttribute("type", "text");
     });
 
     it("displays error message when provided", () => {
-      render(
+      renderWithProviders(
         <ApiKeyInput
           value=""
           onChange={() => {}}
           onBlur={() => {}}
-          isVisible={false}
-          onVisibilityToggle={() => {}}
           error="API key is required"
         />
       );
@@ -97,7 +86,7 @@ describe("API Key Management Components", () => {
     const mockServices = ["google-maps", "openai", "weather"];
 
     it("renders with provided services", () => {
-      render(
+      renderWithProviders(
         <ServiceSelector
           services={mockServices}
           selectedService=""
@@ -112,7 +101,7 @@ describe("API Key Management Components", () => {
       const mockOnChange = vi.fn();
       const user = userEvent.setup();
 
-      render(
+      renderWithProviders(
         <ServiceSelector
           services={mockServices}
           selectedService=""
@@ -135,26 +124,26 @@ describe("API Key Management Components", () => {
   describe("ApiKeyForm Component", () => {
     beforeEach(() => {
       // Mock store
-      (useApiKeyStore as any).mockReturnValue({
+      vi.mocked(useApiKeyStore).mockReturnValue({
         supportedServices: ["google-maps", "openai"],
         selectedService: null,
         setSelectedService: vi.fn(),
       });
 
       // Mock API hooks
-      (apiHooks.useValidateApiKey as any).mockReturnValue({
+      vi.mocked(apiHooks.useValidateApiKey).mockReturnValue({
         mutate: vi.fn(),
         isPending: false,
       });
 
-      (apiHooks.useAddApiKey as any).mockReturnValue({
+      vi.mocked(apiHooks.useAddApiKey).mockReturnValue({
         mutate: vi.fn(),
         isPending: false,
       });
     });
 
     it("renders the form correctly", () => {
-      render(<ApiKeyForm />);
+      renderWithProviders(<ApiKeyForm />);
 
       expect(screen.getByText("Service")).toBeInTheDocument();
       expect(screen.getByText("API Key")).toBeInTheDocument();
@@ -163,13 +152,13 @@ describe("API Key Management Components", () => {
 
     it("submits the form with valid data", async () => {
       const validateMock = vi.fn();
-      (apiHooks.useValidateApiKey as any).mockReturnValue({
+      vi.mocked(apiHooks.useValidateApiKey).mockReturnValue({
         mutate: validateMock,
         isPending: false,
       });
 
       const user = userEvent.setup();
-      render(<ApiKeyForm />);
+      renderWithProviders(<ApiKeyForm />);
 
       // Fill in the form
       // Note: In a real test, we would properly simulate the service selection
@@ -190,7 +179,7 @@ describe("API Key Management Components", () => {
 
   describe("ApiKeyList Component", () => {
     beforeEach(() => {
-      (useApiKeyStore as any).mockReturnValue({
+      vi.mocked(useApiKeyStore).mockReturnValue({
         keys: {
           "google-maps": {
             service: "google-maps",
@@ -208,19 +197,19 @@ describe("API Key Management Components", () => {
         },
       });
 
-      (apiHooks.useDeleteApiKey as any).mockReturnValue({
+      vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue({
         mutate: vi.fn(),
         isPending: false,
       });
 
-      (apiHooks.useValidateApiKey as any).mockReturnValue({
+      vi.mocked(apiHooks.useValidateApiKey).mockReturnValue({
         mutate: vi.fn(),
         isPending: false,
       });
     });
 
     it("renders the list of API keys", () => {
-      render(<ApiKeyList />);
+      renderWithProviders(<ApiKeyList />);
 
       expect(screen.getByText("google-maps")).toBeInTheDocument();
       expect(screen.getByText("openai")).toBeInTheDocument();
@@ -230,13 +219,13 @@ describe("API Key Management Components", () => {
 
     it("calls delete function when remove is confirmed", async () => {
       const deleteMock = vi.fn();
-      (apiHooks.useDeleteApiKey as any).mockReturnValue({
+      vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue({
         mutate: deleteMock,
         isPending: false,
       });
 
       const user = userEvent.setup();
-      render(<ApiKeyList />);
+      renderWithProviders(<ApiKeyList />);
 
       // Click the first remove button
       const removeButtons = screen.getAllByText("Remove");
@@ -252,7 +241,7 @@ describe("API Key Management Components", () => {
 
   describe("ApiKeySettings Component", () => {
     beforeEach(() => {
-      (apiHooks.useApiKeys as any).mockReturnValue({
+      vi.mocked(apiHooks.useApiKeys).mockReturnValue({
         isLoading: false,
         isError: false,
         error: null,
@@ -261,35 +250,35 @@ describe("API Key Management Components", () => {
     });
 
     it("renders tabs and content", () => {
-      render(<ApiKeySettings />);
+      renderWithProviders(<ApiKeySettings />);
 
       expect(screen.getByText("Your API Keys")).toBeInTheDocument();
       expect(screen.getByText("Add New Key")).toBeInTheDocument();
     });
 
     it("shows loading state when loading", () => {
-      (apiHooks.useApiKeys as any).mockReturnValue({
+      vi.mocked(apiHooks.useApiKeys).mockReturnValue({
         isLoading: true,
         isError: false,
         error: null,
         refetch: vi.fn(),
       });
 
-      render(<ApiKeySettings />);
+      renderWithProviders(<ApiKeySettings />);
 
       // Loading indicator should be visible
       expect(screen.getByRole("status")).toBeInTheDocument();
     });
 
     it("shows error state when error occurs", () => {
-      (apiHooks.useApiKeys as any).mockReturnValue({
+      vi.mocked(apiHooks.useApiKeys).mockReturnValue({
         isLoading: false,
         isError: true,
         error: new Error("Failed to load API keys"),
         refetch: vi.fn(),
       });
 
-      render(<ApiKeySettings />);
+      renderWithProviders(<ApiKeySettings />);
 
       expect(screen.getByText("Error Loading API Keys")).toBeInTheDocument();
       expect(screen.getByText("Failed to load API keys")).toBeInTheDocument();

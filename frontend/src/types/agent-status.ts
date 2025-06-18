@@ -30,14 +30,14 @@ export interface Agent {
   tasks: AgentTask[];
   createdAt: string;
   updatedAt: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AgentActivity {
   id: string;
   agentId: string;
   action: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: string;
 }
 

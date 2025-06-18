@@ -13,6 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
+import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { useBudgetStore } from "@/stores/budget-store";
 import { useDealsStore } from "@/stores/deals-store";
 import {
@@ -26,110 +27,12 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-interface TripSuggestion {
-  id: string;
-  title: string;
-  destination: string;
-  description: string;
-  imageUrl?: string;
-  estimatedPrice: number;
-  currency: string;
-  duration: number; // days
-  rating: number;
-  category: "adventure" | "relaxation" | "culture" | "nature" | "city" | "beach";
-  bestTimeToVisit: string;
-  highlights: string[];
-  difficulty?: "easy" | "moderate" | "challenging";
-  trending?: boolean;
-  seasonal?: boolean;
-}
-
 interface TripSuggestionsProps {
   limit?: number;
   showEmpty?: boolean;
   userId?: string;
   showMemoryBased?: boolean;
 }
-
-const mockSuggestions: TripSuggestion[] = [
-  {
-    id: "suggestion-1",
-    title: "Tokyo Cherry Blossom Adventure",
-    destination: "Tokyo, Japan",
-    description:
-      "Experience the magic of cherry blossom season in Japan's vibrant capital city.",
-    estimatedPrice: 2800,
-    currency: "USD",
-    duration: 7,
-    rating: 4.8,
-    category: "culture",
-    bestTimeToVisit: "March - May",
-    highlights: ["Cherry Blossoms", "Temples", "Street Food", "Modern Culture"],
-    trending: true,
-    seasonal: true,
-  },
-  {
-    id: "suggestion-2",
-    title: "Bali Tropical Retreat",
-    destination: "Bali, Indonesia",
-    description:
-      "Relax on pristine beaches and explore ancient temples in this tropical paradise.",
-    estimatedPrice: 1500,
-    currency: "USD",
-    duration: 10,
-    rating: 4.6,
-    category: "relaxation",
-    bestTimeToVisit: "April - October",
-    highlights: ["Beaches", "Temples", "Rice Terraces", "Wellness"],
-    difficulty: "easy",
-  },
-  {
-    id: "suggestion-3",
-    title: "Swiss Alps Hiking Experience",
-    destination: "Interlaken, Switzerland",
-    description:
-      "Challenge yourself with breathtaking alpine hikes and stunning mountain views.",
-    estimatedPrice: 3200,
-    currency: "USD",
-    duration: 5,
-    rating: 4.9,
-    category: "adventure",
-    bestTimeToVisit: "June - September",
-    highlights: ["Mountain Hiking", "Alpine Lakes", "Cable Cars", "Local Cuisine"],
-    difficulty: "challenging",
-  },
-  {
-    id: "suggestion-4",
-    title: "Santorini Sunset Romance",
-    destination: "Santorini, Greece",
-    description:
-      "Watch spectacular sunsets from clifftop villages in this iconic Greek island.",
-    estimatedPrice: 2100,
-    currency: "USD",
-    duration: 6,
-    rating: 4.7,
-    category: "relaxation",
-    bestTimeToVisit: "April - October",
-    highlights: ["Sunset Views", "White Architecture", "Wine Tasting", "Beaches"],
-    difficulty: "easy",
-  },
-  {
-    id: "suggestion-5",
-    title: "Iceland Northern Lights",
-    destination: "Reykjavik, Iceland",
-    description:
-      "Chase the aurora borealis and explore dramatic landscapes of fire and ice.",
-    estimatedPrice: 2500,
-    currency: "USD",
-    duration: 8,
-    rating: 4.5,
-    category: "nature",
-    bestTimeToVisit: "September - March",
-    highlights: ["Northern Lights", "Geysers", "Waterfalls", "Blue Lagoon"],
-    seasonal: true,
-    difficulty: "moderate",
-  },
-];
 
 function SuggestionCardSkeleton() {
   return (
@@ -224,7 +127,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
             <span>{suggestion.rating}</span>
           </div>
           <div className="text-lg font-semibold text-primary">
-            {formatPrice(suggestion.estimatedPrice, suggestion.currency)}
+            {formatPrice(suggestion.estimated_price, suggestion.currency)}
           </div>
         </div>
       </div>
@@ -253,7 +156,11 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
 
       <div className="flex flex-wrap gap-1 mb-3">
         {suggestion.highlights.slice(0, 3).map((highlight, index) => (
-          <Badge key={index} variant="outline" className="text-xs">
+          <Badge
+            key={`highlight-${highlight}-${index}`}
+            variant="outline"
+            className="text-xs"
+          >
             {highlight}
           </Badge>
         ))}
@@ -266,7 +173,7 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <span className="text-xs text-muted-foreground">
-          Best time: {suggestion.bestTimeToVisit}
+          Best time: {suggestion.best_time_to_visit}
         </span>
         <Button size="sm" variant="outline" asChild>
           <Link href={`/dashboard/trips/create?suggestion=${suggestion.id}`}>
@@ -300,8 +207,13 @@ export function TripSuggestions({
   userId,
   showMemoryBased = true,
 }: TripSuggestionsProps) {
-  const { budget } = useBudgetStore();
-  const isLoading = false; // Mock loading state
+  const { activeBudget } = useBudgetStore();
+
+  // Use React Query hook to fetch trip suggestions
+  const { data: apiSuggestions, isLoading } = useTripSuggestions({
+    limit: limit + 2, // Get extra in case we filter some out
+    budget_max: activeBudget?.totalAmount,
+  });
 
   // Memory-based recommendations
   const { data: memoryContext, isLoading: memoryLoading } = useMemoryContext(
@@ -331,13 +243,13 @@ export function TripSuggestions({
           title: `Return to ${dest}`,
           destination: dest,
           description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
-          estimatedPrice: budgetPatterns?.averageSpending?.accommodation || 2000,
+          estimated_price: budgetPatterns?.averageSpending?.accommodation || 2000,
           currency: "USD",
           duration: 7,
           rating: 4.7,
           category:
             userPreferences.travel_style === "luxury" ? "relaxation" : "culture",
-          bestTimeToVisit: "Year-round",
+          best_time_to_visit: "Year-round",
           highlights: userPreferences.activities?.slice(0, 3) || ["Sightseeing"],
           trending: true,
         });
@@ -353,12 +265,12 @@ export function TripSuggestions({
             title: rec.recommendation,
             destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
             description: rec.reasoning,
-            estimatedPrice: budgetPatterns?.averageSpending?.total || 2500,
+            estimated_price: budgetPatterns?.averageSpending?.total || 2500,
             currency: "USD",
             duration: 5,
             rating: 4.6,
             category: "adventure",
-            bestTimeToVisit: "Spring/Fall",
+            best_time_to_visit: "Spring/Fall",
             highlights: ["AI Recommended", "Personalized"],
             trending: true,
           });
@@ -371,16 +283,11 @@ export function TripSuggestions({
 
   const memoryBasedSuggestions = generateMemoryBasedSuggestions();
 
-  // Combine memory-based and regular suggestions
-  const allSuggestions = [...memoryBasedSuggestions, ...mockSuggestions];
+  // Combine memory-based and API suggestions
+  const allSuggestions = [...memoryBasedSuggestions, ...(apiSuggestions || [])];
 
-  // Filter suggestions based on budget if available
-  const filteredSuggestions = allSuggestions
-    .filter((suggestion) => {
-      if (!budget?.totalBudget) return true;
-      return suggestion.estimatedPrice <= budget.totalBudget;
-    })
-    .slice(0, limit);
+  // Limit the number of suggestions
+  const filteredSuggestions = allSuggestions.slice(0, limit);
 
   if (isLoading) {
     return (
@@ -391,7 +298,7 @@ export function TripSuggestions({
         </CardHeader>
         <CardContent className="space-y-4">
           {Array.from({ length: 2 }).map((_, i) => (
-            <SuggestionCardSkeleton key={i} />
+            <SuggestionCardSkeleton key={`skeleton-${i}`} />
           ))}
         </CardContent>
         <CardFooter>

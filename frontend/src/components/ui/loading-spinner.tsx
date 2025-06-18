@@ -30,7 +30,13 @@ const spinnerVariants = cva("animate-spin", {
 });
 
 export interface LoadingSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends Omit<React.HTMLAttributes<HTMLDivElement>, "color">,
+    VariantProps<typeof spinnerVariants> {
+  variant?: "default" | "dots" | "bars" | "pulse";
+}
+
+export interface SVGSpinnerProps
+  extends Omit<React.SVGAttributes<SVGSVGElement>, "color">,
     VariantProps<typeof spinnerVariants> {
   variant?: "default" | "dots" | "bars" | "pulse";
 }
@@ -38,16 +44,14 @@ export interface LoadingSpinnerProps
 /**
  * Default spinning circle loader
  */
-const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
-  ({ size, color, className, ...props }, ref) => (
+const DefaultSpinner = ({ size, color, className }: LoadingSpinnerProps) => (
+  <div className={cn(spinnerVariants({ size, color }), className)}>
     <svg
-      ref={ref}
-      className={cn(spinnerVariants({ size, color }), className)}
+      className="w-full h-full"
       fill="none"
       viewBox="0 0 24 24"
       role="status"
       aria-label="Loading"
-      {...props}
     >
       <circle
         className="opacity-25"
@@ -63,7 +67,7 @@ const DefaultSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
         d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
       />
     </svg>
-  )
+  </div>
 );
 
 DefaultSpinner.displayName = "DefaultSpinner";
@@ -92,7 +96,7 @@ const DotsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       >
         {[0, 1, 2].map((index) => (
           <div
-            key={index}
+            key={`dot-${index}`}
             className={cn(
               "animate-pulse rounded-full bg-current dots-spinner",
               dotSize,
@@ -135,7 +139,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       >
         {[0, 1, 2, 3, 4].map((index) => (
           <div
-            key={index}
+            key={`bar-${index}`}
             className={cn(
               "animate-pulse rounded-full bg-current bars-spinner",
               barSize,
@@ -200,7 +204,7 @@ const LoadingSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
       case "pulse":
         return <PulseSpinner ref={ref} {...props} />;
       default:
-        return <DefaultSpinner ref={ref} {...props} />;
+        return <DefaultSpinner {...props} />;
     }
   }
 );

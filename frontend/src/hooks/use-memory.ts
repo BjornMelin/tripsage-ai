@@ -23,7 +23,7 @@ export function useMemoryContext(userId: string, enabled = true) {
     {
       enabled: enabled && !!userId,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      cacheTime: 10 * 60 * 1000, // 10 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
     }
   );
 }
@@ -56,7 +56,7 @@ export function useMemoryInsights(userId: string, enabled = true) {
     {
       enabled: enabled && !!userId,
       staleTime: 10 * 60 * 1000, // 10 minutes
-      cacheTime: 30 * 60 * 1000, // 30 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes
     }
   );
 }
@@ -74,12 +74,7 @@ export function useAddConversationMemory() {
  * Hook for deleting user memories
  */
 export function useDeleteUserMemories(userId: string) {
-  return useApiMutation<DeleteUserMemoriesResponse, void>(
-    `/api/memory/user/${userId}`,
-    {
-      method: "DELETE",
-    }
-  );
+  return useApiMutation<DeleteUserMemoriesResponse, void>(`/api/memory/user/${userId}`);
 }
 
 /**
@@ -97,7 +92,14 @@ export function useMemoryStats(userId: string, enabled = true) {
     {
       enabled: enabled && !!userId,
       staleTime: 15 * 60 * 1000, // 15 minutes
-      cacheTime: 30 * 60 * 1000, // 30 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes
     }
   );
+}
+
+/**
+ * Hook for storing conversation memory (alias for backwards compatibility)
+ */
+export function useStoreConversation() {
+  return useAddConversationMemory();
 }

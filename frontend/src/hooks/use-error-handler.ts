@@ -3,12 +3,23 @@
 import { errorService } from "@/lib/error-service";
 import { useCallback } from "react";
 
+// Extend Window interface for custom properties
+declare global {
+  interface Window {
+    __USER_STORE__?: {
+      user?: {
+        id?: string;
+      };
+    };
+  }
+}
+
 /**
  * Hook for handling errors in components
  */
 export function useErrorHandler() {
   const handleError = useCallback(
-    (error: Error, additionalInfo?: Record<string, any>) => {
+    (error: Error, additionalInfo?: Record<string, unknown>) => {
       // Create error report
       const errorReport = errorService.createErrorReport(error, undefined, {
         userId: getUserId(),
@@ -50,7 +61,7 @@ export function useErrorHandler() {
 
 function getUserId(): string | undefined {
   try {
-    const userStore = (window as any).__USER_STORE__;
+    const userStore = window.__USER_STORE__;
     return userStore?.user?.id;
   } catch {
     return undefined;

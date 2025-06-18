@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/contexts/auth-context";
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,10 +23,9 @@ interface ResetPasswordFormProps {
 
 export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   const router = useRouter();
+  const { resetPassword, isLoading, error, clearError } = useAuth();
   const [email, setEmail] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
 
   // Handle form submission
@@ -33,35 +33,19 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
     e.preventDefault();
 
     if (!email.trim()) {
-      setError("Email address is required");
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    setMessage(null);
-
     try {
-      // Mock reset password functionality for now
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await resetPassword(email);
 
-      // Simulate success
-      setIsSuccess(true);
-      setMessage("Password reset instructions have been sent to your email");
-
-      // Log mock email for development
-      if (process.env.NODE_ENV === "development") {
-        console.log("Mock Password Reset Email:", {
-          to: email,
-          subject: "Password Reset Instructions",
-          message:
-            "Click the link below to reset your password: http://localhost:3000/reset-password/mock-token",
-        });
+      if (!error) {
+        setIsSuccess(true);
+        setMessage("Password reset instructions have been sent to your email");
       }
     } catch (err) {
-      setError("Failed to send reset instructions. Please try again.");
-    } finally {
-      setIsLoading(false);
+      // Error will be handled by the auth context
+      console.error("Reset password error:", err);
     }
   };
 
@@ -112,7 +96,13 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 disabled={isLoading}
                 className="w-full"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear error when user starts typing
+                  if (error) {
+                    clearError();
+                  }
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 We&apos;ll send password reset instructions to this email address
@@ -120,7 +110,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" className="w-full" disabled={isLoading || !email}>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -180,7 +170,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 onClick={() => {
                   setIsSuccess(false);
                   setMessage(null);
-                  setError(null);
+                  clearError();
                 }}
                 className="text-sm text-primary hover:underline"
               >

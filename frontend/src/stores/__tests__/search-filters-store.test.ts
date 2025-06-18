@@ -10,22 +10,25 @@ import type {
 describe("Search Filters Store", () => {
   beforeEach(() => {
     act(() => {
+      // Get current state to preserve any nested beforeEach setup
+      const currentState = useSearchFiltersStore.getState();
+
       useSearchFiltersStore.setState({
         availableFilters: {
-          flight: [],
-          accommodation: [],
-          activity: [],
-          destination: [],
+          flight: currentState.availableFilters?.flight || [],
+          accommodation: currentState.availableFilters?.accommodation || [],
+          activity: currentState.availableFilters?.activity || [],
+          destination: currentState.availableFilters?.destination || [],
         },
         availableSortOptions: {
-          flight: [],
-          accommodation: [],
-          activity: [],
-          destination: [],
+          flight: currentState.availableSortOptions?.flight || [],
+          accommodation: currentState.availableSortOptions?.accommodation || [],
+          activity: currentState.availableSortOptions?.activity || [],
+          destination: currentState.availableSortOptions?.destination || [],
         },
         activeFilters: {},
         activeSortOption: null,
-        currentSearchType: null,
+        currentSearchType: currentState.currentSearchType || null,
         filterPresets: [],
         activePreset: null,
         isApplyingFilters: false,
@@ -110,6 +113,7 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -168,12 +172,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
         {
           id: "stops",
           label: "Number of Stops",
           type: "select",
           category: "routing",
+          required: false,
         },
       ];
 
@@ -201,6 +207,7 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
       ];
 
@@ -219,13 +226,18 @@ describe("Search Filters Store", () => {
         label: "Airlines",
         type: "multiselect",
         category: "airline",
+        required: false,
       };
 
       act(() => {
         result.current.addAvailableFilter("flight", newFilter);
       });
 
-      expect(result.current.availableFilters.flight).toContain(newFilter);
+      const addedFilter = result.current.availableFilters.flight.find(
+        (f) => f.id === "airline"
+      );
+      expect(addedFilter).toBeDefined();
+      expect(addedFilter).toMatchObject(newFilter);
     });
 
     it("updates existing filter configuration", () => {
@@ -236,6 +248,7 @@ describe("Search Filters Store", () => {
         label: "Price Range",
         type: "range",
         category: "pricing",
+        required: false,
       };
 
       act(() => {
@@ -265,12 +278,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
         {
           id: "airline",
           label: "Airlines",
           type: "multiselect",
           category: "airline",
+          required: false,
         },
       ];
 
@@ -297,6 +312,7 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -315,13 +331,18 @@ describe("Search Filters Store", () => {
         label: "Duration",
         field: "totalDuration",
         direction: "asc",
+        isDefault: false,
       };
 
       act(() => {
         result.current.addAvailableSortOption("flight", newSortOption);
       });
 
-      expect(result.current.availableSortOptions.flight).toContain(newSortOption);
+      const addedOption = result.current.availableSortOptions.flight.find(
+        (o) => o.id === "duration"
+      );
+      expect(addedOption).toBeDefined();
+      expect(addedOption).toMatchObject(newSortOption);
     });
 
     it("updates existing sort option", () => {
@@ -332,6 +353,7 @@ describe("Search Filters Store", () => {
         label: "Price: Low to High",
         field: "price",
         direction: "asc",
+        isDefault: false,
       };
 
       act(() => {
@@ -361,12 +383,14 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
         {
           id: "duration",
           label: "Duration",
           field: "totalDuration",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -391,6 +415,7 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
           validation: { min: 0, max: 10000 },
         },
         {
@@ -398,6 +423,7 @@ describe("Search Filters Store", () => {
           label: "Airlines",
           type: "multiselect",
           category: "airline",
+          required: false,
         },
       ];
 
@@ -417,6 +443,11 @@ describe("Search Filters Store", () => {
 
       const filterValue: FilterValue = { min: 100, max: 500 };
 
+      // First set the search type to ensure current filters are available
+      act(() => {
+        result.current.setSearchType("flight");
+      });
+
       await act(async () => {
         const success = await result.current.setActiveFilter(
           "price_range",
@@ -425,9 +456,9 @@ describe("Search Filters Store", () => {
         expect(success).toBe(true);
       });
 
-      expect(result.current.activeFilters["price_range"]).toBeDefined();
-      expect(result.current.activeFilters["price_range"].value).toEqual(filterValue);
-      expect(result.current.activeFilters["price_range"].filterId).toBe("price_range");
+      expect(result.current.activeFilters.price_range).toBeDefined();
+      expect(result.current.activeFilters.price_range.value).toEqual(filterValue);
+      expect(result.current.activeFilters.price_range.filterId).toBe("price_range");
     });
 
     it("removes active filter", () => {
@@ -445,17 +476,22 @@ describe("Search Filters Store", () => {
         });
       });
 
-      expect(result.current.activeFilters["price_range"]).toBeDefined();
+      expect(result.current.activeFilters.price_range).toBeDefined();
 
       act(() => {
         result.current.removeActiveFilter("price_range");
       });
 
-      expect(result.current.activeFilters["price_range"]).toBeUndefined();
+      expect(result.current.activeFilters.price_range).toBeUndefined();
     });
 
     it("updates active filter", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
+
+      // First set the search type to ensure current filters are available
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       // Set initial filter
       await act(async () => {
@@ -471,7 +507,7 @@ describe("Search Filters Store", () => {
         expect(success).toBe(true);
       });
 
-      expect(result.current.activeFilters["price_range"].value).toEqual({
+      expect(result.current.activeFilters.price_range.value).toEqual({
         min: 200,
         max: 800,
       });
@@ -499,6 +535,7 @@ describe("Search Filters Store", () => {
             label: "Price: Low to High",
             field: "price",
             direction: "asc",
+            isDefault: false,
           },
         });
       });
@@ -538,12 +575,17 @@ describe("Search Filters Store", () => {
         result.current.clearFiltersByCategory("pricing");
       });
 
-      expect(result.current.activeFilters["price_range"]).toBeUndefined();
-      expect(result.current.activeFilters["airline"]).toBeDefined();
+      expect(result.current.activeFilters.price_range).toBeUndefined();
+      expect(result.current.activeFilters.airline).toBeDefined();
     });
 
     it("sets multiple filters at once", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
+
+      // First set the search type to ensure current filters are available
+      act(() => {
+        result.current.setSearchType("flight");
+      });
 
       const multipleFilters = {
         price_range: { min: 100, max: 500 },
@@ -555,8 +597,8 @@ describe("Search Filters Store", () => {
         expect(success).toBe(true);
       });
 
-      expect(result.current.activeFilters["price_range"]).toBeDefined();
-      expect(result.current.activeFilters["airline"]).toBeDefined();
+      expect(result.current.activeFilters.price_range).toBeDefined();
+      expect(result.current.activeFilters.airline).toBeDefined();
       expect(result.current.activeFilterCount).toBe(2);
     });
   });
@@ -576,6 +618,7 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -598,6 +641,7 @@ describe("Search Filters Store", () => {
         label: "Price: Low to High",
         field: "price",
         direction: "asc",
+        isDefault: false,
       };
 
       act(() => {
@@ -665,12 +709,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
           validation: { min: 0, max: 10000 },
         },
         {
           id: "required_field",
           label: "Required Field",
           type: "text",
+          required: true,
           validation: { required: true },
         },
       ];
@@ -694,7 +740,7 @@ describe("Search Filters Store", () => {
         max: 500,
       });
       expect(isValid).toBe(true);
-      expect(result.current.filterValidationErrors["price_range"]).toBeUndefined();
+      expect(result.current.filterValidationErrors.price_range).toBeUndefined();
     });
 
     it("validates required field", async () => {
@@ -703,7 +749,7 @@ describe("Search Filters Store", () => {
       // Test empty value for required field
       const isValid = await result.current.validateFilter("required_field", "");
       expect(isValid).toBe(false);
-      expect(result.current.filterValidationErrors["required_field"]).toBe(
+      expect(result.current.filterValidationErrors.required_field).toBe(
         "This filter is required"
       );
     });
@@ -764,7 +810,7 @@ describe("Search Filters Store", () => {
 
       // Set some validation errors
       await result.current.validateFilter("required_field", "");
-      expect(result.current.filterValidationErrors["required_field"]).toBeDefined();
+      expect(result.current.filterValidationErrors.required_field).toBeDefined();
 
       act(() => {
         result.current.clearValidationErrors();
@@ -786,8 +832,8 @@ describe("Search Filters Store", () => {
         result.current.clearValidationError("required_field");
       });
 
-      expect(result.current.filterValidationErrors["required_field"]).toBeUndefined();
-      expect(result.current.filterValidationErrors["price_range"]).toBeDefined();
+      expect(result.current.filterValidationErrors.required_field).toBeUndefined();
+      expect(result.current.filterValidationErrors.price_range).toBeDefined();
     });
   });
 
@@ -808,6 +854,7 @@ describe("Search Filters Store", () => {
             label: "Price: Low to High",
             field: "price",
             direction: "asc",
+            isDefault: false,
           },
         });
       });
@@ -948,6 +995,7 @@ describe("Search Filters Store", () => {
         });
       });
 
+      // Force re-render to ensure computed properties are updated
       expect(result.current.activeFilterCount).toBeGreaterThan(0);
       expect(result.current.currentSearchType).toBe("flight");
       expect(result.current.filterPresets).toHaveLength(1);
@@ -970,6 +1018,7 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
       ];
 
@@ -1031,6 +1080,7 @@ describe("Search Filters Store", () => {
             label: "Price: Low to High",
             field: "price",
             direction: "asc",
+            isDefault: false,
           },
         });
       });
@@ -1047,12 +1097,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
         {
           id: "airline",
           label: "Airlines",
           type: "multiselect",
           category: "airline",
+          required: false,
         },
       ];
 

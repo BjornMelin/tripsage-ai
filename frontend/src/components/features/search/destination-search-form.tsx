@@ -30,12 +30,12 @@ import { z } from "zod";
 
 const destinationSearchFormSchema = z.object({
   query: z.string().min(1, { message: "Destination is required" }),
-  types: z
-    .array(z.enum(["locality", "country", "administrative_area", "establishment"]))
-    .default(["locality", "country"]),
+  types: z.array(
+    z.enum(["locality", "country", "administrative_area", "establishment"])
+  ),
   language: z.string().optional(),
   region: z.string().optional(),
-  limit: z.number().min(1).max(20).default(10),
+  limit: z.number().min(1).max(20),
 });
 
 type DestinationSearchFormValues = z.infer<typeof destinationSearchFormSchema>;
@@ -112,7 +112,12 @@ export function DestinationSearchForm({
 
   const form = useForm<DestinationSearchFormValues>({
     resolver: zodResolver(destinationSearchFormSchema),
-    defaultValues: initialValues,
+    defaultValues: {
+      query: "",
+      types: ["locality", "country"],
+      limit: 10,
+      ...initialValues,
+    },
     mode: "onChange",
   });
 
@@ -209,15 +214,18 @@ export function DestinationSearchForm({
               <FormField
                 control={form.control}
                 name="query"
-                render={({ field }) => (
+                render={({ field: { ref, ...fieldProps } }) => (
                   <FormItem className="relative">
                     <FormLabel>Destination</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
-                          ref={inputRef}
+                          ref={(el) => {
+                            ref(el);
+                            inputRef.current = el;
+                          }}
                           placeholder="Search for cities, countries, or landmarks..."
-                          {...field}
+                          {...fieldProps}
                           autoComplete="off"
                           onFocus={() => {
                             if (suggestions.length > 0) {
@@ -396,13 +404,28 @@ export function DestinationSearchForm({
                           <input
                             type="checkbox"
                             value={type.id}
-                            checked={form.watch("types").includes(type.id as any)}
+                            checked={form
+                              .watch("types")
+                              .includes(
+                                type.id as
+                                  | "locality"
+                                  | "country"
+                                  | "administrative_area"
+                                  | "establishment"
+                              )}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const types = form.getValues("types");
 
                               if (checked) {
-                                form.setValue("types", [...types, type.id as any]);
+                                form.setValue("types", [
+                                  ...types,
+                                  type.id as
+                                    | "locality"
+                                    | "country"
+                                    | "administrative_area"
+                                    | "establishment",
+                                ]);
                               } else {
                                 form.setValue(
                                   "types",

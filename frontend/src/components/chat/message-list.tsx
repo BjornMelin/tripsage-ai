@@ -124,6 +124,8 @@ export function MessageList({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="No messages"
                 >
                   <path
                     strokeLinecap="round"
@@ -180,6 +182,7 @@ export function MessageList({
       {isUserScrolledRef.current && (
         <div className="absolute bottom-20 right-4">
           <button
+            type="button"
             onClick={() => scrollToBottom(true)}
             className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 transition-colors"
           >
@@ -188,6 +191,8 @@ export function MessageList({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              role="img"
+              aria-label="Scroll to bottom"
             >
               <path
                 strokeLinecap="round"
@@ -235,14 +240,14 @@ function formatDateSeparator(dateString: string): string {
 
   if (date.toDateString() === today.toDateString()) {
     return "Today";
-  } else if (date.toDateString() === yesterday.toDateString()) {
-    return "Yesterday";
-  } else {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
   }
+  if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }

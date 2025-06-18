@@ -265,7 +265,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
 
       completeAgentTask: (agentId, taskId, error) => {
         const timestamp = getCurrentTimestamp();
-        const status = error ? "failed" : "completed";
+        const status: "completed" | "failed" = error ? "failed" : "completed";
 
         set((state) => {
           const agentUpdate = (agent: Agent) => {
@@ -273,7 +273,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
 
             // Find the next pending task if this was the current task
             const isCurrentTask = agent.currentTaskId === taskId;
-            let nextTaskId = agent.currentTaskId;
+            let nextTaskId: string | undefined = agent.currentTaskId;
 
             if (isCurrentTask) {
               const pendingTask = agent.tasks.find((t) => t.status === "pending");

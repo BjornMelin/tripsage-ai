@@ -57,6 +57,8 @@ export default async function RegisterPage({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="Save Time Planning icon"
                 >
                   <path
                     strokeLinecap="round"
@@ -81,6 +83,8 @@ export default async function RegisterPage({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="Budget-Smart Travel icon"
                 >
                   <path
                     strokeLinecap="round"
@@ -105,6 +109,8 @@ export default async function RegisterPage({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="AI-Powered Insights icon"
                 >
                   <path
                     strokeLinecap="round"
