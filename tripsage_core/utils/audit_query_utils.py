@@ -483,7 +483,9 @@ class AuditQueryEngine:
                     {
                         "type": "excessive_failed_logins",
                         "actor_id": actor_id,
-                        "description": f"Actor {actor_id} had {count} failed login attempts",
+                        "description": (
+                            f"Actor {actor_id} had {count} failed login attempts"
+                        ),
                         "severity": "medium",
                         "count": count,
                     }
@@ -519,13 +521,15 @@ class AuditQueryEngine:
         # High-risk events recommendation
         if analysis.high_risk_events > analysis.total_events * 0.1:
             recommendations.append(
-                "Consider implementing additional security controls to reduce high-risk events"
+                "Consider implementing additional security controls to reduce "
+                "high-risk events"
             )
 
         # Failed authentication recommendation
         if analysis.failed_authentications > analysis.total_events * 0.2:
             recommendations.append(
-                "Review authentication policies and consider implementing account lockout mechanisms"
+                "Review authentication policies and consider implementing "
+                "account lockout mechanisms"
             )
 
         # Security incidents recommendation

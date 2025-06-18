@@ -5,10 +5,9 @@ This module provides fixtures and setup for comprehensive integration testing
 with real database and cache dependencies.
 """
 
-import asyncio
 import os
 import uuid
-from typing import AsyncGenerator, Dict, Any
+from typing import Any, AsyncGenerator, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from tripsage.api.main import app
-from tripsage_core.config import Settings, get_settings
+from tripsage_core.config import get_settings
 
 
 @pytest.fixture(scope="session")
@@ -39,13 +38,13 @@ def integration_test_settings():
         "WEATHER_API_KEY": "test-weather-integration-key",
         "GOOGLE_MAPS_API_KEY": "test-maps-integration-key",
     }
-    
+
     # Set environment variables
     original_env = {}
     for key, value in test_env.items():
         original_env[key] = os.environ.get(key)
         os.environ[key] = value
-    
+
     try:
         settings = get_settings()
         yield settings
@@ -67,16 +66,16 @@ async def integration_redis():
             decode_responses=True,
         )
         await redis_client.ping()
-        
+
         # Clean up any existing test data
         await redis_client.flushdb()
-        
+
         yield redis_client
-        
+
         # Clean up after tests
         await redis_client.flushdb()
         await redis_client.close()
-        
+
     except Exception as e:
         # Fallback to mock for CI environments without Redis
         print(f"Redis not available, using mock: {e}")
@@ -98,11 +97,12 @@ async def integration_db_engine():
         echo=False,
         future=True,
     )
-    
+
     # Create full schema
     async with engine.begin() as conn:
         # Users table
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TABLE users (
                 id TEXT PRIMARY KEY,
                 email TEXT UNIQUE NOT NULL,
@@ -113,10 +113,12 @@ async def integration_db_engine():
                 is_active BOOLEAN DEFAULT TRUE,
                 is_verified BOOLEAN DEFAULT FALSE
             )
-        """))
-        
+        """)
+        )
+
         # API Keys table
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TABLE api_keys (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -133,10 +135,12 @@ async def integration_db_engine():
                 usage_count INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
-        """))
-        
+        """)
+        )
+
         # API Key Usage Logs table
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TABLE api_key_usage_logs (
                 id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
                 key_id TEXT NOT NULL,
@@ -152,10 +156,12 @@ async def integration_db_engine():
                 FOREIGN KEY (key_id) REFERENCES api_keys (id),
                 FOREIGN KEY (user_id) REFERENCES users (id)
             )
-        """))
-        
+        """)
+        )
+
         # Audit logs table
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE TABLE audit_logs (
                 id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
                 event_type TEXT NOT NULL,
@@ -170,21 +176,36 @@ async def integration_db_engine():
                 FOREIGN KEY (user_id) REFERENCES users (id),
                 FOREIGN KEY (key_id) REFERENCES api_keys (id)
             )
-        """))
-        
+        """)
+        )
+
         # Indexes for performance
-        await conn.execute(text("CREATE INDEX idx_api_keys_user_id ON api_keys(user_id)"))
-        await conn.execute(text("CREATE INDEX idx_api_keys_service ON api_keys(service)"))
-        await conn.execute(text("CREATE INDEX idx_usage_logs_key_id ON api_key_usage_logs(key_id)"))
-        await conn.execute(text("CREATE INDEX idx_usage_logs_timestamp ON api_key_usage_logs(timestamp)"))
-        await conn.execute(text("CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp)"))
-    
+        await conn.execute(
+            text("CREATE INDEX idx_api_keys_user_id ON api_keys(user_id)")
+        )
+        await conn.execute(
+            text("CREATE INDEX idx_api_keys_service ON api_keys(service)")
+        )
+        await conn.execute(
+            text("CREATE INDEX idx_usage_logs_key_id ON api_key_usage_logs(key_id)")
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX idx_usage_logs_timestamp ON api_key_usage_logs(timestamp)"
+            )
+        )
+        await conn.execute(
+            text("CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp)")
+        )
+
     yield engine
     await engine.dispose()
 
 
 @pytest.fixture
-async def integration_db_session(integration_db_engine) -> AsyncGenerator[AsyncSession, None]:
+async def integration_db_session(
+    integration_db_engine,
+) -> AsyncGenerator[AsyncSession, None]:
     """Create database session for each test."""
     async with AsyncSession(integration_db_engine) as session:
         yield session
@@ -195,12 +216,13 @@ async def integration_db_session(integration_db_engine) -> AsyncGenerator[AsyncS
 @pytest.fixture
 async def test_user_factory(integration_db_session):
     """Factory for creating test users."""
+
     async def create_user(
         email: str = None,
         username: str = None,
         full_name: str = None,
         is_active: bool = True,
-        is_verified: bool = True
+        is_verified: bool = True,
     ) -> Dict[str, Any]:
         user_id = str(uuid.uuid4())
         user_data = {
@@ -211,18 +233,19 @@ async def test_user_factory(integration_db_session):
             "is_active": is_active,
             "is_verified": is_verified,
         }
-        
+
         await integration_db_session.execute(
             text("""
-                INSERT INTO users (id, email, username, full_name, is_active, is_verified)
+                INSERT INTO users (id, email, username, full_name, is_active,
+                                   is_verified)
                 VALUES (:id, :email, :username, :full_name, :is_active, :is_verified)
             """),
-            user_data
+            user_data,
         )
         await integration_db_session.commit()
-        
+
         return user_data
-    
+
     return create_user
 
 
@@ -230,14 +253,16 @@ async def test_user_factory(integration_db_session):
 async def authenticated_test_client(test_user_factory):
     """Create TestClient with authenticated user."""
     user = await test_user_factory()
-    
-    with patch("tripsage.api.core.dependencies.get_principal_id", return_value=user["id"]):
+
+    with patch(
+        "tripsage.api.core.dependencies.get_principal_id", return_value=user["id"]
+    ):
         with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
             mock_principal = MagicMock()
             mock_principal.user_id = user["id"]
             mock_principal.email = user["email"]
             mock_auth.return_value = mock_principal
-            
+
             client = TestClient(app)
             client.user = user  # Attach user data for test access
             yield client
@@ -247,67 +272,72 @@ async def authenticated_test_client(test_user_factory):
 def mock_external_apis():
     """Mock external API responses for testing."""
     with patch("httpx.AsyncClient.get") as mock_get:
-        def api_response_factory(service: str, status_code: int = 200, valid: bool = True):
+
+        def api_response_factory(
+            service: str, status_code: int = 200, valid: bool = True
+        ):
             response = MagicMock()
             response.status_code = status_code
-            
+
             if service == "openai" and status_code == 200:
                 response.json.return_value = {
                     "data": [
                         {"id": "gpt-4"},
                         {"id": "gpt-3.5-turbo"},
-                        {"id": "dall-e-3"}
+                        {"id": "dall-e-3"},
                     ]
                 }
             elif service == "weather" and status_code == 200:
                 response.json.return_value = {
                     "name": "London",
                     "weather": [{"main": "Clear"}],
-                    "main": {"temp": 20}
+                    "main": {"temp": 20},
                 }
             elif service == "googlemaps" and status_code == 200:
                 response.json.return_value = {
                     "status": "OK" if valid else "REQUEST_DENIED",
-                    "results": [{"formatted_address": "Test Address"}] if valid else []
+                    "results": [{"formatted_address": "Test Address"}] if valid else [],
                 }
             elif status_code == 401:
-                response.json.return_value = {
-                    "error": {"message": "Invalid API key"}
-                }
+                response.json.return_value = {"error": {"message": "Invalid API key"}}
             elif status_code == 429:
                 response.headers = {
                     "retry-after": "60",
                     "x-ratelimit-limit": "100",
-                    "x-ratelimit-remaining": "0"
+                    "x-ratelimit-remaining": "0",
                 }
                 response.json.return_value = {
                     "error": {"message": "Rate limit exceeded"}
                 }
-            
+
             return response
-        
+
         # Default to successful OpenAI response
         mock_get.return_value = api_response_factory("openai")
         mock_get.api_response_factory = api_response_factory
-        
+
         yield mock_get
 
 
 @pytest.fixture
 def mock_encryption():
     """Mock encryption for faster tests."""
-    with patch("tripsage_core.services.business.api_key_service.ApiKeyService._encrypt_api_key") as mock_encrypt:
-        with patch("tripsage_core.services.business.api_key_service.ApiKeyService._decrypt_api_key") as mock_decrypt:
+    with patch(
+        "tripsage_core.services.business.api_key_service.ApiKeyService._encrypt_api_key"
+    ) as mock_encrypt:
+        with patch(
+            "tripsage_core.services.business.api_key_service.ApiKeyService._decrypt_api_key"
+        ) as mock_decrypt:
             # Simple mock encryption/decryption
             def encrypt(key_value: str) -> str:
                 return f"encrypted_{key_value}"
-            
+
             def decrypt(encrypted_key: str) -> str:
                 return encrypted_key.replace("encrypted_", "")
-            
+
             mock_encrypt.side_effect = encrypt
             mock_decrypt.side_effect = decrypt
-            
+
             yield {"encrypt": mock_encrypt, "decrypt": mock_decrypt}
 
 
@@ -317,7 +347,7 @@ async def cleanup_redis_after_test(integration_redis):
     yield
     # Clean up any test data
     try:
-        if hasattr(integration_redis, 'flushdb'):
+        if hasattr(integration_redis, "flushdb"):
             await integration_redis.flushdb()
     except Exception:
         pass  # Ignore cleanup errors
@@ -329,10 +359,14 @@ pytest_plugins = ["pytest_asyncio"]
 
 def pytest_configure(config):
     """Configure pytest with custom markers for integration tests."""
-    config.addinivalue_line("markers", "integration: Integration tests with real dependencies")
+    config.addinivalue_line(
+        "markers", "integration: Integration tests with real dependencies"
+    )
     config.addinivalue_line("markers", "full_stack: Full stack integration tests")
     config.addinivalue_line("markers", "performance: Performance and load tests")
-    config.addinivalue_line("markers", "external_api: Tests requiring external API mocking")
+    config.addinivalue_line(
+        "markers", "external_api: Tests requiring external API mocking"
+    )
     config.addinivalue_line("markers", "database: Tests requiring database operations")
     config.addinivalue_line("markers", "cache: Tests requiring cache operations")
 
@@ -343,7 +377,7 @@ def pytest_collection_modifyitems(config, items):
         # Add integration marker to all tests in this directory
         if "integration" in str(item.fspath):
             item.add_marker(pytest.mark.integration)
-        
+
         # Add specific markers based on test names
         if "full_stack" in item.name:
             item.add_marker(pytest.mark.full_stack)

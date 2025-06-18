@@ -7,7 +7,9 @@ management of services while enabling easy testing through dependency injection.
 
 from typing import Optional
 
+from tripsage_core.config import get_settings
 from tripsage_core.services.business.accommodation_service import AccommodationService
+from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import ChatService
 from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
@@ -15,7 +17,6 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
-from tripsage_core.services.business.key_management_service import KeyManagementService
 from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.user_service import UserService
@@ -53,7 +54,7 @@ class ServiceRegistry:
         file_processing_service: Optional[FileProcessingService] = None,
         flight_service: Optional[FlightService] = None,
         itinerary_service: Optional[ItineraryService] = None,
-        key_management_service: Optional[KeyManagementService] = None,
+        api_key_service: Optional[ApiKeyService] = None,
         memory_service: Optional[MemoryService] = None,
         trip_service: Optional[TripService] = None,
         user_service: Optional[UserService] = None,
@@ -84,7 +85,7 @@ class ServiceRegistry:
         self.file_processing_service = file_processing_service
         self.flight_service = flight_service
         self.itinerary_service = itinerary_service
-        self.key_management_service = key_management_service
+        self.api_key_service = api_key_service
         self.memory_service = memory_service
         self.trip_service = trip_service
         self.user_service = user_service
@@ -134,8 +135,11 @@ class ServiceRegistry:
         webcrawl_service = WebCrawlService()
 
         # Initialize business services with dependencies
+        settings = get_settings()
         user_service = UserService(db_service)
-        key_management_service = KeyManagementService(db_service)
+        api_key_service = ApiKeyService(
+            db=db_service, cache=cache_service, settings=settings
+        )
         memory_service = MemoryService(db_service)
         chat_service = ChatService(db_service, memory_service)
         file_processing_service = FileProcessingService(document_analyzer)
@@ -164,7 +168,7 @@ class ServiceRegistry:
             file_processing_service=file_processing_service,
             flight_service=flight_service,
             itinerary_service=itinerary_service,
-            key_management_service=key_management_service,
+            api_key_service=api_key_service,
             memory_service=memory_service,
             trip_service=trip_service,
             user_service=user_service,

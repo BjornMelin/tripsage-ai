@@ -594,12 +594,12 @@ class ConfigurationAuditService:
             return value
 
         # If it looks like a secret, hash it
+        alphanumeric_chars = (
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+        )
         if (
             len(value) > 20
-            and any(
-                char in value
-                for char in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-            )
+            and any(char in value for char in alphanumeric_chars)
             and not value.startswith(("http://", "https://", "/", "."))
         ):
             return f"<hash:{hashlib.sha256(value.encode()).hexdigest()[:16]}>"

@@ -9,15 +9,12 @@ modern testing patterns.
 import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from hypothesis import assume, given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
-from tripsage_core.exceptions import (
-    CoreServiceError as ServiceError,
-)
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
     ApiKeyResponse,
@@ -26,7 +23,6 @@ from tripsage_core.services.business.api_key_service import (
     ValidationResult,
     ValidationStatus,
 )
-
 
 # Test data strategies
 service_types = st.sampled_from(list(ServiceType))
@@ -46,7 +42,7 @@ class TestApiKeyServiceComprehensive:
         db.get_api_key_for_service = AsyncMock(return_value=None)
         db.get_api_key_by_id = AsyncMock(return_value=None)
         db.transaction = AsyncMock()
-        
+
         # Mock transaction context manager
         async def mock_transaction():
             transaction_mock = AsyncMock()
@@ -55,9 +51,9 @@ class TestApiKeyServiceComprehensive:
             transaction_mock.insert = Mock()
             transaction_mock.delete = Mock()
             return transaction_mock
-            
+
         db.transaction = mock_transaction
-        
+
         return db
 
     @pytest.fixture
@@ -69,7 +65,7 @@ class TestApiKeyServiceComprehensive:
     @pytest.fixture
     def api_service(self, mock_db, mock_cache):
         """Create ApiKeyService with mocked dependencies."""
-        with patch('tripsage_core.config.get_settings') as mock_settings:
+        with patch("tripsage_core.config.get_settings") as mock_settings:
             mock_settings.return_value.secret_key = "test-secret-key-for-testing"
             service = ApiKeyService(db=mock_db, cache=mock_cache)
             return service
@@ -85,7 +81,9 @@ class TestApiKeyServiceComprehensive:
         )
 
     @pytest.mark.skip(reason="Create API key test has implementation issues")
-    async def test_create_api_key_success(self, api_service, mock_db, sample_create_request):
+    async def test_create_api_key_success(
+        self, api_service, mock_db, sample_create_request
+    ):
         """Test successful API key creation."""
         pass
 
@@ -93,7 +91,7 @@ class TestApiKeyServiceComprehensive:
     async def test_list_user_keys(self, api_service, mock_db):
         """Test listing user keys."""
         user_id = str(uuid.uuid4())
-        
+
         # Mock database response
         mock_db_results = [
             {
@@ -112,9 +110,9 @@ class TestApiKeyServiceComprehensive:
             }
         ]
         mock_db.get_user_api_keys.return_value = mock_db_results
-        
+
         results = await api_service.list_user_keys(user_id)
-        
+
         assert len(results) == 1
         assert isinstance(results[0], ApiKeyResponse)
         assert results[0].name == "Test Key 1"
@@ -126,7 +124,7 @@ class TestApiKeyServiceComprehensive:
         """Test getting key for specific service."""
         user_id = str(uuid.uuid4())
         service = ServiceType.OPENAI
-        
+
         # Mock database response with encrypted key
         mock_db_result = {
             "id": str(uuid.uuid4()),
@@ -137,9 +135,9 @@ class TestApiKeyServiceComprehensive:
             "is_valid": True,
         }
         mock_db.get_api_key_for_service.return_value = mock_db_result
-        
+
         result = await api_service.get_key_for_service(user_id, service)
-        
+
         assert result == "sk-test_key"
         mock_db.get_api_key_for_service.assert_called_once_with(user_id, "openai")
 
@@ -148,7 +146,7 @@ class TestApiKeyServiceComprehensive:
         """Test getting expired key returns None."""
         user_id = str(uuid.uuid4())
         service = ServiceType.OPENAI
-        
+
         # Mock expired key
         expired_time = datetime.now(timezone.utc) - timedelta(days=1)
         mock_db_result = {
@@ -156,9 +154,9 @@ class TestApiKeyServiceComprehensive:
             "is_valid": True,
         }
         mock_db.get_api_key_for_service.return_value = mock_db_result
-        
+
         result = await api_service.get_key_for_service(user_id, service)
-        
+
         assert result is None
 
     @pytest.mark.asyncio
@@ -169,11 +167,11 @@ class TestApiKeyServiceComprehensive:
             mock_response.status_code = 200
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
-            
+
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key_12345"
             )
-            
+
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
             assert result.service == ServiceType.OPENAI
@@ -184,15 +182,13 @@ class TestApiKeyServiceComprehensive:
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 401
-            mock_response.json.return_value = {
-                "error": {"message": "Invalid API key"}
-            }
+            mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
             mock_get.return_value = mock_response
-            
+
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-invalid_key"
             )
-            
+
             assert result.is_valid is False
             assert result.status == ValidationStatus.INVALID
 
@@ -206,11 +202,11 @@ class TestApiKeyServiceComprehensive:
                 "error": {"message": "Rate limit exceeded"}
             }
             mock_get.return_value = mock_response
-            
+
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key"
             )
-            
+
             assert result.is_valid is False
             assert result.status == ValidationStatus.RATE_LIMITED
 
@@ -219,11 +215,11 @@ class TestApiKeyServiceComprehensive:
         """Test API key validation with network error."""
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_get.side_effect = asyncio.TimeoutError("Network timeout")
-            
+
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key"
             )
-            
+
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
 
@@ -232,7 +228,7 @@ class TestApiKeyServiceComprehensive:
         """Test successful API key deletion."""
         user_id = str(uuid.uuid4())
         key_id = str(uuid.uuid4())
-        
+
         # Mock key exists
         mock_key_data = {
             "id": key_id,
@@ -241,12 +237,12 @@ class TestApiKeyServiceComprehensive:
             "name": "Test Key",
         }
         mock_db.get_api_key_by_id.return_value = mock_key_data
-        
+
         result = await api_service.delete_api_key(key_id, user_id)
-        
+
         assert result is True
         mock_db.get_api_key_by_id.assert_called_once_with(key_id, user_id)
-        
+
         # Verify transaction was used
         transaction_mock = mock_db.transaction.return_value
         transaction_mock.delete.assert_called()
@@ -257,12 +253,12 @@ class TestApiKeyServiceComprehensive:
         """Test deleting non-existent key."""
         user_id = str(uuid.uuid4())
         key_id = str(uuid.uuid4())
-        
+
         # Mock key doesn't exist
         mock_db.get_api_key_by_id.return_value = None
-        
+
         result = await api_service.delete_api_key(key_id, user_id)
-        
+
         assert result is False
 
     @pytest.mark.asyncio
@@ -273,9 +269,9 @@ class TestApiKeyServiceComprehensive:
             mock_response.status_code = 200
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
-            
+
             result = await api_service.check_service_health(ServiceType.OPENAI)
-            
+
             assert result.service == ServiceType.OPENAI
             assert result.is_healthy is True
 
@@ -288,9 +284,9 @@ class TestApiKeyServiceComprehensive:
             mock_response.status_code = 200
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
-            
+
             results = await api_service.check_all_services_health()
-            
+
             assert isinstance(results, dict)
             assert len(results) >= 1  # At least OpenAI should be checked
 
@@ -298,12 +294,12 @@ class TestApiKeyServiceComprehensive:
     async def test_encryption_decryption(self, api_service):
         """Test key encryption and decryption."""
         test_key = "sk-test_encryption_key_12345"
-        
+
         # Test encryption
         encrypted = api_service._encrypt_api_key(test_key)
         assert encrypted != test_key
         assert len(encrypted) > len(test_key)
-        
+
         # Test decryption
         decrypted = api_service._decrypt_api_key(encrypted)
         assert decrypted == test_key
@@ -313,34 +309,35 @@ class TestApiKeyServiceComprehensive:
         """Test validation result caching."""
         # Mock cache miss initially
         mock_cache.get.return_value = None
-        
+
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
-            
+
             # First validation should hit the API
             result1 = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key"
             )
-            
+
             # Cache should be set
             mock_cache.set.assert_called()
-            
+
             # Mock cache hit for second call
-            mock_cache.get.return_value = '{"is_valid": true, "status": "valid", "service": "openai", "message": "Cached"}'
-            
+            cache_response = '{"is_valid": true, "status": "valid", "service": "openai", "message": "Cached"}'
+            mock_cache.get.return_value = cache_response
+
             # Second validation should use cache
             result2 = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key"
             )
-            
+
             assert result1.is_valid is True
             assert result2.is_valid is True
 
     # Property-based tests
-    @pytest.mark.skip(reason="Create API key test has implementation issues")  
+    @pytest.mark.skip(reason="Create API key test has implementation issues")
     @given(
         service=service_types,
         key_name=key_names,
@@ -357,7 +354,7 @@ class TestApiKeyServiceComprehensive:
     async def test_validate_key_format_property_based(self, api_service, api_key):
         """Property-based test for key validation."""
         result = await api_service.validate_api_key(ServiceType.OPENAI, api_key)
-        
+
         # Basic invariants
         assert isinstance(result, ValidationResult)
         assert result.service == ServiceType.OPENAI
@@ -368,20 +365,19 @@ class TestApiKeyServiceComprehensive:
     async def test_concurrent_validations(self, api_service):
         """Test concurrent API key validations."""
         keys = [f"sk-concurrent_test_{i}" for i in range(5)]
-        
+
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
-            
+
             # Run concurrent validations
             tasks = [
-                api_service.validate_api_key(ServiceType.OPENAI, key)
-                for key in keys
+                api_service.validate_api_key(ServiceType.OPENAI, key) for key in keys
             ]
             results = await asyncio.gather(*tasks)
-            
+
             # All should complete successfully
             assert len(results) == 5
             assert all(isinstance(result, ValidationResult) for result in results)
@@ -389,20 +385,18 @@ class TestApiKeyServiceComprehensive:
     @pytest.mark.asyncio
     async def test_service_initialization_and_cleanup(self, mock_db, mock_cache):
         """Test service initialization and cleanup."""
-        with patch('tripsage_core.config.get_settings') as mock_settings:
+        with patch("tripsage_core.config.get_settings") as mock_settings:
             mock_settings.return_value.secret_key = "test-secret-key"
-            
+
             # Test context manager usage
             async with ApiKeyService(db=mock_db, cache=mock_cache) as service:
                 assert service.client is not None
                 assert service.master_cipher is not None
-                
+
                 # Service should be usable
-                result = await service.validate_api_key(
-                    ServiceType.OPENAI, "sk-test"
-                )
+                result = await service.validate_api_key(ServiceType.OPENAI, "sk-test")
                 assert isinstance(result, ValidationResult)
-            
+
             # Client should be closed after context manager exit
             # (We can't easily test this without exposing internal state)
 
@@ -414,12 +408,15 @@ class TestApiKeyServiceComprehensive:
             ("short", ValidationStatus.FORMAT_ERROR),  # Too short
             ("sk-" + "x" * 1000, ValidationStatus.INVALID),  # Very long key
         ]
-        
+
         for test_key, expected_status in edge_cases:
             result = await api_service.validate_api_key(ServiceType.OPENAI, test_key)
-            
+
             # Should handle gracefully
             assert isinstance(result, ValidationResult)
             assert result.is_valid is False
             if test_key:  # Non-empty keys should get proper status
-                assert result.status == expected_status or result.status == ValidationStatus.SERVICE_ERROR
+                assert (
+                    result.status == expected_status
+                    or result.status == ValidationStatus.SERVICE_ERROR
+                )
