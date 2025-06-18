@@ -20,7 +20,7 @@ sys.path.insert(0, str(project_root))
 
 # These imports rely on the path adjustments above
 from tripsage.mcp_abstraction.manager import MCPManager  # noqa: E402
-from tripsage_core.config.base_app_settings import settings  # noqa: E402
+from tripsage_core.config import get_settings  # noqa: E402
 from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
 
 # Configure logging
@@ -162,6 +162,7 @@ async def main():
 
     try:
         # Initialize MCP manager
+        settings = get_settings()
         mcp_manager = await MCPManager.get_instance(settings.model_dump())
 
         # Check SQL connection
