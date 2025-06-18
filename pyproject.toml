@@ -145,14 +145,26 @@ dev = [
 benchmark = [
     # CLI interface for benchmark scripts
     "click>=8.1.0",
+    # Efficient vector generation for database benchmarks
+    "numpy>=1.24.0",
     # System monitoring (psutil already in main dependencies)
     # Database connectivity (asyncpg, supabase already in main dependencies)
 ]
 
-# Optional visualization capabilities (install only when needed)
-visualization = [
+# Static visualization for CI/CD and reports
+visualization-static = [
     "matplotlib>=3.7.0",
+]
+
+# Interactive visualization for dashboards and web reports  
+visualization-interactive = [
     "plotly>=5.17.0",
+]
+
+# Complete visualization suite
+visualization = [
+    {include-group = "visualization-static"},
+    {include-group = "visualization-interactive"},
 ]
 
 # Optional profiling capabilities (install only when needed)  
