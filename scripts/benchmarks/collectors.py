@@ -19,7 +19,10 @@ from typing import Any, Dict, List, Optional
 
 import psutil
 
-from config import BenchmarkConfig
+try:
+    from .config import BenchmarkConfig
+except ImportError:
+    from config import BenchmarkConfig
 
 logger = logging.getLogger(__name__)
 
@@ -136,8 +139,8 @@ class MetricsCollector:
         """Get comprehensive metrics summary."""
         return {
             "query_performance": self._get_query_summary(),
-            "memory_usage": self._get_memory_summary(),
-            "connection_efficiency": self._get_connection_summary(),
+            "memory_usage": self.get_memory_summary(),
+            "connection_efficiency": self.get_connection_summary(),
             "collection_period": {
                 "start_time": self._start_time,
                 "duration_seconds": time.time() - self._start_time,

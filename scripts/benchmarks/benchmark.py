@@ -23,8 +23,12 @@ from typing import Any, Dict, Optional
 
 import click
 
-from config import BenchmarkConfig
-from collectors import MetricsCollector, ReportGenerator
+try:
+    from .config import BenchmarkConfig
+    from .collectors import MetricsCollector, ReportGenerator
+except ImportError:
+    from config import BenchmarkConfig
+    from collectors import MetricsCollector, ReportGenerator
 
 logger = logging.getLogger(__name__)
 
