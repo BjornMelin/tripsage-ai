@@ -45,7 +45,10 @@ class TestSQLInjectionPrevention:
             # Boolean-based blind injection
             "' AND (SELECT COUNT(*) FROM api_keys) > 0 --",
             # Blind injection with ASCII
-            "' AND ASCII(SUBSTRING((SELECT password FROM users WHERE id=1),1,1)) > 64 --",
+            (
+                "' AND ASCII(SUBSTRING((SELECT password FROM users WHERE id=1),1,1)) "
+                "> 64 --"
+            ),
             # Time-based blind injection
             "'; WAITFOR DELAY '00:00:05'; --",
             "' AND (SELECT SLEEP(5)) --",
@@ -62,7 +65,10 @@ class TestSQLInjectionPrevention:
             "' || '1'=='1",
             # Advanced SQL injection
             # EXTRACTVALUE injection
-            "' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT password FROM users LIMIT 1), 0x7e)) --",
+            (
+                "' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT password FROM users "
+                "LIMIT 1), 0x7e)) --"
+            ),
             # Error-based SQL injection
             "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x "
             "FROM information_schema.tables GROUP BY x)a) --",
@@ -73,13 +79,16 @@ class TestSQLInjectionPrevention:
             "＇ OR ＇1＇=＇1",  # Fullwidth characters
             "′ OR ′1′=′1",  # Different quote characters
             # NULL byte injection
-            "'; SELECT * FROM users WHERE id=1\x00 --",
+            "'; SELECT * FROM users WHERE id=1\x00 --",  # NULL byte
             # Hex-based injection
             "0x27204F522027312027203D202731",
             # MySQL-specific
             # MySQL error-based injection with ROW
-            "' AND ROW(1,1) > (SELECT COUNT(*), CONCAT(version(), 0x3a, FLOOR(RAND(0)*2)) x "
-            "FROM (SELECT 1 UNION SELECT 2) a GROUP BY x LIMIT 1) --",
+            (
+                "' AND ROW(1,1) > (SELECT COUNT(*), CONCAT(version(), 0x3a, "
+                "FLOOR(RAND(0)*2)) x FROM (SELECT 1 UNION SELECT 2) a GROUP BY x "
+                "LIMIT 1) --"
+            ),
             # PostgreSQL-specific
             "'; COPY (SELECT * FROM users) TO '/tmp/output.txt'; --",
             # SQLite-specific

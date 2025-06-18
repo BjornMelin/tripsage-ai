@@ -638,7 +638,10 @@ class TestInputValidationSecurity:
             # Test malformed JSON that could bypass validation
             malformed_payloads = [
                 # Prototype pollution attempt
-                '{"name": "Test", "extra": {"constructor": {"prototype": {"polluted": true}}}}',
+                (
+                    '{"name": "Test", "extra": {"constructor": '
+                    '{"prototype": {"polluted": true}}}}'
+                ),
                 '{"__proto__": {"polluted": true}, "name": "Test"}',
                 '{"name": "Test\\u0000Null"}',
                 '{"name": "Test\\"", "service": "openai"}',
