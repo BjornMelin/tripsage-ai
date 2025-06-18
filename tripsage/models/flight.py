@@ -21,7 +21,7 @@ from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
 # FlightSegment moved to tripsage_core.models.domain.flight
 
 
-# MultiCityFlightSearchRequest moved to tripsage_core.models.schemas_common.flight_schemas
+# MultiCityFlightSearchRequest moved to schemas_common.flight_schemas
 # Import it from there if needed for MCP operations
 
 
