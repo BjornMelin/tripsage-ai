@@ -98,6 +98,18 @@ class Settings(BaseSettings):
     # Redis/Cache (DragonflyDB)
     redis_url: str | None = None
     redis_password: str | None = None
+    
+    # WebSocket Configuration
+    websocket_allowed_origins: list[str] = Field(
+        default=[
+            "https://app.tripsage.com",
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+        ],
+        description="Allowed origins for WebSocket connections (CSWSH protection)",
+    )
     redis_max_connections: int = Field(
         default=50, description="Maximum Redis connections"
     )

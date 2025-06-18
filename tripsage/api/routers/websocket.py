@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import (
@@ -35,11 +36,57 @@ from tripsage_core.services.business.chat_service import (
     MessageCreateRequest,
     MessageRole,
 )
-from tripsage_core.services.infrastructure.websocket_manager import (
+from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
+from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
     WebSocketEventType,
-    websocket_manager,
 )
+from tripsage_core.config import get_settings
+
+
+# WebSocket Security Configuration
+def get_allowed_origins() -> List[str]:
+    """Get allowed origins from settings or use defaults."""
+    settings = get_settings()
+    # Check if settings has websocket_allowed_origins attribute
+    if hasattr(settings, "websocket_allowed_origins"):
+        return settings.websocket_allowed_origins
+    # Default allowed origins for production and development
+    return [
+        "https://app.tripsage.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ]
+
+
+async def validate_websocket_origin(websocket: WebSocket) -> bool:
+    """Validate WebSocket Origin header to prevent CSWSH attacks.
+    
+    Args:
+        websocket: The WebSocket connection to validate
+        
+    Returns:
+        True if the origin is allowed, False otherwise
+    """
+    origin = websocket.headers.get("origin", "").lower()
+    
+    # If no origin header, reject for security (browsers always send it)
+    if not origin:
+        logger.warning("WebSocket connection rejected: No Origin header")
+        return False
+    
+    allowed_origins = get_allowed_origins()
+    
+    # Check if origin matches any allowed origin (exact match only for security)
+    for allowed in allowed_origins:
+        if origin == allowed.lower():
+            logger.debug(f"WebSocket origin validated: {origin}")
+            return True
+    
+    logger.warning(f"WebSocket connection rejected: Invalid origin '{origin}'")
+    return False
 
 
 # Create event classes here temporarily until they are properly organized
@@ -127,6 +174,14 @@ async def chat_websocket(
     connection_id = None
 
     try:
+        # Validate Origin header before accepting connection
+        if not await validate_websocket_origin(websocket):
+            await websocket.close(code=1008, reason="Invalid origin")
+            logger.warning(
+                f"WebSocket connection rejected for chat session {session_id}: Invalid origin"
+            )
+            return
+        
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"WebSocket connection accepted for chat session {session_id}")
@@ -329,6 +384,14 @@ async def agent_status_websocket(
     connection_id = None
 
     try:
+        # Validate Origin header before accepting connection
+        if not await validate_websocket_origin(websocket):
+            await websocket.close(code=1008, reason="Invalid origin")
+            logger.warning(
+                f"WebSocket connection rejected for agent status user {user_id}: Invalid origin"
+            )
+            return
+        
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"Agent status WebSocket connection accepted for user {user_id}")
