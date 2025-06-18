@@ -466,7 +466,7 @@ class AsyncMemoryService:
         # It would directly use asyncpg to store embeddings
         pool = await self._init_pg_pool()
 
-        async with pool.acquire() as conn:
+        async with pool.acquire():
             # Here we would:
             # 1. Generate embeddings for messages
             # 2. Store them in pgvector table
@@ -571,7 +571,7 @@ class AsyncMemoryService:
         """Direct pgvector similarity search implementation."""
         pool = await self._init_pg_pool()
 
-        async with pool.acquire() as conn:
+        async with pool.acquire():
             # Placeholder for actual pgvector similarity search
             # Would use something like:
             # SELECT * FROM memories
@@ -749,7 +749,7 @@ class AsyncMemoryService:
         """Direct database implementation to get all user memories."""
         pool = await self._init_pg_pool()
 
-        async with pool.acquire() as conn:
+        async with pool.acquire():
             # Placeholder for actual implementation
             return {"results": []}
 
@@ -956,7 +956,7 @@ class AsyncMemoryService:
         """Direct database deletion of specific memories."""
         pool = await self._init_pg_pool()
 
-        async with pool.acquire() as conn:
+        async with pool.acquire():
             # Placeholder for actual deletion
             return 0
 
@@ -964,7 +964,7 @@ class AsyncMemoryService:
         """Direct database deletion of all user memories."""
         pool = await self._init_pg_pool()
 
-        async with pool.acquire() as conn:
+        async with pool.acquire():
             # Placeholder for actual deletion
             return 0
 

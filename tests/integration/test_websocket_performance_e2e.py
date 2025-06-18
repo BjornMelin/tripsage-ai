@@ -186,7 +186,7 @@ class TestWebSocketPerformanceE2E:
                         websocket.send_json(message)
 
                         # Wait for first chunk
-                        response = websocket.receive_json()
+                        websocket.receive_json()
                         processing_time = (time.time() - start) * 1000
                         processing_times.append(processing_time)
 
@@ -260,7 +260,7 @@ class TestWebSocketPerformanceE2E:
                 }
 
                 # Track data sent (would be compressed in real implementation)
-                start_size = len(json.dumps(message).encode("utf-8"))
+                len(json.dumps(message).encode("utf-8"))
 
                 websocket.send_json(message)
 

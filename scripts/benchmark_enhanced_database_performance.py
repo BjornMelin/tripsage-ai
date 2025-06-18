@@ -59,7 +59,7 @@ class PerformanceBenchmark:
 
         try:
             # Get settings
-            settings = get_settings()
+            get_settings()
 
             # Get consolidated database service
             self.db_service = await get_database_service()
@@ -91,7 +91,7 @@ class PerformanceBenchmark:
             try:
                 start_time = time.perf_counter()
 
-                async with self.db_service.get_session() as session:
+                async with self.db_service.get_session():
                     # Minimal work to simulate real usage
                     await asyncio.sleep(0.001)
 
@@ -168,7 +168,7 @@ class PerformanceBenchmark:
                     start_time = time.perf_counter()
 
                     # Simulate database operation
-                    async with self.db_service.get_session() as session:
+                    async with self.db_service.get_session():
                         # Simulate increasing load
                         operation_latency = 0.010 + (i * 0.0001)
                         # Simulate work
@@ -252,7 +252,7 @@ class PerformanceBenchmark:
                 """Single concurrent task."""
                 start_time = time.perf_counter()
                 try:
-                    async with self.db_service.get_session() as session:
+                    async with self.db_service.get_session():
                         await asyncio.sleep(0.005)  # Simulate work
                     end_time = time.perf_counter()
                     return {
@@ -332,7 +332,7 @@ class PerformanceBenchmark:
 
             async def load_task():
                 """Task to maintain load on the pool."""
-                async with self.db_service.get_session() as session:
+                async with self.db_service.get_session():
                     await asyncio.sleep(0.1)  # Hold connection briefly
 
             # Execute load test

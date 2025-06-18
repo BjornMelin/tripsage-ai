@@ -279,7 +279,7 @@ class TestWebSocketPerformance:
         # Test with multiple messages
         with patch("tripsage.api.routers.websocket.handle_chat_message", mock_handler):
             tasks = []
-            for i in range(10):
+            for _i in range(10):
                 task = asyncio.create_task(mock_handler())
                 tasks.append(task)
 
@@ -406,10 +406,10 @@ class TestWebSocketPerformance:
 
         # Should timeout
         try:
-            result = await asyncio.wait_for(
+            await asyncio.wait_for(
                 slow_handler(), timeout=PerformanceConfig.MESSAGE_TIMEOUT
             )
-            assert False, "Should have timed out"
+            raise AssertionError("Should have timed out")
         except asyncio.TimeoutError:
             # Expected
             pass
@@ -497,7 +497,7 @@ class TestErrorRecovery:
             raise Exception("Handler failed")
 
         # Create failing tasks
-        for i in range(5):
+        for _i in range(5):
             task = asyncio.create_task(failing_handler())
             failed_handlers.add(task)
 
