@@ -44,7 +44,6 @@ from .financial import (
     PriceRange,
 )
 from .flight_schemas import (
-    Airport,
     AirportSearchRequest,
     AirportSearchResponse,
     FlightOffer,
@@ -64,6 +63,7 @@ from .geographic import (
     Place,
     Region,
     Route,
+    # Airport is available here but we use domain model for consistency
 )
 from .temporal import (
     Availability,
@@ -116,7 +116,6 @@ __all__ = [
     "PriceRange",
     # Geographic
     "Address",
-    "Airport",
     "BoundingBox",
     "Coordinates",
     "Place",
@@ -136,10 +135,8 @@ __all__ = [
     "TripPreferences",
     "TripSummary",
     # Flight schemas
-    "Airport",
     "AirportSearchRequest",
     "AirportSearchResponse",
-    "FlightOffer",
     "FlightPassenger",
     "FlightSearchRequest",
     "FlightSearchResponse",

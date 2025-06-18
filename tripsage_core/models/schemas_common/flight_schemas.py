@@ -17,6 +17,16 @@ from .base_models import BaseResponse
 from .common_validators import AirportCode
 from .enums import CabinClass, PassengerType
 
+# Removed TYPE_CHECKING imports to avoid circular import issues
+
+class Airport(BaseModel):
+    """Airport information model."""
+    
+    iata_code: AirportCode = Field(..., description="IATA airport code")
+    name: str = Field(..., description="Airport name")
+    city: str = Field(..., description="City name")
+    country: str = Field(..., description="Country name")
+
 
 class FlightPassenger(BaseModel):
     """Passenger information for flight bookings."""
@@ -236,41 +246,13 @@ class SavedFlightRequest(BaseModel):
     )
 
 
-class FlightOffer(BaseModel):
-    """Response model for a flight offer."""
-
-    id: str = Field(description="Offer ID")
-    origin: AirportCode = Field(description="Origin airport code")
-    destination: AirportCode = Field(description="Destination airport code")
-    departure_date: date = Field(description="Departure date")
-    return_date: Optional[date] = Field(default=None, description="Return date")
-    airline: str = Field(description="Airline code")
-    airline_name: str = Field(description="Airline name")
-    price: float = Field(description="Total price")
-    currency: str = Field(description="Currency code")
-    cabin_class: CabinClass = Field(description="Cabin class")
-    stops: int = Field(description="Number of stops")
-    duration_minutes: int = Field(description="Flight duration in minutes")
-    segments: List[Dict[str, Any]] = Field(description="Flight segments")
-    booking_link: Optional[str] = Field(default=None, description="Booking link")
-
-
-class Airport(BaseModel):
-    """Response model for airport information."""
-
-    code: AirportCode = Field(description="IATA code")
-    name: str = Field(description="Airport name")
-    city: str = Field(description="City name")
-    country: str = Field(description="Country name")
-    country_code: str = Field(description="Country code")
-    latitude: float = Field(description="Latitude")
-    longitude: float = Field(description="Longitude")
+# FlightOffer moved to domain layer - import from tripsage_core.models.domain.flight
 
 
 class FlightSearchResponse(BaseResponse):
     """Response model for flight search results."""
 
-    results: List[FlightOffer] = Field(description="Flight offers")
+    results: List[Any] = Field(description="Flight offers")  # FlightOffer from domain
     count: int = Field(description="Number of results")
     currency: str = Field(description="Currency code for prices", default="USD")
     search_id: str = Field(description="Search ID for reference")
@@ -285,7 +267,7 @@ class FlightSearchResponse(BaseResponse):
 class AirportSearchResponse(BaseResponse):
     """Response model for airport search results."""
 
-    results: List[Airport] = Field(description="Airport results")
+    results: List[Dict[str, Any]] = Field(description="Airport results")
     count: int = Field(description="Number of results")
 
 
@@ -295,7 +277,7 @@ class SavedFlightResponse(BaseModel):
     id: UUID = Field(description="Saved flight ID")
     user_id: str = Field(description="User ID")
     trip_id: UUID = Field(description="Trip ID")
-    offer: FlightOffer = Field(description="Flight offer details")
+    offer: Any = Field(description="Flight offer details")  # FlightOffer from domain
     saved_at: datetime = Field(description="Timestamp when flight was saved")
     notes: Optional[str] = Field(
         default=None, description="Notes about this flight offer"
