@@ -12,7 +12,6 @@ from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
-
 class OptionType(str, Enum):
     """Enum for option type values."""
 
@@ -20,7 +19,6 @@ class OptionType(str, Enum):
     ACCOMMODATION = "accommodation"
     TRANSPORTATION = "transportation"
     ACTIVITY = "activity"
-
 
 class SavedOption(TripSageModel):
     """SavedOption model for TripSage.
@@ -34,12 +32,12 @@ class SavedOption(TripSageModel):
         notes: Additional notes or comments about this option
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     option_type: OptionType = Field(..., description="Type of the saved option")
     option_id: int = Field(..., description="ID of the saved option")
     timestamp: datetime = Field(..., description="When the option was saved")
-    notes: Optional[str] = Field(None, description="Additional notes or comments")
+    notes: str | None = Field(None, description="Additional notes or comments")
 
     @field_validator("option_id")
     @classmethod
@@ -92,7 +90,7 @@ class SavedOption(TripSageModel):
         """Check if the option has notes."""
         return self.notes is not None and len(self.notes.strip()) > 0
 
-    def update_notes(self, new_notes: Optional[str]) -> None:
+    def update_notes(self, new_notes: str | None) -> None:
         """Update the notes for this saved option.
 
         Args:

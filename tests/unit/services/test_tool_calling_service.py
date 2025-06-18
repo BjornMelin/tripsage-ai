@@ -23,7 +23,6 @@ from tripsage_core.services.business.tool_calling_service import (
 
 # Module-level fixtures for pytest discovery
 
-
 @pytest.fixture
 def mock_mcp_manager():
     """Mock MCP manager."""
@@ -31,7 +30,6 @@ def mock_mcp_manager():
     # Mock the invoke method to accept method_name and params
     mock_manager.invoke = AsyncMock(return_value={"data": "test result"})
     return mock_manager
-
 
 @pytest.fixture
 def mock_error_recovery_service():
@@ -41,12 +39,10 @@ def mock_error_recovery_service():
     mock_service.handle_retry.return_value = True
     return mock_service
 
-
 @pytest.fixture
 def tool_calling_service(mock_mcp_manager):
     """Create ToolCallService with mocked dependencies."""
     return ToolCallService(mcp_manager=mock_mcp_manager)
-
 
 @pytest.fixture
 def sample_tool_call_request():
@@ -65,7 +61,6 @@ def sample_tool_call_request():
         retry_count=3,
     )
 
-
 @pytest.fixture
 def sample_tool_call_response():
     """Sample tool call response."""
@@ -79,7 +74,6 @@ def sample_tool_call_response():
         method="search_flights",
         timestamp=time.time(),
     )
-
 
 class TestToolCallValidation:
     """Test tool call validation functionality."""
@@ -165,7 +159,6 @@ class TestToolCallValidation:
         # Should be valid since all required fields are present
         assert result.is_valid is True
         assert result.sanitized_params is not None
-
 
 class TestToolCallExecution:
     """Test tool call execution functionality."""
@@ -299,7 +292,6 @@ class TestToolCallExecution:
         assert response.status == "error"
         assert "Tool call failed after error recovery" in response.error
 
-
 class TestParallelToolCalls:
     """Test parallel tool call functionality."""
 
@@ -429,7 +421,6 @@ class TestParallelToolCalls:
         assert len(responses) == 5
         assert all(response.status == "success" for response in responses)
 
-
 class TestToolCallMetrics:
     """Test tool call metrics and monitoring."""
 
@@ -483,7 +474,6 @@ class TestToolCallMetrics:
             limit=10, service="duffel_flights"
         )
         assert all(r.service == "duffel_flights" for r in flight_history)
-
 
 class TestErrorHandling:
     """Test error handling scenarios."""
@@ -564,7 +554,6 @@ class TestErrorHandling:
         assert stats["tool_calling_stats"]["total_calls"] >= 5
         assert stats["tool_calling_stats"]["error_rate"] > 0
 
-
 class TestDependencyInjection:
     """Test dependency injection functionality."""
 
@@ -587,7 +576,6 @@ class TestDependencyInjection:
         assert service.error_recovery is not None  # Created internally
         assert isinstance(service.execution_history, list)
         assert isinstance(service.rate_limits, dict)
-
 
 class TestToolCallFormatting:
     """Test tool call formatting and response processing."""

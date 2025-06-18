@@ -6,7 +6,7 @@ Updated for Pydantic v2 and modern pytest patterns (2025).
 
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
@@ -16,7 +16,6 @@ from pydantic import SecretStr
 
 # Configure pytest-asyncio - updated for pytest-asyncio 1.0
 # No longer need event_loop fixture with pytest-asyncio 1.0
-
 
 # Global mock for cache service to prevent Redis connection errors in tests
 @pytest.fixture(scope="session", autouse=True)
@@ -46,7 +45,6 @@ def mock_cache_globally():
         ),
     ):
         yield mock_cache
-
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment():
@@ -82,7 +80,6 @@ def setup_test_environment():
         else:
             os.environ[key] = original_value
 
-
 @pytest.fixture
 def mock_settings():
     """Create mock settings for testing."""
@@ -112,7 +109,6 @@ def mock_settings():
 
     return settings
 
-
 @pytest.fixture
 def mock_database_service():
     """Create mock database service."""
@@ -130,7 +126,6 @@ def mock_database_service():
     db_service.rollback = AsyncMock()
 
     return db_service
-
 
 @pytest.fixture
 def mock_cache_service():
@@ -152,27 +147,23 @@ def mock_cache_service():
 
     return cache_service
 
-
 @pytest.fixture
 def sample_user_id() -> str:
     """Generate a sample user ID."""
     return str(uuid4())
-
 
 @pytest.fixture
 def sample_trip_id() -> str:
     """Generate a sample trip ID."""
     return str(uuid4())
 
-
 @pytest.fixture
 def sample_timestamp() -> datetime:
     """Generate a sample timestamp."""
     return datetime.now(timezone.utc)
 
-
 @pytest.fixture
-def sample_user_data(sample_user_id: str) -> Dict[str, Any]:
+def sample_user_data(sample_user_id: str) -> dict[str, Any]:
     """Create sample user data."""
     return {
         "id": sample_user_id,
@@ -185,9 +176,8 @@ def sample_user_data(sample_user_id: str) -> Dict[str, Any]:
         "is_verified": True,
     }
 
-
 @pytest.fixture
-def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> Dict[str, Any]:
+def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> dict[str, Any]:
     """Create sample trip data."""
     return {
         "id": sample_trip_id,
@@ -203,7 +193,6 @@ def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> Dict[str, Any]
         "created_at": datetime.now(timezone.utc),
         "updated_at": datetime.now(timezone.utc),
     }
-
 
 @pytest_asyncio.fixture
 async def mock_supabase_client():
@@ -259,7 +248,6 @@ async def mock_supabase_client():
 
     return client
 
-
 @pytest.fixture
 def mock_openai_client():
     """Create mock OpenAI client."""
@@ -289,7 +277,6 @@ def mock_openai_client():
 
     return client
 
-
 @pytest.fixture
 def mock_service_registry():
     """Create mock service registry."""
@@ -306,7 +293,6 @@ def mock_service_registry():
 
     return registry
 
-
 # Markers for test categorization
 def pytest_configure(config):
     """Configure pytest with custom markers."""
@@ -317,7 +303,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "external: Tests requiring external services")
     config.addinivalue_line("markers", "asyncio: Async tests")
 
-
 # Skip slow tests by default
 def pytest_collection_modifyitems(config, items):
     """Modify test collection based on markers."""
@@ -326,7 +311,6 @@ def pytest_collection_modifyitems(config, items):
         for item in items:
             if "slow" in item.keywords:
                 item.add_marker(skip_slow)
-
 
 def pytest_addoption(parser):
     """Add custom command line options."""

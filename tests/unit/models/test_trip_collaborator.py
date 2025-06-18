@@ -26,7 +26,6 @@ from tripsage_core.models.db.trip_collaborator import (
     TripCollaboratorUpdate,
 )
 
-
 class TestPermissionLevel:
     """Test PermissionLevel enum values and hierarchy."""
 
@@ -69,7 +68,6 @@ class TestPermissionLevel:
             PermissionLevel.ADMIN: 3,
         }
         assert permission_hierarchy[permission] == expected_hierarchy
-
 
 class TestTripCollaboratorDB:
     """Test TripCollaboratorDB model validation and methods."""
@@ -268,7 +266,6 @@ class TestTripCollaboratorDB:
         with pytest.raises(ValidationError):
             collaborator.permission_level = "invalid_permission"
 
-
 class TestTripCollaboratorCreate:
     """Test TripCollaboratorCreate model validation."""
 
@@ -396,7 +393,6 @@ class TestTripCollaboratorCreate:
         create_request = TripCollaboratorCreate(**base_create_data)
         assert create_request.permission_level == PermissionLevel.EDIT
 
-
 class TestTripCollaboratorUpdate:
     """Test TripCollaboratorUpdate model validation."""
 
@@ -495,7 +491,6 @@ class TestTripCollaboratorUpdate:
         # Test str_strip_whitespace is True
         assert update_request.model_config["str_strip_whitespace"] is True
 
-
 class TestTripCollaboratorEdgeCases:
     """Test edge cases and boundary conditions."""
 
@@ -581,7 +576,6 @@ class TestTripCollaboratorEdgeCases:
                 permission_level="EDIT",  # Uppercase should fail
                 added_by=uuid4(),
             )
-
 
 class TestTripCollaboratorPropertyBased:
     """Property-based tests using Hypothesis for comprehensive validation."""
@@ -689,7 +683,6 @@ class TestTripCollaboratorPropertyBased:
                 added_by=added_by,
             )
             assert create_request.trip_id == trip_id
-
 
 class TestTripCollaboratorBusinessLogic:
     """Test business logic and integration scenarios."""

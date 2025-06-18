@@ -3,7 +3,6 @@ Router for activity-related endpoints in the TripSage API.
 """
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
@@ -23,7 +22,6 @@ from tripsage_core.services.business.activity_service import (
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
 
 @router.post("/search", response_model=ActivitySearchResponse)
 async def search_activities(request: ActivitySearchRequest):
@@ -56,7 +54,6 @@ async def search_activities(request: ActivitySearchRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while searching for activities",
         ) from e
-
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
 async def get_activity_details(activity_id: str):
@@ -97,7 +94,6 @@ async def get_activity_details(activity_id: str):
             detail="An unexpected error occurred while retrieving activity details",
         ) from e
 
-
 @router.post("/save", response_model=SavedActivityResponse)
 async def save_activity(request: SaveActivityRequest):
     """
@@ -115,8 +111,7 @@ async def save_activity(request: SaveActivityRequest):
         detail="Save activity endpoint requires user authentication implementation",
     )
 
-
-@router.get("/saved", response_model=List[SavedActivityResponse])
+@router.get("/saved", response_model=list[SavedActivityResponse])
 async def get_saved_activities():
     """
     Get all activities saved by a user.
@@ -128,7 +123,6 @@ async def get_saved_activities():
     # TODO: Implement user authentication and database retrieval
     # For now, return empty list to maintain API contract
     return []
-
 
 @router.delete("/saved/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_activity(activity_id: str):

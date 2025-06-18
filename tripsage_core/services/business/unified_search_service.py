@@ -10,7 +10,7 @@ to avoid code duplication while providing enhanced search capabilities.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import (
@@ -39,11 +39,10 @@ RESOURCE_TYPES = {
 # Default search types if none specified
 DEFAULT_SEARCH_TYPES = ["destination", "activity", "accommodation"]
 
-
 class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         details = {
             "additional_context": {
                 "original_error": str(original_error) if original_error else None
@@ -56,7 +55,6 @@ class UnifiedSearchServiceError(CoreServiceError):
             details=details,
         )
         self.original_error = original_error
-
 
 class UnifiedSearchService:
     """Service for unified search across multiple resource types."""
@@ -206,7 +204,7 @@ class UnifiedSearchService:
 
     async def _search_destinations(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search destinations and convert to unified results."""
         try:
             # Use the destination service to search
@@ -248,7 +246,7 @@ class UnifiedSearchService:
 
     async def _search_activities(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search activities and convert to unified results."""
         try:
             if not request.destination:
@@ -308,7 +306,7 @@ class UnifiedSearchService:
 
     async def _search_flights(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search flights and convert to unified results."""
         try:
             # For now, return empty as flight service integration needs more work
@@ -321,7 +319,7 @@ class UnifiedSearchService:
 
     async def _search_accommodations(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search accommodations and convert to unified results."""
         try:
             # For now, return empty as accommodation service integration needs more work
@@ -333,8 +331,8 @@ class UnifiedSearchService:
             return []
 
     def _apply_unified_filters(
-        self, results: List[SearchResultItem], request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+        self, results: list[SearchResultItem], request: UnifiedSearchRequest
+    ) -> list[SearchResultItem]:
         """Apply filters across all result types."""
         if not request.filters:
             return results
@@ -367,8 +365,8 @@ class UnifiedSearchService:
         return filtered
 
     def _sort_unified_results(
-        self, results: List[SearchResultItem], request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+        self, results: list[SearchResultItem], request: UnifiedSearchRequest
+    ) -> list[SearchResultItem]:
         """Sort results across all types."""
         sort_by = request.sort_by or "relevance"
         reverse = request.sort_order == "desc"
@@ -394,7 +392,7 @@ class UnifiedSearchService:
 
         return results
 
-    def _generate_facets(self, results: List[SearchResultItem]) -> List[SearchFacet]:
+    def _generate_facets(self, results: list[SearchResultItem]) -> list[SearchFacet]:
         """Generate facets for filtering UI."""
         facets = []
 
@@ -442,7 +440,7 @@ class UnifiedSearchService:
         return facets
 
     @with_error_handling()
-    async def get_search_suggestions(self, query: str, limit: int = 10) -> List[str]:
+    async def get_search_suggestions(self, query: str, limit: int = 10) -> list[str]:
         """
         Get search suggestions based on partial query.
 
@@ -502,10 +500,8 @@ class UnifiedSearchService:
             logger.error(f"Failed to get search suggestions: {e}")
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
 
-
 # Global service instance
-_unified_search_service: Optional[UnifiedSearchService] = None
-
+_unified_search_service: UnifiedSearchService | None = None
 
 async def get_unified_search_service() -> UnifiedSearchService:
     """Get the global unified search service instance."""
@@ -516,7 +512,6 @@ async def get_unified_search_service() -> UnifiedSearchService:
         await _unified_search_service.ensure_services()
 
     return _unified_search_service
-
 
 async def close_unified_search_service() -> None:
     """Close the global unified search service instance."""

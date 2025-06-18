@@ -17,7 +17,6 @@ from tripsage_core.monitoring.database_metrics import (
     reset_database_metrics,
 )
 
-
 class TestDatabaseMetrics:
     """Test suite for DatabaseMetrics class."""
 
@@ -252,7 +251,6 @@ class TestDatabaseMetrics:
             pass
         return []
 
-
 class TestGlobalMetricsInstance:
     """Test global metrics instance management."""
 
@@ -279,7 +277,6 @@ class TestGlobalMetricsInstance:
         metrics2 = get_database_metrics()
 
         assert metrics1 is not metrics2
-
 
 class TestMetricsIntegration:
     """Integration tests for metrics collection."""

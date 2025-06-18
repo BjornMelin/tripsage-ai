@@ -2,7 +2,6 @@
 
 from fastapi import status
 
-
 class TestFlightsRouter:
     """Test suite for flights router endpoints."""
 

@@ -7,14 +7,13 @@ with structured logging support.
 import logging
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 logger = logging.getLogger(__name__)
-
 
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for logging requests and responses.

@@ -11,7 +11,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from ipaddress import AddressValueError
 from ipaddress import ip_address as parse_ip_address
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field, field_validator
 
@@ -22,19 +22,18 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
-
 class UserSession(TripSageModel):
     """User session model with enhanced security validation."""
 
     id: str = Field(..., description="Session ID")
     user_id: str = Field(..., description="User ID")
     session_token: str = Field(..., description="Session token hash")
-    ip_address: Optional[str] = Field(None, description="IP address")
-    user_agent: Optional[str] = Field(None, description="User agent string")
-    device_info: Dict[str, Any] = Field(
+    ip_address: str | None = Field(None, description="IP address")
+    user_agent: str | None = Field(None, description="User agent string")
+    device_info: dict[str, Any] = Field(
         default_factory=dict, description="Device information"
     )
-    location_info: Dict[str, Any] = Field(
+    location_info: dict[str, Any] = Field(
         default_factory=dict, description="Location information"
     )
     is_active: bool = Field(True, description="Session active status")
@@ -43,7 +42,7 @@ class UserSession(TripSageModel):
     )
     expires_at: datetime = Field(..., description="Session expiration time")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    ended_at: Optional[datetime] = Field(None, description="Session end time")
+    ended_at: datetime | None = Field(None, description="Session end time")
 
     @field_validator("id")
     @classmethod
@@ -82,7 +81,7 @@ class UserSession(TripSageModel):
 
     @field_validator("ip_address")
     @classmethod
-    def validate_ip_address(cls, v: Optional[str]) -> Optional[str]:
+    def validate_ip_address(cls, v: str | None) -> str | None:
         """Validate IP address format and security."""
         if v is None or v == "":
             return None
@@ -120,7 +119,7 @@ class UserSession(TripSageModel):
 
     @field_validator("user_agent")
     @classmethod
-    def validate_user_agent(cls, v: Optional[str]) -> Optional[str]:
+    def validate_user_agent(cls, v: str | None) -> str | None:
         """Validate user agent string."""
         if v is None:
             return None
@@ -156,18 +155,17 @@ class UserSession(TripSageModel):
 
         return v
 
-
 class SecurityEvent(TripSageModel):
     """Security event model."""
 
-    id: Optional[str] = Field(None, description="Event ID")
-    user_id: Optional[str] = Field(None, description="User ID")
+    id: str | None = Field(None, description="Event ID")
+    user_id: str | None = Field(None, description="User ID")
     event_type: str = Field(..., description="Event type")
     event_category: str = Field(default="authentication", description="Event category")
     severity: str = Field(default="info", description="Event severity")
-    ip_address: Optional[str] = Field(None, description="IP address")
-    user_agent: Optional[str] = Field(None, description="User agent")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Event details")
+    ip_address: str | None = Field(None, description="IP address")
+    user_agent: str | None = Field(None, description="User agent")
+    details: dict[str, Any] = Field(default_factory=dict, description="Event details")
     risk_score: int = Field(default=0, description="Risk score (0-100)")
     is_blocked: bool = Field(default=False, description="Whether action was blocked")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -212,7 +210,6 @@ class SecurityEvent(TripSageModel):
             raise ValueError("Risk score must be between 0 and 100")
         return v
 
-
 class SessionSecurityMetrics(TripSageModel):
     """Security metrics for a user."""
 
@@ -226,11 +223,10 @@ class SessionSecurityMetrics(TripSageModel):
     )
     security_events_7d: int = Field(default=0, description="Security events in 7 days")
     risk_score: int = Field(default=0, description="Overall risk score")
-    last_login_at: Optional[datetime] = Field(None, description="Last login time")
-    password_changed_at: Optional[datetime] = Field(
+    last_login_at: datetime | None = Field(None, description="Last login time")
+    password_changed_at: datetime | None = Field(
         None, description="Last password change"
     )
-
 
 class SessionSecurityService:
     """
@@ -275,16 +271,16 @@ class SessionSecurityService:
         self.max_failed_attempts = max_failed_attempts
 
         # In-memory cache for rate limiting (use Redis in production)
-        self._rate_limit_cache: Dict[str, List[float]] = {}
-        self._risk_scores: Dict[str, int] = {}
+        self._rate_limit_cache: dict[str, list[float]] = {}
+        self._risk_scores: dict[str, int] = {}
 
     async def create_session(
         self,
         user_id: str,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        device_info: Optional[Dict[str, Any]] = None,
-        location_info: Optional[Dict[str, Any]] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        device_info: dict[str, Any] | None = None,
+        location_info: dict[str, Any] | None = None,
     ) -> UserSession:
         """
         Create a new user session.
@@ -371,9 +367,9 @@ class SessionSecurityService:
     async def validate_session(
         self,
         session_token: str,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-    ) -> Optional[UserSession]:
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession | None:
         """
         Validate and refresh a session.
 
@@ -452,7 +448,7 @@ class SessionSecurityService:
         self,
         session_id: str,
         reason: str = "user_logout",
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> bool:
         """
         Terminate a user session.
@@ -509,7 +505,7 @@ class SessionSecurityService:
             )
             return False
 
-    async def get_active_sessions(self, user_id: str) -> List[UserSession]:
+    async def get_active_sessions(self, user_id: str) -> list[UserSession]:
         """
         Get all active sessions for a user.
 
@@ -551,10 +547,10 @@ class SessionSecurityService:
     async def log_security_event(
         self,
         event_type: str,
-        user_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        user_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        details: dict[str, Any] | None = None,
         risk_score: int = 0,
         severity: str = "info",
         event_category: str = "authentication",
@@ -712,7 +708,7 @@ class SessionSecurityService:
             return SessionSecurityMetrics(user_id=user_id)
 
     def _calculate_login_risk_score(
-        self, user_id: str, ip_address: Optional[str]
+        self, user_id: str, ip_address: str | None
     ) -> int:
         """Calculate risk score for login attempt."""
         risk_score = 0
@@ -848,8 +844,8 @@ class SessionSecurityService:
     def _calculate_activity_risk_score(
         self,
         session: UserSession,
-        current_ip: Optional[str],
-        current_user_agent: Optional[str],
+        current_ip: str | None,
+        current_user_agent: str | None,
     ) -> int:
         """Calculate risk score for activity."""
         risk_score = 0
@@ -868,7 +864,7 @@ class SessionSecurityService:
 
         return min(risk_score, 100)
 
-    def _calculate_user_risk_score(self, user_id: str, metrics: Dict[str, Any]) -> int:
+    def _calculate_user_risk_score(self, user_id: str, metrics: dict[str, Any]) -> int:
         """Calculate overall user risk score."""
         risk_score = 0
 
@@ -935,7 +931,6 @@ class SessionSecurityService:
         except Exception as e:
             logger.error(f"Failed to cleanup expired sessions: {e}")
             return 0
-
 
 # Dependency function for FastAPI
 async def get_session_security_service() -> SessionSecurityService:

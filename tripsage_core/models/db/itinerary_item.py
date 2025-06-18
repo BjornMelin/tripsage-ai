@@ -13,7 +13,6 @@ from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
-
 class ItemType(str, Enum):
     """Enum for itinerary item type values."""
 
@@ -22,7 +21,6 @@ class ItemType(str, Enum):
     TRANSPORT = "transport"
     ACCOMMODATION = "accommodation"
     OTHER = "other"
-
 
 class ItineraryItem(TripSageModel):
     """ItineraryItem model for TripSage.
@@ -38,20 +36,20 @@ class ItineraryItem(TripSageModel):
         notes: Additional notes or information
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     item_type: ItemType = Field(..., description="Type of itinerary item")
     date: Date = Field(..., description="Date of the itinerary item")
-    scheduled_time: Optional[dt_time] = Field(
+    scheduled_time: dt_time | None = Field(
         None, description="Time of the itinerary item"
     )
     description: str = Field(..., description="Description of the itinerary item")
-    cost: Optional[float] = Field(None, description="Cost in default currency")
-    notes: Optional[str] = Field(None, description="Additional notes or information")
+    cost: float | None = Field(None, description="Cost in default currency")
+    notes: str | None = Field(None, description="Additional notes or information")
 
     @field_validator("cost")
     @classmethod
-    def validate_cost(cls, v: Optional[float]) -> Optional[float]:
+    def validate_cost(cls, v: float | None) -> float | None:
         """Validate that cost is a non-negative number if provided."""
         if v is not None and v < 0:
             raise ValueError("Cost must be non-negative")

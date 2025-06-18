@@ -1,7 +1,7 @@
 """Test fixtures for database model tests."""
 
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -24,9 +24,8 @@ from tripsage_core.models.schemas_common.enums import (
 # Temporarily commented out until fixed
 # from tripsage_core.models.db.itinerary_item import ItineraryItem, ItemType
 
-
 @pytest.fixture
-def sample_user_dict() -> Dict[str, Any]:
+def sample_user_dict() -> dict[str, Any]:
     """Return a sample user dict for testing."""
     return {
         "id": 1,
@@ -41,9 +40,8 @@ def sample_user_dict() -> Dict[str, Any]:
         "preferences": {"theme": "dark", "notifications": True},
     }
 
-
 @pytest.fixture
-def sample_trip_dict() -> Dict[str, Any]:
+def sample_trip_dict() -> dict[str, Any]:
     """Return a sample trip dict for testing."""
     return {
         "id": 1,
@@ -63,9 +61,8 @@ def sample_trip_dict() -> Dict[str, Any]:
         "tags": ["vacation", "winter"],
     }
 
-
 @pytest.fixture
-def sample_flight_dict() -> Dict[str, Any]:
+def sample_flight_dict() -> dict[str, Any]:
     """Return a sample flight dict for testing."""
     now = datetime.now(timezone.utc)
     return {
@@ -86,9 +83,8 @@ def sample_flight_dict() -> Dict[str, Any]:
         "cabin_class": "economy",
     }
 
-
 @pytest.fixture
-def sample_accommodation_dict() -> Dict[str, Any]:
+def sample_accommodation_dict() -> dict[str, Any]:
     """Return a sample accommodation dict for testing."""
     return {
         "id": 1,
@@ -109,9 +105,8 @@ def sample_accommodation_dict() -> Dict[str, Any]:
         "images": ["https://example.com/hotel1.jpg", "https://example.com/hotel2.jpg"],
     }
 
-
 @pytest.fixture
-def sample_search_parameters_dict() -> Dict[str, Any]:
+def sample_search_parameters_dict() -> dict[str, Any]:
     """Return a sample search parameters dict for testing."""
     return {
         "id": 1,
@@ -130,9 +125,8 @@ def sample_search_parameters_dict() -> Dict[str, Any]:
         },
     }
 
-
 @pytest.fixture
-def sample_trip_note_dict() -> Dict[str, Any]:
+def sample_trip_note_dict() -> dict[str, Any]:
     """Return a sample trip note dict for testing."""
     return {
         "id": 1,
@@ -141,9 +135,8 @@ def sample_trip_note_dict() -> Dict[str, Any]:
         "content": "Remember to exchange currency before departure",
     }
 
-
 @pytest.fixture
-def sample_price_history_dict() -> Dict[str, Any]:
+def sample_price_history_dict() -> dict[str, Any]:
     """Return a sample price history dict for testing."""
     return {
         "id": 1,
@@ -154,9 +147,8 @@ def sample_price_history_dict() -> Dict[str, Any]:
         "currency": "USD",
     }
 
-
 @pytest.fixture
-def sample_saved_option_dict() -> Dict[str, Any]:
+def sample_saved_option_dict() -> dict[str, Any]:
     """Return a sample saved option dict for testing."""
     return {
         "id": 1,
@@ -167,9 +159,8 @@ def sample_saved_option_dict() -> Dict[str, Any]:
         "notes": "Best price found so far",
     }
 
-
 @pytest.fixture
-def sample_trip_comparison_dict() -> Dict[str, Any]:
+def sample_trip_comparison_dict() -> dict[str, Any]:
     """Return a sample trip comparison dict for testing."""
     return {
         "id": 1,
@@ -190,9 +181,8 @@ def sample_trip_comparison_dict() -> Dict[str, Any]:
         },
     }
 
-
 @pytest.fixture
-def sample_transportation_dict() -> Dict[str, Any]:
+def sample_transportation_dict() -> dict[str, Any]:
     """Return a sample transportation dict for testing."""
     now = datetime.now(timezone.utc)
     return {
@@ -207,9 +197,8 @@ def sample_transportation_dict() -> Dict[str, Any]:
         "booking_status": BookingStatus.VIEWED,
     }
 
-
 @pytest.fixture
-def sample_trip_collaborator_dict() -> Dict[str, Any]:
+def sample_trip_collaborator_dict() -> dict[str, Any]:
     """Return a sample trip collaborator dict for testing."""
     now = datetime.now(timezone.utc)
     return {

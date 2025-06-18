@@ -13,7 +13,6 @@ if str(project_root) not in sys.path:
 # Import the core module to ensure it's available
 import tripsage_core  # noqa: E402, F401
 
-
 @pytest.fixture(autouse=True)
 def mock_core_settings(monkeypatch):
     """Mock settings for TripSage Core tests."""

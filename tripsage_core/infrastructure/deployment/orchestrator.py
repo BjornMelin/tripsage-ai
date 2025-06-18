@@ -10,7 +10,7 @@ import logging
 import time
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,7 +23,6 @@ from tripsage_core.infrastructure.deployment.strategies import (
 
 logger = logging.getLogger(__name__)
 
-
 class DeploymentStatus(str, Enum):
     """Overall deployment status."""
 
@@ -32,7 +31,6 @@ class DeploymentStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     ROLLED_BACK = "rolled_back"
-
 
 class DeploymentResult(BaseModel):
     """Result of a deployment operation."""
@@ -46,19 +44,19 @@ class DeploymentResult(BaseModel):
     start_time: float = Field(
         default_factory=time.time, description="Deployment start time"
     )
-    end_time: Optional[float] = Field(default=None, description="Deployment end time")
+    end_time: float | None = Field(default=None, description="Deployment end time")
 
-    metrics: Optional[DeploymentMetrics] = Field(
+    metrics: DeploymentMetrics | None = Field(
         default=None, description="Deployment metrics"
     )
-    rollback_metrics: Optional[DeploymentMetrics] = Field(
+    rollback_metrics: DeploymentMetrics | None = Field(
         default=None, description="Rollback metrics"
     )
 
     success: bool = Field(
         default=False, description="Whether deployment was successful"
     )
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         default=None, description="Error message if failed"
     )
 
@@ -75,7 +73,7 @@ class DeploymentResult(BaseModel):
         end = self.end_time or time.time()
         return end - self.start_time
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get deployment summary for reporting."""
         return {
             "deployment_id": self.deployment_id,
@@ -88,7 +86,6 @@ class DeploymentResult(BaseModel):
             "monitoring": self.monitoring_enabled,
         }
 
-
 class ConfigurableDeploymentOrchestrator:
     """Orchestrator for managing configurable deployment strategies.
 
@@ -99,8 +96,8 @@ class ConfigurableDeploymentOrchestrator:
 
     def __init__(self):
         self.enterprise_config = get_enterprise_config()
-        self.active_deployments: Dict[str, DeploymentResult] = {}
-        self.deployment_history: List[DeploymentResult] = []
+        self.active_deployments: dict[str, DeploymentResult] = {}
+        self.deployment_history: list[DeploymentResult] = []
 
         logger.info(
             f"Initialized deployment orchestrator with strategy: "
@@ -111,8 +108,8 @@ class ConfigurableDeploymentOrchestrator:
         self,
         image_tag: str,
         environment: str,
-        config: Optional[Dict[str, Any]] = None,
-        strategy: Optional[DeploymentStrategy] = None,
+        config: dict[str, Any] | None = None,
+        strategy: DeploymentStrategy | None = None,
     ) -> DeploymentResult:
         """Execute a deployment using the configured strategy.
 
@@ -322,7 +319,7 @@ class ConfigurableDeploymentOrchestrator:
 
     async def get_deployment_status(
         self, deployment_id: str
-    ) -> Optional[DeploymentResult]:
+    ) -> DeploymentResult | None:
         """Get status of a specific deployment.
 
         Args:
@@ -342,7 +339,7 @@ class ConfigurableDeploymentOrchestrator:
 
         return None
 
-    async def list_active_deployments(self) -> List[DeploymentResult]:
+    async def list_active_deployments(self) -> list[DeploymentResult]:
         """Get list of currently active deployments.
 
         Returns:
@@ -352,9 +349,9 @@ class ConfigurableDeploymentOrchestrator:
 
     async def get_deployment_history(
         self,
-        environment: Optional[str] = None,
+        environment: str | None = None,
         limit: int = 50,
-    ) -> List[DeploymentResult]:
+    ) -> list[DeploymentResult]:
         """Get deployment history with optional filtering.
 
         Args:
@@ -372,7 +369,7 @@ class ConfigurableDeploymentOrchestrator:
         # Return most recent first
         return sorted(history, key=lambda x: x.start_time, reverse=True)[:limit]
 
-    async def get_deployment_statistics(self) -> Dict[str, Any]:
+    async def get_deployment_statistics(self) -> dict[str, Any]:
         """Get deployment statistics for monitoring and reporting.
 
         Returns:
@@ -493,10 +490,8 @@ class ConfigurableDeploymentOrchestrator:
 
         logger.info(f"Monitoring completed for deployment {deployment_id}")
 
-
 # Global orchestrator instance
-_orchestrator: Optional[ConfigurableDeploymentOrchestrator] = None
-
+_orchestrator: ConfigurableDeploymentOrchestrator | None = None
 
 def get_deployment_orchestrator() -> ConfigurableDeploymentOrchestrator:
     """Get the global deployment orchestrator instance.

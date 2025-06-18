@@ -7,11 +7,10 @@ from pydantic import BaseModel
 T = TypeVar("T", bound=BaseModel)
 R = TypeVar("R", bound=BaseModel)
 
-
 class BaseClient:
     """Base client for all service integrations."""
 
-    def __init__(self, base_url: str, api_key: Optional[str] = None):
+    def __init__(self, base_url: str, api_key: str | None = None):
         """Initialize the base client.
 
         Args:
@@ -21,11 +20,10 @@ class BaseClient:
         self.base_url = base_url
         self.api_key = api_key
 
-
 class BaseMCPClient(Generic[T, R]):
     """Base client for MCP service integrations."""
 
-    def __init__(self, base_url: str, api_key: Optional[str] = None):
+    def __init__(self, base_url: str, api_key: str | None = None):
         """Initialize the base MCP client.
 
         Args:

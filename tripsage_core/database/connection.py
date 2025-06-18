@@ -7,7 +7,8 @@ now with enhanced security through validated URL parsing and conversion.
 
 import asyncio
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Optional
+from typing import Optional
+from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -26,18 +27,15 @@ from tripsage_core.utils.url_converters import DatabaseURLConverter, DatabaseURL
 
 logger = get_logger(__name__)
 
-
 class Base(DeclarativeBase):
     """Base class for SQLAlchemy models."""
 
     pass
 
-
 # Global engine and session factory
 _engine = None
 _session_factory = None
 _connection_manager = None
-
 
 def get_connection_manager() -> SecureDatabaseConnectionManager:
     """Get or create the global secure connection manager."""
@@ -51,7 +49,6 @@ def get_connection_manager() -> SecureDatabaseConnectionManager:
         )
         logger.info("Secure connection manager initialized")
     return _connection_manager
-
 
 async def create_secure_async_engine(
     database_url: str,
@@ -163,7 +160,6 @@ async def create_secure_async_engine(
 
     return engine
 
-
 def get_engine():
     """
     Get or create the global async database engine with secure connection.
@@ -214,7 +210,6 @@ def get_engine():
 
     return _engine
 
-
 def get_session_factory():
     """Get or create the global session factory."""
     global _session_factory
@@ -231,7 +226,6 @@ def get_session_factory():
         logger.info("Database session factory created")
 
     return _session_factory
-
 
 @asynccontextmanager
 async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
@@ -252,7 +246,6 @@ async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
-
 
 async def test_connection() -> bool:
     """
@@ -312,7 +305,6 @@ async def test_connection() -> bool:
         logger.error(f"Database connection test failed: {e}")
         return False
 
-
 async def close_connections():
     """
     Close all database connections and cleanup resources.
@@ -333,9 +325,8 @@ async def close_connections():
         _connection_manager = None
         logger.info("Connection manager reset")
 
-
 async def get_engine_for_testing(
-    database_url: Optional[str] = None,
+    database_url: str | None = None,
     use_null_pool: bool = True,
 ) -> AsyncGenerator:
     """

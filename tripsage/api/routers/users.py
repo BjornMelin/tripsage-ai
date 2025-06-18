@@ -16,7 +16,6 @@ from tripsage_core.services.business.user_service import UserService, get_user_s
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
 @router.get("/preferences", response_model=UserPreferencesResponse)
 async def get_user_preferences(
     principal=Depends(require_principal),
@@ -57,7 +56,6 @@ async def get_user_preferences(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve preferences",
         ) from e
-
 
 @router.put("/preferences", response_model=UserPreferencesResponse)
 async def update_user_preferences(

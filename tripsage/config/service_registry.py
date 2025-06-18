@@ -7,11 +7,10 @@ with support for different integration modes (direct SDK, API, etc).
 import asyncio
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Protocol
+from typing import Any, Protocol
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage_core.config import get_settings
-
 
 class ServiceProtocol(Protocol):
     """Protocol for service implementations."""
@@ -23,7 +22,6 @@ class ServiceProtocol(Protocol):
     async def close(self) -> None:
         """Close service connection."""
         ...
-
 
 class BaseService(ABC):
     """Base class for all service implementations."""
@@ -46,7 +44,6 @@ class BaseService(ABC):
     def is_connected(self) -> bool:
         """Check if service is connected."""
         return self._connected
-
 
 class ServiceAdapter(ABC):
     """Abstract adapter for services supporting different integration modes."""
@@ -74,7 +71,6 @@ class ServiceAdapter(ABC):
         """Get appropriate service instance."""
         return await self.get_service_instance()
 
-
 class ServiceRegistry:
     """Lightweight service registry for unified service discovery.
 
@@ -83,9 +79,9 @@ class ServiceRegistry:
     """
 
     def __init__(self):
-        self._services: Dict[str, ServiceAdapter] = {}
-        self._instances: Dict[str, Any] = {}
-        self._locks: Dict[str, asyncio.Lock] = {}
+        self._services: dict[str, ServiceAdapter] = {}
+        self._instances: dict[str, Any] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
 
     def register_service(self, name: str, adapter: ServiceAdapter) -> None:
         """Register a service adapter.
@@ -157,7 +153,7 @@ class ServiceRegistry:
 
         self._instances.clear()
 
-    def list_services(self) -> Dict[str, Dict[str, Any]]:
+    def list_services(self) -> dict[str, dict[str, Any]]:
         """List all registered services and their status.
 
         Returns:
@@ -195,10 +191,8 @@ class ServiceRegistry:
             # Services are managed by the registry, no cleanup needed here
             pass
 
-
 # Global service registry instance
 service_registry = ServiceRegistry()
-
 
 def get_service_registry() -> ServiceRegistry:
     """Get the global service registry instance.
@@ -207,7 +201,6 @@ def get_service_registry() -> ServiceRegistry:
         Global ServiceRegistry instance
     """
     return service_registry
-
 
 async def get_service(name: str) -> Any:
     """Convenience function to get a service from the global registry.
@@ -220,7 +213,6 @@ async def get_service(name: str) -> Any:
     """
     return await service_registry.get_service(name)
 
-
 async def refresh_service(name: str) -> Any:
     """Convenience function to refresh a service in the global registry.
 
@@ -232,7 +224,6 @@ async def refresh_service(name: str) -> Any:
     """
     return await service_registry.refresh_service(name)
 
-
 def register_service(name: str, adapter: ServiceAdapter) -> None:
     """Convenience function to register a service in the global registry.
 
@@ -241,7 +232,6 @@ def register_service(name: str, adapter: ServiceAdapter) -> None:
         adapter: Service adapter instance
     """
     service_registry.register_service(name, adapter)
-
 
 async def close_all_services() -> None:
     """Convenience function to close all services in the global registry."""

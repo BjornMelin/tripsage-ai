@@ -15,7 +15,6 @@ from tripsage.orchestration.simple_graph import (
     get_orchestrator,
 )
 
-
 class TestSimpleTripSageOrchestrator:
     """Test the simplified LangGraph orchestrator."""
 
@@ -276,7 +275,6 @@ class TestSimpleTripSageOrchestrator:
         assert "weather" in prompt.lower()
         assert "memory" in prompt.lower()
 
-
 class TestOrchestratorGlobalAccess:
     """Test global orchestrator access patterns."""
 
@@ -329,7 +327,6 @@ class TestOrchestratorGlobalAccess:
         # Should not create another instance
         assert mock_orchestrator_class.call_count == 2
 
-
 class TestOrchestratorBackwardsCompatibility:
     """Test backwards compatibility features."""
 
@@ -356,7 +353,6 @@ class TestOrchestratorBackwardsCompatibility:
         assert TripSageOrchestrator is not None
         assert get_orchestrator is not None
         assert TravelPlanningState is not None
-
 
 class TestIntegrationScenarios:
     """Integration test scenarios for realistic usage."""

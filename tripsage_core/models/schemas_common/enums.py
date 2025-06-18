@@ -8,7 +8,6 @@ and other categorical data used throughout the system.
 
 from enum import Enum
 
-
 class BookingStatus(str, Enum):
     """Status of a booking across all booking types (accommodations, flights, etc.)."""
 
@@ -16,7 +15,6 @@ class BookingStatus(str, Enum):
     SAVED = "saved"
     BOOKED = "booked"
     CANCELLED = "cancelled"
-
 
 class TripStatus(str, Enum):
     """Status of a trip throughout its lifecycle."""
@@ -26,7 +24,6 @@ class TripStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
-
 
 class AccommodationType(str, Enum):
     """Types of accommodations available for booking."""
@@ -50,7 +47,6 @@ class AccommodationType(str, Enum):
     OTHER = "other"
     ALL = "all"  # For search filters
 
-
 class CancellationPolicy(str, Enum):
     """Cancellation policies for bookings."""
 
@@ -62,13 +58,11 @@ class CancellationPolicy(str, Enum):
     STRICT = "strict"
     UNKNOWN = "unknown"
 
-
 class UserRole(str, Enum):
     """User roles in the system."""
 
     USER = "user"
     ADMIN = "admin"
-
 
 class CabinClass(str, Enum):
     """Flight cabin classes."""
@@ -77,7 +71,6 @@ class CabinClass(str, Enum):
     PREMIUM_ECONOMY = "premium_economy"
     BUSINESS = "business"
     FIRST = "first"
-
 
 class PaymentType(str, Enum):
     """Payment methods and types."""
@@ -89,7 +82,6 @@ class PaymentType(str, Enum):
     CRYPTO = "crypto"
     CASH = "cash"
     OTHER = "other"
-
 
 class CurrencyCode(str, Enum):
     """ISO 4217 currency codes for the most common currencies."""
@@ -120,14 +112,12 @@ class CurrencyCode(str, Enum):
     TRY = "TRY"  # Turkish Lira
     THB = "THB"  # Thai Baht
 
-
 class PassengerType(str, Enum):
     """Types of passengers for flight bookings."""
 
     ADULT = "adult"
     CHILD = "child"
     INFANT = "infant"
-
 
 class FareType(str, Enum):
     """Flight fare types."""
@@ -139,7 +129,6 @@ class FareType(str, Enum):
     BUSINESS = "business"
     FIRST_CLASS = "first_class"
 
-
 class OrderState(str, Enum):
     """Order states for bookings."""
 
@@ -150,14 +139,12 @@ class OrderState(str, Enum):
     REFUNDED = "refunded"
     EXPIRED = "expired"
 
-
 class TemperatureUnit(str, Enum):
     """Temperature measurement units."""
 
     CELSIUS = "celsius"
     FAHRENHEIT = "fahrenheit"
     KELVIN = "kelvin"
-
 
 class WindSpeedUnit(str, Enum):
     """Wind speed measurement units."""
@@ -167,7 +154,6 @@ class WindSpeedUnit(str, Enum):
     MS = "ms"  # meters per second
     KNOTS = "knots"
 
-
 class PressureUnit(str, Enum):
     """Atmospheric pressure measurement units."""
 
@@ -175,7 +161,6 @@ class PressureUnit(str, Enum):
     MBAR = "mbar"  # millibars
     INHG = "inhg"  # inches of mercury
     MMHG = "mmhg"  # millimeters of mercury
-
 
 class AirQualityIndex(str, Enum):
     """Air quality index levels."""
@@ -187,7 +172,6 @@ class AirQualityIndex(str, Enum):
     VERY_UNHEALTHY = "very_unhealthy"
     HAZARDOUS = "hazardous"
 
-
 class Priority(str, Enum):
     """General priority levels."""
 
@@ -195,7 +179,6 @@ class Priority(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     URGENT = "urgent"
-
 
 class SearchSortOrder(str, Enum):
     """Sort order for search results."""
@@ -211,7 +194,6 @@ class SearchSortOrder(str, Enum):
     NEWEST = "newest"
     OLDEST = "oldest"
 
-
 class NotificationType(str, Enum):
     """Types of notifications."""
 
@@ -223,7 +205,6 @@ class NotificationType(str, Enum):
     PRICE_ALERT = "price_alert"
     TRIP_REMINDER = "trip_reminder"
     PAYMENT_REMINDER = "payment_reminder"
-
 
 class AirlineProvider(str, Enum):
     """Airline providers for flight bookings."""
@@ -244,7 +225,6 @@ class AirlineProvider(str, Enum):
     SINGAPORE_AIRLINES = "singapore_airlines"
     OTHER = "other"
 
-
 class DataSource(str, Enum):
     """Data source providers for travel information."""
 
@@ -260,7 +240,6 @@ class DataSource(str, Enum):
     TRIPADVISOR = "tripadvisor"
     API_DIRECT = "api_direct"
     OTHER = "other"
-
 
 class TransportationType(str, Enum):
     """Types of transportation methods."""
@@ -278,7 +257,6 @@ class TransportationType(str, Enum):
     WALKING = "walking"
     OTHER = "other"
 
-
 class TripType(str, Enum):
     """Enum for trip type values."""
 
@@ -287,7 +265,6 @@ class TripType(str, Enum):
     FAMILY = "family"
     SOLO = "solo"
     OTHER = "other"
-
 
 class TripVisibility(str, Enum):
     """Enum for trip visibility values."""

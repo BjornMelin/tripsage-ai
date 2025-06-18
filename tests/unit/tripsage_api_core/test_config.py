@@ -13,7 +13,6 @@ from pydantic import ValidationError
 
 from tripsage.api.core.config import Settings, get_settings
 
-
 class TestSettings:
     """Test the unified Settings configuration class."""
 
@@ -220,7 +219,6 @@ class TestSettings:
         assert settings.request_timeout == 30
         assert settings.max_request_size == 10485760  # 10MB
 
-
 class TestGetSettings:
     """Test the get_settings function and caching behavior."""
 
@@ -248,7 +246,6 @@ class TestGetSettings:
         # Cache should still return the same instance even with different env
         settings2 = get_settings()
         assert settings1 is settings2
-
 
 class TestSettingsValidation:
     """Test advanced validation scenarios and edge cases."""
@@ -304,7 +301,6 @@ class TestSettingsValidation:
         # Chat limits should be reasonable for real-time communication
         assert settings.rate_limit_chat_requests <= settings.rate_limit_requests
 
-
 class TestEnvironmentSpecificBehavior:
     """Test environment-specific configuration behavior."""
 
@@ -335,7 +331,6 @@ class TestEnvironmentSpecificBehavior:
         assert settings.environment == "testing"
         # Other settings should use reasonable defaults
         assert settings.rate_limit_enabled is True
-
 
 class TestConfigurationIntegration:
     """Test integration scenarios and complex configurations."""
@@ -414,7 +409,6 @@ class TestConfigurationIntegration:
         assert settings_custom.get_rate_limit_for_endpoint("general") == 50
         assert settings_custom.get_rate_limit_for_endpoint("chat") == 25
         assert settings_custom.get_rate_limit_for_endpoint("search") == 100
-
 
 class TestErrorHandling:
     """Test error handling and validation edge cases."""

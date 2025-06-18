@@ -29,14 +29,12 @@ from tripsage_core.services.business.memory_service_async import (
     get_async_memory_service,
 )
 
-
 @pytest.fixture
 async def mock_database_service():
     """Mock database service."""
     service = AsyncMock()
     service.execute_sql = AsyncMock(return_value=[])
     return service
-
 
 @pytest.fixture
 async def mock_cache_service():
@@ -49,7 +47,6 @@ async def mock_cache_service():
     service.delete_pattern = AsyncMock(return_value=5)
     return service
 
-
 @pytest.fixture
 async def mock_pg_pool():
     """Mock asyncpg connection pool."""
@@ -59,7 +56,6 @@ async def mock_pg_pool():
         return_value=AsyncMock(__aenter__=AsyncMock(return_value=conn))
     )
     return pool
-
 
 @pytest.fixture
 async def memory_service(mock_database_service, mock_cache_service, mock_pg_pool):
@@ -102,7 +98,6 @@ async def memory_service(mock_database_service, mock_cache_service, mock_pg_pool
             service.memory.delete = Mock()
 
             yield service
-
 
 class TestAsyncMemoryService:
     """Test suite for AsyncMemoryService."""
@@ -497,7 +492,6 @@ class TestAsyncMemoryService:
         assert "Failed to connect async memory service" in str(exc_info.value)
         assert not memory_service._connected
 
-
 class TestAsyncMemoryServiceIntegration:
     """Integration tests for async memory service."""
 
@@ -572,7 +566,6 @@ class TestAsyncMemoryServiceIntegration:
         # Verify no exceptions
         exceptions = [r for r in results if isinstance(r, Exception)]
         assert len(exceptions) == 0
-
 
 @pytest.mark.asyncio
 async def test_get_async_memory_service():

@@ -12,7 +12,6 @@ import pytest
 
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
-
 class TestCollaborationTriggers:
     """Test collaboration event triggers and notifications."""
 
@@ -176,7 +175,6 @@ class TestCollaborationTriggers:
         assert "Collaboration updated" in audit_records[0]["content"]
         assert audit_records[0]["metadata"]["operation"] == "UPDATE"
 
-
 class TestCacheInvalidationTriggers:
     """Test cache invalidation triggers."""
 
@@ -275,7 +273,6 @@ class TestCacheInvalidationTriggers:
         )
 
         assert len(remaining_cache) == 0
-
 
 class TestBusinessLogicTriggers:
     """Test business logic automation triggers."""
@@ -456,7 +453,6 @@ class TestBusinessLogicTriggers:
 
         assert attachment[0]["metadata"].get("orphaned")
 
-
 class TestScheduledJobFunctions:
     """Test scheduled maintenance job functions."""
 
@@ -570,7 +566,6 @@ class TestScheduledJobFunctions:
 
         assert len(cleanup_logs) >= 1
         assert "Monthly deep cleanup completed" in cleanup_logs[0]["content"]
-
 
 class TestTriggerPerformance:
     """Test trigger performance and overhead."""

@@ -36,7 +36,6 @@ from tripsage.api.schemas.itineraries import (
 from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
 from tripsage_core.services.business.itinerary_service import ItineraryService
 
-
 class TestItinerariesRouter:
     """Test itineraries router functionality by testing functions directly."""
 

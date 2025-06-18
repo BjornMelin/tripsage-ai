@@ -30,7 +30,6 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
 )
 
-
 class TestKeysRouter:
     """Test keys router functionality by testing functions directly."""
 

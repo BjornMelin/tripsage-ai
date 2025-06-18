@@ -137,8 +137,8 @@ dev = [
     {include-group = "lint"},
     # Additional development tools
     "radon>=6.0.1",
-    "python-jose[cryptography]>=3.5.0",
     "bandit>=1.8.3",
+    "mypy>=1.16.0",
 ]
 
 # Scripts and benchmarking with visualization
@@ -155,7 +155,7 @@ benchmark = [
 analysis = [
     "jupyter>=1.1.1",
     "ipython>=8.0.0", 
-    "pandas>=2.1.0",
+    "polars>=1.0.0",              # High-performance data processing (15-30x faster)
     "memory-profiler>=0.61.0",
 ]
 

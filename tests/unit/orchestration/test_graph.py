@@ -14,7 +14,6 @@ from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.graph import TripSageOrchestrator
 from tripsage.orchestration.state import create_initial_state
 
-
 class TestTripSageOrchestrator:
     """Test the main orchestration graph."""
 
@@ -276,7 +275,6 @@ class TestTripSageOrchestrator:
             result = await orchestrator.get_session_state("test_session")
             assert result is None
 
-
 class TestStateCreation:
     """Test state creation and management."""
 
@@ -301,7 +299,6 @@ class TestStateCreation:
 
         assert state["session_id"] == session_id
         assert state["user_id"] == "test_user"
-
 
 class TestTripSageOrchestratorEnhanced:
     """Enhanced test suite for TripSageOrchestrator with comprehensive coverage."""

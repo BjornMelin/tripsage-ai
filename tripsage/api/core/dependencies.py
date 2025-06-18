@@ -51,12 +51,10 @@ from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPMan
 from tripsage_core.services.simple_mcp_service import mcp_manager
 from tripsage_core.utils.session_utils import SessionMemory
 
-
 # Settings dependency
 def get_settings_dependency() -> Settings:
     """Get settings instance as a dependency."""
     return get_settings()
-
 
 # Database dependency
 async def get_db():
@@ -66,7 +64,6 @@ async def get_db():
     monitoring, and security features.
     """
     return await get_database_service()
-
 
 # Session memory dependency
 async def get_session_memory(request: Request) -> SessionMemory:
@@ -80,7 +77,6 @@ async def get_session_memory(request: Request) -> SessionMemory:
         request.state.session_memory = SessionMemory(session_id=session_id)
     return request.state.session_memory
 
-
 # Principal-based authentication
 async def get_current_principal(request: Request) -> Principal | None:
     """Get the current authenticated principal from request state.
@@ -89,7 +85,6 @@ async def get_current_principal(request: Request) -> Principal | None:
     Returns None if no authentication is present.
     """
     return getattr(request.state, "principal", None)
-
 
 async def require_principal(request: Request) -> Principal:
     """Require an authenticated principal or raise an error."""
@@ -102,7 +97,6 @@ async def require_principal(request: Request) -> Principal:
         )
     return principal
 
-
 async def require_user_principal(request: Request) -> Principal:
     """Require a user principal (JWT-authenticated user)."""
     principal = await require_principal(request)
@@ -113,7 +107,6 @@ async def require_user_principal(request: Request) -> Principal:
             details={"additional_context": {"current_auth": principal.type}},
         )
     return principal
-
 
 async def require_agent_principal(request: Request) -> Principal:
     """Require an agent principal (API key-authenticated agent)."""
@@ -126,12 +119,10 @@ async def require_agent_principal(request: Request) -> Principal:
         )
     return principal
 
-
 # Principal utilities
 def get_principal_id(principal: Principal) -> str:
     """Get the principal's ID as a string."""
     return principal.id
-
 
 async def verify_service_access(
     principal: Principal,
@@ -154,18 +145,15 @@ async def verify_service_access(
 
     return False
 
-
 # Cache service dependency
 async def get_cache_service_dep():
     """Get the cache service instance as a dependency."""
     return await get_cache_service()
 
-
 # MCP Manager dependency
 def get_mcp_manager() -> MCPManager:
     """Get the MCP Manager instance."""
     return mcp_manager
-
 
 # API Key service dependency
 async def get_api_key_service() -> ApiKeyService:
@@ -174,7 +162,6 @@ async def get_api_key_service() -> ApiKeyService:
     cache = await get_cache_service()
     settings = get_settings()
     return ApiKeyService(db=db, cache=cache, settings=settings)
-
 
 # Modern Annotated dependency types for 2025 best practices
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]

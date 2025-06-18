@@ -52,7 +52,6 @@ from tripsage_core.models.schemas_common.enums import (
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.services.business.trip_service import TripService
 
-
 class TestTripsRouterComprehensive:
     """Comprehensive test suite for trips router functionality."""
 

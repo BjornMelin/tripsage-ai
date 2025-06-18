@@ -16,7 +16,6 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
-
 class TestApiKeyIntegrationDemo:
     """Demonstration integration test class."""
 

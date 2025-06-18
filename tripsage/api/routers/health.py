@@ -11,7 +11,7 @@ This module provides comprehensive health check endpoints including:
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
@@ -32,16 +32,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
-
 class ComponentHealth(BaseModel):
     """Health status of a system component."""
 
     name: str
     status: str  # healthy, degraded, unhealthy
-    latency_ms: Optional[float] = None
-    message: Optional[str] = None
-    details: Dict = Field(default_factory=dict)
-
+    latency_ms: float | None = None
+    message: str | None = None
+    details: dict = Field(default_factory=dict)
 
 class SystemHealth(BaseModel):
     """Overall system health status."""
@@ -50,18 +48,16 @@ class SystemHealth(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     version: str = "1.0.0"
     environment: str
-    components: List[ComponentHealth]
-    external_services: Dict[str, ServiceHealthCheck] = Field(default_factory=dict)
-
+    components: list[ComponentHealth]
+    external_services: dict[str, ServiceHealthCheck] = Field(default_factory=dict)
 
 class ReadinessCheck(BaseModel):
     """Readiness check result."""
 
     ready: bool
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    checks: Dict[str, bool]
-    details: Dict[str, str] = Field(default_factory=dict)
-
+    checks: dict[str, bool]
+    details: dict[str, str] = Field(default_factory=dict)
 
 @router.get("/health", response_model=SystemHealth)
 async def comprehensive_health_check(
@@ -137,7 +133,6 @@ async def comprehensive_health_check(
         external_services=external_services,
     )
 
-
 @router.get("/health/liveness")
 async def liveness_check():
     """Basic liveness check for container orchestration.
@@ -149,7 +144,6 @@ async def liveness_check():
         "status": "alive",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-
 
 @router.get("/health/readiness", response_model=ReadinessCheck)
 async def readiness_check(
@@ -205,7 +199,6 @@ async def readiness_check(
         details=details,
     )
 
-
 @router.get("/health/services/{service_type}")
 async def check_specific_service_health(
     service_type: ServiceType,
@@ -243,7 +236,6 @@ async def check_specific_service_health(
             message=f"Health check error: {str(e)}",
         )
 
-
 @router.get("/health/database")
 async def database_health_check(db_service: DatabaseDep):
     """Detailed database health check.
@@ -264,7 +256,6 @@ async def database_health_check(db_service: DatabaseDep):
             logger.warning(f"Failed to get pool stats: {e}")
 
     return health
-
 
 @router.get("/health/cache")
 async def cache_health_check(cache_service: CacheDep):
@@ -292,7 +283,6 @@ async def cache_health_check(cache_service: CacheDep):
             logger.warning(f"Failed to get cache info: {e}")
 
     return health
-
 
 async def _check_database_health(db_service) -> ComponentHealth:
     """Check database health and connectivity."""
@@ -330,7 +320,6 @@ async def _check_database_health(db_service) -> ComponentHealth:
             message=f"Database error: {str(e)}",
             details={"error": str(e)},
         )
-
 
 async def _check_cache_health(cache_service) -> ComponentHealth:
     """Check cache (DragonflyDB) health and connectivity."""

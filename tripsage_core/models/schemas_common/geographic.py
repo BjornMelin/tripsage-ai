@@ -13,13 +13,12 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 from .common_validators import AirportCode, Latitude, Longitude
 
-
 class Coordinates(TripSageModel):
     """Geographic coordinates."""
 
     latitude: Latitude = Field(description="Latitude in decimal degrees")
     longitude: Longitude = Field(description="Longitude in decimal degrees")
-    altitude: Optional[float] = Field(None, description="Altitude in meters")
+    altitude: float | None = Field(None, description="Altitude in meters")
 
     def distance_to(self, other: "Coordinates") -> float:
         """Calculate the Haversine distance to another coordinate in kilometers."""
@@ -42,16 +41,15 @@ class Coordinates(TripSageModel):
         r = 6371
         return c * r
 
-
 class Address(TripSageModel):
     """Structured address information."""
 
-    street: Optional[str] = Field(None, description="Street address")
-    city: Optional[str] = Field(None, description="City name")
-    state: Optional[str] = Field(None, description="State or province")
-    country: Optional[str] = Field(None, description="Country name")
-    postal_code: Optional[str] = Field(None, description="Postal or ZIP code")
-    formatted: Optional[str] = Field(None, description="Formatted address string")
+    street: str | None = Field(None, description="Street address")
+    city: str | None = Field(None, description="City name")
+    state: str | None = Field(None, description="State or province")
+    country: str | None = Field(None, description="Country name")
+    postal_code: str | None = Field(None, description="Postal or ZIP code")
+    formatted: str | None = Field(None, description="Formatted address string")
 
     def to_string(self) -> str:
         """Convert address to a formatted string."""
@@ -72,23 +70,21 @@ class Address(TripSageModel):
 
         return ", ".join(parts)
 
-
 class Place(TripSageModel):
     """A geographic place with coordinates and address."""
 
     name: str = Field(description="Place name")
-    coordinates: Optional[Coordinates] = Field(
+    coordinates: Coordinates | None = Field(
         None, description="Geographic coordinates"
     )
-    address: Optional[Address] = Field(None, description="Structured address")
-    place_id: Optional[str] = Field(
+    address: Address | None = Field(None, description="Structured address")
+    place_id: str | None = Field(
         None, description="External place identifier (e.g., Google Place ID)"
     )
-    place_type: Optional[str] = Field(
+    place_type: str | None = Field(
         None, description="Type of place (e.g., city, airport, hotel)"
     )
-    timezone: Optional[str] = Field(None, description="IANA timezone identifier")
-
+    timezone: str | None = Field(None, description="IANA timezone identifier")
 
 class BoundingBox(TripSageModel):
     """Geographic bounding box."""
@@ -111,50 +107,47 @@ class BoundingBox(TripSageModel):
         center_lon = (self.east + self.west) / 2
         return Coordinates(latitude=center_lat, longitude=center_lon)
 
-
 class Region(TripSageModel):
     """Geographic region with metadata."""
 
     name: str = Field(description="Region name")
-    code: Optional[str] = Field(
+    code: str | None = Field(
         None, description="Region code (e.g., ISO country code)"
     )
-    bounding_box: Optional[BoundingBox] = Field(None, description="Region boundaries")
-    center: Optional[Coordinates] = Field(None, description="Region center point")
-    population: Optional[int] = Field(None, description="Population count", ge=0)
-    area_km2: Optional[float] = Field(
+    bounding_box: BoundingBox | None = Field(None, description="Region boundaries")
+    center: Coordinates | None = Field(None, description="Region center point")
+    population: int | None = Field(None, description="Population count", ge=0)
+    area_km2: float | None = Field(
         None, description="Area in square kilometers", ge=0
     )
-
 
 class Airport(TripSageModel):
     """Airport information."""
 
     code: AirportCode = Field(description="IATA airport code")
-    icao_code: Optional[str] = Field(
+    icao_code: str | None = Field(
         None, description="ICAO airport code", min_length=4, max_length=4
     )
     name: str = Field(description="Airport name")
     city: str = Field(description="City name")
     country: str = Field(description="Country name")
-    coordinates: Optional[Coordinates] = Field(None, description="Airport coordinates")
-    timezone: Optional[str] = Field(None, description="Airport timezone")
-
+    coordinates: Coordinates | None = Field(None, description="Airport coordinates")
+    timezone: str | None = Field(None, description="Airport timezone")
 
 class Route(TripSageModel):
     """Geographic route between two places."""
 
     origin: Place = Field(description="Starting place")
     destination: Place = Field(description="Ending place")
-    distance_km: Optional[float] = Field(
+    distance_km: float | None = Field(
         None, description="Distance in kilometers", ge=0
     )
-    duration_minutes: Optional[int] = Field(
+    duration_minutes: int | None = Field(
         None, description="Estimated duration in minutes", ge=0
     )
-    waypoints: Optional[list[Place]] = Field(None, description="Intermediate waypoints")
+    waypoints: list[Place] | None = Field(None, description="Intermediate waypoints")
 
-    def total_distance(self) -> Optional[float]:
+    def total_distance(self) -> float | None:
         """Calculate total route distance if coordinates are available."""
         if not self.origin.coordinates or not self.destination.coordinates:
             return self.distance_km

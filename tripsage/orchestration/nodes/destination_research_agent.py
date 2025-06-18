@@ -8,7 +8,7 @@ capabilities.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -20,7 +20,6 @@ from tripsage_core.services.configuration_service import get_configuration_servi
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class DestinationResearchAgentNode(BaseAgentNode):
     """
@@ -167,7 +166,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     async def _extract_research_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Extract destination research parameters from user message and conversation
         context.
@@ -243,8 +242,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             return None
 
     async def _research_destination(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Perform comprehensive destination research using MCP tools.
 
@@ -313,7 +312,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             logger.error(f"Destination research failed for {destination}: {str(e)}")
             return {"error": f"Research failed: {str(e)}", "destination": destination}
 
-    async def _research_overview(self, destination: str) -> Dict[str, Any]:
+    async def _research_overview(self, destination: str) -> dict[str, Any]:
         """Research general overview information about a destination."""
         try:
             # Use web crawling tool for comprehensive overview
@@ -409,7 +408,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             logger.error(f"Activities research failed: {str(e)}")
             return [{"error": str(e)}]
 
-    async def _research_practical_info(self, destination: str) -> Dict[str, Any]:
+    async def _research_practical_info(self, destination: str) -> dict[str, Any]:
         """Research practical travel information for a destination."""
         try:
             # Use web crawling for practical information
@@ -433,7 +432,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             logger.error(f"Practical info research failed: {str(e)}")
             return {"error": str(e)}
 
-    async def _research_cultural_info(self, destination: str) -> Dict[str, Any]:
+    async def _research_cultural_info(self, destination: str) -> dict[str, Any]:
         """Research cultural information and customs for a destination."""
         try:
             # Use web crawling for cultural information
@@ -457,8 +456,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             return {"error": str(e)}
 
     async def _research_weather_info(
-        self, destination: str, travel_dates: Optional[str]
-    ) -> Dict[str, Any]:
+        self, destination: str, travel_dates: str | None
+    ) -> dict[str, Any]:
         """Research weather and climate information for a destination."""
         try:
             # Use weather tools for climate information
@@ -477,7 +476,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             logger.error(f"Weather info research failed: {str(e)}")
             return {"error": str(e)}
 
-    async def _get_location_data(self, destination: str) -> Dict[str, Any]:
+    async def _get_location_data(self, destination: str) -> dict[str, Any]:
         """Get location data using Google Maps tools."""
         try:
             # Use Google Maps for location information
@@ -497,10 +496,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     async def _generate_research_response(
         self,
-        research_results: Dict[str, Any],
-        params: Dict[str, Any],
+        research_results: dict[str, Any],
+        params: dict[str, Any],
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate user-friendly response from destination research results.
 
@@ -599,7 +598,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     async def _handle_general_research_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle general destination research inquiries.
 

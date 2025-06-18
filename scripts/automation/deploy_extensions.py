@@ -8,14 +8,12 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 import asyncpg
 from rich.console import Console
 from rich.panel import Panel
 
 console = Console()
-
 
 class ExtensionDeployer:
     def __init__(self, database_url: str, schema_path: Path):
@@ -67,7 +65,7 @@ class ExtensionDeployer:
             console.print(f"❌ Failed to execute {file_path}: {e}", style="red")
             return False
 
-    def _split_sql_statements(self, sql_content: str) -> List[str]:
+    def _split_sql_statements(self, sql_content: str) -> list[str]:
         """Split SQL content into individual statements."""
         # This is a simple implementation - for production use a proper SQL parser
         statements = []
@@ -169,7 +167,7 @@ class ExtensionDeployer:
             migration_file, "Automation Extensions Migration"
         )
 
-    async def verify_deployment(self) -> Dict[str, bool]:
+    async def verify_deployment(self) -> dict[str, bool]:
         """Verify the deployment was successful."""
         console.print("\n🔍 Verifying Deployment...", style="bold blue")
 
@@ -333,7 +331,6 @@ class ExtensionDeployer:
 
         return all_steps_passed and all_verifications_passed
 
-
 def get_database_url() -> str:
     """Get database URL from environment."""
     database_url = os.getenv("SUPABASE_DB_URL")
@@ -348,7 +345,6 @@ def get_database_url() -> str:
         sys.exit(1)
 
     return database_url
-
 
 async def main():
     """Main deployment function."""
@@ -366,7 +362,6 @@ async def main():
     success = await deployer.full_deployment()
 
     sys.exit(0 if success else 1)
-
 
 if __name__ == "__main__":
     asyncio.run(main())

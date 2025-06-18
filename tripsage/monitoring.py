@@ -19,11 +19,10 @@ from opentelemetry.sdk.trace.export import (
 
 logger = logging.getLogger(__name__)
 
-
 def configure_opentelemetry(
     service_name: str = "tripsage",
     service_version: str = "1.0.0",
-    otlp_endpoint: Optional[str] = None,
+    otlp_endpoint: str | None = None,
     use_console_exporter: bool = True,
 ) -> None:
     """
@@ -69,7 +68,6 @@ def configure_opentelemetry(
         f"OpenTelemetry configured for service '{service_name}' "
         f"version '{service_version}'"
     )
-
 
 def get_tracer(component_name: str) -> trace.Tracer:
     """

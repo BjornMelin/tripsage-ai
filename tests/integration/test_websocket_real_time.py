@@ -11,7 +11,7 @@ Tests the complete WebSocket integration including:
 
 import json
 import uuid
-from typing import Dict, List
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
@@ -32,12 +32,11 @@ from tripsage_core.services.infrastructure.websocket_manager import (
     websocket_manager,
 )
 
-
 class MockWebSocket:
     """Mock WebSocket for testing."""
 
     def __init__(self):
-        self.messages_sent: List[str] = []
+        self.messages_sent: list[str] = []
         self.closed = False
         self.close_code = None
         self.close_reason = None
@@ -69,7 +68,6 @@ class MockWebSocket:
         self.close_code = code
         self.close_reason = reason
 
-
 class MockChatService:
     """Mock chat service for testing."""
 
@@ -77,11 +75,10 @@ class MockChatService:
         """Mock add_message method."""
         return {"id": "mock-message-id", "content": message_data.content}
 
-
 class MockChatAgent:
     """Mock chat agent for testing."""
 
-    async def run(self, content: str, context: Dict):
+    async def run(self, content: str, context: dict):
         """Mock run method."""
         return {
             "content": f"I received your message: {content}. This is a mock response.",
@@ -89,24 +86,20 @@ class MockChatAgent:
             "metadata": {},
         }
 
-
 @pytest.fixture
 def mock_websocket():
     """Fixture providing a mock WebSocket."""
     return MockWebSocket()
-
 
 @pytest.fixture
 def mock_chat_service():
     """Fixture providing a mock chat service."""
     return MockChatService()
 
-
 @pytest.fixture
 def mock_chat_agent():
     """Fixture providing a mock chat agent."""
     return MockChatAgent()
-
 
 @pytest.fixture
 def valid_jwt_token():
@@ -124,12 +117,10 @@ def valid_jwt_token():
         algorithm="HS256",
     )
 
-
 @pytest.fixture
 def invalid_jwt_token():
     """Fixture providing an invalid JWT token."""
     return "invalid.jwt.token"
-
 
 class TestWebSocketAuthentication:
     """Test WebSocket authentication flow."""
@@ -225,7 +216,6 @@ class TestWebSocketAuthentication:
         assert "Invalid authentication request" in error_message["message"]
         assert mock_websocket.closed
         assert mock_websocket.close_code == 4000
-
 
 class TestWebSocketChatMessages:
     """Test WebSocket chat message handling."""
@@ -346,7 +336,6 @@ class TestWebSocketChatMessages:
         assert hasattr(error_event, "error_code")
         assert error_event.error_code == "chat_error"
 
-
 class TestWebSocketAgentStatus:
     """Test WebSocket agent status functionality."""
 
@@ -411,7 +400,6 @@ class TestWebSocketAgentStatus:
         assert mock_websocket.closed
         assert mock_websocket.close_code == 4003
 
-
 class TestWebSocketSubscriptions:
     """Test WebSocket subscription functionality."""
 
@@ -458,7 +446,6 @@ class TestWebSocketSubscriptions:
         )
 
         assert response.success is True
-
 
 class TestWebSocketEventTypes:
     """Test WebSocket event type handling."""
@@ -512,7 +499,6 @@ class TestWebSocketEventTypes:
                 for attr in dir(WebSocketEventType)
                 if not attr.startswith("_")
             )
-
 
 class TestWebSocketPerformance:
     """Test WebSocket performance and optimization features."""
@@ -587,7 +573,6 @@ class TestWebSocketPerformance:
         assert len(typing_start_events) >= 1
         assert len(typing_stop_events) >= 1
 
-
 class TestWebSocketHealthCheck:
     """Test WebSocket health check endpoints."""
 
@@ -613,7 +598,6 @@ class TestWebSocketHealthCheck:
         assert "total_count" in data
         assert isinstance(data["connections"], list)
         assert isinstance(data["total_count"], int)
-
 
 @pytest.mark.asyncio
 async def test_websocket_integration_end_to_end():
@@ -641,7 +625,6 @@ async def test_websocket_integration_end_to_end():
     finally:
         # Cleanup
         await websocket_manager.stop()
-
 
 if __name__ == "__main__":
     # Run tests with pytest

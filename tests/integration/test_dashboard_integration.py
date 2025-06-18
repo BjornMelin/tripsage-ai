@@ -19,7 +19,6 @@ from tripsage_core.services.business.api_key_monitoring import (
     UsageDashboard,
 )
 
-
 class TestDashboardIntegration:
     """Integration tests for dashboard monitoring endpoints."""
 

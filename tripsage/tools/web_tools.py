@@ -15,7 +15,7 @@ allowing sharing of cached web search results across multiple application instan
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from tripsage_core.utils.cache_utils import (
     CacheStats,
@@ -37,7 +37,6 @@ from tripsage_core.utils.logging_utils import get_logger
 # NOTE: Temporarily using mock implementation due to missing agents dependency
 # from agents import WebSearchTool
 
-
 class MockWebSearchTool:
     """Mock WebSearchTool for testing and development.
 
@@ -47,7 +46,7 @@ class MockWebSearchTool:
 
     def __init__(
         self,
-        user_location: Optional[Any] = None,
+        user_location: Any | None = None,
         search_context_size: str = "medium",
     ):
         """Initialize the MockWebSearchTool.
@@ -89,7 +88,6 @@ class MockWebSearchTool:
             },
         }
 
-
 # Use the mock implementation
 WebSearchTool = MockWebSearchTool
 
@@ -97,7 +95,6 @@ logger = get_logger(__name__)
 
 # Default namespace for web cache operations
 WEB_CACHE_NAMESPACE = "web-search"
-
 
 class CachedWebSearchTool(WebSearchTool):
     """Wrapper for WebSearchTool with direct Redis/DragonflyDB caching.
@@ -115,7 +112,7 @@ class CachedWebSearchTool(WebSearchTool):
     def __init__(
         self,
         namespace: str = WEB_CACHE_NAMESPACE,
-        user_location: Optional[Any] = None,
+        user_location: Any | None = None,
         search_context_size: str = "medium",
     ):
         """Initialize the CachedWebSearchTool.
@@ -219,7 +216,7 @@ class CachedWebSearchTool(WebSearchTool):
             }
 
     def _determine_content_type(
-        self, query: str, result: Optional[Dict[str, Any]] = None
+        self, query: str, result: dict[str, Any] | None = None
     ) -> ContentType:
         """Determine content type from query and results.
 
@@ -291,7 +288,6 @@ class CachedWebSearchTool(WebSearchTool):
             # Don't let prefetching errors affect the main flow
             logger.debug(f"Error prefetching related queries: {str(e)}")
 
-
 async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
     """Get statistics for the web cache.
 
@@ -302,7 +298,6 @@ async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
         Cache statistics
     """
     return await get_cache_stats(namespace=WEB_CACHE_NAMESPACE, time_window=time_window)
-
 
 async def invalidate_web_cache_for_query(query: str) -> int:
     """Invalidate cache entries for a specific query.
@@ -331,10 +326,9 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         logger.error(f"Error invalidating web cache for query '{query}': {str(e)}")
         return 0
 
-
 async def batch_web_search(
-    queries: List[str], skip_cache: bool = False
-) -> List[Dict[str, Any]]:
+    queries: list[str], skip_cache: bool = False
+) -> list[dict[str, Any]]:
     """Perform multiple web searches in a batch.
 
     This function optimizes multiple searches by using batch cache operations
@@ -394,8 +388,7 @@ async def batch_web_search(
             {"status": "error", "error": {"message": str(e)}, "search_results": []}
         ] * len(queries)
 
-
-def web_cached(content_type: ContentType, ttl: Optional[int] = None):
+def web_cached(content_type: ContentType, ttl: int | None = None):
     """Decorator for adding web caching to any function.
 
     Args:
@@ -410,7 +403,6 @@ def web_cached(content_type: ContentType, ttl: Optional[int] = None):
         ttl=ttl,
         namespace=WEB_CACHE_NAMESPACE,
     )
-
 
 # Export API
 __all__ = [

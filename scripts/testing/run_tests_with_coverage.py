@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 
-
 def run_tests():
     """Run tests and display results."""
     print("Running tests with coverage...")
@@ -58,7 +57,6 @@ def run_tests():
         print(f"\nTotal tests collected: {test_count}")
 
     return result.returncode
-
 
 if __name__ == "__main__":
     sys.exit(run_tests())

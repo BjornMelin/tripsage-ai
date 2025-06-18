@@ -21,7 +21,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Annotated, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Annotated, Any, Optional
 
 if TYPE_CHECKING:
     from tripsage_core.config import Settings
@@ -58,7 +58,6 @@ from tripsage_core.services.business.audit_logging_service import (
 
 logger = logging.getLogger(__name__)
 
-
 class ServiceType(str, Enum):
     """Supported external service types."""
 
@@ -71,7 +70,6 @@ class ServiceType(str, Enum):
     CALENDAR = "calendar"
     EMAIL = "email"
 
-
 class ValidationStatus(str, Enum):
     """API key validation status."""
 
@@ -82,7 +80,6 @@ class ValidationStatus(str, Enum):
     SERVICE_ERROR = "service_error"
     FORMAT_ERROR = "format_error"
 
-
 class ServiceHealthStatus(str, Enum):
     """Service health status."""
 
@@ -90,7 +87,6 @@ class ServiceHealthStatus(str, Enum):
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     UNKNOWN = "unknown"
-
 
 class ApiKeyCreateRequest(TripSageModel):
     """Modern request model for API key creation with Pydantic V2 optimizations."""
@@ -106,10 +102,10 @@ class ApiKeyCreateRequest(TripSageModel):
     )
     service: ServiceType = Field(description="Service name")
     key_value: str = Field(min_length=1, description="The actual API key", alias="key")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None, max_length=500, description="Optional description"
     )
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         default=None, description="Optional expiration date"
     )
 
@@ -120,7 +116,6 @@ class ApiKeyCreateRequest(TripSageModel):
         if len(v.strip()) < 8:
             raise ValueError("API key must be at least 8 characters long")
         return v.strip()
-
 
 class ApiKeyResponse(TripSageModel):
     """Modern response model with computed fields."""
@@ -134,17 +129,17 @@ class ApiKeyResponse(TripSageModel):
     id: str = Field(description="Key ID")
     name: str = Field(description="Key name")
     service: ServiceType = Field(description="Service name")
-    description: Optional[str] = Field(default=None, description="Key description")
+    description: str | None = Field(default=None, description="Key description")
     is_valid: bool = Field(description="Validation status")
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         default=None, description="Expiration timestamp"
     )
-    last_used: Optional[datetime] = Field(
+    last_used: datetime | None = Field(
         default=None, description="Last usage timestamp"
     )
-    last_validated: Optional[datetime] = Field(
+    last_validated: datetime | None = Field(
         default=None, description="Last validation timestamp"
     )
     usage_count: int = Field(default=0, description="Number of times used")
@@ -159,13 +154,12 @@ class ApiKeyResponse(TripSageModel):
 
     @computed_field
     @property
-    def expires_in_days(self) -> Optional[int]:
+    def expires_in_days(self) -> int | None:
         """Days until expiration."""
         if not self.expires_at:
             return None
         delta = self.expires_at - datetime.now(timezone.utc)
         return max(0, delta.days)
-
 
 class ValidationResult(TripSageModel):
     """Enhanced validation result with Pydantic V2 optimizations."""
@@ -180,21 +174,20 @@ class ValidationResult(TripSageModel):
     status: ValidationStatus
     service: ServiceType
     message: str
-    details: Dict[str, Any] = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
     latency_ms: float = Field(default=0.0)
     validated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Enhanced metadata
-    rate_limit_info: Optional[Dict[str, Any]] = Field(default=None)
-    quota_info: Optional[Dict[str, Any]] = Field(default=None)
-    capabilities: List[str] = Field(default_factory=list)
+    rate_limit_info: dict[str, Any] | None = Field(default=None)
+    quota_info: dict[str, Any] | None = Field(default=None)
+    capabilities: list[str] = Field(default_factory=list)
 
     @computed_field
     @property
     def success_rate_category(self) -> str:
         """Categorize based on success."""
         return "success" if self.is_valid else "failure"
-
 
 class ServiceHealthCheck(TripSageModel):
     """Health check result for a service."""
@@ -209,7 +202,7 @@ class ServiceHealthCheck(TripSageModel):
     status: ServiceHealthStatus
     latency_ms: float
     message: str
-    details: Dict[str, Any] = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
     checked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @computed_field
@@ -217,7 +210,6 @@ class ServiceHealthCheck(TripSageModel):
     def is_healthy(self) -> bool:
         """Simple health check."""
         return self.status == ServiceHealthStatus.HEALTHY
-
 
 class ApiKeyService:
     """
@@ -389,7 +381,7 @@ class ApiKeyService:
             )
             raise ServiceError(f"Failed to create API key: {str(e)}") from e
 
-    async def list_user_keys(self, user_id: str) -> List[ApiKeyResponse]:
+    async def list_user_keys(self, user_id: str) -> list[ApiKeyResponse]:
         """
         Get all API keys for a user.
 
@@ -402,7 +394,7 @@ class ApiKeyService:
         results = await self.db.get_user_api_keys(user_id)
         return [self._db_result_to_response(result) for result in results]
 
-    async def get_api_key(self, key_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_api_key(self, key_id: str, user_id: str) -> dict[str, Any] | None:
         """
         Get a specific API key by ID.
 
@@ -417,7 +409,7 @@ class ApiKeyService:
 
     async def get_key_for_service(
         self, user_id: str, service: ServiceType
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Get decrypted API key for a specific service.
 
@@ -459,7 +451,7 @@ class ApiKeyService:
         self,
         service: ServiceType,
         key_value: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> ValidationResult:
         """
         Validate an API key with retry patterns using tenacity.
@@ -560,7 +552,7 @@ class ApiKeyService:
                 details={"error": str(e)},
             )
 
-    async def check_all_services_health(self) -> Dict[ServiceType, ServiceHealthCheck]:
+    async def check_all_services_health(self) -> dict[ServiceType, ServiceHealthCheck]:
         """
         Check health of all supported services concurrently.
 
@@ -1098,7 +1090,7 @@ class ApiKeyService:
                 message="Service timeout",
             )
 
-    async def _check_googlemaps_capabilities(self, key_value: str) -> List[str]:
+    async def _check_googlemaps_capabilities(self, key_value: str) -> list[str]:
         """Check which Google Maps APIs are enabled for a key."""
         capabilities = []
 
@@ -1130,7 +1122,7 @@ class ApiKeyService:
 
     async def _get_cached_validation(
         self, service: ServiceType, key_value: str
-    ) -> Optional[ValidationResult]:
+    ) -> ValidationResult | None:
         """Get cached validation result if available."""
         if not self.cache:
             return None
@@ -1199,7 +1191,7 @@ class ApiKeyService:
             logger.warning(f"Audit logging failed for key creation: {e}")
 
     async def _audit_key_deletion(
-        self, key_id: str, user_id: str, key_data: Dict[str, Any]
+        self, key_id: str, user_id: str, key_data: dict[str, Any]
     ) -> None:
         """Fire-and-forget audit logging for key deletion."""
         try:
@@ -1215,7 +1207,7 @@ class ApiKeyService:
         except Exception as e:
             logger.warning(f"Audit logging failed for key deletion: {e}")
 
-    def _db_result_to_response(self, result: Dict[str, Any]) -> ApiKeyResponse:
+    def _db_result_to_response(self, result: dict[str, Any]) -> ApiKeyResponse:
         """Convert database result to modern response model."""
         return ApiKeyResponse(
             id=result["id"],
@@ -1237,9 +1229,7 @@ class ApiKeyService:
             usage_count=result["usage_count"],
         )
 
-
 # Dependency functions for FastAPI
-
 
 async def get_api_key_service(
     db: Annotated["DatabaseService", Depends("get_database_service")],
@@ -1256,7 +1246,6 @@ async def get_api_key_service(
         Configured ApiKeyService instance
     """
     return ApiKeyService(db=db, cache=cache)
-
 
 # Type alias for easier use in endpoints
 ApiKeyServiceDep = Annotated[ApiKeyService, Depends(get_api_key_service)]

@@ -8,7 +8,7 @@ of collaboration-related database operations.
 import statistics
 import time
 from datetime import datetime, timedelta
-from typing import List
+
 from uuid import uuid4
 
 import pytest
@@ -22,7 +22,6 @@ from tests.integration.conftest_supabase_schema import (
     create_test_memory_embedding,
     simulate_concurrent_access,
 )
-
 
 class CollaborationPerformanceTestSuite:
     """Performance test suite for collaboration features."""
@@ -438,7 +437,7 @@ class CollaborationPerformanceTestSuite:
     # Helper methods
 
     async def _populate_database(
-        self, client: MockSupabaseClient, trips: List[TestTrip]
+        self, client: MockSupabaseClient, trips: list[TestTrip]
     ):
         """Helper to populate database with trip data."""
         for trip in trips:
@@ -468,7 +467,6 @@ class CollaborationPerformanceTestSuite:
             "SELECT check_trip_permission($1, $2, $3) as has_permission",
             (user_id, trip_id, required_permission),
         )
-
 
 class PerformanceRegressionTests:
     """Tests to detect performance regressions."""
@@ -564,7 +562,6 @@ class PerformanceRegressionTests:
         logger = logging.getLogger(__name__)
         logger.info(f"Performance summary: {summary}")
 
-
 # Test configuration
 pytestmark = [
     pytest.mark.performance,
@@ -572,7 +569,6 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.slow,  # Mark as slow tests that may be skipped in quick test runs
 ]
-
 
 # Performance test runner helper
 if __name__ == "__main__":

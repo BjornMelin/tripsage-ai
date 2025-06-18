@@ -8,7 +8,7 @@ rate limiting, and timeout handling integrated with TripSage Core.
 
 import asyncio
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from urllib.parse import urljoin
 
 import httpx
@@ -23,15 +23,14 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 
-
 class DuffelAPIError(CoreAPIError):
     """Base exception for Duffel API errors."""
 
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        response_data: Optional[Dict] = None,
+        status_code: int | None = None,
+        response_data: dict | None = None,
     ):
         super().__init__(
             message=message,
@@ -43,18 +42,16 @@ class DuffelAPIError(CoreAPIError):
         self.status_code = status_code
         self.response_data = response_data or {}
 
-
 class DuffelRateLimitError(CoreRateLimitError):
     """Exception raised when rate limit is exceeded."""
 
-    def __init__(self, message: str, retry_after: Optional[int] = None):
+    def __init__(self, message: str, retry_after: int | None = None):
         super().__init__(
             message=message,
             code="DUFFEL_RATE_LIMIT_EXCEEDED",
             retry_after=retry_after,
         )
         self.retry_after = retry_after
-
 
 class DuffelHTTPClient:
     """
@@ -70,8 +67,8 @@ class DuffelHTTPClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        settings: Optional[Settings] = None,
+        api_key: str | None = None,
+        settings: Settings | None = None,
         base_url: str = "https://api.duffel.com",
         timeout: float = 30.0,
         max_retries: int = 3,
@@ -91,7 +88,7 @@ class DuffelHTTPClient:
             max_connections: Maximum number of concurrent connections.
         """
         self.settings = settings or get_settings()
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
         self._connected = False
 
         # Use provided API key or get from core settings
@@ -163,7 +160,7 @@ class DuffelHTTPClient:
         if not self._connected:
             await self.connect()
 
-    def _get_default_headers(self) -> Dict[str, str]:
+    def _get_default_headers(self) -> dict[str, str]:
         """Get default headers for Duffel API requests."""
         return {
             "Authorization": f"Bearer {self.api_key}",
@@ -201,10 +198,10 @@ class DuffelHTTPClient:
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict] = None,
-        params: Optional[Dict] = None,
-        correlation_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        data: dict | None = None,
+        params: dict | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
         """
         Make an HTTP request to the Duffel API with retry logic.
 
@@ -328,7 +325,7 @@ class DuffelHTTPClient:
             f"Last error: {str(last_exception)}"
         )
 
-    async def search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
+    async def search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
         """
         Search for flights using the Duffel API.
 
@@ -355,7 +352,7 @@ class DuffelHTTPClient:
         except ValidationError as e:
             raise DuffelAPIError(f"Invalid response format: {str(e)}") from e
 
-    async def get_aircraft(self, aircraft_id: str) -> Optional[Dict[str, Any]]:
+    async def get_aircraft(self, aircraft_id: str) -> dict[str, Any] | None:
         """
         Get aircraft information by ID.
 
@@ -377,7 +374,7 @@ class DuffelHTTPClient:
                 return None
             raise
 
-    async def list_aircraft(self, limit: int = 50) -> List[Dict[str, Any]]:
+    async def list_aircraft(self, limit: int = 50) -> list[dict[str, Any]]:
         """
         List available aircraft.
 
@@ -393,7 +390,7 @@ class DuffelHTTPClient:
 
         return response_data.get("data", [])
 
-    async def get_airports(self, query: str) -> List[Dict[str, Any]]:
+    async def get_airports(self, query: str) -> list[dict[str, Any]]:
         """
         Search for airports by code or name.
 
@@ -442,10 +439,8 @@ class DuffelHTTPClient:
         """Async context manager exit."""
         await self.close()
 
-
 # Global service instance
-_duffel_client: Optional[DuffelHTTPClient] = None
-
+_duffel_client: DuffelHTTPClient | None = None
 
 async def get_duffel_client() -> DuffelHTTPClient:
     """
@@ -461,7 +456,6 @@ async def get_duffel_client() -> DuffelHTTPClient:
         await _duffel_client.connect()
 
     return _duffel_client
-
 
 async def close_duffel_client() -> None:
     """Close the global Duffel HTTP client instance."""

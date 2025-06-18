@@ -7,7 +7,7 @@ and real-time updates following 2025 best practices.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from sqlalchemy import text
@@ -25,7 +25,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-
 class ConfigurationService:
     """Service for managing agent configurations with database persistence."""
 
@@ -34,8 +33,8 @@ class ConfigurationService:
         self._cache_ttl = 300  # 5 minutes cache TTL for config data
 
     async def get_agent_config(
-        self, agent_type: str, environment: Optional[str] = None, **overrides
-    ) -> Dict[str, Any]:
+        self, agent_type: str, environment: str | None = None, **overrides
+    ) -> dict[str, Any]:
         """Get configuration for an agent with caching and fallback logic.
 
         Priority order:
@@ -86,7 +85,7 @@ class ConfigurationService:
 
     async def _get_agent_config_from_db(
         self, agent_type: str, environment: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get agent configuration from database."""
         async with get_database_session() as session:
             result = await session.execute(
@@ -120,11 +119,11 @@ class ConfigurationService:
     async def update_agent_config(
         self,
         agent_type: str,
-        config_updates: Dict[str, Any],
+        config_updates: dict[str, Any],
         updated_by: str,
-        environment: Optional[str] = None,
-        description: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        environment: str | None = None,
+        description: str | None = None,
+    ) -> dict[str, Any]:
         """Update agent configuration in database with versioning."""
         if environment is None:
             environment = self.settings.environment
@@ -182,10 +181,10 @@ class ConfigurationService:
         self,
         session: AsyncSession,
         agent_type: str,
-        config_updates: Dict[str, Any],
+        config_updates: dict[str, Any],
         updated_by: str,
         environment: str,
-        description: Optional[str],
+        description: str | None,
     ) -> UUID:
         """Create a new configuration profile."""
         # Get defaults from settings
@@ -226,10 +225,10 @@ class ConfigurationService:
         self,
         session: AsyncSession,
         agent_type: str,
-        config_updates: Dict[str, Any],
+        config_updates: dict[str, Any],
         updated_by: str,
         environment: str,
-        description: Optional[str],
+        description: str | None,
     ) -> UUID:
         """Update existing configuration profile."""
         # Build update clauses
@@ -279,8 +278,8 @@ class ConfigurationService:
         return row[0]
 
     async def get_configuration_versions(
-        self, agent_type: str, environment: Optional[str] = None, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+        self, agent_type: str, environment: str | None = None, limit: int = 10
+    ) -> list[dict[str, Any]]:
         """Get configuration version history."""
         if environment is None:
             environment = self.settings.environment
@@ -321,8 +320,8 @@ class ConfigurationService:
         agent_type: str,
         version_id: str,
         rolled_back_by: str,
-        environment: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        environment: str | None = None,
+    ) -> dict[str, Any]:
         """Rollback configuration to a specific version."""
         if environment is None:
             environment = self.settings.environment
@@ -401,8 +400,8 @@ class ConfigurationService:
             raise
 
     async def get_all_agent_configs(
-        self, environment: Optional[str] = None
-    ) -> Dict[str, Dict[str, Any]]:
+        self, environment: str | None = None
+    ) -> dict[str, dict[str, Any]]:
         """Get all agent configurations for an environment."""
         if environment is None:
             environment = self.settings.environment
@@ -425,8 +424,8 @@ class ConfigurationService:
     async def record_performance_metrics(
         self,
         agent_type: str,
-        metrics: Dict[str, Any],
-        environment: Optional[str] = None,
+        metrics: dict[str, Any],
+        environment: str | None = None,
     ) -> None:
         """Record performance metrics for configuration optimization."""
         if environment is None:
@@ -493,10 +492,8 @@ class ConfigurationService:
         except Exception as e:
             logger.error(f"Error recording performance metrics: {e}")
 
-
 # Global service instance
-_configuration_service: Optional[ConfigurationService] = None
-
+_configuration_service: ConfigurationService | None = None
 
 def get_configuration_service() -> ConfigurationService:
     """Get the global configuration service instance."""

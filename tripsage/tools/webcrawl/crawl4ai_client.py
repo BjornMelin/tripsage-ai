@@ -5,7 +5,7 @@ This module provides an adapter for the Crawl4AI MCP server to be used by TripSa
 agent tools.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -17,7 +17,6 @@ from tripsage_core.utils.logging_utils import get_logger
 settings = get_settings()
 
 logger = get_logger(__name__)
-
 
 class Crawl4AIClient:
     """Client adapter for the Crawl4AI MCP server."""
@@ -46,9 +45,9 @@ class Crawl4AIClient:
         full_page: bool = False,
         extract_images: bool = False,
         extract_links: bool = False,
-        specific_selector: Optional[str] = None,
+        specific_selector: str | None = None,
         js_enabled: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Scrape content from a URL using Crawl4AI.
 
         Args:
@@ -126,7 +125,7 @@ class Crawl4AIClient:
             logger.error(error_msg)
             return {"success": False, "error": error_msg}
 
-    async def search_web(self, query: str, depth: str = "standard") -> Dict[str, Any]:
+    async def search_web(self, query: str, depth: str = "standard") -> dict[str, Any]:
         """Search the web for information using Crawl4AI.
 
         Args:
@@ -150,7 +149,7 @@ class Crawl4AIClient:
 
     async def crawl_blog(
         self, url: str, extract_type: str, max_pages: int = 1
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Crawl a travel blog using Crawl4AI.
 
         Args:
@@ -225,7 +224,7 @@ class Crawl4AIClient:
             logger.error(error_msg)
             return {"success": False, "error": error_msg}
 
-    def _format_result(self, result: Dict[str, Any], url: str) -> Dict[str, Any]:
+    def _format_result(self, result: dict[str, Any], url: str) -> dict[str, Any]:
         """Format the crawl result into a standardized structure.
 
         Args:
@@ -267,8 +266,8 @@ class Crawl4AIClient:
         return formatted_result
 
     def _format_blog_result(
-        self, result: Dict[str, Any], url: str, extract_type: str
-    ) -> Dict[str, Any]:
+        self, result: dict[str, Any], url: str, extract_type: str
+    ) -> dict[str, Any]:
         """Format the blog crawl result based on the extract type.
 
         Args:
@@ -297,9 +296,9 @@ class Crawl4AIClient:
         self,
         content: str,
         url: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         content_type: str = "web_content",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Extract travel-related insights from web content using Mem0.
 
         Args:
@@ -362,8 +361,8 @@ class Crawl4AIClient:
             return {"success": False, "url": url, "error": str(e), "insights": {}}
 
     def _parse_travel_insights(
-        self, memory_result: Dict[str, Any], content: str, url: str
-    ) -> Dict[str, Any]:
+        self, memory_result: dict[str, Any], content: str, url: str
+    ) -> dict[str, Any]:
         """Parse and categorize travel insights from memory extraction result.
 
         Args:
@@ -433,13 +432,13 @@ class Crawl4AIClient:
     async def scrape_with_memory_extraction(
         self,
         url: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         full_page: bool = False,
         extract_images: bool = False,
         extract_links: bool = False,
-        specific_selector: Optional[str] = None,
+        specific_selector: str | None = None,
         js_enabled: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Scrape URL and extract travel insights to memory.
 
         This method combines web scraping with automatic travel insight extraction
@@ -493,10 +492,8 @@ class Crawl4AIClient:
 
         return combined_result
 
-
 # Singleton instance
 crawl4ai_client = Crawl4AIClient()
-
 
 def get_client() -> Crawl4AIClient:
     """Get the singleton instance of the Crawl4AI client.

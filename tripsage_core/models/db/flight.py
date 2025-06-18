@@ -16,7 +16,6 @@ from tripsage_core.models.schemas_common.enums import (
     DataSource,
 )
 
-
 class Flight(TripSageModel):
     """Flight model for TripSage.
 
@@ -36,7 +35,7 @@ class Flight(TripSageModel):
         data_source: Source of the flight data
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     origin: str = Field(..., description="Origin airport code (IATA 3-letter code)")
     destination: str = Field(
@@ -46,7 +45,7 @@ class Flight(TripSageModel):
     departure_time: datetime = Field(..., description="Departure date and time")
     arrival_time: datetime = Field(..., description="Arrival date and time")
     price: float = Field(..., description="Price in default currency")
-    booking_link: Optional[str] = Field(None, description="URL for booking this flight")
+    booking_link: str | None = Field(None, description="URL for booking this flight")
     segment_number: int = Field(
         1, description="For multi-segment flights, the order of this segment (1-based)"
     )

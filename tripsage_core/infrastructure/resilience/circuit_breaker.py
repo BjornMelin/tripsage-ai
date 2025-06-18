@@ -23,7 +23,8 @@ import logging
 import time
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Optional, Type, Union
+from collections.abc import Callable
 
 from tenacity import (
     AsyncRetrying,
@@ -37,14 +38,12 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
-
 class CircuitState(str, Enum):
     """Circuit breaker states."""
 
     CLOSED = "closed"  # Normal operation, requests pass through
     OPEN = "open"  # Circuit is open, requests fail fast
     HALF_OPEN = "half_open"  # Testing if service has recovered
-
 
 class CircuitBreakerError(Exception):
     """Raised when circuit breaker is open."""
@@ -53,7 +52,6 @@ class CircuitBreakerError(Exception):
         super().__init__(message)
         self.circuit_name = circuit_name
         self.failure_count = failure_count
-
 
 class CircuitBreakerMetrics:
     """Metrics collection for circuit breaker analysis."""
@@ -65,9 +63,9 @@ class CircuitBreakerMetrics:
         self.failure_calls = 0
         self.circuit_opens = 0
         self.circuit_closes = 0
-        self.last_failure_time: Optional[float] = None
-        self.last_success_time: Optional[float] = None
-        self.failure_types: Dict[str, int] = {}
+        self.last_failure_time: float | None = None
+        self.last_success_time: float | None = None
+        self.failure_types: dict[str, int] = {}
 
     def record_call(self) -> None:
         """Record a call attempt."""
@@ -100,7 +98,7 @@ class CircuitBreakerMetrics:
             return 0.0
         return self.failure_calls / self.total_calls
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get metrics summary."""
         return {
             "circuit_name": self.circuit_name,
@@ -114,7 +112,6 @@ class CircuitBreakerMetrics:
             "last_success_time": self.last_success_time,
             "failure_types": self.failure_types,
         }
-
 
 class SimpleCircuitBreaker:
     """Simple circuit breaker using retry with exponential backoff.
@@ -131,7 +128,7 @@ class SimpleCircuitBreaker:
         max_delay: float = 60.0,
         backoff_multiplier: float = 2.0,
         timeout: float = 30.0,
-        exceptions: Optional[List[Type[Exception]]] = None,
+        exceptions: list[type[Exception]] | None = None,
     ):
         self.name = name
         self.max_retries = max_retries
@@ -212,7 +209,6 @@ class SimpleCircuitBreaker:
 
         return wrapper
 
-
 class EnterpriseCircuitBreaker:
     """Enterprise circuit breaker with full state management and analytics.
 
@@ -230,7 +226,7 @@ class EnterpriseCircuitBreaker:
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 60.0,
-        exceptions: Optional[List[Type[Exception]]] = None,
+        exceptions: list[type[Exception]] | None = None,
     ):
         self.name = name
         self.failure_threshold = failure_threshold
@@ -245,7 +241,7 @@ class EnterpriseCircuitBreaker:
         self.state = CircuitState.CLOSED
         self.failure_count = 0
         self.success_count = 0
-        self.last_failure_time: Optional[float] = None
+        self.last_failure_time: float | None = None
         self.state_change_time = time.time()
 
         # Metrics and analytics
@@ -445,7 +441,7 @@ class EnterpriseCircuitBreaker:
 
         return wrapper
 
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> dict[str, Any]:
         """Get current circuit breaker state."""
         return {
             "name": self.name,
@@ -460,7 +456,6 @@ class EnterpriseCircuitBreaker:
             "metrics": self.metrics.get_summary(),
         }
 
-
 def circuit_breaker(
     name: str,
     failure_threshold: int = 5,
@@ -469,8 +464,8 @@ def circuit_breaker(
     max_retries: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 60.0,
-    exceptions: Optional[List[Type[Exception]]] = None,
-) -> Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]:
+    exceptions: list[type[Exception]] | None = None,
+) -> SimpleCircuitBreaker | EnterpriseCircuitBreaker:
     """Create a configurable circuit breaker based on enterprise configuration.
 
     Args:
@@ -512,28 +507,24 @@ def circuit_breaker(
             exceptions=exceptions,
         )
 
-
 # Global circuit breaker registry for enterprise monitoring
-_circuit_breaker_registry: Dict[
-    str, Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]
+_circuit_breaker_registry: dict[
+    str, SimpleCircuitBreaker | EnterpriseCircuitBreaker
 ] = {}
 
-
-def get_circuit_breaker_registry() -> Dict[
-    str, Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]
+def get_circuit_breaker_registry() -> dict[
+    str, SimpleCircuitBreaker | EnterpriseCircuitBreaker
 ]:
     """Get the global circuit breaker registry."""
     return _circuit_breaker_registry
 
-
 def register_circuit_breaker(
-    breaker: Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker],
+    breaker: SimpleCircuitBreaker | EnterpriseCircuitBreaker,
 ) -> None:
     """Register a circuit breaker in the global registry."""
     _circuit_breaker_registry[breaker.name] = breaker
 
-
-def get_circuit_breaker_status() -> Dict[str, Any]:
+def get_circuit_breaker_status() -> dict[str, Any]:
     """Get status of all registered circuit breakers."""
     status = {}
     for name, breaker in _circuit_breaker_registry.items():

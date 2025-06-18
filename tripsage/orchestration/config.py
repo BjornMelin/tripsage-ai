@@ -8,10 +8,9 @@ the LangGraph-based orchestration system settings.
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from tripsage_core.config import get_settings
-
 
 class CheckpointStorage(Enum):
     """Available checkpoint storage backends."""
@@ -19,7 +18,6 @@ class CheckpointStorage(Enum):
     MEMORY = "memory"
     POSTGRES = "postgres"
     REDIS = "redis"
-
 
 @dataclass
 class LangGraphConfig:
@@ -41,7 +39,7 @@ class LangGraphConfig:
 
     # Checkpointing and state management
     checkpoint_storage: CheckpointStorage = CheckpointStorage.MEMORY
-    checkpoint_connection_string: Optional[str] = None
+    checkpoint_connection_string: str | None = None
 
     # Error handling and resilience
     max_retries: int = 3
@@ -52,7 +50,7 @@ class LangGraphConfig:
     # Monitoring and observability
     enable_langsmith: bool = True
     langsmith_project: str = "tripsage-langgraph"
-    langsmith_api_key: Optional[str] = None
+    langsmith_api_key: str | None = None
 
     # Performance optimization
     parallel_execution: bool = True
@@ -157,7 +155,7 @@ class LangGraphConfig:
             else None,
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert configuration to dictionary.
 
@@ -223,7 +221,6 @@ class LangGraphConfig:
 
         if self.max_message_history < 1:
             raise ValueError("Max message history must be positive")
-
 
 def get_default_config() -> LangGraphConfig:
     """

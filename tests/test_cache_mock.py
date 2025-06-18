@@ -6,17 +6,16 @@ in tests without requiring a real DragonflyDB connection.
 """
 
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 from unittest.mock import AsyncMock
-
 
 class MockCacheService:
     """Mock implementation of CacheService for testing."""
 
     def __init__(self):
         """Initialize the mock cache service."""
-        self._storage: Dict[str, str] = {}
-        self._ttls: Dict[str, float] = {}
+        self._storage: dict[str, str] = {}
+        self._ttls: dict[str, float] = {}
         self._is_connected = True
         self.connect = AsyncMock()
         self.disconnect = AsyncMock()
@@ -31,14 +30,14 @@ class MockCacheService:
         """Mock ensure connected."""
         pass
 
-    async def set_json(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set_json(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Mock set_json."""
         self._storage[key] = json.dumps(value)
         if ttl:
             self._ttls[key] = ttl
         return True
 
-    async def get_json(self, key: str) -> Optional[Any]:
+    async def get_json(self, key: str) -> Any | None:
         """Mock get_json."""
         if key in self._storage:
             return json.loads(self._storage[key])
@@ -70,7 +69,7 @@ class MockCacheService:
         """Mock ttl."""
         return int(self._ttls.get(key, -1))
 
-    async def keys(self, pattern: str = "*") -> List[str]:
+    async def keys(self, pattern: str = "*") -> list[str]:
         """Mock keys."""
         if pattern == "*":
             return list(self._storage.keys())
@@ -92,7 +91,7 @@ class MockCacheService:
         self._ttls.clear()
         return True
 
-    async def info(self, section: Optional[str] = None) -> Dict[str, Any]:
+    async def info(self, section: str | None = None) -> dict[str, Any]:
         """Mock info."""
         return {
             "server": {"version": "mock-1.0.0"},
@@ -114,12 +113,12 @@ class MockCacheService:
         return await self.set_json(key, value, ttl=86400)
 
     # Batch operations
-    async def mget_json(self, keys: List[str]) -> List[Optional[Any]]:
+    async def mget_json(self, keys: list[str]) -> list[Any | None]:
         """Mock mget_json."""
         return [await self.get_json(key) for key in keys]
 
     async def mset_json(
-        self, mapping: Dict[str, Any], ttl: Optional[int] = None
+        self, mapping: dict[str, Any], ttl: int | None = None
     ) -> bool:
         """Mock mset_json."""
         for key, value in mapping.items():
@@ -128,7 +127,7 @@ class MockCacheService:
 
     # Additional methods for compatibility
     async def set(
-        self, key: str, value: Union[str, bytes], ttl: Optional[int] = None
+        self, key: str, value: str | bytes, ttl: int | None = None
     ) -> bool:
         """Mock set method."""
         self._storage[key] = value if isinstance(value, str) else value.decode("utf-8")
@@ -136,7 +135,7 @@ class MockCacheService:
             self._ttls[key] = ttl
         return True
 
-    async def get(self, key: str) -> Optional[Union[str, bytes]]:
+    async def get(self, key: str) -> str | bytes | None:
         """Mock get method."""
         return self._storage.get(key)
 
@@ -147,11 +146,9 @@ class MockCacheService:
         self._storage[key] = str(new_value)
         return new_value
 
-
 def create_mock_cache_service():
     """Create a mock cache service instance."""
     return MockCacheService()
-
 
 async def mock_get_cache_service():
     """Mock get_cache_service function that returns a mock instance."""

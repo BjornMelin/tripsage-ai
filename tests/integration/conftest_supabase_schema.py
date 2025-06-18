@@ -9,7 +9,7 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import pytest
@@ -17,7 +17,6 @@ import pytest
 # Configure test logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 class TestConfig:
     """Configuration for schema integration tests."""
@@ -63,7 +62,6 @@ class TestConfig:
         "search_session_memories",
     ]
 
-
 class TestUser:
     """Test user representation for collaboration testing."""
 
@@ -74,7 +72,7 @@ class TestUser:
         self.created_at = datetime.utcnow()
         self.permissions = self._get_default_permissions(role)
 
-    def _get_default_permissions(self, role: str) -> Dict[str, bool]:
+    def _get_default_permissions(self, role: str) -> dict[str, bool]:
         """Get default permissions based on role."""
         permission_map = {
             "owner": {
@@ -108,7 +106,6 @@ class TestUser:
         }
         return permission_map.get(role, permission_map["viewer"])
 
-
 class TestTrip:
     """Test trip representation for collaboration testing."""
 
@@ -129,7 +126,7 @@ class TestTrip:
             "added_by": self.owner.id,
         }
 
-    def get_collaborator_permission(self, user_id: UUID) -> Optional[str]:
+    def get_collaborator_permission(self, user_id: UUID) -> str | None:
         """Get permission level for a collaborator."""
         if user_id == self.owner.id:
             return "admin"
@@ -137,12 +134,11 @@ class TestTrip:
         collab = self.collaborators.get(user_id)
         return collab["permission_level"] if collab else None
 
-
 class MockSupabaseClient:
     """Mock Supabase client for testing schema interactions."""
 
     def __init__(self):
-        self.current_user_id: Optional[UUID] = None
+        self.current_user_id: UUID | None = None
         self.data_store = {
             "trips": {},
             "trip_collaborators": {},
@@ -157,11 +153,11 @@ class MockSupabaseClient:
         self.constraints_enabled = True
         self.rls_enabled = True
 
-    def set_current_user(self, user_id: Optional[UUID]):
+    def set_current_user(self, user_id: UUID | None):
         """Set current authenticated user for RLS simulation."""
         self.current_user_id = user_id
 
-    def auth_uid(self) -> Optional[UUID]:
+    def auth_uid(self) -> UUID | None:
         """Simulate auth.uid() function."""
         return self.current_user_id
 
@@ -182,7 +178,7 @@ class MockSupabaseClient:
             logger.info(f"Unhandled query type: {query[:50]}...")
             return None
 
-    async def _handle_select(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    async def _handle_select(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle SELECT queries with RLS simulation."""
         # Extract table name (simple parsing)
         if "FROM trips" in query:
@@ -194,7 +190,7 @@ class MockSupabaseClient:
         else:
             return []
 
-    async def _select_trips(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    async def _select_trips(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle trips table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -225,7 +221,7 @@ class MockSupabaseClient:
 
     async def _select_collaborators(
         self, query: str, params: tuple
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Handle trip_collaborators table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -247,7 +243,7 @@ class MockSupabaseClient:
 
         return accessible_collabs
 
-    async def _select_memories(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    async def _select_memories(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle memories table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -358,14 +354,13 @@ class MockSupabaseClient:
         """Handle DELETE queries with RLS validation."""
         logger.info(f"DELETE query: {query[:50]}... with params: {params}")
 
-
 class SchemaValidator:
     """Validator for database schema components."""
 
-    def __init__(self, schema_files: Dict[str, str]):
+    def __init__(self, schema_files: dict[str, str]):
         self.schema_files = schema_files
 
-    def validate_policies(self) -> List[str]:
+    def validate_policies(self) -> list[str]:
         """Validate RLS policies are properly defined."""
         policies_sql = self.schema_files.get("policies", "")
         errors = []
@@ -384,7 +379,7 @@ class SchemaValidator:
 
         return errors
 
-    def validate_indexes(self) -> List[str]:
+    def validate_indexes(self) -> list[str]:
         """Validate performance indexes are defined."""
         indexes_sql = self.schema_files.get("indexes", "")
         errors = []
@@ -395,7 +390,7 @@ class SchemaValidator:
 
         return errors
 
-    def validate_functions(self) -> List[str]:
+    def validate_functions(self) -> list[str]:
         """Validate database functions are defined."""
         functions_sql = self.schema_files.get("functions", "")
         errors = []
@@ -406,7 +401,7 @@ class SchemaValidator:
 
         return errors
 
-    def validate_migration(self, migration_sql: str) -> List[str]:
+    def validate_migration(self, migration_sql: str) -> list[str]:
         """Validate migration safety and completeness."""
         errors = []
 
@@ -426,15 +421,12 @@ class SchemaValidator:
 
         return errors
 
-
 # Test Fixtures
-
 
 @pytest.fixture
 def test_config():
     """Provide test configuration."""
     return TestConfig()
-
 
 @pytest.fixture
 def schema_files():
@@ -468,12 +460,10 @@ def schema_files():
 
     return files
 
-
 @pytest.fixture
 def mock_supabase_client():
     """Provide mock Supabase client."""
     return MockSupabaseClient()
-
 
 @pytest.fixture
 def test_users():
@@ -485,7 +475,6 @@ def test_users():
         "viewer": TestUser("viewer"),
         "unauthorized": TestUser("viewer"),  # Extra user for isolation tests
     }
-
 
 @pytest.fixture
 def test_trips(test_users):
@@ -504,7 +493,6 @@ def test_trips(test_users):
     trip3 = TestTrip(editor, "Editor's Trip")
 
     return {"collaborative": trip1, "owner_only": trip2, "editor_owned": trip3}
-
 
 @pytest.fixture
 async def populated_database(mock_supabase_client, test_users, test_trips):
@@ -540,12 +528,10 @@ async def populated_database(mock_supabase_client, test_users, test_trips):
 
     return client
 
-
 @pytest.fixture
 def schema_validator(schema_files):
     """Provide schema validator."""
     return SchemaValidator(schema_files)
-
 
 @pytest.fixture
 def performance_tracker():
@@ -605,7 +591,6 @@ def performance_tracker():
 
     return Tracker()
 
-
 @pytest.fixture(autouse=True)
 async def cleanup_after_test():
     """Automatic cleanup after each test."""
@@ -614,9 +599,7 @@ async def cleanup_after_test():
     # In a real implementation, this would clean up test data from the database
     logger.info("Test cleanup completed")
 
-
 # Utility functions for tests
-
 
 def assert_performance_threshold(duration: float, threshold: float, operation: str):
     """Assert operation meets performance threshold."""
@@ -625,9 +608,8 @@ def assert_performance_threshold(duration: float, threshold: float, operation: s
             f"{operation} took {duration:.3f}s, exceeding threshold of {threshold:.3f}s"
         )
 
-
 def assert_rls_isolation(
-    user1_data: List[Any], user2_data: List[Any], user1_id: UUID, user2_id: UUID
+    user1_data: list[Any], user2_data: list[Any], user1_id: UUID, user2_id: UUID
 ):
     """Assert RLS properly isolates data between users."""
     # Check user1 data belongs to user1
@@ -652,18 +634,16 @@ def assert_rls_isolation(
                 "User2 can see User1's data - RLS violation"
             )
 
-
-def create_test_memory_embedding() -> List[float]:
+def create_test_memory_embedding() -> list[float]:
     """Create a test embedding vector for memory operations."""
     import random
 
     random.seed(42)  # Deterministic for testing
     return [random.uniform(-1, 1) for _ in range(1536)]
 
-
 async def simulate_concurrent_access(
-    operations: List[callable], max_concurrent: int = 3
-) -> List[Any]:
+    operations: list[callable], max_concurrent: int = 3
+) -> list[Any]:
     """Simulate concurrent database access for testing."""
     semaphore = asyncio.Semaphore(max_concurrent)
 
@@ -673,7 +653,6 @@ async def simulate_concurrent_access(
 
     tasks = [run_operation(op) for op in operations]
     return await asyncio.gather(*tasks, return_exceptions=True)
-
 
 # Test markers
 pytestmark = [

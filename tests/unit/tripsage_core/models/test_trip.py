@@ -19,7 +19,6 @@ from tripsage_core.models.trip import (
     TripVisibility,
 )
 
-
 class TestBudgetBreakdown:
     """Test BudgetBreakdown model."""
 
@@ -51,7 +50,6 @@ class TestBudgetBreakdown:
         """Test BudgetBreakdown rejects negative values."""
         with pytest.raises(ValidationError):
             BudgetBreakdown(accommodation=-100.0)
-
 
 class TestEnhancedBudget:
     """Test EnhancedBudget model."""
@@ -90,7 +88,6 @@ class TestEnhancedBudget:
         """Test EnhancedBudget rejects negative spent amount."""
         with pytest.raises(ValidationError):
             EnhancedBudget(total=1000.0, spent=-100.0)
-
 
 class TestTripPreferences:
     """Test TripPreferences model."""
@@ -148,7 +145,6 @@ class TestTripPreferences:
         # Invalid: negative
         with pytest.raises(ValidationError):
             TripPreferences(date_flexibility=-1)
-
 
 class TestTrip:
     """Test the unified Trip model."""
@@ -489,7 +485,6 @@ class TestTrip:
         with pytest.raises(ValidationError):
             Trip(**invalid_data)
 
-
 class TestTripIntegration:
     """Integration tests for Trip model with related models."""
 
@@ -555,7 +550,6 @@ class TestTripIntegration:
         assert trip.remaining_budget == 6500.0
         assert len(trip.notes) == 2
         assert trip.is_shared is True
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

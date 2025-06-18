@@ -17,7 +17,6 @@ from tripsage_core.config import Settings
 from tripsage_core.exceptions.exceptions import CoreDatabaseError, CoreServiceError
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
-
 class TestDatabaseServiceCore:
     """Test suite for core database service functionality."""
 
@@ -314,7 +313,6 @@ class TestDatabaseServiceCore:
                 # Cleanup
                 await database_service.close()
 
-
 class TestDatabaseServicePerformance:
     """Test suite for database service performance scenarios."""
 
@@ -393,7 +391,6 @@ class TestDatabaseServicePerformance:
                 # Assert
                 assert len(results) == 3
                 assert all(result == [{"id": 1}] for result in results)
-
 
 class TestDatabaseServicePropertyBased:
     """Property-based tests for database service."""

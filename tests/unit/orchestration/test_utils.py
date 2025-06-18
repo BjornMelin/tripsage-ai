@@ -4,16 +4,14 @@ Test utilities for orchestration tests.
 Provides common mocking utilities for LangChain and OpenAI API calls.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from unittest.mock import AsyncMock, Mock
-
 
 class MockLLMResponse:
     """Mock response for LLM calls."""
 
     def __init__(self, content: str):
         self.content = content
-
 
 class MockChatOpenAI:
     """Mock ChatOpenAI that doesn't make real API calls."""
@@ -35,7 +33,7 @@ class MockChatOpenAI:
         self._default_response = response
 
     async def ainvoke(
-        self, messages: List[Dict[str, str]], **kwargs
+        self, messages: list[dict[str, str]], **kwargs
     ) -> MockLLMResponse:
         """Mock async invoke."""
         # Extract content from messages
@@ -156,19 +154,17 @@ class MockChatOpenAI:
         # Default response
         return MockLLMResponse(self._default_response)
 
-    def invoke(self, messages: List[Dict[str, str]], **kwargs) -> MockLLMResponse:
+    def invoke(self, messages: list[dict[str, str]], **kwargs) -> MockLLMResponse:
         """Mock sync invoke."""
         import asyncio
 
         return asyncio.run(self.ainvoke(messages, **kwargs))
-
 
 def create_mock_llm(default_response: str = "Test response") -> MockChatOpenAI:
     """Create a mock LLM instance."""
     mock_llm = MockChatOpenAI()
     mock_llm.set_default_response(default_response)
     return mock_llm
-
 
 def patch_openai_in_module(module_path: str):
     """
@@ -185,8 +181,7 @@ def patch_openai_in_module(module_path: str):
 
     return patch(f"{module_path}.ChatOpenAI", MockChatOpenAI)
 
-
-def create_mock_service_registry(services: Optional[Dict[str, Any]] = None) -> Mock:
+def create_mock_service_registry(services: dict[str, Any] | None = None) -> Mock:
     """
     Create a mock service registry with common services.
 
@@ -230,7 +225,6 @@ def create_mock_service_registry(services: Optional[Dict[str, Any]] = None) -> M
 
     return registry
 
-
 def create_mock_tool_registry():
     """Create a mock tool registry."""
     registry = Mock()
@@ -245,7 +239,6 @@ def create_mock_tool_registry():
     registry.get_tool = Mock(return_value=mock_tool)
 
     return registry
-
 
 # Common test responses for different agents
 AGENT_TEST_RESPONSES = {

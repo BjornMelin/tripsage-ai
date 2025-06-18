@@ -9,7 +9,8 @@ import asyncio
 import functools
 import inspect
 import time
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
+from typing import Any, Optional, TypeVar, cast
+from collections.abc import Callable
 
 from tripsage_core.exceptions import (
     CoreAuthenticationError,
@@ -26,13 +27,12 @@ logger = get_logger(__name__)
 # Type definitions for better type checking
 F = TypeVar("F", bound=Callable[..., Any])
 
-
 def with_error_handling(
-    operation_name: Optional[str] = None,
-    expected_errors: Optional[Tuple[Exception, ...]] = None,
-    log_extra_func: Optional[Callable[..., Dict[str, Any]]] = None,
-    reraise_errors: Optional[Tuple[Exception, ...]] = None,
-    default_return: Optional[Any] = None,
+    operation_name: str | None = None,
+    expected_errors: tuple[Exception, ...] | None = None,
+    log_extra_func: Callable[..., dict[str, Any]] | None = None,
+    reraise_errors: tuple[Exception, ...] | None = None,
+    default_return: Any | None = None,
 ) -> Callable[[F], F]:
     """
     Enhanced decorator for standardized error handling with comprehensive features.
@@ -340,7 +340,6 @@ def with_error_handling(
 
     return decorator
 
-
 def ensure_memory_client_initialized(func: F) -> F:
     """Decorator to ensure memory service is initialized.
 
@@ -400,7 +399,6 @@ def ensure_memory_client_initialized(func: F) -> F:
             raise
 
     return cast(F, wrapper)
-
 
 # Retry decorator for network operations
 def retry_on_failure(
@@ -484,7 +482,6 @@ def retry_on_failure(
             return cast(F, sync_wrapper)
 
     return decorator
-
 
 __all__ = [
     "ensure_memory_client_initialized",

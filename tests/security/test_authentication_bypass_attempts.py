@@ -25,7 +25,6 @@ from tripsage.api.middlewares.authentication import (
     Principal,
 )
 
-
 class TestJWTBypassAttempts:
     """Test suite for JWT authentication bypass attempts."""
 
@@ -323,7 +322,6 @@ class TestJWTBypassAttempts:
             assert "secret" not in error_text
             assert "key" not in error_text
 
-
 class TestAPIKeyBypassAttempts:
     """Test suite for API key authentication bypass attempts."""
 
@@ -486,7 +484,6 @@ class TestAPIKeyBypassAttempts:
         unique_codes = set(results)
         assert len(unique_codes) <= 2  # Should not have inconsistent behavior
 
-
 class TestAuthenticationHeaderManipulation:
     """Test suite for authentication header manipulation attacks."""
 
@@ -608,7 +605,6 @@ class TestAuthenticationHeaderManipulation:
         # Should handle gracefully without DoS
         assert response.status_code in [400, 413, 431]
 
-
 class TestSessionManipulationAttacks:
     """Test suite for session manipulation and fixation attacks."""
 
@@ -690,7 +686,6 @@ class TestSessionManipulationAttacks:
             assert "HttpOnly" in cookie_header or "httponly" in cookie_header.lower()
             assert "Secure" in cookie_header or "secure" in cookie_header.lower()
             assert "SameSite" in cookie_header or "samesite" in cookie_header.lower()
-
 
 class TestPrivilegeEscalationAttempts:
     """Test suite for privilege escalation attacks."""
@@ -776,7 +771,6 @@ class TestPrivilegeEscalationAttempts:
 
             # Should not grant unauthorized access
             assert response.status_code in [401, 403, 404]
-
 
 class TestInformationDisclosureViaAuthentication:
     """Test suite for information disclosure through authentication mechanisms."""

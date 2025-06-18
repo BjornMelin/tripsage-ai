@@ -12,7 +12,6 @@ from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
-
 class EntityType(str, Enum):
     """Enum for entity type values."""
 
@@ -20,7 +19,6 @@ class EntityType(str, Enum):
     ACCOMMODATION = "accommodation"
     TRANSPORTATION = "transportation"
     ACTIVITY = "activity"
-
 
 class PriceHistory(TripSageModel):
     """PriceHistory model for TripSage.
@@ -33,7 +31,7 @@ class PriceHistory(TripSageModel):
         price: The price value in default currency
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     entity_type: EntityType = Field(..., description="Type of entity this price is for")
     entity_id: int = Field(..., description="ID of the entity this price is for")
     timestamp: datetime = Field(..., description="When the price was recorded")

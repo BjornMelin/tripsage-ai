@@ -7,13 +7,12 @@ and external service initialization.
 """
 
 import logging
-from typing import Any, Dict, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from tripsage_core.exceptions import CoreServiceError
 from tripsage_core.utils.decorator_utils import with_error_handling
 
 ServiceType = TypeVar("ServiceType")
-
 
 class BaseService:
     """
@@ -57,11 +56,11 @@ class BaseService:
 
     def __init__(
         self,
-        database_service: Optional[Any] = None,
-        external_service_module: Optional[str] = None,
-        external_service_class: Optional[str] = None,
-        cache_service: Optional[Any] = None,
-        service_name: Optional[str] = None,
+        database_service: Any | None = None,
+        external_service_module: str | None = None,
+        external_service_class: str | None = None,
+        cache_service: Any | None = None,
+        service_name: str | None = None,
     ):
         """
         Initialize the base service with dependency injection.
@@ -112,7 +111,7 @@ class BaseService:
 
         return logger
 
-    def _initialize_database_service(self, service: Optional[Any]) -> Optional[Any]:
+    def _initialize_database_service(self, service: Any | None) -> Any | None:
         """
         Initialize database service with dependency injection pattern.
 
@@ -148,7 +147,7 @@ class BaseService:
             )
             return None
 
-    def _initialize_cache_service(self, service: Optional[Any]) -> Optional[Any]:
+    def _initialize_cache_service(self, service: Any | None) -> Any | None:
         """
         Initialize cache service with dependency injection pattern.
 
@@ -183,8 +182,8 @@ class BaseService:
             return None
 
     def _initialize_external_service(
-        self, module_name: Optional[str], class_name: Optional[str]
-    ) -> Optional[Any]:
+        self, module_name: str | None, class_name: str | None
+    ) -> Any | None:
         """
         Initialize external service with dynamic import pattern.
 
@@ -249,7 +248,7 @@ class BaseService:
             return None
 
     @with_error_handling(operation_name="health_check")
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """
         Perform health check for the service and its dependencies.
 
@@ -320,7 +319,7 @@ class BaseService:
 
         return health_status
 
-    def get_service_info(self) -> Dict[str, Any]:
+    def get_service_info(self) -> dict[str, Any]:
         """
         Get service information and configuration.
 
@@ -345,7 +344,6 @@ class BaseService:
         """String representation of the service."""
         return f"{self.__class__.__name__}(name='{self.service_name}')"
 
-
 class BaseCRUDService(BaseService):
     """
     Base service class with common CRUD operations.
@@ -356,8 +354,8 @@ class BaseCRUDService(BaseService):
 
     @with_error_handling(operation_name="create_entity")
     async def create_entity(
-        self, entity_data: Dict[str, Any], entity_type: str
-    ) -> Dict[str, Any]:
+        self, entity_data: dict[str, Any], entity_type: str
+    ) -> dict[str, Any]:
         """
         Create a new entity with standardized error handling.
 
@@ -384,7 +382,7 @@ class BaseCRUDService(BaseService):
     @with_error_handling(operation_name="get_entity")
     async def get_entity(
         self, entity_id: str, entity_type: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Retrieve an entity by ID with standardized error handling.
 
@@ -406,8 +404,8 @@ class BaseCRUDService(BaseService):
 
     @with_error_handling(operation_name="update_entity")
     async def update_entity(
-        self, entity_id: str, entity_data: Dict[str, Any], entity_type: str
-    ) -> Dict[str, Any]:
+        self, entity_id: str, entity_data: dict[str, Any], entity_type: str
+    ) -> dict[str, Any]:
         """
         Update an existing entity with standardized error handling.
 
@@ -454,6 +452,5 @@ class BaseCRUDService(BaseService):
             )
 
         return await self.db.delete_entity(entity_id, entity_type)
-
 
 __all__ = ["BaseService", "BaseCRUDService"]

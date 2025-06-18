@@ -15,12 +15,11 @@ Key principles:
 
 import logging
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
-
 
 class DistanceFunction(str, Enum):
     """Standard pgvector distance functions."""
@@ -29,14 +28,12 @@ class DistanceFunction(str, Enum):
     COSINE = "vector_cosine_ops"
     INNER_PRODUCT = "vector_ip_ops"
 
-
 class OptimizationProfile(str, Enum):
     """Optimization profiles based on research."""
 
     SPEED = "speed"  # Use defaults: fast queries, good enough accuracy
     BALANCED = "balanced"  # Slightly better recall: ef_search=100
     QUALITY = "quality"  # Best recall: ef_construction=100, ef_search=200
-
 
 class IndexConfig(BaseModel):
     """Configuration for HNSW index creation."""
@@ -47,7 +44,6 @@ class IndexConfig(BaseModel):
     )
     ef_search: int = Field(default=40, description="Query quality (adjust per query)")
 
-
 class IndexStats(BaseModel):
     """Index performance statistics."""
 
@@ -56,8 +52,7 @@ class IndexStats(BaseModel):
     index_size_human: str
     row_count: int
     index_usage_count: int
-    last_used: Optional[str] = None
-
+    last_used: str | None = None
 
 class PGVectorService:
     """
@@ -75,7 +70,7 @@ class PGVectorService:
         self.db = database_service
         self._profiles = self._create_profiles()
 
-    def _create_profiles(self) -> Dict[OptimizationProfile, IndexConfig]:
+    def _create_profiles(self) -> dict[OptimizationProfile, IndexConfig]:
         """Create optimization profiles based on research."""
         return {
             OptimizationProfile.SPEED: IndexConfig(
@@ -95,7 +90,7 @@ class PGVectorService:
         column_name: str,
         distance_function: DistanceFunction = DistanceFunction.COSINE,
         profile: OptimizationProfile = OptimizationProfile.BALANCED,
-        index_name: Optional[str] = None,
+        index_name: str | None = None,
     ) -> str:
         """
         Create HNSW index with standard parameters.
@@ -159,7 +154,7 @@ class PGVectorService:
 
     async def get_index_stats(
         self, table_name: str, column_name: str
-    ) -> Optional[IndexStats]:
+    ) -> IndexStats | None:
         """
         Get index performance statistics.
 
@@ -208,7 +203,7 @@ class PGVectorService:
 
     async def check_index_health(
         self, table_name: str, column_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check index health and provide recommendations.
 
@@ -266,7 +261,7 @@ class PGVectorService:
 
     async def optimize_for_table(
         self, table_name: str, column_name: str, expected_query_load: str = "medium"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         One-click optimization for a table.
 
@@ -327,7 +322,7 @@ class PGVectorService:
 
         return results
 
-    async def optimize_memory_tables(self) -> Dict[str, Any]:
+    async def optimize_memory_tables(self) -> dict[str, Any]:
         """
         Optimize all memory-related tables for Mem0 integration.
 
@@ -402,7 +397,7 @@ class PGVectorService:
         except Exception as e:
             logger.warning(f"Could not set default ef_search: {e}")
 
-    async def list_vector_tables(self) -> list[Dict[str, Any]]:
+    async def list_vector_tables(self) -> list[dict[str, Any]]:
         """
         Find tables with vector columns that could benefit from HNSW indexes.
 
@@ -430,11 +425,10 @@ class PGVectorService:
         result = await self.db.execute_sql(tables_sql)
         return [dict(row) for row in result] if result else []
 
-
 # Utility function for quick optimization
 async def optimize_vector_table(
     database_service, table_name: str, column_name: str, query_load: str = "medium"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Quick optimization utility - one function call to optimize a vector table.
 
@@ -449,7 +443,6 @@ async def optimize_vector_table(
     """
     service = PGVectorService(database_service)
     return await service.optimize_for_table(table_name, column_name, query_load)
-
 
 # Export main classes and functions
 __all__ = [

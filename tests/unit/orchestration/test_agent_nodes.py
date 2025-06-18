@@ -23,7 +23,6 @@ from .test_utils import (
     patch_openai_in_module,
 )
 
-
 class TestBaseAgentNode:
     """Test base agent node functionality."""
 
@@ -49,7 +48,6 @@ class TestBaseAgentNode:
             assert node.node_name == "flight_agent"
             assert node.service_registry == mock_service_registry
             assert hasattr(node, "logger")
-
 
 class TestFlightAgentNode:
     """Test flight agent node functionality."""
@@ -133,7 +131,6 @@ class TestFlightAgentNode:
         assert "flight_searches" in result
         assert len(result["flight_searches"]) > 0
 
-
 class TestAccommodationAgentNode:
     """Test accommodation agent node functionality."""
 
@@ -191,7 +188,6 @@ class TestAccommodationAgentNode:
         assert "accommodation_searches" in result
         assert len(result["accommodation_searches"]) > 0
 
-
 class TestBudgetAgentNode:
     """Test budget agent node functionality."""
 
@@ -242,7 +238,6 @@ class TestBudgetAgentNode:
         budget_analysis = result["budget_analyses"][0]
         assert "analysis" in budget_analysis
 
-
 class TestMemoryUpdateNode:
     """Test memory update node functionality."""
 
@@ -277,7 +272,6 @@ class TestMemoryUpdateNode:
         # Should return state unchanged but trigger memory update
         assert result["user_id"] == state["user_id"]
         assert result["session_id"] == state["session_id"]
-
 
 class TestErrorRecoveryNode:
     """Test error recovery node functionality."""
@@ -387,7 +381,6 @@ class TestErrorRecoveryNode:
         assert "handoff_context" in result
         assert "escalation" in result["handoff_context"]
 
-
 class TestRouterNode:
     """Test router node functionality."""
 
@@ -439,7 +432,6 @@ class TestRouterNode:
         handoff_dict = result["handoff_context"]
         assert "routing_confidence" in handoff_dict
         assert "routing_reasoning" in handoff_dict
-
 
 class TestNodeIntegration:
     """Test integration between different nodes."""

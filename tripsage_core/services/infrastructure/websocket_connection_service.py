@@ -15,14 +15,13 @@ import time
 from collections import deque
 from datetime import datetime
 from enum import Enum
-from typing import Any, Deque, Dict, Optional, Set
+from typing import Any, Deque, Optional
 from uuid import UUID
 
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
-
 
 class ConnectionState(str, Enum):
     """Enhanced connection state management."""
@@ -35,7 +34,6 @@ class ConnectionState(str, Enum):
     ERROR = "error"
     SUSPENDED = "suspended"
     DEGRADED = "degraded"
-
 
 class ConnectionHealth(BaseModel):
     """Connection health metrics."""
@@ -50,7 +48,6 @@ class ConnectionHealth(BaseModel):
     backpressure_active: bool = Field(description="Whether backpressure is active")
     dropped_messages: int = Field(description="Number of dropped messages")
 
-
 class ExponentialBackoffException(Exception):
     """Custom exception for exponential backoff failures."""
 
@@ -58,7 +55,6 @@ class ExponentialBackoffException(Exception):
         super().__init__(message)
         self.max_attempts = max_attempts
         self.last_delay = last_delay
-
 
 class MonitoredDeque(deque):
     """Deque that logs when items are dropped due to maxlen."""
@@ -91,7 +87,6 @@ class MonitoredDeque(deque):
             )
         super().appendleft(item)
 
-
 class WebSocketConnection:
     """Enhanced WebSocket connection wrapper with health monitoring."""
 
@@ -99,8 +94,8 @@ class WebSocketConnection:
         self,
         websocket: WebSocket,
         connection_id: str,
-        user_id: Optional[UUID] = None,
-        session_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
+        session_id: UUID | None = None,
     ):
         self.websocket = websocket
         self.connection_id = connection_id
@@ -110,19 +105,19 @@ class WebSocketConnection:
         self.last_heartbeat = datetime.utcnow()
         self.last_pong = datetime.utcnow()
         self.state = ConnectionState.CONNECTED
-        self.subscribed_channels: Set[str] = set()
-        self.client_ip: Optional[str] = None
-        self.user_agent: Optional[str] = None
+        self.subscribed_channels: set[str] = set()
+        self.client_ip: str | None = None
+        self.user_agent: str | None = None
 
         # Configuration for queue limits and backpressure
         self.MAX_TOTAL_QUEUE_SIZE = 2000  # Total messages across all priority queues
         self.BACKPRESSURE_THRESHOLD = 0.8  # 80% of max size triggers backpressure
 
         # Message queue with priority support - fix starvation issue
-        self.message_queue: Deque[Any] = MonitoredDeque(
+        self.message_queue: deque[Any] = MonitoredDeque(
             maxlen=1000, priority_name="main", connection_id=connection_id
         )
-        self.priority_queue: Dict[int, Deque[Any]] = {
+        self.priority_queue: dict[int, deque[Any]] = {
             1: MonitoredDeque(
                 maxlen=100, priority_name="high", connection_id=connection_id
             ),
@@ -147,12 +142,12 @@ class WebSocketConnection:
         self.reconnect_count = 0
 
         # Connection health - fix latency calculation for low sample counts
-        self.latency_samples: Deque[float] = deque(maxlen=10)
-        self.ping_sent_times: Dict[str, float] = {}  # ping_id -> timestamp
+        self.latency_samples: deque[float] = deque(maxlen=10)
+        self.ping_sent_times: dict[str, float] = {}  # ping_id -> timestamp
         self.ping_timeout_threshold = 5.0  # seconds
 
         # Backward compatibility property for tests
-        self._ping_sent_time_compat: Optional[float] = None
+        self._ping_sent_time_compat: float | None = None
 
         # Error recovery components that were moved from manager
         from .websocket_manager import CircuitBreaker, ExponentialBackoff
@@ -162,10 +157,10 @@ class WebSocketConnection:
 
         # Concurrency control
         self._send_lock = asyncio.Lock()
-        self._ping_task: Optional[asyncio.Task] = None
+        self._ping_task: asyncio.Task | None = None
 
     @property
-    def ping_sent_time(self) -> Optional[float]:
+    def ping_sent_time(self) -> float | None:
         """Backward compatibility property for tests."""
         if self.ping_sent_times:
             # Return the oldest ping time for compatibility
@@ -173,7 +168,7 @@ class WebSocketConnection:
         return self._ping_sent_time_compat
 
     @ping_sent_time.setter
-    def ping_sent_time(self, value: Optional[float]) -> None:
+    def ping_sent_time(self, value: float | None) -> None:
         """Backward compatibility setter for tests."""
         self._ping_sent_time_compat = value
         if value is not None:
@@ -263,7 +258,7 @@ class WebSocketConnection:
         self.priority_queue[priority].append(event)
         return True
 
-    async def send(self, event: Dict[str, Any]) -> bool:
+    async def send(self, event: dict[str, Any]) -> bool:
         """Send event to WebSocket connection with error handling."""
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
             # For cascade failure prevention: if connection is in ERROR state but
@@ -439,7 +434,7 @@ class WebSocketConnection:
             self.state = ConnectionState.ERROR
             return False
 
-    def handle_pong(self, ping_id: Optional[str] = None):
+    def handle_pong(self, ping_id: str | None = None):
         """Handle pong response and calculate latency with support for multiple pings.
 
         Args:
@@ -591,19 +586,18 @@ class WebSocketConnection:
         """Check if subscribed to a channel."""
         return channel in self.subscribed_channels
 
-
 class WebSocketConnectionService:
     """Service for managing individual WebSocket connections."""
 
     def __init__(self):
-        self.connections: Dict[str, WebSocketConnection] = {}
+        self.connections: dict[str, WebSocketConnection] = {}
 
     async def create_connection(
         self,
         websocket: WebSocket,
         connection_id: str,
-        user_id: Optional[UUID] = None,
-        session_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
+        session_id: UUID | None = None,
     ) -> WebSocketConnection:
         """Create a new WebSocket connection."""
         connection = WebSocketConnection(
@@ -627,7 +621,7 @@ class WebSocketConnectionService:
             connection.state = ConnectionState.DISCONNECTED
             logger.info(f"Removed WebSocket connection {connection_id}")
 
-    def get_connection(self, connection_id: str) -> Optional[WebSocketConnection]:
+    def get_connection(self, connection_id: str) -> WebSocketConnection | None:
         """Get a connection by ID with better encapsulation."""
         return self.connections.get(connection_id)
 
@@ -635,7 +629,7 @@ class WebSocketConnectionService:
         """Check if connection exists."""
         return connection_id in self.connections
 
-    def get_all_connections(self) -> Dict[str, WebSocketConnection]:
+    def get_all_connections(self) -> dict[str, WebSocketConnection]:
         """Get all connections (returns a copy for safety)."""
         return self.connections.copy()
 
@@ -645,7 +639,7 @@ class WebSocketConnectionService:
 
     def get_connections_by_state(
         self, state: ConnectionState
-    ) -> Dict[str, WebSocketConnection]:
+    ) -> dict[str, WebSocketConnection]:
         """Get connections filtered by state."""
         return {
             conn_id: conn
@@ -653,7 +647,7 @@ class WebSocketConnectionService:
             if conn.state == state
         }
 
-    def get_connections_for_user(self, user_id: UUID) -> Dict[str, WebSocketConnection]:
+    def get_connections_for_user(self, user_id: UUID) -> dict[str, WebSocketConnection]:
         """Get all connections for a user."""
         return {
             conn_id: conn
@@ -663,7 +657,7 @@ class WebSocketConnectionService:
 
     def get_connections_for_session(
         self, session_id: UUID
-    ) -> Dict[str, WebSocketConnection]:
+    ) -> dict[str, WebSocketConnection]:
         """Get all connections for a session."""
         return {
             conn_id: conn

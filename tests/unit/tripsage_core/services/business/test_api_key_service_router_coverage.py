@@ -28,7 +28,6 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
-
 class TestApiKeyRouterCoverage:
     """Router-level tests targeting uncovered exception handling paths."""
 

@@ -5,7 +5,7 @@ This module provides the ChatAgent class that integrates with the LangGraph
 orchestration system for processing user messages through specialized agents.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.service_registry import ServiceRegistry
@@ -14,7 +14,6 @@ from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class ChatAgent(BaseAgent):
     """
@@ -46,9 +45,9 @@ class ChatAgent(BaseAgent):
         self,
         user_id: str,
         message: str,
-        session_id: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        session_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Process a user message through the orchestration system.
 
@@ -97,8 +96,8 @@ class ChatAgent(BaseAgent):
         self,
         user_id: str,
         message: str,
-        session_id: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
+        session_id: str | None = None,
+        context: dict[str, Any] | None = None,
     ):
         """
         Stream processing of a user message.
@@ -157,7 +156,7 @@ class ChatAgent(BaseAgent):
 
     async def get_conversation_history(
         self, user_id: str, session_id: str, limit: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get conversation history for a session.
 
@@ -208,7 +207,7 @@ class ChatAgent(BaseAgent):
             logger.error(f"Error clearing conversation: {e}")
             return False
 
-    def get_available_agents(self) -> List[str]:
+    def get_available_agents(self) -> list[str]:
         """
         Get list of available specialized agents.
 
@@ -223,7 +222,7 @@ class ChatAgent(BaseAgent):
             "itinerary_agent",
         ]
 
-    def get_agent_capabilities(self) -> Dict[str, List[str]]:
+    def get_agent_capabilities(self) -> dict[str, list[str]]:
         """
         Get capabilities of each specialized agent.
 

@@ -28,7 +28,6 @@ from tripsage.api.middlewares.rate_limiting import (
 )
 from tripsage_core.config import Settings
 
-
 class TestTimingAttackProtection:
     """Test timing attack protection functions."""
 
@@ -103,7 +102,6 @@ class TestTimingAttackProtection:
         time_diff = abs(valid_time - invalid_time)
         assert time_diff < 0.01, f"Timing difference too large: {time_diff}s"
 
-
 class TestSecurityMonitoring:
     """Test security monitoring and audit logging."""
 
@@ -173,7 +171,6 @@ class TestSecurityMonitoring:
             assert "Authentication failed" in log_call[0]
             assert log_call[1]["extra"]["success"] is False
             assert log_call[1]["extra"]["error"] == "Invalid token"
-
 
 class TestSlowAPIRateLimitMiddleware:
     """Test the enhanced SlowAPI rate limiting middleware."""
@@ -265,7 +262,6 @@ class TestSlowAPIRateLimitMiddleware:
         # (The actual rate limiting behavior is tested in integration tests)
         assert "X-RateLimit-Limit" in response.headers or response.status_code == 200
 
-
 class TestEnhancedIPExtraction:
     """Test enhanced IP extraction with geographic awareness."""
 
@@ -309,7 +305,6 @@ class TestEnhancedIPExtraction:
 
         ip = enhanced_get_remote_address(mock_request_with_headers)
         assert ip == "8.8.8.8"  # Should skip private IP
-
 
 class TestSecureKeyFunction:
     """Test the secure key function for rate limiting."""
@@ -366,7 +361,6 @@ class TestSecureKeyFunction:
 
         assert "agent:openai:agent_openai_123" in key
         assert len(key) > 20
-
 
 class TestIntegrationSecurity:
     """Integration tests for complete security system."""

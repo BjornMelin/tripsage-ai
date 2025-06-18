@@ -12,7 +12,6 @@ import pytest
 
 from tripsage_core.services.external_apis.weather_service import WeatherService
 
-
 @pytest.fixture
 def weather_service(monkeypatch):
     """Create WeatherService with mocked dependencies."""
@@ -36,7 +35,6 @@ def weather_service(monkeypatch):
         service._make_request = AsyncMock()
         return service
 
-
 @pytest.fixture
 def sample_weather_response():
     """Sample weather API response data."""
@@ -58,7 +56,6 @@ def sample_weather_response():
         "dt": int(datetime.now().timestamp()),
         "name": "New York",
     }
-
 
 @pytest.fixture
 def sample_forecast_response():
@@ -91,7 +88,6 @@ def sample_forecast_response():
         "city": {"name": "New York", "coord": {"lat": 40.7484, "lon": -73.9857}},
     }
 
-
 @pytest.fixture
 def sample_air_quality_response():
     """Sample air quality API response data."""
@@ -114,7 +110,6 @@ def sample_air_quality_response():
             }
         ],
     }
-
 
 class TestWeatherServiceIntegration:
     """Integration tests for weather service operations."""

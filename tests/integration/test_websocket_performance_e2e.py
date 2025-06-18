@@ -21,7 +21,6 @@ from fastapi.testclient import TestClient
 from tripsage.api.main import app
 from tripsage.api.routers.websocket import PerformanceConfig
 
-
 class TestWebSocketPerformanceE2E:
     """End-to-end WebSocket performance tests."""
 

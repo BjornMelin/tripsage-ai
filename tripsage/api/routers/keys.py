@@ -5,7 +5,7 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
@@ -32,15 +32,13 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
 def get_monitoring_service() -> KeyMonitoringService:
     """Dependency provider for the KeyMonitoringService."""
     return KeyMonitoringService()
 
-
 @router.get(
     "",
-    response_model=List[ApiKeyResponse],
+    response_model=list[ApiKeyResponse],
     summary="List API keys",
 )
 async def list_keys(
@@ -58,7 +56,6 @@ async def list_keys(
     """
     user_id = get_principal_id(principal)
     return await key_service.list_user_keys(user_id)
-
 
 @router.post(
     "",
@@ -105,7 +102,6 @@ async def create_key(
             detail=f"Failed to create API key: {str(e)}",
         ) from e
 
-
 @router.delete(
     "/{key_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -145,7 +141,6 @@ async def delete_key(
     # Delete the key
     await key_service.delete_key(key_id)
 
-
 @router.post(
     "/validate",
     response_model=ApiKeyValidateResponse,
@@ -168,7 +163,6 @@ async def validate_key(
 
     user_id = get_principal_id(principal)
     return await key_service.validate_key(key_data.key, key_data.service, user_id)
-
 
 @router.post(
     "/{key_id}/rotate",
@@ -225,10 +219,9 @@ async def rotate_key(
     # Rotate the key
     return await key_service.rotate_key(key_id, key_data.new_key, user_id)
 
-
 @router.get(
     "/metrics",
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
     summary="Get API key metrics",
 )
 async def get_metrics(
@@ -247,10 +240,9 @@ async def get_metrics(
     # This would normally check user roles, but for now we'll use a simple approach
     return await get_key_health_metrics()
 
-
 @router.get(
     "/audit",
-    response_model=List[Dict[str, Any]],
+    response_model=list[dict[str, Any]],
     summary="Get API key audit log",
 )
 async def get_audit_log(

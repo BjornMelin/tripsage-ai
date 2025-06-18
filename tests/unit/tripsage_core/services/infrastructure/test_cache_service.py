@@ -20,7 +20,6 @@ from tripsage_core.services.infrastructure.cache_service import (
     get_cache_service,
 )
 
-
 class TestCacheService:
     """Comprehensive test suite for CacheService."""
 

@@ -19,13 +19,12 @@ import logging
 import statistics
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
-
 
 # Simple table formatting function if tabulate is not available
 def simple_table(data, headers):
@@ -53,37 +52,21 @@ def simple_table(data, headers):
 
     return "\n".join(lines)
 
-
-try:
-    from tabulate import tabulate
-except ImportError:
-    # Fallback to simple table if tabulate is not available
-    def tabulate(data, headers=None, tablefmt="grid"):
-        return simple_table(data, headers)
+# Use simple table formatting without external dependencies
+def tabulate(data, headers=None, tablefmt="grid"):
+    return simple_table(data, headers)
 
 # Note: We now use the unified DatabaseService (consolidates 7 previous services)
-# This benchmark compares different usage patterns within the same service
-
-# Check if old service is available for comparison
-OLD_SERVICE_AVAILABLE = False
-try:
-    from tripsage_core.services.infrastructure.old_database_service import (
-        OldDatabaseService,
-    )
-
-    OLD_SERVICE_AVAILABLE = True
-except ImportError:
-    pass
-
+# This benchmark validates the unified service performance
 
 class BenchmarkResult:
     """Container for benchmark results."""
 
     def __init__(self, name: str):
         self.name = name
-        self.durations: List[float] = []
+        self.durations: list[float] = []
         self.errors = 0
-        self.metadata: Dict[str, Any] = {}
+        self.metadata: dict[str, Any] = {}
 
     @property
     def avg_duration(self) -> float:
@@ -122,7 +105,6 @@ class BenchmarkResult:
         else:
             self.errors += 1
 
-
 class DatabaseBenchmark:
     """Database service benchmark runner."""
 
@@ -130,7 +112,7 @@ class DatabaseBenchmark:
         self.iterations = iterations
         self.concurrent_users = concurrent_users
         self.settings = get_settings()
-        self.results: Dict[str, BenchmarkResult] = {}
+        self.results: dict[str, BenchmarkResult] = {}
 
     async def run_all_benchmarks(self):
         """Run all benchmarks."""
@@ -138,24 +120,19 @@ class DatabaseBenchmark:
         print(f"Concurrent users: {self.concurrent_users}\n")
 
         # Test unified database service
-        print("Testing Unified Database Service...")
-        await self.benchmark_unified_service()
-
-        # Test old service if available for comparison
-        if OLD_SERVICE_AVAILABLE:
-            print("\nTesting Old Database Service (for comparison)...")
-            await self.benchmark_old_service()
+        print("Testing Database Service...")
+        await self.benchmark_database_service()
 
         # Generate report
         self.generate_report()
 
-    async def benchmark_unified_service(self):
-        """Benchmark the unified database service."""
+    async def benchmark_database_service(self):
+        """Benchmark the database service."""
         service = DatabaseService(settings=self.settings)
 
         try:
             # Test connection establishment
-            await self._benchmark_connection(service, "Unified - Connection Test")
+            await self._benchmark_connection(service, "Database - Connection Test")
 
             # Test different query types
             await self._benchmark_query_types(service)
@@ -171,34 +148,6 @@ class DatabaseBenchmark:
 
             # Test vector search if available
             await self._benchmark_vector_search(service)
-
-        finally:
-            await service.close()
-
-    async def benchmark_old_service(self):
-        """Benchmark the old database service."""
-        if not OLD_SERVICE_AVAILABLE:
-            return
-
-        service = OldDatabaseService(settings=self.settings)
-
-        try:
-            # Test connection establishment
-            result = BenchmarkResult("Old Service - Connect")
-            start = time.time()
-
-            try:
-                await service.connect()
-                duration = (time.time() - start) * 1000
-                result.add_result(duration)
-            except Exception as e:
-                result.add_result(0, success=False)
-                print(f"Old service connection failed: {e}")
-
-            self.results[result.name] = result
-
-            # Test basic queries
-            await self._benchmark_old_service_queries(service)
 
         finally:
             await service.close()
@@ -234,7 +183,7 @@ class DatabaseBenchmark:
             return
 
         # SELECT benchmark
-        result = BenchmarkResult("Unified - SELECT")
+        result = BenchmarkResult("Database - SELECT")
         for _ in range(self.iterations):
             start = time.time()
             try:
@@ -258,7 +207,7 @@ class DatabaseBenchmark:
             """)
 
             # INSERT benchmark (fewer iterations to avoid spam)
-            result = BenchmarkResult("Unified - INSERT")
+            result = BenchmarkResult("Database - INSERT")
             for i in range(min(10, self.iterations)):
                 start = time.time()
                 try:
@@ -274,7 +223,7 @@ class DatabaseBenchmark:
             self.results[result.name] = result
 
             # UPDATE benchmark
-            result = BenchmarkResult("Unified - UPDATE")
+            result = BenchmarkResult("Database - UPDATE")
             for i in range(min(5, self.iterations)):
                 start = time.time()
                 try:
@@ -294,7 +243,7 @@ class DatabaseBenchmark:
 
     async def _benchmark_transactions(self, service: DatabaseService):
         """Benchmark transaction performance."""
-        result = BenchmarkResult("Unified - Transactions")
+        result = BenchmarkResult("Database - Transactions")
 
         for _ in range(min(5, self.iterations)):
             start = time.time()
@@ -318,7 +267,7 @@ class DatabaseBenchmark:
             return
 
         # Test repeated queries to see if there's any caching benefit
-        result_first_run = BenchmarkResult("Unified - SELECT (First Run)")
+        result_first_run = BenchmarkResult("Database - SELECT (First Run)")
         for i in range(min(20, self.iterations)):
             start = time.time()
             try:
@@ -334,7 +283,7 @@ class DatabaseBenchmark:
         self.results[result_first_run.name] = result_first_run
 
         # Run same queries again to test for any caching
-        result_repeat_run = BenchmarkResult("Unified - SELECT (Repeat Run)")
+        result_repeat_run = BenchmarkResult("Database - SELECT (Repeat Run)")
         for i in range(min(20, self.iterations)):
             start = time.time()
             try:
@@ -359,7 +308,7 @@ class DatabaseBenchmark:
         # Service is already connected
 
         result = BenchmarkResult(
-            f"Unified - Concurrent SELECT ({self.concurrent_users} users)"
+            f"Database - Concurrent SELECT ({self.concurrent_users} users)"
         )
 
         async def concurrent_select(user_id: int):
@@ -399,7 +348,7 @@ class DatabaseBenchmark:
         """Benchmark vector search operations."""
         # Service is already connected
 
-        result = BenchmarkResult("Unified - Vector Search")
+        result = BenchmarkResult("Database - Vector Search")
 
         # Check if pgvector extension is available
         try:
@@ -435,28 +384,6 @@ class DatabaseBenchmark:
             logging.info(f"Vector search benchmark skipped: {e}")
 
         self.results[result.name] = result
-
-    async def _benchmark_old_service_queries(self, service):
-        """Benchmark queries for old service."""
-        try:
-            # Test if service has basic methods
-            if hasattr(service, "execute_sql"):
-                # SELECT benchmark
-                result = BenchmarkResult("Old Service - SELECT")
-                for _ in range(self.iterations):
-                    start = time.time()
-                    try:
-                        await service.execute_sql("SELECT 1 as test_column LIMIT 10")
-                        duration = (time.time() - start) * 1000
-                        result.add_result(duration)
-                    except Exception:
-                        result.add_result(0, success=False)
-
-                self.results[result.name] = result
-            else:
-                logging.info("Old service doesn't have expected interface")
-        except Exception as e:
-            logging.info(f"Could not benchmark old service: {e}")
 
     def generate_report(self):
         """Generate and display benchmark report."""
@@ -500,39 +427,6 @@ class DatabaseBenchmark:
         ]
         print(tabulate(table_data, headers=headers, tablefmt="grid"))
 
-        # Performance comparison if both services tested
-        if OLD_SERVICE_AVAILABLE:
-            print("\n" + "=" * 80)
-            print("PERFORMANCE COMPARISON")
-            print("=" * 80 + "\n")
-
-            comparisons = []
-
-            # Compare SELECT performance
-            old_select = self.results.get("Old Service - SELECT")
-            new_select = self.results.get("Unified - SELECT")
-
-            if old_select and new_select:
-                improvement = (
-                    (old_select.avg_duration - new_select.avg_duration)
-                    / old_select.avg_duration
-                    * 100
-                )
-                comparisons.append(
-                    [
-                        "SELECT Performance",
-                        f"{old_select.avg_duration:.2f} ms",
-                        f"{new_select.avg_duration:.2f} ms",
-                        f"{improvement:.1f}% improvement"
-                        if improvement > 0
-                        else f"{-improvement:.1f}% slower",
-                    ]
-                )
-
-            if comparisons:
-                headers = ["Metric", "Old Service", "Unified Service", "Change"]
-                print(tabulate(comparisons, headers=headers, tablefmt="grid"))
-
         # Save detailed results to file
         self.save_results()
 
@@ -567,7 +461,6 @@ class DatabaseBenchmark:
 
         print(f"\nDetailed results saved to: {filename}")
 
-
 async def main():
     """Main benchmark runner."""
     import argparse
@@ -587,7 +480,6 @@ async def main():
     )
 
     await benchmark.run_all_benchmarks()
-
 
 if __name__ == "__main__":
     asyncio.run(main())

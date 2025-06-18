@@ -22,7 +22,7 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
@@ -39,7 +39,6 @@ from tripsage_core.exceptions.exceptions import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class QueryType(Enum):
     """Database query operation types."""
@@ -58,7 +57,6 @@ class QueryType(Enum):
     WRITE = "WRITE"  # Generic write operation
     ANALYTICS = "ANALYTICS"  # Analytics queries
 
-
 class HealthStatus(Enum):
     """Database health status levels."""
 
@@ -66,7 +64,6 @@ class HealthStatus(Enum):
     WARNING = "warning"
     CRITICAL = "critical"
     UNKNOWN = "unknown"
-
 
 class SecurityEvent(Enum):
     """Security event types."""
@@ -79,20 +76,18 @@ class SecurityEvent(Enum):
     SQL_INJECTION_ATTEMPT = "sql_injection_attempt"
     UNAUTHORIZED_ACCESS = "unauthorized_access"
 
-
 class QueryMetrics(BaseModel):
     """Query execution metrics."""
 
     query_type: QueryType
-    table: Optional[str] = None
+    table: str | None = None
     duration_ms: float
     rows_affected: int = 0
     success: bool = True
-    error: Optional[str] = None
+    error: str | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    user_id: Optional[str] = None
-    replica_id: Optional[str] = None
-
+    user_id: str | None = None
+    replica_id: str | None = None
 
 class ConnectionStats(BaseModel):
     """Connection pool statistics."""
@@ -103,12 +98,11 @@ class ConnectionStats(BaseModel):
     pool_size: int = 0
     max_overflow: int = 0
     connection_errors: int = 0
-    last_error: Optional[str] = None
+    last_error: str | None = None
     uptime_seconds: float = 0
     queries_executed: int = 0
     avg_query_time_ms: float = 0
     pool_utilization: float = 0
-
 
 class SecurityAlert(BaseModel):
     """Security alert information."""
@@ -116,12 +110,11 @@ class SecurityAlert(BaseModel):
     event_type: SecurityEvent
     severity: str  # low, medium, high, critical
     message: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    user_id: Optional[str] = None
-    ip_address: Optional[str] = None
-    action_taken: Optional[str] = None
-
+    user_id: str | None = None
+    ip_address: str | None = None
+    action_taken: str | None = None
 
 class DatabaseService:
     """
@@ -139,7 +132,7 @@ class DatabaseService:
 
     def __init__(
         self,
-        settings: Optional[Settings] = None,
+        settings: Settings | None = None,
         # Connection pooling configuration
         pool_size: int = 100,  # As per research recommendations
         max_overflow: int = 500,  # As per research recommendations
@@ -210,14 +203,14 @@ class DatabaseService:
         self.enable_circuit_breaker = enable_circuit_breaker
 
         # Service state
-        self._supabase_client: Optional[Client] = None
-        self._sqlalchemy_engine: Optional[Engine] = None
+        self._supabase_client: Client | None = None
+        self._sqlalchemy_engine: Engine | None = None
         self._connected = False
         self._start_time = time.time()
 
         # Monitoring and metrics
-        self._query_metrics: List[QueryMetrics] = []
-        self._security_alerts: List[SecurityAlert] = []
+        self._query_metrics: list[QueryMetrics] = []
+        self._security_alerts: list[SecurityAlert] = []
         self._connection_stats = ConnectionStats(
             pool_size=pool_size, max_overflow=max_overflow
         )
@@ -614,7 +607,7 @@ class DatabaseService:
 
     # Rate limiting implementation
 
-    async def _check_rate_limit(self, user_id: Optional[str] = None) -> None:
+    async def _check_rate_limit(self, user_id: str | None = None) -> None:
         """Check if request should be rate limited."""
         if not self.enable_rate_limiting or not user_id:
             return
@@ -670,8 +663,8 @@ class DatabaseService:
     async def _monitor_query(
         self,
         query_type: QueryType,
-        table: Optional[str] = None,
-        user_id: Optional[str] = None,
+        table: str | None = None,
+        user_id: str | None = None,
     ):
         """Context manager for query monitoring and metrics."""
         start_time = time.time()
@@ -784,9 +777,9 @@ class DatabaseService:
     async def insert(
         self,
         table: str,
-        data: Union[Dict[str, Any], List[Dict[str, Any]]],
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        data: dict[str, Any] | list[dict[str, Any]],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Insert data into table with monitoring and security."""
         await self.ensure_connected()
 
@@ -820,12 +813,12 @@ class DatabaseService:
         self,
         table: str,
         columns: str = "*",
-        filters: Optional[Dict[str, Any]] = None,
-        order_by: Optional[str] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Select data from table with monitoring."""
         await self.ensure_connected()
 
@@ -871,10 +864,10 @@ class DatabaseService:
     async def update(
         self,
         table: str,
-        data: Dict[str, Any],
-        filters: Dict[str, Any],
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        data: dict[str, Any],
+        filters: dict[str, Any],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Update data in table with monitoring and security."""
         await self.ensure_connected()
 
@@ -911,10 +904,10 @@ class DatabaseService:
     async def upsert(
         self,
         table: str,
-        data: Union[Dict[str, Any], List[Dict[str, Any]]],
-        on_conflict: Optional[str] = None,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        data: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Upsert data in table with monitoring."""
         await self.ensure_connected()
 
@@ -950,9 +943,9 @@ class DatabaseService:
     async def delete(
         self,
         table: str,
-        filters: Dict[str, Any],
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        filters: dict[str, Any],
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Delete data from table with monitoring and security."""
         await self.ensure_connected()
 
@@ -989,8 +982,8 @@ class DatabaseService:
     async def count(
         self,
         table: str,
-        filters: Optional[Dict[str, Any]] = None,
-        user_id: Optional[str] = None,
+        filters: dict[str, Any] | None = None,
+        user_id: str | None = None,
     ) -> int:
         """Count records in table with monitoring."""
         await self.ensure_connected()
@@ -1022,12 +1015,12 @@ class DatabaseService:
         self,
         table: str,
         vector_column: str,
-        query_vector: List[float],
+        query_vector: list[float],
         limit: int = 10,
-        similarity_threshold: Optional[float] = None,
-        filters: Optional[Dict[str, Any]] = None,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        similarity_threshold: float | None = None,
+        filters: dict[str, Any] | None = None,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Perform vector similarity search using pgvector."""
         await self.ensure_connected()
 
@@ -1105,7 +1098,7 @@ class DatabaseService:
     # Transaction support
 
     @asynccontextmanager
-    async def transaction(self, user_id: Optional[str] = None):
+    async def transaction(self, user_id: str | None = None):
         """Context manager for database transactions."""
         await self.ensure_connected()
 
@@ -1120,16 +1113,16 @@ class DatabaseService:
                     self.operations = operations
 
                 def insert(
-                    self, table: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]
+                    self, table: str, data: dict[str, Any] | list[dict[str, Any]]
                 ):
                     self.operations.append(("insert", table, data))
 
                 def update(
-                    self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
+                    self, table: str, data: dict[str, Any], filters: dict[str, Any]
                 ):
                     self.operations.append(("update", table, data, filters))
 
-                def delete(self, table: str, filters: Dict[str, Any]):
+                def delete(self, table: str, filters: dict[str, Any]):
                     self.operations.append(("delete", table, filters))
 
                 async def execute(self):
@@ -1157,15 +1150,15 @@ class DatabaseService:
     # High-level business operations
 
     async def create_trip(
-        self, trip_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, trip_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Create a new trip record."""
         result = await self.insert("trips", trip_data, user_id)
         return result[0] if result else {}
 
     async def get_trip(
-        self, trip_id: str, user_id: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, trip_id: str, user_id: str | None = None
+    ) -> dict[str, Any] | None:
         """Get trip by ID."""
         result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
         if not result:
@@ -1175,15 +1168,15 @@ class DatabaseService:
             )
         return result[0]
 
-    async def get_user_trips(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_trips(self, user_id: str) -> list[dict[str, Any]]:
         """Get all trips for a user."""
         return await self.select(
             "trips", "*", {"user_id": user_id}, order_by="-created_at", user_id=user_id
         )
 
     async def update_trip(
-        self, trip_id: str, trip_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, trip_id: str, trip_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Update trip record."""
         result = await self.update("trips", trip_data, {"id": trip_id}, user_id)
         if not result:
@@ -1193,19 +1186,19 @@ class DatabaseService:
             )
         return result[0]
 
-    async def delete_trip(self, trip_id: str, user_id: Optional[str] = None) -> bool:
+    async def delete_trip(self, trip_id: str, user_id: str | None = None) -> bool:
         """Delete trip record."""
         result = await self.delete("trips", {"id": trip_id}, user_id)
         return len(result) > 0
 
     # User operations
 
-    async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new user record."""
         result = await self.insert("users", user_data)
         return result[0] if result else {}
 
-    async def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_user(self, user_id: str) -> dict[str, Any] | None:
         """Get user by ID."""
         result = await self.select("users", "*", {"id": user_id})
         if not result:
@@ -1215,14 +1208,14 @@ class DatabaseService:
             )
         return result[0]
 
-    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         """Get user by email."""
         result = await self.select("users", "*", {"email": email})
         return result[0] if result else None
 
     async def update_user(
-        self, user_id: str, user_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, user_id: str, user_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update user record."""
         result = await self.update("users", user_data, {"id": user_id})
         if not result:
@@ -1235,20 +1228,20 @@ class DatabaseService:
     # Flight operations
 
     async def save_flight_search(
-        self, search_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, search_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Save flight search parameters."""
         result = await self.insert("flight_searches", search_data, user_id)
         return result[0] if result else {}
 
     async def save_flight_option(
-        self, option_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, option_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Save flight option."""
         result = await self.insert("flight_options", option_data, user_id)
         return result[0] if result else {}
 
-    async def get_user_flight_searches(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_flight_searches(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's flight searches."""
         return await self.select(
             "flight_searches",
@@ -1261,22 +1254,22 @@ class DatabaseService:
     # Accommodation operations
 
     async def save_accommodation_search(
-        self, search_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, search_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Save accommodation search parameters."""
         result = await self.insert("accommodation_searches", search_data, user_id)
         return result[0] if result else {}
 
     async def save_accommodation_option(
-        self, option_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, option_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Save accommodation option."""
         result = await self.insert("accommodation_options", option_data, user_id)
         return result[0] if result else {}
 
     async def get_user_accommodation_searches(
         self, user_id: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get user's accommodation searches."""
         return await self.select(
             "accommodation_searches",
@@ -1289,22 +1282,22 @@ class DatabaseService:
     # Chat operations
 
     async def create_chat_session(
-        self, session_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, session_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Create chat session."""
         result = await self.insert("chat_sessions", session_data, user_id)
         return result[0] if result else {}
 
     async def save_chat_message(
-        self, message_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, message_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Save chat message."""
         result = await self.insert("chat_messages", message_data, user_id)
         return result[0] if result else {}
 
     async def get_chat_history(
-        self, session_id: str, limit: int = 50, user_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, session_id: str, limit: int = 50, user_id: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get chat history for session."""
         return await self.select(
             "chat_messages",
@@ -1318,21 +1311,21 @@ class DatabaseService:
     # API key operations
 
     async def save_api_key(
-        self, key_data: Dict[str, Any], user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, key_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
         """Save API key configuration."""
         result = await self.upsert(
             "api_keys", key_data, on_conflict="user_id,service_name", user_id=user_id
         )
         return result[0] if result else {}
 
-    async def get_user_api_keys(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's API keys."""
         return await self.select("api_keys", "*", {"user_id": user_id}, user_id=user_id)
 
     async def get_api_key(
         self, user_id: str, service_name: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get specific API key for user and service."""
         result = await self.select(
             "api_keys",
@@ -1358,7 +1351,7 @@ class DatabaseService:
 
     # Additional API key methods for compatibility
 
-    async def create_api_key(self, key_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_api_key(self, key_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new API key."""
         user_id = key_data.get("user_id")
         result = await self.insert("api_keys", key_data, user_id)
@@ -1366,13 +1359,13 @@ class DatabaseService:
 
     async def get_api_key_for_service(
         self, user_id: str, service: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key for specific service - alias for get_api_key."""
         return await self.get_api_key(user_id, service)
 
     async def get_api_key_by_id(
         self, key_id: str, user_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key by ID with user authorization."""
         result = await self.select(
             "api_keys", "*", {"id": key_id, "user_id": user_id}, user_id=user_id
@@ -1411,13 +1404,13 @@ class DatabaseService:
         return len(result) > 0
 
     async def update_api_key(
-        self, key_id: str, update_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, key_id: str, update_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update an API key with new data."""
         result = await self.update("api_keys", update_data, {"id": key_id})
         return result[0] if result else {}
 
-    async def log_api_key_usage(self, usage_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def log_api_key_usage(self, usage_data: dict[str, Any]) -> dict[str, Any]:
         """Log API key usage for audit trail."""
         user_id = usage_data.get("user_id")
         result = await self.insert("api_key_usage_logs", usage_data, user_id)
@@ -1427,11 +1420,11 @@ class DatabaseService:
 
     async def vector_search_destinations(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         limit: int = 10,
         similarity_threshold: float = 0.7,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Search destinations using vector similarity."""
         return await self.vector_search(
             "destinations",
@@ -1444,10 +1437,10 @@ class DatabaseService:
 
     async def save_destination_embedding(
         self,
-        destination_data: Dict[str, Any],
-        embedding: List[float],
-        user_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        destination_data: dict[str, Any],
+        embedding: list[float],
+        user_id: str | None = None,
+    ) -> dict[str, Any]:
         """Save destination with embedding."""
         destination_data["embedding"] = embedding
         result = await self.upsert(
@@ -1460,9 +1453,9 @@ class DatabaseService:
     async def execute_sql(
         self,
         sql: str,
-        params: Optional[Dict[str, Any]] = None,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        params: dict[str, Any] | None = None,
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Execute raw SQL query with security checks."""
         await self.ensure_connected()
 
@@ -1501,8 +1494,8 @@ class DatabaseService:
     async def call_function(
         self,
         function_name: str,
-        params: Optional[Dict[str, Any]] = None,
-        user_id: Optional[str] = None,
+        params: dict[str, Any] | None = None,
+        user_id: str | None = None,
     ) -> Any:
         """Call Supabase database function."""
         await self.ensure_connected()
@@ -1525,8 +1518,8 @@ class DatabaseService:
     # Trip-specific operations
 
     async def get_trip_by_id(
-        self, trip_id: str, user_id: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self, trip_id: str, user_id: str | None = None
+    ) -> dict[str, Any] | None:
         """Get trip by ID - compatibility method."""
         try:
             result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
@@ -1537,11 +1530,11 @@ class DatabaseService:
 
     async def search_trips(
         self,
-        search_filters: Dict[str, Any],
+        search_filters: dict[str, Any],
         limit: int = 50,
         offset: int = 0,
-        user_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        user_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Search trips with text and filters."""
         await self.ensure_connected()
 
@@ -1610,8 +1603,8 @@ class DatabaseService:
                 ) from e
 
     async def get_trip_collaborators(
-        self, trip_id: str, user_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, trip_id: str, user_id: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get trip collaborators."""
         try:
             return await self.select(
@@ -1628,8 +1621,8 @@ class DatabaseService:
             ) from e
 
     async def get_trip_related_counts(
-        self, trip_id: str, user_id: Optional[str] = None
-    ) -> Dict[str, int]:
+        self, trip_id: str, user_id: str | None = None
+    ) -> dict[str, int]:
         """Get counts of related trip data."""
         try:
             results = {}
@@ -1671,8 +1664,8 @@ class DatabaseService:
             ) from e
 
     async def add_trip_collaborator(
-        self, collaborator_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, collaborator_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Add trip collaborator."""
         try:
             # Ensure required fields
@@ -1710,7 +1703,7 @@ class DatabaseService:
 
     async def get_trip_collaborator(
         self, trip_id: str, user_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get specific trip collaborator."""
         try:
             result = await self.select(
@@ -1735,7 +1728,7 @@ class DatabaseService:
 
     # Analytics and reporting
 
-    async def get_user_stats(self, user_id: str) -> Dict[str, Any]:
+    async def get_user_stats(self, user_id: str) -> dict[str, Any]:
         """Get user statistics."""
         # Get trip count
         trip_count = await self.count("trips", {"user_id": user_id}, user_id)
@@ -1756,8 +1749,8 @@ class DatabaseService:
         }
 
     async def get_popular_destinations(
-        self, limit: int = 10, user_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, limit: int = 10, user_id: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get most popular destinations."""
         return await self.execute_sql(
             """
@@ -1804,8 +1797,8 @@ class DatabaseService:
             return False
 
     async def get_table_info(
-        self, table: str, user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, table: str, user_id: str | None = None
+    ) -> dict[str, Any]:
         """Get table schema information."""
         try:
             result = await self.execute_sql(
@@ -1828,7 +1821,7 @@ class DatabaseService:
                 details={"error": str(e)},
             ) from e
 
-    async def get_database_stats(self) -> Dict[str, Any]:
+    async def get_database_stats(self) -> dict[str, Any]:
         """Get comprehensive database statistics."""
         try:
             stats = {
@@ -1941,7 +1934,7 @@ class DatabaseService:
 
     def _log_audit_event(
         self,
-        user_id: Optional[str],
+        user_id: str | None,
         action: str,
         table: str,
         records_affected: int,
@@ -1956,7 +1949,7 @@ class DatabaseService:
             f"records={records_affected}, timestamp={datetime.now(timezone.utc).isoformat()}"
         )
 
-    def _get_queries_by_type(self) -> Dict[str, int]:
+    def _get_queries_by_type(self) -> dict[str, int]:
         """Get query count by type."""
         counts = {}
         for metric in self._query_metrics:
@@ -1964,7 +1957,7 @@ class DatabaseService:
             counts[query_type] = counts.get(query_type, 0) + 1
         return counts
 
-    def _get_alerts_by_type(self) -> Dict[str, int]:
+    def _get_alerts_by_type(self) -> dict[str, int]:
         """Get security alert count by type."""
         counts = {}
         for alert in self._security_alerts:
@@ -2002,7 +1995,7 @@ class DatabaseService:
 
     def get_recent_queries(
         self, limit: int = 100, include_slow_only: bool = False
-    ) -> List[QueryMetrics]:
+    ) -> list[QueryMetrics]:
         """Get recent query metrics."""
         queries = self._query_metrics[-limit:]
 
@@ -2014,8 +2007,8 @@ class DatabaseService:
         return queries
 
     def get_security_alerts(
-        self, limit: Optional[int] = None, severity: Optional[str] = None
-    ) -> List[SecurityAlert]:
+        self, limit: int | None = None, severity: str | None = None
+    ) -> list[SecurityAlert]:
         """Get security alerts with optional filtering."""
         alerts = self._security_alerts
 
@@ -2033,10 +2026,8 @@ class DatabaseService:
         self._security_alerts.clear()
         logger.info("Metrics and alerts cleared")
 
-
 # Global database service instance
-_database_service: Optional[DatabaseService] = None
-
+_database_service: DatabaseService | None = None
 
 async def get_database_service() -> DatabaseService:
     """Get the global database service instance.
@@ -2051,7 +2042,6 @@ async def get_database_service() -> DatabaseService:
         await _database_service.connect()
 
     return _database_service
-
 
 async def close_database_service() -> None:
     """Close the global database service instance."""

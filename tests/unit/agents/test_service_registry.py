@@ -11,7 +11,6 @@ import pytest
 
 from tripsage.agents.service_registry import ServiceRegistry
 
-
 class TestServiceRegistry:
     """Tests for the ServiceRegistry class."""
 
@@ -121,7 +120,6 @@ class TestServiceRegistry:
             assert registry.cache_service is not None
             assert registry.memory_service is not None
             assert registry.accommodation_service is not None
-
 
 class TestServiceRegistryIntegration:
     """Integration tests for ServiceRegistry."""

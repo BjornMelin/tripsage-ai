@@ -9,7 +9,6 @@ This service handles WebSocket connection authentication including:
 """
 
 import logging
-from typing import List, Optional
 from uuid import UUID
 
 import jwt
@@ -25,8 +24,8 @@ class WebSocketAuthRequest(BaseModel):
     """WebSocket authentication request."""
 
     token: str
-    session_id: Optional[UUID] = None
-    channels: List[str] = Field(default_factory=list)
+    session_id: UUID | None = None
+    channels: list[str] = Field(default_factory=list)
 
 
 class WebSocketAuthResponse(BaseModel):
@@ -34,10 +33,10 @@ class WebSocketAuthResponse(BaseModel):
 
     success: bool
     connection_id: str
-    user_id: Optional[UUID] = None
-    session_id: Optional[UUID] = None
-    available_channels: List[str] = Field(default_factory=list)
-    error: Optional[str] = None
+    user_id: UUID | None = None
+    session_id: UUID | None = None
+    available_channels: list[str] = Field(default_factory=list)
+    error: str | None = None
 
 
 class WebSocketAuthService:
@@ -61,7 +60,7 @@ class WebSocketAuthService:
         try:
             payload = jwt.decode(
                 token,
-                self.settings.jwt_secret_key.get_secret_value(),
+                self.settings.database_jwt_secret.get_secret_value(),
                 algorithms=["HS256"],
             )
 
@@ -78,7 +77,7 @@ class WebSocketAuthService:
                 details={"reason": str(e)},
             ) from e
 
-    def get_available_channels(self, user_id: UUID) -> List[str]:
+    def get_available_channels(self, user_id: UUID) -> list[str]:
         """Get available channels for a user.
 
         Args:
@@ -101,8 +100,8 @@ class WebSocketAuthService:
         return channels
 
     def validate_channel_access(
-        self, user_id: UUID, channels: List[str]
-    ) -> tuple[List[str], List[str]]:
+        self, user_id: UUID, channels: list[str]
+    ) -> tuple[list[str], list[str]]:
         """Validate user access to requested channels.
 
         Args:
@@ -124,7 +123,7 @@ class WebSocketAuthService:
 
         return allowed, denied
 
-    def parse_channel_target(self, channel: str) -> tuple[str, Optional[str]]:
+    def parse_channel_target(self, channel: str) -> tuple[str, str | None]:
         """Parse channel string to extract target type and ID.
 
         Centralized channel parsing logic to address code review comment.

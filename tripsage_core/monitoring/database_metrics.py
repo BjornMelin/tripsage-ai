@@ -9,7 +9,7 @@ and error rates for the TripSage database services.
 import logging
 import time
 from contextlib import contextmanager
-from typing import Dict, Optional
+from typing import Optional
 
 from prometheus_client import (
     CollectorRegistry,
@@ -21,7 +21,6 @@ from prometheus_client import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class DatabaseMetrics:
     """
@@ -35,7 +34,7 @@ class DatabaseMetrics:
     - Health check results
     """
 
-    def __init__(self, registry: Optional[CollectorRegistry] = None):
+    def __init__(self, registry: CollectorRegistry | None = None):
         """Initialize database metrics collector.
 
         Args:
@@ -170,7 +169,7 @@ class DatabaseMetrics:
         table: str,
         duration: float,
         success: bool,
-        error_type: Optional[str] = None,
+        error_type: str | None = None,
     ):
         """Record a database query execution.
 
@@ -299,7 +298,7 @@ class DatabaseMetrics:
                 f"Recorded transaction: service={service}, duration={duration:.3f}s"
             )
 
-    def get_metrics_summary(self) -> Dict[str, any]:
+    def get_metrics_summary(self) -> dict[str, any]:
         """Get a summary of current metrics.
 
         Returns:
@@ -313,7 +312,7 @@ class DatabaseMetrics:
             "health_status": self._get_gauge_value(self.health_status),
         }
 
-    def _get_counter_value(self, counter: Counter) -> Dict[str, float]:
+    def _get_counter_value(self, counter: Counter) -> dict[str, float]:
         """Get counter values by labels."""
         try:
             return {
@@ -323,7 +322,7 @@ class DatabaseMetrics:
         except (IndexError, AttributeError):
             return {}
 
-    def _get_gauge_value(self, gauge: Gauge) -> Dict[str, float]:
+    def _get_gauge_value(self, gauge: Gauge) -> dict[str, float]:
         """Get gauge values by labels."""
         try:
             return {
@@ -346,10 +345,8 @@ class DatabaseMetrics:
             logger.error(f"Failed to start metrics server: {e}")
             raise
 
-
 # Global metrics instance
-_database_metrics: Optional[DatabaseMetrics] = None
-
+_database_metrics: DatabaseMetrics | None = None
 
 def get_database_metrics() -> DatabaseMetrics:
     """Get or create global database metrics instance.
@@ -363,7 +360,6 @@ def get_database_metrics() -> DatabaseMetrics:
         _database_metrics = DatabaseMetrics()
 
     return _database_metrics
-
 
 def reset_database_metrics():
     """Reset global database metrics instance (for testing)."""

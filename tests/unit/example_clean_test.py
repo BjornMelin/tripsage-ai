@@ -16,7 +16,6 @@ from tests.test_config import (
     create_test_settings,
 )
 
-
 class TestExampleService:
     """Example test class showing clean testing patterns."""
 
@@ -71,7 +70,6 @@ class TestExampleService:
         # Should have errors since we're using test API keys in production
         assert len(errors) > 0
 
-
 class TestExampleBusinessLogic:
     """Example of testing business logic without complex setup."""
 
@@ -103,7 +101,6 @@ class TestExampleBusinessLogic:
         assert result["response"] == "Test response"
         assert result["status"] == "completed"
         mock_chat_service.process_message.assert_called_once_with("Hello")
-
 
 class TestExampleIntegration:
     """Example of integration testing with minimal setup."""
@@ -148,7 +145,6 @@ class TestExampleIntegration:
         # Should have errors since we're using test API keys in production
         assert len(errors) > 0
 
-
 class TestExampleErrorHandling:
     """Example of testing error conditions cleanly."""
 
@@ -172,7 +168,6 @@ class TestExampleErrorHandling:
         # Test that errors are handled appropriately
         with pytest.raises(Exception, match="Cache error"):
             await mock_cache.get_json("test_key")
-
 
 class TestExamplePerformance:
     """Example of performance testing patterns."""
@@ -205,9 +200,7 @@ class TestExamplePerformance:
         # Should complete very quickly
         assert performance_timer.elapsed < 0.1
 
-
 # Additional examples of testing patterns
-
 
 @pytest.mark.asyncio
 async def test_standalone_async_function():
@@ -216,13 +209,11 @@ async def test_standalone_async_function():
     result = await AsyncMock(return_value="test_result")()
     assert result == "test_result"
 
-
 def test_with_multiple_fixtures(sample_user, sample_trip, mock_settings):
     """Example using multiple fixtures together."""
     # All fixtures are available and properly configured
     assert sample_user["id"] == sample_trip["user_id"]
     assert mock_settings.environment == "testing"
-
 
 @pytest.mark.parametrize(
     "environment,debug",

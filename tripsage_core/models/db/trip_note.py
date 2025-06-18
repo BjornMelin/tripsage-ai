@@ -11,7 +11,6 @@ from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
-
 class TripNote(TripSageModel):
     """TripNote model for TripSage.
 
@@ -22,7 +21,7 @@ class TripNote(TripSageModel):
         content: The note content
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     timestamp: datetime = Field(..., description="When the note was created")
     content: str = Field(..., description="The note content")

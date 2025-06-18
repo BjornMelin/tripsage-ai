@@ -5,7 +5,7 @@ This module implements the core graph-based orchestration system that coordinate
 all specialized agents and manages the conversation flow.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
@@ -32,7 +32,6 @@ from tripsage.orchestration.state import TravelPlanningState, create_initial_sta
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class TripSageOrchestrator:
     """
@@ -66,9 +65,9 @@ class TripSageOrchestrator:
 
     def __init__(
         self,
-        service_registry: Optional[ServiceRegistry] = None,
-        checkpointer: Optional[Any] = None,
-        config: Optional[Any] = None,
+        service_registry: ServiceRegistry | None = None,
+        checkpointer: Any | None = None,
+        config: Any | None = None,
     ):
         """
         Initialize the orchestrator with graph construction and checkpointing.
@@ -384,8 +383,8 @@ class TripSageOrchestrator:
         return general_agent
 
     async def process_message(
-        self, user_id: str, message: str, session_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, user_id: str, message: str, session_id: str | None = None
+    ) -> dict[str, Any]:
         """
         Main entry point for processing user messages.
 
@@ -457,7 +456,7 @@ class TripSageOrchestrator:
                 "error": str(e),
             }
 
-    async def get_session_state(self, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session_state(self, session_id: str) -> dict[str, Any] | None:
         """
         Get the current state for a session.
 

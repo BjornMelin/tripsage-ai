@@ -7,7 +7,7 @@ replacing the over-engineered registry system with simple, direct tool functions
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
@@ -17,7 +17,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-
 # Tool parameter schemas using Pydantic for validation
 class FlightSearchParams(BaseModel):
     """Parameters for flight search."""
@@ -25,14 +24,13 @@ class FlightSearchParams(BaseModel):
     origin: str = Field(description="Origin airport code or city")
     destination: str = Field(description="Destination airport code or city")
     departure_date: str = Field(description="Departure date (YYYY-MM-DD)")
-    return_date: Optional[str] = Field(
+    return_date: str | None = Field(
         default=None, description="Return date (YYYY-MM-DD)"
     )
     passengers: int = Field(default=1, description="Number of passengers")
-    class_preference: Optional[str] = Field(
+    class_preference: str | None = Field(
         default="economy", description="Flight class (economy, business, first)"
     )
-
 
 class AccommodationSearchParams(BaseModel):
     """Parameters for accommodation search."""
@@ -41,35 +39,31 @@ class AccommodationSearchParams(BaseModel):
     check_in: str = Field(description="Check-in date (YYYY-MM-DD)")
     check_out: str = Field(description="Check-out date (YYYY-MM-DD)")
     guests: int = Field(default=1, description="Number of guests")
-    price_min: Optional[float] = Field(
+    price_min: float | None = Field(
         default=None, description="Minimum price per night"
     )
-    price_max: Optional[float] = Field(
+    price_max: float | None = Field(
         default=None, description="Maximum price per night"
     )
-
 
 class MemoryParams(BaseModel):
     """Parameters for memory operations."""
 
     content: str = Field(description="Information to save or search for")
-    category: Optional[str] = Field(default=None, description="Memory category")
-
+    category: str | None = Field(default=None, description="Memory category")
 
 class LocationParams(BaseModel):
     """Parameters for location operations."""
 
     location: str = Field(description="Location name or address")
 
-
 class WebSearchParams(BaseModel):
     """Parameters for web search."""
 
     query: str = Field(description="Search query")
-    location: Optional[str] = Field(
+    location: str | None = Field(
         default=None, description="Location context for search"
     )
-
 
 # Core Travel Tools
 @tool("search_flights", args_schema=FlightSearchParams)
@@ -77,7 +71,7 @@ async def search_flights(
     origin: str,
     destination: str,
     departure_date: str,
-    return_date: Optional[str] = None,
+    return_date: str | None = None,
     passengers: int = 1,
     class_preference: str = "economy",
 ) -> str:
@@ -101,15 +95,14 @@ async def search_flights(
         logger.error(f"Flight search failed: {e}")
         return json.dumps({"error": f"Flight search failed: {str(e)}"})
 
-
 @tool("search_accommodations", args_schema=AccommodationSearchParams)
 async def search_accommodations(
     location: str,
     check_in: str,
     check_out: str,
     guests: int = 1,
-    price_min: Optional[float] = None,
-    price_max: Optional[float] = None,
+    price_min: float | None = None,
+    price_max: float | None = None,
 ) -> str:
     """Search for accommodations in a location with check-in/out dates and
     guest requirements."""
@@ -132,7 +125,6 @@ async def search_accommodations(
         logger.error(f"Accommodation search failed: {e}")
         return json.dumps({"error": f"Accommodation search failed: {str(e)}"})
 
-
 @tool("geocode_location", args_schema=LocationParams)
 async def geocode_location(location: str) -> str:
     """Get geographic coordinates and details for a location."""
@@ -145,7 +137,6 @@ async def geocode_location(location: str) -> str:
     except Exception as e:
         logger.error(f"Geocoding failed: {e}")
         return json.dumps({"error": f"Geocoding failed: {str(e)}"})
-
 
 @tool("get_weather", args_schema=LocationParams)
 async def get_weather(location: str) -> str:
@@ -160,9 +151,8 @@ async def get_weather(location: str) -> str:
         logger.error(f"Weather lookup failed: {e}")
         return json.dumps({"error": f"Weather lookup failed: {str(e)}"})
 
-
 @tool("web_search", args_schema=WebSearchParams)
-async def web_search(query: str, location: Optional[str] = None) -> str:
+async def web_search(query: str, location: str | None = None) -> str:
     """Search the web for travel-related information."""
     try:
         params = {"query": query}
@@ -176,9 +166,8 @@ async def web_search(query: str, location: Optional[str] = None) -> str:
         logger.error(f"Web search failed: {e}")
         return json.dumps({"error": f"Web search failed: {str(e)}"})
 
-
 @tool("add_memory", args_schema=MemoryParams)
-async def add_memory(content: str, category: Optional[str] = None) -> str:
+async def add_memory(content: str, category: str | None = None) -> str:
     """Save important information to user memory for future reference."""
     try:
         params = {"content": content}
@@ -192,9 +181,8 @@ async def add_memory(content: str, category: Optional[str] = None) -> str:
         logger.error(f"Memory addition failed: {e}")
         return json.dumps({"error": f"Memory addition failed: {str(e)}"})
 
-
 @tool("search_memories", args_schema=MemoryParams)
-async def search_memories(content: str, category: Optional[str] = None) -> str:
+async def search_memories(content: str, category: str | None = None) -> str:
     """Search user memories for relevant information."""
     try:
         params = {"query": content}
@@ -207,7 +195,6 @@ async def search_memories(content: str, category: Optional[str] = None) -> str:
     except Exception as e:
         logger.error(f"Memory search failed: {e}")
         return json.dumps({"error": f"Memory search failed: {str(e)}"})
-
 
 # Tool catalog for agent-specific tool access
 AGENT_TOOLS = {
@@ -264,18 +251,15 @@ ALL_TOOLS = [
     search_memories,
 ]
 
-
-def get_tools_for_agent(agent_type: str) -> List:
+def get_tools_for_agent(agent_type: str) -> list:
     """Get tools for a specific agent type."""
     return AGENT_TOOLS.get(agent_type, [])
 
-
-def get_all_tools() -> List:
+def get_all_tools() -> list:
     """Get all available tools."""
     return ALL_TOOLS
 
-
-async def health_check() -> Dict[str, Any]:
+async def health_check() -> dict[str, Any]:
     """Perform basic health check on core tools."""
     healthy = []
     unhealthy = []

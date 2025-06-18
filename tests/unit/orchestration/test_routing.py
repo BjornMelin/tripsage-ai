@@ -19,7 +19,6 @@ from tripsage.orchestration.handoff_coordinator import (
 from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import create_initial_state
 
-
 class TestEnhancedRouterNode:
     """Test cases for the enhanced RouterNode with fallback classification."""
 
@@ -156,7 +155,6 @@ class TestEnhancedRouterNode:
         assert context["previous_searches"] == "flights"
         assert context["user_preferences"] == {"budget": "economy"}
         assert context["recent_agents"] == ["router", "flight_agent"]
-
 
 class TestEnhancedHandoffCoordinator:
     """Test cases for the enhanced AgentHandoffCoordinator."""
@@ -328,7 +326,6 @@ class TestEnhancedHandoffCoordinator:
 
         # Check that preserved context is merged
         assert updated_state["destination"] == "Paris"
-
 
 class TestRoutingIntegration:
     """Integration tests for routing and handoff coordination."""

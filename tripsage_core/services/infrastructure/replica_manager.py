@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Optional
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
@@ -23,7 +23,6 @@ from tripsage_core.exceptions.exceptions import (
 
 logger = logging.getLogger(__name__)
 
-
 class QueryType(Enum):
     """Types of database queries for routing decisions."""
 
@@ -32,13 +31,11 @@ class QueryType(Enum):
     VECTOR_SEARCH = "vector_search"
     ANALYTICS = "analytics"
 
-
 class ReplicaStatus(Enum):
     """Read replica health status."""
 
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
-
 
 class LoadBalancingStrategy(Enum):
     """Load balancing strategies for read replicas."""
@@ -46,7 +43,6 @@ class LoadBalancingStrategy(Enum):
     ROUND_ROBIN = "round_robin"
     LEAST_CONNECTIONS = "least_connections"
     WEIGHTED_ROUND_ROBIN = "weighted_round_robin"
-
 
 @dataclass
 class ReplicaConfig:
@@ -56,7 +52,6 @@ class ReplicaConfig:
     url: str
     api_key: str
     enabled: bool = True
-
 
 @dataclass
 class ReplicaHealth:
@@ -68,7 +63,6 @@ class ReplicaHealth:
     latency_ms: float
     error_count: int = 0
     uptime_percentage: float = 100.0
-
 
 @dataclass
 class ReplicaMetrics:
@@ -86,7 +80,6 @@ class ReplicaMetrics:
         if self.last_updated is None:
             self.last_updated = datetime.now(timezone.utc)
 
-
 @dataclass
 class LoadBalancerStats:
     """Simple load balancer statistics."""
@@ -95,15 +88,14 @@ class LoadBalancerStats:
     successful_requests: int = 0
     failed_requests: int = 0
     avg_response_time_ms: float = 0.0
-    requests_per_replica: Dict[str, int] = None
-    geographic_routes: Dict[str, str] = None
+    requests_per_replica: dict[str, int] = None
+    geographic_routes: dict[str, str] = None
 
     def __post_init__(self):
         if self.requests_per_replica is None:
             self.requests_per_replica = {}
         if self.geographic_routes is None:
             self.geographic_routes = {}
-
 
 class ReplicaManager:
     """
@@ -115,23 +107,23 @@ class ReplicaManager:
     - Automatic fallback to primary for writes and unhealthy replicas
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize the replica manager.
 
         Args:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self._replicas: Dict[str, ReplicaConfig] = {}
-        self._clients: Dict[str, Client] = {}
-        self._health: Dict[str, ReplicaHealth] = {}
+        self._replicas: dict[str, ReplicaConfig] = {}
+        self._clients: dict[str, Client] = {}
+        self._health: dict[str, ReplicaHealth] = {}
 
         # Round-robin state
         self._current_replica_index = 0
 
         # Health checking
         self._health_check_interval = 60  # seconds
-        self._health_check_task: Optional[asyncio.Task] = None
+        self._health_check_task: asyncio.Task | None = None
         self._health_check_timeout = 5.0
 
         # Configuration
@@ -295,7 +287,7 @@ class ReplicaManager:
         logger.debug(f"Using primary for {query_type.value} query")
         return "primary"
 
-    def _get_healthy_read_replicas(self) -> List[str]:
+    def _get_healthy_read_replicas(self) -> list[str]:
         """Get list of healthy read replicas (excluding primary).
 
         Returns:
@@ -323,7 +315,7 @@ class ReplicaManager:
         self,
         query_type: QueryType = QueryType.READ,
         timeout: float = 5.0,
-        user_region: Optional[str] = None,
+        user_region: str | None = None,
     ):
         """Acquire a connection from the optimal replica.
 
@@ -433,8 +425,8 @@ class ReplicaManager:
             logger.warning(f"Health check failed for replica {replica_id}: {e}")
 
     def get_replica_health(
-        self, replica_id: Optional[str] = None
-    ) -> Optional[ReplicaHealth] | Dict[str, ReplicaHealth]:
+        self, replica_id: str | None = None
+    ) -> ReplicaHealth | None | dict[str, ReplicaHealth]:
         """Get health status for replica(s).
 
         Args:
@@ -447,7 +439,7 @@ class ReplicaManager:
             return self._health.get(replica_id)
         return self._health.copy()
 
-    def get_replica_configs(self) -> Dict[str, ReplicaConfig]:
+    def get_replica_configs(self) -> dict[str, ReplicaConfig]:
         """Get all replica configurations.
 
         Returns:
@@ -455,7 +447,7 @@ class ReplicaManager:
         """
         return self._replicas.copy()
 
-    def get_replica_metrics(self) -> Dict[str, ReplicaMetrics]:
+    def get_replica_metrics(self) -> dict[str, ReplicaMetrics]:
         """Get basic metrics for all replicas.
 
         Returns:
@@ -546,10 +538,8 @@ class ReplicaManager:
 
         logger.info("Replica manager closed")
 
-
 # Global replica manager instance
-_replica_manager: Optional[ReplicaManager] = None
-
+_replica_manager: ReplicaManager | None = None
 
 async def get_replica_manager() -> ReplicaManager:
     """Get the global replica manager instance.
@@ -564,7 +554,6 @@ async def get_replica_manager() -> ReplicaManager:
         await _replica_manager.initialize()
 
     return _replica_manager
-
 
 async def close_replica_manager() -> None:
     """Close the global replica manager instance."""

@@ -8,19 +8,16 @@ from starlette.types import ASGIApp
 
 from tripsage.api.middlewares.logging import LoggingMiddleware
 
-
 @pytest.fixture
 def mock_app():
     """Create a mock ASGI app."""
     app = MagicMock(spec=ASGIApp)
     return app
 
-
 @pytest.fixture
 def middleware(mock_app):
     """Create middleware instance."""
     return LoggingMiddleware(app=mock_app)
-
 
 @pytest.fixture
 def mock_request():
@@ -39,7 +36,6 @@ def mock_request():
 
     return request
 
-
 @pytest.fixture
 def mock_response():
     """Create a mock response."""
@@ -47,7 +43,6 @@ def mock_response():
     response.status_code = 200
     response.headers = {}
     return response
-
 
 @pytest.fixture
 def mock_call_next(mock_response):
@@ -57,7 +52,6 @@ def mock_call_next(mock_response):
         return mock_response
 
     return call_next
-
 
 class TestLoggingMiddleware:
     """Test cases for LoggingMiddleware."""

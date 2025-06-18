@@ -8,7 +8,7 @@ modern async patterns, and comprehensive edge case coverage using Hypothesis.
 import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -51,7 +51,6 @@ timestamps = st.datetimes(
     max_value=datetime(2030, 12, 31, tzinfo=timezone.utc),
 )
 
-
 class TestApiKeyServiceModern:
     """Modern test suite for ApiKeyService with property-based testing."""
 
@@ -82,7 +81,7 @@ class TestApiKeyServiceModern:
         )
         return service
 
-    def _sample_db_result(self) -> Dict[str, Any]:
+    def _sample_db_result(self) -> dict[str, Any]:
         """Generate sample database result."""
         return {
             "id": str(uuid.uuid4()),

@@ -10,14 +10,12 @@ from tripsage.api.routers.websocket import (
     validate_websocket_origin,
 )
 
-
 @pytest.fixture
 def mock_websocket():
     """Create a mock WebSocket with configurable headers."""
     websocket = Mock(spec=WebSocket)
     websocket.headers = {}
     return websocket
-
 
 @pytest.fixture
 def mock_settings():
@@ -29,7 +27,6 @@ def mock_settings():
         "http://test.example.com",
     ]
     return settings
-
 
 class TestWebSocketOriginValidation:
     """Test WebSocket Origin validation for CSWSH protection."""

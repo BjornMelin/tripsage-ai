@@ -9,14 +9,13 @@ import asyncio
 import os
 import random
 import time
-from typing import Any, Dict
+from typing import Any
 
 from tripsage_core.config import apply_preset, get_enterprise_config
 from tripsage_core.infrastructure.resilience import (
     circuit_breaker,
     get_circuit_breaker_status,
 )
-
 
 class MockService:
     """Mock service that can simulate failures for testing circuit breakers."""
@@ -28,7 +27,7 @@ class MockService:
         self.success_count = 0
         self.failure_count = 0
 
-    async def unreliable_operation(self, operation_id: str) -> Dict[str, Any]:
+    async def unreliable_operation(self, operation_id: str) -> dict[str, Any]:
         """Simulate an unreliable operation that may fail."""
         self.call_count += 1
 
@@ -51,7 +50,7 @@ class MockService:
             "call_count": self.call_count,
         }
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get service statistics."""
         return {
             "name": self.name,
@@ -62,7 +61,6 @@ class MockService:
             if self.call_count > 0
             else 0,
         }
-
 
 async def demonstrate_simple_mode():
     """Demonstrate circuit breaker in simple mode."""
@@ -107,7 +105,6 @@ async def demonstrate_simple_mode():
 
     print(f"\nService stats: {service.get_stats()}")
     print(f"Circuit breaker stats: {breaker.metrics.get_summary()}")
-
 
 async def demonstrate_enterprise_mode():
     """Demonstrate circuit breaker in enterprise mode."""
@@ -171,7 +168,6 @@ async def demonstrate_enterprise_mode():
         print(f"Circuit breaker state: {breaker.get_state()}")
     else:
         print(f"Circuit breaker stats: {breaker.metrics.get_summary()}")
-
 
 async def demonstrate_recovery():
     """Demonstrate circuit breaker recovery in enterprise mode."""
@@ -247,7 +243,6 @@ async def demonstrate_recovery():
     if hasattr(breaker, "get_state"):
         print(f"Final circuit state: {breaker.get_state()}")
 
-
 async def main():
     """Run all demonstrations."""
     print("🔧 Configurable Circuit Breaker Demonstration")
@@ -268,7 +263,6 @@ async def main():
         import traceback
 
         traceback.print_exc()
-
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -6,22 +6,21 @@ replacing the over-engineered 677-line abstraction system with simple direct cal
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage_core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-
 class SimpleMCPService:
     """Direct MCP service without abstraction layers."""
 
     def __init__(self):
         """Initialize the simplified MCP service."""
-        self._airbnb_client: Optional[AirbnbMCPClient] = None
+        self._airbnb_client: AirbnbMCPClient | None = None
 
-    async def _get_airbnb_client(self) -> Optional[AirbnbMCPClient]:
+    async def _get_airbnb_client(self) -> AirbnbMCPClient | None:
         """Get or create the Airbnb client."""
         if self._airbnb_client is None:
             try:
@@ -40,8 +39,8 @@ class SimpleMCPService:
         return self._airbnb_client
 
     async def invoke(
-        self, method_name: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, method_name: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Invoke an MCP method directly.
 
@@ -104,7 +103,7 @@ class SimpleMCPService:
             logger.error(f"MCP method '{method_name}' failed: {e}")
             raise Exception(f"MCP method '{method_name}' failed: {str(e)}") from e
 
-    def _convert_to_airbnb_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_to_airbnb_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Convert generic params to Airbnb-specific format."""
         airbnb_params = {}
 
@@ -128,7 +127,7 @@ class SimpleMCPService:
 
         return airbnb_params
 
-    async def _mock_flight_search(self, **params) -> Dict[str, Any]:
+    async def _mock_flight_search(self, **params) -> dict[str, Any]:
         """Mock flight search (not implemented via MCP)."""
         return {
             "flights": [],
@@ -136,7 +135,7 @@ class SimpleMCPService:
             "params": params,
         }
 
-    async def _mock_geocode(self, **params) -> Dict[str, Any]:
+    async def _mock_geocode(self, **params) -> dict[str, Any]:
         """Mock geocoding (not implemented via MCP)."""
         location = params.get("location", "Unknown")
         return {
@@ -146,7 +145,7 @@ class SimpleMCPService:
             "message": "Geocoding not implemented in MCP layer",
         }
 
-    async def _mock_weather(self, **params) -> Dict[str, Any]:
+    async def _mock_weather(self, **params) -> dict[str, Any]:
         """Mock weather data (not implemented via MCP)."""
         return {
             "temperature": 20,
@@ -154,7 +153,7 @@ class SimpleMCPService:
             "message": "Weather data not implemented in MCP layer",
         }
 
-    async def _mock_add_memory(self, **params) -> Dict[str, Any]:
+    async def _mock_add_memory(self, **params) -> dict[str, Any]:
         """Mock memory addition (not implemented via MCP)."""
         return {
             "success": True,
@@ -162,11 +161,11 @@ class SimpleMCPService:
             "message": "Memory not implemented in MCP layer",
         }
 
-    async def _mock_search_memories(self, **params) -> Dict[str, Any]:
+    async def _mock_search_memories(self, **params) -> dict[str, Any]:
         """Mock memory search (not implemented via MCP)."""
         return {"memories": [], "message": "Memory search not implemented in MCP layer"}
 
-    async def _health_check(self, **params) -> Dict[str, Any]:
+    async def _health_check(self, **params) -> dict[str, Any]:
         """Perform health check."""
         client = await self._get_airbnb_client()
         if client is None:
@@ -213,10 +212,8 @@ class SimpleMCPService:
             except Exception as e:
                 logger.error(f"Error disconnecting Airbnb client: {e}")
 
-
 # Global instance
-_mcp_service: Optional[SimpleMCPService] = None
-
+_mcp_service: SimpleMCPService | None = None
 
 def get_mcp_service() -> SimpleMCPService:
     """Get the global MCP service instance."""
@@ -224,7 +221,6 @@ def get_mcp_service() -> SimpleMCPService:
     if _mcp_service is None:
         _mcp_service = SimpleMCPService()
     return _mcp_service
-
 
 # Backwards compatibility alias
 mcp_manager = get_mcp_service()

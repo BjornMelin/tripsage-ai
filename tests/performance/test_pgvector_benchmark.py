@@ -37,7 +37,6 @@ from scripts.benchmarks.regression_detector import (
     RegressionThresholds,
 )
 
-
 class TestBenchmarkConfig:
     """Test benchmark configuration."""
 
@@ -72,7 +71,6 @@ class TestBenchmarkConfig:
         assert config.small_dataset_size == 500
         assert config.ef_search_values == [50, 150]
         assert config.target_query_latency_ms == 5.0
-
 
 class TestPGVectorBenchmark:
     """Test PGVector benchmark execution."""
@@ -399,7 +397,6 @@ class TestPGVectorBenchmark:
         assert system_info["cpu_count"] > 0
         assert system_info["memory_total_gb"] > 0
 
-
 class TestBaselineManager:
     """Test baseline management functionality."""
 
@@ -468,7 +465,6 @@ class TestBaselineManager:
         assert baseline.test_version == "v1.2"  # Latest version
         assert baseline.avg_latency_ms == 7.0  # 5.0 + 2
         assert baseline.queries_per_second == 220.0  # 200.0 + 2*10
-
 
 class TestRegressionDetector:
     """Test regression detection functionality."""
@@ -626,7 +622,6 @@ class TestRegressionDetector:
         assert not analysis.overall_regression
         assert "No baseline available" in analysis.recommendations[0]
 
-
 @pytest.mark.asyncio
 async def test_run_benchmark_integration():
     """Integration test for run_benchmark function."""
@@ -667,7 +662,6 @@ async def test_run_benchmark_integration():
                 output_path = Path(temp_dir)
                 assert (output_path / "benchmark_raw_data.json").exists()
                 assert (output_path / "benchmark_summary.md").exists()
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

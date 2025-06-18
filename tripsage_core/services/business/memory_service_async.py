@@ -10,11 +10,12 @@ import hashlib
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional, cast
 
 import asyncpg
 from pydantic import Field, field_validator
 
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.infrastructure import CacheService, get_cache_service
 from tripsage_core.utils.connection_utils import (
@@ -31,10 +32,10 @@ class MemorySearchResult(TripSageModel):
 
     id: str = Field(..., description="Memory ID")
     memory: str = Field(..., description="Memory content")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Memory metadata"
     )
-    categories: List[str] = Field(default_factory=list, description="Memory categories")
+    categories: list[str] = Field(default_factory=list, description="Memory categories")
     similarity: float = Field(default=0.0, description="Similarity score")
     created_at: datetime = Field(..., description="Creation timestamp")
     user_id: str = Field(..., description="User ID")
@@ -43,10 +44,10 @@ class MemorySearchResult(TripSageModel):
 class ConversationMemoryRequest(TripSageModel):
     """Request model for conversation memory extraction."""
 
-    messages: List[Dict[str, str]] = Field(..., description="Conversation messages")
-    session_id: Optional[str] = Field(None, description="Chat session ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    messages: list[dict[str, str]] = Field(..., description="Conversation messages")
+    session_id: str | None = Field(None, description="Chat session ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
+    metadata: dict[str, Any] | None = Field(None, description="Additional metadata")
 
 
 class MemorySearchRequest(TripSageModel):
@@ -54,7 +55,7 @@ class MemorySearchRequest(TripSageModel):
 
     query: str = Field(..., min_length=1, description="Search query")
     limit: int = Field(default=5, ge=1, le=50, description="Maximum results")
-    filters: Optional[Dict[str, Any]] = Field(None, description="Search filters")
+    filters: dict[str, Any] | None = Field(None, description="Search filters")
     similarity_threshold: float = Field(
         default=0.3, ge=0.0, le=1.0, description="Minimum similarity"
     )
@@ -63,31 +64,31 @@ class MemorySearchRequest(TripSageModel):
 class UserContextResponse(TripSageModel):
     """Response model for user context."""
 
-    preferences: List[Dict[str, Any]] = Field(
+    preferences: list[dict[str, Any]] = Field(
         default_factory=list, description="User preferences"
     )
-    past_trips: List[Dict[str, Any]] = Field(
+    past_trips: list[dict[str, Any]] = Field(
         default_factory=list, description="Past trip memories"
     )
-    saved_destinations: List[Dict[str, Any]] = Field(
+    saved_destinations: list[dict[str, Any]] = Field(
         default_factory=list, description="Saved destinations"
     )
-    budget_patterns: List[Dict[str, Any]] = Field(
+    budget_patterns: list[dict[str, Any]] = Field(
         default_factory=list, description="Budget patterns"
     )
-    travel_style: List[Dict[str, Any]] = Field(
+    travel_style: list[dict[str, Any]] = Field(
         default_factory=list, description="Travel style memories"
     )
-    dietary_restrictions: List[Dict[str, Any]] = Field(
+    dietary_restrictions: list[dict[str, Any]] = Field(
         default_factory=list, description="Dietary restrictions"
     )
-    accommodation_preferences: List[Dict[str, Any]] = Field(
+    accommodation_preferences: list[dict[str, Any]] = Field(
         default_factory=list, description="Accommodation preferences"
     )
-    activity_preferences: List[Dict[str, Any]] = Field(
+    activity_preferences: list[dict[str, Any]] = Field(
         default_factory=list, description="Activity preferences"
     )
-    insights: Dict[str, Any] = Field(
+    insights: dict[str, Any] = Field(
         default_factory=dict, description="Derived insights"
     )
     summary: str = Field(default="", description="Context summary")
@@ -96,12 +97,12 @@ class UserContextResponse(TripSageModel):
 class PreferencesUpdateRequest(TripSageModel):
     """Request model for preferences update."""
 
-    preferences: Dict[str, Any] = Field(..., description="Preferences to update")
-    category: Optional[str] = Field(None, description="Preference category")
+    preferences: dict[str, Any] = Field(..., description="Preferences to update")
+    category: str | None = Field(None, description="Preference category")
 
     @field_validator("preferences")
     @classmethod
-    def validate_preferences(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_preferences(cls, v: dict[str, Any]) -> dict[str, Any]:
         """Validate preferences data."""
         if not v:
             raise ValueError("Preferences cannot be empty")
@@ -125,7 +126,7 @@ class AsyncMemoryService:
     def __init__(
         self,
         database_service=None,
-        memory_backend_config: Optional[Dict[str, Any]] = None,
+        memory_backend_config: dict[str, Any] | None = None,
         cache_ttl: int = 300,
         connection_max_retries: int = 3,
         connection_validation_timeout: float = 10.0,
@@ -161,21 +162,21 @@ class AsyncMemoryService:
         )
 
         # Initialize asyncpg connection pool
-        self._pg_pool: Optional[asyncpg.Pool] = None
+        self._pg_pool: asyncpg.Pool | None = None
         self._pool_lock = asyncio.Lock()
 
         # Initialize DragonflyDB cache service
-        self._cache_service: Optional[CacheService] = None
+        self._cache_service: CacheService | None = None
 
         # Track active cache keys for invalidation
-        self._cache_keys: Set[str] = set()
+        self._cache_keys: set[str] = set()
         self._cache_keys_lock = asyncio.Lock()
 
         # Initialize memory backend
         self._initialize_memory_backend(memory_backend_config)
         self._connected = False
 
-    def _initialize_memory_backend(self, config: Optional[Dict[str, Any]]) -> None:
+    def _initialize_memory_backend(self, config: dict[str, Any] | None) -> None:
         """
         Initialize Mem0 memory backend.
 
@@ -202,7 +203,7 @@ class AsyncMemoryService:
             logger.error(f"Failed to initialize memory backend: {str(e)}")
             self.memory = None
 
-    def _get_default_config(self) -> Dict[str, Any]:
+    def _get_default_config(self) -> dict[str, Any]:
         """
         Get default Mem0 configuration optimized for TripSage with secure URL parsing.
 
@@ -220,7 +221,7 @@ class AsyncMemoryService:
         try:
             # Parse database URL securely using effective PostgreSQL URL
             url_parser = DatabaseURLParser()
-            credentials = url_parser.parse_url(settings.effective_postgres_url())
+            credentials = url_parser.parse_url(settings.effective_postgres_url)
 
             logger.info(
                 "Database configuration parsed successfully",
@@ -271,11 +272,11 @@ class AsyncMemoryService:
         except DatabaseURLParsingError as e:
             error_msg = f"Failed to parse database URL: {e}"
             logger.error(error_msg)
-            raise ServiceError(error_msg) from e
+            raise CoreServiceError(error_msg) from e
         except Exception as e:
             error_msg = f"Failed to create Mem0 configuration: {e}"
             logger.error(error_msg)
-            raise ServiceError(error_msg) from e
+            raise CoreServiceError(error_msg) from e
 
     async def _init_pg_pool(self) -> asyncpg.Pool:
         """Initialize asyncpg connection pool for native async operations."""
@@ -289,7 +290,7 @@ class AsyncMemoryService:
 
             # Parse database URL
             url_parser = DatabaseURLParser()
-            credentials = url_parser.parse_url(settings.effective_postgres_url())
+            credentials = url_parser.parse_url(settings.effective_postgres_url)
 
             # Create connection pool with optimized settings
             self._pg_pool = await asyncpg.create_pool(
@@ -366,7 +367,7 @@ class AsyncMemoryService:
         except Exception as e:
             error_msg = f"Failed to connect async memory service: {e}"
             logger.error(error_msg)
-            raise ServiceError(error_msg) from e
+            raise CoreServiceError(error_msg) from e
 
     async def close(self) -> None:
         """Close service connections properly."""
@@ -391,7 +392,7 @@ class AsyncMemoryService:
 
     async def add_conversation_memory(
         self, user_id: str, memory_request: ConversationMemoryRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Extract and store memories from conversation using native async operations.
 
@@ -459,8 +460,8 @@ class AsyncMemoryService:
             return {"results": [], "error": str(e)}
 
     async def _add_memory_direct(
-        self, user_id: str, messages: List[Dict[str, str]], metadata: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, user_id: str, messages: list[dict[str, str]], metadata: dict[str, Any]
+    ) -> dict[str, Any]:
         """Direct pgvector implementation for memory storage."""
         # This is a fallback implementation when Mem0 is not available
         # It would directly use asyncpg to store embeddings
@@ -476,7 +477,7 @@ class AsyncMemoryService:
 
     async def search_memories(
         self, user_id: str, search_request: MemorySearchRequest
-    ) -> List[MemorySearchResult]:
+    ) -> list[MemorySearchResult]:
         """
         Search user memories with DragonflyDB caching and native async operations.
 
@@ -567,7 +568,7 @@ class AsyncMemoryService:
 
     async def _search_memories_direct(
         self, user_id: str, search_request: MemorySearchRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Direct pgvector similarity search implementation."""
         pool = await self._init_pg_pool()
 
@@ -581,8 +582,8 @@ class AsyncMemoryService:
             return {"results": []}
 
     async def search_memories_batch(
-        self, user_queries: List[Tuple[str, MemorySearchRequest]]
-    ) -> Dict[str, List[MemorySearchResult]]:
+        self, user_queries: list[tuple[str, MemorySearchRequest]]
+    ) -> dict[str, list[MemorySearchResult]]:
         """
         Batch search memories for multiple users efficiently.
 
@@ -629,18 +630,18 @@ class AsyncMemoryService:
 
             # Process results
             for i, (user_id, _search_request) in enumerate(uncached_queries):
-                if isinstance(search_results[i], Exception):
-                    logger.error(
-                        f"Batch search failed for user {user_id}: {search_results[i]}"
-                    )
+                result = search_results[i]
+                if isinstance(result, Exception):
+                    logger.error(f"Batch search failed for user {user_id}: {result}")
                     results[user_id] = []
                 else:
-                    results[user_id] = search_results[i]
+                    # Type narrowing: if not Exception, then it's list[MemorySearchResult]
+                    results[user_id] = cast(list[MemorySearchResult], result)
 
         return results
 
     async def get_user_context(
-        self, user_id: str, context_type: Optional[str] = None
+        self, user_id: str, context_type: str | None = None
     ) -> UserContextResponse:
         """
         Get comprehensive user context with DragonflyDB caching.
@@ -673,7 +674,7 @@ class AsyncMemoryService:
                 all_memories = await self._get_all_memories_direct(user_id)
 
             # Organize by category
-            context = {
+            context: dict[str, list[dict[str, Any]]] = {
                 "preferences": [],
                 "past_trips": [],
                 "saved_destinations": [],
@@ -745,7 +746,7 @@ class AsyncMemoryService:
             )
             return UserContextResponse(summary="Error retrieving user context")
 
-    async def _get_all_memories_direct(self, user_id: str) -> Dict[str, Any]:
+    async def _get_all_memories_direct(self, user_id: str) -> dict[str, Any]:
         """Direct database implementation to get all user memories."""
         pool = await self._init_pg_pool()
 
@@ -753,7 +754,7 @@ class AsyncMemoryService:
             # Placeholder for actual implementation
             return {"results": []}
 
-    async def optimize_memory_tables(self) -> Dict[str, Any]:
+    async def optimize_memory_tables(self) -> dict[str, Any]:
         """
         Optimize memory-related vector tables for better query performance.
 
@@ -808,7 +809,7 @@ class AsyncMemoryService:
 
     async def update_user_preferences(
         self, user_id: str, preferences_request: PreferencesUpdateRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update user travel preferences in memory.
 
@@ -843,6 +844,8 @@ class AsyncMemoryService:
 
             memory_request = ConversationMemoryRequest(
                 messages=preference_messages,
+                session_id=None,
+                trip_id=None,
                 metadata={
                     "type": "preferences_update",
                     "category": preferences_request.category or "travel_preferences",
@@ -870,8 +873,8 @@ class AsyncMemoryService:
             return {"error": str(e)}
 
     async def delete_user_memories(
-        self, user_id: str, memory_ids: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, user_id: str, memory_ids: list[str] | None = None
+    ) -> dict[str, Any]:
         """
         Delete user memories (GDPR compliance) with batch operations.
 
@@ -952,7 +955,7 @@ class AsyncMemoryService:
             )
             return {"error": str(e), "success": False}
 
-    async def _delete_memories_direct(self, memory_ids: List[str]) -> int:
+    async def _delete_memories_direct(self, memory_ids: list[str]) -> int:
         """Direct database deletion of specific memories."""
         pool = await self._init_pg_pool()
 
@@ -1038,8 +1041,8 @@ class AsyncMemoryService:
             return datetime.now(timezone.utc)
 
     async def _enrich_travel_memories(
-        self, memories: List[MemorySearchResult]
-    ) -> List[MemorySearchResult]:
+        self, memories: list[MemorySearchResult]
+    ) -> list[MemorySearchResult]:
         """Enrich memories with travel-specific context."""
         # This can be done asynchronously if we have external enrichment services
         for memory in memories:
@@ -1065,7 +1068,7 @@ class AsyncMemoryService:
 
         return memories
 
-    async def _derive_travel_insights(self, context: Dict[str, List]) -> Dict[str, Any]:
+    async def _derive_travel_insights(self, context: dict[str, list]) -> dict[str, Any]:
         """Derive insights from user's travel history and preferences."""
         insights = {
             "preferred_destinations": self._analyze_destinations(context),
@@ -1077,7 +1080,7 @@ class AsyncMemoryService:
 
         return insights
 
-    def _analyze_destinations(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_destinations(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze destination preferences from context."""
         destinations = []
         for memory in context.get("past_trips", []) + context.get(
@@ -1102,7 +1105,7 @@ class AsyncMemoryService:
             "destination_count": len(set(destinations)),
         }
 
-    def _analyze_budgets(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_budgets(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze budget patterns from context."""
         budgets = []
         for memory in context.get("budget_patterns", []):
@@ -1121,7 +1124,7 @@ class AsyncMemoryService:
             }
         return {"budget_info": "No budget data available"}
 
-    def _analyze_frequency(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_frequency(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze travel frequency from context."""
         trips = context.get("past_trips", [])
         return {
@@ -1129,7 +1132,7 @@ class AsyncMemoryService:
             "estimated_frequency": "Regular" if len(trips) > 5 else "Occasional",
         }
 
-    def _analyze_activities(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_activities(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze activity preferences from context."""
         activities = []
         for memory in context.get("activity_preferences", []) + context.get(
@@ -1156,7 +1159,7 @@ class AsyncMemoryService:
             else "Adventure",
         }
 
-    def _analyze_travel_style(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_travel_style(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze overall travel style from context."""
         style_indicators = {
             "luxury": ["luxury", "expensive", "high-end", "premium"],
@@ -1186,7 +1189,7 @@ class AsyncMemoryService:
         }
 
     def _generate_context_summary(
-        self, context: Dict[str, Any], insights: Dict[str, Any]
+        self, context: dict[str, Any], insights: dict[str, Any]
     ) -> str:
         """Generate a human-readable summary of user context."""
         summary_parts = []

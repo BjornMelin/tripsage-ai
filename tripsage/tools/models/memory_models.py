@@ -10,7 +10,7 @@ This module defines all Pydantic models for memory operations with:
 """
 
 from datetime import datetime
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -118,7 +118,6 @@ ActivityName = Annotated[
 
 # === CORE MEMORY MODELS ===
 
-
 class ConversationMessage(BaseModel):
     """
     Message model for conversation memory using modern Pydantic 2.0 patterns.
@@ -141,10 +140,9 @@ class ConversationMessage(BaseModel):
         description="Message role - must be user, assistant, or system"
     )
     content: ContentText = Field(description="Message content")
-    timestamp: Optional[datetime] = Field(
+    timestamp: datetime | None = Field(
         default=None, description="Message timestamp, auto-generated if not provided"
     )
-
 
 class UserPreferences(BaseModel):
     """
@@ -163,38 +161,38 @@ class UserPreferences(BaseModel):
 
     user_id: UserId
 
-    budget_range: Optional[BudgetRange] = Field(
+    budget_range: BudgetRange | None = Field(
         default=None,
         alias="budget",
         description="Preferred budget range (low/medium/high or dollar amounts)",
     )
 
-    accommodation_type: Optional[str] = Field(
+    accommodation_type: str | None = Field(
         default=None,
         alias="accommodation",
         description="Preferred accommodation type",
         examples=["hotel", "hostel", "airbnb", "resort", "apartment"],
     )
 
-    travel_style: Optional[TravelStyle] = Field(
+    travel_style: TravelStyle | None = Field(
         default=None, description="Travel style preference"
     )
 
-    destinations: Optional[List[DestinationName]] = Field(
+    destinations: list[DestinationName] | None = Field(
         default=None, description="Preferred travel destinations"
     )
 
-    activities: Optional[List[ActivityName]] = Field(
+    activities: list[ActivityName] | None = Field(
         default=None, description="Preferred activities and interests"
     )
 
-    dietary_restrictions: Optional[List[Annotated[str, Field(min_length=1)]]] = Field(
+    dietary_restrictions: list[Annotated[str, Field(min_length=1)]] | None = Field(
         default=None,
         description="Dietary restrictions and requirements",
         examples=[["vegetarian", "gluten-free"], ["kosher"], ["vegan"]],
     )
 
-    accessibility_needs: Optional[List[Annotated[str, Field(min_length=1)]]] = Field(
+    accessibility_needs: list[Annotated[str, Field(min_length=1)]] | None = Field(
         default=None,
         description="Accessibility requirements",
         examples=[
@@ -203,7 +201,6 @@ class UserPreferences(BaseModel):
             ["visual assistance"],
         ],
     )
-
 
 class MemorySearchQuery(BaseModel):
     """
@@ -223,14 +220,13 @@ class MemorySearchQuery(BaseModel):
     query: SearchQuery
     user_id: UserId
     limit: ResultLimit = Field(default=5)
-    category_filter: Optional[MemoryCategory] = Field(
+    category_filter: MemoryCategory | None = Field(
         default=None,
         description=(
             "Filter memories by category "
             "(e.g., 'travel', 'preferences', 'destinations')"
         ),
     )
-
 
 class TravelMemoryQuery(BaseModel):
     """
@@ -249,12 +245,11 @@ class TravelMemoryQuery(BaseModel):
     query: SearchQuery
     user_id: UserId
     limit: ResultLimit = Field(default=5)
-    category: Optional[MemoryCategory] = Field(
+    category: MemoryCategory | None = Field(
         default=None,
         alias="category_filter",
         description="Memory category filter for travel-specific searches",
     )
-
 
 class SessionSummary(BaseModel):
     """
@@ -275,7 +270,7 @@ class SessionSummary(BaseModel):
     session_id: SessionId
     summary: SummaryText
 
-    key_insights: Optional[List[InsightText]] = Field(
+    key_insights: list[InsightText] | None = Field(
         default=None,
         description="Key insights extracted from the session",
         examples=[
@@ -287,7 +282,7 @@ class SessionSummary(BaseModel):
         ],
     )
 
-    decisions_made: Optional[List[InsightText]] = Field(
+    decisions_made: list[InsightText] | None = Field(
         default=None,
         description="Important decisions made during the session",
         examples=[

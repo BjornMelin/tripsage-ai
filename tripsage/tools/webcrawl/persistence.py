@@ -7,12 +7,11 @@ the Memory MCP knowledge graph.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class WebCrawlPersistence:
     """Handles persistence of web crawl results."""
@@ -27,7 +26,7 @@ class WebCrawlPersistence:
         self.memory_service = get_memory_service()
 
     async def store_crawl_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store a web crawl result in Supabase and Memory MCP.
 
@@ -46,7 +45,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def store_search_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store a web search result in Supabase and Memory MCP.
 
@@ -66,9 +65,9 @@ class WebCrawlPersistence:
 
     async def store_price_result(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         product_type: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> bool:
         """Store a price monitoring result in Supabase and Memory MCP.
 
@@ -96,7 +95,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def store_events_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store an events result in Supabase and Memory MCP.
 
@@ -115,7 +114,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def store_blog_result(
-        self, result: Dict[str, Any], session_id: Optional[str] = None
+        self, result: dict[str, Any], session_id: str | None = None
     ) -> bool:
         """Store a blog crawl result in Supabase and Memory MCP.
 
@@ -134,7 +133,7 @@ class WebCrawlPersistence:
         return success_supabase and success_memory
 
     async def _store_in_supabase(
-        self, result: Dict[str, Any], table: str, session_id: Optional[str] = None
+        self, result: dict[str, Any], table: str, session_id: str | None = None
     ) -> bool:
         """Store a result in Supabase.
 
@@ -181,7 +180,7 @@ class WebCrawlPersistence:
             logger.error(f"Error storing result in Supabase: {str(e)}")
             return False
 
-    async def _store_in_memory(self, result: Dict[str, Any]) -> bool:
+    async def _store_in_memory(self, result: dict[str, Any]) -> bool:
         """Store a result in the Mem0 memory system.
 
         Args:
@@ -257,7 +256,7 @@ class WebCrawlPersistence:
             logger.error(f"Error storing result in memory: {str(e)}")
             return False
 
-    async def _store_events_in_memory(self, result: Dict[str, Any]) -> bool:
+    async def _store_events_in_memory(self, result: dict[str, Any]) -> bool:
         """Store an events result in the memory system.
 
         Args:
@@ -336,7 +335,7 @@ class WebCrawlPersistence:
             logger.error(f"Error storing events in memory: {str(e)}")
             return False
 
-    async def _store_blog_in_memory(self, result: Dict[str, Any]) -> bool:
+    async def _store_blog_in_memory(self, result: dict[str, Any]) -> bool:
         """Store a blog crawl result in the memory system.
 
         Args:
@@ -434,7 +433,7 @@ class WebCrawlPersistence:
             return False
 
     async def _store_price_history(
-        self, item: Dict[str, Any], product_type: str
+        self, item: dict[str, Any], product_type: str
     ) -> bool:
         """Store a price history entry in Supabase.
 
@@ -478,10 +477,8 @@ class WebCrawlPersistence:
             logger.error(f"Error storing price history in Supabase: {str(e)}")
             return False
 
-
 # Singleton instance
 persistence_manager = WebCrawlPersistence()
-
 
 def get_persistence_manager() -> WebCrawlPersistence:
     """Get the singleton instance of the web crawl persistence manager.

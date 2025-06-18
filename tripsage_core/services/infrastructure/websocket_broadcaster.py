@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 from uuid import UUID
 
 import redis.asyncio as redis
@@ -20,18 +20,16 @@ from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
 
-
 class BroadcastMessage(BaseModel):
     """Message for broadcasting across WebSocket connections."""
 
     id: str
-    event: Dict[str, Any]  # Simplified from WebSocketEvent for serialization
+    event: dict[str, Any]  # Simplified from WebSocketEvent for serialization
     target_type: str  # "connection", "user", "session", "channel", "broadcast"
-    target_id: Optional[str] = None
+    target_id: str | None = None
     created_at: datetime
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     priority: int = Field(default=1)  # 1=high, 2=medium, 3=low
-
 
 class WebSocketBroadcaster:
     """
@@ -45,7 +43,7 @@ class WebSocketBroadcaster:
     - Performance monitoring
     """
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         """Initialize the WebSocket broadcaster.
 
         Args:
@@ -53,13 +51,13 @@ class WebSocketBroadcaster:
         """
         self.settings = get_settings()
         self.redis_url = redis_url or self.settings.redis_url
-        self.redis_client: Optional[redis.Redis] = None
-        self.pubsub: Optional[redis.client.PubSub] = None
+        self.redis_client: redis.Redis | None = None
+        self.pubsub: redis.client.PubSub | None = None
         self._running = False
-        self._subscribers: Dict[str, Set[str]] = {}  # channel -> connection_ids
+        self._subscribers: dict[str, set[str]] = {}  # channel -> connection_ids
 
         # Message deduplication - track recent message IDs to prevent duplicates
-        self._recent_message_ids: Set[str] = set()
+        self._recent_message_ids: set[str] = set()
         self._max_recent_messages = 10000  # Keep track of last 10k message IDs
         self._message_id_cleanup_counter = 0
 
@@ -70,8 +68,8 @@ class WebSocketBroadcaster:
         self.CONNECTION_INFO_KEY = "tripsage:websocket:connections"
 
         # Message processing
-        self._broadcast_task: Optional[asyncio.Task] = None
-        self._subscription_task: Optional[asyncio.Task] = None
+        self._broadcast_task: asyncio.Task | None = None
+        self._subscription_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """Start the broadcaster service."""
@@ -168,7 +166,7 @@ class WebSocketBroadcaster:
         return False
 
     async def broadcast_to_connection(
-        self, connection_id: str, event: Dict[str, Any], priority: int = 1
+        self, connection_id: str, event: dict[str, Any], priority: int = 1
     ) -> bool:
         """Broadcast event to specific connection.
 
@@ -199,7 +197,7 @@ class WebSocketBroadcaster:
         return await self._queue_broadcast_message(message)
 
     async def broadcast_to_user(
-        self, user_id: UUID, event: Dict[str, Any], priority: int = 1
+        self, user_id: UUID, event: dict[str, Any], priority: int = 1
     ) -> bool:
         """Broadcast event to all connections for a user.
 
@@ -230,7 +228,7 @@ class WebSocketBroadcaster:
         return await self._queue_broadcast_message(message)
 
     async def broadcast_to_session(
-        self, session_id: UUID, event: Dict[str, Any], priority: int = 1
+        self, session_id: UUID, event: dict[str, Any], priority: int = 1
     ) -> bool:
         """Broadcast event to all connections for a session.
 
@@ -261,7 +259,7 @@ class WebSocketBroadcaster:
         return await self._queue_broadcast_message(message)
 
     async def broadcast_to_channel(
-        self, channel: str, event: Dict[str, Any], priority: int = 1
+        self, channel: str, event: dict[str, Any], priority: int = 1
     ) -> bool:
         """Broadcast event to all connections subscribed to a channel.
 
@@ -291,7 +289,7 @@ class WebSocketBroadcaster:
 
         return await self._queue_broadcast_message(message)
 
-    async def broadcast_to_all(self, event: Dict[str, Any], priority: int = 2) -> bool:
+    async def broadcast_to_all(self, event: dict[str, Any], priority: int = 2) -> bool:
         """Broadcast event to all connections.
 
         Args:
@@ -322,8 +320,8 @@ class WebSocketBroadcaster:
         self,
         connection_id: str,
         user_id: UUID,
-        session_id: Optional[UUID] = None,
-        channels: Optional[List[str]] = None,
+        session_id: UUID | None = None,
+        channels: list[str] | None = None,
     ) -> None:
         """Register a connection for broadcasting.
 
@@ -571,7 +569,7 @@ class WebSocketBroadcaster:
                 logger.error(f"Error in broadcast queue processing: {e}")
                 await asyncio.sleep(1)
 
-    async def _process_broadcast_message(self, message_data: Dict[str, Any]) -> None:
+    async def _process_broadcast_message(self, message_data: dict[str, Any]) -> None:
         """Process a single broadcast message.
 
         Args:
@@ -662,7 +660,6 @@ class WebSocketBroadcaster:
                     f"Failed to unsubscribe connection {connection_id} from channel "
                     f"{channel}: {e}"
                 )
-
 
 # Global broadcaster instance
 websocket_broadcaster = WebSocketBroadcaster()

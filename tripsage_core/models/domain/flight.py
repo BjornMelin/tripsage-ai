@@ -6,7 +6,7 @@ entities. These models represent the essential flight data structures
 independent of storage implementation or API specifics.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field
 
@@ -21,7 +21,6 @@ from tripsage_core.models.schemas_common.common_validators import (
 )
 from tripsage_core.models.schemas_common.enums import CabinClass
 
-
 class Airport(TripSageDomainModel):
     """Core airport information business entity.
 
@@ -34,8 +33,7 @@ class Airport(TripSageDomainModel):
     country: str = Field(..., description="Country name")
     latitude: Latitude = Field(None, description="Latitude coordinate")
     longitude: Longitude = Field(None, description="Longitude coordinate")
-    timezone: Optional[str] = Field(None, description="Timezone")
-
+    timezone: str | None = Field(None, description="Timezone")
 
 class FlightSegment(TripSageDomainModel):
     """A segment of a flight (one leg of the journey)."""
@@ -43,13 +41,12 @@ class FlightSegment(TripSageDomainModel):
     origin: AirportCode = Field(..., description="Origin airport code")
     destination: AirportCode = Field(..., description="Destination airport code")
     departure_date: str = Field(..., description="Departure date (YYYY-MM-DD)")
-    departure_time: Optional[str] = Field(None, description="Departure time (HH:MM)")
-    arrival_date: Optional[str] = Field(None, description="Arrival date (YYYY-MM-DD)")
-    arrival_time: Optional[str] = Field(None, description="Arrival time (HH:MM)")
-    carrier: Optional[str] = Field(None, description="Carrier code")
-    flight_number: Optional[str] = Field(None, description="Flight number")
+    departure_time: str | None = Field(None, description="Departure time (HH:MM)")
+    arrival_date: str | None = Field(None, description="Arrival date (YYYY-MM-DD)")
+    arrival_time: str | None = Field(None, description="Arrival time (HH:MM)")
+    carrier: str | None = Field(None, description="Carrier code")
+    flight_number: str | None = Field(None, description="Flight number")
     duration_minutes: PositiveInt = Field(None, description="Duration in minutes")
-
 
 class FlightOffer(TripSageDomainModel):
     """Core flight offer business entity.
@@ -64,39 +61,39 @@ class FlightOffer(TripSageDomainModel):
     total_currency: CurrencyCode = Field(..., description="Currency code")
     base_amount: NonNegativeFloat = Field(None, description="Base fare amount")
     tax_amount: NonNegativeFloat = Field(None, description="Tax amount")
-    slices: List[Dict[str, Any]] = Field(..., description="Flight slices (legs)")
+    slices: list[dict[str, Any]] = Field(..., description="Flight slices (legs)")
     passenger_count: PositiveInt = Field(..., description="Number of passengers")
-    cabin_class: Optional[CabinClass] = Field(None, description="Cabin class")
+    cabin_class: CabinClass | None = Field(None, description="Cabin class")
 
     # Additional domain-specific fields for enhanced functionality
-    segments: Optional[List[FlightSegment]] = Field(
+    segments: list[FlightSegment] | None = Field(
         None, description="Parsed flight segments"
     )
-    origin_airport: Optional[Airport] = Field(
+    origin_airport: Airport | None = Field(
         None, description="Origin airport details"
     )
-    destination_airport: Optional[Airport] = Field(
+    destination_airport: Airport | None = Field(
         None, description="Destination airport details"
     )
-    departure_datetime: Optional[str] = Field(
+    departure_datetime: str | None = Field(
         None, description="Combined departure date and time (ISO format)"
     )
-    arrival_datetime: Optional[str] = Field(
+    arrival_datetime: str | None = Field(
         None, description="Combined arrival date and time (ISO format)"
     )
     total_duration_minutes: PositiveInt = Field(
         None, description="Total travel duration in minutes"
     )
     stops_count: PositiveInt = Field(None, description="Number of stops")
-    airlines: Optional[List[str]] = Field(None, description="Airlines involved")
-    booking_class: Optional[str] = Field(None, description="Booking class code")
-    fare_basis: Optional[str] = Field(None, description="Fare basis code")
+    airlines: list[str] | None = Field(None, description="Airlines involved")
+    booking_class: str | None = Field(None, description="Booking class code")
+    fare_basis: str | None = Field(None, description="Fare basis code")
 
     # Source and tracking information
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None, description="Source of the offer (e.g., 'duffel', 'amadeus')"
     )
-    search_id: Optional[str] = Field(None, description="Associated search ID")
-    expires_at: Optional[str] = Field(
+    search_id: str | None = Field(None, description="Associated search ID")
+    expires_at: str | None = Field(
         None, description="Offer expiration timestamp (ISO format)"
     )

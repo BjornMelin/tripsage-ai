@@ -7,7 +7,7 @@ forecasts, current conditions, and travel-specific weather analysis.
 
 import asyncio
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import httpx
 
@@ -15,11 +15,10 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
-
 class WeatherServiceError(CoreAPIError):
     """Exception raised for weather service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="WEATHER_API_ERROR",
@@ -28,11 +27,10 @@ class WeatherServiceError(CoreAPIError):
         )
         self.original_error = original_error
 
-
 class WeatherService:
     """Service for interacting with OpenWeatherMap API."""
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """
         Initialize the OpenWeatherMap service.
 
@@ -53,7 +51,7 @@ class WeatherService:
             )
 
         self.api_key = weather_key.get_secret_value()
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
         self._connected = False
 
     async def connect(self) -> None:
@@ -98,9 +96,9 @@ class WeatherService:
     async def _make_request(
         self,
         endpoint: str,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         use_v3: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Make a request to the OpenWeatherMap API.
 
@@ -153,7 +151,7 @@ class WeatherService:
         longitude: float,
         units: str = "metric",
         lang: str = "en",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get current weather conditions.
 
@@ -184,7 +182,7 @@ class WeatherService:
         include_hourly: bool = True,
         units: str = "metric",
         lang: str = "en",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get weather forecast.
 
@@ -215,7 +213,7 @@ class WeatherService:
         self,
         latitude: float,
         longitude: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get air quality data.
 
@@ -238,7 +236,7 @@ class WeatherService:
         self,
         latitude: float,
         longitude: float,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get weather alerts for a location.
 
@@ -262,8 +260,8 @@ class WeatherService:
         self,
         latitude: float,
         longitude: float,
-        dt: Optional[datetime] = None,
-    ) -> Dict[str, Any]:
+        dt: datetime | None = None,
+    ) -> dict[str, Any]:
         """
         Get UV index data.
 
@@ -293,9 +291,9 @@ class WeatherService:
         longitude: float,
         arrival_date: datetime,
         departure_date: datetime,
-        activities: Optional[List[str]] = None,
+        activities: list[str] | None = None,
         units: str = "metric",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get comprehensive weather summary for travel planning.
 
@@ -339,7 +337,7 @@ class WeatherService:
 
     async def _gather_travel_weather_data(
         self, latitude: float, longitude: float, trip_duration: int, units: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Gather all required weather data for travel summary."""
         forecast_data = await self.get_forecast(
             latitude=latitude,
@@ -361,8 +359,8 @@ class WeatherService:
         }
 
     def _analyze_weather_patterns(
-        self, forecast_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, forecast_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Analyze weather patterns from forecast data."""
         daily_forecasts = forecast_data.get("daily", [])
 
@@ -411,10 +409,10 @@ class WeatherService:
 
     def _generate_activity_recommendations(
         self,
-        activities: Optional[List[str]],
-        weather_stats: Dict[str, Any],
+        activities: list[str] | None,
+        weather_stats: dict[str, Any],
         trip_duration: int,
-    ) -> Dict[str, List[str]]:
+    ) -> dict[str, list[str]]:
         """Generate activity recommendations and warnings."""
         recommendations = []
         warnings = []
@@ -466,7 +464,7 @@ class WeatherService:
             "weather_warnings": warnings,
         }
 
-    def _generate_packing_suggestions(self, weather_stats: Dict[str, Any]) -> List[str]:
+    def _generate_packing_suggestions(self, weather_stats: dict[str, Any]) -> list[str]:
         """Generate packing suggestions based on weather."""
         suggestions = []
 
@@ -490,10 +488,10 @@ class WeatherService:
 
     async def get_multi_city_weather(
         self,
-        cities: List[Tuple[float, float, str]],
-        date: Optional[datetime] = None,
+        cities: list[tuple[float, float, str]],
+        date: datetime | None = None,
         units: str = "metric",
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         Get weather for multiple cities (useful for trip planning).
 
@@ -532,7 +530,7 @@ class WeatherService:
         longitude: float,
         travel_date: datetime,
         activity_type: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check if weather conditions are suitable for specific activities.
 
@@ -571,7 +569,7 @@ class WeatherService:
 
     async def _get_target_date_forecast(
         self, latitude: float, longitude: float, travel_date: datetime, days_ahead: int
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get forecast for target date."""
         forecast_data = await self.get_forecast(
             latitude=latitude,
@@ -590,8 +588,8 @@ class WeatherService:
         return None
 
     def _evaluate_activity_suitability(
-        self, target_forecast: Dict[str, Any], activity_type: str
-    ) -> Dict[str, Any]:
+        self, target_forecast: dict[str, Any], activity_type: str
+    ) -> dict[str, Any]:
         """Evaluate weather suitability for specific activity."""
         weather_conditions = self._extract_weather_conditions(target_forecast)
         score, recommendations, warnings = self._calculate_activity_score(
@@ -613,7 +611,7 @@ class WeatherService:
             "forecast": target_forecast,
         }
 
-    def _extract_weather_conditions(self, forecast: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_weather_conditions(self, forecast: dict[str, Any]) -> dict[str, Any]:
         """Extract relevant weather conditions from forecast."""
         return {
             "temp_day": forecast.get("temp", {}).get("day", 0),
@@ -623,8 +621,8 @@ class WeatherService:
         }
 
     def _calculate_activity_score(
-        self, conditions: Dict[str, Any], activity: str
-    ) -> tuple[int, List[str], List[str]]:
+        self, conditions: dict[str, Any], activity: str
+    ) -> tuple[int, list[str], list[str]]:
         """Calculate suitability score for activity based on conditions."""
         score = 0
         recommendations = []
@@ -644,8 +642,8 @@ class WeatherService:
         return score, recommendations, warnings
 
     def _score_beach_activity(
-        self, conditions: Dict[str, Any]
-    ) -> tuple[int, List[str], List[str]]:
+        self, conditions: dict[str, Any]
+    ) -> tuple[int, list[str], list[str]]:
         """Score beach activity conditions."""
         score = 0
         recommendations = []
@@ -687,8 +685,8 @@ class WeatherService:
         return score, recommendations, warnings
 
     def _score_hiking_activity(
-        self, conditions: Dict[str, Any]
-    ) -> tuple[int, List[str], List[str]]:
+        self, conditions: dict[str, Any]
+    ) -> tuple[int, list[str], list[str]]:
         """Score hiking activity conditions."""
         score = 0
         recommendations = []
@@ -728,8 +726,8 @@ class WeatherService:
         return score, recommendations, warnings
 
     def _score_sightseeing_activity(
-        self, conditions: Dict[str, Any]
-    ) -> tuple[int, List[str], List[str]]:
+        self, conditions: dict[str, Any]
+    ) -> tuple[int, list[str], list[str]]:
         """Score sightseeing activity conditions."""
         score = 0
         recommendations = []
@@ -787,10 +785,8 @@ class WeatherService:
         """Async context manager exit."""
         await self.close()
 
-
 # Global service instance
-_weather_service: Optional[WeatherService] = None
-
+_weather_service: WeatherService | None = None
 
 async def get_weather_service() -> WeatherService:
     """
@@ -806,7 +802,6 @@ async def get_weather_service() -> WeatherService:
         await _weather_service.connect()
 
     return _weather_service
-
 
 async def close_weather_service() -> None:
     """Close the global weather service instance."""

@@ -200,7 +200,6 @@ API_LICENSE = {
 }
 API_TERMS = "https://tripsage.example.com/terms/"
 
-
 # Tags with descriptions for API endpoints
 TAG_DESCRIPTIONS = [
     {
@@ -305,7 +304,6 @@ TAG_DESCRIPTIONS = [
     },
 ]
 
-
 # Example responses for different endpoints
 EXAMPLES = {
     "auth_token": {
@@ -374,7 +372,6 @@ EXAMPLES = {
         },
     },
 }
-
 
 def custom_openapi(app):
     """Create a custom OpenAPI schema for the FastAPI application.

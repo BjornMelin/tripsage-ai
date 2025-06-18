@@ -30,7 +30,6 @@ from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsServiceError,
 )
 
-
 class TestActivityService:
     """Test ActivityService class."""
 

@@ -5,20 +5,18 @@ used across different storage backends.
 """
 
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.common_validators import EmailLowercase
 
-
 class UserRole(str, Enum):
     """Enum for user role values."""
 
     USER = "user"
     ADMIN = "admin"
-
 
 class User(TripSageModel):
     """User model for TripSage.
@@ -33,19 +31,19 @@ class User(TripSageModel):
         preferences_json: User preferences stored as a dictionary
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
-    name: Optional[str] = Field(None, description="User's display name")
+    id: int | None = Field(None, description="Unique identifier")
+    name: str | None = Field(None, description="User's display name")
     email: EmailLowercase = Field(None, description="User's email address")
-    password_hash: Optional[str] = Field(None, description="Hashed password")
+    password_hash: str | None = Field(None, description="Hashed password")
     role: UserRole = Field(UserRole.USER, description="User's role")
     is_admin: bool = Field(False, description="Whether the user is an admin")
     is_disabled: bool = Field(False, description="Whether the user is disabled")
-    preferences_json: Optional[Dict[str, Any]] = Field(
+    preferences_json: dict[str, Any] | None = Field(
         None, description="User preferences", alias="preferences"
     )
 
     @property
-    def full_preferences(self) -> Dict[str, Any]:
+    def full_preferences(self) -> dict[str, Any]:
         """Get the full preferences dictionary with defaults."""
         defaults = {
             "theme": "light",
@@ -89,7 +87,7 @@ class User(TripSageModel):
         """Check if the user account is active."""
         return not self.is_disabled
 
-    def update_preferences(self, updates: Dict[str, Any]) -> None:
+    def update_preferences(self, updates: dict[str, Any]) -> None:
         """Update user preferences, merging with existing preferences.
 
         Args:

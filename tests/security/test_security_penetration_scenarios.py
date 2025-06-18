@@ -25,7 +25,6 @@ from tripsage.api.middlewares.rate_limiting import (
     EnhancedRateLimitMiddleware,
 )
 
-
 class TestAdvancedPersistentThreatScenarios:
     """Penetration tests simulating Advanced Persistent Threat (APT) attack patterns."""
 
@@ -392,7 +391,6 @@ class TestAdvancedPersistentThreatScenarios:
 
             assert response.status_code in [401, 403, 405, 422]
 
-
 class TestMultiVectorAttackScenarios:
     """Penetration tests for sophisticated multi-vector attack scenarios."""
 
@@ -680,7 +678,6 @@ class TestMultiVectorAttackScenarios:
                 f"Social engineering vector exposed: {vector['endpoint']}"
             )
 
-
 class TestAdvancedBypassTechniques:
     """Penetration tests for advanced security bypass techniques."""
 
@@ -887,7 +884,6 @@ class TestAdvancedBypassTechniques:
             # Check that no malicious cache directives are honored
             cache_control = response.headers.get("Cache-Control", "")
             assert "public" not in cache_control or "max-age" not in cache_control
-
 
 class TestSecurityMisconfigurationExploitation:
     """Penetration tests targeting security misconfigurations."""

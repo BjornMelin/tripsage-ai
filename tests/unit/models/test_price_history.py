@@ -7,7 +7,6 @@ from pydantic import ValidationError
 
 from tripsage_core.models.db.price_history import EntityType, PriceHistory
 
-
 def test_price_history_creation(sample_price_history_dict):
     """Test creating a PriceHistory model with valid data."""
     price_history = PriceHistory(**sample_price_history_dict)
@@ -16,7 +15,6 @@ def test_price_history_creation(sample_price_history_dict):
     assert price_history.entity_id == 1
     assert price_history.price == 1200.00
     assert price_history.currency == "USD"
-
 
 def test_price_history_optional_fields():
     """Test creating a PriceHistory model with minimal required fields."""
@@ -33,7 +31,6 @@ def test_price_history_optional_fields():
     assert minimal_price_history.timestamp == now
     assert minimal_price_history.currency == "USD"  # Default value
 
-
 def test_price_history_validation_price():
     """Test price validation."""
     now = datetime.now(timezone.utc)
@@ -47,7 +44,6 @@ def test_price_history_validation_price():
             price=-100.00,  # Negative price
         )
     assert "ensure this value is greater than 0" in str(excinfo.value)
-
 
 def test_price_history_validation_currency():
     """Test currency validation."""
@@ -76,7 +72,6 @@ def test_price_history_validation_currency():
         )
         assert price_history.currency == currency
 
-
 def test_price_history_is_flight_price_property(sample_price_history_dict):
     """Test the is_flight_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
@@ -84,7 +79,6 @@ def test_price_history_is_flight_price_property(sample_price_history_dict):
 
     price_history.entity_type = EntityType.ACCOMMODATION
     assert price_history.is_flight_price is False
-
 
 def test_price_history_is_accommodation_price_property(sample_price_history_dict):
     """Test the is_accommodation_price property."""
@@ -94,7 +88,6 @@ def test_price_history_is_accommodation_price_property(sample_price_history_dict
     price_history.entity_type = EntityType.ACCOMMODATION
     assert price_history.is_accommodation_price is True
 
-
 def test_price_history_is_transportation_price_property(sample_price_history_dict):
     """Test the is_transportation_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
@@ -103,7 +96,6 @@ def test_price_history_is_transportation_price_property(sample_price_history_dic
     price_history.entity_type = EntityType.TRANSPORTATION
     assert price_history.is_transportation_price is True
 
-
 def test_price_history_is_activity_price_property(sample_price_history_dict):
     """Test the is_activity_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
@@ -111,7 +103,6 @@ def test_price_history_is_activity_price_property(sample_price_history_dict):
 
     price_history.entity_type = EntityType.ACTIVITY
     assert price_history.is_activity_price is True
-
 
 def test_price_history_formatted_price(sample_price_history_dict):
     """Test the formatted_price property."""
@@ -127,14 +118,12 @@ def test_price_history_formatted_price(sample_price_history_dict):
     price_history.currency = "GBP"
     assert price_history.formatted_price == "£1,200.00"
 
-
 def test_price_history_formatted_timestamp(sample_price_history_dict):
     """Test the formatted_timestamp property."""
     price_history = PriceHistory(**sample_price_history_dict)
     # This is a basic check since the exact format depends on the implementation
     assert isinstance(price_history.formatted_timestamp, str)
     assert len(price_history.formatted_timestamp) > 0
-
 
 def test_price_history_model_dump(sample_price_history_dict):
     """Test model_dump method."""

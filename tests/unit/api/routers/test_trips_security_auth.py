@@ -24,7 +24,6 @@ from tripsage_core.exceptions import (
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.services.business.trip_service import TripService, TripVisibility
 
-
 class TestTripsSecurityAuthentication:
     """Security and authentication tests for trips router."""
 

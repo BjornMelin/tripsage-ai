@@ -11,7 +11,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import (
     APIRouter,
@@ -34,7 +34,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/dashboard/realtime", tags=["dashboard-realtime"])
 
-
 class RealtimeMetrics(BaseModel):
     """Real-time metrics data."""
 
@@ -47,7 +46,6 @@ class RealtimeMetrics(BaseModel):
     cache_hit_rate: float
     memory_usage_percentage: float
 
-
 class AlertNotification(BaseModel):
     """Real-time alert notification."""
 
@@ -55,11 +53,10 @@ class AlertNotification(BaseModel):
     type: str  # "new", "updated", "resolved"
     severity: str
     message: str
-    service: Optional[str] = None
-    key_id: Optional[str] = None
+    service: str | None = None
+    key_id: str | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: Dict[str, Any] = Field(default_factory=dict)
-
+    details: dict[str, Any] = Field(default_factory=dict)
 
 class SystemEvent(BaseModel):
     """System event notification."""
@@ -69,16 +66,15 @@ class SystemEvent(BaseModel):
     message: str
     severity: str  # "info", "warning", "error", "critical"
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    affected_services: List[str] = Field(default_factory=list)
-    details: Dict[str, Any] = Field(default_factory=dict)
-
+    affected_services: list[str] = Field(default_factory=list)
+    details: dict[str, Any] = Field(default_factory=dict)
 
 class DashboardConnectionManager:
     """Manages WebSocket connections for dashboard clients."""
 
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self.connection_metadata: Dict[WebSocket, Dict[str, Any]] = {}
+        self.active_connections: list[WebSocket] = []
+        self.connection_metadata: dict[WebSocket, dict[str, Any]] = {}
 
     async def connect(
         self,
@@ -113,7 +109,7 @@ class DashboardConnectionManager:
             logger.error(f"Failed to send personal message: {e}")
             self.disconnect(websocket)
 
-    async def broadcast(self, message: str, connection_type: Optional[str] = None):
+    async def broadcast(self, message: str, connection_type: str | None = None):
         """Broadcast message to all or filtered connections."""
         disconnected = []
 
@@ -158,10 +154,8 @@ class DashboardConnectionManager:
         }
         await self.broadcast(json.dumps(message), "dashboard")
 
-
 # Global connection manager
 dashboard_manager = DashboardConnectionManager()
-
 
 @router.websocket("/ws/{user_id}")
 async def dashboard_websocket_endpoint(
@@ -222,7 +216,6 @@ async def dashboard_websocket_endpoint(
         if "metrics_task" in locals():
             metrics_task.cancel()
         dashboard_manager.disconnect(websocket)
-
 
 @router.get("/events")
 async def dashboard_events_stream(
@@ -318,10 +311,9 @@ async def dashboard_events_stream(
         },
     )
 
-
 @router.post("/alerts/broadcast")
 async def broadcast_alert(
-    alert_data: Dict[str, Any],
+    alert_data: dict[str, Any],
     cache_service: CacheDep,
     db_service: DatabaseDep,
 ):
@@ -356,10 +348,9 @@ async def broadcast_alert(
             "message": f"Failed to broadcast alert: {str(e)}",
         }
 
-
 @router.post("/events/broadcast")
 async def broadcast_system_event(
-    event_data: Dict[str, Any],
+    event_data: dict[str, Any],
     cache_service: CacheDep,
     db_service: DatabaseDep,
 ):
@@ -393,7 +384,6 @@ async def broadcast_system_event(
             "message": f"Failed to broadcast system event: {str(e)}",
         }
 
-
 @router.get("/connections")
 async def get_active_connections():
     """Get information about active dashboard connections.
@@ -419,7 +409,6 @@ async def get_active_connections():
         "total_connections": len(dashboard_manager.active_connections),
         "connections": connections_info,
     }
-
 
 async def _send_periodic_metrics(
     websocket: WebSocket, monitoring_service: ApiKeyMonitoringService
@@ -467,10 +456,9 @@ async def _send_periodic_metrics(
     except asyncio.CancelledError:
         pass
 
-
 async def _handle_subscription(
     websocket: WebSocket,
-    message: Dict[str, Any],
+    message: dict[str, Any],
     monitoring_service: ApiKeyMonitoringService,
 ):
     """Handle client subscription requests."""
@@ -532,7 +520,6 @@ async def _handle_subscription(
 
     except Exception as e:
         logger.error(f"Error handling subscription: {e}")
-
 
 # Export the dashboard manager for use by other services
 __all__ = [

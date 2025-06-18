@@ -10,12 +10,10 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Dict
 
 import asyncpg
 
 from supabase import Client, create_client
-
 
 class StorageDeployment:
     """Handles deployment of storage infrastructure to Supabase."""
@@ -26,7 +24,7 @@ class StorageDeployment:
         self.project_root = Path(__file__).parent.parent.parent
         self.storage_dir = self.project_root / "supabase" / "storage"
 
-    async def deploy_all(self) -> Dict[str, bool]:
+    async def deploy_all(self) -> dict[str, bool]:
         """Deploy complete storage infrastructure."""
         results = {}
 
@@ -289,7 +287,7 @@ class StorageDeployment:
             print(f"❌ Verification tests failed: {e}")
             return False
 
-    def print_deployment_summary(self, results: Dict[str, bool]) -> None:
+    def print_deployment_summary(self, results: dict[str, bool]) -> None:
         """Print deployment summary."""
         print("\n" + "=" * 60)
         print("📊 DEPLOYMENT SUMMARY")
@@ -321,7 +319,6 @@ class StorageDeployment:
                 "Please review and fix issues before proceeding."
             )
 
-
 async def main():
     """Main deployment function."""
     # Get environment variables
@@ -345,7 +342,6 @@ async def main():
         sys.exit(0)
     else:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     asyncio.run(main())

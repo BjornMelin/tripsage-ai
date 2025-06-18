@@ -11,7 +11,8 @@ import logging
 import secrets
 import time
 from datetime import datetime, timezone
-from typing import Callable, Optional, Union
+from typing import Optional, Union
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict
@@ -38,7 +39,6 @@ from tripsage_core.services.business.audit_logging_service import (
 
 logger = logging.getLogger(__name__)
 
-
 def constant_time_compare(a: str, b: str) -> bool:
     """Constant-time string comparison to prevent timing attacks.
 
@@ -56,7 +56,6 @@ def constant_time_compare(a: str, b: str) -> bool:
 
     # Use hmac.compare_digest for constant-time comparison
     return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
-
 
 def secure_token_validation(token: str, expected_format: str = "jwt") -> bool:
     """Secure token format validation with timing attack protection.
@@ -99,7 +98,6 @@ def secure_token_validation(token: str, expected_format: str = "jwt") -> bool:
         time.sleep(0.001)
         return False
 
-
 def _validate_jwt_format(token: str) -> bool:
     """Internal JWT format validation."""
     if len(token) < 20 or len(token) > 4096:
@@ -123,7 +121,6 @@ def _validate_jwt_format(token: str) -> bool:
             return False
 
     return True
-
 
 def _validate_api_key_format(api_key: str) -> bool:
     """Internal API key format validation."""
@@ -157,7 +154,6 @@ def _validate_api_key_format(api_key: str) -> bool:
     # For non-sk_ format, require minimum length and printable ASCII
     return len(api_key) >= 20 and all(32 <= ord(c) <= 126 for c in api_key)
 
-
 class AuthenticationAuditLogger:
     """Enhanced audit logging for authentication events."""
 
@@ -170,8 +166,8 @@ class AuthenticationAuditLogger:
         request: Request,
         auth_type: str,
         success: bool,
-        principal_id: Optional[str] = None,
-        error: Optional[str] = None,
+        principal_id: str | None = None,
+        error: str | None = None,
     ):
         """Log authentication attempt with enhanced security context."""
         client_ip = self._get_client_ip(request)
@@ -227,18 +223,16 @@ class AuthenticationAuditLogger:
 
         return request.client.host if request.client else "unknown"
 
-
 # Global audit logger instance
 auth_audit_logger = AuthenticationAuditLogger()
-
 
 class Principal(BaseModel):
     """Represents an authenticated principal (user or agent)."""
 
     id: str
     type: str  # "user" or "agent"
-    email: Optional[str] = None
-    service: Optional[str] = None  # For API keys
+    email: str | None = None
+    service: str | None = None  # For API keys
     auth_method: str  # "jwt" or "api_key"
     scopes: list[str] = []
     metadata: dict = {}
@@ -256,7 +250,6 @@ class Principal(BaseModel):
         """Get user ID (alias for id field)."""
         return self.id
 
-
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """Enhanced middleware for JWT and API Key authentication.
 
@@ -270,8 +263,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        settings: Optional[Settings] = None,
-        key_service: Optional[ApiKeyService] = None,
+        settings: Settings | None = None,
+        key_service: ApiKeyService | None = None,
     ):
         """Initialize AuthenticationMiddleware.
 
@@ -769,7 +762,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             time.sleep(min_time - elapsed)
 
     def _create_auth_error_response(
-        self, error: Union[AuthenticationError, KeyValidationError]
+        self, error: AuthenticationError | KeyValidationError
     ) -> Response:
         """Create an authentication error response.
 

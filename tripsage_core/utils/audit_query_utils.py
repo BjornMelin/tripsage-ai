@@ -16,7 +16,7 @@ Features:
 
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -33,39 +33,38 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-
 class AuditQuery(BaseModel):
     """Structured audit log query parameters."""
 
     # Time range
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
 
     # Event filters
-    event_types: Optional[List[AuditEventType]] = None
-    severities: Optional[List[AuditSeverity]] = None
-    outcomes: Optional[List[AuditOutcome]] = None
+    event_types: list[AuditEventType] | None = None
+    severities: list[AuditSeverity] | None = None
+    outcomes: list[AuditOutcome] | None = None
 
     # Actor filters
-    actor_ids: Optional[List[str]] = None
-    actor_types: Optional[List[str]] = None
+    actor_ids: list[str] | None = None
+    actor_types: list[str] | None = None
 
     # Source filters
-    ip_addresses: Optional[List[str]] = None
-    countries: Optional[List[str]] = None
+    ip_addresses: list[str] | None = None
+    countries: list[str] | None = None
 
     # Target filters
-    resource_types: Optional[List[str]] = None
-    resource_ids: Optional[List[str]] = None
+    resource_types: list[str] | None = None
+    resource_ids: list[str] | None = None
 
     # Risk and compliance
-    min_risk_score: Optional[int] = None
-    max_risk_score: Optional[int] = None
-    compliance_tags: Optional[List[str]] = None
+    min_risk_score: int | None = None
+    max_risk_score: int | None = None
+    compliance_tags: list[str] | None = None
 
     # Text search
-    message_contains: Optional[str] = None
-    description_contains: Optional[str] = None
+    message_contains: str | None = None
+    description_contains: str | None = None
 
     # Pagination and sorting
     limit: int = 1000
@@ -74,26 +73,25 @@ class AuditQuery(BaseModel):
     sort_order: str = "desc"  # asc or desc
 
     # Aggregation
-    group_by: Optional[str] = None  # event_type, actor_id, ip_address, etc.
+    group_by: str | None = None  # event_type, actor_id, ip_address, etc.
     include_stats: bool = False
-
 
 class AuditAnalysisResult(TripSageModel):
     """Result of audit log analysis."""
 
     total_events: int
-    events: List[AuditEvent]
+    events: list[AuditEvent]
 
     # Statistics
-    events_by_type: Dict[str, int] = Field(default_factory=dict)
-    events_by_severity: Dict[str, int] = Field(default_factory=dict)
-    events_by_outcome: Dict[str, int] = Field(default_factory=dict)
-    events_by_actor: Dict[str, int] = Field(default_factory=dict)
-    events_by_ip: Dict[str, int] = Field(default_factory=dict)
+    events_by_type: dict[str, int] = Field(default_factory=dict)
+    events_by_severity: dict[str, int] = Field(default_factory=dict)
+    events_by_outcome: dict[str, int] = Field(default_factory=dict)
+    events_by_actor: dict[str, int] = Field(default_factory=dict)
+    events_by_ip: dict[str, int] = Field(default_factory=dict)
 
     # Time-based analysis
-    events_by_hour: Dict[int, int] = Field(default_factory=dict)
-    events_by_day: Dict[str, int] = Field(default_factory=dict)
+    events_by_hour: dict[int, int] = Field(default_factory=dict)
+    events_by_day: dict[str, int] = Field(default_factory=dict)
 
     # Risk analysis
     high_risk_events: int = 0
@@ -101,12 +99,11 @@ class AuditAnalysisResult(TripSageModel):
     failed_authentications: int = 0
 
     # Trends
-    trends: Dict[str, Any] = Field(default_factory=dict)
+    trends: dict[str, Any] = Field(default_factory=dict)
 
     # Query metadata
     query_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    query_duration_ms: Optional[float] = None
-
+    query_duration_ms: float | None = None
 
 class ComplianceReport(TripSageModel):
     """Compliance audit report."""
@@ -129,24 +126,23 @@ class ComplianceReport(TripSageModel):
     data_access_events: int
 
     # Compliance-specific metrics
-    compliance_violations: List[Dict[str, Any]] = Field(default_factory=list)
-    policy_violations: List[Dict[str, Any]] = Field(default_factory=list)
-    access_patterns: Dict[str, Any] = Field(default_factory=dict)
+    compliance_violations: list[dict[str, Any]] = Field(default_factory=list)
+    policy_violations: list[dict[str, Any]] = Field(default_factory=list)
+    access_patterns: dict[str, Any] = Field(default_factory=dict)
 
     # Risk assessment
     overall_risk_score: int = 0
-    risk_factors: List[str] = Field(default_factory=list)
-    recommendations: List[str] = Field(default_factory=list)
+    risk_factors: list[str] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
 
     # Supporting data
-    events_summary: Dict[str, Any] = Field(default_factory=dict)
-    trends: Dict[str, Any] = Field(default_factory=dict)
-
+    events_summary: dict[str, Any] = Field(default_factory=dict)
+    trends: dict[str, Any] = Field(default_factory=dict)
 
 class AuditQueryEngine:
     """Engine for querying and analyzing audit logs."""
 
-    def __init__(self, audit_logger: Optional[SecurityAuditLogger] = None):
+    def __init__(self, audit_logger: SecurityAuditLogger | None = None):
         """Initialize the query engine."""
         self.audit_logger = audit_logger
 
@@ -170,7 +166,7 @@ class AuditQueryEngine:
 
         return result
 
-    async def _execute_query(self, query: AuditQuery) -> List[AuditEvent]:
+    async def _execute_query(self, query: AuditQuery) -> list[AuditEvent]:
         """Execute the actual query against audit logs."""
         # Use the audit logger's query method with our parameters
         events = await self.audit_logger.query_events(
@@ -273,7 +269,7 @@ class AuditQueryEngine:
         return True
 
     async def _analyze_events(
-        self, events: List[AuditEvent], query: AuditQuery
+        self, events: list[AuditEvent], query: AuditQuery
     ) -> AuditAnalysisResult:
         """Analyze a list of events and generate statistics."""
         result = AuditAnalysisResult(total_events=len(events), events=events)
@@ -328,7 +324,7 @@ class AuditQueryEngine:
 
         return result
 
-    async def _calculate_trends(self, events: List[AuditEvent]) -> Dict[str, Any]:
+    async def _calculate_trends(self, events: list[AuditEvent]) -> dict[str, Any]:
         """Calculate trends from events."""
         if len(events) < 2:
             return {}
@@ -367,7 +363,7 @@ class AuditQueryEngine:
         report_type: str,
         start_date: datetime,
         end_date: datetime,
-        compliance_framework: Optional[str] = None,
+        compliance_framework: str | None = None,
     ) -> ComplianceReport:
         """Generate a compliance audit report."""
         # Query all events in the date range
@@ -421,8 +417,8 @@ class AuditQueryEngine:
         return report
 
     async def _analyze_compliance_violations(
-        self, events: List[AuditEvent], report_type: str
-    ) -> List[Dict[str, Any]]:
+        self, events: list[AuditEvent], report_type: str
+    ) -> list[dict[str, Any]]:
         """Analyze events for compliance violations."""
         violations = []
 
@@ -465,8 +461,8 @@ class AuditQueryEngine:
         return violations
 
     async def _analyze_policy_violations(
-        self, events: List[AuditEvent]
-    ) -> List[Dict[str, Any]]:
+        self, events: list[AuditEvent]
+    ) -> list[dict[str, Any]]:
         """Analyze events for policy violations."""
         violations = []
 
@@ -514,7 +510,7 @@ class AuditQueryEngine:
 
     async def _generate_recommendations(
         self, analysis: AuditAnalysisResult, report_type: str
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate recommendations based on analysis."""
         recommendations = []
 
@@ -549,13 +545,11 @@ class AuditQueryEngine:
 
         return recommendations
 
-
 # Convenience functions for common queries
 
-
 async def query_failed_logins(
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
     limit: int = 100,
 ) -> AuditAnalysisResult:
     """Query failed login attempts."""
@@ -573,10 +567,9 @@ async def query_failed_logins(
     engine = AuditQueryEngine()
     return await engine.query(query)
 
-
 async def query_high_risk_events(
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
     min_risk_score: int = 70,
     limit: int = 100,
 ) -> AuditAnalysisResult:
@@ -596,11 +589,10 @@ async def query_high_risk_events(
     engine = AuditQueryEngine()
     return await engine.query(query)
 
-
 async def query_user_activity(
     user_id: str,
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
     limit: int = 100,
 ) -> AuditAnalysisResult:
     """Query activity for a specific user."""
@@ -618,10 +610,9 @@ async def query_user_activity(
     engine = AuditQueryEngine()
     return await engine.query(query)
 
-
 async def query_api_key_events(
-    start_time: Optional[datetime] = None,
-    end_time: Optional[datetime] = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
     limit: int = 100,
 ) -> AuditAnalysisResult:
     """Query API key related events."""
@@ -647,7 +638,6 @@ async def query_api_key_events(
 
     engine = AuditQueryEngine()
     return await engine.query(query)
-
 
 async def generate_daily_security_report() -> ComplianceReport:
     """Generate a daily security report."""

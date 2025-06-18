@@ -5,12 +5,11 @@ used for finding flights, accommodations, and other travel options.
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
-
 
 class SearchParameters(TripSageModel):
     """SearchParameters model for TripSage.
@@ -22,10 +21,10 @@ class SearchParameters(TripSageModel):
         parameter_json: The search parameters in JSON format
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     timestamp: datetime = Field(..., description="When the search was performed")
-    parameter_json: Dict[str, Any] = Field(
+    parameter_json: dict[str, Any] = Field(
         ..., description="The search parameters in JSON format"
     )
 

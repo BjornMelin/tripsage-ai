@@ -5,7 +5,6 @@ of travel documents, following KISS principles and security best practices.
 """
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
@@ -32,16 +31,13 @@ require_principal_module_dep = Depends(require_principal)
 file_upload_dep = File(...)
 files_upload_dep = File(...)
 
-
 def get_file_processing_service() -> FileProcessingService:
     """Get file processing service singleton."""
     # Choice: Using simple import pattern instead of complex DI
     # Reason: KISS principle - FileProcessingService is lightweight and stateless
     return FileProcessingService()
 
-
 get_file_processing_service_dep = Depends(get_file_processing_service)
-
 
 class FileUploadResponse(BaseModel):
     """Response model for file upload."""
@@ -54,14 +50,12 @@ class FileUploadResponse(BaseModel):
     upload_status: str = Field(..., description="Upload status")
     message: str = Field(default="Upload successful", description="Status message")
 
-
 class BatchUploadResponse(BaseModel):
     """Response model for batch file upload."""
 
-    files: List[FileUploadResponse] = Field(..., description="Processed files")
+    files: list[FileUploadResponse] = Field(..., description="Processed files")
     total_files: int = Field(..., description="Total files processed")
     total_size: int = Field(..., description="Total size in bytes")
-
 
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(
@@ -127,10 +121,9 @@ async def upload_file(
             detail="File processing failed",
         ) from e
 
-
 @router.post("/upload/batch", response_model=BatchUploadResponse)
 async def upload_files_batch(
-    files: List[UploadFile] = files_upload_dep,
+    files: list[UploadFile] = files_upload_dep,
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
 ):
@@ -220,7 +213,6 @@ async def upload_files_batch(
         total_size=sum(f.file_size for f in processed_files),
     )
 
-
 @router.get("/files/{file_id}")
 async def get_file_metadata(
     file_id: str,
@@ -248,7 +240,6 @@ async def get_file_metadata(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file information",
         ) from e
-
 
 @router.delete("/files/{file_id}")
 async def delete_file(
@@ -279,7 +270,6 @@ async def delete_file(
             detail="Failed to delete file",
         ) from e
 
-
 @router.get("/files")
 async def list_user_files(
     principal: Principal = require_principal_module_dep,
@@ -309,7 +299,6 @@ async def list_user_files(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
         ) from e
-
 
 @router.get("/files/{file_id}/download")
 async def download_file(
@@ -371,7 +360,6 @@ async def download_file(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to download file",
         ) from e
-
 
 @router.get("/trips/{trip_id}/attachments")
 async def list_trip_attachments(

@@ -6,7 +6,7 @@ Updated for Pydantic v2 and modern testing patterns.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -29,7 +29,6 @@ from tripsage_core.services.business.user_service import (
     UserUpdateRequest,
     get_user_service,
 )
-
 
 class TestUserService:
     """Test suite for UserService."""
@@ -67,7 +66,7 @@ class TestUserService:
         )
 
     @pytest.fixture
-    def sample_db_user_data(self, sample_user_id: str) -> Dict[str, Any]:
+    def sample_db_user_data(self, sample_user_id: str) -> dict[str, Any]:
         """Sample database user data."""
         now = datetime.now(timezone.utc)
 
@@ -132,7 +131,7 @@ class TestUserService:
         user_service: UserService,
         mock_database_service: AsyncMock,
         sample_user_create_request: UserCreateRequest,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test user creation with duplicate email."""
         # Arrange
@@ -148,7 +147,7 @@ class TestUserService:
         user_service: UserService,
         mock_database_service: AsyncMock,
         sample_user_create_request: UserCreateRequest,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test user creation with duplicate username."""
         # Arrange
@@ -176,7 +175,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user retrieval by ID."""
         # Arrange
@@ -213,7 +212,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user retrieval by email."""
         # Arrange
@@ -233,7 +232,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user retrieval by username."""
         # Arrange
@@ -257,7 +256,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user update."""
         # Arrange
@@ -301,7 +300,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful password change."""
         # Arrange
@@ -330,7 +329,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test password change with wrong current password."""
         # Arrange
@@ -374,7 +373,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful credential verification."""
         # Arrange
@@ -400,7 +399,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test credential verification with wrong password."""
         # Arrange
@@ -441,7 +440,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test credential verification with inactive user."""
         # Arrange
@@ -469,7 +468,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user deactivation."""
         # Arrange
@@ -488,7 +487,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user activation."""
         # Arrange
@@ -633,7 +632,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test user update with empty update request."""
         # Arrange

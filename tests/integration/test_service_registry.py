@@ -18,7 +18,6 @@ from tripsage.config.service_registry import (
 )
 from tripsage_core.services.infrastructure import get_cache_service
 
-
 class MockService(ServiceProtocol):
     """Mock service for testing."""
 
@@ -37,7 +36,6 @@ class MockService(ServiceProtocol):
     async def operation(self, value: str) -> str:
         self.operations.append(f"operation:{value}")
         return f"result:{value}"
-
 
 class MockAdapter(ServiceAdapter):
     """Mock adapter for testing."""
@@ -63,7 +61,6 @@ class MockAdapter(ServiceAdapter):
     async def get_direct_service(self):
         await self.direct_service.connect()
         return self.direct_service
-
 
 class TestServiceRegistry:
     """Test service registry functionality."""
@@ -218,7 +215,6 @@ class TestServiceRegistry:
         for i, result in enumerate(results):
             assert result == f"result:worker_{i}"
 
-
 class TestCacheServiceIntegration:
     """Test Core cache service integration."""
 
@@ -243,7 +239,6 @@ class TestCacheServiceIntegration:
         except Exception:
             # Skip if cache service is not available in test environment
             pytest.skip("Cache service not available in test environment")
-
 
 class TestGlobalRegistry:
     """Test global registry functions."""

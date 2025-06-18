@@ -21,7 +21,6 @@ from tripsage_core.services.business.api_key_service import (
     get_api_key_service,
 )
 
-
 class TestApiKeyService:
     """Test suite for ApiKeyService."""
 

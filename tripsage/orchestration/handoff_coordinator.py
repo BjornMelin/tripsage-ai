@@ -9,14 +9,13 @@ between specialized agents.
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
 from tripsage.orchestration.state import TravelPlanningState
 
 logger = logging.getLogger(__name__)
-
 
 class HandoffTrigger(str, Enum):
     """Enumeration of handoff trigger types."""
@@ -27,7 +26,6 @@ class HandoffTrigger(str, Enum):
     ERROR_RECOVERY = "error_recovery"
     TIMEOUT = "timeout"
     QUALITY_THRESHOLD = "quality_threshold"
-
 
 class AgentCapability(str, Enum):
     """Enumeration of agent capabilities."""
@@ -40,21 +38,19 @@ class AgentCapability(str, Enum):
     GENERAL_ASSISTANCE = "general_assistance"
     ERROR_HANDLING = "error_handling"
 
-
 class HandoffRule(BaseModel):
     """Configuration for agent handoff rules."""
 
     from_agent: str = Field(description="Source agent name")
     to_agent: str = Field(description="Target agent name")
     trigger: HandoffTrigger = Field(description="Handoff trigger type")
-    conditions: Dict[str, Any] = Field(
+    conditions: dict[str, Any] = Field(
         default_factory=dict, description="Handoff conditions"
     )
     priority: int = Field(default=1, description="Rule priority (higher wins)")
-    context_keys: List[str] = Field(
+    context_keys: list[str] = Field(
         default_factory=list, description="State keys to preserve in handoff"
     )
-
 
 class HandoffContext(BaseModel):
     """Context information for agent handoffs."""
@@ -66,13 +62,12 @@ class HandoffContext(BaseModel):
     timestamp: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
-    preserved_context: Dict[str, Any] = Field(
+    preserved_context: dict[str, Any] = Field(
         default_factory=dict, description="Context to preserve"
     )
-    handoff_metadata: Dict[str, Any] = Field(
+    handoff_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-
 
 class AgentHandoffCoordinator:
     """
@@ -84,9 +79,9 @@ class AgentHandoffCoordinator:
 
     def __init__(self):
         """Initialize the handoff coordinator."""
-        self.handoff_rules: List[HandoffRule] = []
-        self.agent_capabilities: Dict[str, Set[AgentCapability]] = {}
-        self.handoff_history: List[HandoffContext] = []
+        self.handoff_rules: list[HandoffRule] = []
+        self.agent_capabilities: dict[str, set[AgentCapability]] = {}
+        self.handoff_history: list[HandoffContext] = []
         self._initialize_default_rules()
         self._initialize_agent_capabilities()
 
@@ -254,7 +249,7 @@ class AgentHandoffCoordinator:
         current_agent: str,
         state: TravelPlanningState,
         trigger: HandoffTrigger = HandoffTrigger.USER_REQUEST,
-    ) -> Optional[Tuple[str, HandoffContext]]:
+    ) -> tuple[str, HandoffContext] | None:
         """
         Determine the next agent based on current state and handoff rules.
 
@@ -317,7 +312,7 @@ class AgentHandoffCoordinator:
         return self._evaluate_conditions(rule.conditions, state)
 
     def _evaluate_conditions(
-        self, conditions: Dict[str, Any], state: TravelPlanningState
+        self, conditions: dict[str, Any], state: TravelPlanningState
     ) -> bool:
         """
         Evaluate handoff conditions against current state.
@@ -372,7 +367,7 @@ class AgentHandoffCoordinator:
 
         return True
 
-    def _has_keywords(self, keywords: List[str], state: TravelPlanningState) -> bool:
+    def _has_keywords(self, keywords: list[str], state: TravelPlanningState) -> bool:
         """
         Check if any keywords appear in recent messages.
 
@@ -507,7 +502,7 @@ class AgentHandoffCoordinator:
         logger.debug(f"Handoff executed successfully to {handoff_context.to_agent}")
         return state
 
-    def get_agent_capabilities(self, agent_name: str) -> Set[AgentCapability]:
+    def get_agent_capabilities(self, agent_name: str) -> set[AgentCapability]:
         """Get capabilities for a specific agent."""
         return self.agent_capabilities.get(agent_name, set())
 
@@ -518,7 +513,7 @@ class AgentHandoffCoordinator:
         agent_caps = self.get_agent_capabilities(agent_name)
         return capability in agent_caps
 
-    def find_agents_with_capability(self, capability: AgentCapability) -> List[str]:
+    def find_agents_with_capability(self, capability: AgentCapability) -> list[str]:
         """Find all agents that can handle a specific capability."""
         return [
             agent
@@ -526,7 +521,7 @@ class AgentHandoffCoordinator:
             if capability in caps
         ]
 
-    def get_handoff_history(self, limit: int = 10) -> List[HandoffContext]:
+    def get_handoff_history(self, limit: int = 10) -> list[HandoffContext]:
         """Get recent handoff history."""
         return self.handoff_history[-limit:]
 
@@ -535,10 +530,8 @@ class AgentHandoffCoordinator:
         self.handoff_history.clear()
         logger.info("Handoff history cleared")
 
-
 # Global coordinator instance
-_global_handoff_coordinator: Optional[AgentHandoffCoordinator] = None
-
+_global_handoff_coordinator: AgentHandoffCoordinator | None = None
 
 def get_handoff_coordinator() -> AgentHandoffCoordinator:
     """Get the global handoff coordinator instance."""

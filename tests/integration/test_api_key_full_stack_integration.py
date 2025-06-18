@@ -19,7 +19,7 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -39,7 +39,6 @@ from tripsage_core.services.business.api_key_service import (
 
 logger = logging.getLogger(__name__)
 
-
 class TestDatabaseService:
     """Lightweight test database service for integration tests."""
 
@@ -47,7 +46,7 @@ class TestDatabaseService:
         self.engine = engine
         self._transaction_stack = []
 
-    async def insert(self, table: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def insert(self, table: str, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Insert data into table."""
         async with self.engine.begin() as conn:
             # Build INSERT statement
@@ -64,8 +63,8 @@ class TestDatabaseService:
             return [dict(row._mapping) for row in result.fetchall()]
 
     async def select(
-        self, table: str, filters: Optional[Dict[str, Any]] = None, columns: str = "*"
-    ) -> List[Dict[str, Any]]:
+        self, table: str, filters: dict[str, Any] | None = None, columns: str = "*"
+    ) -> list[dict[str, Any]]:
         """Select data from table."""
         async with self.engine.begin() as conn:
             query = f"SELECT {columns} FROM {table}"
@@ -82,8 +81,8 @@ class TestDatabaseService:
             return [dict(row._mapping) for row in result.fetchall()]
 
     async def update(
-        self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        self, table: str, data: dict[str, Any], filters: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Update data in table."""
         async with self.engine.begin() as conn:
             set_clauses = []
@@ -105,7 +104,7 @@ class TestDatabaseService:
             result = await conn.execute(text(query), params)
             return [dict(row._mapping) for row in result.fetchall()]
 
-    async def delete(self, table: str, filters: Dict[str, Any]) -> int:
+    async def delete(self, table: str, filters: dict[str, Any]) -> int:
         """Delete data from table."""
         async with self.engine.begin() as conn:
             conditions = []
@@ -128,13 +127,13 @@ class TestDatabaseService:
             def __init__(self, ops):
                 self.ops = ops
 
-            def insert(self, table: str, data: Dict[str, Any]):
+            def insert(self, table: str, data: dict[str, Any]):
                 self.ops.append(("insert", table, data))
 
-            def update(self, table: str, data: Dict[str, Any], filters: Dict[str, Any]):
+            def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]):
                 self.ops.append(("update", table, data, filters))
 
-            def delete(self, table: str, filters: Dict[str, Any]):
+            def delete(self, table: str, filters: dict[str, Any]):
                 self.ops.append(("delete", table, filters))
 
             async def execute(self):
@@ -199,13 +198,13 @@ class TestDatabaseService:
         yield ctx
 
     # Methods required by ApiKeyService
-    async def get_user_api_keys(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
         """Get all API keys for a user."""
         return await self.select("api_keys", {"user_id": user_id})
 
     async def get_api_key_for_service(
         self, user_id: str, service: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key for specific service."""
         results = await self.select(
             "api_keys", {"user_id": user_id, "service": service}
@@ -214,7 +213,7 @@ class TestDatabaseService:
 
     async def get_api_key_by_id(
         self, key_id: str, user_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key by ID and user."""
         results = await self.select("api_keys", {"id": key_id, "user_id": user_id})
         return results[0] if results else None
@@ -227,18 +226,17 @@ class TestDatabaseService:
             {"id": key_id},
         )
 
-
 class TestCacheService:
     """Lightweight test cache service."""
 
     def __init__(self, redis_client):
         self.redis = redis_client
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         """Get value from cache."""
         return await self.redis.get(key)
 
-    async def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: str, ex: int | None = None) -> bool:
         """Set value in cache."""
         return await self.redis.set(key, value, ex=ex)
 
@@ -246,9 +244,7 @@ class TestCacheService:
         """Delete key from cache."""
         return await self.redis.delete(key)
 
-
 # Test Fixtures
-
 
 @pytest.fixture(scope="session")
 async def test_db_engine():
@@ -317,7 +313,6 @@ async def test_db_engine():
     yield engine
     await engine.dispose()
 
-
 @pytest.fixture(scope="session")
 async def test_redis():
     """Create test Redis connection."""
@@ -341,18 +336,15 @@ async def test_redis():
         mock_redis.close.return_value = None
         yield mock_redis
 
-
 @pytest.fixture
 async def test_db_service(test_db_engine):
     """Create test database service."""
     return TestDatabaseService(test_db_engine)
 
-
 @pytest.fixture
 async def test_cache_service(test_redis):
     """Create test cache service."""
     return TestCacheService(test_redis)
-
 
 @pytest.fixture
 async def api_key_service(test_db_service, test_cache_service):
@@ -368,7 +360,6 @@ async def api_key_service(test_db_service, test_cache_service):
     )
 
     return service
-
 
 @pytest.fixture
 async def test_user(test_db_service):
@@ -386,15 +377,12 @@ async def test_user(test_db_service):
     await test_db_service.insert("users", user_data)
     return user_data
 
-
 @pytest.fixture
 def test_client():
     """Create FastAPI test client."""
     return TestClient(app)
 
-
 # Integration Test Classes
-
 
 class TestApiKeyFullStackIntegration:
     """Full stack integration tests for API key management."""
@@ -813,7 +801,6 @@ class TestApiKeyFullStackIntegration:
                 # Verify audit logging was called for deletion
                 assert mock_audit.call_count >= 2
 
-
 class TestApiKeyValidationEdgeCases:
     """Test edge cases and error conditions."""
 
@@ -917,9 +904,7 @@ class TestApiKeyValidationEdgeCases:
             assert result.is_valid is True
             assert mock_get.call_count == 1  # Should have hit external API
 
-
 # Performance and Load Testing
-
 
 class TestApiKeyPerformance:
     """Performance and load testing for API key operations."""

@@ -6,46 +6,41 @@ in the LangGraph-based orchestration system, enhanced for clarity and maintainab
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 from langgraph.graph import add_messages
 from pydantic import BaseModel, Field
-from typing_extensions import Annotated, TypedDict
-
+from typing_extensions import TypedDict
+from typing import Annotated
 
 class UserPreferences(BaseModel):
     """User travel preferences and constraints."""
 
-    budget_total: Optional[float] = None
+    budget_total: float | None = None
     budget_currency: str = "USD"
-    preferred_airlines: List[str] = Field(default_factory=list)
-    seat_class: Optional[Literal["economy", "business", "first"]] = None
-    accommodation_type: Optional[Literal["hotel", "rental", "hostel", "resort"]] = None
-    meal_preferences: List[str] = Field(default_factory=list)
-    accessibility_needs: List[str] = Field(default_factory=list)
-    travel_style: Optional[Literal["budget", "comfort", "luxury"]] = None
-
+    preferred_airlines: list[str] = Field(default_factory=list)
+    seat_class: Literal["economy", "business", "first"] | None = None
+    accommodation_type: Literal["hotel", "rental", "hostel", "resort"] | None = None
+    meal_preferences: list[str] = Field(default_factory=list)
+    accessibility_needs: list[str] = Field(default_factory=list)
+    travel_style: Literal["budget", "comfort", "luxury"] | None = None
 
 class TravelDates(BaseModel):
     """Travel date information."""
 
-    departure_date: Optional[str] = None  # YYYY-MM-DD format
-    return_date: Optional[str] = None  # YYYY-MM-DD format
+    departure_date: str | None = None  # YYYY-MM-DD format
+    return_date: str | None = None  # YYYY-MM-DD format
     flexible_dates: bool = False
-    date_range_days: Optional[int] = None  # Flexibility range in days
-
+    date_range_days: int | None = None  # Flexibility range in days
 
 class DestinationInfo(BaseModel):
     """Destination information and context."""
 
-    origin: Optional[str] = None
-    destination: Optional[str] = None
-    intermediate_stops: List[str] = Field(default_factory=list)
-    trip_type: Optional[Literal["one_way", "round_trip", "multi_city"]] = None
-    purpose: Optional[
-        Literal["business", "leisure", "family", "honeymoon", "adventure"]
-    ] = None
-
+    origin: str | None = None
+    destination: str | None = None
+    intermediate_stops: list[str] = Field(default_factory=list)
+    trip_type: Literal["one_way", "round_trip", "multi_city"] | None = None
+    purpose: Literal["business", "leisure", "family", "honeymoon", "adventure"] | None = None
 
 class SearchResult(BaseModel):
     """Generic search result structure."""
@@ -53,25 +48,23 @@ class SearchResult(BaseModel):
     search_id: str
     timestamp: str
     agent: str
-    parameters: Dict[str, Any]
-    results: List[Dict[str, Any]]
+    parameters: dict[str, Any]
+    results: list[dict[str, Any]]
     result_count: int
     status: Literal["success", "error", "partial"]
-    error_message: Optional[str] = None
-
+    error_message: str | None = None
 
 class BookingProgress(BaseModel):
     """Booking progress tracking."""
 
-    flight_booking: Optional[Dict[str, Any]] = None
-    accommodation_booking: Optional[Dict[str, Any]] = None
-    activity_bookings: List[Dict[str, Any]] = Field(default_factory=list)
-    total_cost: Optional[float] = None
+    flight_booking: dict[str, Any] | None = None
+    accommodation_booking: dict[str, Any] | None = None
+    activity_bookings: list[dict[str, Any]] = Field(default_factory=list)
+    total_cost: float | None = None
     currency: str = "USD"
     status: Literal["planning", "comparing", "booking", "confirmed", "cancelled"] = (
         "planning"
     )
-
 
 class HandoffContext(BaseModel):
     """Agent handoff context information."""
@@ -82,29 +75,26 @@ class HandoffContext(BaseModel):
     routing_reasoning: str
     timestamp: str
     message_analyzed: str
-    additional_context: Dict[str, Any] = Field(default_factory=dict)
-
+    additional_context: dict[str, Any] = Field(default_factory=dict)
 
 class ErrorInfo(BaseModel):
     """Error tracking information."""
 
     error_count: int = 0
-    last_error: Optional[str] = None
-    retry_attempts: Dict[str, int] = Field(default_factory=dict)
-    error_history: List[Dict[str, Any]] = Field(default_factory=list)
-
+    last_error: str | None = None
+    retry_attempts: dict[str, int] = Field(default_factory=dict)
+    error_history: list[dict[str, Any]] = Field(default_factory=list)
 
 class ToolCallInfo(BaseModel):
     """Tool call tracking information."""
 
     tool_name: str
     timestamp: str
-    parameters: Dict[str, Any]
-    result: Optional[Dict[str, Any]] = None
+    parameters: dict[str, Any]
+    result: dict[str, Any] | None = None
     status: Literal["pending", "success", "error"] = "pending"
-    error_message: Optional[str] = None
-    execution_time_ms: Optional[float] = None
-
+    error_message: str | None = None
+    execution_time_ms: float | None = None
 
 class TravelPlanningState(TypedDict):
     """
@@ -123,50 +113,49 @@ class TravelPlanningState(TypedDict):
     """
 
     # Core conversation data - handled by LangGraph add_messages
-    messages: Annotated[List[Dict[str, Any]], add_messages]
+    messages: Annotated[list[dict[str, Any]], add_messages]
     user_id: str
     session_id: str
 
     # Structured user context (using Pydantic models for validation)
-    user_preferences: Optional[Dict[str, Any]]  # Serialized UserPreferences
-    travel_dates: Optional[Dict[str, Any]]  # Serialized TravelDates
-    destination_info: Optional[Dict[str, Any]]  # Serialized DestinationInfo
+    user_preferences: dict[str, Any] | None  # Serialized UserPreferences
+    travel_dates: dict[str, Any] | None  # Serialized TravelDates
+    destination_info: dict[str, Any] | None  # Serialized DestinationInfo
 
     # Search results with structured tracking
-    flight_searches: List[Dict[str, Any]]  # List of SearchResult dicts
-    accommodation_searches: List[Dict[str, Any]]  # List of SearchResult dicts
-    activity_searches: List[Dict[str, Any]]  # List of SearchResult dicts
+    flight_searches: list[dict[str, Any]]  # List of SearchResult dicts
+    accommodation_searches: list[dict[str, Any]]  # List of SearchResult dicts
+    activity_searches: list[dict[str, Any]]  # List of SearchResult dicts
 
     # Booking progress tracking
-    booking_progress: Optional[Dict[str, Any]]  # Serialized BookingProgress
+    booking_progress: dict[str, Any] | None  # Serialized BookingProgress
 
     # Agent orchestration and routing
-    current_agent: Optional[str]
-    agent_history: List[str]
-    handoff_context: Optional[Dict[str, Any]]  # Serialized HandoffContext
+    current_agent: str | None
+    agent_history: list[str]
+    handoff_context: dict[str, Any] | None  # Serialized HandoffContext
 
     # Enhanced error handling and resilience
-    error_info: Dict[str, Any]  # Serialized ErrorInfo
+    error_info: dict[str, Any]  # Serialized ErrorInfo
 
     # Tool execution tracking with detailed information
-    active_tool_calls: List[Dict[str, Any]]  # List of ToolCallInfo dicts
-    completed_tool_calls: List[Dict[str, Any]]  # List of ToolCallInfo dicts
+    active_tool_calls: list[dict[str, Any]]  # List of ToolCallInfo dicts
+    completed_tool_calls: list[dict[str, Any]]  # List of ToolCallInfo dicts
 
     # Memory and context enhancement
-    conversation_summary: Optional[str]  # LLM-generated summary for long conversations
-    extracted_entities: Dict[str, Any]  # Named entities extracted from conversation
-    user_intent: Optional[str]  # Current identified user intent
-    confidence_score: Optional[float]  # Confidence in current routing/intent
+    conversation_summary: str | None  # LLM-generated summary for long conversations
+    extracted_entities: dict[str, Any]  # Named entities extracted from conversation
+    user_intent: str | None  # Current identified user intent
+    confidence_score: float | None  # Confidence in current routing/intent
 
     # Session lifecycle management
-    created_at: Optional[str]
-    updated_at: Optional[str]
-    last_activity: Optional[str]
+    created_at: str | None
+    updated_at: str | None
+    last_activity: str | None
     is_active: bool
 
-
 def create_initial_state(
-    user_id: str, message: str, session_id: Optional[str] = None
+    user_id: str, message: str, session_id: str | None = None
 ) -> TravelPlanningState:
     """
     Create an initial state for a new conversation.
@@ -216,7 +205,6 @@ def create_initial_state(
         last_activity=now,
         is_active=True,
     )
-
 
 def update_state_timestamp(state: TravelPlanningState) -> TravelPlanningState:
     """

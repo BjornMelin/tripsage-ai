@@ -8,7 +8,7 @@ over traditional Redis implementations.
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import redis.asyncio as redis
 
@@ -16,7 +16,6 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
-
 
 class CacheService:
     """
@@ -31,15 +30,15 @@ class CacheService:
     - Connection pooling
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize the cache service.
 
         Args:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self._client: Optional[redis.Redis] = None
-        self._connection_pool: Optional[redis.ConnectionPool] = None
+        self._client: redis.Redis | None = None
+        self._connection_pool: redis.ConnectionPool | None = None
         self._is_connected = False
 
     @property
@@ -148,7 +147,7 @@ class CacheService:
 
     # JSON operations
 
-    async def set_json(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set_json(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Store a JSON-serializable value in cache.
 
         Args:
@@ -217,7 +216,7 @@ class CacheService:
 
     # String operations
 
-    async def set(self, key: str, value: str, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: str, ttl: int | None = None) -> bool:
         """Set a string value in cache.
 
         Args:
@@ -248,7 +247,7 @@ class CacheService:
                 details={"key": key, "error": str(e)},
             ) from e
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         """Get a string value from cache.
 
         Args:
@@ -379,7 +378,7 @@ class CacheService:
 
     # Atomic operations
 
-    async def incr(self, key: str) -> Optional[int]:
+    async def incr(self, key: str) -> int | None:
         """Increment a counter in cache.
 
         Args:
@@ -400,7 +399,7 @@ class CacheService:
             logger.error(f"Failed to increment key {key}: {e}")
             return None
 
-    async def decr(self, key: str) -> Optional[int]:
+    async def decr(self, key: str) -> int | None:
         """Decrement a counter in cache.
 
         Args:
@@ -440,7 +439,7 @@ class CacheService:
             )
         return self._client.pipeline()
 
-    async def mget(self, keys: List[str]) -> List[Optional[str]]:
+    async def mget(self, keys: list[str]) -> list[str | None]:
         """Get multiple values at once.
 
         Args:
@@ -467,7 +466,7 @@ class CacheService:
                 details={"error": str(e)},
             ) from e
 
-    async def mset(self, mapping: Dict[str, str]) -> bool:
+    async def mset(self, mapping: dict[str, str]) -> bool:
         """Set multiple key-value pairs at once.
 
         Args:
@@ -495,7 +494,7 @@ class CacheService:
 
     # Pattern-based operations
 
-    async def keys(self, pattern: str = "*") -> List[str]:
+    async def keys(self, pattern: str = "*") -> list[str]:
         """Get all keys matching a pattern.
 
         Args:
@@ -550,7 +549,7 @@ class CacheService:
             logger.error(f"Failed to flush database: {e}")
             return False
 
-    async def info(self, section: Optional[str] = None) -> Dict[str, Any]:
+    async def info(self, section: str | None = None) -> dict[str, Any]:
         """Get DragonflyDB server information.
 
         Args:
@@ -632,10 +631,8 @@ class CacheService:
         """
         return await self.set_json(key, value, ttl=86400)  # Long TTL (24 hours)
 
-
 # Global service instance
-_cache_service: Optional[CacheService] = None
-
+_cache_service: CacheService | None = None
 
 async def get_cache_service() -> CacheService:
     """Get the global cache service instance.
@@ -650,7 +647,6 @@ async def get_cache_service() -> CacheService:
         await _cache_service.connect()
 
     return _cache_service
-
 
 async def close_cache_service() -> None:
     """Close the global cache service instance."""

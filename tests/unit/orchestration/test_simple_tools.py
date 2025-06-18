@@ -25,7 +25,6 @@ from tripsage.orchestration.tools import (
     web_search,
 )
 
-
 class TestSimpleTools:
     """Test the simple tool implementations."""
 
@@ -253,7 +252,6 @@ class TestSimpleTools:
         assert result["unhealthy"][0]["service"] == "mcp_manager"
         assert "Connection failed" in result["unhealthy"][0]["error"]
 
-
 class TestToolSchemaValidation:
     """Test tool parameter schema validation."""
 
@@ -295,7 +293,6 @@ class TestToolSchemaValidation:
         )
         assert valid_params.content == "User prefers aisle seats"
         assert valid_params.category == "preferences"
-
 
 class TestToolIntegration:
     """Integration tests for tool functionality."""

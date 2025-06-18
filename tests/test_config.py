@@ -10,13 +10,12 @@ This module provides a simplified, robust test configuration approach that:
 """
 
 import os
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from tripsage_core.config import Settings
-
 
 def setup_test_environment() -> None:
     """Set up comprehensive test environment variables."""
@@ -48,7 +47,6 @@ def setup_test_environment() -> None:
     for key, value in test_env.items():
         os.environ[key] = value
 
-
 def create_test_settings(**overrides) -> Settings:
     """
     Create a test settings instance with proper defaults.
@@ -78,12 +76,11 @@ def create_test_settings(**overrides) -> Settings:
     # Don't pass any config to the constructor
     return Settings()
 
-
 class MockCacheService:
     """Simple, reliable mock cache service for tests."""
 
     def __init__(self):
-        self._storage: Dict[str, Any] = {}
+        self._storage: dict[str, Any] = {}
         self._connected = True
 
     @property
@@ -111,7 +108,6 @@ class MockCacheService:
     async def health_check(self) -> bool:
         return True
 
-
 class MockDatabaseService:
     """Simple, reliable mock database service for tests."""
 
@@ -125,18 +121,17 @@ class MockDatabaseService:
     async def get_session(self):
         return MagicMock()
 
-    async def execute(self, query: str, params: Dict = None):
+    async def execute(self, query: str, params: dict = None):
         return MagicMock()
 
-    async def fetch_one(self, query: str, params: Dict = None):
+    async def fetch_one(self, query: str, params: dict = None):
         return None
 
-    async def fetch_all(self, query: str, params: Dict = None):
+    async def fetch_all(self, query: str, params: dict = None):
         return []
 
     async def health_check(self) -> bool:
         return True
-
 
 @pytest.fixture(autouse=True)
 def clean_test_environment():
@@ -175,24 +170,20 @@ def clean_test_environment():
             "database": mock_db,
         }
 
-
 @pytest.fixture
 def test_settings():
     """Provide test settings instance."""
     return create_test_settings()
-
 
 @pytest.fixture
 def mock_cache_service():
     """Provide mock cache service."""
     return MockCacheService()
 
-
 @pytest.fixture
 def mock_database_service():
     """Provide mock database service."""
     return MockDatabaseService()
-
 
 def create_mock_api_settings(**overrides) -> Any:
     """
@@ -250,12 +241,10 @@ def create_mock_api_settings(**overrides) -> Any:
 
     return mock_settings
 
-
 @pytest.fixture
 def mock_api_settings():
     """Provide mock API settings."""
     return create_mock_api_settings()
-
 
 # Export convenience functions
 __all__ = [

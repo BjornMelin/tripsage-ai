@@ -8,7 +8,7 @@ capabilities.
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -19,7 +19,6 @@ from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class ItineraryAgentNode(BaseAgentNode):
     """
@@ -137,7 +136,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
     async def _extract_itinerary_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Extract itinerary parameters from user message and conversation context.
 
@@ -222,8 +221,8 @@ class ItineraryAgentNode(BaseAgentNode):
             return None
 
     async def _create_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Create a detailed daily itinerary.
 
@@ -301,12 +300,12 @@ class ItineraryAgentNode(BaseAgentNode):
         destination: str,
         duration: int,
         start_date: str,
-        attractions: List[Dict],
-        activities: List[Dict],
-        interests: List[str],
+        attractions: list[dict],
+        activities: list[dict],
+        interests: list[str],
         pace: str,
         budget_per_day: float,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate a daily schedule for the itinerary."""
         daily_schedule = []
 
@@ -401,8 +400,8 @@ class ItineraryAgentNode(BaseAgentNode):
         return daily_schedule
 
     async def _optimize_schedule_logistics(
-        self, daily_schedule: List[Dict], destination: str
-    ) -> List[Dict]:
+        self, daily_schedule: list[dict], destination: str
+    ) -> list[dict]:
         """Optimize the schedule for logistics and travel times."""
         # This would use Google Maps API to calculate travel times and optimize routes
         # For now, we'll add basic logistics information
@@ -421,8 +420,8 @@ class ItineraryAgentNode(BaseAgentNode):
         return daily_schedule
 
     def _calculate_estimated_cost(
-        self, daily_schedule: List[Dict], budget_per_day: float
-    ) -> Dict[str, float]:
+        self, daily_schedule: list[dict], budget_per_day: float
+    ) -> dict[str, float]:
         """Calculate estimated costs for the itinerary."""
         total_cost = 0
         daily_costs = []
@@ -443,8 +442,8 @@ class ItineraryAgentNode(BaseAgentNode):
         }
 
     async def _optimize_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Optimize an existing itinerary for better flow and efficiency.
 
@@ -503,8 +502,8 @@ class ItineraryAgentNode(BaseAgentNode):
             return {"error": f"Failed to optimize itinerary: {str(e)}"}
 
     async def _modify_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Modify an existing itinerary by adding or removing activities.
 
@@ -576,8 +575,8 @@ class ItineraryAgentNode(BaseAgentNode):
             return {"error": f"Failed to modify itinerary: {str(e)}"}
 
     async def _create_calendar_events(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Create calendar events from an itinerary.
 
@@ -631,11 +630,11 @@ class ItineraryAgentNode(BaseAgentNode):
 
     async def _generate_itinerary_response(
         self,
-        result: Dict[str, Any],
-        params: Dict[str, Any],
+        result: dict[str, Any],
+        params: dict[str, Any],
         operation_type: str,
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate user-friendly response from itinerary results.
 
@@ -674,7 +673,7 @@ class ItineraryAgentNode(BaseAgentNode):
         )
 
     def _format_create_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format itinerary creation response."""
         destination = result.get("destination", "")
@@ -723,7 +722,7 @@ class ItineraryAgentNode(BaseAgentNode):
         return content
 
     def _format_optimize_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format itinerary optimization response."""
         destination = result.get("destination", "")
@@ -744,7 +743,7 @@ class ItineraryAgentNode(BaseAgentNode):
         return content
 
     def _format_modify_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format itinerary modification response."""
         modification_type = result.get("modification_type", "")
@@ -772,7 +771,7 @@ class ItineraryAgentNode(BaseAgentNode):
         return content
 
     def _format_calendar_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format calendar events creation response."""
         events_count = result.get("events_count", 0)
@@ -794,7 +793,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
     async def _handle_general_itinerary_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle general itinerary inquiries that don't require specific planning.
 

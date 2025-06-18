@@ -9,7 +9,7 @@ clean abstractions over external services while maintaining proper data relation
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from pydantic import Field, field_validator
@@ -36,14 +36,12 @@ from tripsage_core.models.schemas_common.flight_schemas import (
 
 logger = logging.getLogger(__name__)
 
-
 class FlightType(str, Enum):
     """Flight type enumeration."""
 
     ROUND_TRIP = "round_trip"
     ONE_WAY = "one_way"
     MULTI_CITY = "multi_city"
-
 
 # Note: Using BookingStatus, CabinClass, PassengerType from schemas_common.enums
 # Re-export for convenience
@@ -63,7 +61,6 @@ __all__ = [
     "get_flight_service",
 ]
 
-
 class FlightSegment(TripSageModel):
     """Flight segment information."""
 
@@ -71,10 +68,10 @@ class FlightSegment(TripSageModel):
     destination: str = Field(..., description="Destination airport code")
     departure_date: datetime = Field(..., description="Departure date and time")
     arrival_date: datetime = Field(..., description="Arrival date and time")
-    airline: Optional[str] = Field(None, description="Airline code")
-    flight_number: Optional[str] = Field(None, description="Flight number")
-    aircraft_type: Optional[str] = Field(None, description="Aircraft type")
-    duration_minutes: Optional[int] = Field(
+    airline: str | None = Field(None, description="Airline code")
+    flight_number: str | None = Field(None, description="Flight number")
+    aircraft_type: str | None = Field(None, description="Aircraft type")
+    duration_minutes: int | None = Field(
         None, description="Flight duration in minutes"
     )
 
@@ -86,68 +83,66 @@ class FlightSegment(TripSageModel):
             raise ValueError("Airport code must be 3 letters")
         return v.upper()
 
-
 class FlightOffer(TripSageModel):
     """Flight offer response model."""
 
     id: str = Field(..., description="Offer ID")
-    search_id: Optional[str] = Field(None, description="Associated search ID")
-    outbound_segments: List[FlightSegment] = Field(
+    search_id: str | None = Field(None, description="Associated search ID")
+    outbound_segments: list[FlightSegment] = Field(
         ..., description="Outbound flight segments"
     )
-    return_segments: Optional[List[FlightSegment]] = Field(
+    return_segments: list[FlightSegment] | None = Field(
         None, description="Return flight segments"
     )
 
     total_price: float = Field(..., description="Total price")
-    base_price: Optional[float] = Field(None, description="Base fare price")
-    taxes: Optional[float] = Field(None, description="Taxes and fees")
+    base_price: float | None = Field(None, description="Base fare price")
+    taxes: float | None = Field(None, description="Taxes and fees")
     currency: str = Field(..., description="Price currency")
 
     cabin_class: CabinClass = Field(..., description="Cabin class")
-    booking_class: Optional[str] = Field(None, description="Booking class code")
+    booking_class: str | None = Field(None, description="Booking class code")
 
-    total_duration: Optional[int] = Field(
+    total_duration: int | None = Field(
         None, description="Total travel time in minutes"
     )
     stops_count: int = Field(default=0, description="Number of stops")
-    airlines: List[str] = Field(default_factory=list, description="Airlines involved")
+    airlines: list[str] = Field(default_factory=list, description="Airlines involved")
 
-    expires_at: Optional[datetime] = Field(None, description="Offer expiration time")
+    expires_at: datetime | None = Field(None, description="Offer expiration time")
     bookable: bool = Field(default=True, description="Whether offer can be booked")
 
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None, description="Source API (duffel, amadeus, etc.)"
     )
-    source_offer_id: Optional[str] = Field(
+    source_offer_id: str | None = Field(
         None, description="Original offer ID from source"
     )
 
     # Scoring and ranking
-    score: Optional[float] = Field(None, ge=0, le=1, description="Quality score")
-    price_score: Optional[float] = Field(
+    score: float | None = Field(None, ge=0, le=1, description="Quality score")
+    price_score: float | None = Field(
         None, ge=0, le=1, description="Price competitiveness"
     )
-    convenience_score: Optional[float] = Field(
+    convenience_score: float | None = Field(
         None, ge=0, le=1, description="Convenience score"
     )
-
 
 class FlightBooking(TripSageModel):
     """Flight booking response model."""
 
     id: str = Field(..., description="Booking ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
     user_id: str = Field(..., description="User ID")
 
     offer_id: str = Field(..., description="Booked offer ID")
-    confirmation_number: Optional[str] = Field(
+    confirmation_number: str | None = Field(
         None, description="Airline confirmation number"
     )
 
-    passengers: List[FlightPassenger] = Field(..., description="Passenger details")
-    outbound_segments: List[FlightSegment] = Field(..., description="Outbound segments")
-    return_segments: Optional[List[FlightSegment]] = Field(
+    passengers: list[FlightPassenger] = Field(..., description="Passenger details")
+    outbound_segments: list[FlightSegment] = Field(..., description="Outbound segments")
+    return_segments: list[FlightSegment] | None = Field(
         None, description="Return segments"
     )
 
@@ -156,55 +151,52 @@ class FlightBooking(TripSageModel):
 
     status: BookingStatus = Field(..., description="Booking status")
     booked_at: datetime = Field(..., description="Booking timestamp")
-    expires_at: Optional[datetime] = Field(None, description="Booking expiration")
+    expires_at: datetime | None = Field(None, description="Booking expiration")
 
     cancellable: bool = Field(
         default=False, description="Whether booking can be cancelled"
     )
     refundable: bool = Field(default=False, description="Whether booking is refundable")
 
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-
 
 class FlightSearchResponse(TripSageModel):
     """Flight search response model."""
 
     search_id: str = Field(..., description="Search ID")
-    offers: List[FlightOffer] = Field(..., description="Flight offers")
+    offers: list[FlightOffer] = Field(..., description="Flight offers")
     search_parameters: FlightSearchRequest = Field(
         ..., description="Original search parameters"
     )
     total_results: int = Field(..., description="Total number of results")
-    search_duration_ms: Optional[int] = Field(
+    search_duration_ms: int | None = Field(
         None, description="Search duration in milliseconds"
     )
     cached: bool = Field(default=False, description="Whether results were cached")
-
 
 class FlightBookingRequest(TripSageModel):
     """Request model for flight booking."""
 
     offer_id: str = Field(..., description="Offer ID to book")
-    passengers: List[FlightPassenger] = Field(
+    passengers: list[FlightPassenger] = Field(
         ..., description="Complete passenger information"
     )
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
     hold_only: bool = Field(default=False, description="Hold booking without payment")
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         None, description="Additional booking metadata"
     )
 
     @field_validator("passengers")
     @classmethod
-    def validate_passengers(cls, v: List[FlightPassenger]) -> List[FlightPassenger]:
+    def validate_passengers(cls, v: list[FlightPassenger]) -> list[FlightPassenger]:
         """Validate passenger information is complete for booking."""
         for passenger in v:
             if not passenger.given_name or not passenger.family_name:
                 raise ValueError("Given name and family name are required for booking")
         return v
-
 
 class FlightService:
     """
@@ -253,7 +245,7 @@ class FlightService:
         self.cache_ttl = cache_ttl
 
         # In-memory cache for search results
-        self._search_cache: Dict[str, tuple] = {}
+        self._search_cache: dict[str, tuple] = {}
 
     async def search_flights(
         self, search_request: FlightSearchRequest
@@ -353,7 +345,7 @@ class FlightService:
 
     async def get_offer_details(
         self, offer_id: str, user_id: str
-    ) -> Optional[FlightOffer]:
+    ) -> FlightOffer | None:
         """
         Get detailed information about a flight offer.
 
@@ -509,10 +501,10 @@ class FlightService:
     async def get_user_bookings(
         self,
         user_id: str,
-        trip_id: Optional[str] = None,
-        status: Optional[BookingStatus] = None,
+        trip_id: str | None = None,
+        status: BookingStatus | None = None,
         limit: int = 50,
-    ) -> List[FlightBooking]:
+    ) -> list[FlightBooking]:
         """
         Get flight bookings for a user.
 
@@ -609,7 +601,7 @@ class FlightService:
 
     async def _search_external_api(
         self, search_request: FlightSearchRequest
-    ) -> List[FlightOffer]:
+    ) -> list[FlightOffer]:
         """Search flights using external API."""
         if not self.external_service:
             return []
@@ -665,7 +657,7 @@ class FlightService:
 
     async def _generate_mock_offers(
         self, search_request: FlightSearchRequest
-    ) -> List[FlightOffer]:
+    ) -> list[FlightOffer]:
         """Generate mock flight offers for testing."""
         offers = []
 
@@ -699,8 +691,8 @@ class FlightService:
         return offers
 
     async def _score_offers(
-        self, offers: List[FlightOffer], search_request: FlightSearchRequest
-    ) -> List[FlightOffer]:
+        self, offers: list[FlightOffer], search_request: FlightSearchRequest
+    ) -> list[FlightOffer]:
         """Score and rank flight offers."""
         if not offers:
             return offers
@@ -745,7 +737,7 @@ class FlightService:
 
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
-    def _get_cached_search(self, cache_key: str) -> Optional[Dict[str, Any]]:
+    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
         """Get cached search results if still valid."""
         if cache_key in self._search_cache:
             result, timestamp = self._search_cache[cache_key]
@@ -757,7 +749,7 @@ class FlightService:
                 del self._search_cache[cache_key]
         return None
 
-    def _cache_search_results(self, cache_key: str, offers: List[FlightOffer]) -> None:
+    def _cache_search_results(self, cache_key: str, offers: list[FlightOffer]) -> None:
         """Cache search results."""
         import time
 
@@ -775,7 +767,7 @@ class FlightService:
         self,
         search_id: str,
         search_request: FlightSearchRequest,
-        offers: List[FlightOffer],
+        offers: list[FlightOffer],
     ) -> None:
         """Store search history in database."""
         try:
@@ -832,7 +824,7 @@ class FlightService:
 
     async def _book_external_flight(
         self, offer: FlightOffer, booking_request: FlightBookingRequest
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Book flight using external API."""
         if not self.external_service:
             return None
@@ -889,7 +881,6 @@ class FlightService:
                 "External cancellation failed",
                 extra={"booking_id": booking.id, "error": str(e)},
             )
-
 
 # Dependency function for FastAPI
 async def get_flight_service() -> FlightService:

@@ -18,7 +18,6 @@ from tripsage.tools.memory_tools import (
     search_user_memories,
 )
 
-
 class TestMemorySecurityIsolation:
     """Test security and data isolation in memory system."""
 
@@ -499,7 +498,6 @@ class TestMemorySecurityIsolation:
                 assert metadata["consent_given"] is True
                 assert "privacy_level" in metadata
 
-
 class TestMemoryGDPRCompliance:
     """Test GDPR compliance features."""
 
@@ -708,7 +706,6 @@ class TestMemoryGDPRCompliance:
             imported_data = json.loads(json_export)
             assert imported_data["user_id"] == user_id
             assert len(imported_data["memories"]) == len(memories)
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

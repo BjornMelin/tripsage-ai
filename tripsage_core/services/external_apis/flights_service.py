@@ -7,7 +7,7 @@ booking, and management operations.
 import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Optional
 
 import httpx
 from pydantic import ValidationError as PydanticValidationError
@@ -40,7 +40,6 @@ from tripsage_core.utils.logging_utils import get_logger
 settings = get_settings()
 
 logger = get_logger(__name__)
-
 
 class DuffelFlightsService(BaseService):
     """Service for interacting with Duffel Flights API."""
@@ -80,9 +79,9 @@ class DuffelFlightsService(BaseService):
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        data: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Make an authenticated request to the Duffel API.
 
         Args:
@@ -120,7 +119,7 @@ class DuffelFlightsService(BaseService):
         self,
         query: str,
         limit: int = 10,
-    ) -> List[Airport]:
+    ) -> list[Airport]:
         """Search for airports by name, city, or code.
 
         Args:
@@ -149,12 +148,12 @@ class DuffelFlightsService(BaseService):
         origin: str,
         destination: str,
         departure_date: datetime,
-        return_date: Optional[datetime] = None,
-        passengers: Optional[List[Passenger]] = None,
-        cabin_class: Optional[CabinClass] = None,
-        max_connections: Optional[int] = None,
+        return_date: datetime | None = None,
+        passengers: list[Passenger] | None = None,
+        cabin_class: CabinClass | None = None,
+        max_connections: int | None = None,
         currency: str = "USD",
-    ) -> List[FlightOffer]:
+    ) -> list[FlightOffer]:
         """Search for flight offers.
 
         Args:
@@ -241,9 +240,9 @@ class DuffelFlightsService(BaseService):
     async def create_order(
         self,
         offer_id: str,
-        passengers: List[Passenger],
+        passengers: list[Passenger],
         payment: PaymentRequest,
-        selected_offers: Optional[List[str]] = None,
+        selected_offers: list[str] | None = None,
     ) -> FlightOrder:
         """Create a flight order (booking).
 
@@ -296,10 +295,10 @@ class DuffelFlightsService(BaseService):
 
     async def list_orders(
         self,
-        created_after: Optional[datetime] = None,
-        created_before: Optional[datetime] = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
         limit: int = 50,
-    ) -> List[FlightOrder]:
+    ) -> list[FlightOrder]:
         """List orders with optional filters.
 
         Args:
@@ -349,7 +348,7 @@ class DuffelFlightsService(BaseService):
         )
         return OrderCancellation(**response["data"])
 
-    async def get_seat_maps(self, offer_id: str) -> List[SeatMap]:
+    async def get_seat_maps(self, offer_id: str) -> list[SeatMap]:
         """Get seat maps for an offer.
 
         Args:
@@ -379,9 +378,9 @@ class DuffelFlightsService(BaseService):
         destination: str,
         departure_date: datetime,
         flexibility_days: int = 3,
-        return_date: Optional[datetime] = None,
+        return_date: datetime | None = None,
         **kwargs,
-    ) -> Dict[str, List[FlightOffer]]:
+    ) -> dict[str, list[FlightOffer]]:
         """Search flights with flexible dates.
 
         Args:
@@ -441,10 +440,10 @@ class DuffelFlightsService(BaseService):
 
     async def find_cheapest_offer(
         self,
-        offers: List[FlightOffer],
-        max_stops: Optional[int] = None,
-        max_duration_hours: Optional[float] = None,
-    ) -> Optional[FlightOffer]:
+        offers: list[FlightOffer],
+        max_stops: int | None = None,
+        max_duration_hours: float | None = None,
+    ) -> FlightOffer | None:
         """Find the cheapest offer matching criteria.
 
         Args:
@@ -487,10 +486,10 @@ class DuffelFlightsService(BaseService):
 
     async def get_airline_preferences(
         self,
-        offers: List[FlightOffer],
-        preferred_airlines: Optional[Set[str]] = None,
-        excluded_airlines: Optional[Set[str]] = None,
-    ) -> List[FlightOffer]:
+        offers: list[FlightOffer],
+        preferred_airlines: set[str] | None = None,
+        excluded_airlines: set[str] | None = None,
+    ) -> list[FlightOffer]:
         """Filter offers by airline preferences.
 
         Args:
@@ -532,8 +531,8 @@ class DuffelFlightsService(BaseService):
         offer_id: str,
         trip_id: str,
         lead_passenger: Passenger,
-        additional_passengers: Optional[List[Passenger]] = None,
-        payment: Optional[PaymentRequest] = None,
+        additional_passengers: list[Passenger] | None = None,
+        payment: PaymentRequest | None = None,
     ) -> FlightOrder:
         """Create a flight booking for a trip.
 

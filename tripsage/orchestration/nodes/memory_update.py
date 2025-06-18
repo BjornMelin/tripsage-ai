@@ -5,14 +5,11 @@ This module handles updating persistent memory and session state with
 insights learned during conversation.
 """
 
-from typing import List
-
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class MemoryUpdateNode(BaseAgentNode):
     """
@@ -66,7 +63,7 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return state
 
-    async def _extract_insights(self, state: TravelPlanningState) -> List[str]:
+    async def _extract_insights(self, state: TravelPlanningState) -> list[str]:
         """
         Extract learnable insights from conversation state.
 
@@ -125,7 +122,7 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return insights
 
-    def _extract_search_insights(self, state: TravelPlanningState) -> List[str]:
+    def _extract_search_insights(self, state: TravelPlanningState) -> list[str]:
         """
         Extract insights from search behavior.
 
@@ -189,7 +186,7 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return insights
 
-    def _extract_interaction_insights(self, state: TravelPlanningState) -> List[str]:
+    def _extract_interaction_insights(self, state: TravelPlanningState) -> list[str]:
         """
         Extract insights from agent interaction patterns.
 
@@ -230,7 +227,7 @@ class MemoryUpdateNode(BaseAgentNode):
         return insights
 
     async def _update_knowledge_graph(
-        self, state: TravelPlanningState, insights: List[str]
+        self, state: TravelPlanningState, insights: list[str]
     ) -> None:
         """
         Update knowledge graph with insights.

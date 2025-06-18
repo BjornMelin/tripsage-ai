@@ -3,7 +3,7 @@ Router for unified search endpoints in the TripSage API.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -25,7 +25,6 @@ from tripsage_core.services.infrastructure.cache_service import get_cache_servic
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
 
 @router.post("/unified", response_model=UnifiedSearchResponse)
 async def unified_search(
@@ -102,9 +101,8 @@ async def unified_search(
             detail="An unexpected error occurred while performing the search",
         ) from e
 
-
 async def _track_search_analytics(
-    user_id: Optional[str], query: str, cache_status: str, cache_service
+    user_id: str | None, query: str, cache_status: str, cache_service
 ):
     """Track search analytics for monitoring and optimization."""
     try:
@@ -131,8 +129,7 @@ async def _track_search_analytics(
     except Exception as e:
         logger.warning(f"Failed to track search analytics: {e}")
 
-
-@router.get("/suggest", response_model=List[str])
+@router.get("/suggest", response_model=list[str])
 async def search_suggestions(
     query: str = Query(
         ..., min_length=1, max_length=100, description="Partial search query"
@@ -168,8 +165,7 @@ async def search_suggestions(
             detail="An unexpected error occurred while generating suggestions",
         ) from e
 
-
-@router.get("/recent", response_model=List[Dict[str, Any]])
+@router.get("/recent", response_model=list[dict[str, Any]])
 async def get_recent_searches(
     limit: int = Query(
         10, ge=1, le=50, description="Maximum number of searches to return"
@@ -200,8 +196,7 @@ async def get_recent_searches(
             detail="Failed to retrieve search history",
         ) from e
 
-
-@router.post("/save", response_model=Dict[str, str])
+@router.post("/save", response_model=dict[str, str])
 async def save_search(
     request: UnifiedSearchRequest,
     principal=Depends(require_principal),
@@ -231,7 +226,6 @@ async def save_search(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to save search",
         ) from e
-
 
 @router.delete("/saved/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_search(
@@ -268,10 +262,9 @@ async def delete_saved_search(
             detail="Failed to delete saved search",
         ) from e
 
-
-@router.post("/bulk", response_model=List[UnifiedSearchResponse])
+@router.post("/bulk", response_model=list[UnifiedSearchResponse])
 async def bulk_search(
-    requests: List[UnifiedSearchRequest],
+    requests: list[UnifiedSearchRequest],
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
 ):
@@ -360,7 +353,6 @@ async def bulk_search(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Bulk search operation failed",
         ) from e
-
 
 @router.get("/analytics")
 async def get_search_analytics(

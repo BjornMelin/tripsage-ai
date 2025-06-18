@@ -8,7 +8,7 @@ JavaScript execution, complex interactions, or sophisticated browser automation.
 
 import asyncio
 import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from playwright.async_api import (
     Browser,
@@ -22,11 +22,10 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
-
 class PlaywrightServiceError(CoreAPIError):
     """Exception raised for Playwright service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="PLAYWRIGHT_SERVICE_ERROR",
@@ -34,7 +33,6 @@ class PlaywrightServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
-
 
 class PlaywrightConfig(BaseModel):
     """Configuration for Playwright service."""
@@ -46,41 +44,39 @@ class PlaywrightConfig(BaseModel):
     viewport_width: int = Field(1920, description="Viewport width")
     viewport_height: int = Field(1080, description="Viewport height")
     timeout: int = Field(30000, description="Default timeout in milliseconds")
-    user_agent: Optional[str] = Field(None, description="Custom user agent")
-    proxy: Optional[str] = Field(None, description="Proxy URL")
+    user_agent: str | None = Field(None, description="Custom user agent")
+    proxy: str | None = Field(None, description="Proxy URL")
     disable_javascript: bool = Field(False, description="Disable JavaScript execution")
     block_images: bool = Field(
         False, description="Block image loading for faster scraping"
     )
     block_css: bool = Field(False, description="Block CSS loading for faster scraping")
 
-
 class ScrapingResult(BaseModel):
     """Result from web scraping operation."""
 
     url: str = Field(..., description="URL that was scraped")
     content: str = Field(..., description="Extracted content")
-    html: Optional[str] = Field(None, description="Raw HTML content")
-    title: Optional[str] = Field(None, description="Page title")
-    links: List[str] = Field(default_factory=list, description="Extracted links")
-    images: List[str] = Field(default_factory=list, description="Extracted image URLs")
-    metadata: Dict[str, Any] = Field(
+    html: str | None = Field(None, description="Raw HTML content")
+    title: str | None = Field(None, description="Page title")
+    links: list[str] = Field(default_factory=list, description="Extracted links")
+    images: list[str] = Field(default_factory=list, description="Extracted image URLs")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-    performance: Dict[str, Union[int, float]] = Field(
+    performance: dict[str, int | float] = Field(
         default_factory=dict, description="Performance metrics"
     )
     success: bool = Field(True, description="Whether scraping was successful")
-    error: Optional[str] = Field(None, description="Error message if failed")
-
+    error: str | None = Field(None, description="Error message if failed")
 
 class PlaywrightService:
     """Direct Playwright SDK service for complex web scraping with Core integration."""
 
     def __init__(
         self,
-        config: Optional[PlaywrightConfig] = None,
-        settings: Optional[Settings] = None,
+        config: PlaywrightConfig | None = None,
+        settings: Settings | None = None,
     ):
         """
         Initialize Playwright service.
@@ -96,9 +92,9 @@ class PlaywrightService:
             config = self._build_config_from_settings()
 
         self.config = config
-        self._playwright: Optional[Playwright] = None
-        self._browser: Optional[Browser] = None
-        self._context: Optional[BrowserContext] = None
+        self._playwright: Playwright | None = None
+        self._browser: Browser | None = None
+        self._context: BrowserContext | None = None
         self._connected = False
 
         # Concurrency control from settings
@@ -233,9 +229,9 @@ class PlaywrightService:
     async def scrape_url(
         self,
         url: str,
-        wait_for_selector: Optional[str] = None,
-        wait_for_function: Optional[str] = None,
-        custom_timeout: Optional[int] = None,
+        wait_for_selector: str | None = None,
+        wait_for_function: str | None = None,
+        custom_timeout: int | None = None,
         extract_links: bool = True,
         extract_images: bool = True,
         include_html: bool = False,
@@ -416,8 +412,8 @@ class PlaywrightService:
                     await page.close()
 
     async def scrape_multiple_urls(
-        self, urls: List[str], max_concurrent: Optional[int] = None, **scrape_options
-    ) -> List[ScrapingResult]:
+        self, urls: list[str], max_concurrent: int | None = None, **scrape_options
+    ) -> list[ScrapingResult]:
         """
         Scrape multiple URLs concurrently.
 
@@ -478,7 +474,7 @@ class PlaywrightService:
 
     async def execute_custom_script(
         self, url: str, script: str, wait_before_script: float = 1.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Execute custom JavaScript on a page.
 
@@ -516,8 +512,8 @@ class PlaywrightService:
                     await page.close()
 
     async def take_screenshot(
-        self, url: str, output_path: Optional[str] = None, full_page: bool = True
-    ) -> Optional[bytes]:
+        self, url: str, output_path: str | None = None, full_page: bool = True
+    ) -> bytes | None:
         """
         Take screenshot of a webpage.
 
@@ -628,10 +624,8 @@ class PlaywrightService:
         """Async context manager exit."""
         await self.close()
 
-
 # Global service instance
-_playwright_service: Optional[PlaywrightService] = None
-
+_playwright_service: PlaywrightService | None = None
 
 async def get_playwright_service() -> PlaywrightService:
     """
@@ -648,7 +642,6 @@ async def get_playwright_service() -> PlaywrightService:
 
     return _playwright_service
 
-
 async def close_playwright_service() -> None:
     """Close the global Playwright service instance."""
     global _playwright_service
@@ -657,22 +650,20 @@ async def close_playwright_service() -> None:
         await _playwright_service.close()
         _playwright_service = None
 
-
 # Convenience functions
 async def create_playwright_service(
-    config: Optional[PlaywrightConfig] = None,
-    settings: Optional[Settings] = None,
+    config: PlaywrightConfig | None = None,
+    settings: Settings | None = None,
 ) -> PlaywrightService:
     """Create and initialize a Playwright service."""
     service = PlaywrightService(config, settings)
     await service.connect()
     return service
 
-
 async def scrape_with_playwright(
     url: str,
-    config: Optional[PlaywrightConfig] = None,
-    settings: Optional[Settings] = None,
+    config: PlaywrightConfig | None = None,
+    settings: Settings | None = None,
     **scrape_options,
 ) -> ScrapingResult:
     """Quick function to scrape a URL with Playwright."""
@@ -681,7 +672,6 @@ async def scrape_with_playwright(
         return await service.scrape_url(url, **scrape_options)
     finally:
         await service.close()
-
 
 __all__ = [
     "PlaywrightService",

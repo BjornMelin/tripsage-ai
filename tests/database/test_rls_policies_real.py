@@ -16,13 +16,12 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Optional
 
 import pytest
 
 from supabase import create_client
 from tripsage_core.models.base_core_model import TripSageModel
-
 
 class RLSTestResult(TripSageModel):
     """Model for RLS test results."""
@@ -34,9 +33,8 @@ class RLSTestResult(TripSageModel):
     expected_access: bool
     actual_access: bool
     passed: bool
-    error: Optional[str] = None
-    performance_ms: Optional[float] = None
-
+    error: str | None = None
+    performance_ms: float | None = None
 
 class RealRLSPolicyTester:
     """Real RLS policy testing against actual Supabase database."""
@@ -49,11 +47,11 @@ class RealRLSPolicyTester:
             pytest.skip("Supabase credentials not available for RLS testing")
 
         self.admin_client = create_client(self.supabase_url, self.supabase_anon_key)
-        self.test_users: List[Dict] = []
-        self.test_results: List[RLSTestResult] = []
-        self.cleanup_data: List[Dict] = []
+        self.test_users: list[dict] = []
+        self.test_results: list[RLSTestResult] = []
+        self.cleanup_data: list[dict] = []
 
-    async def setup_test_users(self) -> List[Dict]:
+    async def setup_test_users(self) -> list[dict]:
         """Create real test users for RLS testing."""
         test_users = []
 
@@ -91,7 +89,7 @@ class RealRLSPolicyTester:
         self.test_users = test_users
         return test_users
 
-    async def _sign_in_user(self, user_data: Dict) -> None:
+    async def _sign_in_user(self, user_data: dict) -> None:
         """Sign in a test user."""
         try:
             response = user_data["client"].auth.sign_in_with_password(
@@ -131,8 +129,8 @@ class RealRLSPolicyTester:
         user_role: str,
         expected_access: bool,
         actual_access: bool,
-        error: Optional[str] = None,
-        performance_ms: Optional[float] = None,
+        error: str | None = None,
+        performance_ms: float | None = None,
     ) -> RLSTestResult:
         """Record a test result."""
         result = RLSTestResult(
@@ -149,7 +147,7 @@ class RealRLSPolicyTester:
         self.test_results.append(result)
         return result
 
-    async def test_user_data_isolation(self) -> List[RLSTestResult]:
+    async def test_user_data_isolation(self) -> list[RLSTestResult]:
         """Test that users can only access their own data."""
         results = []
 
@@ -280,7 +278,7 @@ class RealRLSPolicyTester:
 
         return results
 
-    async def test_collaboration_permissions(self) -> List[RLSTestResult]:
+    async def test_collaboration_permissions(self) -> list[RLSTestResult]:
         """Test trip collaboration permissions work correctly."""
         results = []
 
@@ -425,7 +423,7 @@ class RealRLSPolicyTester:
 
         return results
 
-    async def test_cascade_permissions(self) -> List[RLSTestResult]:
+    async def test_cascade_permissions(self) -> list[RLSTestResult]:
         """Test that trip-related data inherits trip permissions."""
         results = []
 
@@ -511,7 +509,7 @@ class RealRLSPolicyTester:
 
         return results
 
-    async def test_search_cache_isolation(self) -> List[RLSTestResult]:
+    async def test_search_cache_isolation(self) -> list[RLSTestResult]:
         """Test that search caches are user-specific."""
         results = []
 
@@ -575,7 +573,7 @@ class RealRLSPolicyTester:
 
         return results
 
-    async def test_notification_isolation(self) -> List[RLSTestResult]:
+    async def test_notification_isolation(self) -> list[RLSTestResult]:
         """Test that users can only access their own notifications."""
         results = []
 
@@ -796,7 +794,6 @@ Database: {self.supabase_url}
 
         return report
 
-
 @pytest.mark.asyncio
 @pytest.mark.skipif(
     not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"),
@@ -832,7 +829,6 @@ async def test_real_rls_policies():
     finally:
         # Cleanup
         await tester.cleanup_test_data()
-
 
 if __name__ == "__main__":
     asyncio.run(test_real_rls_policies())

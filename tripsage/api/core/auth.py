@@ -15,8 +15,7 @@ from tripsage_core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-
-async def get_current_user_id(authorization: Optional[str] = Header(None)) -> str:
+async def get_current_user_id(authorization: str | None = Header(None)) -> str:
     """
     Verify JWT token and return user ID.
 
@@ -63,10 +62,9 @@ async def get_current_user_id(authorization: Optional[str] = Header(None)) -> st
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         ) from e
 
-
 async def get_optional_user_id(
-    authorization: Optional[str] = Header(None),
-) -> Optional[str]:
+    authorization: str | None = Header(None),
+) -> str | None:
     """
     Get user ID if authenticated, None otherwise.
 

@@ -15,7 +15,6 @@ from tripsage_core.models.base_core_model import (
     TripSageModel,
 )
 
-
 class TestTripSageModel:
     """Tests for the base TripSageModel class."""
 
@@ -86,7 +85,6 @@ class TestTripSageModel:
         assert isinstance(model, TripSageModel)
         assert isinstance(model, BaseModel)
 
-
 class TestTripSageBaseResponse:
     """Tests for the TripSageBaseResponse class."""
 
@@ -140,7 +138,6 @@ class TestTripSageBaseResponse:
 
         assert response1.status_code == 200
         assert response2.status_code == 404
-
 
 class TestTripSageDomainModel:
     """Tests for the TripSageDomainModel class."""
@@ -198,7 +195,6 @@ class TestTripSageDomainModel:
         with pytest.raises(ValidationError):
             TestDomainModel(price=100.0, currency="INVALID")
 
-
 class TestTripSageDBModel:
     """Tests for the TripSageDBModel class."""
 
@@ -253,7 +249,6 @@ class TestTripSageDBModel:
         model = TestDBModel(name="test", extra_field="ignored")
         assert model.name == "test"
         assert not hasattr(model, "extra_field")
-
 
 class TestModelInteraction:
     """Tests for interaction between different model types."""
@@ -349,7 +344,6 @@ class TestModelInteraction:
         assert domain_user.email == db_user.email == response.email
         assert db_user.id == response.id == 123
         assert response.success is True
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

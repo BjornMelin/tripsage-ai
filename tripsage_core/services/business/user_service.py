@@ -9,7 +9,7 @@ principles with proper dependency injection and error handling.
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from passlib.context import CryptContext
 from pydantic import EmailStr, Field, field_validator
@@ -34,14 +34,13 @@ pwd_context = CryptContext(
     bcrypt__rounds=12,  # Higher rounds for better security
 )
 
-
 class UserCreateRequest(TripSageModel):
     """Request model for user creation."""
 
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password")
-    full_name: Optional[str] = Field(None, max_length=100, description="Full name")
-    username: Optional[str] = Field(
+    full_name: str | None = Field(None, max_length=100, description="Full name")
+    username: str | None = Field(
         None, min_length=3, max_length=30, description="Username"
     )
 
@@ -61,31 +60,28 @@ class UserCreateRequest(TripSageModel):
 
         return v
 
-
 class UserUpdateRequest(TripSageModel):
     """Request model for user updates."""
 
-    full_name: Optional[str] = Field(None, max_length=100)
-    username: Optional[str] = Field(None, min_length=3, max_length=30)
-    preferences: Optional[Dict[str, Any]] = Field(None)
-    is_active: Optional[bool] = Field(None)
-
+    full_name: str | None = Field(None, max_length=100)
+    username: str | None = Field(None, min_length=3, max_length=30)
+    preferences: dict[str, Any] | None = Field(None)
+    is_active: bool | None = Field(None)
 
 class UserResponse(TripSageModel):
     """Response model for user data."""
 
     id: str = Field(..., description="User ID")
     email: EmailStr = Field(..., description="User email")
-    full_name: Optional[str] = Field(None, description="Full name")
-    username: Optional[str] = Field(None, description="Username")
+    full_name: str | None = Field(None, description="Full name")
+    username: str | None = Field(None, description="Username")
     is_active: bool = Field(True, description="User active status")
     is_verified: bool = Field(False, description="Email verification status")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    preferences: Dict[str, Any] = Field(
+    preferences: dict[str, Any] = Field(
         default_factory=dict, description="User preferences"
     )
-
 
 class PasswordChangeRequest(TripSageModel):
     """Request model for password changes."""
@@ -107,7 +103,6 @@ class PasswordChangeRequest(TripSageModel):
             raise ValueError("Password must contain at least one letter and one digit")
 
         return v
-
 
 class UserService:
     """
@@ -216,7 +211,7 @@ class UserService:
             )
             raise
 
-    async def get_user_by_id(self, user_id: str) -> Optional[UserResponse]:
+    async def get_user_by_id(self, user_id: str) -> UserResponse | None:
         """
         Retrieve user by ID.
 
@@ -249,7 +244,7 @@ class UserService:
             )
             return None
 
-    async def get_user_by_email(self, email: str) -> Optional[UserResponse]:
+    async def get_user_by_email(self, email: str) -> UserResponse | None:
         """
         Retrieve user by email address.
 
@@ -282,7 +277,7 @@ class UserService:
             )
             return None
 
-    async def get_user_by_username(self, username: str) -> Optional[UserResponse]:
+    async def get_user_by_username(self, username: str) -> UserResponse | None:
         """
         Retrieve user by username.
 
@@ -435,7 +430,7 @@ class UserService:
 
     async def verify_user_credentials(
         self, identifier: str, password: str
-    ) -> Optional[UserResponse]:
+    ) -> UserResponse | None:
         """
         Verify user credentials for authentication.
 
@@ -543,7 +538,7 @@ class UserService:
             return False
 
     async def update_user_preferences(
-        self, user_id: str, preferences: Dict[str, Any]
+        self, user_id: str, preferences: dict[str, Any]
     ) -> UserResponse:
         """
         Update user preferences.
@@ -599,8 +594,8 @@ class UserService:
             raise
 
     def _merge_preferences(
-        self, current: Dict[str, Any], updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, current: dict[str, Any], updates: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Deep merge preference dictionaries.
 
@@ -651,7 +646,6 @@ class UserService:
             True if password matches
         """
         return self._pwd_context.verify(plain_password, hashed_password)
-
 
 # Dependency function for FastAPI
 async def get_user_service(database_service=None) -> UserService:

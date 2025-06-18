@@ -9,7 +9,6 @@ header security configurations.
 Based on OWASP WSTG 2024 guidelines and FastAPI security best practices.
 """
 
-from typing import List
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -21,12 +20,11 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
-
 class TestXSSProtection:
     """Test suite for Cross-Site Scripting (XSS) protection."""
 
     @pytest.fixture
-    def xss_payloads(self) -> List[str]:
+    def xss_payloads(self) -> list[str]:
         """Common XSS attack payloads from OWASP WSTG."""
         return [
             # Basic XSS payloads
@@ -67,7 +65,7 @@ class TestXSSProtection:
         ]
 
     @pytest.fixture
-    def html_injection_payloads(self) -> List[str]:
+    def html_injection_payloads(self) -> list[str]:
         """HTML injection payloads for content injection testing."""
         return [
             "<h1>Injected Content</h1>",
@@ -301,7 +299,6 @@ class TestXSSProtection:
             assert payload not in response_text
             assert "<script>" not in response_text
 
-
 class TestCSRFProtection:
     """Test suite for Cross-Site Request Forgery (CSRF) protection."""
 
@@ -479,7 +476,6 @@ class TestCSRFProtection:
         # Should be handled by authentication middleware
         assert response.status_code in [401, 403]  # Invalid token
 
-
 class TestHTTPSecurityHeaders:
     """Test suite for HTTP security header configurations."""
 
@@ -607,7 +603,6 @@ class TestHTTPSecurityHeaders:
             varies_on_security = any(header in vary for header in security_headers)
             # If Vary is set, should consider security headers
             assert varies_on_security or "Accept" in vary
-
 
 class TestInputValidationSecurity:
     """Test suite for input validation security measures."""

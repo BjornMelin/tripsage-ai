@@ -23,7 +23,6 @@ from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
 # Configure logging
 logger = configure_logging("run_migrations")
 
-
 async def main():
     """Run migrations."""
     parser = argparse.ArgumentParser(description="Run database migrations for TripSage")
@@ -55,7 +54,6 @@ async def main():
         logger.info("No migrations were applied")
     else:
         logger.info(f"Successfully applied {succeeded} migrations")
-
 
 if __name__ == "__main__":
     asyncio.run(main())

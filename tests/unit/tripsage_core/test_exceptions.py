@@ -31,7 +31,6 @@ from tripsage_core.exceptions.exceptions import (
     with_error_handling,
 )
 
-
 class TestErrorDetails:
     """Test cases for ErrorDetails class."""
 
@@ -75,7 +74,6 @@ class TestErrorDetails:
         expected = {"service": "test-service", "additional_context": {"key": "value"}}
 
         assert dumped == expected
-
 
 class TestCoreTripSageError:
     """Test cases for CoreTripSageError base class."""
@@ -152,7 +150,6 @@ class TestCoreTripSageError:
         )
 
         assert repr(exc) == expected
-
 
 class TestSpecificExceptions:
     """Test cases for specific exception classes."""
@@ -276,7 +273,6 @@ class TestSpecificExceptions:
         assert exc.details.service == "FlightAgent"
         assert exc.details.operation == "search_flights"
 
-
 class TestUtilityFunctions:
     """Test cases for utility functions."""
 
@@ -390,7 +386,6 @@ class TestUtilityFunctions:
 
         mock_logger.error.assert_called_once()
 
-
 class TestExceptionInheritance:
     """Test cases for exception inheritance and hierarchy."""
 
@@ -449,7 +444,6 @@ class TestExceptionInheritance:
 
         with pytest.raises(CoreValidationError):
             raise_validation_error()
-
 
 class TestExceptionIntegration:
     """Integration test cases for the exception system."""

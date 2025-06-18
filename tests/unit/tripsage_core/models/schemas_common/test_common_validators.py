@@ -27,7 +27,6 @@ from tripsage_core.models.schemas_common.common_validators import (
     TruncatedShortString,
 )
 
-
 class TestAirportCodeValidator:
     """Test airport code validation."""
 
@@ -68,7 +67,6 @@ class TestAirportCodeValidator:
         with pytest.raises(ValidationError):
             TestModel(code="INVALID")
 
-
 class TestRatingValidator:
     """Test rating validation."""
 
@@ -108,7 +106,6 @@ class TestRatingValidator:
         with pytest.raises(ValidationError):
             TestModel(rating=10.0)
 
-
 class TestEmailValidator:
     """Test email validation."""
 
@@ -139,7 +136,6 @@ class TestEmailValidator:
 
         model = TestModel(email=None)
         assert model.email is None
-
 
 class TestPositiveIntValidator:
     """Test positive integer validation."""
@@ -178,7 +174,6 @@ class TestPositiveIntValidator:
         with pytest.raises(ValidationError):
             TestModel(count=0)
 
-
 class TestNonNegativeNumberValidator:
     """Test non-negative number validation."""
 
@@ -214,7 +209,6 @@ class TestNonNegativeNumberValidator:
         with pytest.raises(ValidationError):
             TestModel(amount=-5.0)
 
-
 class TestCurrencyCodeValidator:
     """Test currency code validation."""
 
@@ -248,7 +242,6 @@ class TestCurrencyCodeValidator:
         # Invalid cases
         with pytest.raises(ValidationError):
             TestModel(currency="DOLLAR")
-
 
 class TestPasswordStrengthValidator:
     """Test password strength validation."""
@@ -291,7 +284,6 @@ class TestPasswordStrengthValidator:
         # Invalid cases
         with pytest.raises(ValidationError):
             TestModel(password="weak")
-
 
 class TestCoordinateValidator:
     """Test coordinate validation."""
@@ -358,7 +350,6 @@ class TestCoordinateValidator:
         with pytest.raises(ValidationError):
             TestModel(lat=45.5, lon=181.0)
 
-
 class TestStringLengthValidators:
     """Test string length validation."""
 
@@ -396,7 +387,6 @@ class TestStringLengthValidators:
         assert model.short is None
         assert model.medium is None
 
-
 class TestTruncationValidators:
     """Test truncation validators."""
 
@@ -417,7 +407,6 @@ class TestTruncationValidators:
         model = TestModel(short=long_string, medium=long_string)
         assert len(model.short) == 50
         assert len(model.medium) == 255
-
 
 class TestEnumValidator:
     """Test enum validator factory."""
@@ -441,7 +430,6 @@ class TestEnumValidator:
         with pytest.raises(ValueError, match="Value must be one of"):
             validator("invalid")
 
-
 class TestUtilityMethods:
     """Test utility methods in CommonValidators."""
 
@@ -464,7 +452,6 @@ class TestUtilityMethods:
         # Invalid case
         with pytest.raises(ValueError, match="New password must be different"):
             CommonValidators.passwords_different("same123", "same123")
-
 
 class TestIntegrationWithPydantic:
     """Test integration with Pydantic models."""

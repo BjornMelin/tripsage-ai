@@ -14,7 +14,6 @@ from tripsage_core.services.external_apis.duffel_http_client import (
     DuffelRateLimitError,
 )
 
-
 @pytest.fixture
 def mock_settings():
     """Create mock settings for DuffelHTTPClient."""
@@ -24,7 +23,6 @@ def mock_settings():
     settings.duffel_max_requests_per_minute = 100
     return settings
 
-
 @pytest.fixture
 def mock_httpx_client():
     """Create mock httpx.AsyncClient."""
@@ -32,7 +30,6 @@ def mock_httpx_client():
     client.request = AsyncMock()
     client.aclose = AsyncMock()
     return client
-
 
 class TestDuffelHTTPClientInitialization:
     """Test DuffelHTTPClient initialization and configuration."""
@@ -97,7 +94,6 @@ class TestDuffelHTTPClientInitialization:
             assert client.timeout == 60.0
             assert client.max_retries == 5
             assert client.retry_backoff == 2.0
-
 
 class TestDuffelHTTPClientConnection:
     """Test connection management."""
@@ -177,7 +173,6 @@ class TestDuffelHTTPClientConnection:
             await client.ensure_connected()
             assert client._connected is True
 
-
 class TestDuffelHTTPClientContextManager:
     """Test async context manager functionality."""
 
@@ -201,7 +196,6 @@ class TestDuffelHTTPClientContextManager:
             # Should be disconnected after exiting context
             assert client._connected is False
             assert client._client is None
-
 
 class TestDuffelHTTPClientRequests:
     """Test HTTP request functionality."""
@@ -382,7 +376,6 @@ class TestDuffelHTTPClientRequests:
 
             assert result is False
 
-
 class TestDuffelHTTPClientErrorHandling:
     """Test error handling and exceptions."""
 
@@ -460,7 +453,6 @@ class TestDuffelHTTPClientErrorHandling:
             assert mock_httpx_client.request.call_count == 3
             assert mock_sleep.call_count == 2
 
-
 class TestDuffelHTTPClientRateLimit:
     """Test rate limiting functionality."""
 
@@ -502,7 +494,6 @@ class TestDuffelHTTPClientRateLimit:
             assert headers["Accept"] == "application/json"
             assert headers["Content-Type"] == "application/json"
             assert "TripSage-Core" in headers["User-Agent"]
-
 
 class TestDuffelHTTPClientGlobalInstance:
     """Test global client instance management."""

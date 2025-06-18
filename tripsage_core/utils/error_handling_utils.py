@@ -5,7 +5,8 @@ This module provides standardized error handling functionality for the TripSage
 application, building on top of the core exception system.
 """
 
-from typing import Any, Callable, Dict, Optional, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
+from collections.abc import Callable
 
 from tripsage_core.exceptions import (
     CoreDatabaseError,
@@ -30,8 +31,7 @@ T = TypeVar("T")
 R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
 
-
-def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
+def log_exception(exc: Exception, logger_name: str | None = None) -> None:
     """Log an exception with appropriate level and details.
 
     Args:
@@ -79,10 +79,9 @@ def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
             exc_info=True,
         )
 
-
 def safe_execute_with_logging(
     func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any
-) -> Union[T, R]:
+) -> T | R:
     """Execute a function with error handling and TripSage logging.
 
     Args:
@@ -96,10 +95,9 @@ def safe_execute_with_logging(
     """
     return core_safe_execute(func, *args, fallback=fallback, logger=logger, **kwargs)
 
-
 def with_error_handling_and_logging(
     fallback: Any = None,
-    logger_instance: Optional[Any] = None,
+    logger_instance: Any | None = None,
     re_raise: bool = False,
 ):
     """Decorator to add error handling with TripSage logging to functions.
@@ -118,15 +116,14 @@ def with_error_handling_and_logging(
         re_raise=re_raise,
     )
 
-
 # Factory functions for creating specific TripSage exceptions
 def create_mcp_error(
     message: str,
     server: str,
-    tool: Optional[str] = None,
-    params: Optional[Dict[str, Any]] = None,
+    tool: str | None = None,
+    params: dict[str, Any] | None = None,
     category: str = "unknown",
-    status_code: Optional[int] = None,
+    status_code: int | None = None,
 ) -> CoreMCPError:
     """Create an MCP error with TripSage-specific formatting.
 
@@ -160,12 +157,11 @@ def create_mcp_error(
         params=params,
     )
 
-
 def create_api_error(
     message: str,
     service: str,
-    status_code: Optional[int] = None,
-    response: Optional[Dict[str, Any]] = None,
+    status_code: int | None = None,
+    response: dict[str, Any] | None = None,
 ) -> CoreExternalAPIError:
     """Create an API error with TripSage-specific formatting.
 
@@ -186,12 +182,11 @@ def create_api_error(
         api_response=response,
     )
 
-
 def create_validation_error(
     message: str,
-    field: Optional[str] = None,
-    value: Optional[Any] = None,
-    constraint: Optional[str] = None,
+    field: str | None = None,
+    value: Any | None = None,
+    constraint: str | None = None,
 ) -> CoreValidationError:
     """Create a validation error with TripSage-specific formatting.
 
@@ -211,13 +206,12 @@ def create_validation_error(
         constraint=constraint,
     )
 
-
 def create_database_error(
     message: str,
-    operation: Optional[str] = None,
-    query: Optional[str] = None,
-    params: Optional[Dict[str, Any]] = None,
-    table: Optional[str] = None,
+    operation: str | None = None,
+    query: str | None = None,
+    params: dict[str, Any] | None = None,
+    table: str | None = None,
 ) -> CoreDatabaseError:
     """Create a database error with TripSage-specific formatting.
 
@@ -237,7 +231,6 @@ def create_database_error(
         table=table,
     )
 
-
 # Enhanced error context manager for TripSage operations
 class TripSageErrorContext:
     """Context manager for enhanced error handling in TripSage operations."""
@@ -245,10 +238,10 @@ class TripSageErrorContext:
     def __init__(
         self,
         operation: str,
-        service: Optional[str] = None,
-        user_id: Optional[str] = None,
-        request_id: Optional[str] = None,
-        logger_instance: Optional[Any] = None,
+        service: str | None = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        logger_instance: Any | None = None,
     ):
         """Initialize the error context.
 
@@ -306,7 +299,6 @@ class TripSageErrorContext:
 
         # Don't suppress the exception
         return False
-
 
 __all__ = [
     "log_exception",

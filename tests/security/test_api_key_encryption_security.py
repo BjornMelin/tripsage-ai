@@ -18,7 +18,6 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.business.api_key_service import ApiKeyService
 
-
 class TestApiKeyEncryptionSecurity:
     """Test encryption security for API key management."""
 

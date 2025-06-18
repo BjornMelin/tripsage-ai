@@ -9,7 +9,7 @@ size limits, and security scanning following KISS principles.
 import hashlib
 import mimetypes
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
 
 from fastapi import UploadFile
 from pydantic import BaseModel, Field
@@ -95,21 +95,18 @@ SUSPICIOUS_PATTERNS = {
     ".jar",
 }
 
-
 # ===== File Validation Classes and Functions =====
-
 
 class ValidationResult(BaseModel):
     """Result of file validation."""
 
     is_valid: bool = Field(..., description="Whether the file passed validation")
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         None, description="Error message if validation failed"
     )
     file_size: int = Field(..., description="File size in bytes")
-    detected_type: Optional[str] = Field(None, description="Detected MIME type")
-    file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
-
+    detected_type: str | None = Field(None, description="Detected MIME type")
+    file_hash: str | None = Field(None, description="SHA256 hash of file content")
 
 async def validate_file(
     file: UploadFile, max_size: int = MAX_FILE_SIZE
@@ -187,8 +184,7 @@ async def validate_file(
         file_hash=file_hash,
     )
 
-
-def _validate_filename(filename: str) -> Tuple[bool, Optional[str]]:
+def _validate_filename(filename: str) -> tuple[bool, str | None]:
     """
     Validate filename for security issues.
 
@@ -213,7 +209,6 @@ def _validate_filename(filename: str) -> Tuple[bool, Optional[str]]:
         return False, "Filename is too long (max 255 characters)"
 
     return True, None
-
 
 def _detect_mime_type(filename: str, content: bytes) -> str:
     """
@@ -259,10 +254,9 @@ def _detect_mime_type(filename: str, content: bytes) -> str:
     # Default to octet-stream for unknown types
     return "application/octet-stream"
 
-
 def _validate_file_content(
     content: bytes, mime_type: str
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """
     Validate file content for format consistency and security.
 
@@ -284,10 +278,9 @@ def _validate_file_content(
     # For other types, basic validation passed
     return True, None
 
-
 def _validate_image_content(
     content: bytes, mime_type: str
-) -> Tuple[bool, Optional[str]]:
+) -> tuple[bool, str | None]:
     """Validate image file content."""
     # Check for basic image headers
     if mime_type == "image/jpeg" and not content.startswith(b"\xff\xd8\xff"):
@@ -301,8 +294,7 @@ def _validate_image_content(
 
     return True, None
 
-
-def _validate_pdf_content(content: bytes) -> Tuple[bool, Optional[str]]:
+def _validate_pdf_content(content: bytes) -> tuple[bool, str | None]:
     """Validate PDF file content."""
     if not content.startswith(b"%PDF-"):
         return False, "Invalid PDF header"
@@ -313,8 +305,7 @@ def _validate_pdf_content(content: bytes) -> Tuple[bool, Optional[str]]:
 
     return True, None
 
-
-def _validate_text_content(content: bytes) -> Tuple[bool, Optional[str]]:
+def _validate_text_content(content: bytes) -> tuple[bool, str | None]:
     """Validate text file content."""
     try:
         # Attempt to decode as UTF-8
@@ -322,7 +313,6 @@ def _validate_text_content(content: bytes) -> Tuple[bool, Optional[str]]:
         return True, None
     except UnicodeDecodeError:
         return False, "Text file is not valid UTF-8"
-
 
 async def validate_batch_upload(
     files: list[UploadFile], max_total_size: int = MAX_SESSION_SIZE
@@ -372,7 +362,6 @@ async def validate_batch_upload(
 
     return ValidationResult(is_valid=True, file_size=total_size)
 
-
 def generate_safe_filename(original_filename: str, user_id: str) -> str:
     """
     Generate a safe filename for storage.
@@ -397,7 +386,6 @@ def generate_safe_filename(original_filename: str, user_id: str) -> str:
     safe_name = f"{user_id}_{filename_hash}{extension}"
 
     return safe_name
-
 
 __all__ = [
     # Configuration constants

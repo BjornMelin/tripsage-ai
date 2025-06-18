@@ -13,8 +13,6 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
-
 
 @dataclass
 class SchemaIssue:
@@ -26,7 +24,6 @@ class SchemaIssue:
     description: str
     severity: str  # 'error', 'warning', 'info'
 
-
 @dataclass
 class TableDefinition:
     """Represents a parsed table definition."""
@@ -34,17 +31,16 @@ class TableDefinition:
     name: str
     file_path: str
     line_number: int
-    columns: Dict[str, str]  # column_name -> column_type
-    foreign_keys: List[Tuple[str, str]]  # (column, references)
-
+    columns: dict[str, str]  # column_name -> column_type
+    foreign_keys: list[tuple[str, str]]  # (column, references)
 
 class SchemaValidator:
     """Validates PostgreSQL schema files for consistency."""
 
     def __init__(self, schema_dir: str):
         self.schema_dir = Path(schema_dir)
-        self.issues: List[SchemaIssue] = []
-        self.tables: Dict[str, TableDefinition] = {}
+        self.issues: list[SchemaIssue] = []
+        self.tables: dict[str, TableDefinition] = {}
 
     def validate(self) -> bool:
         """Run all validation checks."""
@@ -323,7 +319,6 @@ class SchemaValidator:
 
         return len(errors) == 0
 
-
 def main():
     """Main entry point."""
     # Determine schema directory
@@ -340,7 +335,6 @@ def main():
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
-
 
 if __name__ == "__main__":
     main()

@@ -11,7 +11,8 @@ import time
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, cast
+from typing import Any, Optional, TypeVar, cast
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -35,7 +36,6 @@ F = TypeVar("F", bound=Callable[..., Any])
 # Create logger
 logger = get_logger("key_operations")
 
-
 class KeyOperation(str, Enum):
     """API key operations for monitoring."""
 
@@ -46,7 +46,6 @@ class KeyOperation(str, Enum):
     ROTATE = "rotate"
     ACCESS = "access"
 
-
 class KeyMonitoringService:
     """
     Service for monitoring API key operations.
@@ -55,16 +54,16 @@ class KeyMonitoringService:
     suspicious patterns, and sending alerts.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize the key monitoring service.
 
         Args:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self.cache_service: Optional[CacheService] = None
-        self.database_service: Optional[DatabaseService] = None
-        self.suspicious_patterns: Set[str] = set()
+        self.cache_service: CacheService | None = None
+        self.database_service: DatabaseService | None = None
+        self.suspicious_patterns: set[str] = set()
         self.alert_threshold = {
             KeyOperation.CREATE: 5,  # 5 creates in 10 minutes
             KeyOperation.DELETE: 5,  # 5 deletes in 10 minutes
@@ -84,10 +83,10 @@ class KeyMonitoringService:
         self,
         operation: KeyOperation,
         user_id: str,
-        key_id: Optional[str] = None,
-        service: Optional[str] = None,
+        key_id: str | None = None,
+        service: str | None = None,
         success: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log an API key operation with structured data.
 
@@ -205,7 +204,7 @@ class KeyMonitoringService:
         return count >= threshold
 
     async def _send_alert(
-        self, operation: KeyOperation, user_id: str, log_data: Dict[str, Any]
+        self, operation: KeyOperation, user_id: str, log_data: dict[str, Any]
     ) -> None:
         """Send an alert for suspicious key operations.
 
@@ -252,7 +251,7 @@ class KeyMonitoringService:
 
     async def get_user_operations(
         self, user_id: str, limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get recent key operations for a user.
 
         Args:
@@ -271,7 +270,7 @@ class KeyMonitoringService:
         # Return limited results
         return logs[-limit:] if len(logs) > limit else logs
 
-    async def get_alerts(self, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_alerts(self, limit: int = 100) -> list[dict[str, Any]]:
         """Get recent key operation alerts.
 
         Args:
@@ -320,7 +319,6 @@ class KeyMonitoringService:
         await self.cache_service.incr(rate_limit_key)
         return False
 
-
 class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware for rate limiting API key operations.
@@ -333,7 +331,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         monitoring_service: KeyMonitoringService,
-        settings: Optional[Settings] = None,
+        settings: Settings | None = None,
     ):
         """Initialize the middleware.
 
@@ -393,7 +391,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _get_key_operation(self, request: Request) -> Optional[KeyOperation]:
+    def _get_key_operation(self, request: Request) -> KeyOperation | None:
         """Get the key operation from the request.
 
         Args:
@@ -426,7 +424,6 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
                 return KeyOperation.DELETE
 
         return None
-
 
 def monitor_key_operation(
     operation: KeyOperation,
@@ -531,7 +528,6 @@ def monitor_key_operation(
 
     return decorator
 
-
 def secure_random_token(length: int = 64) -> str:
     """Generate a secure random token.
 
@@ -542,7 +538,6 @@ def secure_random_token(length: int = 64) -> str:
         A secure random token
     """
     return secrets.token_hex(length // 2)
-
 
 def constant_time_compare(a: str, b: str) -> bool:
     """Compare two strings in constant time.
@@ -560,8 +555,7 @@ def constant_time_compare(a: str, b: str) -> bool:
     """
     return secrets.compare_digest(a.encode(), b.encode())
 
-
-def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any]:
     """Clear sensitive data from a dictionary.
 
     Args:
@@ -577,10 +571,9 @@ def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any
             result[key] = "[REDACTED]"
     return result
 
-
 async def check_key_expiration(
     monitoring_service: KeyMonitoringService, days_before: int = 7
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Check for API keys that are about to expire.
 
     Args:
@@ -608,8 +601,7 @@ async def check_key_expiration(
         logger.error(f"Failed to check key expiration: {e}")
         return []
 
-
-async def get_key_health_metrics() -> Dict[str, Any]:
+async def get_key_health_metrics() -> dict[str, Any]:
     """Get health metrics for API keys.
 
     Returns:

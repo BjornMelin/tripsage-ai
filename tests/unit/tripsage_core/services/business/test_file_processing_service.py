@@ -22,7 +22,6 @@ from tripsage_core.services.business.file_processing_service import (
     FileVisibility,
 )
 
-
 class TestFileProcessingService:
     """Test suite for FileProcessingService functionality."""
 

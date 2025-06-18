@@ -8,7 +8,7 @@ across agent interactions.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
@@ -18,7 +18,6 @@ from tripsage_core.utils.session_utils import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class SessionMemoryBridge:
     """
@@ -30,7 +29,7 @@ class SessionMemoryBridge:
     - User preferences and learned insights
     """
 
-    def __init__(self, mcp_manager: Optional[MCPManager] = None):
+    def __init__(self, mcp_manager: MCPManager | None = None):
         """Initialize the memory bridge."""
         self.mcp_manager = mcp_manager or MCPManager()
 
@@ -69,7 +68,7 @@ class SessionMemoryBridge:
         return state
 
     async def _map_session_to_state(
-        self, state: TravelPlanningState, session_data: Dict[str, Any]
+        self, state: TravelPlanningState, session_data: dict[str, Any]
     ) -> TravelPlanningState:
         """
         Map session memory data to LangGraph state format.
@@ -144,7 +143,7 @@ class SessionMemoryBridge:
 
         return state
 
-    def _extract_favorite_destinations(self, trips: List[Dict[str, Any]]) -> List[str]:
+    def _extract_favorite_destinations(self, trips: list[dict[str, Any]]) -> list[str]:
         """Extract frequently visited destinations."""
         destination_counts = {}
         for trip in trips:
@@ -162,8 +161,8 @@ class SessionMemoryBridge:
         ]
 
     def _calculate_typical_budget_range(
-        self, budget_history: List[Dict[str, Any]]
-    ) -> Dict[str, float]:
+        self, budget_history: list[dict[str, Any]]
+    ) -> dict[str, float]:
         """Calculate typical budget range from history."""
         budgets = [
             b.get("total_budget", 0) for b in budget_history if b.get("total_budget")
@@ -180,8 +179,8 @@ class SessionMemoryBridge:
         }
 
     def _analyze_spending_patterns(
-        self, budget_history: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, budget_history: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Analyze spending patterns from budget history."""
         patterns = {
             "accommodation_percentage": [],
@@ -205,7 +204,7 @@ class SessionMemoryBridge:
 
     async def extract_and_persist_insights(
         self, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Extract insights from state and update knowledge graph.
 
@@ -241,7 +240,7 @@ class SessionMemoryBridge:
 
     async def _extract_insights_from_state(
         self, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Extract insights from LangGraph state.
 
@@ -295,7 +294,7 @@ class SessionMemoryBridge:
 
         return insights
 
-    def _extract_facts_from_messages(self, messages: List[Dict[str, Any]]) -> List[str]:
+    def _extract_facts_from_messages(self, messages: list[dict[str, Any]]) -> list[str]:
         """Extract facts and insights from conversation messages."""
         facts = []
 
@@ -328,7 +327,7 @@ class SessionMemoryBridge:
 
         return facts[-5:]  # Keep last 5 facts to avoid overwhelming memory
 
-    def state_to_checkpoint_format(self, state: TravelPlanningState) -> Dict[str, Any]:
+    def state_to_checkpoint_format(self, state: TravelPlanningState) -> dict[str, Any]:
         """
         Convert state to format suitable for checkpointing.
 
@@ -373,7 +372,7 @@ class SessionMemoryBridge:
         return checkpoint_data
 
     async def restore_from_checkpoint(
-        self, checkpoint_data: Dict[str, Any]
+        self, checkpoint_data: dict[str, Any]
     ) -> TravelPlanningState:
         """
         Restore state from checkpoint data.
@@ -404,7 +403,7 @@ class SessionMemoryBridge:
         user_id: str,
         session_id: str,
         checkpoint_id: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
     ) -> None:
         """
         Store reference to checkpoint in knowledge graph.
@@ -435,10 +434,8 @@ class SessionMemoryBridge:
         except Exception as e:
             logger.error(f"Failed to store checkpoint reference: {e}")
 
-
 # Global bridge instance
-_global_memory_bridge: Optional[SessionMemoryBridge] = None
-
+_global_memory_bridge: SessionMemoryBridge | None = None
 
 def get_memory_bridge() -> SessionMemoryBridge:
     """Get the global session memory bridge instance."""

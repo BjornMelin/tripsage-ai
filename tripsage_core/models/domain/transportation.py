@@ -6,54 +6,50 @@ entities. These models represent the essential transportation data structures
 independent of storage implementation or API specifics.
 """
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageDomainModel
 from tripsage_core.models.schemas_common.enums import TransportationType
 
-
 class TransportationProvider(TripSageDomainModel):
     """Transportation provider information."""
 
     name: str = Field(..., description="Provider name")
-    code: Optional[str] = Field(None, description="Provider code")
-    contact_info: Optional[str] = Field(None, description="Contact information")
-    rating: Optional[float] = Field(None, description="Provider rating")
-
+    code: str | None = Field(None, description="Provider code")
+    contact_info: str | None = Field(None, description="Contact information")
+    rating: float | None = Field(None, description="Provider rating")
 
 class TransportationVehicle(TripSageDomainModel):
     """Vehicle information for transportation."""
 
     type: str = Field(..., description="Vehicle type")
-    make: Optional[str] = Field(None, description="Vehicle make")
-    model: Optional[str] = Field(None, description="Vehicle model")
-    license_plate: Optional[str] = Field(None, description="License plate")
-    capacity: Optional[int] = Field(None, description="Passenger capacity")
-    amenities: List[str] = Field([], description="Available amenities")
+    make: str | None = Field(None, description="Vehicle make")
+    model: str | None = Field(None, description="Vehicle model")
+    license_plate: str | None = Field(None, description="License plate")
+    capacity: int | None = Field(None, description="Passenger capacity")
+    amenities: list[str] = Field([], description="Available amenities")
 
     @field_validator("capacity")
     @classmethod
-    def validate_capacity(cls, v: Optional[int]) -> Optional[int]:
+    def validate_capacity(cls, v: int | None) -> int | None:
         """Validate that capacity is positive if provided."""
         if v is not None and v <= 0:
             raise ValueError("Capacity must be positive")
         return v
 
-
 class TransportationLocation(TripSageDomainModel):
     """Location information for transportation."""
 
-    address: Optional[str] = Field(None, description="Full address")
-    name: Optional[str] = Field(None, description="Location name")
+    address: str | None = Field(None, description="Full address")
+    name: str | None = Field(None, description="Location name")
     city: str = Field(..., description="City")
-    state: Optional[str] = Field(None, description="State/province")
+    state: str | None = Field(None, description="State/province")
     country: str = Field(..., description="Country")
-    postal_code: Optional[str] = Field(None, description="Postal/zip code")
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
-
+    postal_code: str | None = Field(None, description="Postal/zip code")
+    latitude: float | None = Field(None, description="Latitude coordinate")
+    longitude: float | None = Field(None, description="Longitude coordinate")
 
 class TransportationOffer(TripSageDomainModel):
     """Core transportation offer business entity.
@@ -67,7 +63,7 @@ class TransportationOffer(TripSageDomainModel):
     transportation_type: TransportationType = Field(
         ..., description="Type of transportation"
     )
-    provider: Optional[TransportationProvider] = Field(
+    provider: TransportationProvider | None = Field(
         None, description="Transportation provider"
     )
     pickup_location: TransportationLocation = Field(..., description="Pickup location")
@@ -78,20 +74,20 @@ class TransportationOffer(TripSageDomainModel):
     dropoff_datetime: str = Field(..., description="Dropoff date and time (ISO format)")
     price: float = Field(..., description="Price for the transportation")
     currency: str = Field(..., description="Currency code")
-    vehicle: Optional[TransportationVehicle] = Field(
+    vehicle: TransportationVehicle | None = Field(
         None, description="Vehicle information"
     )
-    distance_km: Optional[float] = Field(None, description="Distance in kilometers")
-    duration_minutes: Optional[int] = Field(None, description="Duration in minutes")
-    booking_url: Optional[str] = Field(None, description="URL for booking")
-    cancellation_policy: Optional[str] = Field(None, description="Cancellation policy")
+    distance_km: float | None = Field(None, description="Distance in kilometers")
+    duration_minutes: int | None = Field(None, description="Duration in minutes")
+    booking_url: str | None = Field(None, description="URL for booking")
+    cancellation_policy: str | None = Field(None, description="Cancellation policy")
 
     # Source and tracking information
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None, description="Source of the offer (e.g., 'uber', 'lyft', 'rental_cars')"
     )
-    search_id: Optional[str] = Field(None, description="Associated search ID")
-    expires_at: Optional[str] = Field(
+    search_id: str | None = Field(None, description="Associated search ID")
+    expires_at: str | None = Field(
         None, description="Offer expiration timestamp (ISO format)"
     )
 
@@ -105,7 +101,7 @@ class TransportationOffer(TripSageDomainModel):
 
     @field_validator("distance_km")
     @classmethod
-    def validate_distance(cls, v: Optional[float]) -> Optional[float]:
+    def validate_distance(cls, v: float | None) -> float | None:
         """Validate that distance is non-negative if provided."""
         if v is not None and v < 0:
             raise ValueError("Distance must be non-negative")
@@ -113,7 +109,7 @@ class TransportationOffer(TripSageDomainModel):
 
     @field_validator("duration_minutes")
     @classmethod
-    def validate_duration(cls, v: Optional[int]) -> Optional[int]:
+    def validate_duration(cls, v: int | None) -> int | None:
         """Validate that duration is positive if provided."""
         if v is not None and v <= 0:
             raise ValueError("Duration must be positive")

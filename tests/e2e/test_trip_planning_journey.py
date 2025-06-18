@@ -14,7 +14,6 @@ from tripsage_core.services.business.accommodation_service import AccommodationS
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.external_apis.weather_service import WeatherService
 
-
 @pytest.fixture
 def mock_database():
     """Create a mock database service."""
@@ -69,7 +68,6 @@ def mock_database():
     db.delete_trip = AsyncMock(return_value=True)
     return db
 
-
 @pytest.fixture
 def mock_cache():
     """Create a mock cache service."""
@@ -79,14 +77,12 @@ def mock_cache():
     cache.delete = AsyncMock()
     return cache
 
-
 @pytest.fixture
 def mock_mcp_manager():
     """Create a mock MCP manager."""
     manager = MagicMock()
     manager.invoke = AsyncMock()
     return manager
-
 
 @pytest.fixture
 def trip_service(mock_database, mock_cache):
@@ -103,7 +99,6 @@ def trip_service(mock_database, mock_cache):
     )
     service.cache = mock_cache
     return service
-
 
 @pytest.fixture
 def accommodation_service(mock_cache, mock_mcp_manager):
@@ -137,7 +132,6 @@ def accommodation_service(mock_cache, mock_mcp_manager):
     service._generate_mock_listings = AsyncMock(return_value=[sample_listing])
     return service
 
-
 @pytest.fixture
 def flight_service(mock_cache, mock_mcp_manager):
     """Create FlightService with mocked dependencies."""
@@ -148,7 +142,6 @@ def flight_service(mock_cache, mock_mcp_manager):
     service.cache = mock_cache
     service.mcp_manager = mock_mcp_manager
     return service
-
 
 @pytest.fixture
 def weather_service(mock_cache, monkeypatch):
@@ -173,7 +166,6 @@ def weather_service(mock_cache, monkeypatch):
         service._make_request = AsyncMock()
         return service
 
-
 @pytest.fixture
 def sample_trip_data():
     """Sample trip planning data."""
@@ -193,7 +185,6 @@ def sample_trip_data():
             "interests": ["museums", "dining", "shopping"],
         },
     }
-
 
 class TestTripPlanningJourney:
     """End-to-end tests for complete trip planning workflows."""

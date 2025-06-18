@@ -5,7 +5,7 @@ searching for flights, managing saved flights, and searching for airports.
 """
 
 import logging
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -35,7 +35,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-
 @router.post("/search", response_model=FlightSearchResponse)
 async def search_flights(
     request: FlightSearchRequest,
@@ -63,7 +62,6 @@ async def search_flights(
     results = await flight_service.search_flights(request)
     return results
 
-
 @router.post("/search/multi-city", response_model=FlightSearchResponse)
 async def search_multi_city_flights(
     request: MultiCityFlightSearchRequest,
@@ -84,7 +82,6 @@ async def search_multi_city_flights(
     results = await flight_service.search_multi_city_flights(request)
     return results
 
-
 @router.post("/airports/search", response_model=AirportSearchResponse)
 async def search_airports(
     request: AirportSearchRequest,
@@ -104,7 +101,6 @@ async def search_airports(
     # Search for airports
     results = await flight_service.search_airports(request)
     return results
-
 
 @router.get("/offers/{offer_id}", response_model=FlightOffer)
 async def get_flight_offer(
@@ -134,7 +130,6 @@ async def get_flight_offer(
         )
 
     return offer
-
 
 @router.post(
     "/saved", response_model=SavedFlightResponse, status_code=status.HTTP_201_CREATED
@@ -168,7 +163,6 @@ async def save_flight(
 
     return result
 
-
 @router.delete("/saved/{saved_flight_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_flight(
     saved_flight_id: UUID,
@@ -194,10 +188,9 @@ async def delete_saved_flight(
             details={"saved_flight_id": str(saved_flight_id)},
         )
 
-
-@router.get("/saved", response_model=List[SavedFlightResponse])
+@router.get("/saved", response_model=list[SavedFlightResponse])
 async def list_saved_flights(
-    trip_id: Optional[UUID] = None,
+    trip_id: UUID | None = None,
     principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
@@ -215,8 +208,7 @@ async def list_saved_flights(
     user_id = get_principal_id(principal)
     return await flight_service.list_saved_flights(user_id, trip_id)
 
-
-@router.get("/upcoming", response_model=List[UpcomingFlightResponse])
+@router.get("/upcoming", response_model=list[UpcomingFlightResponse])
 async def get_upcoming_flights(
     limit: int = 10,
     include_trip_context: bool = True,

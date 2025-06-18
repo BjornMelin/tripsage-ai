@@ -7,7 +7,7 @@ replacing MCP wrapper with native SDK calls for improved performance.
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import googlemaps
 from googlemaps.exceptions import (
@@ -23,11 +23,10 @@ from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
 
-
 class GoogleMapsServiceError(CoreAPIError):
     """Exception raised for Google Maps service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="GOOGLE_MAPS_API_ERROR",
@@ -36,11 +35,10 @@ class GoogleMapsServiceError(CoreAPIError):
         )
         self.original_error = original_error
 
-
 class GoogleMapsService:
     """Direct Google Maps API service with async support and connection pooling."""
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(self, settings: Settings | None = None) -> None:
         """
         Initialize Google Maps service.
 
@@ -48,7 +46,7 @@ class GoogleMapsService:
             settings: Core application settings
         """
         self.settings = settings or get_settings()
-        self._client: Optional[googlemaps.Client] = None
+        self._client: googlemaps.Client | None = None
         self._connected = False
 
     @property
@@ -101,7 +99,7 @@ class GoogleMapsService:
         if not self._connected:
             await self.connect()
 
-    async def geocode(self, address: str, **kwargs) -> List[Dict[str, Any]]:
+    async def geocode(self, address: str, **kwargs) -> list[dict[str, Any]]:
         """
         Convert address to coordinates.
 
@@ -127,7 +125,7 @@ class GoogleMapsService:
 
     async def reverse_geocode(
         self, lat: float, lng: float, **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Convert coordinates to address.
 
@@ -163,10 +161,10 @@ class GoogleMapsService:
     async def search_places(
         self,
         query: str,
-        location: Optional[tuple] = None,
-        radius: Optional[int] = None,
+        location: tuple | None = None,
+        radius: int | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search for places using text search.
 
@@ -204,8 +202,8 @@ class GoogleMapsService:
             raise GoogleMapsServiceError(f"Place search failed: {e}", e) from e
 
     async def get_place_details(
-        self, place_id: str, fields: Optional[List[str]] = None, **kwargs
-    ) -> Dict[str, Any]:
+        self, place_id: str, fields: list[str] | None = None, **kwargs
+    ) -> dict[str, Any]:
         """
         Get detailed information about a specific place.
 
@@ -237,7 +235,7 @@ class GoogleMapsService:
 
     async def get_directions(
         self, origin: str, destination: str, mode: str = "driving", **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get directions between two locations.
 
@@ -278,11 +276,11 @@ class GoogleMapsService:
 
     async def distance_matrix(
         self,
-        origins: List[str],
-        destinations: List[str],
+        origins: list[str],
+        destinations: list[str],
         mode: str = "driving",
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calculate distance and time for multiple origins/destinations.
 
@@ -323,8 +321,8 @@ class GoogleMapsService:
             ) from e
 
     async def get_elevation(
-        self, locations: List[tuple], **kwargs
-    ) -> List[Dict[str, Any]]:
+        self, locations: list[tuple], **kwargs
+    ) -> list[dict[str, Any]]:
         """
         Get elevation data for locations.
 
@@ -349,8 +347,8 @@ class GoogleMapsService:
             raise GoogleMapsServiceError(f"Elevation request failed: {e}", e) from e
 
     async def get_timezone(
-        self, location: tuple, timestamp: Optional[int] = None, **kwargs
-    ) -> Dict[str, Any]:
+        self, location: tuple, timestamp: int | None = None, **kwargs
+    ) -> dict[str, Any]:
         """
         Get timezone information for a location.
 
@@ -400,10 +398,8 @@ class GoogleMapsService:
         """Close the service and clean up resources."""
         await self.disconnect()
 
-
 # Global service instance
-_google_maps_service: Optional[GoogleMapsService] = None
-
+_google_maps_service: GoogleMapsService | None = None
 
 async def get_google_maps_service() -> GoogleMapsService:
     """
@@ -419,7 +415,6 @@ async def get_google_maps_service() -> GoogleMapsService:
         await _google_maps_service.connect()
 
     return _google_maps_service
-
 
 async def close_google_maps_service() -> None:
     """Close the global Google Maps service instance."""

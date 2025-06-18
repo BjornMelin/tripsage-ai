@@ -18,7 +18,6 @@ from tripsage.api.core.dependencies import get_chat_service, require_principal
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
 
-
 class TestChatRouter:
     """Modern test suite for chat router endpoints."""
 

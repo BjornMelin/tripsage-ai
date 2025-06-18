@@ -8,7 +8,7 @@ import asyncio
 import os
 import sys
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Optional
 
 import asyncpg
 from rich.console import Console
@@ -44,11 +44,10 @@ REALTIME_TABLES = [
     "chat_tool_calls",
 ]
 
-
 class ExtensionVerifier:
     def __init__(self, database_url: str):
         self.database_url = database_url
-        self.connection: Optional[asyncpg.Connection] = None
+        self.connection: asyncpg.Connection | None = None
 
     async def connect(self):
         """Connect to the database."""
@@ -64,7 +63,7 @@ class ExtensionVerifier:
         if self.connection:
             await self.connection.close()
 
-    async def verify_extensions(self) -> Dict[str, bool]:
+    async def verify_extensions(self) -> dict[str, bool]:
         """Verify all required extensions are installed."""
         console.print("\n🔍 Checking Extensions...", style="bold blue")
 
@@ -357,7 +356,6 @@ class ExtensionVerifier:
 
         return all_passed
 
-
 async def main():
     """Main function."""
     # Get database URL from environment
@@ -378,7 +376,6 @@ async def main():
     success = await verifier.run_comprehensive_check()
 
     sys.exit(0 if success else 1)
-
 
 if __name__ == "__main__":
     asyncio.run(main())

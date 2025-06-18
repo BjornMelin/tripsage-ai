@@ -30,7 +30,6 @@ valid_api_keys = st.text(min_size=20, max_size=100).map(lambda x: f"sk-{x}")
 user_ids = st.uuids().map(str)
 key_names = st.text(min_size=1, max_size=100).filter(str.strip)
 
-
 class TestApiKeyServiceComprehensive:
     """Comprehensive test suite that works with the actual implementation."""
 

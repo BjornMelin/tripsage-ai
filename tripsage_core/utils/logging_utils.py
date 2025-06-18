@@ -11,18 +11,17 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from tripsage_core.config import get_settings
 
 # Cache of loggers to avoid creating multiple loggers for the same module
-_loggers: Dict[str, logging.Logger] = {}
-
+_loggers: dict[str, logging.Logger] = {}
 
 class ContextAdapter(logging.LoggerAdapter):
     """Adapter that adds context information to log records."""
 
-    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+    def process(self, msg: str, kwargs: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         """Process the log record by adding context information.
 
         Args:
@@ -44,7 +43,6 @@ class ContextAdapter(logging.LoggerAdapter):
 
         return msg, kwargs
 
-
 def _get_log_level() -> int:
     """Get the log level from settings."""
     settings = get_settings()
@@ -57,13 +55,12 @@ def _get_log_level() -> int:
     }
     return level_map.get(settings.log_level.upper(), logging.INFO)
 
-
 def configure_logging(
     name: str,
-    level: Optional[int] = None,
+    level: int | None = None,
     log_to_file: bool = True,
     log_dir: str = "logs",
-    context: Optional[Dict[str, Any]] = None,
+    context: dict[str, Any] | None = None,
 ) -> logging.LoggerAdapter:
     """Configure and return a logger with standardized settings.
 
@@ -116,10 +113,9 @@ def configure_logging(
     # Create and return a logger adapter with context
     return ContextAdapter(logger, {"context": context or {}})
 
-
 def get_logger(
-    name: str, level: Optional[int] = None, context: Optional[Dict[str, Any]] = None
-) -> Union[logging.Logger, logging.LoggerAdapter]:
+    name: str, level: int | None = None, context: dict[str, Any] | None = None
+) -> logging.Logger | logging.LoggerAdapter:
     """Get a logger for a module.
 
     This is a convenience function that should be used in each module:
@@ -165,8 +161,7 @@ def get_logger(
 
     return _loggers[name]
 
-
-def configure_root_logger(level: Optional[int] = None) -> None:
+def configure_root_logger(level: int | None = None) -> None:
     """Configure the root logger.
 
     Args:
@@ -196,12 +191,11 @@ def configure_root_logger(level: Optional[int] = None) -> None:
     # Add handler to root logger
     root_logger.addHandler(console_handler)
 
-
 # Utility function for structured logging
 def log_exception(
     logger: logging.Logger,
     exception: Exception,
-    context: Optional[Dict[str, Any]] = None,
+    context: dict[str, Any] | None = None,
 ) -> None:
     """Log an exception with context.
 

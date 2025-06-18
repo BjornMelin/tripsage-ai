@@ -7,7 +7,7 @@ in the database.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
@@ -17,7 +17,6 @@ from tripsage_core.services.infrastructure.database_service import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class SearchHistoryService:
     """Service for managing user search history."""
@@ -32,7 +31,7 @@ class SearchHistoryService:
 
     async def get_recent_searches(
         self, user_id: str, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get recent searches for a user.
 
         Args:
@@ -76,7 +75,7 @@ class SearchHistoryService:
 
     async def save_search(
         self, user_id: str, search_request: UnifiedSearchRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Save a search to the user's history.
 
         Args:
@@ -168,7 +167,7 @@ class SearchHistoryService:
             logger.error(f"Error deleting search {search_id} for user {user_id}: {e}")
             raise
 
-    def _determine_search_type(self, resource_types: Optional[List[str]]) -> str:
+    def _determine_search_type(self, resource_types: list[str] | None) -> str:
         """Determine the search type based on resource types.
 
         Args:
@@ -192,7 +191,6 @@ class SearchHistoryService:
             return type_map.get(resource_types[0], "unified")
 
         return "unified"
-
 
 async def get_search_history_service() -> SearchHistoryService:
     """Get an instance of the search history service.

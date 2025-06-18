@@ -6,7 +6,6 @@ versioning, and real-time updates following 2025 best practices.
 """
 
 from datetime import datetime, timezone
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -26,13 +25,12 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/config", tags=["configuration"])
 
-
 # WebSocket connection manager
 class ConfigurationWebSocketManager:
     """Manages WebSocket connections for real-time configuration updates."""
 
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -50,16 +48,13 @@ class ConfigurationWebSocketManager:
             except Exception:
                 self.disconnect(connection)
 
-
 # Global WebSocket manager using the imported schema
 ws_manager = ConfigurationWebSocketManager()
 
-
-@router.get("/agents", response_model=List[str])
+@router.get("/agents", response_model=list[str])
 async def list_agent_types():
     """List all available agent types."""
     return ["budget_agent", "destination_research_agent", "itinerary_agent"]
-
 
 @router.get("/agents/{agent_type}", response_model=AgentConfigResponse)
 async def get_agent_config(agent_type: str):
@@ -89,7 +84,6 @@ async def get_agent_config(agent_type: str):
     except Exception as e:
         logger.error(f"Error getting agent config for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @router.put("/agents/{agent_type}", response_model=AgentConfigResponse)
 async def update_agent_config(
@@ -163,8 +157,7 @@ async def update_agent_config(
         logger.error(f"Error updating agent config for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
-@router.get("/agents/{agent_type}/versions", response_model=List[ConfigurationVersion])
+@router.get("/agents/{agent_type}/versions", response_model=list[ConfigurationVersion])
 async def get_agent_config_versions(
     agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
 ):
@@ -187,7 +180,6 @@ async def get_agent_config_versions(
     except Exception as e:
         logger.error(f"Error getting config versions for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
-
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
 async def rollback_agent_config(
@@ -227,7 +219,6 @@ async def rollback_agent_config(
         logger.error(f"Error rolling back config for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-
 @router.get("/environment")
 async def get_environment_config():
     """Get current environment configuration summary."""
@@ -251,7 +242,6 @@ async def get_environment_config():
             "model": settings.openai_model,
         },
     }
-
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

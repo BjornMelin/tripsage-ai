@@ -18,7 +18,6 @@ from tripsage_core.services.business.memory_service import (
     MemoryService,
 )
 
-
 class TestMemoryPGVectorIntegration:
     """Test memory service integration with PGVectorService."""
 

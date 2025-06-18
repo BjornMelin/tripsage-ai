@@ -11,7 +11,6 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -37,7 +36,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 class ConnectionMigrationTester:
     """Test all database connections after migration to secure utilities."""
 
@@ -45,7 +43,7 @@ class ConnectionMigrationTester:
         self.settings = get_settings()
         self.manager = SecureDatabaseConnectionManager()
         self.converter = DatabaseURLConverter()
-        self.results: Dict[str, Dict] = {}
+        self.results: dict[str, dict] = {}
         self.start_time = datetime.utcnow()
 
     async def test_supabase_api_connection(self) -> bool:
@@ -495,7 +493,6 @@ class ConnectionMigrationTester:
             logger.info("\n✅ All database connections successfully migrated!")
             logger.info("The secure connection utilities are working correctly.")
 
-
 async def main():
     """Main entry point for migration testing."""
     tester = ConnectionMigrationTester()
@@ -503,7 +500,6 @@ async def main():
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
-
 
 if __name__ == "__main__":
     asyncio.run(main())

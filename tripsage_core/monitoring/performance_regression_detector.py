@@ -17,10 +17,10 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Optional
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
-
 
 class RegressionSeverity(Enum):
     """Severity levels for performance regressions."""
@@ -30,7 +30,6 @@ class RegressionSeverity(Enum):
     CRITICAL = "critical"
     EMERGENCY = "emergency"
 
-
 class TrendDirection(Enum):
     """Performance trend directions."""
 
@@ -38,7 +37,6 @@ class TrendDirection(Enum):
     STABLE = "stable"
     DEGRADING = "degrading"
     VOLATILE = "volatile"
-
 
 @dataclass
 class PerformanceDataPoint:
@@ -48,13 +46,12 @@ class PerformanceDataPoint:
     value: float
     operation: str
     table: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def age_minutes(self) -> float:
         """Get age of data point in minutes."""
         return (datetime.now(timezone.utc) - self.timestamp).total_seconds() / 60
-
 
 @dataclass
 class StatisticalBaseline:
@@ -70,11 +67,11 @@ class StatisticalBaseline:
     min_value: float
     max_value: float
     sample_count: int
-    confidence_interval: Tuple[float, float]
+    confidence_interval: tuple[float, float]
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
-    def is_anomaly(self, value: float, sensitivity: float = 2.0) -> Tuple[bool, float]:
+    def is_anomaly(self, value: float, sensitivity: float = 2.0) -> tuple[bool, float]:
         """Check if value is an anomaly using statistical methods.
 
         Args:
@@ -108,7 +105,6 @@ class StatisticalBaseline:
         else:
             return RegressionSeverity.INFO
 
-
 @dataclass
 class PerformanceTrend:
     """Performance trend analysis."""
@@ -130,7 +126,6 @@ class PerformanceTrend:
         """Check if trend is statistically significant."""
         return abs(self.correlation) > 0.7 and abs(self.change_percent) > 10.0
 
-
 @dataclass
 class RegressionAlert:
     """Performance regression alert."""
@@ -141,9 +136,9 @@ class RegressionAlert:
     baseline_p95: float
     z_score: float
     message: str
-    trend: Optional[PerformanceTrend] = None
-    recommendations: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    trend: PerformanceTrend | None = None
+    recommendations: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     acknowledged: bool = False
     resolved: bool = False
@@ -163,7 +158,6 @@ class RegressionAlert:
         self.metadata["resolved_at"] = datetime.now(timezone.utc).isoformat()
         if note:
             self.metadata["resolution_note"] = note
-
 
 class PerformanceRegressionDetector:
     """
@@ -211,18 +205,18 @@ class PerformanceRegressionDetector:
         self.enable_adaptive_thresholds = enable_adaptive_thresholds
 
         # Data storage
-        self._data_points: Dict[str, deque] = defaultdict(
+        self._data_points: dict[str, deque] = defaultdict(
             lambda: deque(maxlen=max_data_points)
         )
-        self._baselines: Dict[str, StatisticalBaseline] = {}
-        self._trends: Dict[str, PerformanceTrend] = {}
+        self._baselines: dict[str, StatisticalBaseline] = {}
+        self._trends: dict[str, PerformanceTrend] = {}
         self._alerts: deque = deque(maxlen=1000)
 
         # Alert callbacks
-        self._alert_callbacks: List[Callable[[RegressionAlert], None]] = []
+        self._alert_callbacks: list[Callable[[RegressionAlert], None]] = []
 
         # Background processing
-        self._processing_task: Optional[asyncio.Task] = None
+        self._processing_task: asyncio.Task | None = None
         self._running = False
 
         logger.info("Performance regression detector initialized")
@@ -258,7 +252,7 @@ class PerformanceRegressionDetector:
         value: float,
         operation: str = "unknown",
         table: str = "unknown",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Record a performance measurement.
 
@@ -539,7 +533,7 @@ class PerformanceRegressionDetector:
         data_point: PerformanceDataPoint,
         baseline: StatisticalBaseline,
         severity: RegressionSeverity,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate contextual recommendations for performance issues."""
         recommendations = []
 
@@ -638,20 +632,20 @@ class PerformanceRegressionDetector:
         if callback in self._alert_callbacks:
             self._alert_callbacks.remove(callback)
 
-    def get_baseline(self, metric_name: str) -> Optional[StatisticalBaseline]:
+    def get_baseline(self, metric_name: str) -> StatisticalBaseline | None:
         """Get baseline for a metric."""
         return self._baselines.get(metric_name)
 
-    def get_trend(self, metric_name: str) -> Optional[PerformanceTrend]:
+    def get_trend(self, metric_name: str) -> PerformanceTrend | None:
         """Get trend analysis for a metric."""
         return self._trends.get(metric_name)
 
     def get_recent_alerts(
         self,
         limit: int = 50,
-        severity: Optional[RegressionSeverity] = None,
+        severity: RegressionSeverity | None = None,
         unresolved_only: bool = False,
-    ) -> List[RegressionAlert]:
+    ) -> list[RegressionAlert]:
         """Get recent performance alerts."""
         alerts = list(self._alerts)
 
@@ -671,7 +665,7 @@ class PerformanceRegressionDetector:
                 return True
         return False
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of detector metrics."""
         total_alerts = len(self._alerts)
         critical_alerts = len(
@@ -697,10 +691,8 @@ class PerformanceRegressionDetector:
             },
         }
 
-
 # Global regression detector instance
-_regression_detector: Optional[PerformanceRegressionDetector] = None
-
+_regression_detector: PerformanceRegressionDetector | None = None
 
 async def get_regression_detector(**kwargs) -> PerformanceRegressionDetector:
     """Get or create global regression detector instance."""
@@ -711,7 +703,6 @@ async def get_regression_detector(**kwargs) -> PerformanceRegressionDetector:
         await _regression_detector.start()
 
     return _regression_detector
-
 
 async def close_regression_detector():
     """Close global regression detector instance."""

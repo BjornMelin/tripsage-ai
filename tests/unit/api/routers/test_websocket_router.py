@@ -19,7 +19,6 @@ from tests.test_config import MockCacheService, MockDatabaseService
 from tripsage.api.core.dependencies import get_db
 from tripsage.api.main import app
 
-
 class TestWebSocketRouter:
     """Modern test suite for websocket router endpoints."""
 

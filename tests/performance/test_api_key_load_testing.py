@@ -25,7 +25,6 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
-
 class ApiKeyLoadTestUser(HttpUser):
     """
     Locust user class simulating API key operations.
@@ -275,7 +274,6 @@ class ApiKeyLoadTestUser(HttpUser):
                 exception=e,
             )
 
-
 class HighFrequencyApiKeyUser(HttpUser):
     """
     High-frequency user simulating automated systems or heavy usage.
@@ -360,13 +358,11 @@ class HighFrequencyApiKeyUser(HttpUser):
                     exception=e,
                 )
 
-
 def create_load_test_environment():
     """Create a Locust environment for programmatic load testing."""
     env = Environment(user_classes=[ApiKeyLoadTestUser])
     env.create_local_runner()
     return env
-
 
 class TestApiKeyLoadTesting:
     """Test suite for load testing API key operations."""
@@ -584,7 +580,6 @@ class TestApiKeyLoadTesting:
             f"Performance degraded too much over time: {degradation:.2%}"
         )
 
-
 def run_performance_report():
     """Generate a comprehensive performance report."""
     print("\n" + "=" * 60)
@@ -602,7 +597,6 @@ def run_performance_report():
     print("- Set up alerting for response times > 500ms")
     print("- Consider rate limiting at 100 requests/minute per user")
     print("- Implement circuit breakers for external API calls")
-
 
 if __name__ == "__main__":
     # Can be run standalone for quick performance testing

@@ -25,7 +25,6 @@ from tripsage_core.services.infrastructure.websocket_manager import (
     websocket_manager,
 )
 
-
 class TestHeartbeatMechanisms:
     """Test heartbeat and keepalive mechanisms."""
 
@@ -136,7 +135,6 @@ class TestHeartbeatMechanisms:
         # Should attempt to disconnect stale connection
         assert "stale-conn" not in manager.connections
 
-
 class TestRateLimitingEdgeCases:
     """Test rate limiting edge cases and burst scenarios."""
 
@@ -242,7 +240,6 @@ class TestRateLimitingEdgeCases:
             await manager.send_to_connection(conn_id, event)
             # Result depends on rate limiter configuration
 
-
 class TestMessagePrioritization:
     """Test message priority queuing and processing."""
 
@@ -315,7 +312,6 @@ class TestMessagePrioritization:
         # Should handle expired messages gracefully
         await connection.send(expired_event)
         # Implementation doesn't check expiration, but this tests the field exists
-
 
 class TestRedisIntegrationFailures:
     """Test Redis/DragonflyDB integration failure scenarios."""
@@ -393,7 +389,6 @@ class TestRedisIntegrationFailures:
 
         # Should attempt to send to subscribed connection
         assert mock_conn.send.called
-
 
 class TestConcurrentOperations:
     """Test concurrent WebSocket operations."""
@@ -504,7 +499,6 @@ class TestConcurrentOperations:
 
         assert sent_count == num_connections
 
-
 class TestConnectionStateTransitions:
     """Test all connection state transitions."""
 
@@ -567,7 +561,6 @@ class TestConnectionStateTransitions:
         # Reset after successful connection
         connection.backoff.reset()
         assert connection.backoff.attempt_count == 0
-
 
 class TestPerformanceOptimization:
     """Test performance optimization features."""
@@ -644,7 +637,6 @@ class TestPerformanceOptimization:
         assert connection.priority_queue[1].maxlen == 100
         assert connection.priority_queue[2].maxlen == 500
         assert connection.priority_queue[3].maxlen == 1000
-
 
 # Run specific test scenarios
 if __name__ == "__main__":

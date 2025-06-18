@@ -20,7 +20,6 @@ from tripsage_core.models.db.chat import ChatMessageDB, ChatSessionDB
 from tripsage_core.models.db.user import User
 from tripsage_core.services.business.chat_service import ChatService as CoreChatService
 
-
 class TestChatSessionFlow:
     """Test complete chat session management flow."""
 

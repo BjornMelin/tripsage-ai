@@ -8,7 +8,7 @@ Refactored to support dependency injection and service-based architecture.
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.state import TravelPlanningState, update_state_timestamp
@@ -16,12 +16,10 @@ from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageErr
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
-
 class BaseAgentNodeError(TripSageError):
     """Error raised when agent node operations fail."""
 
     pass
-
 
 class BaseAgentNode(ABC):
     """
@@ -35,7 +33,7 @@ class BaseAgentNode(ABC):
         self,
         node_name: str,
         service_registry: ServiceRegistry,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ):
         """
         Initialize the base agent node with dependency injection.
@@ -161,7 +159,7 @@ class BaseAgentNode(ABC):
 
         return state
 
-    def _extract_user_intent(self, message: str) -> Dict[str, Any]:
+    def _extract_user_intent(self, message: str) -> dict[str, Any]:
         """
         Extract user intent from a message (default implementation).
 
@@ -181,8 +179,8 @@ class BaseAgentNode(ABC):
         }
 
     def _create_response_message(
-        self, content: str, additional_data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, content: str, additional_data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Create a standardized response message.
 

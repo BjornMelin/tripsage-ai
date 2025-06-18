@@ -15,7 +15,8 @@ import json
 import logging
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from pydantic import BaseModel, Field
@@ -34,7 +35,6 @@ from tripsage_core.services.business.audit_logging_service import (
 
 logger = logging.getLogger(__name__)
 
-
 class RateLimitConfig(BaseModel):
     """Configuration for rate limiting with enhanced features."""
 
@@ -48,7 +48,7 @@ class RateLimitConfig(BaseModel):
     refill_rate: float = Field(default=1.0, gt=0)  # tokens per second
 
     # Service-specific multipliers
-    service_multipliers: Dict[str, float] = Field(default_factory=dict)
+    service_multipliers: dict[str, float] = Field(default_factory=dict)
 
     # Advanced features
     enable_sliding_window: bool = True
@@ -56,11 +56,11 @@ class RateLimitConfig(BaseModel):
     enable_burst_protection: bool = True
 
     # Custom limits per endpoint pattern
-    endpoint_overrides: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+    endpoint_overrides: dict[str, dict[str, int]] = Field(default_factory=dict)
 
     def get_effective_limits(
-        self, service: Optional[str] = None, endpoint: Optional[str] = None
-    ) -> Dict[str, int]:
+        self, service: str | None = None, endpoint: str | None = None
+    ) -> dict[str, int]:
         """Get effective rate limits for a service/endpoint combination."""
         multiplier = self.service_multipliers.get(service, 1.0) if service else 1.0
 
@@ -92,7 +92,6 @@ class RateLimitConfig(BaseModel):
             "burst_size": int(self.burst_size * multiplier),
         }
 
-
 class RateLimitResult(BaseModel):
     """Result of a rate limit check."""
 
@@ -105,10 +104,9 @@ class RateLimitResult(BaseModel):
     retry_after_seconds: int = 0
 
     # Additional metadata
-    tokens_remaining: Optional[float] = None
-    window_start: Optional[datetime] = None
+    tokens_remaining: float | None = None
+    window_start: datetime | None = None
     algorithm: str = "sliding_window"  # 'sliding_window', 'token_bucket'
-
 
 class RateLimiter:
     """Base rate limiter interface with enhanced capabilities."""
@@ -117,8 +115,8 @@ class RateLimiter:
         self,
         key: str,
         config: RateLimitConfig,
-        service: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        service: str | None = None,
+        endpoint: str | None = None,
         cost: int = 1,
     ) -> RateLimitResult:
         """Check if a request should be rate limited.
@@ -146,20 +144,19 @@ class RateLimiter:
         """
         raise NotImplementedError
 
-
 class InMemoryRateLimiter(RateLimiter):
     """Enhanced in-memory rate limiter with sliding window and token bucket."""
 
     def __init__(self):
-        self.requests: Dict[str, list] = {}
-        self.token_buckets: Dict[str, Dict[str, Any]] = {}
+        self.requests: dict[str, list] = {}
+        self.token_buckets: dict[str, dict[str, Any]] = {}
 
     async def check_rate_limit(
         self,
         key: str,
         config: RateLimitConfig,
-        service: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        service: str | None = None,
+        endpoint: str | None = None,
         cost: int = 1,
     ) -> RateLimitResult:
         """Check rate limit using sliding window algorithm."""
@@ -251,7 +248,6 @@ class InMemoryRateLimiter(RateLimiter):
             del self.token_buckets[key]
         return True
 
-
 class DragonflyRateLimiter(RateLimiter):
     """Production-ready DragonflyDB-based rate limiter with hybrid algorithms."""
 
@@ -275,8 +271,8 @@ class DragonflyRateLimiter(RateLimiter):
         self,
         key: str,
         config: RateLimitConfig,
-        service: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        service: str | None = None,
+        endpoint: str | None = None,
         cost: int = 1,
     ) -> RateLimitResult:
         """Check rate limit using hybrid sliding window + token bucket algorithm."""
@@ -354,7 +350,7 @@ class DragonflyRateLimiter(RateLimiter):
         self,
         key: str,
         config: RateLimitConfig,
-        limits: Dict[str, int],
+        limits: dict[str, int],
         cost: int,
         current_time: float,
         current_dt: datetime,
@@ -430,12 +426,12 @@ class DragonflyRateLimiter(RateLimiter):
         self,
         key: str,
         config: RateLimitConfig,
-        limits: Dict[str, int],
+        limits: dict[str, int],
         cost: int,
         current_time: float,
         current_dt: datetime,
-        service: Optional[str],
-        endpoint: Optional[str],
+        service: str | None,
+        endpoint: str | None,
     ) -> RateLimitResult:
         """Check sliding windows for sustained rate limits."""
         windows = [
@@ -515,7 +511,7 @@ class DragonflyRateLimiter(RateLimiter):
         )
 
     async def _track_rate_limit_hit(
-        self, key: str, service: Optional[str], limit_type: str, result: RateLimitResult
+        self, key: str, service: str | None, limit_type: str, result: RateLimitResult
     ):
         """Track rate limit hits for monitoring."""
         if self.monitoring_service:
@@ -542,8 +538,8 @@ class DragonflyRateLimiter(RateLimiter):
     async def _record_request(
         self,
         key: str,
-        service: Optional[str],
-        endpoint: Optional[str],
+        service: str | None,
+        endpoint: str | None,
         timestamp: float,
     ):
         """Record successful request for analytics."""
@@ -598,7 +594,6 @@ class DragonflyRateLimiter(RateLimiter):
             logger.error(f"Failed to reset rate limits for {key}: {e}")
             return False
 
-
 class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     """Production-ready rate limiting middleware with comprehensive features.
 
@@ -616,7 +611,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        settings: Optional[Settings] = None,
+        settings: Settings | None = None,
         use_dragonfly: bool = True,
         monitoring_service=None,
     ):
@@ -654,7 +649,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         # Define comprehensive rate limit configurations
         self.configs = self._create_rate_limit_configs()
 
-    def _create_rate_limit_configs(self) -> Dict[str, RateLimitConfig]:
+    def _create_rate_limit_configs(self) -> dict[str, RateLimitConfig]:
         """Create comprehensive rate limit configurations."""
         return {
             # Base configurations
@@ -795,7 +790,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _get_rate_limit_context(self, request: Request) -> Dict[str, Any]:
+    def _get_rate_limit_context(self, request: Request) -> dict[str, Any]:
         """Get comprehensive rate limit context for the request."""
         principal = getattr(request.state, "principal", None)
         path = request.url.path
@@ -940,7 +935,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     def _create_rate_limit_response(
-        self, result: RateLimitResult, context: Dict[str, Any]
+        self, result: RateLimitResult, context: dict[str, Any]
     ) -> Response:
         """Create a comprehensive 429 response."""
         retry_after = result.retry_after_seconds
@@ -1005,7 +1000,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _add_rate_limit_headers(
-        self, response: Response, result: RateLimitResult, context: Dict[str, Any]
+        self, response: Response, result: RateLimitResult, context: dict[str, Any]
     ):
         """Add comprehensive rate limit headers to successful responses."""
         headers = {
@@ -1066,7 +1061,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             return False
 
     async def _track_rate_limit_violation(
-        self, request: Request, context: Dict[str, Any], result: RateLimitResult
+        self, request: Request, context: dict[str, Any], result: RateLimitResult
     ):
         """Track rate limit violations for monitoring and analytics."""
         if self.monitoring_service:
@@ -1162,7 +1157,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     async def _track_successful_request(
         self,
         request: Request,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         start_time: float,
         response: Response,
     ):
@@ -1201,12 +1196,10 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 logger.debug(f"Failed to track successful request: {e}")
 
-
 # Configuration helper functions
-def create_rate_limit_config_from_dict(config_dict: Dict[str, Any]) -> RateLimitConfig:
+def create_rate_limit_config_from_dict(config_dict: dict[str, Any]) -> RateLimitConfig:
     """Create a RateLimitConfig from a dictionary (useful for dynamic configuration)."""
     return RateLimitConfig(**config_dict)
-
 
 def create_rate_limit_config_from_settings(
     settings: Settings, tier: str = "user"
@@ -1251,11 +1244,10 @@ def create_rate_limit_config_from_settings(
 
     return base_config
 
-
 def get_default_rate_limit_middleware(
     app: ASGIApp,
-    settings: Optional[Settings] = None,
-    use_dragonfly: Optional[bool] = None,
+    settings: Settings | None = None,
+    use_dragonfly: bool | None = None,
     monitoring_service=None,
 ) -> EnhancedRateLimitMiddleware:
     """Get a pre-configured rate limiting middleware with sensible defaults."""
@@ -1272,10 +1264,9 @@ def get_default_rate_limit_middleware(
         monitoring_service=monitoring_service,
     )
 
-
 def create_middleware_from_settings(
-    app: ASGIApp, settings: Optional[Settings] = None
-) -> Optional[EnhancedRateLimitMiddleware]:
+    app: ASGIApp, settings: Settings | None = None
+) -> EnhancedRateLimitMiddleware | None:
     """Create rate limiting middleware from settings if enabled.
 
     Args:

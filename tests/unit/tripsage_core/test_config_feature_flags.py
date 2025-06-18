@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 from tripsage_core.config import Settings, get_settings
 
-
 class TestConfigurationFeatureFlags:
     """Test configuration and feature flag functionality."""
 
@@ -287,7 +286,6 @@ class TestConfigurationFeatureFlags:
             assert settings.enable_database_monitoring is False
             assert settings.enable_prometheus_metrics is False
             assert settings.enable_security_monitoring is False
-
 
 class TestSettingsIntegration:
     """Test settings integration with monitoring components."""

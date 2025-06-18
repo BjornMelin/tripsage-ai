@@ -11,7 +11,7 @@ This service consolidates all WebSocket message sending logic including:
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -21,22 +21,21 @@ from .websocket_connection_service import WebSocketConnection
 
 logger = logging.getLogger(__name__)
 
-
 class WebSocketEvent(BaseModel):
     """Enhanced WebSocket event model."""
 
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    user_id: Optional[UUID] = None
-    session_id: Optional[UUID] = None
-    connection_id: Optional[str] = None
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    user_id: UUID | None = None
+    session_id: UUID | None = None
+    connection_id: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
     priority: int = Field(default=1, description="1=high, 2=medium, 3=low")
     retry_count: int = Field(default=0)
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert event to serializable dictionary for WebSocket transmission.
 
         Centralized JSON serialization logic to address code review comment.
@@ -53,7 +52,6 @@ class WebSocketEvent(BaseModel):
             "retry_count": self.retry_count,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }
-
 
 class WebSocketEventType:
     """WebSocket event type constants."""
@@ -95,7 +93,6 @@ class WebSocketEventType:
     RATE_LIMIT_WARNING = "rate_limit.warning"
     RATE_LIMIT_EXCEEDED = "rate_limit.exceeded"
 
-
 class WebSocketMessagingService:
     """Service for consolidating WebSocket messaging operations."""
 
@@ -103,10 +100,10 @@ class WebSocketMessagingService:
         self.auth_service = auth_service
 
         # Connection tracking
-        self.connections: Dict[str, WebSocketConnection] = {}
-        self.user_connections: Dict[UUID, Set[str]] = {}
-        self.session_connections: Dict[UUID, Set[str]] = {}
-        self.channel_connections: Dict[str, Set[str]] = {}
+        self.connections: dict[str, WebSocketConnection] = {}
+        self.user_connections: dict[UUID, set[str]] = {}
+        self.session_connections: dict[UUID, set[str]] = {}
+        self.channel_connections: dict[str, set[str]] = {}
 
         # Performance metrics
         self.performance_metrics = {
@@ -293,7 +290,7 @@ class WebSocketMessagingService:
     async def send_by_target(
         self,
         target_type: str,
-        target_id: Optional[str],
+        target_id: str | None,
         event: WebSocketEvent,
         rate_limiter=None,
     ) -> int:
@@ -316,7 +313,7 @@ class WebSocketMessagingService:
             logger.warning(f"Unknown target type: {target_type}")
             return 0
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """Get messaging statistics."""
         total_queued = sum(
             len(conn.message_queue) + sum(len(q) for q in conn.priority_queue.values())

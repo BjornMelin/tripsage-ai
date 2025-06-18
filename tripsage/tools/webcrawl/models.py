@@ -1,10 +1,9 @@
 """Unified web crawl output schema for normalizing results from different crawlers."""
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
-
 
 class UnifiedCrawlResult(BaseModel):
     """
@@ -12,29 +11,29 @@ class UnifiedCrawlResult(BaseModel):
     """
 
     url: str = Field(..., description="The URL that was crawled")
-    title: Optional[str] = Field(
+    title: str | None = Field(
         None, description="Page title extracted from the content"
     )
-    main_content_markdown: Optional[str] = Field(
+    main_content_markdown: str | None = Field(
         None, description="Main content in markdown format"
     )
-    main_content_text: Optional[str] = Field(
+    main_content_text: str | None = Field(
         None, description="Main content as plain text"
     )
-    html_content: Optional[str] = Field(
+    html_content: str | None = Field(
         None, description="Raw HTML content if available"
     )
-    structured_data: Optional[Dict[str, Any]] = Field(
+    structured_data: dict[str, Any] | None = Field(
         None,
         description=(
             "Structured data extracted from the page (e.g., JSON-LD, OpenGraph)"
         ),
     )
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata about the crawl operation",
     )
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         None, description="Error message if crawl failed"
     )
     status: str = Field("success", description="Status of the crawl operation")
@@ -59,7 +58,7 @@ class UnifiedCrawlResult(BaseModel):
     }
 
     @property
-    def crawl_timestamp(self) -> Optional[datetime]:
+    def crawl_timestamp(self) -> datetime | None:
         """Get the crawl timestamp from metadata if available."""
         timestamp = self.metadata.get("crawl_timestamp")
         if timestamp and isinstance(timestamp, str):
@@ -72,7 +71,7 @@ class UnifiedCrawlResult(BaseModel):
         return None
 
     @property
-    def source_crawler(self) -> Optional[str]:
+    def source_crawler(self) -> str | None:
         """Get the source crawler from metadata if available."""
         return self.metadata.get("source_crawler")
 

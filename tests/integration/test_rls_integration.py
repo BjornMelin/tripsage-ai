@@ -15,9 +15,8 @@ from supabase import Client, create_client
 # Load environment variables
 load_dotenv()
 
-
 @pytest.fixture
-def supabase_client() -> Optional[Client]:
+def supabase_client() -> Client | None:
     """Create Supabase client if credentials are available."""
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_ANON_KEY")
@@ -28,9 +27,8 @@ def supabase_client() -> Optional[Client]:
 
     return create_client(url, key)
 
-
 @pytest.fixture
-def service_client() -> Optional[Client]:
+def service_client() -> Client | None:
     """Create service role client for test setup."""
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_SERVICE_KEY")
@@ -40,7 +38,6 @@ def service_client() -> Optional[Client]:
         return None
 
     return create_client(url, key)
-
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -104,7 +101,6 @@ async def test_trip_user_isolation(supabase_client: Client, service_client: Clie
             # Delete test users
             service_client.auth.admin.delete_user(auth1.user.id)
             service_client.auth.admin.delete_user(auth2.user.id)
-
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -223,7 +219,6 @@ async def test_trip_collaboration_permissions(
                 service_client.auth.admin.delete_user(viewer_id)
             if editor_id:
                 service_client.auth.admin.delete_user(editor_id)
-
 
 @pytest.mark.integration
 @pytest.mark.asyncio

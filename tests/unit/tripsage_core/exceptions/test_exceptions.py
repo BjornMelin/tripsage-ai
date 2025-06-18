@@ -30,7 +30,6 @@ from tripsage_core.exceptions.exceptions import (
     with_error_handling,
 )
 
-
 class TestErrorDetails:
     """Test ErrorDetails model."""
 
@@ -72,7 +71,6 @@ class TestErrorDetails:
             "additional_context": {"nested": {"data": 123}},
         }
         assert serialized == expected
-
 
 class TestCoreTripSageError:
     """Test base CoreTripSageError class."""
@@ -133,7 +131,6 @@ class TestCoreTripSageError:
         assert "CoreTripSageError" in repr(error)
         assert "TEST_ERROR" in repr(error)
         assert "Test message" in repr(error)
-
 
 class TestSpecificExceptions:
     """Test specific exception types."""
@@ -223,7 +220,6 @@ class TestSpecificExceptions:
         assert error.message == "Agent failed"
         assert error.details.service == "test_agent"
 
-
 class TestUtilityFunctions:
     """Test utility functions."""
 
@@ -302,7 +298,6 @@ class TestUtilityFunctions:
         result = failing_func()
         assert result == "default"
 
-
 class TestErrorCreationHelpers:
     """Test error creation helper functions."""
 
@@ -333,7 +328,6 @@ class TestErrorCreationHelpers:
         assert isinstance(error, CoreResourceNotFoundError)
         assert error.message == "Resource missing"
         assert error.code == "RESOURCE_NOT_FOUND"
-
 
 class TestErrorInheritance:
     """Test exception inheritance relationships."""
@@ -367,7 +361,6 @@ class TestErrorInheritance:
         assert isinstance(agent_error, CoreServiceError)
         assert isinstance(mcp_error, CoreTripSageError)
         assert isinstance(agent_error, CoreTripSageError)
-
 
 class TestErrorWithComplexDetails:
     """Test errors with complex detail structures."""

@@ -11,7 +11,6 @@ from uuid import uuid4
 
 import pytest
 
-
 class TestRLSPolicyValidation:
     """Test suite for RLS policy validation and security enforcement."""
 

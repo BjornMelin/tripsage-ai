@@ -11,7 +11,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -25,11 +25,10 @@ from tripsage_core.models.attachments import (
     FileType,
 )
 
-
 class DocumentAnalyzerError(CoreAPIError):
     """Exception raised for document analyzer errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="DOCUMENT_ANALYZER_ERROR",
@@ -38,7 +37,6 @@ class DocumentAnalyzerError(CoreAPIError):
         )
         self.original_error = original_error
 
-
 class AnalysisContext(BaseModel):
     """Context for document analysis."""
 
@@ -46,32 +44,30 @@ class AnalysisContext(BaseModel):
     file_path: Path = Field(..., description="Path to file on disk")
     mime_type: str = Field(..., description="MIME type of file")
     file_type: FileType = Field(..., description="Categorized file type")
-    user_context: Optional[str] = Field(None, description="User-provided context")
-
+    user_context: str | None = Field(None, description="User-provided context")
 
 class TravelInformation(BaseModel):
     """Extracted travel-related information."""
 
-    destinations: List[str] = Field(
+    destinations: list[str] = Field(
         default_factory=list, description="Mentioned destinations"
     )
-    dates: List[str] = Field(default_factory=list, description="Travel dates")
-    accommodations: List[Dict[str, str]] = Field(
+    dates: list[str] = Field(default_factory=list, description="Travel dates")
+    accommodations: list[dict[str, str]] = Field(
         default_factory=list, description="Accommodation details"
     )
-    flights: List[Dict[str, str]] = Field(
+    flights: list[dict[str, str]] = Field(
         default_factory=list, description="Flight information"
     )
-    activities: List[str] = Field(
+    activities: list[str] = Field(
         default_factory=list, description="Planned activities"
     )
-    budget_info: Optional[Dict[str, Any]] = Field(
+    budget_info: dict[str, Any] | None = Field(
         None, description="Budget-related information"
     )
-    contact_info: List[Dict[str, str]] = Field(
+    contact_info: list[dict[str, str]] = Field(
         default_factory=list, description="Important contact information"
     )
-
 
 class DocumentAnalyzer:
     """
@@ -81,7 +77,7 @@ class DocumentAnalyzer:
     using appropriate extraction methods based on file type.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """
         Initialize document analyzer.
 
@@ -237,7 +233,7 @@ class DocumentAnalyzer:
                     original_error=e,
                 ) from e
 
-    async def _extract_text_content(self, context: AnalysisContext) -> Optional[str]:
+    async def _extract_text_content(self, context: AnalysisContext) -> str | None:
         """
         Extract text content from file based on type.
 
@@ -301,7 +297,7 @@ class DocumentAnalyzer:
                     content = content[: self.max_text_length]
                 return content
 
-    async def _extract_text_from_pdf(self, file_path: Path) -> Optional[str]:
+    async def _extract_text_from_pdf(self, file_path: Path) -> str | None:
         """
         Extract text from PDF file.
 
@@ -328,7 +324,7 @@ class DocumentAnalyzer:
                 content = content[: self.max_text_length]
             return content
 
-    async def _extract_text_from_image(self, file_path: Path) -> Optional[str]:
+    async def _extract_text_from_image(self, file_path: Path) -> str | None:
         """
         Extract text from image using OCR.
 
@@ -338,7 +334,7 @@ class DocumentAnalyzer:
         # Placeholder implementation
         return f"OCR text extraction not yet implemented for {file_path.name}"
 
-    async def _extract_text_from_office_doc(self, file_path: Path) -> Optional[str]:
+    async def _extract_text_from_office_doc(self, file_path: Path) -> str | None:
         """
         Extract text from Office documents.
 
@@ -351,8 +347,8 @@ class DocumentAnalyzer:
         )
 
     async def _analyze_text_with_ai(
-        self, text: str, analysis_type: str, user_context: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, text: str, analysis_type: str, user_context: str | None = None
+    ) -> dict[str, Any]:
         """
         Analyze extracted text using AI.
 
@@ -398,7 +394,7 @@ class DocumentAnalyzer:
 
         return mock_analysis
 
-    def _extract_basic_entities(self, text: str) -> Dict[str, List[str]]:
+    def _extract_basic_entities(self, text: str) -> dict[str, list[str]]:
         """
         Extract basic entities from text using enhanced pattern matching.
 
@@ -472,7 +468,7 @@ class DocumentAnalyzer:
 
         return entities
 
-    def _find_travel_keywords(self, text: str) -> List[str]:
+    def _find_travel_keywords(self, text: str) -> list[str]:
         """Find travel-related keywords in text with enhanced matching."""
         travel_keywords = {
             # Transportation
@@ -542,8 +538,8 @@ class DocumentAnalyzer:
         return found_keywords
 
     def _extract_travel_information(
-        self, analysis_results: Dict[str, Any], text: str
-    ) -> Optional[TravelInformation]:
+        self, analysis_results: dict[str, Any], text: str
+    ) -> TravelInformation | None:
         """
         Extract structured travel information from analysis results.
 
@@ -625,7 +621,7 @@ class DocumentAnalyzer:
         except Exception:
             return None
 
-    def _calculate_confidence_score(self, analysis_results: Dict[str, Any]) -> float:
+    def _calculate_confidence_score(self, analysis_results: dict[str, Any]) -> float:
         """
         Calculate confidence score for analysis results.
 
@@ -659,7 +655,7 @@ class DocumentAnalyzer:
 
         return min(1.0, score)
 
-    async def get_supported_analysis_types(self) -> List[str]:
+    async def get_supported_analysis_types(self) -> list[str]:
         """
         Get list of supported analysis types.
 
@@ -669,8 +665,8 @@ class DocumentAnalyzer:
         return list(self.analysis_templates.keys())
 
     async def batch_analyze_documents(
-        self, contexts: List[AnalysisContext], analysis_type: str = "general"
-    ) -> List[DocumentAnalysisResult]:
+        self, contexts: list[AnalysisContext], analysis_type: str = "general"
+    ) -> list[DocumentAnalysisResult]:
         """
         Analyze multiple documents in batch.
 
@@ -774,10 +770,8 @@ class DocumentAnalyzer:
         """Async context manager exit."""
         await self.close()
 
-
 # Global service instance
-_document_analyzer: Optional[DocumentAnalyzer] = None
-
+_document_analyzer: DocumentAnalyzer | None = None
 
 async def get_document_analyzer() -> DocumentAnalyzer:
     """
@@ -794,7 +788,6 @@ async def get_document_analyzer() -> DocumentAnalyzer:
 
     return _document_analyzer
 
-
 async def close_document_analyzer() -> None:
     """Close the global document analyzer instance."""
     global _document_analyzer
@@ -802,7 +795,6 @@ async def close_document_analyzer() -> None:
     if _document_analyzer:
         await _document_analyzer.close()
         _document_analyzer = None
-
 
 __all__ = [
     "DocumentAnalyzer",

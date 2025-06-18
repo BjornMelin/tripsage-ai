@@ -8,7 +8,7 @@ and confidence scoring.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -19,7 +19,6 @@ from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class RouterNode(BaseAgentNode):
     """
@@ -199,8 +198,8 @@ class RouterNode(BaseAgentNode):
         return state
 
     async def _classify_intent(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Classify user intent using semantic analysis.
 
@@ -251,7 +250,7 @@ class RouterNode(BaseAgentNode):
             }
 
     def _build_classification_prompt(
-        self, message: str, context: Dict[str, Any]
+        self, message: str, context: dict[str, Any]
     ) -> str:
         """
         Build the classification prompt for intent detection.
@@ -300,7 +299,7 @@ class RouterNode(BaseAgentNode):
         {{"agent": "agent_name", "confidence": 0.9, "reasoning": "brief explanation"}}
         """
 
-    def _build_conversation_context(self, state: TravelPlanningState) -> Dict[str, Any]:
+    def _build_conversation_context(self, state: TravelPlanningState) -> dict[str, Any]:
         """
         Build conversation context for better routing decisions.
 
@@ -336,7 +335,7 @@ class RouterNode(BaseAgentNode):
 
         return context
 
-    def _validate_classification(self, classification: Dict[str, Any]) -> bool:
+    def _validate_classification(self, classification: dict[str, Any]) -> bool:
         """
         Validate the classification result.
 
@@ -384,8 +383,8 @@ class RouterNode(BaseAgentNode):
         return True
 
     async def _enhanced_classification_with_fallback(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Enhanced classification with multiple fallback strategies.
 
@@ -417,7 +416,7 @@ class RouterNode(BaseAgentNode):
             logger.error(f"Enhanced classification failed: {str(e)}")
             return self._get_safe_fallback_classification()
 
-    def _keyword_based_classification(self, message: str) -> Dict[str, Any]:
+    def _keyword_based_classification(self, message: str) -> dict[str, Any]:
         """
         Keyword-based classification as fallback.
 
@@ -471,7 +470,7 @@ class RouterNode(BaseAgentNode):
         else:
             return self._get_safe_fallback_classification()
 
-    def _get_safe_fallback_classification(self) -> Dict[str, Any]:
+    def _get_safe_fallback_classification(self) -> dict[str, Any]:
         """Get a safe fallback classification."""
         return {
             "agent": "general_agent",

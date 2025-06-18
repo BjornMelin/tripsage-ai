@@ -6,7 +6,7 @@ retrieval, updates, sharing, and collaboration features.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import Field, field_validator
@@ -34,30 +34,28 @@ from tripsage_core.models.trip import (
 
 logger = logging.getLogger(__name__)
 
-
 class TripLocation(TripSageModel):
     """Trip location information."""
 
     name: str = Field(..., description="Location name")
-    country: Optional[str] = Field(None, description="Country")
-    city: Optional[str] = Field(None, description="City")
-    coordinates: Optional[Dict[str, float]] = Field(
+    country: str | None = Field(None, description="Country")
+    city: str | None = Field(None, description="City")
+    coordinates: dict[str, float] | None = Field(
         None, description="Lat/lng coordinates"
     )
-    timezone: Optional[str] = Field(None, description="Location timezone")
-
+    timezone: str | None = Field(None, description="Location timezone")
 
 class TripCreateRequest(TripSageModel):
     """Request model for trip creation."""
 
     title: str = Field(..., min_length=1, max_length=200, description="Trip title")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, max_length=2000, description="Trip description"
     )
     start_date: datetime = Field(..., description="Trip start date")
     end_date: datetime = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination")
-    destinations: List[TripLocation] = Field(
+    destinations: list[TripLocation] = Field(
         default_factory=list, description="Trip destinations"
     )
     budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
@@ -66,8 +64,8 @@ class TripCreateRequest(TripSageModel):
     visibility: TripVisibility = Field(
         default=TripVisibility.PRIVATE, description="Trip visibility"
     )
-    tags: List[str] = Field(default_factory=list, description="Trip tags")
-    preferences: Optional[TripPreferences] = Field(None, description="Trip preferences")
+    tags: list[str] = Field(default_factory=list, description="Trip tags")
+    preferences: TripPreferences | None = Field(None, description="Trip preferences")
 
     @field_validator("end_date")
     @classmethod
@@ -77,24 +75,22 @@ class TripCreateRequest(TripSageModel):
             raise ValueError("End date must be after start date")
         return v
 
-
 class TripUpdateRequest(TripSageModel):
     """Request model for trip updates."""
 
-    title: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = Field(None, max_length=2000)
-    start_date: Optional[datetime] = Field(None)
-    end_date: Optional[datetime] = Field(None)
-    destination: Optional[str] = Field(None)
-    destinations: Optional[List[TripLocation]] = Field(None)
-    budget: Optional[EnhancedBudget] = Field(None)
-    travelers: Optional[int] = Field(None, ge=1)
-    trip_type: Optional[TripType] = Field(None)
-    visibility: Optional[TripVisibility] = Field(None)
-    tags: Optional[List[str]] = Field(None)
-    preferences: Optional[TripPreferences] = Field(None)
-    status: Optional[TripStatus] = Field(None)
-
+    title: str | None = Field(None, min_length=1, max_length=200)
+    description: str | None = Field(None, max_length=2000)
+    start_date: datetime | None = Field(None)
+    end_date: datetime | None = Field(None)
+    destination: str | None = Field(None)
+    destinations: list[TripLocation] | None = Field(None)
+    budget: EnhancedBudget | None = Field(None)
+    travelers: int | None = Field(None, ge=1)
+    trip_type: TripType | None = Field(None)
+    visibility: TripVisibility | None = Field(None)
+    tags: list[str] | None = Field(None)
+    preferences: TripPreferences | None = Field(None)
+    status: TripStatus | None = Field(None)
 
 class TripResponse(TripSageModel):
     """Response model for trip data."""
@@ -102,11 +98,11 @@ class TripResponse(TripSageModel):
     id: UUID = Field(..., description="Trip ID")
     user_id: UUID = Field(..., description="Owner user ID")
     title: str = Field(..., description="Trip title")
-    description: Optional[str] = Field(None, description="Trip description")
+    description: str | None = Field(None, description="Trip description")
     start_date: datetime = Field(..., description="Trip start date")
     end_date: datetime = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination")
-    destinations: List[TripLocation] = Field(
+    destinations: list[TripLocation] = Field(
         default_factory=list, description="Trip destinations"
     )
     budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
@@ -114,7 +110,7 @@ class TripResponse(TripSageModel):
     trip_type: TripType = Field(..., description="Type of trip")
     status: TripStatus = Field(..., description="Trip status")
     visibility: TripVisibility = Field(..., description="Trip visibility")
-    tags: List[str] = Field(default_factory=list, description="Trip tags")
+    tags: list[str] = Field(default_factory=list, description="Trip tags")
     preferences: TripPreferences = Field(..., description="Trip preferences")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
@@ -123,10 +119,9 @@ class TripResponse(TripSageModel):
     note_count: int = Field(default=0, description="Number of notes")
     attachment_count: int = Field(default=0, description="Number of attachments")
     collaborator_count: int = Field(default=0, description="Number of collaborators")
-    shared_with: List[str] = Field(
+    shared_with: list[str] = Field(
         default_factory=list, description="User IDs trip is shared with"
     )
-
 
 class TripService:
     """Service for managing trips."""
@@ -205,7 +200,7 @@ class TripService:
             )
             raise
 
-    async def get_trip(self, trip_id: str, user_id: str) -> Optional[TripResponse]:
+    async def get_trip(self, trip_id: str, user_id: str) -> TripResponse | None:
         """Get trip by ID.
 
         Args:
@@ -236,12 +231,12 @@ class TripService:
     async def get_user_trips(
         self,
         user_id: str,
-        status: Optional[TripStatus] = None,
-        visibility: Optional[TripVisibility] = None,
-        tag: Optional[str] = None,
+        status: TripStatus | None = None,
+        visibility: TripVisibility | None = None,
+        tag: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[TripResponse]:
+    ) -> list[TripResponse]:
         """Get trips for a user with optional filters.
 
         Args:
@@ -286,7 +281,7 @@ class TripService:
 
     async def update_trip(
         self, trip_id: str, user_id: str, update_data: TripUpdateRequest
-    ) -> Optional[TripResponse]:
+    ) -> TripResponse | None:
         """Update a trip.
 
         Args:
@@ -511,7 +506,7 @@ class TripService:
 
     async def get_shared_trips(
         self, user_id: str, limit: int = 50, offset: int = 0
-    ) -> List[TripResponse]:
+    ) -> list[TripResponse]:
         """Get trips shared with a user.
 
         Args:
@@ -547,10 +542,10 @@ class TripService:
         self,
         user_id: str,
         query: str,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> List[TripResponse]:
+    ) -> list[TripResponse]:
         """Search trips by query and filters.
 
         Args:
@@ -627,7 +622,7 @@ class TripService:
 
         return False
 
-    async def _build_trip_response(self, trip_data: Dict[str, Any]) -> TripResponse:
+    async def _build_trip_response(self, trip_data: dict[str, Any]) -> TripResponse:
         """Build trip response from database data.
 
         Args:
@@ -673,7 +668,6 @@ class TripService:
             shared_with=shared_with,
         )
 
-
 async def get_trip_service() -> TripService:
     """Get a configured TripService instance.
 
@@ -681,7 +675,6 @@ async def get_trip_service() -> TripService:
         TripService: Configured trip service instance
     """
     return TripService()
-
 
 __all__ = [
     "TripService",

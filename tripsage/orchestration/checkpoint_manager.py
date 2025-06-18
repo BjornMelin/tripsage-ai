@@ -8,7 +8,7 @@ session management with enhanced security through validated URL conversion.
 
 import asyncio
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from tripsage_core.config import get_settings
 from tripsage_core.utils.connection_utils import (
@@ -34,9 +34,7 @@ except ImportError:
     AsyncConnectionPool = None
     POSTGRES_AVAILABLE = False
 
-
 logger = logging.getLogger(__name__)
-
 
 class SupabaseCheckpointManager:
     """
@@ -48,11 +46,11 @@ class SupabaseCheckpointManager:
 
     def __init__(self):
         """Initialize the checkpoint manager."""
-        self._checkpointer: Optional[PostgresSaver] = None
-        self._async_checkpointer: Optional[AsyncPostgresSaver] = None
-        self._connection_pool: Optional[ConnectionPool] = None
-        self._async_connection_pool: Optional[AsyncConnectionPool] = None
-        self._connection_string: Optional[str] = None
+        self._checkpointer: PostgresSaver | None = None
+        self._async_checkpointer: AsyncPostgresSaver | None = None
+        self._connection_pool: ConnectionPool | None = None
+        self._async_connection_pool: AsyncConnectionPool | None = None
+        self._connection_string: str | None = None
 
     def _build_connection_string(self) -> str:
         """
@@ -268,7 +266,7 @@ class SupabaseCheckpointManager:
             logger.error(f"Failed to cleanup old checkpoints: {e}")
             return 0
 
-    async def get_checkpoint_stats(self) -> Dict[str, Any]:
+    async def get_checkpoint_stats(self) -> dict[str, Any]:
         """
         Get statistics about checkpoint usage.
 
@@ -344,7 +342,6 @@ class SupabaseCheckpointManager:
         except Exception:
             pass  # Ignore errors during garbage collection
 
-
 class CheckpointConfig:
     """Configuration for checkpoint management."""
 
@@ -369,10 +366,8 @@ class CheckpointConfig:
         self.pool_size = pool_size
         self.enable_stats = enable_stats
 
-
 # Global checkpoint manager instance
-_global_checkpoint_manager: Optional[SupabaseCheckpointManager] = None
-
+_global_checkpoint_manager: SupabaseCheckpointManager | None = None
 
 def get_checkpoint_manager() -> SupabaseCheckpointManager:
     """Get the global checkpoint manager instance."""
@@ -381,12 +376,10 @@ def get_checkpoint_manager() -> SupabaseCheckpointManager:
         _global_checkpoint_manager = SupabaseCheckpointManager()
     return _global_checkpoint_manager
 
-
 async def get_async_checkpointer() -> AsyncPostgresSaver:
     """Get the async PostgreSQL checkpointer."""
     manager = get_checkpoint_manager()
     return await manager.get_async_checkpointer()
-
 
 def get_sync_checkpointer() -> PostgresSaver:
     """Get the sync PostgreSQL checkpointer."""

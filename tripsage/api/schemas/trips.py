@@ -5,7 +5,7 @@ Consolidates both request and response schemas for trip operations.
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -13,7 +13,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 
 # ===== Request Schemas =====
-
 
 class CreateTripRequest(BaseModel):
     """Request model for creating a trip."""
@@ -23,18 +22,18 @@ class CreateTripRequest(BaseModel):
         min_length=1,
         max_length=100,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="Trip description",
         max_length=500,
     )
     start_date: date = Field(description="Trip start date")
     end_date: date = Field(description="Trip end date")
-    destinations: List[TripDestination] = Field(
+    destinations: list[TripDestination] = Field(
         description="Trip destinations",
         min_length=1,
     )
-    preferences: Optional[TripPreferences] = Field(
+    preferences: TripPreferences | None = Field(
         default=None,
         description="Trip preferences",
     )
@@ -46,24 +45,23 @@ class CreateTripRequest(BaseModel):
             raise ValueError("End date must be after start date")
         return self
 
-
 class UpdateTripRequest(BaseModel):
     """Request model for updating a trip."""
 
-    title: Optional[str] = Field(
+    title: str | None = Field(
         default=None,
         description="Trip title",
         min_length=1,
         max_length=100,
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         description="Trip description",
         max_length=500,
     )
-    start_date: Optional[date] = Field(default=None, description="Trip start date")
-    end_date: Optional[date] = Field(default=None, description="Trip end date")
-    destinations: Optional[List[TripDestination]] = Field(
+    start_date: date | None = Field(default=None, description="Trip start date")
+    end_date: date | None = Field(default=None, description="Trip end date")
+    destinations: list[TripDestination] | None = Field(
         default=None,
         description="Trip destinations",
     )
@@ -75,15 +73,12 @@ class UpdateTripRequest(BaseModel):
             raise ValueError("End date must be after start date")
         return self
 
-
 class TripPreferencesRequest(TripPreferences):
     """Request model for updating trip preferences."""
 
     pass
 
-
 # ===== Response Schemas =====
-
 
 class TripResponse(BaseModel):
     """Response model for trip details."""
@@ -163,21 +158,20 @@ class TripResponse(BaseModel):
     id: UUID = Field(description="Trip ID")
     user_id: str = Field(description="User ID")
     title: str = Field(description="Trip title")
-    description: Optional[str] = Field(default=None, description="Trip description")
+    description: str | None = Field(default=None, description="Trip description")
     start_date: date = Field(description="Trip start date")
     end_date: date = Field(description="Trip end date")
     duration_days: int = Field(description="Trip duration in days")
-    destinations: List[TripDestination] = Field(description="Trip destinations")
-    preferences: Optional[TripPreferences] = Field(
+    destinations: list[TripDestination] = Field(description="Trip destinations")
+    preferences: TripPreferences | None = Field(
         default=None, description="Trip preferences"
     )
-    itinerary_id: Optional[UUID] = Field(
+    itinerary_id: UUID | None = Field(
         default=None, description="Associated itinerary ID"
     )
     status: str = Field(description="Trip status")
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
-
 
 class TripListItem(BaseModel):
     """Response model for trip list items."""
@@ -187,19 +181,17 @@ class TripListItem(BaseModel):
     start_date: date = Field(description="Trip start date")
     end_date: date = Field(description="Trip end date")
     duration_days: int = Field(description="Trip duration in days")
-    destinations: List[str] = Field(description="Trip destination names")
+    destinations: list[str] = Field(description="Trip destination names")
     status: str = Field(description="Trip status")
     created_at: datetime = Field(description="Creation timestamp")
-
 
 class TripListResponse(BaseModel):
     """Response model for a list of trips."""
 
-    items: List[TripListItem] = Field(description="List of trips")
+    items: list[TripListItem] = Field(description="List of trips")
     total: int = Field(description="Total number of trips")
     skip: int = Field(description="Number of trips skipped")
     limit: int = Field(description="Maximum number of trips returned")
-
 
 class TripSummaryResponse(BaseModel):
     """Response model for trip summary."""
@@ -238,14 +230,14 @@ class TripSummaryResponse(BaseModel):
     title: str = Field(description="Trip title")
     date_range: str = Field(description="Trip date range")
     duration_days: int = Field(description="Trip duration in days")
-    destinations: List[str] = Field(description="Trip destination names")
-    accommodation_summary: Optional[str] = Field(
+    destinations: list[str] = Field(description="Trip destination names")
+    accommodation_summary: str | None = Field(
         default=None, description="Accommodation summary"
     )
-    transportation_summary: Optional[str] = Field(
+    transportation_summary: str | None = Field(
         default=None, description="Transportation summary"
     )
-    budget_summary: Optional[Dict[str, Any]] = Field(
+    budget_summary: dict[str, Any] | None = Field(
         default=None, description="Budget summary"
     )
     has_itinerary: bool = Field(description="Whether trip has an itinerary")
@@ -254,7 +246,6 @@ class TripSummaryResponse(BaseModel):
         ge=0,
         le=100,
     )
-
 
 class TripSuggestionResponse(BaseModel):
     """Response model for trip suggestions."""
@@ -303,7 +294,7 @@ class TripSuggestionResponse(BaseModel):
     title: str = Field(description="Trip title")
     destination: str = Field(description="Primary destination")
     description: str = Field(description="Trip description")
-    image_url: Optional[str] = Field(default=None, description="Cover image URL")
+    image_url: str | None = Field(default=None, description="Cover image URL")
     estimated_price: float = Field(description="Estimated total price")
     currency: str = Field(description="Price currency")
     duration: int = Field(description="Trip duration in days")
@@ -314,8 +305,8 @@ class TripSuggestionResponse(BaseModel):
         )
     )
     best_time_to_visit: str = Field(description="Recommended time period")
-    highlights: List[str] = Field(description="Key highlights", max_length=10)
-    difficulty: Optional[str] = Field(
+    highlights: list[str] = Field(description="Key highlights", max_length=10)
+    difficulty: str | None = Field(
         default=None, description="Trip difficulty (easy, moderate, challenging)"
     )
     trending: bool = Field(
@@ -324,21 +315,19 @@ class TripSuggestionResponse(BaseModel):
     seasonal: bool = Field(
         default=False, description="Whether this is seasonal/time-sensitive"
     )
-    relevance_score: Optional[float] = Field(
+    relevance_score: float | None = Field(
         default=None, description="Personalization relevance score", ge=0, le=1
     )
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         default=None, description="Additional metadata"
     )
 
-
 # ===== Trip Collaboration Schemas =====
-
 
 class TripShareRequest(BaseModel):
     """Request model for sharing a trip with other users."""
 
-    user_emails: List[str] = Field(
+    user_emails: list[str] = Field(
         description="Email addresses of users to share with",
         min_length=1,
         max_length=10,
@@ -348,26 +337,24 @@ class TripShareRequest(BaseModel):
         description="Permission level (view, edit, admin)",
         pattern="^(view|edit|admin)$",
     )
-    message: Optional[str] = Field(
+    message: str | None = Field(
         default=None,
         description="Optional message to send with invitation",
         max_length=500,
     )
-
 
 class TripCollaboratorResponse(BaseModel):
     """Response model for trip collaborator information."""
 
     user_id: UUID = Field(description="Collaborator user ID")
     email: str = Field(description="Collaborator email")
-    name: Optional[str] = Field(default=None, description="Collaborator name")
+    name: str | None = Field(default=None, description="Collaborator name")
     permission_level: str = Field(description="Permission level (view, edit, admin)")
     added_by: UUID = Field(description="User ID who added this collaborator")
     added_at: datetime = Field(description="Timestamp when access was granted")
     is_active: bool = Field(
         default=True, description="Whether the collaborator is active"
     )
-
 
 class TripCollaboratorUpdateRequest(BaseModel):
     """Request model for updating collaborator permissions."""
@@ -377,11 +364,10 @@ class TripCollaboratorUpdateRequest(BaseModel):
         pattern="^(view|edit|admin)$",
     )
 
-
 class TripCollaboratorsListResponse(BaseModel):
     """Response model for listing trip collaborators."""
 
-    collaborators: List[TripCollaboratorResponse] = Field(
+    collaborators: list[TripCollaboratorResponse] = Field(
         description="List of trip collaborators"
     )
     total: int = Field(description="Total number of collaborators")

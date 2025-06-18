@@ -10,7 +10,7 @@ import hashlib
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, Any, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -22,7 +22,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
+from typing import Self
 
 # Type aliases for better type safety
 ModelName = Annotated[
@@ -39,7 +39,6 @@ VersionId = Annotated[
 DescriptionText = Annotated[
     str, StringConstraints(max_length=500, strip_whitespace=True)
 ]
-
 
 class AgentType(str, Enum):
     """Enumeration of available agent types with metadata."""
@@ -66,7 +65,6 @@ class AgentType(str, Enum):
             "itinerary_agent": 0.4,  # Structured creativity
         }[self.value]
 
-
 class ConfigurationScope(str, Enum):
     """Enumeration of configuration scopes."""
 
@@ -74,7 +72,6 @@ class ConfigurationScope(str, Enum):
     ENVIRONMENT = "environment"
     AGENT_SPECIFIC = "agent_specific"
     USER_OVERRIDE = "user_override"
-
 
 class BaseConfigModel(BaseModel):
     """Base configuration model with common settings."""
@@ -89,60 +86,28 @@ class BaseConfigModel(BaseModel):
         populate_by_name=True,
     )
 
-
 class AgentConfigRequest(BaseConfigModel):
     """Request schema for agent configuration updates with advanced validation."""
 
-    temperature: Optional[
-        Annotated[
-            float,
-            Field(
-                ge=0.0,
-                le=2.0,
-                description="Controls randomness in responses"
-                " (0.0=deterministic, 2.0=very creative)",
-            ),
-        ]
-    ] = None
+    temperature: Annotated[float, Field(ge=0.0, le=2.0, description="Controls randomness in responses" " (0.0=deterministic, 2.0=very creative)")] | None = None
 
-    max_tokens: Optional[
-        Annotated[
-            int,
-            Field(
-                ge=1,
-                le=8000,
-                description="Maximum tokens in response"
-                " (affects cost and response length)",
-            ),
-        ]
-    ] = None
+    max_tokens: Annotated[int, Field(ge=1, le=8000, description="Maximum tokens in response" " (affects cost and response length)")] | None = None
 
-    top_p: Optional[
-        Annotated[
-            float,
-            Field(
-                ge=0.0,
-                le=1.0,
-                description="Nucleus sampling parameter (0.1=focused, 1.0=diverse)",
-            ),
-        ]
-    ] = None
+    top_p: Annotated[float, Field(ge=0.0, le=1.0, description="Nucleus sampling parameter (0.1=focused, 1.0=diverse)")] | None = None
 
-    timeout_seconds: Optional[
-        Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")]
-    ] = None
+    timeout_seconds: Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")] | None = None
 
-    model: Optional[ModelName] = Field(
+    model: ModelName | None = Field(
         None, description="AI model to use for this agent"
     )
 
-    description: Optional[DescriptionText] = Field(
+    description: DescriptionText | None = Field(
         None, description="Description of configuration changes"
     )
 
     @field_validator("temperature")
     @classmethod
-    def validate_temperature_precision(cls, v: Optional[float]) -> Optional[float]:
+    def validate_temperature_precision(cls, v: float | None) -> float | None:
         """Validate temperature with precision control."""
         if v is not None:
             # Round to 2 decimal places for consistency
@@ -199,14 +164,13 @@ class AgentConfigRequest(BaseConfigModel):
             # Fallback for Python < 3.9
             return hashlib.md5(config_str.encode()).hexdigest()[:8]
 
-    def get_changed_fields(self, other: "AgentConfigRequest") -> List[str]:
+    def get_changed_fields(self, other: "AgentConfigRequest") -> list[str]:
         """Get list of fields that changed compared to another configuration."""
         changed = []
         for field_name in self.model_fields:
             if getattr(self, field_name) != getattr(other, field_name):
                 changed.append(field_name)
         return changed
-
 
 class AgentConfigResponse(BaseConfigModel):
     """Response schema for agent configuration with computed metrics."""
@@ -220,8 +184,8 @@ class AgentConfigResponse(BaseConfigModel):
     scope: ConfigurationScope
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_by: Optional[str] = None
-    description: Optional[DescriptionText] = None
+    updated_by: str | None = None
+    description: DescriptionText | None = None
     is_active: bool = True
 
     @computed_field
@@ -292,7 +256,7 @@ class AgentConfigResponse(BaseConfigModel):
         temp_diff = abs(self.temperature - recommended_temp)
         return temp_diff <= 0.1  # Within 10% of recommended
 
-    def get_optimization_suggestions(self) -> List[str]:
+    def get_optimization_suggestions(self) -> list[str]:
         """Get suggestions for optimizing this configuration."""
         suggestions = []
 
@@ -317,17 +281,16 @@ class AgentConfigResponse(BaseConfigModel):
 
         return suggestions
 
-
 class ConfigurationVersion(BaseConfigModel):
     """Schema for configuration version history with enhanced metadata."""
 
     version_id: VersionId = Field(description="Unique version identifier")
     agent_type: AgentType
-    configuration: Dict[str, Any] = Field(description="Configuration snapshot")
+    configuration: dict[str, Any] = Field(description="Configuration snapshot")
     scope: ConfigurationScope
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str
-    description: Optional[DescriptionText] = None
+    description: DescriptionText | None = None
     is_current: bool = False
 
     @computed_field
@@ -347,13 +310,12 @@ class ConfigurationVersion(BaseConfigModel):
         """Check if this version was created recently (within 7 days)."""
         return self.age_in_days <= 7
 
-
 class ConfigurationDiff(BaseConfigModel):
     """Schema for configuration differences."""
 
     field: str
-    old_value: Union[str, int, float, bool, None]
-    new_value: Union[str, int, float, bool, None]
+    old_value: str | int | float | bool | None
+    new_value: str | int | float | bool | None
     change_type: str = Field(description="added, modified, or removed")
 
     @computed_field
@@ -368,7 +330,6 @@ class ConfigurationDiff(BaseConfigModel):
         else:
             return "Low"
 
-
 class PerformanceMetrics(BaseConfigModel):
     """Schema for configuration performance metrics with trends."""
 
@@ -382,7 +343,7 @@ class PerformanceMetrics(BaseConfigModel):
     error_rate: Annotated[
         float, Field(ge=0.0, le=1.0, description="Error rate (0.0-1.0)")
     ]
-    token_usage: Dict[str, int] = Field(description="Token usage statistics")
+    token_usage: dict[str, int] = Field(description="Token usage statistics")
     cost_estimate: Annotated[Decimal, Field(ge=0, description="Estimated cost in USD")]
     measured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     sample_size: Annotated[int, Field(ge=1, description="Number of requests measured")]
@@ -411,13 +372,12 @@ class PerformanceMetrics(BaseConfigModel):
             return total_tokens / self.average_response_time
         return 0.0
 
-
 class ConfigurationRecommendation(BaseConfigModel):
     """Schema for AI-driven configuration optimization recommendations."""
 
     agent_type: AgentType
-    current_config: Dict[str, Any]
-    recommended_config: Dict[str, Any]
+    current_config: dict[str, Any]
+    recommended_config: dict[str, Any]
     reasoning: str
     expected_improvement: str
     confidence_score: Annotated[float, Field(ge=0.0, le=1.0)]
@@ -451,17 +411,16 @@ class ConfigurationRecommendation(BaseConfigModel):
 
         return self
 
-
 class WebSocketConfigMessage(BaseConfigModel):
     """Schema for real-time WebSocket configuration messages."""
 
     type: str = Field(description="Message type (update, rollback, validation, etc.)")
-    agent_type: Optional[AgentType] = None
-    configuration: Optional[Dict[str, Any]] = None
-    version_id: Optional[VersionId] = None
-    updated_by: Optional[str] = None
+    agent_type: AgentType | None = None
+    configuration: dict[str, Any] | None = None
+    version_id: VersionId | None = None
+    updated_by: str | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    message: Optional[str] = None
+    message: str | None = None
 
     @model_validator(mode="after")
     def validate_message_consistency(self) -> Self:
@@ -474,15 +433,14 @@ class WebSocketConfigMessage(BaseConfigModel):
 
         return self
 
-
 class ConfigurationExport(BaseConfigModel):
     """Schema for configuration export with metadata."""
 
     export_id: str
     environment: str
-    agent_configurations: Dict[str, AgentConfigResponse]
-    feature_flags: Dict[str, bool]
-    global_defaults: Dict[str, Any]
+    agent_configurations: dict[str, AgentConfigResponse]
+    feature_flags: dict[str, bool]
+    global_defaults: dict[str, Any]
     exported_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     exported_by: str
     format: str = "json"
@@ -500,15 +458,14 @@ class ConfigurationExport(BaseConfigModel):
         # Rough estimation based on typical configuration sizes
         return len(self.model_dump_json().encode()) / 1024
 
-
 class ConfigurationImport(BaseConfigModel):
     """Schema for configuration import with validation."""
 
     source_environment: str
-    agent_configurations: Dict[str, AgentConfigRequest]
-    feature_flags: Optional[Dict[str, bool]] = None
-    global_defaults: Optional[Dict[str, Any]] = None
-    description: Optional[DescriptionText] = None
+    agent_configurations: dict[str, AgentConfigRequest]
+    feature_flags: dict[str, bool] | None = None
+    global_defaults: dict[str, Any] | None = None
+    description: DescriptionText | None = None
     dry_run: bool = False
 
     @model_validator(mode="after")
@@ -525,14 +482,13 @@ class ConfigurationImport(BaseConfigModel):
 
         return self
 
-
 class ConfigurationValidationError(BaseConfigModel):
     """Schema for detailed configuration validation errors."""
 
     field: str
     error: str
-    current_value: Union[str, int, float, bool, None]
-    suggested_value: Union[str, int, float, bool, None] = None
+    current_value: str | int | float | bool | None
+    suggested_value: str | int | float | bool | None = None
     severity: str = Field(default="error", description="error, warning, or info")
 
     @computed_field
@@ -543,14 +499,13 @@ class ConfigurationValidationError(BaseConfigModel):
         severity_code = self.severity.upper()[:1]
         return f"CFG{severity_code}{field_code}"
 
-
 class ConfigurationValidationResponse(BaseConfigModel):
     """Response schema for comprehensive configuration validation."""
 
     is_valid: bool
-    errors: List[ConfigurationValidationError] = []
-    warnings: List[ConfigurationValidationError] = []
-    suggestions: List[str] = []
+    errors: list[ConfigurationValidationError] = []
+    warnings: list[ConfigurationValidationError] = []
+    suggestions: list[str] = []
 
     @computed_field
     @property
@@ -564,15 +519,14 @@ class ConfigurationValidationResponse(BaseConfigModel):
                 f"{len(self.warnings)} warnings)"
             )
 
-
 class ConfigurationImportResult(BaseConfigModel):
     """Schema for configuration import operation results."""
 
     import_id: str
     success: bool
-    imported_configurations: List[str] = []
-    failed_configurations: List[str] = []
-    validation_errors: List[ConfigurationValidationError] = []
+    imported_configurations: list[str] = []
+    failed_configurations: list[str] = []
+    validation_errors: list[ConfigurationValidationError] = []
     imported_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     imported_by: str
 

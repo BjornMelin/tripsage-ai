@@ -12,7 +12,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-
 @pytest.fixture(scope="function", autouse=True)
 def setup_test_environment():
     """Set up test environment for API tests."""
@@ -45,7 +44,6 @@ def setup_test_environment():
         else:
             os.environ[key] = value
 
-
 @pytest.fixture
 def mock_cache_service():
     """Mock cache service for tests."""
@@ -60,7 +58,6 @@ def mock_cache_service():
     cache._connected = True
     return cache
 
-
 @pytest.fixture
 def mock_database_service():
     """Mock database service for tests."""
@@ -71,7 +68,6 @@ def mock_database_service():
     db.connect = AsyncMock()
     db.disconnect = AsyncMock()
     return db
-
 
 def create_authenticated_test_client(mock_principal):
     """Create an authenticated test client with all dependencies mocked.
@@ -95,7 +91,6 @@ def create_authenticated_test_client(mock_principal):
 
     return TestClient(app)
 
-
 def create_unauthenticated_test_client():
     """Create an unauthenticated test client with authentication
     dependencies returning None.
@@ -112,7 +107,6 @@ def create_unauthenticated_test_client():
     app.dependency_overrides[get_current_principal] = lambda: None
 
     return TestClient(app)
-
 
 @pytest.fixture
 def api_test_client(mock_cache_service, mock_database_service, mock_principal):
@@ -470,7 +464,6 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         with TestClient(app) as client:
             yield client
 
-
 @pytest.fixture
 def unauthenticated_test_client(mock_cache_service, mock_database_service):
     """Create FastAPI test client for testing unauthenticated requests."""
@@ -524,12 +517,10 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         with TestClient(app) as client:
             yield client
 
-
 @pytest.fixture
 def authenticated_headers():
     """Standard authentication headers for tests."""
     return {"Authorization": "Bearer test-token"}
-
 
 @pytest.fixture
 def mock_principal():
@@ -545,7 +536,6 @@ def mock_principal():
         metadata={"role": "authenticated", "aud": "authenticated"},
     )
 
-
 # Validation test data fixtures
 @pytest.fixture
 def valid_accommodation_search():
@@ -556,7 +546,6 @@ def valid_accommodation_search():
         "check_out": "2024-03-18",
         "adults": 2,
     }
-
 
 @pytest.fixture
 def invalid_accommodation_search_data():
@@ -603,14 +592,12 @@ def invalid_accommodation_search_data():
         },
     ]
 
-
 @pytest.fixture
 def valid_accommodation_details():
     """Valid accommodation details request data."""
     return {
         "listing_id": "test-listing-id",
     }
-
 
 @pytest.fixture
 def valid_save_accommodation():
@@ -623,9 +610,7 @@ def valid_save_accommodation():
         "notes": "Great location!",
     }
 
-
 # === FLIGHTS FIXTURES ===
-
 
 @pytest.fixture
 def valid_flight_search():
@@ -641,14 +626,12 @@ def valid_flight_search():
         "cabin_class": "economy",
     }
 
-
 @pytest.fixture
 def valid_flight_details():
     """Valid flight details request data."""
     return {
         "offer_id": "test-offer-id",  # Changed from flight_id
     }
-
 
 @pytest.fixture
 def valid_save_flight():
@@ -659,9 +642,7 @@ def valid_save_flight():
         "notes": "Great price!",
     }
 
-
 # === DESTINATIONS FIXTURES ===
-
 
 @pytest.fixture
 def valid_destination_search():
@@ -671,7 +652,6 @@ def valid_destination_search():
         "limit": 10,
     }
 
-
 @pytest.fixture
 def valid_destination_details():
     """Valid destination details request data."""
@@ -680,7 +660,6 @@ def valid_destination_details():
         "include_weather": True,
         "include_activities": True,
     }
-
 
 @pytest.fixture
 def valid_destination_recommendations():
@@ -694,9 +673,7 @@ def valid_destination_recommendations():
         "limit": 5,
     }
 
-
 # === TRIPS FIXTURES ===
-
 
 @pytest.fixture
 def valid_trip_create():
@@ -710,7 +687,6 @@ def valid_trip_create():
         "budget": 5000.0,
         "currency": "USD",
     }
-
 
 @pytest.fixture
 def valid_trip_update():

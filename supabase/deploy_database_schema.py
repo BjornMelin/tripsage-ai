@@ -13,11 +13,10 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-
 class DatabaseDeployer:
     """Handles TripSage database schema deployment to Supabase."""
 
-    def __init__(self, project_ref: Optional[str] = None):
+    def __init__(self, project_ref: str | None = None):
         self.project_ref = project_ref
         self.schema_dir = Path("supabase/schemas")
         self.migration_dir = Path("supabase/migrations")
@@ -110,7 +109,7 @@ class DatabaseDeployer:
             self.log_step("Schema Validation", False, f"Validation failed: {e.stderr}")
             return False
 
-    def create_consolidated_migration(self) -> Optional[Path]:
+    def create_consolidated_migration(self) -> Path | None:
         """Create a consolidated migration file for deployment."""
         print("\n📝 Creating Consolidated Migration...")
 
@@ -333,7 +332,6 @@ $$;
         self.save_deployment_log()
         return True
 
-
 def main():
     """Main deployment function."""
     import argparse
@@ -363,7 +361,6 @@ def main():
     success = deployer.deploy(args.target)
 
     return 0 if success else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -22,7 +22,6 @@ from tripsage_core.utils.session_utils import (
     update_session_memory,
 )
 
-
 class TestSessionModels:
     """Test session memory models."""
 
@@ -86,7 +85,6 @@ class TestSessionModels:
         assert preferences.accommodation_preferences is None
         assert preferences.dietary_restrictions is None
         assert preferences.accessibility_needs is None
-
 
 class TestSessionMemoryUtility:
     """Test SessionMemory utility class."""
@@ -152,7 +150,6 @@ class TestSessionMemoryUtility:
         assert result["user_id"] == "user456"
         assert result["data"]["preference"] == "cultural"
         assert result["data"]["budget"] == 2000
-
 
 class TestInitializeSessionMemory:
     """Test session memory initialization."""
@@ -276,7 +273,6 @@ class TestInitializeSessionMemory:
             # Should only include first 5 (most recent)
             assert len(result["recent_trips"]) == 5
 
-
 class TestUpdateSessionMemory:
     """Test session memory updates."""
 
@@ -390,7 +386,6 @@ class TestUpdateSessionMemory:
             assert result["success"] is True
             assert result["memories_created"] == 0
 
-
 class TestStoreSessionSummary:
     """Test session summary storage."""
 
@@ -474,7 +469,6 @@ class TestStoreSessionSummary:
             assert result["status"] == "error"
             assert "Connection error" in result["error"]
             assert result["memories_created"] == 0
-
 
 class TestPrivateHelperFunctions:
     """Test private helper functions."""
@@ -569,7 +563,6 @@ class TestPrivateHelperFunctions:
         # Should not create any memories for irrelevant data
         assert result.get("memories_created", 0) == 0
         mock_memory_service.add_memory.assert_not_called()
-
 
 class TestErrorHandling:
     """Test error handling in session utilities."""

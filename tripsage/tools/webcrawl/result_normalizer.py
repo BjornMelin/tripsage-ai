@@ -7,7 +7,7 @@ sources (Crawl4AI and Firecrawl) into a consistent UnifiedCrawlResult format.
 
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage_core.services.external_apis.webcrawl_service import WebCrawlResult
@@ -15,14 +15,13 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-
 class ResultNormalizer:
     """
     Normalizes results from different web crawling sources into UnifiedCrawlResult.
     """
 
     async def normalize_firecrawl_output(
-        self, raw_output: Dict[str, Any], original_url: str
+        self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
         """Normalize Firecrawl MCP output to UnifiedCrawlResult.
 
@@ -82,7 +81,7 @@ class ResultNormalizer:
         )
 
     async def normalize_crawl4ai_output(
-        self, raw_output: Dict[str, Any], original_url: str
+        self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
         """Normalize Crawl4AI MCP output to UnifiedCrawlResult.
 
@@ -146,8 +145,8 @@ class ResultNormalizer:
         )
 
     async def normalize_search_results(
-        self, raw_results: List[Dict[str, Any]], source: str, query: str
-    ) -> List[UnifiedCrawlResult]:
+        self, raw_results: list[dict[str, Any]], source: str, query: str
+    ) -> list[UnifiedCrawlResult]:
         """Normalize search results from either crawler into UnifiedCrawlResult list.
 
         Args:
@@ -179,7 +178,7 @@ class ResultNormalizer:
         return normalized_results
 
     async def normalize_playwright_mcp_output(
-        self, raw_output: Dict[str, Any], original_url: str
+        self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
         """Normalize Playwright MCP output to UnifiedCrawlResult.
 
@@ -345,10 +344,8 @@ class ResultNormalizer:
 
         return text.strip()
 
-
 # Singleton instance
 result_normalizer = ResultNormalizer()
-
 
 def get_normalizer() -> ResultNormalizer:
     """Get the singleton instance of the result normalizer.

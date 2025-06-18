@@ -20,21 +20,18 @@ from tripsage_core.services.external_apis.webcrawl_service import (
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
-
 # Temporarily use a simple mock function for missing webcrawl_feature_flags
 def get_performance_metrics():
     """Mock performance metrics function."""
     return {"enabled": True, "timeout": 30}
 
-
 logger = get_logger(__name__)
-
 
 @with_error_handling()
 async def crawl_website_content(
     url: str,
     extract_structured_data: bool = False,
-    content_type: Optional[str] = None,
+    content_type: str | None = None,
     requires_javascript: bool = False,
     use_cache: bool = True,
     enable_playwright_fallback: bool = True,
@@ -137,7 +134,6 @@ async def crawl_website_content(
             },
         )
 
-
 @with_error_handling()
 async def crawl_travel_blog(
     url: str, extract_insights: bool = True, use_cache: bool = True
@@ -162,7 +158,6 @@ async def crawl_travel_blog(
         requires_javascript=False,  # Most blogs don't need JS
         use_cache=use_cache,
     )
-
 
 @with_error_handling()
 async def crawl_booking_site(
@@ -189,7 +184,6 @@ async def crawl_booking_site(
         use_cache=use_cache,
     )
 
-
 @with_error_handling()
 async def crawl_event_listing(
     url: str, extract_dates: bool = True, use_cache: bool = True
@@ -214,7 +208,6 @@ async def crawl_event_listing(
         requires_javascript=True,  # Event sites often need JS
         use_cache=use_cache,
     )
-
 
 async def _crawl_with_playwright_fallback(
     url: str,
@@ -346,7 +339,6 @@ async def _crawl_with_playwright_fallback(
 
         finally:
             await browser.close()
-
 
 # Compatibility alias for legacy test imports
 crawl_website_content_tool = crawl_website_content

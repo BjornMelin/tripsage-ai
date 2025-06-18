@@ -10,7 +10,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 class ChatSessionDB(BaseModel):
     """Database model for chat sessions."""
 
@@ -20,7 +19,7 @@ class ChatSessionDB(BaseModel):
     user_id: UUID = Field(..., description="User ID from auth.users table")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    ended_at: Optional[datetime] = Field(None, description="Session end timestamp")
+    ended_at: datetime | None = Field(None, description="Session end timestamp")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Session metadata"
     )
@@ -34,7 +33,6 @@ class ChatSessionDB(BaseModel):
         if isinstance(v, dict):
             return v
         return {}
-
 
 class ChatMessageDB(BaseModel):
     """Database model for chat messages."""
@@ -77,7 +75,6 @@ class ChatMessageDB(BaseModel):
             return v
         return {}
 
-
 class ChatToolCallDB(BaseModel):
     """Database model for tool calls within chat messages."""
 
@@ -92,11 +89,11 @@ class ChatToolCallDB(BaseModel):
     arguments: dict[str, Any] = Field(
         default_factory=dict, description="Tool arguments"
     )
-    result: Optional[dict[str, Any]] = Field(None, description="Tool result")
+    result: dict[str, Any] | None = Field(None, description="Tool result")
     status: str = Field("pending", description="Tool call status")
     created_at: datetime = Field(..., description="Creation timestamp")
-    completed_at: Optional[datetime] = Field(None, description="Completion timestamp")
-    error_message: Optional[str] = Field(None, description="Error message if failed")
+    completed_at: datetime | None = Field(None, description="Completion timestamp")
+    error_message: str | None = Field(None, description="Error message if failed")
 
     @field_validator("status")
     @classmethod
@@ -117,21 +114,18 @@ class ChatToolCallDB(BaseModel):
             return v
         return {}
 
-
 class ChatSessionWithStats(ChatSessionDB):
     """Chat session with additional statistics."""
 
     message_count: int = Field(0, description="Total messages in session")
-    last_message_at: Optional[datetime] = Field(
+    last_message_at: datetime | None = Field(
         None, description="Timestamp of last message"
     )
-
 
 class MessageWithTokenEstimate(ChatMessageDB):
     """Chat message with token estimation."""
 
     estimated_tokens: int = Field(..., description="Estimated token count")
-
 
 # Response models for queries
 class RecentMessagesResponse(BaseModel):

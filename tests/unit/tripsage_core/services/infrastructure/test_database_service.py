@@ -24,7 +24,6 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 
-
 class TestDatabaseService:
     """Comprehensive test suite for DatabaseService."""
 

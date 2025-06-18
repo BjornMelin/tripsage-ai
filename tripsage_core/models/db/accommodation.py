@@ -5,7 +5,7 @@ used across different storage backends.
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import Field, field_validator, model_validator
 
@@ -15,7 +15,6 @@ from tripsage_core.models.schemas_common.enums import (
     BookingStatus,
     CancellationPolicy,
 )
-
 
 class Accommodation(TripSageModel):
     """Accommodation model for TripSage.
@@ -40,7 +39,7 @@ class Accommodation(TripSageModel):
         neighborhood: Neighborhood or area name
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     name: str = Field(..., description="Name of the accommodation")
     accommodation_type: AccommodationType = Field(
@@ -55,12 +54,12 @@ class Accommodation(TripSageModel):
         ..., description="Total price for the stay in default currency"
     )
     location: str = Field(..., description="Address or location description")
-    rating: Optional[float] = Field(None, description="Rating score out of 5")
-    amenities: Optional[Dict[str, Any]] = Field(None, description="Available amenities")
-    booking_link: Optional[str] = Field(
+    rating: float | None = Field(None, description="Rating score out of 5")
+    amenities: dict[str, Any] | None = Field(None, description="Available amenities")
+    booking_link: str | None = Field(
         None, description="URL for booking this accommodation"
     )
-    search_timestamp: Optional[datetime] = Field(
+    search_timestamp: datetime | None = Field(
         None, description="When this accommodation data was fetched"
     )
     booking_status: BookingStatus = Field(
@@ -69,11 +68,11 @@ class Accommodation(TripSageModel):
     cancellation_policy: CancellationPolicy = Field(
         CancellationPolicy.UNKNOWN, description="Cancellation policy for the booking"
     )
-    distance_to_center: Optional[float] = Field(
+    distance_to_center: float | None = Field(
         None, description="Distance to city center in kilometers"
     )
-    neighborhood: Optional[str] = Field(None, description="Neighborhood or area name")
-    images: List[str] = Field(default_factory=list, description="List of image URLs")
+    neighborhood: str | None = Field(None, description="Neighborhood or area name")
+    images: list[str] = Field(default_factory=list, description="List of image URLs")
 
     @field_validator("price_per_night", "total_price")
     @classmethod
@@ -85,7 +84,7 @@ class Accommodation(TripSageModel):
 
     @field_validator("rating")
     @classmethod
-    def validate_rating(cls, v: Optional[float]) -> Optional[float]:
+    def validate_rating(cls, v: float | None) -> float | None:
         """Validate that rating is between 0 and 5 if provided."""
         if v is not None and v < 0:
             raise ValueError("ensure this value is greater than or equal to 0")
@@ -95,7 +94,7 @@ class Accommodation(TripSageModel):
 
     @field_validator("distance_to_center")
     @classmethod
-    def validate_distance(cls, v: Optional[float]) -> Optional[float]:
+    def validate_distance(cls, v: float | None) -> float | None:
         """Validate that distance is non-negative if provided."""
         if v is not None and v < 0:
             raise ValueError("Distance must be non-negative")
@@ -175,7 +174,7 @@ class Accommodation(TripSageModel):
         return self.duration_nights
 
     @property
-    def amenities_list(self) -> List[str]:
+    def amenities_list(self) -> list[str]:
         """Get the list of amenities."""
         if not self.amenities:
             return []

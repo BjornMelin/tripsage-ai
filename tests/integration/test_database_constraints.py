@@ -13,12 +13,10 @@ import pytest
 
 from tripsage_core.models.db.memory import Memory, MemoryCreate
 
-
 class MockForeignKeyViolationError(Exception):
     """Mock foreign key violation error for testing."""
 
     pass
-
 
 class TestDatabaseConstraints:
     """Test foreign key constraints for memory tables."""

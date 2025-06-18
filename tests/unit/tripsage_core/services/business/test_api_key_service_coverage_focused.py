@@ -27,7 +27,6 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
-
 class TestApiKeyServiceCoverageFocused:
     """Focused tests targeting specific uncovered line ranges."""
 
@@ -752,7 +751,6 @@ class TestApiKeyServiceCoverageFocused:
         all_health = await api_service.check_all_services_health()
         assert isinstance(all_health, dict)
         assert len(all_health) >= 1
-
 
 class TestServiceValidationFailures:
     """Comprehensive tests for service validation failures and timeout scenarios."""

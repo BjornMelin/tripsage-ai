@@ -7,8 +7,7 @@ service reliability and response times across all integrations.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Optional
-
+from typing import Optional
 
 @dataclass
 class ServiceMetrics:
@@ -23,7 +22,7 @@ class ServiceMetrics:
     last_updated: datetime = field(default_factory=datetime.now)
 
     # Service-specific metrics
-    custom_metrics: Dict[str, float] = field(default_factory=dict)
+    custom_metrics: dict[str, float] = field(default_factory=dict)
 
     def add_request_result(self, duration_ms: float, success: bool) -> None:
         """Record a service request result.
@@ -84,12 +83,11 @@ class ServiceMetrics:
             "custom_metrics": self.custom_metrics,
         }
 
-
 @dataclass
 class PerformanceMetrics:
     """Central performance metrics for all services."""
 
-    services: Dict[str, ServiceMetrics] = field(default_factory=dict)
+    services: dict[str, ServiceMetrics] = field(default_factory=dict)
 
     def get_service_metrics(self, service_name: str) -> ServiceMetrics:
         """Get or create metrics for a service.
@@ -130,14 +128,14 @@ class PerformanceMetrics:
         metrics = self.get_service_metrics(service_name)
         metrics.add_custom_metric(metric_name, value)
 
-    def get_all_summaries(self) -> Dict[str, dict]:
+    def get_all_summaries(self) -> dict[str, dict]:
         """Get summaries for all services."""
         return {
             service_name: metrics.get_summary()
             for service_name, metrics in self.services.items()
         }
 
-    def get_summary(self, service_name: str) -> Optional[dict]:
+    def get_summary(self, service_name: str) -> dict | None:
         """Get summary for a specific service.
 
         Args:
@@ -163,10 +161,8 @@ class PerformanceMetrics:
         """Reset all metrics."""
         self.services.clear()
 
-
 # Global performance metrics instance
-_performance_metrics: Optional[PerformanceMetrics] = None
-
+_performance_metrics: PerformanceMetrics | None = None
 
 def get_performance_metrics() -> PerformanceMetrics:
     """Get the global performance metrics instance."""
@@ -175,18 +171,15 @@ def get_performance_metrics() -> PerformanceMetrics:
         _performance_metrics = PerformanceMetrics()
     return _performance_metrics
 
-
 def reset_performance_metrics() -> None:
     """Reset all performance metrics (useful for testing)."""
     global _performance_metrics
     _performance_metrics = PerformanceMetrics()
 
-
 # Convenience functions for common services
 def record_webcrawl_request(duration_ms: float, success: bool) -> None:
     """Record a webcrawl request."""
     get_performance_metrics().record_request("webcrawl", duration_ms, success)
-
 
 def record_api_request(api_name: str, duration_ms: float, success: bool) -> None:
     """Record an API request.
@@ -197,7 +190,6 @@ def record_api_request(api_name: str, duration_ms: float, success: bool) -> None
         success: Whether the request succeeded
     """
     get_performance_metrics().record_request(f"api_{api_name}", duration_ms, success)
-
 
 def record_database_request(operation: str, duration_ms: float, success: bool) -> None:
     """Record a database request.

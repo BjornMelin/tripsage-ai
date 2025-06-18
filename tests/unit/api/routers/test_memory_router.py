@@ -31,7 +31,6 @@ from tripsage.api.routers.memory import (
 )
 from tripsage_core.services.business.memory_service import MemoryService
 
-
 class TestMemoryRouter:
     """Modern test suite for memory router endpoints."""
 

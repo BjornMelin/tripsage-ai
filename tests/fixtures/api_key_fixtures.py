@@ -48,7 +48,6 @@ TIMESTAMPS = st.datetimes(
     max_value=datetime(2030, 12, 31, tzinfo=timezone.utc),
 )
 
-
 @pytest.fixture(scope="session")
 def event_loop():
     """Create event loop for the test session."""
@@ -56,18 +55,15 @@ def event_loop():
     yield loop
     loop.close()
 
-
 @pytest.fixture
 def sample_user_id():
     """Generate a sample user ID."""
     return str(uuid.uuid4())
 
-
 @pytest.fixture
 def sample_key_id():
     """Generate a sample key ID."""
     return str(uuid.uuid4())
-
 
 @pytest.fixture
 def mock_principal():
@@ -78,7 +74,6 @@ def mock_principal():
         email="test@tripsage.com",
         auth_method="jwt",
     )
-
 
 @pytest.fixture
 def multiple_principals():
@@ -93,7 +88,6 @@ def multiple_principals():
         for i in range(1, 6)
     ]
 
-
 @pytest.fixture
 def sample_api_key_create():
     """Create sample API key creation request."""
@@ -104,7 +98,6 @@ def sample_api_key_create():
         description="Test key for unit testing",
     )
 
-
 @pytest.fixture
 def sample_api_key_create_request():
     """Create sample API key creation request for service layer."""
@@ -114,7 +107,6 @@ def sample_api_key_create_request():
         key_value="sk-test_key_for_unit_testing_12345",
         description="Test key for unit testing",
     )
-
 
 @pytest.fixture
 def sample_api_key_response():
@@ -132,7 +124,6 @@ def sample_api_key_response():
         last_validated=datetime.now(timezone.utc),
         usage_count=0,
     )
-
 
 @pytest.fixture
 def multiple_api_key_responses():
@@ -155,7 +146,6 @@ def multiple_api_key_responses():
         for i in range(1, 6)
     ]
 
-
 @pytest.fixture
 def sample_validation_result():
     """Create sample validation result."""
@@ -165,7 +155,6 @@ def sample_validation_result():
         service=ServiceType.OPENAI,
         message="Key validation successful",
     )
-
 
 @pytest.fixture
 def validation_results_various():
@@ -203,7 +192,6 @@ def validation_results_various():
         ),
     }
 
-
 @pytest.fixture
 def sample_db_result():
     """Create sample database result."""
@@ -222,7 +210,6 @@ def sample_db_result():
         "last_validated": datetime.now(timezone.utc).isoformat(),
         "usage_count": 0,
     }
-
 
 @pytest.fixture
 def multiple_db_results():
@@ -248,7 +235,6 @@ def multiple_db_results():
         }
         for i in range(1, 6)
     ]
-
 
 @pytest.fixture
 async def mock_api_key_service():
@@ -278,7 +264,6 @@ async def mock_api_key_service():
     await service.initialize()
     return service
 
-
 @pytest.fixture
 async def mock_key_monitoring_service():
     """Create comprehensive mock key monitoring service."""
@@ -292,7 +277,6 @@ async def mock_key_monitoring_service():
     service.get_health_status = AsyncMock(return_value="healthy")
 
     return service
-
 
 @pytest.fixture
 def mock_database_service():
@@ -308,7 +292,6 @@ def mock_database_service():
     db.log_api_key_usage = AsyncMock()
 
     return db
-
 
 @pytest.fixture
 def mock_cache_service():
@@ -326,7 +309,6 @@ def mock_cache_service():
 
     return cache
 
-
 @pytest.fixture
 def mock_audit_service():
     """Create mock audit service for testing."""
@@ -339,7 +321,6 @@ def mock_audit_service():
     audit.get_logs = AsyncMock(return_value=[])
 
     return audit
-
 
 @pytest.fixture
 async def api_key_service_with_mocks(
@@ -356,12 +337,10 @@ async def api_key_service_with_mocks(
     await service.initialize()
     return service
 
-
 @pytest.fixture
 def sample_rotate_request():
     """Create sample key rotation request."""
     return ApiKeyRotateRequest(new_key="sk-rotated_key_for_testing_67890")
-
 
 @pytest.fixture
 def sample_validate_request():
@@ -371,7 +350,6 @@ def sample_validate_request():
         key="sk-validate_test_key_12345",
         save=False,
     )
-
 
 @pytest.fixture
 def monitoring_data_samples():
@@ -404,7 +382,6 @@ def monitoring_data_samples():
         },
     }
 
-
 @pytest.fixture
 def audit_log_samples():
     """Create sample audit log entries."""
@@ -431,7 +408,6 @@ def audit_log_samples():
         )
     ]
 
-
 @pytest.fixture
 def error_scenarios():
     """Create various error scenarios for testing."""
@@ -445,7 +421,6 @@ def error_scenarios():
         "rate_limit_error": Exception("Rate limit exceeded"),
     }
 
-
 @pytest.fixture
 def performance_test_data():
     """Create data for performance testing."""
@@ -455,7 +430,6 @@ def performance_test_data():
         "large_batch": [f"sk-test_key_{i}" for i in range(1000)],
         "concurrent_users": [f"user_{i}" for i in range(20)],
     }
-
 
 @pytest.fixture
 def security_test_inputs():
@@ -471,37 +445,31 @@ def security_test_inputs():
         "emoji_unicode": "🔑🚀🌟💫",
     }
 
-
 # Property-based testing strategies as fixtures
 @pytest.fixture
 def api_key_strategies():
     """Provide Hypothesis strategies for API keys."""
     return API_KEY_STRATEGIES
 
-
 @pytest.fixture
 def service_type_strategy():
     """Provide Hypothesis strategy for service types."""
     return SERVICE_TYPES
-
 
 @pytest.fixture
 def user_id_strategy():
     """Provide Hypothesis strategy for user IDs."""
     return USER_IDS
 
-
 @pytest.fixture
 def key_name_strategy():
     """Provide Hypothesis strategy for key names."""
     return KEY_NAMES
 
-
 @pytest.fixture
 def description_strategy():
     """Provide Hypothesis strategy for descriptions."""
     return DESCRIPTIONS
-
 
 @pytest.fixture
 def timestamp_strategy():

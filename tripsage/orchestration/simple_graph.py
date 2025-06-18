@@ -5,7 +5,7 @@ This module implements a simple, maintainable graph-based orchestration system
 using modern LangGraph patterns with create_react_agent for simplicity.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -17,7 +17,6 @@ from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class SimpleTripSageOrchestrator:
     """
@@ -90,8 +89,8 @@ You help users plan comprehensive trips by:
 Start by greeting the user and asking how you can help with their travel planning!"""
 
     async def process_conversation(
-        self, messages: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Process a conversation using the simple agent.
 
@@ -168,7 +167,7 @@ Start by greeting the user and asking how you can help with their travel plannin
             return "unknown"
 
     async def stream_conversation(
-        self, messages: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None
+        self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
     ):
         """
         Stream a conversation response from the agent.
@@ -209,7 +208,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 "messages": [{"role": "assistant", "content": f"Error: {str(e)}"}],
             }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on the orchestrator."""
         try:
             # Test basic agent functionality
@@ -230,10 +229,8 @@ Start by greeting the user and asking how you can help with their travel plannin
             logger.error(f"Health check failed: {e}")
             return {"status": "unhealthy", "agent_responsive": False, "error": str(e)}
 
-
 # Global orchestrator instance
-_global_orchestrator: Optional[SimpleTripSageOrchestrator] = None
-
+_global_orchestrator: SimpleTripSageOrchestrator | None = None
 
 def get_orchestrator(service_registry=None) -> SimpleTripSageOrchestrator:
     """Get the global orchestrator instance."""

@@ -8,8 +8,6 @@ RLS policies, and vector search.
 import os
 import sys
 from pathlib import Path
-from typing import Dict
-
 
 class DatabaseTester:
     """Database integration tester for TripSage Supabase schema."""
@@ -291,7 +289,7 @@ class DatabaseTester:
             self.log_test("Security Configuration", True, "Complete RLS security setup")
             return True
 
-    def generate_schema_summary(self) -> Dict:
+    def generate_schema_summary(self) -> dict:
         """Generate a summary of the database schema."""
         summary = {
             "tables": [],
@@ -377,7 +375,6 @@ class DatabaseTester:
             print(f"❌ {total_tests - passed_tests} tests failed - Review issues above")
             return False
 
-
 def main():
     """Main test function."""
     # Change to project directory (parent of supabase dir)
@@ -402,7 +399,6 @@ def main():
     print("   📈 Monitor vector search performance with production data")
 
     return 0 if success else 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

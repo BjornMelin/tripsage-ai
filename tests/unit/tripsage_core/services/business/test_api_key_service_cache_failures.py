@@ -30,7 +30,6 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
-
 class TestApiKeyServiceCacheFailures:
     """Comprehensive cache infrastructure failure tests."""
 

@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID, uuid4
 
+import jwt
 import pytest
 from fastapi import WebSocket
-from jose import jwt
 
 from tripsage_core.config import Settings
 from tripsage_core.services.infrastructure.websocket_auth_service import (
@@ -243,8 +243,8 @@ class TestWebSocketManager:
     def mock_settings(self):
         """Create mock settings."""
         settings = Mock(spec=Settings)
-        settings.jwt_secret_key = Mock()
-        settings.jwt_secret_key.get_secret_value = Mock(
+        settings.database_jwt_secret = Mock()
+        settings.database_jwt_secret.get_secret_value = Mock(
             return_value="test-secret-key-12345"
         )
         return settings
@@ -278,7 +278,9 @@ class TestWebSocketManager:
             "exp": int(time.time()) + 3600,  # Expires in 1 hour
         }
         return jwt.encode(
-            payload, mock_settings.jwt_secret_key.get_secret_value(), algorithm="HS256"
+            payload,
+            mock_settings.database_jwt_secret.get_secret_value(),
+            algorithm="HS256",
         )
 
     @pytest.mark.asyncio
@@ -370,7 +372,9 @@ class TestWebSocketManager:
         # Create token with missing required fields
         payload = {"some_field": "value"}  # Missing 'sub' and 'user_id'
         malformed_token = jwt.encode(
-            payload, mock_settings.jwt_secret_key.get_secret_value(), algorithm="HS256"
+            payload,
+            mock_settings.database_jwt_secret.get_secret_value(),
+            algorithm="HS256",
         )
 
         auth_request = WebSocketAuthRequest(token=malformed_token, channels=["general"])
@@ -958,7 +962,7 @@ class TestWebSocketManager:
             }
             token = jwt.encode(
                 payload,
-                mock_settings.jwt_secret_key.get_secret_value(),
+                mock_settings.database_jwt_secret.get_secret_value(),
                 algorithm="HS256",
             )
             tokens.append(token)

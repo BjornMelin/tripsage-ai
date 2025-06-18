@@ -24,7 +24,6 @@ from tripsage_core.exceptions import (
 from tripsage_core.models.db.trip_collaborator import TripCollaboratorDB
 from tripsage_core.services.business.trip_service import TripService
 
-
 class TestTripCollaborationEndpoints:
     """
     Test potential collaboration endpoints for the trips router.

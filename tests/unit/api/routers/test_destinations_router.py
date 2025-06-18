@@ -3,7 +3,6 @@
 import pytest
 from fastapi import status
 
-
 class TestDestinationsRouter:
     """Test suite for destinations router endpoints."""
 

@@ -45,7 +45,6 @@ key_names = st.text(min_size=1, max_size=100).filter(str.strip)
 api_keys = st.text(min_size=10, max_size=200)
 uuids = st.uuids().map(str)
 
-
 class TestKeysRouterModern:
     """Modern test suite for keys router with comprehensive coverage."""
 

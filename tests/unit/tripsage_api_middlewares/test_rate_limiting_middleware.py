@@ -15,13 +15,11 @@ from tripsage.api.middlewares.rate_limiting import (
     RateLimitConfig,
 )
 
-
 @pytest.fixture
 def mock_app():
     """Create a mock ASGI app."""
     app = MagicMock(spec=ASGIApp)
     return app
-
 
 @pytest.fixture
 def mock_settings():
@@ -30,12 +28,10 @@ def mock_settings():
     settings.redis_url = None  # Default to in-memory
     return settings
 
-
 @pytest.fixture
 def middleware(mock_app, mock_settings):
     """Create middleware instance with in-memory rate limiter."""
     return EnhancedRateLimitMiddleware(app=mock_app, settings=mock_settings)
-
 
 @pytest.fixture
 def mock_request():
@@ -52,7 +48,6 @@ def mock_request():
 
     return request
 
-
 @pytest.fixture
 def mock_response():
     """Create a mock response."""
@@ -60,7 +55,6 @@ def mock_response():
     response.status_code = 200
     response.headers = {}
     return response
-
 
 @pytest.fixture
 def mock_call_next(mock_response):
@@ -70,7 +64,6 @@ def mock_call_next(mock_response):
         return mock_response
 
     return call_next
-
 
 @pytest.fixture
 def user_principal():
@@ -82,7 +75,6 @@ def user_principal():
         auth_method="jwt",
     )
 
-
 @pytest.fixture
 def agent_principal():
     """Create an agent principal."""
@@ -92,7 +84,6 @@ def agent_principal():
         service="openai",
         auth_method="api_key",
     )
-
 
 class TestRateLimitConfig:
     """Test cases for RateLimitConfig."""
@@ -112,7 +103,6 @@ class TestRateLimitConfig:
         assert config.requests_per_minute == 120
         assert config.requests_per_hour == 5000
         assert config.burst_size == 20
-
 
 class TestInMemoryRateLimiter:
     """Test cases for InMemoryRateLimiter."""
@@ -209,7 +199,6 @@ class TestInMemoryRateLimiter:
         # Second key: allowed
         is_limited, _ = await limiter.is_rate_limited("key2", config)
         assert not is_limited
-
 
 class TestDragonflyRateLimiter:
     """Test cases for DragonflyRateLimiter."""
@@ -314,7 +303,6 @@ class TestDragonflyRateLimiter:
         # Should not be limited (fail open)
         assert not is_limited
         assert metadata == {}
-
 
 class TestEnhancedRateLimitMiddleware:
     """Test cases for EnhancedRateLimitMiddleware."""

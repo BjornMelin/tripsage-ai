@@ -62,7 +62,6 @@ from tripsage_core.services.simple_mcp_service import mcp_manager
 
 logger = logging.getLogger(__name__)
 
-
 def format_error_response(exc: CoreTripSageError, request: Request) -> dict[str, Any]:
     """Format error response with simple, consistent structure.
 
@@ -74,7 +73,6 @@ def format_error_response(exc: CoreTripSageError, request: Request) -> dict[str,
         "code": exc.code,
         "type": exc.__class__.__name__.replace("Core", "").replace("Error", "").lower(),
     }
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -112,7 +110,6 @@ async def lifespan(app: FastAPI):
 
     logger.info("Shutting down MCP Manager")
     await mcp_manager.shutdown()
-
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application.
@@ -352,9 +349,7 @@ def create_app() -> FastAPI:
     logger.info(f"FastAPI application configured with {len(app.routes)} routes")
     return app
 
-
 app = create_app()
-
 
 if __name__ == "__main__":
     import uvicorn

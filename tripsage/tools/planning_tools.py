@@ -6,7 +6,7 @@ TravelPlanningAgent, including plan creation, updates, and persistence.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,50 +18,46 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-
 class TravelPlanInput(BaseModel):
     """Input model for travel plan creation and updates."""
 
     user_id: str = Field(..., description="User ID")
     title: str = Field(..., description="Plan title")
-    destinations: List[str] = Field(..., description="List of destinations")
+    destinations: list[str] = Field(..., description="List of destinations")
     start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
     end_date: str = Field(..., description="End date (YYYY-MM-DD)")
     travelers: int = Field(1, description="Number of travelers")
-    budget: Optional[float] = Field(None, description="Total budget")
-    preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
-
+    budget: float | None = Field(None, description="Total budget")
+    preferences: dict[str, Any] | None = Field(None, description="User preferences")
 
 class TravelPlanUpdate(BaseModel):
     """Input model for travel plan updates."""
 
     plan_id: str = Field(..., description="Travel plan ID")
     user_id: str = Field(..., description="User ID")
-    updates: Dict[str, Any] = Field(..., description="Fields to update")
-
+    updates: dict[str, Any] = Field(..., description="Fields to update")
 
 class SearchResultInput(BaseModel):
     """Input model for combining search results."""
 
-    flight_results: Optional[Dict[str, Any]] = Field(
+    flight_results: dict[str, Any] | None = Field(
         None, description="Flight search results"
     )
-    accommodation_results: Optional[Dict[str, Any]] = Field(
+    accommodation_results: dict[str, Any] | None = Field(
         None, description="Accommodation search results"
     )
-    activity_results: Optional[Dict[str, Any]] = Field(
+    activity_results: dict[str, Any] | None = Field(
         None, description="Activity search results"
     )
-    destination_info: Optional[Dict[str, Any]] = Field(
+    destination_info: dict[str, Any] | None = Field(
         None, description="Destination information"
     )
-    user_preferences: Optional[Dict[str, Any]] = Field(
+    user_preferences: dict[str, Any] | None = Field(
         None, description="User preferences"
     )
 
-
 @with_error_handling()
-async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Create a new travel plan with basic information.
 
     Creates an initial travel plan with core details like destinations, dates,
@@ -167,9 +163,8 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         log_exception(e)
         return {"success": False, "error": f"Travel plan creation error: {str(e)}"}
 
-
 @with_error_handling()
-async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Update an existing travel plan with new information.
 
     Updates specific fields in a travel plan, such as adding components or
@@ -269,9 +264,8 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         log_exception(e)
         return {"success": False, "error": f"Travel plan update error: {str(e)}"}
 
-
 @with_error_handling()
-async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
+async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
     """Combine results from multiple search operations into a unified recommendation.
 
     Analyzes and combines flight, accommodation, and activity search results based on
@@ -394,9 +388,8 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
         log_exception(e)
         return {"success": False, "error": f"Result combination error: {str(e)}"}
 
-
 @with_error_handling()
-async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
+async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
     """Generate a comprehensive summary of a travel plan.
 
     Creates a user-friendly summary of a travel plan with key information
@@ -454,8 +447,7 @@ async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
         log_exception(e)
         return {"success": False, "error": f"Summary generation error: {str(e)}"}
 
-
-def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_markdown_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a markdown summary of a travel plan.
 
     Args:
@@ -533,8 +525,7 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
 
     return summary
 
-
-def _generate_text_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_text_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a plain text summary of a travel plan.
 
     Args:
@@ -550,8 +541,7 @@ def _generate_text_summary(travel_plan: Dict[str, Any]) -> str:
     text = text.replace("**", "").replace("*", "").replace("\n\n", "\n")
     return text
 
-
-def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_html_summary(travel_plan: dict[str, Any]) -> str:
     """Generate an HTML summary of a travel plan.
 
     Args:
@@ -569,9 +559,8 @@ def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
     )
     return f"<html><body><p>{html}</p></body></html>"
 
-
 @with_error_handling()
-async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Save a travel plan to persistent storage.
 
     Stores the travel plan in the database and updates related knowledge graph entities.

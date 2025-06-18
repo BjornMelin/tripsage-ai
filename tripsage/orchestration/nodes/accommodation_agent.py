@@ -7,7 +7,7 @@ using modern LangGraph @tool patterns for simplicity and maintainability.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -19,7 +19,6 @@ from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class AccommodationAgentNode(BaseAgentNode):
     """
@@ -105,7 +104,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
     async def _extract_accommodation_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Extract accommodation search parameters from user message and context.
 
@@ -175,8 +174,8 @@ class AccommodationAgentNode(BaseAgentNode):
             return None
 
     async def _search_accommodations(
-        self, search_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, search_params: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Perform accommodation search using service layer.
 
@@ -206,10 +205,10 @@ class AccommodationAgentNode(BaseAgentNode):
 
     async def _generate_accommodation_response(
         self,
-        search_results: Dict[str, Any],
-        search_params: Dict[str, Any],
+        search_results: dict[str, Any],
+        search_params: dict[str, Any],
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate user-friendly response from accommodation search results.
 
@@ -291,7 +290,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
     async def _handle_general_accommodation_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle general accommodation inquiries that don't require a specific search.
 

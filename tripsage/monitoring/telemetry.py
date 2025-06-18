@@ -7,7 +7,8 @@ for the memory service and other critical components.
 import os
 from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc import (
@@ -31,7 +32,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()
-
 
 class TelemetryService:
     """Centralized telemetry service for monitoring and observability."""
@@ -178,7 +178,7 @@ class TelemetryService:
         yield Observation(value=memory_info.vms, attributes={"type": "vms"})
 
     @contextmanager
-    def span(self, name: str, attributes: Optional[Dict[str, Any]] = None):
+    def span(self, name: str, attributes: dict[str, Any] | None = None):
         """Context manager for creating spans.
 
         Args:
@@ -211,7 +211,7 @@ class TelemetryService:
         duration_ms: float,
         user_id: str,
         success: bool = True,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         """Record memory operation metrics.
 
@@ -305,22 +305,18 @@ class TelemetryService:
 
         return decorator
 
-
 # Global telemetry instance
 telemetry = TelemetryService()
-
 
 def initialize_telemetry() -> None:
     """Initialize global telemetry service."""
     telemetry.initialize()
-
 
 def get_telemetry() -> TelemetryService:
     """Get global telemetry service instance."""
     if not telemetry._initialized:
         telemetry.initialize()
     return telemetry
-
 
 # Convenience decorators
 traced = telemetry.create_span_decorator

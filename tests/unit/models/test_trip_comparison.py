@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 from tripsage_core.models.db.trip_comparison import TripComparison
 
-
 def test_trip_comparison_creation(sample_trip_comparison_dict):
     """Test creating a TripComparison model with valid data."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
@@ -12,7 +11,6 @@ def test_trip_comparison_creation(sample_trip_comparison_dict):
     assert trip_comparison.trip_id == 1
     assert trip_comparison.comparison_json["options"][0]["airline"] == "Japan Airlines"
     assert trip_comparison.comparison_json["selected_option_id"] == 1
-
 
 def test_trip_comparison_optional_fields():
     """Test creating a TripComparison model with minimal required fields."""
@@ -39,7 +37,6 @@ def test_trip_comparison_optional_fields():
     # selected_option_id is not required
     assert "selected_option_id" not in minimal_comparison.comparison_json
 
-
 def test_trip_comparison_has_selected_option(sample_trip_comparison_dict):
     """Test the has_selected_option property."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
@@ -49,7 +46,6 @@ def test_trip_comparison_has_selected_option(sample_trip_comparison_dict):
     del trip_comparison.comparison_json["selected_option_id"]
     assert trip_comparison.has_selected_option is False
 
-
 def test_trip_comparison_selected_option_id(sample_trip_comparison_dict):
     """Test the selected_option_id property."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
@@ -58,7 +54,6 @@ def test_trip_comparison_selected_option_id(sample_trip_comparison_dict):
     # Remove selected_option_id
     del trip_comparison.comparison_json["selected_option_id"]
     assert trip_comparison.selected_option_id is None
-
 
 def test_trip_comparison_options_count(sample_trip_comparison_dict):
     """Test the options_count property."""
@@ -70,7 +65,6 @@ def test_trip_comparison_options_count(sample_trip_comparison_dict):
         {"id": 3, "type": "flight", "price": 1100.00, "airline": "United"}
     )
     assert trip_comparison.options_count == 3
-
 
 def test_trip_comparison_comparison_type(sample_trip_comparison_dict):
     """Test the comparison_type property."""
@@ -91,7 +85,6 @@ def test_trip_comparison_comparison_type(sample_trip_comparison_dict):
     trip_comparison.comparison_json["options"] = []
     assert trip_comparison.comparison_type is None
 
-
 def test_trip_comparison_get_option_by_id(sample_trip_comparison_dict):
     """Test the get_option_by_id method."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
@@ -105,7 +98,6 @@ def test_trip_comparison_get_option_by_id(sample_trip_comparison_dict):
     # Get non-existent option
     option = trip_comparison.get_option_by_id(999)
     assert option is None
-
 
 def test_trip_comparison_get_selected_option(sample_trip_comparison_dict):
     """Test the get_selected_option method."""
@@ -122,7 +114,6 @@ def test_trip_comparison_get_selected_option(sample_trip_comparison_dict):
     option = trip_comparison.get_selected_option()
     assert option is None
 
-
 def test_trip_comparison_has_criteria(sample_trip_comparison_dict):
     """Test the has_criteria property."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
@@ -131,7 +122,6 @@ def test_trip_comparison_has_criteria(sample_trip_comparison_dict):
     # Remove criteria
     del trip_comparison.comparison_json["criteria"]
     assert trip_comparison.has_criteria is False
-
 
 def test_trip_comparison_criteria_list(sample_trip_comparison_dict):
     """Test the criteria_list property."""
@@ -142,14 +132,12 @@ def test_trip_comparison_criteria_list(sample_trip_comparison_dict):
     del trip_comparison.comparison_json["criteria"]
     assert trip_comparison.criteria_list == []
 
-
 def test_trip_comparison_formatted_timestamp(sample_trip_comparison_dict):
     """Test the formatted_timestamp property."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
     # This is a basic check since the exact format depends on the implementation
     assert isinstance(trip_comparison.formatted_timestamp, str)
     assert len(trip_comparison.formatted_timestamp) > 0
-
 
 def test_trip_comparison_model_dump(sample_trip_comparison_dict):
     """Test model_dump method."""

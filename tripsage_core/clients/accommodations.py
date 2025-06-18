@@ -8,7 +8,6 @@ from tripsage_core.models.accommodation import (
     AccommodationSearchResponse,
 )
 
-
 class AccommodationMCPClient(
     BaseMCPClient[AccommodationSearchRequest, AccommodationSearchResponse]
 ):

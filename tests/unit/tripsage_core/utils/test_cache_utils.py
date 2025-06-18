@@ -34,7 +34,6 @@ from tripsage_core.utils.cache_utils import (
 )
 from tripsage_core.utils.content_utils import ContentType
 
-
 class TestCacheStats:
     """Test cache statistics model."""
 
@@ -67,7 +66,6 @@ class TestCacheStats:
         assert stats.deletes == 5
         assert stats.key_count == 45
         assert stats.size_mb == 2.5
-
 
 class TestInMemoryCache:
     """Test in-memory cache implementation."""
@@ -180,7 +178,6 @@ class TestInMemoryCache:
 
         # All values should be set correctly
         assert len([r for r in results if r is not None]) == 10
-
 
 class TestDragonflyCache:
     """Test DragonflyDB cache implementation."""
@@ -311,7 +308,6 @@ class TestDragonflyCache:
             assert stats.sets == 4
             assert stats.deletes == 1
 
-
 class TestCacheKeyGeneration:
     """Test cache key generation functionality."""
 
@@ -356,7 +352,6 @@ class TestCacheKeyGeneration:
         key1 = generate_cache_key("prefix", "QUERY")
         key2 = generate_cache_key("prefix", "query")
         assert key1 == key2
-
 
 class TestCachedDecorator:
     """Test cached decorator functionality."""
@@ -476,7 +471,6 @@ class TestCachedDecorator:
             # All functions should have been called once
             assert len(functions) == 5
 
-
 class TestBatchOperations:
     """Test batch cache operations."""
 
@@ -524,7 +518,6 @@ class TestBatchOperations:
             assert len(results) == 1
             assert results[0] is True
 
-
 class TestCacheLock:
     """Test distributed cache locking."""
 
@@ -562,7 +555,6 @@ class TestCacheLock:
 
             async with cache_lock("test_lock") as acquired:
                 assert acquired is True  # Should always succeed in development
-
 
 class TestContentTypeDetection:
     """Test content type detection functionality."""
@@ -620,7 +612,6 @@ class TestContentTypeDetection:
         """Test default content type for travel content."""
         content_type = determine_content_type("hotels in paris")
         assert content_type == ContentType.DAILY
-
 
 class TestUtilityFunctions:
     """Test utility functions."""

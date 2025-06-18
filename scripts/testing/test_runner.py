@@ -24,7 +24,6 @@ os.environ.update(
     }
 )
 
-
 def test_config_imports():
     """Test that config module can be imported and instantiated."""
     try:
@@ -66,7 +65,6 @@ def test_config_imports():
         traceback.print_exc()
         return False
 
-
 def test_exception_imports():
     """Test that exception handlers can be imported."""
     try:
@@ -96,7 +94,6 @@ def test_exception_imports():
         traceback.print_exc()
         return False
 
-
 def test_main_imports():
     """Test that main module can be imported (without running the app)."""
     try:
@@ -112,7 +109,6 @@ def test_main_imports():
         print(f"✗ Main imports test failed: {e}")
         traceback.print_exc()
         return False
-
 
 def test_cors_validation():
     """Test CORS validation logic."""
@@ -146,7 +142,6 @@ def test_cors_validation():
         traceback.print_exc()
         return False
 
-
 def test_inheritance():
     """Test inheritance from Settings works correctly."""
     try:
@@ -178,7 +173,6 @@ def test_inheritance():
         traceback.print_exc()
         return False
 
-
 def main():
     """Run all tests."""
     print("Running basic functionality tests...\n")
@@ -209,7 +203,6 @@ def main():
     else:
         print("❌ Some tests failed")
         return 1
-
 
 if __name__ == "__main__":
     sys.exit(main())

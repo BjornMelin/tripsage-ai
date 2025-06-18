@@ -18,7 +18,6 @@ from tripsage_core.models.schemas_common.enums import (
     DataSource,
 )
 
-
 class TestFlightModel:
     """Test suite for Flight model validation and functionality."""
 

@@ -20,7 +20,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
 )
 
-
 class TestWebSocketIntegration:
     """Integration tests for WebSocket functionality."""
 

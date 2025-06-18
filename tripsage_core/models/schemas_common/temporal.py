@@ -12,7 +12,6 @@ from pydantic import Field, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
-
 class DateRange(TripSageModel):
     """Date range with validation."""
 
@@ -40,7 +39,6 @@ class DateRange(TripSageModel):
             self.end_date < other.start_date or other.end_date < self.start_date
         )
 
-
 class TimeRange(TripSageModel):
     """Time range within a day."""
 
@@ -63,7 +61,6 @@ class TimeRange(TripSageModel):
     def contains(self, check_time: time) -> bool:
         """Check if a time falls within this range."""
         return self.start_time <= check_time <= self.end_time
-
 
 class Duration(TripSageModel):
     """Duration with multiple representations."""
@@ -105,13 +102,12 @@ class Duration(TripSageModel):
 
         return cls(days=days, hours=hours, minutes=minutes)
 
-
 class DateTimeRange(TripSageModel):
     """DateTime range with timezone awareness."""
 
     start_datetime: datetime = Field(description="Start datetime")
     end_datetime: datetime = Field(description="End datetime")
-    timezone: Optional[str] = Field(None, description="IANA timezone identifier")
+    timezone: str | None = Field(None, description="IANA timezone identifier")
 
     @model_validator(mode="after")
     def validate_datetime_range(self) -> "DateTimeRange":
@@ -135,19 +131,18 @@ class DateTimeRange(TripSageModel):
             or other.end_datetime <= self.start_datetime
         )
 
-
 class RecurrenceRule(TripSageModel):
     """Recurrence rule for repeating events."""
 
     frequency: str = Field(description="Frequency (DAILY, WEEKLY, MONTHLY, YEARLY)")
     interval: int = Field(1, ge=1, description="Interval between occurrences")
-    count: Optional[int] = Field(None, ge=1, description="Number of occurrences")
-    until: Optional[date] = Field(None, description="End date for recurrence")
-    by_day: Optional[list[str]] = Field(
+    count: int | None = Field(None, ge=1, description="Number of occurrences")
+    until: date | None = Field(None, description="End date for recurrence")
+    by_day: list[str] | None = Field(
         None, description="Days of week (MO, TU, WE, etc.)"
     )
-    by_month_day: Optional[list[int]] = Field(None, description="Days of month (1-31)")
-    by_month: Optional[list[int]] = Field(None, description="Months (1-12)")
+    by_month_day: list[int] | None = Field(None, description="Days of month (1-31)")
+    by_month: list[int] | None = Field(None, description="Months (1-12)")
 
     @model_validator(mode="after")
     def validate_recurrence(self) -> "RecurrenceRule":
@@ -182,18 +177,17 @@ class RecurrenceRule(TripSageModel):
 
         return self
 
-
 class BusinessHours(TripSageModel):
     """Business hours for a location or service."""
 
-    monday: Optional[TimeRange] = Field(None, description="Monday hours")
-    tuesday: Optional[TimeRange] = Field(None, description="Tuesday hours")
-    wednesday: Optional[TimeRange] = Field(None, description="Wednesday hours")
-    thursday: Optional[TimeRange] = Field(None, description="Thursday hours")
-    friday: Optional[TimeRange] = Field(None, description="Friday hours")
-    saturday: Optional[TimeRange] = Field(None, description="Saturday hours")
-    sunday: Optional[TimeRange] = Field(None, description="Sunday hours")
-    timezone: Optional[str] = Field(None, description="IANA timezone identifier")
+    monday: TimeRange | None = Field(None, description="Monday hours")
+    tuesday: TimeRange | None = Field(None, description="Tuesday hours")
+    wednesday: TimeRange | None = Field(None, description="Wednesday hours")
+    thursday: TimeRange | None = Field(None, description="Thursday hours")
+    friday: TimeRange | None = Field(None, description="Friday hours")
+    saturday: TimeRange | None = Field(None, description="Saturday hours")
+    sunday: TimeRange | None = Field(None, description="Sunday hours")
+    timezone: str | None = Field(None, description="IANA timezone identifier")
 
     def is_open_at(self, check_datetime: datetime) -> bool:
         """Check if open at a specific datetime."""
@@ -217,19 +211,18 @@ class BusinessHours(TripSageModel):
 
         return day_hours.contains(check_datetime.time())
 
-
 class Availability(TripSageModel):
     """Availability information for a resource."""
 
     available: bool = Field(description="Whether the resource is available")
-    from_datetime: Optional[datetime] = Field(
+    from_datetime: datetime | None = Field(
         None, description="Available from this datetime"
     )
-    to_datetime: Optional[datetime] = Field(
+    to_datetime: datetime | None = Field(
         None, description="Available until this datetime"
     )
-    capacity: Optional[int] = Field(None, ge=0, description="Available capacity")
-    restrictions: Optional[list[str]] = Field(
+    capacity: int | None = Field(None, ge=0, description="Available capacity")
+    restrictions: list[str] | None = Field(
         None, description="Availability restrictions"
     )
 

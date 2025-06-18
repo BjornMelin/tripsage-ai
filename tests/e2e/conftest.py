@@ -23,14 +23,12 @@ os.environ.update(
     }
 )
 
-
 @pytest.fixture
 def event_loop():
     """Create event loop for async tests."""
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
-
 
 @pytest.fixture
 async def test_client():

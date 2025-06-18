@@ -8,7 +8,7 @@ capabilities.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -20,7 +20,6 @@ from tripsage_core.services.configuration_service import get_configuration_servi
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class BudgetAgentNode(BaseAgentNode):
     """
@@ -173,7 +172,7 @@ class BudgetAgentNode(BaseAgentNode):
 
     async def _extract_budget_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Extract budget parameters from user message and conversation context.
 
@@ -252,8 +251,8 @@ class BudgetAgentNode(BaseAgentNode):
             return None
 
     async def _optimize_budget(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Optimize budget allocation based on trip parameters and preferences.
 
@@ -337,8 +336,8 @@ class BudgetAgentNode(BaseAgentNode):
         }
 
     async def _track_expenses(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Track and categorize travel expenses.
 
@@ -382,8 +381,8 @@ class BudgetAgentNode(BaseAgentNode):
         }
 
     async def _compare_costs(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Compare cost options for travel components.
 
@@ -443,8 +442,8 @@ class BudgetAgentNode(BaseAgentNode):
         }
 
     async def _analyze_spending(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
         """
         Analyze spending patterns against budget.
 
@@ -505,7 +504,7 @@ class BudgetAgentNode(BaseAgentNode):
             "variance_analysis": variance_analysis,
         }
 
-    def _calculate_value_score(self, option: Dict[str, Any], category: str) -> float:
+    def _calculate_value_score(self, option: dict[str, Any], category: str) -> float:
         """
         Calculate a value score for an option based on cost and features.
 
@@ -536,11 +535,11 @@ class BudgetAgentNode(BaseAgentNode):
 
     async def _generate_budget_response(
         self,
-        analysis: Dict[str, Any],
-        params: Dict[str, Any],
+        analysis: dict[str, Any],
+        params: dict[str, Any],
         operation_type: str,
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate user-friendly response from budget analysis.
 
@@ -573,7 +572,7 @@ class BudgetAgentNode(BaseAgentNode):
         )
 
     def _format_optimization_response(
-        self, analysis: Dict[str, Any], params: Dict[str, Any]
+        self, analysis: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format budget optimization response."""
         total_budget = analysis.get("total_budget", 0)
@@ -612,7 +611,7 @@ class BudgetAgentNode(BaseAgentNode):
         return content
 
     def _format_tracking_response(
-        self, analysis: Dict[str, Any], params: Dict[str, Any]
+        self, analysis: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format expense tracking response."""
         total_spent = analysis.get("total_spent", 0)
@@ -633,7 +632,7 @@ class BudgetAgentNode(BaseAgentNode):
         return content
 
     def _format_comparison_response(
-        self, analysis: Dict[str, Any], params: Dict[str, Any]
+        self, analysis: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format cost comparison response."""
         category = analysis.get("category", "options")
@@ -661,7 +660,7 @@ class BudgetAgentNode(BaseAgentNode):
         return content
 
     def _format_analysis_response(
-        self, analysis: Dict[str, Any], params: Dict[str, Any]
+        self, analysis: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format spending analysis response."""
         if "message" in analysis:
@@ -691,7 +690,7 @@ class BudgetAgentNode(BaseAgentNode):
 
     async def _handle_general_budget_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle general budget inquiries that don't require specific analysis.
 

@@ -8,7 +8,6 @@ from connection_utils.py.
 
 import logging
 import re
-from typing import Dict, Tuple
 
 from tripsage_core.utils.connection_utils import (
     ConnectionCredentials,
@@ -17,7 +16,6 @@ from tripsage_core.utils.connection_utils import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class DatabaseURLConverter:
     """
@@ -66,7 +64,7 @@ class DatabaseURLConverter:
         """
         return url.startswith(("postgresql://", "postgres://"))
 
-    def extract_supabase_project_ref(self, supabase_url: str) -> Tuple[str, str]:
+    def extract_supabase_project_ref(self, supabase_url: str) -> tuple[str, str]:
         """
         Extract project reference and domain from Supabase URL.
 
@@ -168,7 +166,7 @@ class DatabaseURLConverter:
 
     def postgres_to_supabase(
         self, postgres_url: str, *, domain: str = "supabase.co"
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """
         Extract Supabase project reference from PostgreSQL URL.
 
@@ -249,7 +247,6 @@ class DatabaseURLConverter:
             self.logger.error(f"Validation failed: {e}")
             return False
 
-
 class DatabaseURLDetector:
     """
     Detect and classify database URLs for appropriate handling.
@@ -262,7 +259,7 @@ class DatabaseURLDetector:
         self.converter = DatabaseURLConverter()
         self.parser = DatabaseURLParser()
 
-    def detect_url_type(self, url: str) -> Dict[str, any]:
+    def detect_url_type(self, url: str) -> dict[str, any]:
         """
         Detect URL type and provide metadata.
 
@@ -334,7 +331,6 @@ class DatabaseURLDetector:
         else:
             return "Unknown URL type - manual inspection required"
 
-
 # Convenience functions
 def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> str:
     """
@@ -351,8 +347,7 @@ def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> 
     converter = DatabaseURLConverter()
     return converter.supabase_to_postgres(supabase_url, password, **kwargs)
 
-
-def detect_database_url_type(url: str) -> Dict[str, any]:
+def detect_database_url_type(url: str) -> dict[str, any]:
     """
     Detect and analyze database URL type.
 

@@ -13,7 +13,7 @@ This module provides comprehensive dashboard API endpoints for monitoring and in
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
@@ -39,9 +39,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
-
 # Pydantic models for dashboard responses
-
 
 class SystemOverview(BaseModel):
     """System overview data for dashboard."""
@@ -57,18 +55,16 @@ class SystemOverview(BaseModel):
     active_users_24h: int
     active_api_keys: int
 
-
 class ServiceStatus(BaseModel):
     """Service status information."""
 
     service: str
     status: str  # healthy, degraded, unhealthy
-    latency_ms: Optional[float] = None
+    latency_ms: float | None = None
     last_check: datetime
     error_rate: float
     uptime_percentage: float
-    message: Optional[str] = None
-
+    message: str | None = None
 
 class UsageMetrics(BaseModel):
     """Usage metrics for a specific time period."""
@@ -83,9 +79,8 @@ class UsageMetrics(BaseModel):
     p99_latency_ms: float
     unique_users: int
     unique_endpoints: int
-    top_endpoints: List[Dict[str, Any]]
-    error_breakdown: Dict[str, int]
-
+    top_endpoints: list[dict[str, Any]]
+    error_breakdown: dict[str, int]
 
 class RateLimitInfo(BaseModel):
     """Rate limit information."""
@@ -98,7 +93,6 @@ class RateLimitInfo(BaseModel):
     reset_at: datetime
     percentage_used: float
 
-
 class AlertInfo(BaseModel):
     """Alert information for dashboard."""
 
@@ -107,11 +101,10 @@ class AlertInfo(BaseModel):
     type: str
     message: str
     created_at: datetime
-    key_id: Optional[str] = None
-    service: Optional[str] = None
+    key_id: str | None = None
+    service: str | None = None
     acknowledged: bool = False
-    details: Dict[str, Any] = Field(default_factory=dict)
-
+    details: dict[str, Any] = Field(default_factory=dict)
 
 class UserActivity(BaseModel):
     """User activity information."""
@@ -122,28 +115,25 @@ class UserActivity(BaseModel):
     error_count: int
     success_rate: float
     last_activity: datetime
-    services_used: List[str]
+    services_used: list[str]
     avg_latency_ms: float
-
 
 class TrendData(BaseModel):
     """Time series trend data."""
 
     timestamp: datetime
     value: float
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 class DashboardFilters(BaseModel):
     """Filters for dashboard queries."""
 
     time_range_hours: int = Field(default=24, ge=1, le=168)  # 1 hour to 1 week
-    service: Optional[str] = None
-    user_id: Optional[str] = None
-    key_id: Optional[str] = None
-    severity: Optional[str] = None
-    status: Optional[str] = None
-
+    service: str | None = None
+    user_id: str | None = None
+    key_id: str | None = None
+    severity: str | None = None
+    status: str | None = None
 
 # Dependency for getting authenticated principal
 async def get_current_principal(request: Request) -> Principal:
@@ -159,9 +149,7 @@ async def get_current_principal(request: Request) -> Principal:
 
     return principal
 
-
 # Dashboard endpoints
-
 
 @router.get("/overview", response_model=SystemOverview)
 async def get_system_overview(
@@ -219,12 +207,11 @@ async def get_system_overview(
             detail=f"Failed to retrieve system overview: {str(e)}",
         ) from e
 
-
-@router.get("/services", response_model=List[ServiceStatus])
+@router.get("/services", response_model=list[ServiceStatus])
 async def get_services_status(
     cache_service: CacheDep,
     principal: Principal = Depends(get_current_principal),
-) -> List[ServiceStatus]:
+) -> list[ServiceStatus]:
     """Get status of all external services.
 
     Returns health status for all integrated external services:
@@ -283,13 +270,12 @@ async def get_services_status(
             detail=f"Failed to retrieve services status: {str(e)}",
         ) from e
 
-
 @router.get("/metrics", response_model=UsageMetrics)
 async def get_usage_metrics(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     time_range_hours: int = Query(default=24, ge=1, le=168),
-    service: Optional[str] = Query(default=None),
+    service: str | None = Query(default=None),
     principal: Principal = Depends(get_current_principal),
 ) -> UsageMetrics:
     """Get usage metrics for specified time range.
@@ -362,14 +348,13 @@ async def get_usage_metrics(
             detail=f"Failed to retrieve usage metrics: {str(e)}",
         ) from e
 
-
-@router.get("/rate-limits", response_model=List[RateLimitInfo])
+@router.get("/rate-limits", response_model=list[RateLimitInfo])
 async def get_rate_limits_status(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     limit: int = Query(default=20, ge=1, le=100),
     principal: Principal = Depends(get_current_principal),
-) -> List[RateLimitInfo]:
+) -> list[RateLimitInfo]:
     """Get rate limit status for API keys.
 
     Returns current rate limit status for active API keys including:
@@ -432,16 +417,15 @@ async def get_rate_limits_status(
             detail=f"Failed to retrieve rate limits status: {str(e)}",
         ) from e
 
-
-@router.get("/alerts", response_model=List[AlertInfo])
+@router.get("/alerts", response_model=list[AlertInfo])
 async def get_alerts(
     cache_service: CacheDep,
     db_service: DatabaseDep,
-    severity: Optional[str] = Query(default=None),
-    acknowledged: Optional[bool] = Query(default=None),
+    severity: str | None = Query(default=None),
+    acknowledged: bool | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     principal: Principal = Depends(get_current_principal),
-) -> List[AlertInfo]:
+) -> list[AlertInfo]:
     """Get system alerts and notifications.
 
     Returns alerts filtered by severity and acknowledgment status:
@@ -500,14 +484,13 @@ async def get_alerts(
             detail=f"Failed to retrieve alerts: {str(e)}",
         ) from e
 
-
 @router.post("/alerts/{alert_id}/acknowledge")
 async def acknowledge_alert(
     alert_id: str,
     cache_service: CacheDep,
     db_service: DatabaseDep,
     principal: Principal = Depends(get_current_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Acknowledge an alert.
 
     Marks an alert as acknowledged by the current user.
@@ -556,14 +539,13 @@ async def acknowledge_alert(
             detail=f"Failed to acknowledge alert: {str(e)}",
         ) from e
 
-
 @router.delete("/alerts/{alert_id}")
 async def dismiss_alert(
     alert_id: str,
     cache_service: CacheDep,
     db_service: DatabaseDep,
     principal: Principal = Depends(get_current_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Dismiss an alert.
 
     Removes an alert from the active alerts list.
@@ -611,15 +593,14 @@ async def dismiss_alert(
             detail=f"Failed to dismiss alert: {str(e)}",
         ) from e
 
-
-@router.get("/users/activity", response_model=List[UserActivity])
+@router.get("/users/activity", response_model=list[UserActivity])
 async def get_user_activity(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     limit: int = Query(default=20, ge=1, le=100),
     principal: Principal = Depends(get_current_principal),
-) -> List[UserActivity]:
+) -> list[UserActivity]:
     """Get user activity data.
 
     Returns user activity metrics including:
@@ -677,8 +658,7 @@ async def get_user_activity(
             detail=f"Failed to retrieve user activity: {str(e)}",
         ) from e
 
-
-@router.get("/trends/{metric_type}", response_model=List[TrendData])
+@router.get("/trends/{metric_type}", response_model=list[TrendData])
 async def get_trend_data(
     metric_type: str,
     cache_service: CacheDep,
@@ -686,7 +666,7 @@ async def get_trend_data(
     time_range_hours: int = Query(default=24, ge=1, le=168),
     interval_minutes: int = Query(default=60, ge=5, le=1440),
     principal: Principal = Depends(get_current_principal),
-) -> List[TrendData]:
+) -> list[TrendData]:
     """Get trend data for specified metric.
 
     Returns time series data for metrics like:
@@ -758,14 +738,13 @@ async def get_trend_data(
             detail=f"Failed to retrieve trend data: {str(e)}",
         ) from e
 
-
-@router.get("/analytics/summary", response_model=Dict[str, Any])
+@router.get("/analytics/summary", response_model=dict[str, Any])
 async def get_analytics_summary(
     cache_service: CacheDep,
     db_service: DatabaseDep,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     principal: Principal = Depends(get_current_principal),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get comprehensive analytics summary.
 
     Returns comprehensive analytics including:

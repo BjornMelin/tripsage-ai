@@ -16,7 +16,6 @@ from tripsage_core.services.infrastructure.replica_manager import (
     ReplicaManager,
 )
 
-
 @pytest.fixture
 def mock_settings_with_replicas():
     """Create mock settings with read replicas enabled."""
@@ -64,7 +63,6 @@ def mock_settings_with_replicas():
 
     return settings
 
-
 @pytest.fixture
 def mock_settings_without_replicas():
     """Create mock settings with read replicas disabled."""
@@ -96,7 +94,6 @@ def mock_settings_without_replicas():
 
     return settings
 
-
 @pytest.fixture
 def mock_supabase_client():
     """Create a mock Supabase client."""
@@ -124,7 +121,6 @@ def mock_supabase_client():
     )
 
     return client
-
 
 class TestDatabaseServiceReplicaIntegration:
     """Test cases for DatabaseService with replica integration."""
@@ -516,7 +512,6 @@ class TestDatabaseServiceReplicaIntegration:
 
         assert self.db_service.get_replica_manager() is not None
         assert self.db_service.is_replica_enabled() is True
-
 
 class TestQueryTypeRouting:
     """Test query type routing behavior."""

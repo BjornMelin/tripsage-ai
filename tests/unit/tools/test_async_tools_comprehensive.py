@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 class TestAsyncToolsPattern:
     """Test async patterns in tool implementations."""
 
@@ -184,7 +183,6 @@ class TestAsyncToolsPattern:
         total_time = end_time - start_time
         assert total_time < 1.0  # Should complete quickly with mocks
 
-
 class TestToolErrorHandling:
     """Test error handling in async tools."""
 
@@ -244,7 +242,6 @@ class TestToolErrorHandling:
 
         # Verify timeout occurred
         assert (end_time - start_time) < 1.5
-
 
 class TestToolServiceIntegration:
     """Test tool integration with services."""
@@ -318,7 +315,6 @@ class TestToolServiceIntegration:
         mock_registry.get_service.assert_called()
         mock_memory_service.add_conversation_memory.assert_called_once()
         assert isinstance(result, dict)
-
 
 @pytest.mark.integration
 class TestToolsIntegrationScenarios:
@@ -440,7 +436,6 @@ class TestToolsIntegrationScenarios:
         # Verify workflow
         mock_service.search_accommodations.assert_called_once()
         mock_service.book_accommodation.assert_called_once()
-
 
 class TestToolPerformanceCharacteristics:
     """Test performance characteristics of async tools."""

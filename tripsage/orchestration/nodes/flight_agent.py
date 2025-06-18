@@ -7,7 +7,7 @@ using modern LangGraph @tool patterns for simplicity and maintainability.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -19,7 +19,6 @@ from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
 
 class FlightAgentNode(BaseAgentNode):
     """
@@ -103,7 +102,7 @@ class FlightAgentNode(BaseAgentNode):
 
     async def _extract_flight_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Extract flight search parameters from user message and conversation context.
 
@@ -168,7 +167,7 @@ class FlightAgentNode(BaseAgentNode):
             logger.error(f"Error extracting flight parameters: {str(e)}")
             return None
 
-    async def _search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
         """
         Perform flight search using simple tool direct access.
 
@@ -198,10 +197,10 @@ class FlightAgentNode(BaseAgentNode):
 
     async def _generate_flight_response(
         self,
-        search_results: Dict[str, Any],
-        search_params: Dict[str, Any],
+        search_results: dict[str, Any],
+        search_params: dict[str, Any],
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate user-friendly response from flight search results.
 
@@ -260,7 +259,7 @@ class FlightAgentNode(BaseAgentNode):
 
     async def _handle_general_flight_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Handle general flight inquiries that don't require a specific search.
 

@@ -10,7 +10,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 class ApiKeyDB(BaseModel):
     """Database model for API keys.
 
@@ -54,7 +53,7 @@ class ApiKeyDB(BaseModel):
         description="Service name this key is for",
     )
     encrypted_key: str = Field(description="Encrypted API key value")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         max_length=1000,
         description="Optional description of the API key",
@@ -63,11 +62,11 @@ class ApiKeyDB(BaseModel):
     updated_at: datetime = Field(
         description="Timestamp when the API key was last updated"
     )
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         default=None,
         description="Optional expiration timestamp for the API key",
     )
-    last_used: Optional[datetime] = Field(
+    last_used: datetime | None = Field(
         default=None,
         description="Timestamp when the API key was last used",
     )
@@ -94,7 +93,7 @@ class ApiKeyDB(BaseModel):
 
     @field_validator("expires_at")
     @classmethod
-    def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
+    def validate_expires_at(cls, v: datetime | None) -> datetime | None:
         """Validate expiration date is in the future."""
         if v is not None:
             # Handle timezone-aware and timezone-naive datetime comparison
@@ -118,7 +117,6 @@ class ApiKeyDB(BaseModel):
     def is_usable(self) -> bool:
         """Check if the API key can be used."""
         return self.is_active and not self.is_expired()
-
 
 class ApiKeyCreate(BaseModel):
     """Model for creating a new API key."""
@@ -151,16 +149,15 @@ class ApiKeyCreate(BaseModel):
         description="Service name this key is for",
     )
     encrypted_key: str = Field(description="Encrypted API key value")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         max_length=1000,
         description="Optional description of the API key",
     )
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         default=None,
         description="Optional expiration timestamp for the API key",
     )
-
 
 class ApiKeyUpdate(BaseModel):
     """Model for updating an existing API key."""
@@ -178,22 +175,22 @@ class ApiKeyUpdate(BaseModel):
         },
     )
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None,
         min_length=1,
         max_length=255,
         description="Updated user-friendly name",
     )
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         max_length=1000,
         description="Updated description",
     )
-    is_active: Optional[bool] = Field(
+    is_active: bool | None = Field(
         default=None,
         description="Updated active status",
     )
-    expires_at: Optional[datetime] = Field(
+    expires_at: datetime | None = Field(
         default=None,
         description="Updated expiration timestamp",
     )

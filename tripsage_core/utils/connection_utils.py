@@ -10,13 +10,12 @@ import logging
 import time
 from contextlib import asynccontextmanager
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 from urllib.parse import ParseResult, quote_plus, unquote_plus, urlparse
 
 from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
-
 
 class ConnectionState(Enum):
     """Connection circuit breaker states."""
@@ -25,24 +24,20 @@ class ConnectionState(Enum):
     OPEN = "open"
     HALF_OPEN = "half_open"
 
-
 class DatabaseURLParsingError(Exception):
     """Raised when database URL parsing fails."""
 
     pass
-
 
 class DatabaseConnectionError(Exception):
     """Raised when database connection fails."""
 
     pass
 
-
 class DatabaseValidationError(Exception):
     """Raised when database connection validation fails."""
 
     pass
-
 
 class ConnectionCredentials(BaseModel):
     """Secure model for database connection credentials."""
@@ -53,7 +48,7 @@ class ConnectionCredentials(BaseModel):
     hostname: str = Field(..., description="Database hostname")
     port: int = Field(default=5432, ge=1, le=65535, description="Database port")
     database: str = Field(default="postgres", description="Database name")
-    query_params: Dict[str, str] = Field(
+    query_params: dict[str, str] = Field(
         default_factory=dict, description="Query parameters"
     )
 
@@ -91,7 +86,6 @@ class ConnectionCredentials(BaseModel):
     def sanitized_for_logging(self) -> str:
         """Get sanitized connection string safe for logging."""
         return self.to_connection_string(mask_password=True)
-
 
 class DatabaseURLParser:
     """
@@ -172,7 +166,7 @@ class DatabaseURLParser:
         if "://" not in url:
             raise DatabaseURLParsingError("URL must contain scheme separator '://'")
 
-    def _extract_components(self, parsed: ParseResult) -> Dict[str, Any]:
+    def _extract_components(self, parsed: ParseResult) -> dict[str, Any]:
         """
         Extract and validate URL components.
 
@@ -228,7 +222,6 @@ class DatabaseURLParser:
             "database": database,
             "query_params": query_params,
         }
-
 
 class ConnectionCircuitBreaker:
     """
@@ -304,7 +297,6 @@ class ConnectionCircuitBreaker:
             self.logger.error(
                 f"Circuit breaker opening after {self.failure_count} failures"
             )
-
 
 class ExponentialBackoffRetry:
     """
@@ -399,7 +391,6 @@ class ExponentialBackoffRetry:
 
         raise last_exception
 
-
 class DatabaseConnectionValidator:
     """
     Database connection validator with health checks.
@@ -488,7 +479,6 @@ class DatabaseConnectionValidator:
             error_msg = f"Connection validation failed: {e}"
             self.logger.error(error_msg, extra={"hostname": credentials.hostname})
             raise DatabaseValidationError(error_msg) from e
-
 
 class SecureDatabaseConnectionManager:
     """
@@ -602,7 +592,6 @@ class SecureDatabaseConnectionManager:
         finally:
             await conn.close()
 
-
 # Convenience functions for backward compatibility
 async def parse_database_url(url: str) -> ConnectionCredentials:
     """
@@ -616,7 +605,6 @@ async def parse_database_url(url: str) -> ConnectionCredentials:
     """
     parser = DatabaseURLParser()
     return parser.parse_url(url)
-
 
 async def validate_database_connection(url: str) -> bool:
     """

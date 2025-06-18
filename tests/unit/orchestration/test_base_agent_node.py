@@ -7,7 +7,7 @@ Tests use actual domain models with proper mocking and async patterns.
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +15,6 @@ import pytest
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
-
 
 class TestableAgentNode(BaseAgentNode):
     """Concrete implementation of BaseAgentNode for testing."""
@@ -25,7 +24,7 @@ class TestableAgentNode(BaseAgentNode):
         service_registry: ServiceRegistry,
         process_func=None,
         initialize_func=None,
-        config: Dict[str, Any] = None,
+        config: dict[str, Any] = None,
     ):
         """Initialize with optional custom functions."""
         self.process_func = process_func
@@ -54,7 +53,6 @@ class TestableAgentNode(BaseAgentNode):
                 }
             )
             return state
-
 
 class TestBaseAgentNode:
     """Test suite for BaseAgentNode."""

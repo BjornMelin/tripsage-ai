@@ -26,7 +26,6 @@ from tripsage_core.models.schemas_common.travel import (
     TripSummary,
 )
 
-
 class TestTripDestination:
     """Test TripDestination model."""
 
@@ -87,7 +86,6 @@ class TestTripDestination:
                 ),  # Invalid latitude
             )
 
-
 class TestAccommodationPreferences:
     """Test AccommodationPreferences model."""
 
@@ -134,7 +132,6 @@ class TestAccommodationPreferences:
         prefs = AccommodationPreferences(min_rating=5.0)
         assert prefs.min_rating == 5.0
 
-
 class TestTransportationPreferences:
     """Test TransportationPreferences model."""
 
@@ -175,7 +172,6 @@ class TestTransportationPreferences:
         """Test that travel time of 1 hour is valid."""
         prefs = TransportationPreferences(max_travel_time_hours=1)
         assert prefs.max_travel_time_hours == 1
-
 
 class TestTripPreferences:
     """Test TripPreferences model."""
@@ -230,7 +226,6 @@ class TestTripPreferences:
         """Test that group size of 1 is valid."""
         prefs = TripPreferences(group_size=1)
         assert prefs.group_size == 1
-
 
 class TestTripSummary:
     """Test TripSummary model."""
@@ -300,7 +295,6 @@ class TestTripSummary:
             status=TripStatus.PLANNING,
         )
         assert summary.duration_days == 1
-
 
 class TestTravelModelsIntegration:
     """Test integration between travel models."""

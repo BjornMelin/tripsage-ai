@@ -18,7 +18,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 class TriggerDeploymentService:
     """Service for deploying database triggers."""
 
@@ -440,7 +439,6 @@ class TriggerDeploymentService:
             logger.error(f"Error generating deployment report: {e}")
             return {"error": str(e)}
 
-
 async def main():
     """Main deployment function."""
     logger.info("Starting database trigger deployment...")
@@ -518,7 +516,6 @@ async def main():
             await db_service.close()
         except Exception:
             pass
-
 
 if __name__ == "__main__":
     success = asyncio.run(main())

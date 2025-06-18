@@ -8,7 +8,7 @@ for MCP operations, following Phase 5 implementation patterns.
 import asyncio
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,6 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
-
 class ErrorSeverity(Enum):
     """Error severity levels for MCP operations."""
 
@@ -34,7 +33,6 @@ class ErrorSeverity(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
-
 
 class FallbackStrategy(Enum):
     """Fallback strategies for failed MCP operations."""
@@ -44,7 +42,6 @@ class FallbackStrategy(Enum):
     CACHED_RESPONSE = "cached_response"
     GRACEFUL_DEGRADATION = "graceful_degradation"
     FAIL_FAST = "fail_fast"
-
 
 class MCPOperationError(TripSageError):
     """Error raised when MCP operation fails."""
@@ -56,7 +53,7 @@ class MCPOperationError(TripSageError):
         method: str,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
         retry_count: int = 0,
-        original_error: Optional[Exception] = None,
+        original_error: Exception | None = None,
     ):
         """Initialize MCP operation error.
 
@@ -76,21 +73,19 @@ class MCPOperationError(TripSageError):
         self.original_error = original_error
         self.timestamp = time.time()
 
-
 class FallbackResult(BaseModel):
     """Result of fallback operation."""
 
     success: bool = Field(..., description="Whether fallback succeeded")
     strategy_used: FallbackStrategy = Field(..., description="Fallback strategy used")
-    result: Optional[Dict[str, Any]] = Field(
+    result: dict[str, Any] | None = Field(
         default=None, description="Fallback result data"
     )
-    error: Optional[str] = Field(default=None, description="Fallback error message")
+    error: str | None = Field(default=None, description="Fallback error message")
     execution_time: float = Field(..., description="Fallback execution time")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
-
 
 class ErrorRecoveryService:
     """
@@ -109,8 +104,8 @@ class ErrorRecoveryService:
         # MCP manager removed as part of BJO-161 MCP abstraction removal
         if mcp_manager is not None:
             logger.warning("MCP manager parameter is deprecated and will be ignored")
-        self.error_history: List[MCPOperationError] = []
-        self.fallback_cache: Dict[str, Any] = {}
+        self.error_history: list[MCPOperationError] = []
+        self.fallback_cache: dict[str, Any] = {}
 
         # Service fallback mappings
         self.service_alternatives = {
@@ -195,7 +190,7 @@ class ErrorRecoveryService:
         error: Exception,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         retry_count: int = 0,
     ) -> FallbackResult:
         """Handle MCP operation error with comprehensive fallback strategies.
@@ -254,7 +249,7 @@ class ErrorRecoveryService:
         strategy: FallbackStrategy,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
         """Execute specific fallback strategy.
@@ -293,7 +288,7 @@ class ErrorRecoveryService:
         self,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
         """Retry operation using configurable circuit breaker."""
@@ -364,7 +359,7 @@ class ErrorRecoveryService:
         self,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
         """Simple retry fallback when no circuit breaker is available."""
@@ -399,7 +394,7 @@ class ErrorRecoveryService:
         )
 
     async def _try_alternative_service(
-        self, original_service: str, method: str, params: Dict[str, Any]
+        self, original_service: str, method: str, params: dict[str, Any]
     ) -> FallbackResult:
         """Try alternative services for the same functionality."""
         alternatives = self.service_alternatives.get(original_service, [])
@@ -441,7 +436,7 @@ class ErrorRecoveryService:
         )
 
     async def _get_cached_response(
-        self, service: str, method: str, params: Dict[str, Any]
+        self, service: str, method: str, params: dict[str, Any]
     ) -> FallbackResult:
         """Get cached response for the operation."""
         cache_key = self._generate_cache_key(service, method, params)
@@ -468,7 +463,7 @@ class ErrorRecoveryService:
         )
 
     async def _graceful_degradation(
-        self, service: str, method: str, params: Dict[str, Any]
+        self, service: str, method: str, params: dict[str, Any]
     ) -> FallbackResult:
         """Provide graceful degradation response."""
         # Map service to degradation category
@@ -522,7 +517,7 @@ class ErrorRecoveryService:
         return ErrorSeverity.LOW
 
     def _determine_fallback_strategy(
-        self, error: MCPOperationError, params: Dict[str, Any]
+        self, error: MCPOperationError, params: dict[str, Any]
     ) -> FallbackStrategy:
         """Determine appropriate fallback strategy based on error characteristics."""
         # Critical errors should fail fast
@@ -561,8 +556,8 @@ class ErrorRecoveryService:
         return service in known_services
 
     async def _adapt_params_for_service(
-        self, params: Dict[str, Any], original_service: str, target_service: str
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], original_service: str, target_service: str
+    ) -> dict[str, Any]:
         """Adapt parameters for different service APIs."""
         # In production, this would handle parameter mapping between services
         # For now, return original parameters
@@ -572,7 +567,7 @@ class ErrorRecoveryService:
         return adapted_params
 
     def _generate_cache_key(
-        self, service: str, method: str, params: Dict[str, Any]
+        self, service: str, method: str, params: dict[str, Any]
     ) -> str:
         """Generate cache key for operation."""
         import hashlib
@@ -598,7 +593,7 @@ class ErrorRecoveryService:
 
     @with_error_handling()
     async def store_successful_result(
-        self, service: str, method: str, params: Dict[str, Any], result: Any
+        self, service: str, method: str, params: dict[str, Any], result: Any
     ) -> None:
         """Store successful result in cache for future fallback use."""
         try:
@@ -622,7 +617,7 @@ class ErrorRecoveryService:
         except Exception as e:
             logger.warning(f"Failed to cache result: {str(e)}")
 
-    def get_error_statistics(self) -> Dict[str, Any]:
+    def get_error_statistics(self) -> dict[str, Any]:
         """Get error statistics for monitoring."""
         if not self.error_history:
             return {"total_errors": 0, "by_service": {}, "by_severity": {}}
@@ -649,7 +644,7 @@ class ErrorRecoveryService:
             "cache_size": len(self.fallback_cache),
         }
 
-    def get_circuit_breaker_status(self) -> Dict[str, Any]:
+    def get_circuit_breaker_status(self) -> dict[str, Any]:
         """Get status of all circuit breakers for enterprise monitoring."""
         status = {}
 
@@ -668,7 +663,7 @@ class ErrorRecoveryService:
 
         return status
 
-    def get_comprehensive_statistics(self) -> Dict[str, Any]:
+    def get_comprehensive_statistics(self) -> dict[str, Any]:
         """Get comprehensive error handling and circuit breaker statistics."""
         error_stats = self.get_error_statistics()
         circuit_stats = self.get_circuit_breaker_status()

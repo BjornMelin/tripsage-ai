@@ -2,7 +2,6 @@
 
 import pytest
 
-
 @pytest.mark.asyncio
 async def test_health_endpoint(test_client):
     """Test basic health endpoint works."""
@@ -10,7 +9,6 @@ async def test_health_endpoint(test_client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
-
 
 @pytest.mark.asyncio
 async def test_chat_endpoint_not_implemented(test_client):

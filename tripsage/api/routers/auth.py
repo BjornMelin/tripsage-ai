@@ -14,7 +14,6 @@ from tripsage_core.services.business.user_service import UserService, get_user_s
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
 @router.post(
     "/register",
     response_model=UserResponse,

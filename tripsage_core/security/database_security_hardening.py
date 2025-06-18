@@ -14,14 +14,13 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import ValidationError
 
 logger = logging.getLogger(__name__)
-
 
 class SecurityLevel(Enum):
     """Security threat levels."""
@@ -30,7 +29,6 @@ class SecurityLevel(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
-
 
 class ThreatType(Enum):
     """Types of security threats."""
@@ -44,7 +42,6 @@ class ThreatType(Enum):
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     CONNECTION_ABUSE = "connection_abuse"
     PRIVILEGE_ESCALATION = "privilege_escalation"
-
 
 class AuditEventType(Enum):
     """Types of audit events."""
@@ -60,7 +57,6 @@ class AuditEventType(Enum):
     RATE_LIMIT_HIT = "rate_limit_hit"
     THREAT_DETECTED = "threat_detected"
 
-
 @dataclass
 class SecurityMetrics:
     """Security metrics for monitoring."""
@@ -71,9 +67,8 @@ class SecurityMetrics:
     rate_limit_violations: int = 0
     suspicious_queries: int = 0
     failed_authentications: int = 0
-    last_threat_time: Optional[datetime] = None
+    last_threat_time: datetime | None = None
     threat_score: float = 0.0
-
 
 @dataclass
 class ThreatAlert:
@@ -84,10 +79,9 @@ class ThreatAlert:
     source_ip: str
     timestamp: datetime
     message: str
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     blocked: bool = False
     acknowledged: bool = False
-
 
 @dataclass
 class AuditEvent:
@@ -95,13 +89,12 @@ class AuditEvent:
 
     event_type: AuditEventType
     timestamp: datetime
-    user_id: Optional[str]
+    user_id: str | None
     source_ip: str
-    query_hash: Optional[str]
-    table_accessed: Optional[str]
+    query_hash: str | None
+    table_accessed: str | None
     success: bool
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 class ConnectionSecurityValidator(BaseModel):
     """Enhanced connection security validation with Pydantic."""
@@ -111,8 +104,8 @@ class ConnectionSecurityValidator(BaseModel):
     database_url: str = Field(..., description="Database URL to validate")
     api_key: str = Field(..., min_length=20, description="API key for authentication")
     source_ip: str = Field(..., description="Source IP address")
-    user_agent: Optional[str] = Field(None, description="User agent string")
-    connection_metadata: Dict[str, Any] = Field(default_factory=dict)
+    user_agent: str | None = Field(None, description="User agent string")
+    connection_metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("database_url")
     @classmethod
@@ -193,7 +186,6 @@ class ConnectionSecurityValidator(BaseModel):
 
         return self
 
-
 class IPBasedRateLimiter:
     """Advanced IP-based rate limiting with geographic and behavioral analysis."""
 
@@ -210,20 +202,20 @@ class IPBasedRateLimiter:
         self.behavioral_window_minutes = behavioral_window_minutes
 
         # Rate limiting data structures
-        self.ip_requests: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self.ip_locations: Dict[str, Set[str]] = defaultdict(set)
-        self.ip_patterns: Dict[str, List[datetime]] = defaultdict(list)
-        self.blocked_ips: Dict[str, datetime] = {}
+        self.ip_requests: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
+        self.ip_locations: dict[str, set[str]] = defaultdict(set)
+        self.ip_patterns: dict[str, list[datetime]] = defaultdict(list)
+        self.blocked_ips: dict[str, datetime] = {}
 
         # Behavioral analysis
-        self.request_patterns: Dict[str, Dict[str, Any]] = defaultdict(dict)
+        self.request_patterns: dict[str, dict[str, Any]] = defaultdict(dict)
 
     async def check_rate_limit(
         self,
         ip_address: str,
-        user_region: Optional[str] = None,
-        request_metadata: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[bool, Optional[ThreatAlert]]:
+        user_region: str | None = None,
+        request_metadata: dict[str, Any] | None = None,
+    ) -> tuple[bool, ThreatAlert | None]:
         """Check if request should be rate limited."""
         now = datetime.now(timezone.utc)
 
@@ -309,8 +301,8 @@ class IPBasedRateLimiter:
         self,
         ip_address: str,
         now: datetime,
-        request_metadata: Optional[Dict[str, Any]],
-    ) -> Optional[ThreatAlert]:
+        request_metadata: dict[str, Any] | None,
+    ) -> ThreatAlert | None:
         """Analyze behavioral patterns for anomalies."""
         pattern_data = self.request_patterns[ip_address]
 
@@ -374,7 +366,7 @@ class IPBasedRateLimiter:
 
         return None
 
-    def get_ip_statistics(self, ip_address: str) -> Dict[str, Any]:
+    def get_ip_statistics(self, ip_address: str) -> dict[str, Any]:
         """Get statistics for an IP address."""
         pattern_data = self.request_patterns.get(ip_address, {})
         recent_requests = len(self.ip_requests.get(ip_address, []))
@@ -387,7 +379,6 @@ class IPBasedRateLimiter:
             "user_agents_count": len(pattern_data.get("user_agents", set())),
             "blocked": ip_address in self.blocked_ips,
         }
-
 
 class SQLInjectionDetector:
     """Advanced SQL injection pattern detection."""
@@ -433,8 +424,8 @@ class SQLInjectionDetector:
         ]
 
     def detect_sql_injection(
-        self, query: str, parameters: Optional[Dict[str, Any]] = None
-    ) -> Optional[ThreatAlert]:
+        self, query: str, parameters: dict[str, Any] | None = None
+    ) -> ThreatAlert | None:
         """Detect SQL injection attempts in queries."""
         if not query:
             return None
@@ -483,24 +474,23 @@ class SQLInjectionDetector:
 
         return None
 
-
 class DatabaseAuditLogger:
     """Comprehensive database audit logging."""
 
     def __init__(self, max_events: int = 10000):
         self.max_events = max_events
         self.audit_events: deque = deque(maxlen=max_events)
-        self.event_index: Dict[str, List[AuditEvent]] = defaultdict(list)
+        self.event_index: dict[str, list[AuditEvent]] = defaultdict(list)
 
     async def log_event(
         self,
         event_type: AuditEventType,
-        user_id: Optional[str],
+        user_id: str | None,
         source_ip: str,
         success: bool,
-        query: Optional[str] = None,
-        table_accessed: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        query: str | None = None,
+        table_accessed: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log a security audit event."""
         event = AuditEvent(
@@ -533,16 +523,16 @@ class DatabaseAuditLogger:
                 f"(user: {user_id}, success: {success})"
             )
 
-    def get_events_by_ip(self, source_ip: str, limit: int = 100) -> List[AuditEvent]:
+    def get_events_by_ip(self, source_ip: str, limit: int = 100) -> list[AuditEvent]:
         """Get audit events for a specific IP address."""
         events = self.event_index.get(source_ip, [])
         return events[-limit:] if events else []
 
-    def get_recent_events(self, limit: int = 100) -> List[AuditEvent]:
+    def get_recent_events(self, limit: int = 100) -> list[AuditEvent]:
         """Get recent audit events."""
         return list(self.audit_events)[-limit:]
 
-    def get_security_summary(self, hours: int = 24) -> Dict[str, Any]:
+    def get_security_summary(self, hours: int = 24) -> dict[str, Any]:
         """Get security summary for the specified time period."""
         cutoff_time = datetime.now(timezone.utc).timestamp() - (hours * 3600)
         recent_events = [
@@ -570,7 +560,6 @@ class DatabaseAuditLogger:
 
         return summary
 
-
 class SecurityConfigurationValidator:
     """Validate security configuration and compliance."""
 
@@ -583,7 +572,7 @@ class SecurityConfigurationValidator:
             self._check_encryption_settings,
         ]
 
-    async def validate_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def validate_configuration(self, config: dict[str, Any]) -> dict[str, Any]:
         """Validate security configuration against best practices."""
         results = {
             "compliant": True,
@@ -622,7 +611,7 @@ class SecurityConfigurationValidator:
 
         return results
 
-    async def _check_ssl_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _check_ssl_configuration(self, config: dict[str, Any]) -> dict[str, Any]:
         """Check SSL/TLS configuration."""
         score = 0
         recommendations = []
@@ -654,8 +643,8 @@ class SecurityConfigurationValidator:
         }
 
     async def _check_authentication_strength(
-        self, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check authentication configuration."""
         score = 0
         recommendations = []
@@ -693,7 +682,7 @@ class SecurityConfigurationValidator:
             "recommendations": recommendations,
         }
 
-    async def _check_connection_limits(self, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def _check_connection_limits(self, config: dict[str, Any]) -> dict[str, Any]:
         """Check connection limit configuration."""
         score = 0
         recommendations = []
@@ -730,8 +719,8 @@ class SecurityConfigurationValidator:
         }
 
     async def _check_logging_configuration(
-        self, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check logging configuration."""
         score = 0
         recommendations = []
@@ -770,8 +759,8 @@ class SecurityConfigurationValidator:
         }
 
     async def _check_encryption_settings(
-        self, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Check encryption configuration."""
         score = 0
         recommendations = []
@@ -803,7 +792,6 @@ class SecurityConfigurationValidator:
             "score": score,
             "recommendations": recommendations,
         }
-
 
 class DatabaseSecurityManager:
     """Main security hardening manager coordinating all security components."""
@@ -846,10 +834,10 @@ class DatabaseSecurityManager:
         database_url: str,
         api_key: str,
         source_ip: str,
-        user_agent: Optional[str] = None,
-        user_region: Optional[str] = None,
-        connection_metadata: Optional[Dict[str, Any]] = None,
-    ) -> Tuple[bool, Optional[ThreatAlert]]:
+        user_agent: str | None = None,
+        user_region: str | None = None,
+        connection_metadata: dict[str, Any] | None = None,
+    ) -> tuple[bool, ThreatAlert | None]:
         """Comprehensive connection validation with security checks."""
         try:
             # Validate connection parameters
@@ -916,11 +904,11 @@ class DatabaseSecurityManager:
     async def validate_query(
         self,
         query: str,
-        parameters: Optional[Dict[str, Any]],
-        user_id: Optional[str],
+        parameters: dict[str, Any] | None,
+        user_id: str | None,
         source_ip: str,
-        table_accessed: Optional[str] = None,
-    ) -> Tuple[bool, Optional[ThreatAlert]]:
+        table_accessed: str | None = None,
+    ) -> tuple[bool, ThreatAlert | None]:
         """Validate database query for security threats."""
         try:
             # SQL injection detection
@@ -998,7 +986,7 @@ class DatabaseSecurityManager:
                 f"(severity: {alert.severity.value}) - {alert.message}"
             )
 
-    async def get_security_status(self) -> Dict[str, Any]:
+    async def get_security_status(self) -> dict[str, Any]:
         """Get comprehensive security status."""
         status = {
             "metrics": {
@@ -1037,12 +1025,12 @@ class DatabaseSecurityManager:
         return status
 
     async def validate_security_configuration(
-        self, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate security configuration compliance."""
         return await self.config_validator.validate_configuration(config)
 
-    def get_threat_alerts(self, limit: int = 50) -> List[ThreatAlert]:
+    def get_threat_alerts(self, limit: int = 50) -> list[ThreatAlert]:
         """Get recent threat alerts."""
         return list(self.threat_alerts)[-limit:]
 

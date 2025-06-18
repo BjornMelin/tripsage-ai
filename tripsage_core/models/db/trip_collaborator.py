@@ -11,7 +11,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 class PermissionLevel(str, Enum):
     """Permission levels for trip collaborators.
 
@@ -23,7 +22,6 @@ class PermissionLevel(str, Enum):
     VIEW = "view"
     EDIT = "edit"
     ADMIN = "admin"
-
 
 class TripCollaboratorDB(BaseModel):
     """Database model for trip collaborators.
@@ -101,7 +99,6 @@ class TripCollaboratorDB(BaseModel):
 
         return current_level >= required_level_value
 
-
 class TripCollaboratorCreate(BaseModel):
     """Model for creating a new trip collaborator."""
 
@@ -149,7 +146,6 @@ class TripCollaboratorCreate(BaseModel):
         # UUID validation is handled by pydantic, but we can add custom logic here
         return v
 
-
 class TripCollaboratorUpdate(BaseModel):
     """Model for updating an existing trip collaborator."""
 
@@ -164,7 +160,7 @@ class TripCollaboratorUpdate(BaseModel):
         },
     )
 
-    permission_level: Optional[PermissionLevel] = Field(
+    permission_level: PermissionLevel | None = Field(
         default=None, description="Updated permission level for the collaborator"
     )
 

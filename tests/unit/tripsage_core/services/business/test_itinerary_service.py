@@ -32,7 +32,6 @@ from tripsage_core.services.business.itinerary_service import (
     get_itinerary_service,
 )
 
-
 class TestItineraryService:
     """Test suite for ItineraryService."""
 

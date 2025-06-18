@@ -7,7 +7,6 @@ or other complex modules to avoid circular import issues.
 
 from enum import Enum
 
-
 class ContentType(str, Enum):
     """Content types for web operations with different TTL requirements."""
 
@@ -30,7 +29,6 @@ class ContentType(str, Enum):
     HTML = "html"
     # Binary data (images, PDFs, etc.)
     BINARY = "binary"
-
 
 def get_ttl_for_content_type(content_type: ContentType) -> int:
     """Get the appropriate TTL for a content type."""

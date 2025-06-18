@@ -24,7 +24,6 @@ from tripsage_core.services.infrastructure.pgvector_service import (
     optimize_vector_table,
 )
 
-
 class TestDistanceFunction:
     """Test DistanceFunction enum."""
 
@@ -34,7 +33,6 @@ class TestDistanceFunction:
         assert DistanceFunction.COSINE.value == "vector_cosine_ops"
         assert DistanceFunction.INNER_PRODUCT.value == "vector_ip_ops"
 
-
 class TestOptimizationProfile:
     """Test OptimizationProfile enum."""
 
@@ -43,7 +41,6 @@ class TestOptimizationProfile:
         assert OptimizationProfile.SPEED.value == "speed"
         assert OptimizationProfile.BALANCED.value == "balanced"
         assert OptimizationProfile.QUALITY.value == "quality"
-
 
 class TestIndexConfig:
     """Test IndexConfig model."""
@@ -68,7 +65,6 @@ class TestIndexConfig:
         assert config.m == 8
         assert config.ef_construction == 32
         assert config.ef_search == 20
-
 
 class TestIndexStats:
     """Test IndexStats model."""
@@ -100,7 +96,6 @@ class TestIndexStats:
             index_usage_count=0,
         )
         assert stats.last_used is None
-
 
 class TestPGVectorService:
     """Test the main PGVectorService functionality."""
@@ -666,7 +661,6 @@ class TestPGVectorService:
             "SET hnsw.ef_search = 100"
         )
 
-
 class TestUtilityFunction:
     """Test the optimize_vector_table utility function."""
 
@@ -685,7 +679,6 @@ class TestUtilityFunction:
         assert "actions" in results
         assert results["table"] == "test_table"
         assert results["column"] == "embedding"
-
 
 class TestErrorHandling:
     """Test error handling and edge cases."""
@@ -753,7 +746,6 @@ class TestErrorHandling:
         # Test INNER_PRODUCT suffix extraction
         suffix = DistanceFunction.INNER_PRODUCT.value.split("_")[1]
         assert suffix == "ip"
-
 
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""

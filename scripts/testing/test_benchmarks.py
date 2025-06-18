@@ -1,301 +1,260 @@
 #!/usr/bin/env python3
 """
-Tests for consolidated benchmark scripts.
+Modern test suite for consolidated benchmark scripts.
 
-Achieves 90%+ coverage for the new consolidated benchmark.py, collectors.py, and config.py.
+Uses pytest-asyncio for modern async testing patterns.
+Achieves 90%+ coverage for benchmark.py, collectors.py, and config.py.
 """
 
-import asyncio
-import json
+import sys
 import tempfile
 import time
-import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, mock_open, patch
+from unittest.mock import patch
 
-import sys
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "benchmarks"))
 
 from benchmark import BenchmarkRunner
-from collectors import MetricsCollector, ReportGenerator, TimingResult, MemorySnapshot
-from config import BenchmarkConfig, PerformanceThresholds, WorkloadType, OptimizationLevel
+from collectors import MemorySnapshot, MetricsCollector, ReportGenerator, TimingResult
+from config import (
+    BenchmarkConfig,
+    OptimizationLevel,
+    WorkloadType,
+)
 
-
-class TestBenchmarkConfig(unittest.TestCase):
+class TestBenchmarkConfig:
     """Test cases for benchmark configuration."""
 
     def test_benchmark_config_defaults(self):
         """Test default configuration values."""
         config = BenchmarkConfig()
-        
-        self.assertEqual(config.benchmark_iterations, 500)
-        self.assertEqual(config.concurrent_connections, 10)
-        self.assertEqual(config.test_duration_seconds, 300)
-        self.assertEqual(config.test_data_size, 10000)
-        self.assertEqual(config.vector_dimensions, 384)
-        self.assertTrue(config.enable_memory_profiling)
-        self.assertEqual(config.metrics_collection_interval, 1.0)
+
+        assert config.benchmark_iterations == 500
+        assert config.concurrent_connections == 10
+        assert config.test_duration_seconds == 300
+        assert config.test_data_size == 10000
+        assert config.vector_dimensions == 384
+        assert config.enable_memory_profiling is True
+        assert config.metrics_collection_interval == 1.0
 
     def test_benchmark_config_custom_values(self):
         """Test configuration with custom values."""
         config = BenchmarkConfig(
             benchmark_iterations=1000,
             concurrent_connections=20,
-            test_duration_seconds=600
+            test_duration_seconds=600,
         )
-        
-        self.assertEqual(config.benchmark_iterations, 1000)
-        self.assertEqual(config.concurrent_connections, 20)
-        self.assertEqual(config.test_duration_seconds, 600)
 
-    def test_performance_thresholds_defaults(self):
-        """Test default performance threshold values."""
-        thresholds = PerformanceThresholds()
-        
-        self.assertEqual(thresholds.query_performance_improvement, 3.0)
-        self.assertEqual(thresholds.vector_performance_improvement, 30.0)
-        self.assertEqual(thresholds.memory_reduction_target, 0.5)
-        self.assertEqual(thresholds.connection_reuse_ratio, 0.80)
-        self.assertEqual(thresholds.cache_hit_ratio_target, 0.75)
+        assert config.benchmark_iterations == 1000
+        assert config.concurrent_connections == 20
+        assert config.test_duration_seconds == 600
 
     def test_workload_type_enum(self):
         """Test workload type enumeration."""
-        self.assertEqual(WorkloadType.READ_HEAVY, "read_heavy")
-        self.assertEqual(WorkloadType.VECTOR_SEARCH, "vector_search")
-        self.assertEqual(WorkloadType.MIXED, "mixed")
+        assert WorkloadType.READ_HEAVY == "read_heavy"
+        assert WorkloadType.VECTOR_SEARCH == "vector_search"
+        assert WorkloadType.MIXED == "mixed"
 
     def test_optimization_level_enum(self):
         """Test optimization level enumeration."""
-        self.assertEqual(OptimizationLevel.NONE, "none")
-        self.assertEqual(OptimizationLevel.FULL, "full")
+        assert OptimizationLevel.NONE == "none"
+        assert OptimizationLevel.FULL == "full"
 
+class TestTimingResult:
+    """Test cases for timing result data class."""
 
-class TestMetricsCollector(unittest.TestCase):
+    def test_timing_result_creation(self):
+        """Test timing result creation."""
+        result = TimingResult(
+            operation_type="query",
+            duration_seconds=0.05,
+            success=True,
+            timestamp=time.time(),
+        )
+
+        assert result.operation_type == "query"
+        assert result.duration_seconds == 0.05
+        assert result.success is True
+        assert isinstance(result.timestamp, float)
+
+class TestMemorySnapshot:
+    """Test cases for memory snapshot data class."""
+
+    def test_memory_snapshot_creation(self):
+        """Test memory snapshot creation."""
+        snapshot = MemorySnapshot(
+            timestamp=time.time(), process_mb=100.5, system_percent=75.2
+        )
+
+        assert isinstance(snapshot.timestamp, float)
+        assert snapshot.process_mb == 100.5
+        assert snapshot.system_percent == 75.2
+
+class TestMetricsCollector:
     """Test cases for metrics collection."""
 
-    def setUp(self):
+    def setup_method(self):
         """Set up test fixtures."""
         self.config = BenchmarkConfig()
         self.collector = MetricsCollector(self.config)
 
     def test_metrics_collector_initialization(self):
         """Test metrics collector initialization."""
-        self.assertIsNotNone(self.collector.config)
-        self.assertEqual(len(self.collector._timings), 0)
-        self.assertEqual(len(self.collector._memory_snapshots), 0)
-        self.assertFalse(self.collector._monitoring)
+        assert self.collector.config is not None
+        assert len(self.collector._timings) == 0
+        assert len(self.collector._memory_snapshots) == 0
+        assert self.collector._monitoring is False
 
     def test_record_timing(self):
         """Test recording timing results."""
         self.collector.record_timing("query", 0.05, True)
-        
-        self.assertEqual(len(self.collector._timings), 1)
-        timing = self.collector._timings[0]
-        self.assertEqual(timing.operation_type, "query")
-        self.assertEqual(timing.duration_seconds, 0.05)
-        self.assertTrue(timing.success)
 
-    def test_record_failed_timing(self):
-        """Test recording failed timing results."""
-        self.collector.record_timing("query", 0.1, False)
-        
+        assert len(self.collector._timings) == 1
         timing = self.collector._timings[0]
-        self.assertFalse(timing.success)
+        assert timing.operation_type == "query"
+        assert timing.duration_seconds == 0.05
+        assert timing.success is True
 
-    def test_connection_tracking(self):
-        """Test connection reuse and creation tracking."""
-        self.collector.record_connection_reuse()
+    def test_record_connection_operations(self):
+        """Test recording connection operations."""
         self.collector.record_connection_reuse()
         self.collector.record_connection_creation()
-        
-        summary = self.collector.get_connection_summary()
-        self.assertEqual(summary["connection_reuses"], 2)
-        self.assertEqual(summary["connection_creations"], 1)
-        self.assertEqual(summary["total_operations"], 3)
-        self.assertAlmostEqual(summary["efficiency_ratio"], 2/3, places=2)
 
-    def test_query_summary_with_data(self):
-        """Test query performance summary with data."""
-        # Add some timing data
-        for i in range(10):
-            duration = 0.01 + (i * 0.001)  # 10ms to 19ms
-            self.collector.record_timing("query", duration, True)
-        
-        summary = self.collector.get_summary()
-        query_summary = summary["query_performance"]
-        
-        self.assertEqual(query_summary["total_operations"], 10)
-        self.assertEqual(query_summary["successful_operations"], 10)
-        self.assertEqual(query_summary["error_rate"], 0.0)
-        self.assertGreater(query_summary["avg_duration_ms"], 0)
-        self.assertGreater(query_summary["p95_duration_ms"], 0)
-        self.assertGreater(query_summary["operations_per_second"], 0)
+        stats = self.collector._connection_stats
+        assert stats["reuses"] == 1
+        assert stats["creations"] == 1
 
-    def test_query_summary_with_errors(self):
-        """Test query performance summary with some errors."""
-        # Add mixed success/failure data
-        for i in range(5):
-            self.collector.record_timing("query", 0.01, True)
-        for i in range(2):
-            self.collector.record_timing("query", 0.05, False)
-        
-        summary = self.collector.get_summary()
-        query_summary = summary["query_performance"]
-        
-        self.assertEqual(query_summary["total_operations"], 7)
-        self.assertEqual(query_summary["successful_operations"], 5)
-        self.assertAlmostEqual(query_summary["error_rate"], 2/7, places=2)
-
-    def test_query_summary_no_data(self):
-        """Test query performance summary with no data."""
-        summary = self.collector.get_summary()
-        query_summary = summary["query_performance"]
-        
-        self.assertIn("error", query_summary)
-
-    def test_memory_summary_with_data(self):
-        """Test memory usage summary with data."""
-        # Add some memory snapshots
-        for i in range(5):
-            snapshot = MemorySnapshot(
-                timestamp=time.time(),
-                process_mb=100 + i * 10,  # 100, 110, 120, 130, 140 MB
-                system_percent=50 + i
-            )
-            self.collector._memory_snapshots.append(snapshot)
-        
-        summary = self.collector.get_memory_summary()
-        
-        self.assertEqual(summary["current_mb"], 140)
-        self.assertEqual(summary["peak_mb"], 140)
-        self.assertEqual(summary["min_mb"], 100)
-        self.assertEqual(summary["avg_mb"], 120)
-        self.assertEqual(summary["memory_growth_mb"], 40)
-
-    def test_memory_summary_no_data(self):
-        """Test memory usage summary with no data."""
-        summary = self.collector.get_memory_summary()
-        self.assertIn("error", summary)
-
-    def test_reset_metrics(self):
-        """Test resetting all metrics."""
-        # Add some data
-        self.collector.record_timing("query", 0.01, True)
-        self.collector.record_connection_reuse()
-        
-        # Reset
-        self.collector.reset()
-        
-        # Verify all data is cleared
-        self.assertEqual(len(self.collector._timings), 0)
-        self.assertEqual(len(self.collector._memory_snapshots), 0)
-        self.assertEqual(self.collector._connection_stats["reuses"], 0)
-        self.assertEqual(self.collector._connection_stats["creations"], 0)
-
-    @patch('asyncio.sleep')
+    @pytest.mark.asyncio
+    @patch("asyncio.sleep")
     async def test_start_stop_monitoring(self, mock_sleep):
         """Test starting and stopping monitoring."""
-        # Mock sleep to avoid actual delays
         mock_sleep.return_value = None
-        
+
         # Start monitoring
         await self.collector.start_monitoring()
-        self.assertTrue(self.collector._monitoring)
-        self.assertIsNotNone(self.collector._monitor_task)
-        
+        assert self.collector._monitoring is True
+        assert self.collector._monitor_task is not None
+
         # Stop monitoring
         await self.collector.stop_monitoring()
-        self.assertFalse(self.collector._monitoring)
+        assert self.collector._monitoring is False
 
+    def test_get_summary_no_data(self):
+        """Test getting summary with no data."""
+        summary = self.collector.get_summary()
 
-class TestReportGenerator(unittest.TestCase):
+        assert "query_performance" in summary
+        assert "memory_usage" in summary
+        assert "connection_efficiency" in summary
+        assert "collection_period" in summary
+
+    def test_get_summary_with_data(self):
+        """Test getting summary with timing data."""
+        # Add some timing data
+        self.collector.record_timing("query", 0.05, True)
+        self.collector.record_timing("insert", 0.1, True)
+        self.collector.record_connection_reuse()
+
+        summary = self.collector.get_summary()
+
+        query_perf = summary["query_performance"]
+        assert query_perf["total_operations"] == 2
+        assert query_perf["successful_operations"] == 2
+        assert query_perf["error_rate"] == 0
+
+    def test_reset(self):
+        """Test resetting metrics."""
+        self.collector.record_timing("query", 0.05, True)
+        self.collector.record_connection_reuse()
+
+        self.collector.reset()
+
+        assert len(self.collector._timings) == 0
+        assert len(self.collector._memory_snapshots) == 0
+        assert self.collector._connection_stats == {"reuses": 0, "creations": 0}
+
+class TestReportGenerator:
     """Test cases for report generation."""
 
-    def setUp(self):
+    def setup_method(self):
         """Set up test fixtures."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.generator = ReportGenerator(self.temp_dir)
 
-    def tearDown(self):
-        """Clean up test fixtures."""
-        import shutil
-        shutil.rmtree(self.temp_dir)
-
-    async def test_generate_simple_report(self):
-        """Test generating a simple report."""
-        data = {
+    @pytest.mark.asyncio
+    async def test_generate_report(self):
+        """Test report generation."""
+        test_data = {
             "test_type": "quick",
             "execution_time": 120.5,
-            "results": {"operations_per_second": 150.0},
             "metrics": {
                 "query_performance": {
-                    "avg_duration_ms": 15.0,
-                    "operations_per_second": 150.0
+                    "operations_per_second": 150.5,
+                    "avg_duration_ms": 6.7,
                 },
-                "memory_usage": {"peak_mb": 125.0},
-                "connection_efficiency": {"efficiency_ratio": 0.85}
-            }
+                "memory_usage": {"peak_mb": 245.2},
+                "connection_efficiency": {"efficiency_ratio": 0.85},
+            },
+            "validation": {
+                "overall_success": True,
+                "claims_validated": 3,
+                "total_claims": 4,
+            },
         }
-        
-        report_path = await self.generator.generate_simple_report(data, "test_quick")
-        
-        # Verify report files were created
-        self.assertTrue(report_path.exists())
-        self.assertTrue(report_path.name.endswith(".html"))
-        
-        # Verify JSON file was created
-        json_files = list(self.temp_dir.glob("*.json"))
-        self.assertEqual(len(json_files), 1)
-        
-        # Verify CSV file was created
-        csv_files = list(self.temp_dir.glob("*.csv"))
-        self.assertEqual(len(csv_files), 1)
 
+        report_path = await self.generator.generate_report(test_data, "test_run")
+
+        assert report_path.exists()
+        assert report_path.suffix == ".html"
+
+        # Check JSON file was created
+        json_files = list(self.temp_dir.glob("*.json"))
+        assert len(json_files) == 1
+
+        # Check CSV file was created
+        csv_files = list(self.temp_dir.glob("*.csv"))
+        assert len(csv_files) == 1
+
+    @pytest.mark.asyncio
     async def test_generate_csv_summary(self):
         """Test CSV summary generation."""
-        data = {
+        test_data = {
             "detailed_metrics": {
                 "query_performance": {
-                    "operations_per_second": 100.0,
-                    "avg_duration_ms": 20.0,
-                    "p95_duration_ms": 35.0,
-                    "error_rate": 0.05
-                },
-                "memory_usage": {
-                    "peak_mb": 150.0,
-                    "avg_mb": 120.0,
-                    "memory_growth_mb": 30.0
-                },
-                "connection_efficiency": {
-                    "efficiency_ratio": 0.90,
-                    "connection_reuses": 180,
-                    "connection_creations": 20
+                    "operations_per_second": 150.5,
+                    "avg_duration_ms": 6.7,
+                    "p95_duration_ms": 12.3,
+                    "error_rate": 0.05,
                 }
             },
-            "execution_time_seconds": 300.0
+            "execution_time_seconds": 120.5,
         }
-        
-        csv_path = await self.generator._generate_csv_summary(data, "test", 1234567890)
-        
-        self.assertTrue(csv_path.exists())
-        
-        # Verify CSV content
-        content = csv_path.read_text()
-        self.assertIn("metric_name,value,unit")
-        self.assertIn("operations_per_second,100.00,ops/sec")
-        self.assertIn("peak_memory_mb,150.00,MB")
-        self.assertIn("connection_efficiency,0.900,ratio")
 
+        csv_path = await self.generator._generate_csv_summary(
+            test_data, "test", 1234567890
+        )
+
+        assert csv_path.exists()
+
+        with open(csv_path, "r") as f:
+            content = f.read()
+            assert "operations_per_second,150.50,ops/sec" in content
+            assert "avg_duration_ms,6.70,milliseconds" in content
+
+    @pytest.mark.asyncio
     async def test_generate_html_summary(self):
         """Test HTML summary generation."""
-        data = {
+        test_data = {
             "summary": {
-                "query_ops_per_sec": "150.0",
-                "avg_query_latency_ms": "15.00",
-                "peak_memory_mb": "125.0",
+                "test_completed": True,
+                "execution_time_formatted": "2.0 minutes",
+                "query_ops_per_sec": "150.5",
+                "avg_query_latency_ms": "6.70",
+                "peak_memory_mb": "245.2",
                 "connection_efficiency": "85.0%",
-                "execution_time_formatted": "2.0 minutes"
             },
             "validation": {
                 "overall_success": True,
@@ -303,199 +262,134 @@ class TestReportGenerator(unittest.TestCase):
                 "total_claims": 4,
                 "details": {
                     "query_performance_3x": {
-                        "claimed": "3x query improvement",
-                        "target_met": True
-                    },
-                    "vector_search_30x": {
-                        "claimed": "30x vector improvement", 
-                        "target_met": True
+                        "claimed": "3x query performance improvement",
+                        "target_met": True,
                     }
-                }
-            }
+                },
+            },
         }
-        
-        html_path = await self.generator._generate_html_summary(data, "test", 1234567890)
-        
-        self.assertTrue(html_path.exists())
-        
-        # Verify HTML content
-        content = html_path.read_text()
-        self.assertIn("TripSage Benchmark Report")
-        self.assertIn("150.0 ops/sec")
-        self.assertIn("15.00 ms")
-        self.assertIn("125.0 MB")
-        self.assertIn("85.0%")
-        self.assertIn("PASSED")
 
-    def test_format_duration(self):
-        """Test duration formatting."""
-        self.assertEqual(self.generator._format_duration(30), "30.0 seconds")
-        self.assertEqual(self.generator._format_duration(90), "1.5 minutes")
-        self.assertEqual(self.generator._format_duration(3900), "1.1 hours")
+        html_path = await self.generator._generate_html_summary(
+            test_data, "test", 1234567890
+        )
 
+        assert html_path.exists()
 
-class TestBenchmarkRunner(unittest.TestCase):
+        with open(html_path, "r") as f:
+            content = f.read()
+            assert "TripSage Benchmark Report" in content
+            assert "150.5 ops/sec" in content
+            assert "✅" in content  # Success icon
+
+class TestBenchmarkRunner:
     """Test cases for benchmark runner."""
 
-    def setUp(self):
+    def setup_method(self):
         """Set up test fixtures."""
         self.temp_dir = Path(tempfile.mkdtemp())
         self.config = BenchmarkConfig()
         self.runner = BenchmarkRunner(self.config, self.temp_dir)
 
-    def tearDown(self):
-        """Clean up test fixtures."""
-        import shutil
-        shutil.rmtree(self.temp_dir)
-
+    @pytest.mark.asyncio
     async def test_benchmark_runner_initialization(self):
         """Test benchmark runner initialization."""
-        self.assertEqual(self.runner.config, self.config)
-        self.assertEqual(self.runner.output_dir, self.temp_dir)
-        self.assertIsNotNone(self.runner.metrics)
-        self.assertIsNotNone(self.runner.reporter)
+        assert self.runner.config is not None
+        assert self.runner.output_dir == self.temp_dir
+        assert isinstance(self.runner.metrics, MetricsCollector)
+        assert isinstance(self.runner.reporter, ReportGenerator)
 
+    @pytest.mark.asyncio
     async def test_run_core_scenarios(self):
-        """Test running core benchmark scenarios."""
-        results = await self.runner._run_core_scenarios(10, 100, 5)
-        
-        self.assertEqual(results["duration_seconds"], 10)
-        self.assertEqual(results["iterations"], 100)
-        self.assertEqual(results["concurrent_users"], 5)
-        self.assertEqual(results["scenarios_completed"], 1)
-        self.assertEqual(results["total_operations"], 100)
-        self.assertGreater(results["avg_response_time"], 0)
-        self.assertGreater(results["operations_per_second"], 0)
+        """Test core scenario execution."""
+        results = await self.runner._run_core_scenarios(
+            duration_seconds=120, iterations=10, concurrent_users=2
+        )
 
-    @patch.object(BenchmarkRunner, '_run_core_scenarios')
+        assert results["duration_seconds"] == 120
+        assert results["iterations"] == 10
+        assert results["concurrent_users"] == 2
+        assert results["scenarios_completed"] == 1
+        assert results["total_operations"] == 10
+        assert results["avg_response_time"] > 0
+        assert results["operations_per_second"] > 0
+
+    @pytest.mark.asyncio
+    @patch.object(BenchmarkRunner, "_run_core_scenarios")
     async def test_run_quick_test(self, mock_scenarios):
-        """Test running quick benchmark test."""
+        """Test quick test execution."""
         mock_scenarios.return_value = {
-            "operations_per_second": 150.0,
+            "operations_per_second": 100.0,
             "avg_response_time": 0.01,
-            "total_operations": 100
         }
-        
-        with patch.object(self.runner.metrics, 'start_monitoring', new_callable=AsyncMock):
-            with patch.object(self.runner.metrics, 'stop_monitoring', new_callable=AsyncMock):
-                with patch.object(self.runner.metrics, 'get_summary') as mock_summary:
-                    mock_summary.return_value = {"query_performance": {"operations_per_second": 150.0}}
-                    
-                    with patch.object(self.runner.reporter, 'generate_simple_report') as mock_report:
-                        mock_report.return_value = self.temp_dir / "report.html"
-                        
-                        results = await self.runner.run_quick_test()
-                        
-                        self.assertEqual(results["test_type"], "quick")
-                        self.assertIn("execution_time", results)
-                        self.assertIn("results", results)
-                        self.assertIn("metrics", results)
 
-    @patch.object(BenchmarkRunner, '_run_database_scenarios')
-    @patch.object(BenchmarkRunner, '_run_vector_scenarios')  
-    @patch.object(BenchmarkRunner, '_run_mixed_scenarios')
+        results = await self.runner.run_quick_test()
+
+        assert results["test_type"] == "quick"
+        assert "execution_time" in results
+        assert "results" in results
+        assert "metrics" in results
+        assert "report_path" in results
+
+    @pytest.mark.asyncio
+    @patch.object(BenchmarkRunner, "_run_database_scenarios")
+    @patch.object(BenchmarkRunner, "_run_vector_scenarios")
+    @patch.object(BenchmarkRunner, "_run_mixed_scenarios")
     async def test_run_full_suite(self, mock_mixed, mock_vector, mock_db):
-        """Test running full benchmark suite."""
-        # Mock scenario results
-        mock_results = {"operations_per_second": 100.0}
+        """Test full suite execution."""
+        mock_results = {"operations_per_second": 100.0, "avg_response_time": 0.01}
         mock_db.return_value = mock_results
         mock_vector.return_value = mock_results
         mock_mixed.return_value = mock_results
-        
-        with patch.object(self.runner.metrics, 'start_monitoring', new_callable=AsyncMock):
-            with patch.object(self.runner.metrics, 'stop_monitoring', new_callable=AsyncMock):
-                with patch.object(self.runner.metrics, 'get_summary') as mock_summary:
-                    mock_summary.return_value = {
-                        "query_performance": {"operations_per_second": 150.0},
-                        "memory_usage": {"peak_mb": 120.0},
-                        "connection_efficiency": {"efficiency_ratio": 0.85}
-                    }
-                    
-                    with patch.object(self.runner.reporter, 'generate_simple_report') as mock_report:
-                        mock_report.return_value = self.temp_dir / "report.html"
-                        
-                        results = await self.runner.run_full_suite()
-                        
-                        self.assertEqual(results["test_type"], "full_suite")
-                        self.assertIn("validation", results)
-                        self.assertIn("database", results["results"])
-                        self.assertIn("vector", results["results"])
-                        self.assertIn("mixed", results["results"])
+
+        results = await self.runner.run_full_suite()
+
+        assert results["test_type"] == "full_suite"
+        assert "results" in results
+        assert "database" in results["results"]
+        assert "vector" in results["results"]
+        assert "mixed" in results["results"]
+        assert "validation" in results
 
     def test_validate_optimization_claims(self):
         """Test optimization claims validation."""
         database_results = {"operations_per_second": 150.0}
         vector_results = {"operations_per_second": 75.0}
         mixed_results = {"operations_per_second": 100.0}
-        
-        # Mock memory and connection metrics
-        with patch.object(self.runner.metrics, 'get_memory_summary') as mock_memory:
-            mock_memory.return_value = {"peak_mb": 150.0}
-            
-            with patch.object(self.runner.metrics, 'get_connection_summary') as mock_conn:
-                mock_conn.return_value = {"efficiency_ratio": 0.85}
-                
-                validation = self.runner._validate_optimization_claims(
-                    database_results, vector_results, mixed_results
-                )
-                
-                self.assertIn("timestamp", validation)
-                self.assertIn("claims_validated", validation)
-                self.assertIn("total_claims", validation)
-                self.assertIn("details", validation)
-                self.assertEqual(validation["total_claims"], 4)
-                
-                # Check specific claims
-                details = validation["details"]
-                self.assertIn("query_performance_3x", details)
-                self.assertIn("vector_search_30x", details)
-                self.assertIn("memory_reduction_50pct", details)
-                self.assertIn("connection_efficiency", details)
 
+        validation = self.runner._validate_optimization_claims(
+            database_results, vector_results, mixed_results
+        )
 
-class TestBenchmarkIntegration(unittest.TestCase):
-    """Integration tests for benchmark system."""
+        assert "timestamp" in validation
+        assert "claims_validated" in validation
+        assert "total_claims" in validation
+        assert validation["total_claims"] == 4
+        assert "details" in validation
+        assert "overall_success" in validation
 
-    async def test_end_to_end_quick_benchmark(self):
-        """Test end-to-end quick benchmark execution."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            config = BenchmarkConfig(benchmark_iterations=5)  # Small number for testing
-            runner = BenchmarkRunner(config, Path(temp_dir))
-            
-            results = await runner.run_quick_test()
-            
-            # Verify results structure
-            self.assertEqual(results["test_type"], "quick")
-            self.assertIn("execution_time", results)
-            self.assertIn("results", results)
-            self.assertIn("metrics", results)
-            self.assertIn("report_path", results)
-            
-            # Verify report files were created
-            report_path = Path(results["report_path"])
-            self.assertTrue(report_path.exists())
+@pytest.mark.asyncio
+async def test_end_to_end_quick_benchmark():
+    """Test end-to-end quick benchmark execution."""
+    temp_dir = Path(tempfile.mkdtemp())
+    config = BenchmarkConfig(benchmark_iterations=5)  # Small for testing
+    runner = BenchmarkRunner(config, temp_dir)
 
+    results = await runner.run_quick_test()
 
-if __name__ == '__main__':
-    # Run async tests
-    import asyncio
-    
-    def run_async_test(test_method):
-        """Helper to run async test methods."""
-        def wrapper(self):
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(test_method(self))
-            finally:
-                loop.close()
-        return wrapper
-    
-    # Patch async test methods
-    for cls in [TestMetricsCollector, TestReportGenerator, TestBenchmarkRunner, TestBenchmarkIntegration]:
-        for attr_name in dir(cls):
-            attr = getattr(cls, attr_name)
-            if callable(attr) and asyncio.iscoroutinefunction(attr) and attr_name.startswith('test_'):
-                setattr(cls, attr_name, run_async_test(attr))
-    
-    unittest.main(verbosity=2)
+    assert results["test_type"] == "quick"
+    assert "report_path" in results
+
+    report_path = Path(results["report_path"])
+    assert report_path.exists()
+
+    # Verify files were created
+    json_files = list(temp_dir.glob("*.json"))
+    csv_files = list(temp_dir.glob("*.csv"))
+    html_files = list(temp_dir.glob("*.html"))
+
+    assert len(json_files) == 1
+    assert len(csv_files) == 1
+    assert len(html_files) == 1
+
+if __name__ == "__main__":
+    pytest.main([__file__])

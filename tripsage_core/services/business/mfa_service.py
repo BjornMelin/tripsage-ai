@@ -12,7 +12,7 @@ import base64
 import logging
 import secrets
 from io import BytesIO
-from typing import List, Optional
+from typing import Optional
 
 import pyotp
 import qrcode
@@ -26,7 +26,6 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
-
 class MFAEnrollmentRequest(TripSageModel):
     """Request to enroll in MFA."""
 
@@ -35,23 +34,20 @@ class MFAEnrollmentRequest(TripSageModel):
         ..., min_length=6, max_length=6, description="TOTP verification code"
     )
 
-
 class MFAEnrollmentResponse(TripSageModel):
     """Response for MFA enrollment."""
 
-    backup_codes: List[str] = Field(..., description="One-time backup codes")
+    backup_codes: list[str] = Field(..., description="One-time backup codes")
     enrolled_at: str = Field(..., description="Enrollment timestamp")
     success: bool = Field(..., description="Whether enrollment was successful")
-
 
 class MFASetupResponse(TripSageModel):
     """Response for MFA setup initiation."""
 
     secret: str = Field(..., description="TOTP secret key")
     qr_code_url: str = Field(..., description="QR code data URL")
-    backup_codes: List[str] = Field(..., description="One-time backup codes")
+    backup_codes: list[str] = Field(..., description="One-time backup codes")
     manual_entry_key: str = Field(..., description="Manual entry key for apps")
-
 
 class MFAVerificationRequest(TripSageModel):
     """Request to verify MFA code."""
@@ -64,27 +60,24 @@ class MFAVerificationRequest(TripSageModel):
         description="TOTP (6 chars) or backup code (11 chars)",
     )
 
-
 class MFAVerificationResponse(TripSageModel):
     """Response for MFA verification."""
 
     valid: bool = Field(..., description="Whether the code is valid")
     code_type: str = Field(..., description="Type of code (totp, backup)")
-    remaining_backup_codes: Optional[int] = Field(
+    remaining_backup_codes: int | None = Field(
         None, description="Remaining backup codes"
     )
-
 
 class MFAStatus(TripSageModel):
     """MFA status for a user."""
 
     enabled: bool = Field(..., description="Whether MFA is enabled")
-    enrolled_at: Optional[str] = Field(None, description="Enrollment timestamp")
+    enrolled_at: str | None = Field(None, description="Enrollment timestamp")
     backup_codes_remaining: int = Field(
         default=0, description="Number of backup codes remaining"
     )
-    last_used: Optional[str] = Field(None, description="Last successful verification")
-
+    last_used: str | None = Field(None, description="Last successful verification")
 
 class MFAService:
     """
@@ -392,7 +385,7 @@ class MFAService:
             logger.error(f"Failed to disable MFA for user {user_id}: {e}")
             return False
 
-    async def regenerate_backup_codes(self, user_id: str) -> List[str]:
+    async def regenerate_backup_codes(self, user_id: str) -> list[str]:
         """
         Regenerate backup codes for a user.
 
@@ -472,7 +465,7 @@ class MFAService:
 
         return f"data:image/png;base64,{img_str}"
 
-    def _generate_backup_codes(self, count: int = 10) -> List[str]:
+    def _generate_backup_codes(self, count: int = 10) -> list[str]:
         """
         Generate backup codes.
 
@@ -486,7 +479,6 @@ class MFAService:
             f"{secrets.randbelow(100000):05d}-{secrets.randbelow(100000):05d}"
             for _ in range(count)
         ]
-
 
 # Dependency function for FastAPI
 async def get_mfa_service() -> MFAService:

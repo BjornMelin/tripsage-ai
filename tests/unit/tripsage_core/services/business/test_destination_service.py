@@ -31,7 +31,6 @@ from tripsage_core.services.business.destination_service import (
     get_destination_service,
 )
 
-
 class TestDestinationService:
     """Test suite for DestinationService."""
 

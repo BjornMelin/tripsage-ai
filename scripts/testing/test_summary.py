@@ -7,7 +7,6 @@ import os
 import subprocess
 import sys
 
-
 def get_test_results(test_dir):
     """Run tests and get results."""
     env = os.environ.copy()
@@ -59,7 +58,6 @@ def get_test_results(test_dir):
         "success_rate": (passed / total * 100) if total > 0 else 0,
     }
 
-
 def main():
     """Run test summary."""
     print("Test Summary Report")
@@ -107,7 +105,6 @@ def main():
     print("3. Fix import errors and missing dependencies")
     print("4. Run 'ruff check . --fix && ruff format .' on all files")
     print("5. Achieve 90%+ test coverage")
-
 
 if __name__ == "__main__":
     main()

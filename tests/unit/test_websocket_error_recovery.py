@@ -37,7 +37,6 @@ from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
 )
 
-
 class TestConnectionStates:
     """Test all 8 connection states and transitions."""
 
@@ -126,7 +125,6 @@ class TestConnectionStates:
         result = await connection.send(event)
         assert result is True
 
-
 class TestCircuitBreaker:
     """Test circuit breaker pattern implementation."""
 
@@ -209,7 +207,6 @@ class TestCircuitBreaker:
         assert cb.can_execute() is True
         assert cb.state == CircuitBreakerState.HALF_OPEN
 
-
 class TestExponentialBackoff:
     """Test exponential backoff with jitter."""
 
@@ -283,7 +280,6 @@ class TestExponentialBackoff:
         # Should have some variation
         assert len(set(delays)) > 1
         assert all(9.0 <= d <= 11.0 for d in delays)  # ±10% jitter
-
 
 class TestRateLimiting:
     """Test hierarchical rate limiting."""
@@ -397,7 +393,6 @@ class TestRateLimiting:
         result3 = limiter._check_local_message_rate(user_id, connection_id)
         assert result3["allowed"] is False
         assert result3["reason"] == "user_limit_exceeded"
-
 
 class TestWebSocketConnectionAdvanced:
     """Test advanced WebSocket connection features."""
@@ -551,7 +546,6 @@ class TestWebSocketConnectionAdvanced:
 
         # Should not be queued for retry
         assert len(connection.priority_queue[1]) == 0
-
 
 class TestWebSocketManagerIntegration:
     """Test WebSocket manager integration features."""
@@ -725,7 +719,6 @@ class TestWebSocketManagerIntegration:
         assert stats["redis_connected"] is False
         assert stats["broadcaster_running"] is True
 
-
 class TestErrorRecoveryScenarios:
     """Test complex error recovery scenarios."""
 
@@ -819,7 +812,6 @@ class TestErrorRecoveryScenarios:
 
         assert sent_count == 4  # All except the failed one
 
-
 # Additional test for WebSocket event serialization
 class TestWebSocketEventSerialization:
     """Test WebSocket event serialization and deserialization."""
@@ -852,7 +844,6 @@ class TestWebSocketEventSerialization:
         assert "id" in event_dict
         assert "type" in event_dict
         assert "timestamp" in event_dict
-
 
 class TestMonitoredDeque:
     """Test MonitoredDeque dropped message logging functionality."""

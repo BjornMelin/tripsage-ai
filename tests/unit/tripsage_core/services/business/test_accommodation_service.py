@@ -37,7 +37,6 @@ from tripsage_core.services.business.accommodation_service import (
     get_accommodation_service,
 )
 
-
 class TestAccommodationService:
     """Test suite for AccommodationService."""
 

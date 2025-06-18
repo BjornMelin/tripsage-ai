@@ -38,7 +38,6 @@ except ImportError:
     msgpack = None
     MSGPACK_AVAILABLE = False
 
-
 class TestMessageBatcher:
     """Test message batching functionality."""
 
@@ -157,7 +156,6 @@ class TestMessageBatcher:
         batch_data = json.loads(mock_websocket.send_text.call_args[0][0])
         assert batch_data["count"] == 3
 
-
 class TestConnectionPool:
     """Test connection pooling functionality."""
 
@@ -250,7 +248,6 @@ class TestConnectionPool:
         count = await pool.broadcast_to_session(session_id, message)
 
         assert count == 2
-
 
 class TestWebSocketPerformance:
     """Test WebSocket endpoint performance features."""
@@ -425,7 +422,6 @@ class TestWebSocketPerformance:
         assert data["performance_metrics"]["compression_enabled"] is True
         assert "msgpack_available" in data["performance_metrics"]
 
-
 class TestBinaryProtocol:
     """Test binary protocol support."""
 
@@ -467,7 +463,6 @@ class TestBinaryProtocol:
 
         # MessagePack should be smaller for this data
         assert msgpack_size < json_size
-
 
 class TestErrorRecovery:
     """Test error recovery in performance features."""
