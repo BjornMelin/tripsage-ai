@@ -17,7 +17,7 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.flight_service import FlightService
 from tripsage_core.services.business.itinerary_service import ItineraryService
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.business import MemoryService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.external_apis import (

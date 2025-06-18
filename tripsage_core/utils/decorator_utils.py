@@ -360,7 +360,7 @@ def ensure_memory_client_initialized(func: F) -> F:
         @ensure_memory_client_initialized
         async def add_memory() -> Dict[str, Any]:
             # Memory service is already initialized here
-            from tripsage_core.services.business.memory_service import MemoryService
+            from tripsage_core.services.business import MemoryService
             memory_service = MemoryService()
             result = await memory_service.add_memory(
                 user_id="user-123",

@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.business import MemoryService
 from tripsage_core.utils.cache_utils import redis_cache
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import log_exception

@@ -82,7 +82,7 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
     if user_id:
         try:
             # Import here to avoid circular dependencies
-            from tripsage_core.services.business.memory_service import MemoryService
+            from tripsage_core.services.business import MemoryService
 
             memory_service = MemoryService()
 

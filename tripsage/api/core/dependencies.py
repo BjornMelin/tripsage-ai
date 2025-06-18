@@ -33,9 +33,9 @@ from tripsage_core.services.business.itinerary_service import (
     ItineraryService,
     get_itinerary_service,
 )
-from tripsage_core.services.business.memory_service import (
-    MemoryService,
-    get_memory_service,
+from tripsage_core.services.business.memory_service_async import (
+    AsyncMemoryService as MemoryService,
+    get_async_memory_service as get_memory_service,
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.services.business.user_service import UserService, get_user_service
