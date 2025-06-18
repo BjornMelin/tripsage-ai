@@ -1,0 +1,581 @@
+#!/usr/bin/env python3
+"""
+Performance benchmark script for the unified database service.
+
+Benchmarks the consolidated DatabaseService across various operations:
+- Connection establishment and pooling
+- Query execution (SELECT, INSERT, UPDATE, DELETE)
+- Vector search operations (pgvector)
+- Query caching performance
+- Concurrent request handling
+- Performance optimization validation
+
+Validates ULTRATHINK consolidation performance improvements.
+"""
+
+import asyncio
+import json
+import statistics
+import time
+from datetime import datetime
+from typing import Any, Dict, List
+
+import numpy as np
+
+# Simple table formatting function if tabulate is not available
+def simple_table(data, headers):
+    """Simple table formatting without external dependencies."""
+    # Calculate column widths
+    col_widths = [len(h) for h in headers]
+    for row in data:
+        for i, cell in enumerate(row):
+            col_widths[i] = max(col_widths[i], len(str(cell)))
+    
+    # Format rows
+    lines = []
+    
+    # Header
+    header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+    lines.append(header_line)
+    lines.append("-" * len(header_line))
+    
+    # Data rows
+    for row in data:
+        row_line = " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
+        lines.append(row_line)
+    
+    return "\n".join(lines)
+
+try:
+    from tabulate import tabulate
+except ImportError:
+    # Fallback to simple table if tabulate is not available
+    def tabulate(data, headers=None, tablefmt="grid"):
+        return simple_table(data, headers)
+
+from tripsage_core.config import get_settings
+from tripsage_core.services.infrastructure.database_service import DatabaseService
+
+# Note: We now use the unified DatabaseService (consolidates 7 previous services)
+# This benchmark compares different usage patterns within the same service
+
+# Check if old service is available for comparison
+OLD_SERVICE_AVAILABLE = False
+try:
+    from tripsage_core.services.infrastructure.old_database_service import OldDatabaseService
+    OLD_SERVICE_AVAILABLE = True
+except ImportError:
+    pass
+
+
+class BenchmarkResult:
+    """Container for benchmark results."""
+
+    def __init__(self, name: str):
+        self.name = name
+        self.durations: List[float] = []
+        self.errors = 0
+        self.metadata: Dict[str, Any] = {}
+
+    @property
+    def avg_duration(self) -> float:
+        """Average duration in milliseconds."""
+        return statistics.mean(self.durations) if self.durations else 0
+
+    @property
+    def min_duration(self) -> float:
+        """Minimum duration in milliseconds."""
+        return min(self.durations) if self.durations else 0
+
+    @property
+    def max_duration(self) -> float:
+        """Maximum duration in milliseconds."""
+        return max(self.durations) if self.durations else 0
+
+    @property
+    def p95_duration(self) -> float:
+        """95th percentile duration in milliseconds."""
+        if not self.durations:
+            return 0
+        sorted_durations = sorted(self.durations)
+        index = int(len(sorted_durations) * 0.95)
+        return sorted_durations[index]
+
+    @property
+    def success_rate(self) -> float:
+        """Success rate as percentage."""
+        total = len(self.durations) + self.errors
+        return (len(self.durations) / total * 100) if total > 0 else 0
+
+    def add_result(self, duration_ms: float, success: bool = True):
+        """Add a benchmark result."""
+        if success:
+            self.durations.append(duration_ms)
+        else:
+            self.errors += 1
+
+
+class DatabaseBenchmark:
+    """Database service benchmark runner."""
+
+    def __init__(self, iterations: int = 100, concurrent_users: int = 10):
+        self.iterations = iterations
+        self.concurrent_users = concurrent_users
+        self.settings = get_settings()
+        self.results: Dict[str, BenchmarkResult] = {}
+
+    async def run_all_benchmarks(self):
+        """Run all benchmarks."""
+        print(f"Running database benchmarks with {self.iterations} iterations...")
+        print(f"Concurrent users: {self.concurrent_users}\n")
+
+        # Test unified database service
+        print("Testing Unified Database Service...")
+        await self.benchmark_unified_service()
+
+        # Test old service if available for comparison
+        if OLD_SERVICE_AVAILABLE:
+            print("\nTesting Old Database Service (for comparison)...")
+            await self.benchmark_old_service()
+
+        # Generate report
+        self.generate_report()
+
+    async def benchmark_unified_service(self):
+        """Benchmark the unified database service."""
+        service = DatabaseService(settings=self.settings)
+
+        try:
+            # Test connection establishment
+            await self._benchmark_connection(service, "Unified - Connection Test")
+
+            # Test different query types
+            await self._benchmark_query_types(service)
+
+            # Test transaction performance
+            await self._benchmark_transactions(service)
+
+            # Test caching performance
+            await self._benchmark_caching(service)
+
+            # Test concurrent operations
+            await self._benchmark_concurrent_operations(service)
+
+            # Test vector search if available
+            await self._benchmark_vector_search(service)
+
+        finally:
+            await service.close()
+
+    async def benchmark_old_service(self):
+        """Benchmark the old database service."""
+        if not OLD_SERVICE_AVAILABLE:
+            return
+
+        service = OldDatabaseService(settings=self.settings)
+
+        try:
+            # Test connection establishment
+            result = BenchmarkResult("Old Service - Connect")
+            start = time.time()
+
+            try:
+                await service.connect()
+                duration = (time.time() - start) * 1000
+                result.add_result(duration)
+            except Exception as e:
+                result.add_result(0, success=False)
+                print(f"Old service connection failed: {e}")
+
+            self.results[result.name] = result
+
+            # Test basic queries
+            await self._benchmark_old_service_queries(service)
+
+        finally:
+            await service.close()
+
+    async def _benchmark_connection(self, service: DatabaseService, name: str):
+        """Benchmark connection establishment."""
+        result = BenchmarkResult(name)
+
+        for _ in range(
+            min(10, self.iterations)
+        ):  # Connection test doesn't need many iterations
+            # Close existing connections
+            await service.close()
+
+            start = time.time()
+            try:
+                await service.connect()
+                duration = (time.time() - start) * 1000
+                result.add_result(duration)
+            except Exception as e:
+                result.add_result(0, success=False)
+                print(f"Connection failed: {e}")
+
+        self.results[name] = result
+
+    async def _benchmark_query_types(self, service: DatabaseService):
+        """Benchmark different query types with the unified service."""
+        # Ensure connected
+        try:
+            await service.connect()
+        except Exception as e:
+            print(f"Failed to connect for query benchmarks: {e}")
+            return
+
+        # SELECT benchmark
+        result = BenchmarkResult("Unified - SELECT")
+        for _ in range(self.iterations):
+            start = time.time()
+            try:
+                await service.execute_sql("SELECT 1 as test_column LIMIT 10")
+                duration = (time.time() - start) * 1000
+                result.add_result(duration)
+            except Exception:
+                result.add_result(0, success=False)
+
+        self.results[result.name] = result
+
+        # Test table operations if available
+        try:
+            # Create test table for benchmarking
+            await service.execute_sql("""
+                CREATE TABLE IF NOT EXISTS test_benchmark (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+
+            # INSERT benchmark (fewer iterations to avoid spam)
+            result = BenchmarkResult("Unified - INSERT")
+            for i in range(min(10, self.iterations)):
+                start = time.time()
+                try:
+                    await service.execute_sql(
+                        "INSERT INTO test_benchmark (name) VALUES ($1)",
+                        (f"Benchmark {i}",)
+                    )
+                    duration = (time.time() - start) * 1000
+                    result.add_result(duration)
+                except Exception:
+                    result.add_result(0, success=False)
+
+            self.results[result.name] = result
+
+            # UPDATE benchmark
+            result = BenchmarkResult("Unified - UPDATE")
+            for i in range(min(5, self.iterations)):
+                start = time.time()
+                try:
+                    await service.execute_sql(
+                        "UPDATE test_benchmark SET name = $1 WHERE id = $2",
+                        (f"Updated {i}", i + 1)
+                    )
+                    duration = (time.time() - start) * 1000
+                    result.add_result(duration)
+                except Exception:
+                    result.add_result(0, success=False)
+
+            self.results[result.name] = result
+
+        except Exception as e:
+            print(f"Could not run table-based benchmarks: {e}")
+
+    async def _benchmark_transactions(self, service: DatabaseService):
+        """Benchmark transaction performance."""
+        result = BenchmarkResult("Unified - Transactions")
+        
+        for i in range(min(5, self.iterations)):
+            start = time.time()
+            try:
+                async with service.transaction():
+                    await service.execute_sql("SELECT 1")
+                    await service.execute_sql("SELECT 2")
+                duration = (time.time() - start) * 1000
+                result.add_result(duration)
+            except Exception:
+                result.add_result(0, success=False)
+
+        self.results[result.name] = result
+
+    async def _benchmark_caching(self, service: DatabaseService):
+        """Benchmark query caching performance."""
+        try:
+            await service.connect()
+        except Exception as e:
+            print(f"Failed to connect for caching benchmarks: {e}")
+            return
+
+        # Test repeated queries to see if there's any caching benefit
+        result_first_run = BenchmarkResult("Unified - SELECT (First Run)")
+        for i in range(min(20, self.iterations)):
+            start = time.time()
+            try:
+                await service.execute_sql(
+                    "SELECT * FROM information_schema.tables WHERE table_name = $1",
+                    (f"table_{i % 5}",)  # Vary queries slightly
+                )
+                duration = (time.time() - start) * 1000
+                result_first_run.add_result(duration)
+            except Exception:
+                result_first_run.add_result(0, success=False)
+
+        self.results[result_first_run.name] = result_first_run
+
+        # Run same queries again to test for any caching
+        result_repeat_run = BenchmarkResult("Unified - SELECT (Repeat Run)")
+        for i in range(min(20, self.iterations)):
+            start = time.time()
+            try:
+                await service.execute_sql(
+                    "SELECT * FROM information_schema.tables WHERE table_name = $1",
+                    (f"table_{i % 5}",)  # Same queries to test cache hits
+                )
+                duration = (time.time() - start) * 1000
+                result_repeat_run.add_result(duration)
+            except Exception:
+                result_repeat_run.add_result(0, success=False)
+
+        self.results[result_repeat_run.name] = result_repeat_run
+
+        # Calculate potential speedup
+        if result_repeat_run.avg_duration > 0 and result_first_run.avg_duration > 0:
+            speedup = result_first_run.avg_duration / result_repeat_run.avg_duration
+            result_repeat_run.metadata["potential_speedup"] = f"{speedup:.2f}x"
+
+    async def _benchmark_concurrent_operations(self, service: DatabaseService):
+        """Benchmark concurrent operations."""
+        # Service is already connected
+
+        result = BenchmarkResult(
+            f"Unified - Concurrent SELECT ({self.concurrent_users} users)"
+        )
+
+        async def concurrent_select(user_id: int):
+            """Simulate a user making queries."""
+            durations = []
+            for _ in range(10):  # Each user makes 10 queries
+                start = time.time()
+                try:
+                    await service.execute_sql(
+                        "SELECT $1 as user_id, NOW() as timestamp",
+                        (user_id,)
+                    )
+                    duration = (time.time() - start) * 1000
+                    durations.append(duration)
+                except Exception:
+                    pass
+            return durations
+
+        # Run concurrent users
+        start_total = time.time()
+        tasks = [concurrent_select(i) for i in range(self.concurrent_users)]
+        all_durations = await asyncio.gather(*tasks)
+        total_time = (time.time() - start_total) * 1000
+
+        # Flatten and add all durations
+        for user_durations in all_durations:
+            for duration in user_durations:
+                result.add_result(duration)
+
+        result.metadata["total_time_ms"] = f"{total_time:.2f}"
+        result.metadata["queries_per_second"] = (
+            f"{len(result.durations) / (total_time / 1000):.2f}"
+        )
+
+        self.results[result.name] = result
+
+    async def _benchmark_vector_search(self, service: DatabaseService):
+        """Benchmark vector search operations."""
+        # Service is already connected
+
+        result = BenchmarkResult("Unified - Vector Search")
+
+        # Check if pgvector extension is available
+        try:
+            await service.execute_sql("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+            
+            # Generate random vectors for testing
+            vector_dim = 384  # Common embedding dimension
+
+            for _ in range(min(5, self.iterations)):  # Vector search is typically slower
+                query_vector = np.random.rand(vector_dim).tolist()
+
+                start = time.time()
+                try:
+                    # Test basic vector operations if available
+                    await service.execute_sql(
+                        "SELECT $1::vector <-> $2::vector as distance",
+                        (query_vector, query_vector)
+                    )
+                    duration = (time.time() - start) * 1000
+                    result.add_result(duration)
+                except Exception as e:
+                    result.add_result(0, success=False)
+                    result.metadata["note"] = f"Vector operation failed: {str(e)[:100]}"
+                    break
+
+        except Exception as e:
+            result.metadata["note"] = "pgvector extension not available"
+            logger.info(f"Vector search benchmark skipped: {e}")
+
+        self.results[result.name] = result
+
+    async def _benchmark_old_service_queries(self, service):
+        """Benchmark queries for old service."""
+        try:
+            # Test if service has basic methods
+            if hasattr(service, "execute_sql"):
+                # SELECT benchmark
+                result = BenchmarkResult("Old Service - SELECT")
+                for _ in range(self.iterations):
+                    start = time.time()
+                    try:
+                        await service.execute_sql("SELECT 1 as test_column LIMIT 10")
+                        duration = (time.time() - start) * 1000
+                        result.add_result(duration)
+                    except Exception:
+                        result.add_result(0, success=False)
+
+                self.results[result.name] = result
+            else:
+                logger.info("Old service doesn't have expected interface")
+        except Exception as e:
+            logger.info(f"Could not benchmark old service: {e}")
+
+    def generate_report(self):
+        """Generate and display benchmark report."""
+        print("\n" + "=" * 80)
+        print("BENCHMARK RESULTS")
+        print("=" * 80 + "\n")
+
+        # Prepare data for table
+        table_data = []
+        for name, result in self.results.items():
+            row = [
+                name,
+                f"{result.avg_duration:.2f}",
+                f"{result.min_duration:.2f}",
+                f"{result.max_duration:.2f}",
+                f"{result.p95_duration:.2f}",
+                f"{result.success_rate:.1f}%",
+                len(result.durations) + result.errors,
+            ]
+
+            # Add metadata if available
+            if result.metadata:
+                metadata_str = ", ".join(
+                    f"{k}: {v}" for k, v in result.metadata.items()
+                )
+                row.append(metadata_str)
+            else:
+                row.append("")
+
+            table_data.append(row)
+
+        headers = [
+            "Operation",
+            "Avg (ms)",
+            "Min (ms)",
+            "Max (ms)",
+            "P95 (ms)",
+            "Success",
+            "Count",
+            "Notes",
+        ]
+        print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+        # Performance comparison if both services tested
+        if OLD_SERVICE_AVAILABLE:
+            print("\n" + "=" * 80)
+            print("PERFORMANCE COMPARISON")
+            print("=" * 80 + "\n")
+
+            comparisons = []
+
+            # Compare SELECT performance
+            old_select = self.results.get("Old Service - SELECT")
+            new_select = self.results.get("Unified - SELECT")
+
+            if old_select and new_select:
+                improvement = (
+                    (old_select.avg_duration - new_select.avg_duration)
+                    / old_select.avg_duration
+                    * 100
+                )
+                comparisons.append(
+                    [
+                        "SELECT Performance",
+                        f"{old_select.avg_duration:.2f} ms",
+                        f"{new_select.avg_duration:.2f} ms",
+                        f"{improvement:.1f}% improvement"
+                        if improvement > 0
+                        else f"{-improvement:.1f}% slower",
+                    ]
+                )
+
+            if comparisons:
+                headers = ["Metric", "Old Service", "Unified Service", "Change"]
+                print(tabulate(comparisons, headers=headers, tablefmt="grid"))
+
+        # Save detailed results to file
+        self.save_results()
+
+    def save_results(self):
+        """Save detailed results to JSON file."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"benchmark_results_{timestamp}.json"
+
+        results_data = {
+            "timestamp": timestamp,
+            "configuration": {
+                "iterations": self.iterations,
+                "concurrent_users": self.concurrent_users,
+            },
+            "results": {},
+        }
+
+        for name, result in self.results.items():
+            results_data["results"][name] = {
+                "avg_duration_ms": result.avg_duration,
+                "min_duration_ms": result.min_duration,
+                "max_duration_ms": result.max_duration,
+                "p95_duration_ms": result.p95_duration,
+                "success_rate": result.success_rate,
+                "total_operations": len(result.durations) + result.errors,
+                "errors": result.errors,
+                "metadata": result.metadata,
+            }
+
+        with open(filename, "w") as f:
+            json.dump(results_data, f, indent=2)
+
+        print(f"\nDetailed results saved to: {filename}")
+
+
+async def main():
+    """Main benchmark runner."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Benchmark database services")
+    parser.add_argument(
+        "--iterations", type=int, default=100, help="Number of iterations per test"
+    )
+    parser.add_argument(
+        "--concurrent", type=int, default=10, help="Number of concurrent users"
+    )
+
+    args = parser.parse_args()
+
+    benchmark = DatabaseBenchmark(
+        iterations=args.iterations, concurrent_users=args.concurrent
+    )
+
+    await benchmark.run_all_benchmarks()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
