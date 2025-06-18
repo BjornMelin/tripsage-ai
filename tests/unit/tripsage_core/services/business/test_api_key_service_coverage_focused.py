@@ -175,7 +175,7 @@ class TestApiKeyServiceCoverageFocused:
     @pytest.mark.asyncio
     async def test_decrypt_invalid_signature_exception(self, api_service):
         """Test decryption with InvalidSignature exception - targets lines 691-702."""
-        # Create an encrypted key that will pass initial validation but fail signature verification
+        # Create encrypted key that passes validation but fails signature check
         Fernet.generate_key()
 
         with patch.object(api_service.master_cipher, "decrypt") as mock_decrypt:
@@ -244,7 +244,7 @@ class TestApiKeyServiceCoverageFocused:
 
     @pytest.mark.asyncio
     async def test_decrypt_missing_separator_parts(self, api_service):
-        """Test decryption with missing separator resulting in insufficient parts - targets lines 684-687."""
+        """Test decryption with missing separator - targets lines 684-687."""
         # Create data with no separator
         no_separator_data = b"single_part_no_separator"
         no_separator_key = base64.urlsafe_b64encode(no_separator_data).decode()
@@ -398,7 +398,7 @@ class TestApiKeyServiceCoverageFocused:
     async def test_delete_api_key_transaction_context_failure(
         self, api_service, mock_dependencies
     ):
-        """Test transaction context manager failure during delete - targets lines 608-621."""
+        """Test transaction context manager failure during delete."""
         key_id = str(uuid.uuid4())
         user_id = str(uuid.uuid4())
 
