@@ -145,18 +145,16 @@ dev = [
 benchmark = [
     # Core benchmarking
     "click>=8.1.0",
-    "numpy>=1.24.0",
+    "numpy>=1.24.0",  # Vector generation for database benchmarks
     # Visualization (both static and interactive)
     "matplotlib>=3.7.0",
     "plotly>=5.17.0",
-    # System monitoring (psutil already in main dependencies)
-    # Database connectivity (asyncpg, supabase already in main dependencies)
 ]
 
 # Optional heavy dependencies for advanced analysis
 analysis = [
     "jupyter>=1.1.1",
-    "ipython>=8.0.0",
+    "ipython>=8.0.0", 
     "pandas>=2.1.0",
     "memory-profiler>=0.61.0",
 ]
