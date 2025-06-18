@@ -141,43 +141,24 @@ dev = [
     "bandit>=1.8.3",
 ]
 
-# Scripts and benchmarking dependencies
+# Scripts and benchmarking with visualization
 benchmark = [
-    # CLI interface for benchmark scripts
+    # Core benchmarking
     "click>=8.1.0",
-    # Efficient vector generation for database benchmarks
     "numpy>=1.24.0",
+    # Visualization (both static and interactive)
+    "matplotlib>=3.7.0",
+    "plotly>=5.17.0",
     # System monitoring (psutil already in main dependencies)
     # Database connectivity (asyncpg, supabase already in main dependencies)
 ]
 
-# Static visualization for CI/CD and reports
-visualization-static = [
-    "matplotlib>=3.7.0",
-]
-
-# Interactive visualization for dashboards and web reports  
-visualization-interactive = [
-    "plotly>=5.17.0",
-]
-
-# Complete visualization suite
-visualization = [
-    {include-group = "visualization-static"},
-    {include-group = "visualization-interactive"},
-]
-
-# Optional profiling capabilities (install only when needed)  
-profiling = [
-    "memory-profiler>=0.61.0",
-    "line-profiler>=4.1.0",
-]
-
-# Optional data analysis environment
+# Optional heavy dependencies for advanced analysis
 analysis = [
     "jupyter>=1.1.1",
     "ipython>=8.0.0",
     "pandas>=2.1.0",
+    "memory-profiler>=0.61.0",
 ]
 
 [tool.coverage.run]
