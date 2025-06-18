@@ -19,9 +19,10 @@ from .enums import CabinClass, PassengerType
 
 # Removed TYPE_CHECKING imports to avoid circular import issues
 
+
 class Airport(BaseModel):
     """Airport information model."""
-    
+
     iata_code: AirportCode = Field(..., description="IATA airport code")
     name: str = Field(..., description="Airport name")
     city: str = Field(..., description="City name")
