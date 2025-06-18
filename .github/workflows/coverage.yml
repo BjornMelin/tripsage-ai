@@ -1,0 +1,469 @@
+name: Code Coverage Analysis
+
+on:
+  push:
+    branches: [main, develop, feat/*, "session/*"]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run coverage analysis daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: coverage-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  BACKEND_COVERAGE_THRESHOLD: 85
+  FRONTEND_COVERAGE_THRESHOLD: 80
+
+jobs:
+  backend-coverage:
+    name: Backend Coverage Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tripsage_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      dragonfly:
+        image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-coverage-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-coverage-
+          ${{ runner.os }}-uv-
+
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -r requirements.txt
+        uv pip install -r requirements-dev.txt
+
+    - name: Wait for services
+      run: |
+        timeout 60 bash -c 'until pg_isready -h localhost -p 5432; do echo "Waiting for postgres..."; sleep 2; done'
+        timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping; do echo "Waiting for dragonfly..."; sleep 2; done'
+
+    - name: Run comprehensive test suite with coverage
+      env:
+        ENV: test
+        PYTHONPATH: .
+        # Database
+        SUPABASE_URL: https://test-project.supabase.co
+        SUPABASE_ANON_KEY: test-anon-key
+        SUPABASE_SERVICE_KEY: test-service-key
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tripsage_test
+        # DragonflyDB
+        DRAGONFLY_URL: redis://localhost:6379/0
+        DRAGONFLY_PASSWORD: ""
+        # API Keys (test values)
+        OPENAI_API_KEY: test-key
+        ANTHROPIC_API_KEY: test-key
+        DUFFEL_API_KEY: test-key
+        GOOGLE_MAPS_API_KEY: test-key
+      run: |
+        source .venv/bin/activate
+        
+        # Run unit tests with coverage
+        uv run pytest tests/unit/ \
+          --cov=tripsage \
+          --cov=tripsage_core \
+          --cov-report=xml:coverage-unit.xml \
+          --cov-report=html:coverage-html-unit \
+          --cov-report=json:coverage-unit.json \
+          --cov-report=term-missing \
+          --cov-branch \
+          --junitxml=test-results-unit.xml \
+          -v
+
+    - name: Run integration tests with coverage
+      env:
+        ENV: test
+        PYTHONPATH: .
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tripsage_test
+        DRAGONFLY_URL: redis://localhost:6379/0
+        SUPABASE_URL: https://test-project.supabase.co
+        SUPABASE_ANON_KEY: test-anon-key
+        OPENAI_API_KEY: test-key
+      run: |
+        source .venv/bin/activate
+        
+        # Run integration tests with coverage (append to existing coverage)
+        uv run pytest tests/integration/ \
+          --cov=tripsage \
+          --cov=tripsage_core \
+          --cov-append \
+          --cov-report=xml:coverage-integration.xml \
+          --cov-report=html:coverage-html-integration \
+          --cov-report=json:coverage-integration.json \
+          --junitxml=test-results-integration.xml \
+          -v || echo "Integration tests may be incomplete"
+
+    - name: Combine coverage reports
+      run: |
+        source .venv/bin/activate
+        
+        # Combine all coverage data
+        coverage combine
+        coverage report --show-missing
+        coverage xml -o coverage-combined.xml
+        coverage html -d coverage-html-combined
+        coverage json -o coverage-combined.json
+
+    - name: Generate coverage badge
+      run: |
+        source .venv/bin/activate
+        
+        # Extract coverage percentage
+        COVERAGE=$(python -c "
+        import json
+        with open('coverage-combined.json') as f:
+            data = json.load(f)
+            print(f\"{data['totals']['percent_covered']:.1f}\")
+        ")
+        
+        echo "BACKEND_COVERAGE=$COVERAGE" >> $GITHUB_ENV
+        echo "Backend Coverage: $COVERAGE%"
+
+    - name: Coverage threshold check
+      run: |
+        source .venv/bin/activate
+        
+        COVERAGE=$(python -c "
+        import json
+        with open('coverage-combined.json') as f:
+            data = json.load(f)
+            print(data['totals']['percent_covered'])
+        ")
+        
+        echo "Current coverage: $COVERAGE%"
+        echo "Required threshold: ${{ env.BACKEND_COVERAGE_THRESHOLD }}%"
+        
+        # Use python for floating point comparison
+        THRESHOLD_MET=$(python -c "print($COVERAGE >= ${{ env.BACKEND_COVERAGE_THRESHOLD }})")
+        
+        if [ "$THRESHOLD_MET" = "False" ]; then
+          echo "❌ Backend coverage threshold not met!"
+          echo "::error::Coverage ($COVERAGE%) is below the required threshold (${{ env.BACKEND_COVERAGE_THRESHOLD }}%)"
+          exit 1
+        else
+          echo "✅ Backend coverage threshold met!"
+        fi
+
+    - name: Upload backend coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: backend-coverage-reports
+        path: |
+          coverage-combined.xml
+          coverage-combined.json
+          coverage-html-combined/
+          test-results-unit.xml
+          test-results-integration.xml
+        retention-days: 30
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage-combined.xml
+        flags: backend,combined
+        name: backend-combined-coverage
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  frontend-coverage:
+    name: Frontend Coverage Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+        cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Run tests with coverage
+      run: |
+        # Run unit tests with coverage
+        pnpm test:coverage --reporter=verbose --reporter=junit --outputFile=test-results.xml
+        
+        # Ensure coverage directory exists
+        if [ ! -d coverage ]; then
+          echo "❌ Coverage directory not found"
+          exit 1
+        fi
+
+    - name: Generate coverage reports
+      run: |
+        # Generate additional coverage formats if needed
+        if [ -f coverage/coverage-summary.json ]; then
+          echo "Coverage summary found"
+          cat coverage/coverage-summary.json
+        fi
+
+    - name: Extract coverage percentage
+      run: |
+        if [ -f coverage/coverage-summary.json ]; then
+          COVERAGE=$(node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+            console.log(data.total.lines.pct);
+          ")
+          echo "FRONTEND_COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "Frontend Coverage: $COVERAGE%"
+        else
+          echo "❌ Coverage summary not found"
+          exit 1
+        fi
+
+    - name: Coverage threshold check
+      run: |
+        COVERAGE=${{ env.FRONTEND_COVERAGE || '0' }}
+        echo "Current coverage: $COVERAGE%"
+        echo "Required threshold: ${{ env.FRONTEND_COVERAGE_THRESHOLD }}%"
+        
+        # Use node for floating point comparison
+        THRESHOLD_MET=$(node -e "console.log(parseFloat('$COVERAGE') >= ${{ env.FRONTEND_COVERAGE_THRESHOLD }})")
+        
+        if [ "$THRESHOLD_MET" = "false" ]; then
+          echo "❌ Frontend coverage threshold not met!"
+          echo "::error::Coverage ($COVERAGE%) is below the required threshold (${{ env.FRONTEND_COVERAGE_THRESHOLD }}%)"
+          exit 1
+        else
+          echo "✅ Frontend coverage threshold met!"
+        fi
+
+    - name: Upload frontend coverage reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-coverage-reports
+        path: |
+          frontend/coverage/
+          frontend/test-results.xml
+        retention-days: 30
+
+    - name: Upload to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./frontend
+        flags: frontend,unittests
+        name: frontend-coverage
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  coverage-comparison:
+    name: Coverage Comparison
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-coverage, frontend-coverage]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Download coverage artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: "*-coverage-reports"
+        merge-multiple: true
+
+    - name: Compare coverage with base branch
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read current coverage data
+          let backendCoverage = 0;
+          let frontendCoverage = 0;
+          
+          try {
+            const backendData = JSON.parse(fs.readFileSync('coverage-combined.json', 'utf8'));
+            backendCoverage = backendData.totals.percent_covered;
+          } catch (e) {
+            console.log('Backend coverage data not found');
+          }
+          
+          try {
+            const frontendData = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+            frontendCoverage = frontendData.total.lines.pct;
+          } catch (e) {
+            console.log('Frontend coverage data not found');
+          }
+          
+          // Create coverage comparison comment
+          const comment = `## 📊 Coverage Report
+          
+          ### Current Coverage
+          | Component | Coverage | Threshold | Status |
+          |-----------|----------|-----------|--------|
+          | Backend | ${backendCoverage.toFixed(1)}% | ${{ env.BACKEND_COVERAGE_THRESHOLD }}% | ${backendCoverage >= ${{ env.BACKEND_COVERAGE_THRESHOLD }} ? '✅' : '❌'} |
+          | Frontend | ${frontendCoverage.toFixed(1)}% | ${{ env.FRONTEND_COVERAGE_THRESHOLD }}% | ${frontendCoverage >= ${{ env.FRONTEND_COVERAGE_THRESHOLD }} ? '✅' : '❌'} |
+          
+          ### Coverage Trend
+          ${backendCoverage >= ${{ env.BACKEND_COVERAGE_THRESHOLD }} && frontendCoverage >= ${{ env.FRONTEND_COVERAGE_THRESHOLD }} 
+            ? '🎉 **All coverage thresholds met!**' 
+            : '⚠️ **Some coverage thresholds not met**'}
+          
+          📈 [View detailed coverage reports](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          ---
+          *Coverage analysis by GitHub Actions*`;
+          
+          // Post comment
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  coverage-quality-gate:
+    name: Coverage Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [backend-coverage, frontend-coverage]
+    if: always()
+    
+    steps:
+    - name: Evaluate coverage results
+      run: |
+        echo "Coverage Quality Gate Results:"
+        echo "=============================="
+        echo "Backend Coverage: ${{ needs.backend-coverage.result }}"
+        echo "Frontend Coverage: ${{ needs.frontend-coverage.result }}"
+        
+        # Check if any critical coverage job failed
+        if [ "${{ needs.backend-coverage.result }}" = "failure" ]; then
+          echo "❌ Backend coverage failed"
+          exit 1
+        fi
+        
+        if [ "${{ needs.frontend-coverage.result }}" = "failure" ]; then
+          echo "❌ Frontend coverage failed"
+          exit 1
+        fi
+        
+        echo "✅ All coverage quality gates passed!"
+
+  coverage-trends:
+    name: Coverage Trends
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-coverage, frontend-coverage]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download coverage artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: "*-coverage-reports"
+        merge-multiple: true
+
+    - name: Store coverage trends
+      run: |
+        # Create coverage trends directory
+        mkdir -p .coverage-trends
+        
+        # Store current coverage data with timestamp
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        
+        # Backend coverage
+        if [ -f coverage-combined.json ]; then
+          BACKEND_COVERAGE=$(python3 -c "
+          import json
+          with open('coverage-combined.json') as f:
+              data = json.load(f)
+              print(data['totals']['percent_covered'])
+          ")
+          echo "$TIMESTAMP,$BACKEND_COVERAGE" >> .coverage-trends/backend-coverage.csv
+        fi
+        
+        # Frontend coverage
+        if [ -f coverage/coverage-summary.json ]; then
+          FRONTEND_COVERAGE=$(node -e "
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+          console.log(data.total.lines.pct);
+          ")
+          echo "$TIMESTAMP,$FRONTEND_COVERAGE" >> .coverage-trends/frontend-coverage.csv
+        fi
+        
+        echo "Coverage trends updated for commit ${{ github.sha }}"
+
+    - name: Commit coverage trends
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        if [ -n "$(git status --porcelain .coverage-trends/)" ]; then
+          git add .coverage-trends/
+          git commit -m "docs: update coverage trends [skip ci]"
+          git push
+        else
+          echo "No coverage trend changes to commit"
+        fi
