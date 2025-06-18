@@ -253,8 +253,9 @@ class WebSocketConnection:
                 else:
                     # No low priority messages to drop, reject the new message
                     logger.error(
-                        f"Queue full and no low priority messages to drop for connection "
-                        f"{self.connection_id}. Rejecting priority {priority} message."
+                        f"Queue full and no low priority messages to drop for "
+                        f"connection {self.connection_id}. "
+                        f"Rejecting priority {priority} message."
                     )
                     return False
 
@@ -265,8 +266,9 @@ class WebSocketConnection:
     async def send(self, event: Dict[str, Any]) -> bool:
         """Send event to WebSocket connection with error handling."""
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
-            # For cascade failure prevention: if connection is in ERROR state but circuit breaker is CLOSED,
-            # allow the send attempt to proceed (connection might have recovered)
+            # For cascade failure prevention: if connection is in ERROR state but
+            # circuit breaker is CLOSED, allow the send attempt to proceed
+            # (connection might have recovered)
             if (
                 self.state == ConnectionState.ERROR
                 and self.circuit_breaker.can_execute()
@@ -275,20 +277,25 @@ class WebSocketConnection:
                 pass
             else:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} in state {self.state}"
+                    f"Cannot send to connection {self.connection_id} "
+                    f"in state {self.state}"
                 )
                 return False
 
-        # Check circuit breaker state - if OPEN, queue instead of dropping for recovery scenarios
+        # Check circuit breaker state - if OPEN, queue instead of dropping for
+        # recovery scenarios
         if not self.circuit_breaker.can_execute():
-            # For cascade failure prevention test: if in ERROR state with OPEN circuit breaker, fail
+            # For cascade failure prevention test: if in ERROR state with OPEN
+            # circuit breaker, fail
             if self.state == ConnectionState.ERROR:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} - circuit breaker OPEN and in ERROR state"
+                    f"Cannot send to connection {self.connection_id} - "
+                    f"circuit breaker OPEN and in ERROR state"
                 )
                 return False
 
-            # Circuit breaker is OPEN but connection is healthy - queue the message instead of failing
+            # Circuit breaker is OPEN but connection is healthy - queue the message
+            # instead of failing
             priority = (
                 getattr(event, "priority", 2)
                 if hasattr(event, "priority")
@@ -308,7 +315,8 @@ class WebSocketConnection:
                 # Drop low priority messages during backpressure
                 self.dropped_messages_count += 1
                 logger.debug(
-                    f"Dropped low priority message due to backpressure on connection {self.connection_id}"
+                    f"Dropped low priority message due to backpressure on "
+                    f"connection {self.connection_id}"
                 )
                 return False
 
@@ -367,7 +375,8 @@ class WebSocketConnection:
                 if retry_count < 3:
                     # Preserve original event type (Pydantic or dict) for compatibility
                     if hasattr(event, "model_dump"):
-                        # For Pydantic models - create a new instance to preserve object type
+                        # For Pydantic models - create a new instance to preserve
+                        # object type
                         event_dict = event.model_dump()
                         event_dict["retry_count"] = retry_count + 1
                         event_dict["priority"] = 1  # High priority retry
@@ -454,7 +463,8 @@ class WebSocketConnection:
             self.latency_samples.append(latency)
         else:
             logger.debug(
-                f"Received pong but no outstanding pings for connection {self.connection_id}"
+                f"Received pong but no outstanding pings for "
+                f"connection {self.connection_id}"
             )
 
         # Clear compatibility attribute when all pings are handled (for tests)

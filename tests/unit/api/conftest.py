@@ -349,8 +349,10 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_flight_service_getter.return_value = mock_flight_service
 
         # Configure mock search flights response
-        from tripsage.api.schemas.flights import FlightSearchResponse
-        from tripsage_core.models.domain.flight import CabinClass
+        from tripsage_core.models.schemas_common.enums import CabinClass
+        from tripsage_core.models.schemas_common.flight_schemas import (
+            FlightSearchResponse,
+        )
 
         def mock_search_flights(request):
             """Mock search flights method that returns API response format."""
@@ -407,7 +409,9 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         )
 
         # Configure save flight mock
-        from tripsage.api.schemas.flights import SavedFlightResponse
+        from tripsage_core.models.schemas_common.flight_schemas import (
+            SavedFlightResponse,
+        )
 
         def mock_save_flight(user_id, request):
             """Mock save flight method."""

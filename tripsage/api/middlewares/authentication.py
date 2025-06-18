@@ -2,7 +2,8 @@
 
 This module provides robust authentication middleware supporting both JWT tokens
 (for frontend) and API Keys (for agents), populating request.state.principal
-with authenticated entity information.
+with authenticated entity information. Includes comprehensive audit logging
+for all authentication events.
 """
 
 import logging
@@ -22,7 +23,15 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
-from tripsage_core.services.business.key_management_service import KeyManagementService
+from tripsage_core.services.business.api_key_service import ApiKeyService
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditOutcome,
+    AuditSeverity,
+    audit_api_key,
+    audit_authentication,
+    audit_security_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +75,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         settings: Optional[Settings] = None,
-        key_service: Optional[KeyManagementService] = None,
+        key_service: Optional[ApiKeyService] = None,
     ):
         """Initialize AuthenticationMiddleware.
 
@@ -86,11 +95,21 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         """Ensure services are initialized (lazy loading)."""
         if not self._services_initialized:
             if self.key_service is None:
-                from tripsage_core.services.business.key_management_service import (
-                    get_key_management_service,
+                from tripsage_core.config import get_settings
+                from tripsage_core.services.business.api_key_service import (
+                    ApiKeyService,
+                )
+                from tripsage_core.services.infrastructure.cache_service import (
+                    get_cache_service,
+                )
+                from tripsage_core.services.infrastructure.database_service import (
+                    get_database_service,
                 )
 
-                self.key_service = await get_key_management_service()
+                db = await get_database_service()
+                cache = await get_cache_service()
+                settings = get_settings()
+                self.key_service = ApiKeyService(db=db, cache=cache, settings=settings)
 
             self._services_initialized = True
 
@@ -115,6 +134,20 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
         # Enhanced security: validate request headers
         if not self._validate_request_headers(request):
+            # Log suspicious header activity
+            await audit_security_event(
+                event_type=AuditEventType.SECURITY_SUSPICIOUS_ACTIVITY,
+                severity=AuditSeverity.HIGH,
+                message="Suspicious request headers detected",
+                actor_id="unknown",
+                ip_address=self._get_client_ip(request),
+                target_resource=request.url.path,
+                risk_score=70,
+                user_agent=request.headers.get("User-Agent"),
+                method=request.method,
+                headers_count=len(request.headers),
+            )
+
             return Response(
                 content="Invalid request headers",
                 status_code=HTTP_401_UNAUTHORIZED,
@@ -134,8 +167,36 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 if not self._validate_token_format(token):
                     raise AuthenticationError("Invalid token format")
                 principal = await self._authenticate_jwt(token)
+
+                # Log successful JWT authentication
+                if principal:
+                    await audit_authentication(
+                        event_type=AuditEventType.AUTH_LOGIN_SUCCESS,
+                        outcome=AuditOutcome.SUCCESS,
+                        user_id=principal.id,
+                        ip_address=self._get_client_ip(request),
+                        user_agent=request.headers.get("User-Agent"),
+                        message="JWT authentication successful",
+                        endpoint=request.url.path,
+                        method=request.method,
+                    )
+
             except AuthenticationError as e:
                 auth_error = e
+
+                # Log failed JWT authentication
+                await audit_authentication(
+                    event_type=AuditEventType.AUTH_LOGIN_FAILED,
+                    outcome=AuditOutcome.FAILURE,
+                    user_id="unknown",
+                    ip_address=self._get_client_ip(request),
+                    user_agent=request.headers.get("User-Agent"),
+                    message=f"JWT authentication failed: {str(e)}",
+                    endpoint=request.url.path,
+                    method=request.method,
+                    error_type=type(e).__name__,
+                )
+
                 logger.warning(
                     f"JWT authentication failed: {e}",
                     extra={
@@ -156,9 +217,53 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     if not self._validate_api_key_format(api_key_header):
                         raise KeyValidationError("Invalid API key format")
                     principal = await self._authenticate_api_key(api_key_header)
+
+                    # Log successful API key authentication
+                    if principal:
+                        # Extract service from principal metadata
+                        service = principal.service or "unknown"
+                        key_id = principal.metadata.get("key_id", "unknown")
+
+                        await audit_api_key(
+                            event_type=AuditEventType.API_KEY_VALIDATION_SUCCESS,
+                            outcome=AuditOutcome.SUCCESS,
+                            key_id=key_id,
+                            service=service,
+                            ip_address=self._get_client_ip(request),
+                            message="API key authentication successful",
+                            endpoint=request.url.path,
+                            method=request.method,
+                        )
+
                 except (AuthenticationError, KeyValidationError) as e:
                     auth_error = e
                     user_agent = request.headers.get("User-Agent", "Unknown")[:200]
+
+                    # Extract service and key_id for failed authentication audit
+                    service = "unknown"
+                    key_id = "unknown"
+                    try:
+                        if api_key_header and api_key_header.startswith("sk_"):
+                            parts = api_key_header.split("_")
+                            if len(parts) >= 3:
+                                service = parts[1]
+                                key_id = parts[2]
+                    except Exception:
+                        pass
+
+                    # Log failed API key authentication
+                    await audit_api_key(
+                        event_type=AuditEventType.API_KEY_VALIDATION_FAILED,
+                        outcome=AuditOutcome.FAILURE,
+                        key_id=key_id,
+                        service=service,
+                        ip_address=self._get_client_ip(request),
+                        message=f"API key authentication failed: {str(e)}",
+                        endpoint=request.url.path,
+                        method=request.method,
+                        error_type=type(e).__name__,
+                    )
+
                     logger.warning(
                         f"API key authentication failed: {e}",
                         extra={
@@ -173,6 +278,21 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # Log failed authentication attempt
             user_agent = request.headers.get("User-Agent", "Unknown")[:200]
             error_msg = str(auth_error) if auth_error else "No credentials provided"
+
+            # Log comprehensive authentication failure
+            await audit_security_event(
+                event_type=AuditEventType.ACCESS_DENIED,
+                severity=AuditSeverity.MEDIUM,
+                message=f"Authentication required for {request.url.path}",
+                actor_id="unauthenticated",
+                ip_address=self._get_client_ip(request),
+                target_resource=request.url.path,
+                risk_score=30,
+                user_agent=user_agent,
+                method=request.method,
+                error_details=error_msg,
+            )
+
             logger.warning(
                 "Authentication failed",
                 extra={
@@ -333,8 +453,15 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 full_key = f"sk_{service}_{key_id}_{secret}"
 
                 # Validate the key with the appropriate service
+                from tripsage_core.services.business.api_key_service import ServiceType
+
+                service_type = (
+                    ServiceType(service)
+                    if service in [e.value for e in ServiceType]
+                    else ServiceType.OPENAI
+                )
                 validation_result = await self.key_service.validate_api_key(
-                    service=service, key_value=full_key
+                    service=service_type, key_value=full_key
                 )
 
                 if not validation_result.is_valid:
@@ -343,7 +470,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     )
 
                 # Retrieve key metadata if available
-                key_metadata = validation_result.details or {}
+                key_metadata = validation_result.details
 
                 # Create principal for validated API key
                 return Principal(

@@ -18,6 +18,7 @@
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [API Development](api-development.md) | Backend API development with FastAPI | Backend developers |
+| [**API Key Service**](api-key-service.md) | 🔑 Internal API key service implementation guide | Backend developers |
 | [Frontend Development](frontend-development.md) | Next.js frontend development guide | Frontend developers |
 | [**Unified Database Guide**](unified-database-guide.md) | 🗄️ Complete database development reference | Backend developers |
 | [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
@@ -134,6 +135,7 @@ pnpm test:coverage # Coverage report
 - **Architecture Questions**: See [Architecture Guide](architecture-guide.md)
 - **Code Issues**: Check [Debugging Guide](debugging-guide.md)
 - **API Questions**: Reference [API Development](api-development.md)
+- **API Key Issues**: See [API Key Service Guide](api-key-service.md)
 - **Testing Issues**: Consult [Testing Guide](testing-guide.md)
 
 ---

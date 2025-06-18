@@ -5,7 +5,6 @@ searching for flights, managing saved flights, and searching for airports.
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
@@ -13,7 +12,11 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.flights import (
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
+from tripsage_core.models.domain.flight import FlightOffer
+from tripsage_core.models.schemas_common.flight_schemas import (
     AirportSearchRequest,
     AirportSearchResponse,
     FlightSearchRequest,
@@ -23,67 +26,14 @@ from tripsage.api.schemas.flights import (
     SavedFlightResponse,
     UpcomingFlightResponse,
 )
-from tripsage_core.exceptions.exceptions import (
-    CoreResourceNotFoundError as ResourceNotFoundError,
-)
-from tripsage_core.models.domain.flight import FlightOffer
 from tripsage_core.services.business.flight_service import (
-    FlightPassenger,
     FlightService,
-    PassengerType,
     get_flight_service,
-)
-from tripsage_core.services.business.flight_service import (
-    FlightSearchRequest as ServiceFlightSearchRequest,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-
-def _convert_to_service_request(
-    api_request: FlightSearchRequest,
-) -> ServiceFlightSearchRequest:
-    """Convert API FlightSearchRequest to Service FlightSearchRequest.
-
-    Args:
-        api_request: API request model
-
-    Returns:
-        Service request model
-    """
-    # Create passenger list from counts
-    passengers = []
-
-    # Add adults
-    for _ in range(api_request.adults):
-        passengers.append(FlightPassenger(type=PassengerType.ADULT))
-
-    # Add children
-    for _ in range(api_request.children):
-        passengers.append(FlightPassenger(type=PassengerType.CHILD))
-
-    # Add infants
-    for _ in range(api_request.infants):
-        passengers.append(FlightPassenger(type=PassengerType.INFANT_ON_LAP))
-
-    # Convert to service model
-    return ServiceFlightSearchRequest(
-        origin=api_request.origin,
-        destination=api_request.destination,
-        departure_date=datetime.combine(
-            api_request.departure_date, datetime.min.time()
-        ),
-        return_date=datetime.combine(api_request.return_date, datetime.min.time())
-        if api_request.return_date
-        else None,
-        passengers=passengers,
-        cabin_class=api_request.cabin_class,
-        max_stops=api_request.max_stops,
-        max_price=api_request.max_price,
-        preferred_airlines=api_request.preferred_airlines,
-    )
 
 
 @router.post("/search", response_model=FlightSearchResponse)
@@ -109,11 +59,8 @@ async def search_flights(
         request.model_fields if hasattr(request, "model_fields") else "No model_fields",
     )
 
-    # Convert API request to service request
-    service_request = _convert_to_service_request(request)
-
-    # Search for flights
-    results = await flight_service.search_flights(service_request)
+    # Search for flights using unified schema
+    results = await flight_service.search_flights(request)
     return results
 
 

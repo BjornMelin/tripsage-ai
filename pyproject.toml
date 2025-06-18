@@ -116,6 +116,8 @@ test = [
     "fakeredis>=2.29.0",
     "nest-asyncio>=1.6.0",
     "hypothesis>=6.120.0",
+    # Performance and load testing
+    "locust>=2.31.10",
     # Coverage reporting
     "coverage[toml]>=7.8.2",
 ]
