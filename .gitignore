@@ -316,3 +316,55 @@ scan-results/
 **/*.orig
 **/*.rej
 **/.git/COMMIT_EDITMSG.backup
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Testing artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+mutants/
+.mutmut-cache
+
+# Benchmarking
+benchmark_results_*.json
+performance_metrics_*.json
+*.benchmark
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.backup
+*.old
+
+# Environment
+.env
+.env.local
+.env.*.local
+venv/
+env/
+ENV/
