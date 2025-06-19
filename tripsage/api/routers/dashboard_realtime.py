@@ -10,8 +10,8 @@ This module provides real-time monitoring capabilities for the dashboard:
 import asyncio
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/api/dashboard/realtime", tags=["dashboard-realtime"]
 class RealtimeMetrics(BaseModel):
     """Real-time metrics data."""
 
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     requests_per_second: float
     errors_per_second: float
     success_rate: float
@@ -55,10 +55,10 @@ class AlertNotification(BaseModel):
     type: str  # "new", "updated", "resolved"
     severity: str
     message: str
-    service: Optional[str] = None
-    key_id: Optional[str] = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: Dict[str, Any] = Field(default_factory=dict)
+    service: str | None = None
+    key_id: str | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class SystemEvent(BaseModel):
@@ -68,36 +68,36 @@ class SystemEvent(BaseModel):
     event_type: str  # "service_status_change", "rate_limit_exceeded", "maintenance"
     message: str
     severity: str  # "info", "warning", "error", "critical"
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    affected_services: List[str] = Field(default_factory=list)
-    details: Dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    affected_services: list[str] = Field(default_factory=list)
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class DashboardConnectionManager:
     """Manages WebSocket connections for dashboard clients."""
 
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self.connection_metadata: Dict[WebSocket, Dict[str, Any]] = {}
+    def __init__(self) -> None:
+        self.active_connections: list[WebSocket] = []
+        self.connection_metadata: dict[WebSocket, dict[str, Any]] = {}
 
     async def connect(
         self,
         websocket: WebSocket,
         user_id: str,
         connection_type: str = "dashboard",
-    ):
+    ) -> None:
         """Connect a new dashboard client."""
         await websocket.accept()
         self.active_connections.append(websocket)
         self.connection_metadata[websocket] = {
             "user_id": user_id,
             "connection_type": connection_type,
-            "connected_at": datetime.now(timezone.utc),
+            "connected_at": datetime.now(UTC),
         }
 
         logger.info(f"Dashboard WebSocket connection established for user {user_id}")
 
-    def disconnect(self, websocket: WebSocket):
+    def disconnect(self, websocket: WebSocket) -> None:
         """Disconnect a dashboard client."""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
@@ -105,7 +105,7 @@ class DashboardConnectionManager:
             user_id = metadata.get("user_id", "unknown")
             logger.info(f"Dashboard WebSocket connection closed for user {user_id}")
 
-    async def send_personal_message(self, message: str, websocket: WebSocket):
+    async def send_personal_message(self, message: str, websocket: WebSocket) -> None:
         """Send message to specific connection."""
         try:
             await websocket.send_text(message)
@@ -113,7 +113,7 @@ class DashboardConnectionManager:
             logger.error(f"Failed to send personal message: {e}")
             self.disconnect(websocket)
 
-    async def broadcast(self, message: str, connection_type: Optional[str] = None):
+    async def broadcast(self, message: str, connection_type: str | None = None) -> None:
         """Broadcast message to all or filtered connections."""
         disconnected = []
 
@@ -134,7 +134,7 @@ class DashboardConnectionManager:
         for connection in disconnected:
             self.disconnect(connection)
 
-    async def send_metrics(self, metrics: RealtimeMetrics):
+    async def send_metrics(self, metrics: RealtimeMetrics) -> None:
         """Send real-time metrics to all dashboard connections."""
         message = {
             "type": "metrics",
@@ -142,7 +142,7 @@ class DashboardConnectionManager:
         }
         await self.broadcast(json.dumps(message), "dashboard")
 
-    async def send_alert(self, alert: AlertNotification):
+    async def send_alert(self, alert: AlertNotification) -> None:
         """Send alert notification to all dashboard connections."""
         message = {
             "type": "alert",
@@ -150,7 +150,7 @@ class DashboardConnectionManager:
         }
         await self.broadcast(json.dumps(message), "dashboard")
 
-    async def send_system_event(self, event: SystemEvent):
+    async def send_system_event(self, event: SystemEvent) -> None:
         """Send system event to all dashboard connections."""
         message = {
             "type": "system_event",
@@ -169,7 +169,7 @@ async def dashboard_websocket_endpoint(
     user_id: str,
     cache_service: CacheDep,
     db_service: DatabaseDep,
-):
+) -> None:
     """WebSocket endpoint for real-time dashboard updates.
 
     Provides real-time streaming of:
@@ -229,21 +229,21 @@ async def dashboard_events_stream(
     request: Request,
     cache_service: CacheDep,
     db_service: DatabaseDep,
-):
+) -> Any:
     """Server-sent events endpoint for dashboard updates.
 
     Provides real-time updates via Server-Sent Events (SSE) as an alternative
     to WebSockets for clients that prefer HTTP-based streaming.
     """
 
-    async def event_stream():
+    async def event_stream() -> Any:
         """Generate server-sent events."""
         monitoring_service = ApiKeyMonitoringService(
             cache_service=cache_service,
             database_service=db_service,
         )
 
-        last_metrics_time = datetime.now(timezone.utc)
+        last_metrics_time = datetime.now(UTC)
 
         try:
             while True:
@@ -252,7 +252,7 @@ async def dashboard_events_stream(
                     break
 
                 # Send metrics every 5 seconds
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 if (now - last_metrics_time).total_seconds() >= 5:
                     try:
                         # Get current metrics
@@ -321,10 +321,10 @@ async def dashboard_events_stream(
 
 @router.post("/alerts/broadcast")
 async def broadcast_alert(
-    alert_data: Dict[str, Any],
+    alert_data: dict[str, Any],
     cache_service: CacheDep,
     db_service: DatabaseDep,
-):
+) -> dict[str, Any]:
     """Broadcast an alert to all connected dashboard clients.
 
     This endpoint can be called by internal services to push
@@ -353,16 +353,16 @@ async def broadcast_alert(
         logger.error(f"Failed to broadcast alert: {e}")
         return {
             "success": False,
-            "message": f"Failed to broadcast alert: {str(e)}",
+            "message": f"Failed to broadcast alert: {e!s}",
         }
 
 
 @router.post("/events/broadcast")
 async def broadcast_system_event(
-    event_data: Dict[str, Any],
+    event_data: dict[str, Any],
     cache_service: CacheDep,
     db_service: DatabaseDep,
-):
+) -> dict[str, Any]:
     """Broadcast a system event to all connected dashboard clients.
 
     This endpoint can be called by internal services to push
@@ -390,12 +390,12 @@ async def broadcast_system_event(
         logger.error(f"Failed to broadcast system event: {e}")
         return {
             "success": False,
-            "message": f"Failed to broadcast system event: {str(e)}",
+            "message": f"Failed to broadcast system event: {e!s}",
         }
 
 
 @router.get("/connections")
-async def get_active_connections():
+async def get_active_connections() -> dict[str, Any]:
     """Get information about active dashboard connections.
 
     Returns statistics about currently connected dashboard clients.
@@ -409,8 +409,7 @@ async def get_active_connections():
                 "connection_type": metadata.get("connection_type"),
                 "connected_at": metadata.get("connected_at"),
                 "duration_seconds": (
-                    datetime.now(timezone.utc)
-                    - metadata.get("connected_at", datetime.now(timezone.utc))
+                    datetime.now(UTC) - metadata.get("connected_at", datetime.now(UTC))
                 ).total_seconds(),
             }
         )
@@ -423,7 +422,7 @@ async def get_active_connections():
 
 async def _send_periodic_metrics(
     websocket: WebSocket, monitoring_service: ApiKeyMonitoringService
-):
+) -> None:
     """Send periodic metrics updates to a WebSocket connection."""
     try:
         while True:
@@ -470,9 +469,9 @@ async def _send_periodic_metrics(
 
 async def _handle_subscription(
     websocket: WebSocket,
-    message: Dict[str, Any],
+    message: dict[str, Any],
     monitoring_service: ApiKeyMonitoringService,
-):
+) -> None:
     """Handle client subscription requests."""
     try:
         subscription_type = message.get("subscription_type")
@@ -536,9 +535,9 @@ async def _handle_subscription(
 
 # Export the dashboard manager for use by other services
 __all__ = [
-    "dashboard_manager",
+    "AlertNotification",
     "DashboardConnectionManager",
     "RealtimeMetrics",
-    "AlertNotification",
     "SystemEvent",
+    "dashboard_manager",
 ]
