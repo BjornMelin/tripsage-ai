@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 
 # Cache of loggers to avoid creating multiple loggers for the same module
 _loggers: Dict[str, logging.Logger] = {}
@@ -97,7 +97,7 @@ def configure_logging(
 
     # Add file handler if requested and not in testing
     settings = get_settings()
-    if log_to_file and not settings.is_testing():
+    if log_to_file and not settings.is_testing:
         # Create logs directory if it doesn't exist
         os.makedirs(log_dir, exist_ok=True)
 

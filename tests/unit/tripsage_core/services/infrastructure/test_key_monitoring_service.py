@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import Settings
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
@@ -51,7 +51,7 @@ class TestKeyMonitoringService:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        settings = Mock(spec=CoreAppSettings)
+        settings = Mock(spec=Settings)
         return settings
 
     @pytest.fixture
@@ -617,7 +617,7 @@ class TestKeyOperationRateLimitMiddleware:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        return Mock(spec=CoreAppSettings)
+        return Mock(spec=Settings)
 
     @pytest.fixture
     def middleware(self, mock_monitoring_service, mock_settings):
@@ -1241,7 +1241,7 @@ class TestEdgeCasesAndErrorHandling:
 
     def test_initialization_with_custom_settings(self):
         """Test service initialization with custom settings."""
-        custom_settings = Mock(spec=CoreAppSettings)
+        custom_settings = Mock(spec=Settings)
         service = KeyMonitoringService(settings=custom_settings)
 
         assert service.settings is custom_settings
