@@ -18,7 +18,7 @@ from locust import HttpUser, between, task
 from locust.env import Environment
 
 from tripsage_core.services.business.api_key_service import (
-    ApiKeyCreateRequest,
+    ApiKeyCreate,
     ApiKeyService,
     ServiceType,
     ValidationResult,
@@ -162,7 +162,7 @@ class ApiKeyLoadTestUser(HttpUser):
         key_name = f"Load Test Key {random.randint(1, 1000)}"
         key_value = f"sk-load_test_{uuid.uuid4().hex[:16]}"
 
-        request = ApiKeyCreateRequest(
+        request = ApiKeyCreate(
             name=key_name,
             service=service,
             key_value=key_value,

@@ -25,7 +25,7 @@ import pytest
 
 # pytest_benchmark provides the benchmark fixture automatically
 from tripsage_core.services.business.api_key_service import (
-    ApiKeyCreateRequest,
+    ApiKeyCreate,
     ApiKeyService,
     ServiceType,
     ValidationResult,
@@ -155,7 +155,7 @@ class TestApiKeyPerformance:
         """Benchmark API key creation performance."""
         user_id = sample_users[0]
 
-        request = ApiKeyCreateRequest(
+        request = ApiKeyCreate(
             name="Performance Test Key",
             service=ServiceType.OPENAI,
             key_value="sk-performance_test_key_123456789",
@@ -280,7 +280,7 @@ class TestApiKeyPerformance:
 
             # Create operations (30 concurrent)
             for i in range(30):
-                request = ApiKeyCreateRequest(
+                request = ApiKeyCreate(
                     name=f"Load Test Key {i}",
                     service=ServiceType.OPENAI,
                     key_value=sample_api_keys[i],
@@ -589,7 +589,7 @@ class TestApiKeyPerformance:
             decryption_time = time.time() - start_time
 
             # Test creation performance
-            request = ApiKeyCreateRequest(
+            request = ApiKeyCreate(
                 name="Baseline Test",
                 service=ServiceType.OPENAI,
                 key_value="sk-baseline_key",
@@ -1601,7 +1601,7 @@ class TestApiKeyPerformance:
                 user_id = str(uuid.uuid4())
 
                 for i in range(20):
-                    request = ApiKeyCreateRequest(
+                    request = ApiKeyCreate(
                         name=f"Throughput Test {i}",
                         service=ServiceType.OPENAI,
                         key_value=f"sk-throughput_create_{i}",
