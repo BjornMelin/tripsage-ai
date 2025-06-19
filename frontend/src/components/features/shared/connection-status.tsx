@@ -61,14 +61,14 @@ export interface ConnectionAnalytics {
   uptime: number; // in seconds
 }
 
-interface EnhancedConnectionStatusProps {
+interface ConnectionStatusProps {
   status: ConnectionStatus;
   metrics?: NetworkMetrics;
   analytics?: ConnectionAnalytics;
   onReconnect?: () => void;
   onOptimize?: () => void;
   className?: string;
-  compact?: boolean;
+  variant?: "default" | "compact" | "minimal" | "detailed";
   showMetrics?: boolean;
   showOptimizations?: boolean;
 }
@@ -239,25 +239,30 @@ const NetworkOptimizationSuggestions: React.FC<{
   );
 };
 
-export const EnhancedConnectionStatus: React.FC<EnhancedConnectionStatusProps> = ({
+export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   status,
   metrics = defaultMetrics,
   analytics = defaultAnalytics,
   onReconnect,
   onOptimize,
   className,
-  compact = false,
+  variant = "default",
   showMetrics = true,
   showOptimizations = true,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [lastConnectedTime, setLastConnectedTime] = useState<Date | null>(null);
 
   useEffect(() => {
     if (status === "connecting" || status === "reconnecting") {
       setIsAnimating(true);
     } else {
       setIsAnimating(false);
+    }
+
+    if (status === "connected") {
+      setLastConnectedTime(new Date());
     }
   }, [status]);
 
@@ -328,7 +333,25 @@ export const EnhancedConnectionStatus: React.FC<EnhancedConnectionStatusProps> =
 
   const config = getStatusConfig();
 
-  if (compact) {
+  // Minimal variant - just icon and status for status bars
+  if (variant === "minimal") {
+    return (
+      <div className={cn("flex items-center gap-1.5", className)}>
+        <div className={cn("flex-shrink-0", config.color)}>{config.icon}</div>
+        <span className={cn("text-xs font-medium", config.color)}>
+          {status === "connected" ? "Online" : config.label}
+        </span>
+      </div>
+    );
+  }
+
+  // Compact variant - badge format
+  if (variant === "compact") {
+    // Don't show when connected unless there's an issue
+    if (status === "connected" && !showDetails) {
+      return null;
+    }
+
     return (
       <TooltipProvider>
         <Tooltip>
@@ -377,6 +400,33 @@ export const EnhancedConnectionStatus: React.FC<EnhancedConnectionStatusProps> =
     );
   }
 
+  // Default variant - alert format for chat/messaging
+  if (variant === "default") {
+    // Don't show when connected
+    if (status === "connected") {
+      return null;
+    }
+
+    return (
+      <Alert variant={config.variant} className={cn("mx-4 mb-2", className)}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {config.icon}
+            <AlertDescription className="font-medium">{config.description}</AlertDescription>
+          </div>
+
+          {(status === "error" || status === "disconnected") && onReconnect && (
+            <Button variant="outline" size="sm" onClick={onReconnect} className="ml-4">
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Reconnect
+            </Button>
+          )}
+        </div>
+      </Alert>
+    );
+  }
+
+  // Detailed variant - full card with metrics
   return (
     <Card className={cn("transition-all duration-300", className)}>
       <CardHeader className="pb-3">
@@ -395,6 +445,11 @@ export const EnhancedConnectionStatus: React.FC<EnhancedConnectionStatusProps> =
             <div>
               <div className={cn("font-medium", config.color)}>{config.label}</div>
               <div className="text-sm text-muted-foreground">{config.description}</div>
+              {lastConnectedTime && status !== "connected" && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Last connected: {lastConnectedTime.toLocaleTimeString()}
+                </div>
+              )}
             </div>
           </div>
 
@@ -527,4 +582,10 @@ export const EnhancedConnectionStatus: React.FC<EnhancedConnectionStatusProps> =
   );
 };
 
-export default EnhancedConnectionStatus;
+export default ConnectionStatus;
+
+// Legacy exports for backward compatibility
+export const EnhancedConnectionStatus = ConnectionStatus;
+export const CompactConnectionStatus = (props: ConnectionStatusProps) => (
+  <ConnectionStatus {...props} variant="compact" />
+);

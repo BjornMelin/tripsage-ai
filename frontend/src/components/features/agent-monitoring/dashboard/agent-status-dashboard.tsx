@@ -42,7 +42,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { EnhancedConnectionStatus } from "../communication/enhanced-connection-status";
+import { ConnectionStatus } from "../../shared/connection-status";
 
 interface AgentMetrics {
   id: string;
@@ -314,10 +314,10 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   return (
     <div className="space-y-6 p-6">
       {/* WebSocket Connection Status */}
-      <EnhancedConnectionStatus
+      <ConnectionStatus
         status={isConnected ? "connected" : connectionError ? "error" : "disconnected"}
         onReconnect={connect}
-        compact
+        variant="compact"
         className="mb-4"
       />
 

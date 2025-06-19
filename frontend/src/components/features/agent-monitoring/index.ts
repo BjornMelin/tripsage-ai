@@ -2,13 +2,17 @@
 export { AgentStatusDashboard } from "./dashboard/agent-status-dashboard";
 
 // Communication Components
-export { EnhancedConnectionStatus } from "./communication/enhanced-connection-status";
+export { 
+  ConnectionStatus,
+  EnhancedConnectionStatus,
+  CompactConnectionStatus
+} from "../shared/connection-status";
 export { AgentCollaborationHub } from "./communication/agent-collaboration-hub";
 
 // Hook Exports
 export { useWebSocketAgent } from "../../../hooks/use-websocket-agent";
 export type {
-  ConnectionStatus,
+  ConnectionStatus as WebSocketConnectionStatus,
   WebSocketMessage,
   WebSocketAgentConfig,
   UseWebSocketAgentReturn,
@@ -18,4 +22,4 @@ export type {
 export type {
   NetworkMetrics,
   ConnectionAnalytics,
-} from "./communication/enhanced-connection-status";
+} from "../shared/connection-status";

@@ -3,7 +3,7 @@ import type { Agent } from "@/types/agent-status";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
-import { EnhancedConnectionStatus } from "../communication/enhanced-connection-status";
+import { ConnectionStatus } from "../../shared/connection-status";
 import { AgentStatusDashboard } from "../dashboard/agent-status-dashboard";
 
 // Define test-specific types that match the expected component interfaces
@@ -376,7 +376,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onOptimize = vi.fn();
 
       renderWithProviders(
-        <EnhancedConnectionStatus
+        <ConnectionStatus
           status="connected"
           metrics={mockNetworkMetrics}
           analytics={mockConnectionAnalytics}
@@ -398,7 +398,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onOptimize = vi.fn();
 
       renderWithProviders(
-        <EnhancedConnectionStatus
+        <ConnectionStatus
           status="disconnected"
           metrics={mockNetworkMetrics}
           analytics={mockConnectionAnalytics}
@@ -430,7 +430,7 @@ describe("Agent Workflow Integration Tests", () => {
       };
 
       renderWithProviders(
-        <EnhancedConnectionStatus
+        <ConnectionStatus
           status="connected"
           metrics={poorMetrics}
           analytics={mockConnectionAnalytics}
@@ -453,7 +453,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onOptimize = vi.fn();
 
       renderWithProviders(
-        <EnhancedConnectionStatus
+        <ConnectionStatus
           status="connected"
           metrics={mockNetworkMetrics}
           analytics={mockConnectionAnalytics}
@@ -482,7 +482,7 @@ describe("Agent Workflow Integration Tests", () => {
       };
 
       renderWithProviders(
-        <EnhancedConnectionStatus
+        <ConnectionStatus
           status="connected"
           metrics={poorMetrics}
           analytics={mockConnectionAnalytics}
@@ -545,7 +545,7 @@ describe("Agent Workflow Integration Tests", () => {
             onAgentSelect={onAgentSelect}
             refreshInterval={3000}
           />
-          <EnhancedConnectionStatus
+          <ConnectionStatus
             status="connected"
             metrics={mockNetworkMetrics}
             analytics={mockConnectionAnalytics}
@@ -579,7 +579,7 @@ describe("Agent Workflow Integration Tests", () => {
             onAgentSelect={onAgentSelect}
             refreshInterval={3000}
           />
-          <EnhancedConnectionStatus
+          <ConnectionStatus
             status="connected"
             metrics={updatedMetrics}
             analytics={mockConnectionAnalytics}
