@@ -26,7 +26,7 @@ from typing import (
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.content_utils import ContentType, get_ttl_for_content_type
 
@@ -330,7 +330,7 @@ def generate_cache_key(
 
     # Create hash of combined parameters
     combined = f"{prefix}:{normalized_query}:{args_str}:{kwargs_str}"
-    hash_obj = hashlib.md5(combined.encode())
+    hash_obj = hashlib.md5(combined.encode(), usedforsecurity=False)
     query_hash = hash_obj.hexdigest()
 
     return f"{prefix}:{query_hash}"
@@ -351,8 +351,8 @@ def cached(
             # Get settings
             settings = get_settings()
 
-            # Check if caching is enabled
-            if not settings.feature_flags.enable_caching:
+            # Check if Redis/caching is available
+            if not settings.redis_url:
                 return await func(*args, **kwargs)
 
             # Check for skip_cache parameter
@@ -406,7 +406,7 @@ def cached(
             elif effective_ttl is None:
                 # Use default medium TTL from settings
                 settings = get_settings()
-                effective_ttl = settings.dragonfly.ttl_medium
+                effective_ttl = 3600  # Default medium TTL (1 hour)
 
             # Cache the result if not None
             if result is not None:
@@ -460,7 +460,7 @@ async def batch_cache_set(
         List of success/failure booleans for each item
     """
     settings = get_settings()
-    if not use_redis or not settings.feature_flags.enable_caching:
+    if not use_redis or not settings.redis_url:
         results = []
         for item in items:
             success = await memory_cache.set(
@@ -525,7 +525,7 @@ async def batch_cache_get(
         List of values (None for missing keys)
     """
     settings = get_settings()
-    if not use_redis or not settings.feature_flags.enable_caching:
+    if not use_redis or not settings.redis_url:
         results = []
         for key in keys:
             value = await memory_cache.get(key)
@@ -581,7 +581,7 @@ async def cache_lock(
         True if lock was acquired, False otherwise
     """
     settings = get_settings()
-    if not settings.feature_flags.enable_caching:
+    if not settings.redis_url:
         # Simple local lock for development
         yield True
         return

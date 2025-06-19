@@ -18,7 +18,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 from starlette.types import ASGIApp
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.services.infrastructure.cache_service import (
     CacheService,
     get_cache_service,
@@ -55,7 +55,7 @@ class KeyMonitoringService:
     suspicious patterns, and sending alerts.
     """
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """Initialize the key monitoring service.
 
         Args:
@@ -333,7 +333,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         monitoring_service: KeyMonitoringService,
-        settings: Optional[CoreAppSettings] = None,
+        settings: Optional[Settings] = None,
     ):
         """Initialize the middleware.
 
