@@ -15,9 +15,6 @@ from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageErr
 
 # MCPManager removed as part of BJO-161 MCP abstraction removal
 # from tripsage_core.mcp_abstraction.manager import MCPManager
-from tripsage_core.services.business.error_handling_service import (
-    ErrorRecoveryService,
-)
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -117,7 +114,7 @@ class ToolCallService:
         if mcp_manager is not None:
             logger.warning("MCP manager parameter is deprecated and will be ignored")
         self.mcp_manager = None
-        self.error_recovery = ErrorRecoveryService()
+        # Error recovery removed - over-engineered stub
         self.execution_history: List[ToolCallResponse] = []
         self.rate_limits: Dict[str, List[float]] = {}
 

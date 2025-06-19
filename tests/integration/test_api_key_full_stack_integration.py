@@ -784,7 +784,7 @@ class TestApiKeyFullStackIntegration:
 
             # Mock audit logging
             with patch(
-                "tripsage_core.services.business.audit_logging_service.audit_api_key"
+                "tripsage_core.services.business.monitoring_service.log_api_key_event"
             ) as mock_audit:
                 mock_audit.return_value = None
 

@@ -11,6 +11,7 @@ __all__ = [
     "chat",
     "config",
     "dashboard",
+    "dashboard_realtime",
     "destinations",
     "flights",
     "health",

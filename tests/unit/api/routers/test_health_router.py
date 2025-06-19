@@ -14,7 +14,7 @@ from tripsage.api.routers.health import (
     ReadinessCheck,
     SystemHealth,
 )
-from tripsage_core.services.business.api_key_validator import (
+from tripsage_core.services.business.api_key_service import (
     ServiceHealthCheck,
     ServiceHealthStatus,
     ServiceType,

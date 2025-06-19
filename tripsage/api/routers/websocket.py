@@ -36,9 +36,11 @@ from tripsage_core.services.business.chat_service import (
     MessageRole,
 )
 from tripsage_core.services.infrastructure.websocket_manager import (
+    websocket_manager,
+)
+from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
     WebSocketEventType,
-    websocket_manager,
 )
 
 

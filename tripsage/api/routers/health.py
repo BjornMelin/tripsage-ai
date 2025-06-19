@@ -1,8 +1,7 @@
-"""Enhanced health check endpoints with external service monitoring.
+"""Health check endpoints for TripSage API.
 
-This module provides comprehensive health check endpoints including:
+This module provides health check endpoints including:
 - Basic application health
-- External service health checks (OpenAI, Weather, Google Maps)
 - Database connectivity checks
 - Cache (DragonflyDB) health
 - Detailed readiness checks
@@ -13,19 +12,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import (
     CacheDep,
     DatabaseDep,
     SettingsDep,
-)
-from tripsage_core.services.business.api_key_validator import (
-    ApiKeyValidator,
-    ServiceHealthCheck,
-    ServiceHealthStatus,
-    ServiceType,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,7 +44,6 @@ class SystemHealth(BaseModel):
     version: str = "1.0.0"
     environment: str
     components: List[ComponentHealth]
-    external_services: Dict[str, ServiceHealthCheck] = Field(default_factory=dict)
 
 
 class ReadinessCheck(BaseModel):
@@ -97,44 +89,10 @@ async def comprehensive_health_check(
     if cache_health.status != "healthy":
         overall_status = "degraded" if overall_status == "healthy" else overall_status
 
-    # 4. External services health (concurrent checks)
-    external_services = {}
-    try:
-        async with ApiKeyValidator() as validator:
-            external_health = await validator.check_all_services_health()
-
-            for service_type, health_check in external_health.items():
-                external_services[service_type.value] = health_check
-
-                # Add to components list
-                component_status = "healthy"
-                if health_check.status == ServiceHealthStatus.DEGRADED:
-                    component_status = "degraded"
-                    overall_status = (
-                        "degraded" if overall_status == "healthy" else overall_status
-                    )
-                elif health_check.status == ServiceHealthStatus.UNHEALTHY:
-                    component_status = "unhealthy"
-                    overall_status = "unhealthy"
-
-                components.append(
-                    ComponentHealth(
-                        name=f"external_{service_type.value}",
-                        status=component_status,
-                        latency_ms=health_check.latency_ms,
-                        message=health_check.message,
-                        details=health_check.details,
-                    )
-                )
-    except Exception as e:
-        logger.error(f"Failed to check external services: {e}")
-        overall_status = "degraded"
-
     return SystemHealth(
         status=overall_status,
         environment=settings.environment,
         components=components,
-        external_services=external_services,
     )
 
 
@@ -204,44 +162,6 @@ async def readiness_check(
         checks=checks,
         details=details,
     )
-
-
-@router.get("/health/services/{service_type}")
-async def check_specific_service_health(
-    service_type: ServiceType,
-    response: Response,
-):
-    """Check health of a specific external service.
-
-    Args:
-        service_type: The service to check (openai, weather, googlemaps)
-        response: FastAPI response object for setting status codes
-
-    Returns:
-        Detailed health check result for the specified service
-    """
-    try:
-        async with ApiKeyValidator() as validator:
-            health_check = await validator.check_service_health(service_type)
-
-            # Set appropriate HTTP status based on health
-            if health_check.status == ServiceHealthStatus.UNHEALTHY:
-                response.status_code = 503  # Service Unavailable
-            elif health_check.status == ServiceHealthStatus.DEGRADED:
-                response.status_code = 200  # OK but degraded
-
-            return health_check
-
-    except Exception as e:
-        logger.error(f"Service health check failed: {e}")
-        response.status_code = 500
-
-        return ServiceHealthCheck(
-            service=service_type,
-            status=ServiceHealthStatus.UNKNOWN,
-            latency_ms=0,
-            message=f"Health check error: {str(e)}",
-        )
 
 
 @router.get("/health/database")

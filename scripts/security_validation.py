@@ -205,10 +205,9 @@ def check_authentication_security():
 
     # Check for proper JWT handling
     auth_middleware_path = "tripsage/api/middlewares/authentication.py"
-    session_service_path = "tripsage_core/services/business/session_security_service.py"
 
     checks_passed = 0
-    total_checks = 4
+    total_checks = 3
 
     try:
         # Check authentication middleware exists and has security measures
@@ -250,28 +249,6 @@ def check_authentication_security():
             "medium", "Authentication", f"Error checking authentication middleware: {e}"
         )
 
-    try:
-        # Check session security service
-        with open(session_service_path, "r") as f:
-            session_content = f.read()
-
-        if "_validate_and_score_ip" in session_content:
-            log_finding(
-                "info", "Authentication", "IP validation and scoring implemented"
-            )
-            checks_passed += 1
-        else:
-            log_finding("high", "Authentication", "Missing IP validation and scoring")
-
-    except FileNotFoundError:
-        log_finding(
-            "critical",
-            "Authentication",
-            f"Session security service not found: {session_service_path}",
-        )
-    except Exception as e:
-        log_finding("medium", "Authentication", f"Error checking session service: {e}")
-
     log_finding(
         "info",
         "Authentication",
@@ -308,25 +285,10 @@ def check_input_validation():
             "medium", "Input Validation", "Limited Pydantic validation found in models"
         )
 
-    # Check for specific security validations
-    session_service_path = "tripsage_core/services/business/session_security_service.py"
-    try:
-        with open(session_service_path, "r") as f:
-            content = f.read()
-
-        if "validate_ip_address" in content:
-            log_finding("info", "Input Validation", "IP address validation implemented")
-        if "validate_user_agent" in content:
-            log_finding("info", "Input Validation", "User agent validation implemented")
-        if "validate_session_token" in content:
-            log_finding(
-                "info", "Input Validation", "Session token validation implemented"
-            )
-
-    except Exception as e:
-        log_finding(
-            "medium", "Input Validation", f"Could not check session validation: {e}"
-        )
+    # Note: Session security service removed as part of cleanup
+    log_finding(
+        "info", "Input Validation", "Core validation checks completed"
+    )
 
 
 def check_cors_configuration():
