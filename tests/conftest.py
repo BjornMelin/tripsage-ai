@@ -377,6 +377,18 @@ class SerializationHelper:
         restored_dict = model_instance.__class__.model_validate(dict_data)
         assert restored_dict == model_instance
 
+    def test_json_round_trip(self, model_instance):
+        """Test JSON serialization round trip and return restored object."""
+        json_data = model_instance.model_dump_json()
+        restored = model_instance.__class__.model_validate_json(json_data)
+        return restored
+
+    def test_dict_round_trip(self, model_instance):
+        """Test dict serialization round trip and return restored object."""
+        dict_data = model_instance.model_dump()
+        restored = model_instance.__class__.model_validate(dict_data)
+        return restored
+
 
 @pytest.fixture
 def validation_helper():
@@ -405,4 +417,7 @@ def edge_case_data():
         "negative_number": -999999999999999999,
         "zero": 0,
         "float_precision": 3.141592653589793,
+        "min_price": 0.01,
+        "max_price": 99999.99,
+        "max_rating": 5.0,
     }

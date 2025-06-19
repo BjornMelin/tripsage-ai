@@ -1,10 +1,10 @@
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AuthProvider } from "@/contexts/auth-context";
+import type { User } from "@/contexts/auth-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
-import { AuthProvider } from "@/contexts/auth-context";
-import { ThemeProvider } from "@/components/providers/theme-provider";
-import type { User } from "@/contexts/auth-context";
 import { vi } from "vitest";
 
 // Mock the useSupabase hook for tests

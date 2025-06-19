@@ -531,11 +531,11 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
   const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
 
   const currentFilters = state.currentSearchType
-    ? (state.availableFilters || {})[state.currentSearchType] || []
+    ? state.availableFilters?.[state.currentSearchType] || []
     : [];
 
   const currentSortOptions = state.currentSearchType
-    ? (state.availableSortOptions || {})[state.currentSearchType] || []
+    ? state.availableSortOptions?.[state.currentSearchType] || []
     : [];
 
   const summaries: string[] = [];

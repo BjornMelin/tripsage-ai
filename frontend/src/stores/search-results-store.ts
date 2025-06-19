@@ -147,7 +147,7 @@ const getCurrentTimestamp = () => new Date().toISOString();
 // Helper to compute derived state
 const computeDerivedState = (state: Partial<SearchResultsState>) => {
   const hasResults = Object.keys(state.results || {}).some((key) => {
-    const typeResults = (state.results || {})[key as keyof SearchResults];
+    const typeResults = state.results?.[key as keyof SearchResults];
     return Array.isArray(typeResults) && typeResults.length > 0;
   });
 
@@ -155,7 +155,7 @@ const computeDerivedState = (state: Partial<SearchResultsState>) => {
   const canRetry = state.status === "error" && (!state.error || state.error.retryable);
 
   let searchDuration: number | null = null;
-  if (state.currentContext && state.currentContext.completedAt) {
+  if (state.currentContext?.completedAt) {
     const startTime = new Date(state.currentContext.startedAt).getTime();
     const endTime = new Date(state.currentContext.completedAt).getTime();
     searchDuration = endTime - startTime;

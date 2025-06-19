@@ -80,14 +80,14 @@ import {
 } from "../use-trips-with-realtime";
 
 import { useAuth } from "@/contexts/auth-context";
+import { useTripRealtime } from "../use-supabase-realtime";
 import { useTrips } from "../use-trips";
 import {
-  useTripData,
-  useTripCollaborators,
   useAddTripCollaborator,
   useRemoveTripCollaborator,
+  useTripCollaborators,
+  useTripData,
 } from "../use-trips-supabase";
-import { useTripRealtime } from "../use-supabase-realtime";
 
 // Test wrapper with QueryClient
 const createWrapper = () => {

@@ -1,5 +1,5 @@
-import { vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { vi } from "vitest";
 
 // Global storage for mock data that persists across client instances
 const globalMockData: Record<string, any[]> = {

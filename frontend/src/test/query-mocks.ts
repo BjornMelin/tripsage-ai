@@ -1,8 +1,8 @@
+import type { UseMutationResult } from "@tanstack/react-query";
 /**
  * React Query mock utilities for testing
  */
 import { vi } from "vitest";
-import type { UseMutationResult } from "@tanstack/react-query";
 
 // Helper to manually trigger mutation lifecycle
 export interface MutationController<
