@@ -20,7 +20,7 @@ describe("SecurityDashboard", () => {
       email: "test@example.com",
       name: "Test User",
     });
-    
+
     mockUseAuth.mockReturnValue({
       user: mockUser,
       isAuthenticated: true,

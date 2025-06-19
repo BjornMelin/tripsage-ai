@@ -1,4 +1,10 @@
-import type { Agent, AgentActivity, AgentStatusType, AgentTask, ResourceUsage } from "@/types/agent-status";
+import type {
+  Agent,
+  AgentActivity,
+  AgentStatusType,
+  AgentTask,
+  ResourceUsage,
+} from "@/types/agent-status";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { useAgentStatusStore } from "../agent-status-store";
@@ -72,7 +78,7 @@ describe("useAgentStatusStore", () => {
         result.current.endSession(sessionId, "completed");
       });
 
-      const endedSession = result.current.sessions.find(s => s.id === sessionId);
+      const endedSession = result.current.sessions.find((s) => s.id === sessionId);
       expect(endedSession).toEqual(
         expect.objectContaining({
           status: "completed",
@@ -95,7 +101,7 @@ describe("useAgentStatusStore", () => {
         result.current.endSession(sessionId);
       });
 
-      const endedSession = result.current.sessions.find(s => s.id === sessionId);
+      const endedSession = result.current.sessions.find((s) => s.id === sessionId);
       expect(endedSession?.status).toBe("completed");
     });
 
@@ -255,13 +261,13 @@ describe("useAgentStatusStore", () => {
         { name: "Agent 3", type: "search" as const, description: "Agent 3" },
       ];
 
-      agents.forEach(agent => {
+      agents.forEach((agent) => {
         act(() => {
           result.current.addAgent(agent);
         });
       });
 
-      const agentIds = result.current.agents.map(a => a.id);
+      const agentIds = result.current.agents.map((a) => a.id);
 
       // Update statuses
       act(() => {
@@ -697,10 +703,10 @@ describe("useAgentStatusStore", () => {
       // Should include: initializing, active, waiting, paused
       // Should exclude: idle, completed, error
       expect(activeAgents).toHaveLength(4);
-      expect(activeAgents.map(a => a.status)).toEqual(
+      expect(activeAgents.map((a) => a.status)).toEqual(
         expect.arrayContaining(["initializing", "active", "waiting", "paused"])
       );
-      expect(activeAgents.map(a => a.status)).not.toEqual(
+      expect(activeAgents.map((a) => a.status)).not.toEqual(
         expect.arrayContaining(["idle", "completed", "error"])
       );
     });

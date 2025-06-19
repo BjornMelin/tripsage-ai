@@ -81,7 +81,12 @@ import {
 
 import { useAuth } from "@/contexts/auth-context";
 import { useTrips } from "../use-trips";
-import { useTripData, useTripCollaborators, useAddTripCollaborator, useRemoveTripCollaborator } from "../use-trips-supabase";
+import {
+  useTripData,
+  useTripCollaborators,
+  useAddTripCollaborator,
+  useRemoveTripCollaborator,
+} from "../use-trips-supabase";
 import { useTripRealtime } from "../use-supabase-realtime";
 
 // Test wrapper with QueryClient

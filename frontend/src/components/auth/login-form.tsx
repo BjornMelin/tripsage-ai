@@ -58,7 +58,7 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
   const [oauthLoading, setOauthLoading] = React.useState<"google" | "github" | null>(
     null
   );
-  
+
   // Initialize React Hook Form with Zod validation
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginFormSchema),

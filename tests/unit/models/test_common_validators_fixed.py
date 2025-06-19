@@ -1,17 +1,18 @@
 """Fixed comprehensive tests for Pydantic v2 common validators."""
 
+
 import pytest
-from hypothesis import given, settings, strategies as st, assume
-from decimal import Decimal
+from hypothesis import given
+from hypothesis import strategies as st
 
 from tripsage_core.models.schemas_common.common_validators import (
     validate_airport_code,
-    validate_rating_range,
-    validate_password_strength,
     validate_latitude,
     validate_longitude,
-    validate_username,
+    validate_password_strength,
     validate_percentage,
+    validate_rating_range,
+    validate_username,
 )
 
 
@@ -68,10 +69,10 @@ class TestAirportCodeValidation:
         """Test invalid airport codes."""
         with pytest.raises(ValueError, match="exactly 3 characters"):
             validate_airport_code("LA")
-        
+
         with pytest.raises(ValueError, match="exactly 3 characters"):
             validate_airport_code("LAXX")
-        
+
         with pytest.raises(ValueError, match="contain only letters"):
             validate_airport_code("L1X")
 
@@ -88,20 +89,29 @@ class TestUsernameValidation:
 
     def test_invalid_username_characters(self):
         """Test usernames with invalid characters."""
-        with pytest.raises(ValueError, match="must contain only letters, numbers, underscores, and hyphens"):
+        with pytest.raises(
+            ValueError,
+            match="must contain only letters, numbers, underscores, and hyphens",
+        ):
             validate_username("user@name")
-        
-        with pytest.raises(ValueError, match="must contain only letters, numbers, underscores, and hyphens"):
+
+        with pytest.raises(
+            ValueError,
+            match="must contain only letters, numbers, underscores, and hyphens",
+        ):
             validate_username("user name")
-        
-        with pytest.raises(ValueError, match="must contain only letters, numbers, underscores, and hyphens"):
+
+        with pytest.raises(
+            ValueError,
+            match="must contain only letters, numbers, underscores, and hyphens",
+        ):
             validate_username("user.name")
 
     def test_username_length_validation(self):
         """Test username length constraints."""
         with pytest.raises(ValueError, match="at least 3 characters"):
             validate_username("ab")
-        
+
         with pytest.raises(ValueError, match="no more than 50 characters"):
             validate_username("a" * 51)
 

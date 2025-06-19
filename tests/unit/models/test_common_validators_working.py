@@ -1,19 +1,20 @@
 """Working comprehensive tests for Pydantic v2 common validators."""
 
+
 import pytest
-from hypothesis import given, settings, strategies as st, assume
-from decimal import Decimal
+from hypothesis import assume, given
+from hypothesis import strategies as st
 
 from tripsage_core.models.schemas_common.common_validators import (
     validate_airport_code,
-    validate_rating_range,
-    validate_password_strength,
+    validate_currency_code,
+    validate_email_lowercase,
     validate_latitude,
     validate_longitude,
-    validate_email_lowercase,
-    validate_positive_integer,
     validate_non_negative_number,
-    validate_currency_code,
+    validate_password_strength,
+    validate_positive_integer,
+    validate_rating_range,
     validate_string_length_range,
 )
 
@@ -76,10 +77,10 @@ class TestAirportCodeValidation:
         """Test invalid airport codes."""
         with pytest.raises(ValueError, match="exactly 3 characters"):
             validate_airport_code("LA")
-        
+
         with pytest.raises(ValueError, match="exactly 3 characters"):
             validate_airport_code("LAXX")
-        
+
         with pytest.raises(ValueError, match="contain only letters"):
             validate_airport_code("L1X")
 
@@ -143,7 +144,7 @@ class TestEmailValidation:
             ("User@Domain.ORG", "user@domain.org"),
             ("MixedCase@Test.Net", "mixedcase@test.net"),
         ]
-        
+
         for input_email, expected in test_cases:
             result = validate_email_lowercase(input_email)
             assert result == expected
@@ -177,7 +178,7 @@ class TestPositiveIntegerValidation:
 class TestNonNegativeNumberValidation:
     """Test non-negative number validation."""
 
-    @given(st.floats(min_value=0.0, max_value=float('inf')))
+    @given(st.floats(min_value=0.0, max_value=float("inf")))
     def test_valid_non_negative_numbers(self, value: float):
         """Test valid non-negative numbers."""
         assume(not (value != value))  # Filter out NaN
@@ -218,10 +219,10 @@ class TestCurrencyCodeValidation:
         """Test invalid currency codes."""
         with pytest.raises(ValueError, match="exactly 3 characters"):
             validate_currency_code("US")
-        
+
         with pytest.raises(ValueError, match="exactly 3 characters"):
             validate_currency_code("USDX")
-        
+
         with pytest.raises(ValueError, match="contain only letters"):
             validate_currency_code("U1D")
 
@@ -237,7 +238,7 @@ class TestStringLengthValidation:
     def test_valid_string_lengths(self):
         """Test strings within valid length ranges."""
         validator = validate_string_length_range(3, 10)
-        
+
         test_strings = ["abc", "hello", "test123", "1234567890"]
         for test_str in test_strings:
             result = validator(test_str)
@@ -246,14 +247,14 @@ class TestStringLengthValidation:
     def test_string_too_short(self):
         """Test strings that are too short."""
         validator = validate_string_length_range(5, 10)
-        
+
         with pytest.raises(ValueError, match="at least 5 characters"):
             validator("ab")
 
     def test_string_too_long(self):
         """Test strings that are too long."""
         validator = validate_string_length_range(5, 10)
-        
+
         with pytest.raises(ValueError, match="no more than 10 characters"):
             validator("this_is_too_long")
 

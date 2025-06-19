@@ -16,7 +16,7 @@ vi.mock("@/lib/api/client", () => ({
   ApiError: vi.fn((message: string, status: number) => {
     const error = new Error(message) as any;
     error.status = status;
-    error.name = 'ApiError';
+    error.name = "ApiError";
     return error;
   }),
 }));
@@ -41,10 +41,10 @@ describe("useAuthenticatedApi", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     const { useAuth } = require("@/contexts/auth-context");
     const { createClient } = require("@/lib/supabase/client");
-    
+
     vi.mocked(useAuth).mockReturnValue(mockAuthContext);
     vi.mocked(createClient).mockReturnValue(mockSupabaseClient);
   });

@@ -158,7 +158,7 @@ class TestApiKeyServiceCoverageFocused:
 
     @pytest.mark.asyncio
     async def test_decrypt_fernet_invalid_token_exception(self, api_service):
-        """Test decryption with Fernet InvalidToken exception - targets lines 691-702."""
+        """Test decryption with Fernet InvalidToken exception."""
         # Create a valid-looking encrypted key structure but with corrupted Fernet token
         fake_data_key = Fernet.generate_key()
         encrypted_data_key = api_service.master_cipher.encrypt(fake_data_key)
