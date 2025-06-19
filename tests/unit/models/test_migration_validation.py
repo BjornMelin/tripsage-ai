@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.skip(reason="Migration file 20250610_01_fix_user_id_constraints.sql not included in Pydantic v2 migration")
+@pytest.mark.skip(reason="Migration file 20250610_01_fix_user_id_constraints.sql does not exist in source branch - tests designed for non-existent file")
 class TestMigrationScriptValidation:
     """Test suite for migration script validation and best practices."""
 
