@@ -431,7 +431,7 @@ ruff check . --fix
 # Configuration in pyproject.toml
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py313"
 ```
 
 ### **TypeScript with Biome**

@@ -15,7 +15,8 @@ Features:
 import logging
 import time
 from contextlib import asynccontextmanager
-from typing import Annotated, AsyncGenerator, Dict, Optional
+from collections.abc import AsyncGenerator
+from typing import Annotated
 from weakref import WeakKeyDictionary
 
 from fastapi import Depends, Request
@@ -78,7 +79,7 @@ class DependencyHealth(BaseModel):
     healthy: bool
     response_time_ms: float
     error_count: int = 0
-    last_error: Optional[str] = None
+    last_error: str | None = None
     last_check: float = 0.0
 
 
@@ -117,8 +118,8 @@ class CircuitBreaker:
 
 
 # Global dependency health tracking
-_dependency_health: Dict[str, DependencyHealth] = {}
-_circuit_breakers: Dict[str, CircuitBreaker] = {}
+_dependency_health: dict[str, DependencyHealth] = {}
+_circuit_breakers: dict[str, CircuitBreaker] = {}
 _request_scoped_cache: WeakKeyDictionary = WeakKeyDictionary()
 
 
@@ -130,7 +131,7 @@ def get_dependency_health(name: str) -> DependencyHealth:
 
 
 def record_dependency_call(
-    name: str, duration_ms: float, success: bool, error: Optional[str] = None
+    name: str, duration_ms: float, success: bool, error: str | None = None
 ):
     """Record a dependency call for health monitoring."""
     if name not in _dependency_health:
@@ -185,7 +186,7 @@ class RequestScope:
 
     def __init__(self, request: Request):
         self.request = request
-        self._services: Dict[str, any] = {}
+        self._services: dict[str, any] = {}
         self._cleanup_tasks: list = []
 
     async def get_or_create(self, key: str, factory):
@@ -441,8 +442,8 @@ class DependencyOverride:
     """Context manager for overriding dependencies in tests."""
 
     def __init__(self):
-        self._overrides: Dict[str, any] = {}
-        self._original_dependencies: Dict[str, any] = {}
+        self._overrides: dict[str, any] = {}
+        self._original_dependencies: dict[str, any] = {}
 
     def override(self, dependency_name: str, mock_instance):
         """Override a dependency with a mock instance."""
@@ -504,7 +505,7 @@ async def get_background_cache_session():
 # === Dependency Health Endpoints ===
 
 
-def get_all_dependency_health() -> Dict[str, DependencyHealth]:
+def get_all_dependency_health() -> dict[str, DependencyHealth]:
     """Get health status for all tracked dependencies."""
     return _dependency_health.copy()
 

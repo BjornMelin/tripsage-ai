@@ -4,9 +4,12 @@ This module provides shared fixtures and configuration for all tests.
 Updated for Pydantic v2 and modern pytest patterns (2025).
 """
 
+from __future__ import annotations
+
 import os
+from collections.abc import AsyncGenerator, Generator
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
@@ -14,13 +17,17 @@ import pytest
 import pytest_asyncio
 from pydantic import SecretStr
 
+if TYPE_CHECKING:
+    from tripsage.agents.service_registry import ServiceRegistry
+    from tripsage_core.config import Settings
+
 # Configure pytest-asyncio - updated for pytest-asyncio 1.0
 # No longer need event_loop fixture with pytest-asyncio 1.0
 
 
 # Global mock for cache service to prevent Redis connection errors in tests
 @pytest.fixture(scope="session", autouse=True)
-def mock_cache_globally():
+def mock_cache_globally() -> Generator[AsyncMock, None, None]:
     """Mock cache service globally to prevent Redis connection issues."""
     mock_cache = AsyncMock()
     mock_cache.get = AsyncMock(return_value=None)
@@ -49,9 +56,9 @@ def mock_cache_globally():
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment():
+def setup_test_environment() -> Generator[None, None, None]:
     """Set up test environment variables."""
-    test_env = {
+    test_env: dict[str, str] = {
         "ENVIRONMENT": "testing",
         "DEBUG": "True",
         "DATABASE_URL": "https://test.supabase.com",
@@ -68,7 +75,7 @@ def setup_test_environment():
     }
 
     # Save original environment
-    original_env = {}
+    original_env: dict[str, str | None] = {}
     for key, value in test_env.items():
         original_env[key] = os.environ.get(key)
         os.environ[key] = value
@@ -84,7 +91,7 @@ def setup_test_environment():
 
 
 @pytest.fixture
-def mock_settings():
+def mock_settings() -> MagicMock:
     """Create mock settings for testing."""
     from tripsage_core.config import Settings
 
@@ -114,7 +121,7 @@ def mock_settings():
 
 
 @pytest.fixture
-def mock_database_service():
+def mock_database_service() -> AsyncMock:
     """Create mock database service."""
     db_service = AsyncMock()
 
@@ -133,7 +140,7 @@ def mock_database_service():
 
 
 @pytest.fixture
-def mock_cache_service():
+def mock_cache_service() -> AsyncMock:
     """Create mock cache service."""
     cache_service = AsyncMock()
 
@@ -206,7 +213,7 @@ def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> dict[str, Any]
 
 
 @pytest_asyncio.fixture
-async def mock_supabase_client():
+async def mock_supabase_client() -> AsyncMock:
     """Create mock Supabase client."""
     client = AsyncMock()
 
@@ -261,7 +268,7 @@ async def mock_supabase_client():
 
 
 @pytest.fixture
-def mock_openai_client():
+def mock_openai_client() -> AsyncMock:
     """Create mock OpenAI client."""
     client = AsyncMock()
 
@@ -291,7 +298,7 @@ def mock_openai_client():
 
 
 @pytest.fixture
-def mock_service_registry():
+def mock_service_registry() -> ServiceRegistry:
     """Create mock service registry."""
     from tripsage.agents.service_registry import ServiceRegistry
 
@@ -308,7 +315,7 @@ def mock_service_registry():
 
 
 # Markers for test categorization
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Configure pytest with custom markers."""
     config.addinivalue_line("markers", "unit: Unit tests")
     config.addinivalue_line("markers", "integration: Integration tests")
@@ -319,7 +326,9 @@ def pytest_configure(config):
 
 
 # Skip slow tests by default
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Modify test collection based on markers."""
     if not config.getoption("--run-slow"):
         skip_slow = pytest.mark.skip(reason="need --run-slow option to run")
@@ -328,7 +337,7 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_slow)
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     """Add custom command line options."""
     parser.addoption(
         "--run-slow", action="store_true", default=False, help="run slow tests"
