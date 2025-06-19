@@ -20,6 +20,7 @@ from pydantic import Field, ValidationError
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.api.core.config import get_settings
 from tripsage.api.core.dependencies import get_db
 from tripsage.api.schemas.websocket import (
     WebSocketAuthRequest,
@@ -77,6 +78,45 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+async def validate_websocket_origin(websocket: WebSocket) -> bool:
+    """Validate WebSocket Origin header to prevent CSWSH attacks.
+
+    Args:
+        websocket: The WebSocket connection to validate
+
+    Returns:
+        True if origin is valid, False otherwise
+    """
+    settings = get_settings()
+    origin = websocket.headers.get("origin")
+
+    if origin is None:
+        # Allow connections without Origin header for development/testing
+        # In production, you might want to be more strict
+        logger.warning("WebSocket connection attempted without Origin header")
+        if settings.is_production:
+            logger.error("Origin header missing in production - rejecting connection")
+            return False
+        return True
+
+    # Check if origin is in allowed CORS origins
+    if origin in settings.cors_origins:
+        logger.info(f"WebSocket connection from authorized origin: {origin}")
+        return True
+
+    # Additional check for wildcard origins if configured
+    for allowed_origin in settings.cors_origins:
+        if allowed_origin == "*":
+            logger.warning(
+                "Wildcard CORS origin detected - allowing all origins (insecure)"
+            )
+            return True
+
+    logger.error(f"WebSocket connection rejected from unauthorized origin: {origin}")
+    return False
+
+
 # Global chat agent instance
 _chat_agent = None
 _service_registry = None
@@ -129,6 +169,11 @@ async def chat_websocket(
     connection_id = None
 
     try:
+        # Validate Origin header before accepting connection (CSWSH protection)
+        if not await validate_websocket_origin(websocket):
+            await websocket.close(code=4003, reason="Unauthorized origin")
+            return
+
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"WebSocket connection accepted for chat session {session_id}")
@@ -331,6 +376,11 @@ async def agent_status_websocket(
     connection_id = None
 
     try:
+        # Validate Origin header before accepting connection (CSWSH protection)
+        if not await validate_websocket_origin(websocket):
+            await websocket.close(code=4003, reason="Unauthorized origin")
+            return
+
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"Agent status WebSocket connection accepted for user {user_id}")
