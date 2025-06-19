@@ -8,9 +8,9 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 import { MessageList } from "@/components/chat/message-list";
 import { ChatLayout } from "@/components/layouts/chat-layout";
 import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
-import { render, createMockUser } from "@/test/test-utils";
+import { createMockUser, render } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Mock the auth context
 const mockAuthContext = {

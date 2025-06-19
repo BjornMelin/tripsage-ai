@@ -135,7 +135,6 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report critical error", () => {
-      
       render(<GlobalError error={mockError} reset={mockReset} />);
 
       expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
@@ -178,7 +177,6 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report dashboard error", () => {
-      
       render(<DashboardError error={mockError} reset={mockReset} />);
 
       expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
@@ -216,7 +214,6 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report auth error without user ID", () => {
-      
       render(<AuthError error={mockError} reset={mockReset} />);
 
       expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
@@ -277,7 +274,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-            expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
@@ -307,7 +304,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-            expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
@@ -333,7 +330,6 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("Error Reporting Integration", () => {
     it("should create error reports with consistent format", () => {
-      
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
       expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
@@ -346,7 +342,9 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should handle error service failures gracefully", () => {
-            vi.mocked(mockErrorService).reportError.mockRejectedValue(new Error("Reporting failed"));
+      vi.mocked(mockErrorService).reportError.mockRejectedValue(
+        new Error("Reporting failed")
+      );
 
       // Should not throw when error reporting fails
       expect(() => {

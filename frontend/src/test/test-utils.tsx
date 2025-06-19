@@ -1,10 +1,10 @@
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AuthProvider } from "@/contexts/auth-context";
+import type { User } from "@/contexts/auth-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement, ReactNode } from "react";
-import { AuthProvider } from "@/contexts/auth-context";
-import { ThemeProvider } from "@/components/providers/theme-provider";
-import type { User } from "@/contexts/auth-context";
 import { vi } from "vitest";
 
 // Mock the useSupabase hook for tests
@@ -12,9 +12,11 @@ vi.mock("@/lib/supabase/client", () => ({
   useSupabase: vi.fn(() => ({
     auth: {
       onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } }
+        data: { subscription: { unsubscribe: vi.fn() } },
       })),
-      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+      getSession: vi.fn(() =>
+        Promise.resolve({ data: { session: null }, error: null })
+      ),
       signInWithPassword: vi.fn(),
       signUp: vi.fn(),
       signInWithOAuth: vi.fn(),
@@ -22,36 +24,38 @@ vi.mock("@/lib/supabase/client", () => ({
       resetPasswordForEmail: vi.fn(),
       updateUser: vi.fn(),
       getUser: vi.fn(),
-    }
+    },
   })),
   createClient: vi.fn(() => ({
     auth: {
       onAuthStateChange: vi.fn(() => ({
-        data: { subscription: { unsubscribe: vi.fn() } }
+        data: { subscription: { unsubscribe: vi.fn() } },
       })),
-      getSession: vi.fn(() => Promise.resolve({ data: { session: null }, error: null })),
+      getSession: vi.fn(() =>
+        Promise.resolve({ data: { session: null }, error: null })
+      ),
     },
     from: vi.fn(() => ({
       select: vi.fn(() => ({
-        order: vi.fn(() => Promise.resolve({ data: [], error: null }))
+        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
       })),
       insert: vi.fn(() => ({
         select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: null, error: null }))
-        }))
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
       })),
       update: vi.fn(() => ({
         eq: vi.fn(() => ({
           select: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({ data: null, error: null }))
-          }))
-        }))
+            single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+          })),
+        })),
       })),
       delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ error: null }))
-      }))
-    }))
-  }))
+        eq: vi.fn(() => Promise.resolve({ error: null })),
+      })),
+    })),
+  })),
 }));
 
 // Mock next/navigation
@@ -69,9 +73,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 // Mock window.matchMedia for theme provider
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -116,8 +120,8 @@ export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper
   queryClient?: QueryClient;
 }
 
-export const AllTheProviders = ({ 
-  children, 
+export const AllTheProviders = ({
+  children,
   initialUser = null,
   theme = {
     attribute: "class",
@@ -125,16 +129,14 @@ export const AllTheProviders = ({
     enableSystem: true,
     disableTransitionOnChange: true,
   },
-  queryClient
+  queryClient,
 }: ProvidersProps) => {
   const client = queryClient || createTestQueryClient();
-  
+
   return (
     <QueryClientProvider client={client}>
       <ThemeProvider {...theme}>
-        <AuthProvider initialUser={initialUser}>
-          {children}
-        </AuthProvider>
+        <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
@@ -142,12 +144,7 @@ export const AllTheProviders = ({
 
 export const renderWithProviders = (
   ui: ReactElement,
-  {
-    initialUser,
-    theme,
-    queryClient,
-    ...options
-  }: RenderWithProvidersOptions = {}
+  { initialUser, theme, queryClient, ...options }: RenderWithProvidersOptions = {}
 ) => {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <AllTheProviders initialUser={initialUser} theme={theme} queryClient={queryClient}>
@@ -208,8 +205,8 @@ export const mockAuthState = (
   mockUseAuth.error = error;
 
   // Reset all mock functions
-  Object.keys(mockUseAuth).forEach(key => {
-    if (typeof mockUseAuth[key as keyof typeof mockUseAuth] === 'function') {
+  Object.keys(mockUseAuth).forEach((key) => {
+    if (typeof mockUseAuth[key as keyof typeof mockUseAuth] === "function") {
       (mockUseAuth[key as keyof typeof mockUseAuth] as any).mockClear();
     }
   });

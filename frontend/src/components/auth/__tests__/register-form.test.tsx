@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/auth-context";
-import { render, createMockUser } from "@/test/test-utils";
+import { createMockUser, render } from "@/test/test-utils";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";

@@ -85,7 +85,9 @@ describe("BudgetTracker", () => {
       render(<BudgetTracker />);
 
       expect(screen.getByText("Europe Trip Budget")).toBeInTheDocument();
-      expect(screen.getByText("Budget for 2024-06-15 - 2024-06-25")).toBeInTheDocument();
+      expect(
+        screen.getByText("Budget for 2024-06-15 - 2024-06-25")
+      ).toBeInTheDocument();
       expect(screen.getByText("$1,200.00 of $3,000.00")).toBeInTheDocument();
       expect(screen.getByText("40.0% used")).toBeInTheDocument();
       expect(screen.getByText("$1,800.00 remaining")).toBeInTheDocument();
@@ -95,7 +97,9 @@ describe("BudgetTracker", () => {
       render(<BudgetTracker budgetId="budget-2" />);
 
       expect(screen.getByText("Asia Adventure Budget")).toBeInTheDocument();
-      expect(screen.getByText("Budget for 2024-08-01 - 2024-08-15")).toBeInTheDocument();
+      expect(
+        screen.getByText("Budget for 2024-08-01 - 2024-08-15")
+      ).toBeInTheDocument();
     });
 
     it("should render first budget for specific trip", () => {
@@ -488,7 +492,9 @@ describe("BudgetTracker", () => {
 
     it("should show create budget button in no budget state", () => {
       const mockOnCreateBudget = vi.fn();
-      render(<BudgetTracker tripId="nonexistent-trip" onCreateBudget={mockOnCreateBudget} />);
+      render(
+        <BudgetTracker tripId="nonexistent-trip" onCreateBudget={mockOnCreateBudget} />
+      );
 
       const createBudgetButton = screen.getByText("Create Budget");
       fireEvent.click(createBudgetButton);

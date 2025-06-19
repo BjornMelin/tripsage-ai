@@ -39,26 +39,27 @@ vi.mock("@/lib/api/client", () => ({
     if (options?.auth) {
       headers.Authorization = options.auth;
     }
-    
+
     // Remove auth from options before passing to fetch
     const { auth, ...fetchOptions } = options || {};
-    
-    return global.fetch(url, {
-      ...fetchOptions,
-      headers,
-    }).then(res => {
-      if (res.ok) {
-        return res.json();
-      }
-      // Check if res.text is a function before calling it
-      if (typeof res.text === 'function') {
-        return res.text().then(text => {
-          throw new Error(text);
-        });
-      } else {
+
+    return global
+      .fetch(url, {
+        ...fetchOptions,
+        headers,
+      })
+      .then((res) => {
+        if (res.ok) {
+          return res.json();
+        }
+        // Check if res.text is a function before calling it
+        if (typeof res.text === "function") {
+          return res.text().then((text) => {
+            throw new Error(text);
+          });
+        }
         throw new Error("Failed to load keys");
-      }
-    });
+      });
   }),
 }));
 

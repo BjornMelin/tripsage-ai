@@ -177,7 +177,7 @@ describe("Search History Store", () => {
       expect(result.current.recentSearches[0].params).toEqual(searchParams);
     });
 
-    it("updates existing search timestamp for duplicate", () => {
+    it("updates existing search timestamp for duplicate", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       const searchParams = { origin: "NYC", destination: "LAX" };
@@ -187,6 +187,9 @@ describe("Search History Store", () => {
       });
 
       const firstTimestamp = result.current.recentSearches[0].timestamp;
+
+      // Wait a small amount to ensure different timestamp
+      await new Promise((resolve) => setTimeout(resolve, 1));
 
       // Add same search again
       act(() => {

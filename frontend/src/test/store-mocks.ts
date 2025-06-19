@@ -111,7 +111,9 @@ export interface MockSearchStore {
   results: Record<string, unknown>;
 }
 
-export const createMockSearchStore = (overrides?: Partial<MockSearchStore>): MockSearchStore => ({
+export const createMockSearchStore = (
+  overrides?: Partial<MockSearchStore>
+): MockSearchStore => ({
   // Params store methods
   updateAccommodationParams: vi.fn(),
   updateFlightParams: vi.fn(),
@@ -157,7 +159,9 @@ export interface MockBudgetStore {
   clearError: Mock;
 }
 
-export const createMockBudgetStore = (overrides?: Partial<MockBudgetStore>): MockBudgetStore => ({
+export const createMockBudgetStore = (
+  overrides?: Partial<MockBudgetStore>
+): MockBudgetStore => ({
   selectedBudgetId: null,
   budgets: [],
   expenses: [],
@@ -206,7 +210,9 @@ export interface MockDealsStore {
   loadDeals: Mock;
 }
 
-export const createMockDealsStore = (overrides?: Partial<MockDealsStore>): MockDealsStore => ({
+export const createMockDealsStore = (
+  overrides?: Partial<MockDealsStore>
+): MockDealsStore => ({
   deals: [],
   filters: {
     type: null,
@@ -279,7 +285,9 @@ export interface MockUserStore {
   clearUser: Mock;
 }
 
-export const createMockUserStore = (overrides?: Partial<MockUserStore>): MockUserStore => ({
+export const createMockUserStore = (
+  overrides?: Partial<MockUserStore>
+): MockUserStore => ({
   user: null,
   preferences: {},
   isLoading: false,
@@ -308,7 +316,9 @@ export interface MockAuthStore {
   clearError: Mock;
 }
 
-export const createMockAuthStore = (overrides?: Partial<MockAuthStore>): MockAuthStore => ({
+export const createMockAuthStore = (
+  overrides?: Partial<MockAuthStore>
+): MockAuthStore => ({
   isAuthenticated: false,
   user: null,
   session: null,
@@ -362,7 +372,9 @@ export interface MockChatStore {
   clearMessages: Mock;
 }
 
-export const createMockChatStore = (overrides?: Partial<MockChatStore>): MockChatStore => ({
+export const createMockChatStore = (
+  overrides?: Partial<MockChatStore>
+): MockChatStore => ({
   messages: [],
   sessions: [],
   activeSessionId: null,
@@ -392,7 +404,9 @@ export interface MockTripStore {
   clearError: Mock;
 }
 
-export const createMockTripStore = (overrides?: Partial<MockTripStore>): MockTripStore => ({
+export const createMockTripStore = (
+  overrides?: Partial<MockTripStore>
+): MockTripStore => ({
   trips: [],
   selectedTripId: null,
   isLoading: false,

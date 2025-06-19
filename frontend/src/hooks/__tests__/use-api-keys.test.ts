@@ -1,6 +1,11 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { useAddApiKey, useApiKeys, useDeleteApiKey, useValidateApiKey } from "../use-api-keys";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  useAddApiKey,
+  useApiKeys,
+  useDeleteApiKey,
+  useValidateApiKey,
+} from "../use-api-keys";
 
 // Mock the dependencies
 const mockSetKeys = vi.fn();
@@ -25,10 +30,14 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 // Mock the API hooks
+const mockUseApiQuery = vi.fn();
+const mockUseApiMutation = vi.fn();
+const mockUseApiDeleteMutation = vi.fn();
+
 vi.mock("@/hooks/use-api-query", () => ({
-  useApiQuery: vi.fn(),
-  useApiMutation: vi.fn(),
-  useApiDeleteMutation: vi.fn(),
+  useApiQuery: mockUseApiQuery,
+  useApiMutation: mockUseApiMutation,
+  useApiDeleteMutation: mockUseApiDeleteMutation,
 }));
 
 describe("useApiKeys", () => {
@@ -43,9 +52,8 @@ describe("useApiKeys", () => {
       error: null,
       refetch: vi.fn(),
     };
-    
-    const { useApiQuery } = await import("@/hooks/use-api-query");
-    vi.mocked(useApiQuery).mockReturnValue(mockQueryResult);
+
+    mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
 
@@ -56,7 +64,7 @@ describe("useApiKeys", () => {
     const mockData = {
       keys: {
         "google-maps": { is_valid: true, has_key: true, service: "google-maps" },
-        "openai": { is_valid: false, has_key: true, service: "openai" },
+        openai: { is_valid: false, has_key: true, service: "openai" },
       },
       supported_services: ["google-maps", "openai", "weather"],
     };
@@ -68,14 +76,15 @@ describe("useApiKeys", () => {
       refetch: vi.fn(),
     };
 
-    const { useApiQuery } = await import("@/hooks/use-api-query");
-    vi.mocked(useApiQuery).mockReturnValue(mockQueryResult);
+    mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
 
     await waitFor(() => {
       expect(mockSetKeys).toHaveBeenCalledWith(mockData.keys);
-      expect(mockSetSupportedServices).toHaveBeenCalledWith(mockData.supported_services);
+      expect(mockSetSupportedServices).toHaveBeenCalledWith(
+        mockData.supported_services
+      );
     });
   });
 
@@ -87,8 +96,7 @@ describe("useApiKeys", () => {
       refetch: vi.fn(),
     };
 
-    const { useApiQuery } = await import("@/hooks/use-api-query");
-    vi.mocked(useApiQuery).mockReturnValue(mockQueryResult);
+    mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
 

@@ -529,13 +529,13 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
   const hasActiveFilters = Object.keys(state.activeFilters || {}).length > 0;
   const activeFilterCount = Object.keys(state.activeFilters || {}).length;
   const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
-  
-  const currentFilters = state.currentSearchType 
-    ? (state.availableFilters || {})[state.currentSearchType] || [] 
+
+  const currentFilters = state.currentSearchType
+    ? state.availableFilters?.[state.currentSearchType] || []
     : [];
-    
-  const currentSortOptions = state.currentSearchType 
-    ? (state.availableSortOptions || {})[state.currentSearchType] || [] 
+
+  const currentSortOptions = state.currentSearchType
+    ? state.availableSortOptions?.[state.currentSearchType] || []
     : [];
 
   const summaries: string[] = [];
@@ -545,8 +545,8 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
       const valueStr = Array.isArray(activeFilter.value)
         ? activeFilter.value.join(", ")
         : typeof activeFilter.value === "object" && activeFilter.value !== null
-        ? `${(activeFilter.value as any).min || ""} - ${(activeFilter.value as any).max || ""}`
-        : String(activeFilter.value);
+          ? `${(activeFilter.value as any).min || ""} - ${(activeFilter.value as any).max || ""}`
+          : String(activeFilter.value);
       summaries.push(`${filter.label}: ${valueStr}`);
     }
   });
@@ -565,23 +565,23 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
 // Custom middleware to compute derived state
 const withComputedState = (config: any) => (set: any, get: any, api: any) => {
   const setState = (partial: any, replace?: boolean) => {
-    const newState = typeof partial === 'function' ? partial(get()) : partial;
+    const newState = typeof partial === "function" ? partial(get()) : partial;
     const currentState = get();
     const mergedState = replace ? newState : { ...currentState, ...newState };
     const derived = computeDerivedState(mergedState);
     set({ ...newState, ...derived }, replace);
   };
-  
+
   // Override the setState method on the api to ensure computed state is always updated
   const originalSetState = api.setState;
   api.setState = (partial: any, replace?: boolean) => {
-    const newState = typeof partial === 'function' ? partial(get()) : partial;
+    const newState = typeof partial === "function" ? partial(get()) : partial;
     const currentState = get();
     const mergedState = replace ? newState : { ...currentState, ...newState };
     const derived = computeDerivedState(mergedState);
     originalSetState({ ...newState, ...derived }, replace);
   };
-  
+
   return config(setState, get, api);
 };
 
@@ -1123,12 +1123,24 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
               }
 
               // Handle range type filters
-              if (filterConfig.type === "range" && typeof value === "object" && value !== null) {
+              if (
+                filterConfig.type === "range" &&
+                typeof value === "object" &&
+                value !== null
+              ) {
                 const rangeValue = value as { min?: number; max?: number };
-                if (rangeValue.min !== undefined && min !== undefined && rangeValue.min < min) {
+                if (
+                  rangeValue.min !== undefined &&
+                  min !== undefined &&
+                  rangeValue.min < min
+                ) {
                   throw new Error(`Minimum value must be at least ${min}`);
                 }
-                if (rangeValue.max !== undefined && max !== undefined && rangeValue.max > max) {
+                if (
+                  rangeValue.max !== undefined &&
+                  max !== undefined &&
+                  rangeValue.max > max
+                ) {
                   throw new Error(`Maximum value must be at most ${max}`);
                 }
               }

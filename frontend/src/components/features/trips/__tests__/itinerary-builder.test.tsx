@@ -103,7 +103,9 @@ describe("ItineraryBuilder", () => {
       render(<ItineraryBuilder trip={mockTrip} />);
 
       expect(screen.getByText("Itinerary Builder")).toBeInTheDocument();
-      expect(screen.getByText("Plan and organize your trip destinations")).toBeInTheDocument();
+      expect(
+        screen.getByText("Plan and organize your trip destinations")
+      ).toBeInTheDocument();
       expect(screen.getByText("Add Destination")).toBeInTheDocument();
       expect(screen.getByText("Paris")).toBeInTheDocument();
       expect(screen.getByText("Rome")).toBeInTheDocument();
@@ -112,12 +114,16 @@ describe("ItineraryBuilder", () => {
     it("should render empty state when no destinations", () => {
       render(<ItineraryBuilder trip={emptyTrip} />);
 
-      expect(screen.getByText("No destinations added yet. Start building your itinerary!")).toBeInTheDocument();
+      expect(
+        screen.getByText("No destinations added yet. Start building your itinerary!")
+      ).toBeInTheDocument();
       expect(screen.getByText("Add First Destination")).toBeInTheDocument();
     });
 
     it("should apply custom className", () => {
-      const { container } = render(<ItineraryBuilder trip={mockTrip} className="custom-class" />);
+      const { container } = render(
+        <ItineraryBuilder trip={mockTrip} className="custom-class" />
+      );
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass("custom-class");
@@ -189,7 +195,9 @@ describe("ItineraryBuilder", () => {
       await user.click(addButton);
 
       expect(screen.getByText("Add New Destination")).toBeInTheDocument();
-      expect(screen.getByText("Fill in the details for this destination")).toBeInTheDocument();
+      expect(
+        screen.getByText("Fill in the details for this destination")
+      ).toBeInTheDocument();
       expect(screen.getByLabelText("Destination Name")).toBeInTheDocument();
       expect(screen.getByLabelText("Country")).toBeInTheDocument();
     });
@@ -225,7 +233,10 @@ describe("ItineraryBuilder", () => {
       // Add transportation
       await user.click(screen.getByText("Select transport"));
       await user.click(screen.getByText("Flight"));
-      await user.type(screen.getByPlaceholderText("Transportation details"), "Iberia IB456");
+      await user.type(
+        screen.getByPlaceholderText("Transportation details"),
+        "Iberia IB456"
+      );
 
       // Add accommodation
       await user.click(screen.getByText("Accommodation type"));
@@ -243,16 +254,19 @@ describe("ItineraryBuilder", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockAddDestination).toHaveBeenCalledWith("trip-1", expect.objectContaining({
-          name: "Madrid",
-          country: "Spain",
-          startDate: "2024-06-23",
-          endDate: "2024-06-25",
-          transportation: { type: "flight", details: "Iberia IB456" },
-          accommodation: { type: "hotel", name: "Hotel Plaza" },
-          estimatedCost: 700,
-          notes: "Visit Prado Museum",
-        }));
+        expect(mockAddDestination).toHaveBeenCalledWith(
+          "trip-1",
+          expect.objectContaining({
+            name: "Madrid",
+            country: "Spain",
+            startDate: "2024-06-23",
+            endDate: "2024-06-25",
+            transportation: { type: "flight", details: "Iberia IB456" },
+            accommodation: { type: "hotel", name: "Hotel Plaza" },
+            estimatedCost: 700,
+            notes: "Visit Prado Museum",
+          })
+        );
       });
     });
 
@@ -279,10 +293,10 @@ describe("ItineraryBuilder", () => {
 
       // Remove an activity
       const removeButtons = screen.getAllByRole("button");
-      const removeActivityButton = removeButtons.find(btn => 
-        btn.querySelector('svg') && btn.getAttribute('type') === 'button'
+      const removeActivityButton = removeButtons.find(
+        (btn) => btn.querySelector("svg") && btn.getAttribute("type") === "button"
       );
-      
+
       if (removeActivityButton) {
         await user.click(removeActivityButton);
       }
@@ -296,9 +310,9 @@ describe("ItineraryBuilder", () => {
 
       // Find and click edit button for Paris destination
       const editButtons = screen.getAllByRole("button");
-      const editButton = editButtons.find(btn => 
-        btn.getAttribute("aria-label") === undefined && 
-        btn.querySelector('svg')
+      const editButton = editButtons.find(
+        (btn) =>
+          btn.getAttribute("aria-label") === undefined && btn.querySelector("svg")
       );
 
       if (editButton) {
@@ -322,9 +336,9 @@ describe("ItineraryBuilder", () => {
 
       // Open edit dialog
       const editButtons = screen.getAllByRole("button");
-      const editButton = editButtons.find(btn => 
-        btn.getAttribute("aria-label") === undefined && 
-        btn.querySelector('svg')
+      const editButton = editButtons.find(
+        (btn) =>
+          btn.getAttribute("aria-label") === undefined && btn.querySelector("svg")
       );
 
       if (editButton) {
@@ -345,9 +359,13 @@ describe("ItineraryBuilder", () => {
       await user.click(updateButton);
 
       await waitFor(() => {
-        expect(mockUpdateDestination).toHaveBeenCalledWith("trip-1", "dest-1", expect.objectContaining({
-          name: "Lyon",
-        }));
+        expect(mockUpdateDestination).toHaveBeenCalledWith(
+          "trip-1",
+          "dest-1",
+          expect.objectContaining({
+            name: "Lyon",
+          })
+        );
       });
     });
   });
@@ -361,7 +379,7 @@ describe("ItineraryBuilder", () => {
 
       // Find delete button (trash icon)
       const deleteButtons = screen.getAllByRole("button");
-      const deleteButton = deleteButtons.find(btn => 
+      const deleteButton = deleteButtons.find((btn) =>
         btn.className.includes("text-destructive")
       );
 
@@ -370,7 +388,10 @@ describe("ItineraryBuilder", () => {
       }
 
       await waitFor(() => {
-        expect(mockRemoveDestination).toHaveBeenCalledWith("trip-1", expect.any(String));
+        expect(mockRemoveDestination).toHaveBeenCalledWith(
+          "trip-1",
+          expect.any(String)
+        );
       });
     });
   });
@@ -386,8 +407,9 @@ describe("ItineraryBuilder", () => {
     it("should have drag handles on destinations", () => {
       render(<ItineraryBuilder trip={mockTrip} />);
 
-      const dragHandles = screen.getAllByTestId("drag-drop-context")
-        .map(element => element.querySelector('[data-drag-handle="true"]'))
+      const dragHandles = screen
+        .getAllByTestId("drag-drop-context")
+        .map((element) => element.querySelector('[data-drag-handle="true"]'))
         .filter(Boolean);
 
       expect(dragHandles.length).toBeGreaterThan(0);
@@ -428,10 +450,13 @@ describe("ItineraryBuilder", () => {
       await user.click(submitButton);
 
       await waitFor(() => {
-        expect(mockAddDestination).toHaveBeenCalledWith("trip-1", expect.objectContaining({
-          name: "",
-          country: "",
-        }));
+        expect(mockAddDestination).toHaveBeenCalledWith(
+          "trip-1",
+          expect.objectContaining({
+            name: "",
+            country: "",
+          })
+        );
       });
     });
 
@@ -445,7 +470,7 @@ describe("ItineraryBuilder", () => {
       const costInput = screen.getByLabelText("Estimated Cost ($)");
       await user.type(costInput, "1500.50");
 
-      expect(costInput).toHaveValue(1500.50);
+      expect(costInput).toHaveValue(1500.5);
     });
 
     it("should handle clearing estimated cost", async () => {
@@ -485,7 +510,9 @@ describe("ItineraryBuilder", () => {
       expect(buttons.length).toBeGreaterThan(0);
 
       // Check that main action buttons exist
-      expect(screen.getByRole("button", { name: /Add Destination/ })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Add Destination/ })
+      ).toBeInTheDocument();
     });
 
     it("should have proper dialog structure", async () => {
@@ -511,21 +538,21 @@ describe("ItineraryBuilder", () => {
             transportation: { type: "flight", details: "Flight details" },
           },
           {
-            id: "dest-2", 
+            id: "dest-2",
             name: "Test City 2",
             country: "Test Country 2",
             transportation: { type: "car", details: "Car details" },
           },
           {
             id: "dest-3",
-            name: "Test City 3", 
+            name: "Test City 3",
             country: "Test Country 3",
             transportation: { type: "train", details: "Train details" },
           },
           {
             id: "dest-4",
             name: "Test City 4",
-            country: "Test Country 4", 
+            country: "Test Country 4",
             transportation: { type: "other", details: "Other transport" },
           },
         ],
