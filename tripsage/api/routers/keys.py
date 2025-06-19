@@ -5,7 +5,7 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
@@ -38,7 +38,7 @@ def get_monitoring_service() -> KeyMonitoringService:
 
 @router.get(
     "",
-    response_model=List[ApiKeyResponse],
+    response_model=list[ApiKeyResponse],
     summary="List API keys",
 )
 async def list_keys(
@@ -100,7 +100,7 @@ async def create_key(
         logger.error(f"Error creating API key: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create API key: {str(e)}",
+            detail=f"Failed to create API key: {e!s}",
         ) from e
 
 
@@ -226,7 +226,7 @@ async def rotate_key(
 
 @router.get(
     "/metrics",
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
     summary="Get API key metrics",
 )
 async def get_metrics(
@@ -248,7 +248,7 @@ async def get_metrics(
 
 @router.get(
     "/audit",
-    response_model=List[Dict[str, Any]],
+    response_model=list[dict[str, Any]],
     summary="Get API key audit log",
 )
 async def get_audit_log(
