@@ -145,7 +145,7 @@ async def verify_service_access(
             cache = await get_cache_service()
             settings = get_settings()
             key_service = ApiKeyService(db=db, cache=cache, settings=settings)
-        
+
         try:
             keys = await key_service.get_user_api_keys(principal.id)
             service_key = next((k for k in keys if k.service.value == service), None)

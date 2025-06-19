@@ -286,9 +286,7 @@ def check_input_validation():
         )
 
     # Note: Session security service removed as part of cleanup
-    log_finding(
-        "info", "Input Validation", "Core validation checks completed"
-    )
+    log_finding("info", "Input Validation", "Core validation checks completed")
 
 
 def check_cors_configuration():
