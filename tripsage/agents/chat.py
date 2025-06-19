@@ -5,7 +5,7 @@ This module provides the ChatAgent class that integrates with the LangGraph
 orchestration system for processing user messages through specialized agents.
 """
 
-from typing import Any
+# No typing imports needed - using Python 3.13 built-in types
 
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.service_registry import ServiceRegistry
@@ -47,8 +47,8 @@ class ChatAgent(BaseAgent):
         user_id: str,
         message: str,
         session_id: str | None = None,
-        context: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+        context: dict[str, any] | None = None,
+    ) -> dict[str, any]:
         """
         Process a user message through the orchestration system.
 
@@ -98,7 +98,7 @@ class ChatAgent(BaseAgent):
         user_id: str,
         message: str,
         session_id: str | None = None,
-        context: dict[str, Any] | None = None,
+        context: dict[str, any] | None = None,
     ):
         """
         Stream processing of a user message.
@@ -157,7 +157,7 @@ class ChatAgent(BaseAgent):
 
     async def get_conversation_history(
         self, user_id: str, session_id: str, limit: int = 50
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, any]]:
         """
         Get conversation history for a session.
 

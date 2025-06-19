@@ -14,8 +14,8 @@ Features:
 
 import logging
 import time
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from typing import Annotated
 from weakref import WeakKeyDictionary
 
@@ -568,5 +568,5 @@ LegacyUserServiceDep = Annotated[UserService, Depends(get_user_service)]
 
 # Dependency health monitoring
 DependencyHealthDep = Annotated[
-    Dict[str, DependencyHealth], Depends(get_all_dependency_health)
+    dict[str, DependencyHealth], Depends(get_all_dependency_health)
 ]

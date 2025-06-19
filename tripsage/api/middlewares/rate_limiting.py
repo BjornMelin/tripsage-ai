@@ -14,9 +14,10 @@ This module provides production-ready rate limiting with:
 import json
 import logging
 import time
+
+# No typing imports needed - using Python 3.13 built-in types
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
 from fastapi import Request, Response
 from pydantic import BaseModel, Field
@@ -153,7 +154,7 @@ class InMemoryRateLimiter(RateLimiter):
 
     def __init__(self):
         self.requests: dict[str, list] = {}
-        self.token_buckets: dict[str, dict[str, Any]] = {}
+        self.token_buckets: dict[str, dict[str, any]] = {}
 
     async def check_rate_limit(
         self,
@@ -796,7 +797,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _get_rate_limit_context(self, request: Request) -> dict[str, Any]:
+    def _get_rate_limit_context(self, request: Request) -> dict[str, any]:
         """Get comprehensive rate limit context for the request."""
         principal = getattr(request.state, "principal", None)
         path = request.url.path
@@ -941,7 +942,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     def _create_rate_limit_response(
-        self, result: RateLimitResult, context: dict[str, Any]
+        self, result: RateLimitResult, context: dict[str, any]
     ) -> Response:
         """Create a comprehensive 429 response."""
         retry_after = result.retry_after_seconds
@@ -1006,7 +1007,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _add_rate_limit_headers(
-        self, response: Response, result: RateLimitResult, context: dict[str, Any]
+        self, response: Response, result: RateLimitResult, context: dict[str, any]
     ):
         """Add comprehensive rate limit headers to successful responses."""
         headers = {
@@ -1067,7 +1068,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             return False
 
     async def _track_rate_limit_violation(
-        self, request: Request, context: dict[str, Any], result: RateLimitResult
+        self, request: Request, context: dict[str, any], result: RateLimitResult
     ):
         """Track rate limit violations for monitoring and analytics."""
         if self.monitoring_service:
@@ -1163,7 +1164,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     async def _track_successful_request(
         self,
         request: Request,
-        context: dict[str, Any],
+        context: dict[str, any],
         start_time: float,
         response: Response,
     ):
@@ -1204,7 +1205,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
 
 # Configuration helper functions
-def create_rate_limit_config_from_dict(config_dict: dict[str, Any]) -> RateLimitConfig:
+def create_rate_limit_config_from_dict(config_dict: dict[str, any]) -> RateLimitConfig:
     """Create a RateLimitConfig from a dictionary (useful for dynamic configuration)."""
     return RateLimitConfig(**config_dict)
 

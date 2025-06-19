@@ -10,11 +10,14 @@ DatabaseService with multi-layer test architecture supporting:
 - Advanced mocking and service factories
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
+from collections.abc import AsyncGenerator, Callable, Generator
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 
@@ -39,6 +42,9 @@ from tripsage_core.services.infrastructure.database_service import (
     SecurityAlert,
     SecurityEvent,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 # Configure logging for test debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -295,16 +301,13 @@ def database_service_factory(mock_settings_factory):
                 await service.close()
 
     if created_services:
-        # Run cleanup in event loop if available
+        # Run cleanup using modern asyncio patterns
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # Create a task for cleanup
-                asyncio.create_task(cleanup())
-            else:
-                loop.run_until_complete(cleanup())
+            loop = asyncio.get_running_loop()
+            # Create a task for cleanup
+            asyncio.create_task(cleanup())
         except RuntimeError:
-            # No event loop, create one
+            # No event loop running, use asyncio.run
             asyncio.run(cleanup())
 
 

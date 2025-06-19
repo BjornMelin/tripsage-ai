@@ -10,8 +10,9 @@ import importlib
 import inspect
 import time
 import uuid
+
+# No typing imports needed - using Python 3.13 built-in types
 from collections.abc import Callable
-from typing import Any
 
 try:
     from agents import Agent, Runner, function_tool
@@ -67,8 +68,8 @@ class BaseAgent:
         # Initialize tools
         self._tools = tools or []
         self._registered_tools: set[str] = set()
-        self._handoff_tools: dict[str, dict[str, Any]] = {}
-        self._delegation_tools: dict[str, dict[str, Any]] = {}
+        self._handoff_tools: dict[str, dict[str, any]] = {}
+        self._delegation_tools: dict[str, dict[str, any]] = {}
 
         # Register default tools
         self._register_default_tools()
@@ -323,7 +324,7 @@ class BaseAgent:
             self, target_agents, service_registry=self.service_registry
         )
 
-    async def _initialize_session(self, user_id: str | None = None) -> dict[str, Any]:
+    async def _initialize_session(self, user_id: str | None = None) -> dict[str, any]:
         """Initialize a new session with memory data.
 
         Args:
@@ -387,8 +388,8 @@ class BaseAgent:
             log_exception(e)
 
     async def run(
-        self, user_input: str, context: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+        self, user_input: str, context: dict[str, any] | None = None
+    ) -> dict[str, any]:
         """Run the agent with user input.
 
         Args:
@@ -539,7 +540,7 @@ class BaseAgent:
                 "error_message": str(e),
             }
 
-    def get_conversation_history(self) -> list[dict[str, Any]]:
+    def get_conversation_history(self) -> list[dict[str, any]]:
         """Get the conversation history.
 
         Returns:

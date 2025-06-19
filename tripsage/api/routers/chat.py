@@ -5,6 +5,8 @@ chat service for clean separation of concerns.
 """
 
 import logging
+
+# No typing imports needed - using Python 3.13 built-in types
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status

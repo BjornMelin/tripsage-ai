@@ -5,9 +5,13 @@ This module provides comprehensive fixtures following 2025 best practices
 for async testing, property-based testing, and dependency injection.
 """
 
+from __future__ import annotations
+
 import asyncio
 import uuid
+from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -31,6 +35,9 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
 # Hypothesis strategies for property-based testing
 API_KEY_STRATEGIES = {
     "openai": st.text(min_size=20, max_size=100).map(lambda x: f"sk-{x}"),
@@ -50,7 +57,7 @@ TIMESTAMPS = st.datetimes(
 
 
 @pytest.fixture(scope="session")
-def event_loop():
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create event loop for the test session."""
     loop = asyncio.new_event_loop()
     yield loop
@@ -58,19 +65,19 @@ def event_loop():
 
 
 @pytest.fixture
-def sample_user_id():
+def sample_user_id() -> str:
     """Generate a sample user ID."""
     return str(uuid.uuid4())
 
 
 @pytest.fixture
-def sample_key_id():
+def sample_key_id() -> str:
     """Generate a sample key ID."""
     return str(uuid.uuid4())
 
 
 @pytest.fixture
-def mock_principal():
+def mock_principal() -> Principal:
     """Create mock authenticated principal."""
     return Principal(
         id="test_user_123",
@@ -81,7 +88,7 @@ def mock_principal():
 
 
 @pytest.fixture
-def multiple_principals():
+def multiple_principals() -> list[Principal]:
     """Create multiple principals for concurrent testing."""
     return [
         Principal(
@@ -95,7 +102,7 @@ def multiple_principals():
 
 
 @pytest.fixture
-def sample_api_key_create():
+def sample_api_key_create() -> ApiKeyCreate:
     """Create sample API key creation request."""
     return ApiKeyCreate(
         service="openai",
@@ -106,7 +113,7 @@ def sample_api_key_create():
 
 
 @pytest.fixture
-def sample_api_key_create_request():
+def sample_api_key_create_request() -> ApiKeyCreateRequest:
     """Create sample API key creation request for service layer."""
     return ApiKeyCreateRequest(
         name="Test OpenAI Key",
@@ -117,7 +124,7 @@ def sample_api_key_create_request():
 
 
 @pytest.fixture
-def sample_api_key_response():
+def sample_api_key_response() -> ApiKeyResponse:
     """Create sample API key response."""
     return ApiKeyResponse(
         id=str(uuid.uuid4()),
@@ -135,7 +142,7 @@ def sample_api_key_response():
 
 
 @pytest.fixture
-def multiple_api_key_responses():
+def multiple_api_key_responses() -> list[ApiKeyResponse]:
     """Create multiple API key responses for bulk testing."""
     base_time = datetime.now(timezone.utc)
     return [
@@ -157,7 +164,7 @@ def multiple_api_key_responses():
 
 
 @pytest.fixture
-def sample_validation_result():
+def sample_validation_result() -> ValidationResult:
     """Create sample validation result."""
     return ValidationResult(
         is_valid=True,
@@ -168,7 +175,7 @@ def sample_validation_result():
 
 
 @pytest.fixture
-def validation_results_various():
+def validation_results_various() -> dict[str, ValidationResult]:
     """Create various validation results for comprehensive testing."""
     return {
         "valid": ValidationResult(
@@ -205,7 +212,7 @@ def validation_results_various():
 
 
 @pytest.fixture
-def sample_db_result():
+def sample_db_result() -> dict[str, Any]:
     """Create sample database result."""
     return {
         "id": str(uuid.uuid4()),
@@ -225,7 +232,7 @@ def sample_db_result():
 
 
 @pytest.fixture
-def multiple_db_results():
+def multiple_db_results() -> list[dict[str, Any]]:
     """Create multiple database results for bulk testing."""
     base_time = datetime.now(timezone.utc)
     return [
@@ -251,7 +258,7 @@ def multiple_db_results():
 
 
 @pytest.fixture
-async def mock_api_key_service():
+async def mock_api_key_service() -> AsyncGenerator[MagicMock, None]:
     """Create comprehensive mock API key service."""
     service = MagicMock(spec=ApiKeyService)
 
@@ -280,7 +287,7 @@ async def mock_api_key_service():
 
 
 @pytest.fixture
-async def mock_key_monitoring_service():
+async def mock_key_monitoring_service() -> MagicMock:
     """Create comprehensive mock key monitoring service."""
     service = MagicMock(spec=KeyMonitoringService)
 
@@ -295,7 +302,7 @@ async def mock_key_monitoring_service():
 
 
 @pytest.fixture
-def mock_database_service():
+def mock_database_service() -> AsyncMock:
     """Create mock database service for testing."""
     db = AsyncMock()
 
@@ -311,7 +318,7 @@ def mock_database_service():
 
 
 @pytest.fixture
-def mock_cache_service():
+def mock_cache_service() -> AsyncMock:
     """Create mock cache service for testing."""
     cache = AsyncMock()
 
@@ -328,7 +335,7 @@ def mock_cache_service():
 
 
 @pytest.fixture
-def mock_audit_service():
+def mock_audit_service() -> AsyncMock:
     """Create mock audit service for testing."""
     audit = AsyncMock()
 
@@ -343,10 +350,10 @@ def mock_audit_service():
 
 @pytest.fixture
 async def api_key_service_with_mocks(
-    mock_database_service,
-    mock_cache_service,
-    mock_audit_service,
-):
+    mock_database_service: AsyncMock,
+    mock_cache_service: AsyncMock,
+    mock_audit_service: AsyncMock,
+) -> AsyncGenerator[ApiKeyService, None]:
     """Create API key service with all mocked dependencies."""
     service = ApiKeyService()
     service.db = mock_database_service
@@ -358,13 +365,13 @@ async def api_key_service_with_mocks(
 
 
 @pytest.fixture
-def sample_rotate_request():
+def sample_rotate_request() -> ApiKeyRotateRequest:
     """Create sample key rotation request."""
     return ApiKeyRotateRequest(new_key="sk-rotated_key_for_testing_67890")
 
 
 @pytest.fixture
-def sample_validate_request():
+def sample_validate_request() -> ApiKeyValidateRequest:
     """Create sample key validation request."""
     return ApiKeyValidateRequest(
         service="openai",
@@ -374,7 +381,7 @@ def sample_validate_request():
 
 
 @pytest.fixture
-def monitoring_data_samples():
+def monitoring_data_samples() -> dict[str, dict[str, Any]]:
     """Create sample monitoring data."""
     base_time = datetime.now(timezone.utc)
     return {
@@ -406,7 +413,7 @@ def monitoring_data_samples():
 
 
 @pytest.fixture
-def audit_log_samples():
+def audit_log_samples() -> list[dict[str, Any]]:
     """Create sample audit log entries."""
     base_time = datetime.now(timezone.utc)
     return [
@@ -433,7 +440,7 @@ def audit_log_samples():
 
 
 @pytest.fixture
-def error_scenarios():
+def error_scenarios() -> dict[str, Exception]:
     """Create various error scenarios for testing."""
     return {
         "network_timeout": asyncio.TimeoutError("Network request timeout"),
@@ -447,7 +454,7 @@ def error_scenarios():
 
 
 @pytest.fixture
-def performance_test_data():
+def performance_test_data() -> dict[str, list[str]]:
     """Create data for performance testing."""
     return {
         "small_batch": [f"sk-test_key_{i}" for i in range(10)],
@@ -458,7 +465,7 @@ def performance_test_data():
 
 
 @pytest.fixture
-def security_test_inputs():
+def security_test_inputs() -> dict[str, str | bytes]:
     """Create inputs for security testing."""
     return {
         "sql_injection": "'; DROP TABLE api_keys; --",
@@ -474,36 +481,36 @@ def security_test_inputs():
 
 # Property-based testing strategies as fixtures
 @pytest.fixture
-def api_key_strategies():
+def api_key_strategies() -> dict[str, st.SearchStrategy[str]]:
     """Provide Hypothesis strategies for API keys."""
     return API_KEY_STRATEGIES
 
 
 @pytest.fixture
-def service_type_strategy():
+def service_type_strategy() -> st.SearchStrategy[ServiceType]:
     """Provide Hypothesis strategy for service types."""
     return SERVICE_TYPES
 
 
 @pytest.fixture
-def user_id_strategy():
+def user_id_strategy() -> st.SearchStrategy[str]:
     """Provide Hypothesis strategy for user IDs."""
     return USER_IDS
 
 
 @pytest.fixture
-def key_name_strategy():
+def key_name_strategy() -> st.SearchStrategy[str]:
     """Provide Hypothesis strategy for key names."""
     return KEY_NAMES
 
 
 @pytest.fixture
-def description_strategy():
+def description_strategy() -> st.SearchStrategy[str]:
     """Provide Hypothesis strategy for descriptions."""
     return DESCRIPTIONS
 
 
 @pytest.fixture
-def timestamp_strategy():
+def timestamp_strategy() -> st.SearchStrategy[datetime]:
     """Provide Hypothesis strategy for timestamps."""
     return TIMESTAMPS

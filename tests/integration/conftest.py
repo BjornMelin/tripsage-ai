@@ -4,10 +4,13 @@ Pytest configuration for TripSage tests.
 This module provides common fixtures and utilities used across all test suites.
 """
 
+from __future__ import annotations
+
 import asyncio
 import os
 import sys
-from typing import Any
+from collections.abc import Generator
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -15,6 +18,9 @@ import pytest
 # Load test environment variables FIRST
 from dotenv import load_dotenv
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from tripsage_core.config import Settings
 
 load_dotenv(".env.test", override=True)
 
@@ -62,7 +68,7 @@ os.environ.update(
 
 
 @pytest.fixture(autouse=True)
-def mock_environment_variables():
+def mock_environment_variables() -> Generator[dict[str, str], None, None]:
     """Ensure environment variables are available for tests."""
     # Environment already set above, just yield
     yield os.environ
@@ -70,7 +76,7 @@ def mock_environment_variables():
 
 # Mock MCP manager for use in tests
 @pytest.fixture
-def mock_mcp_manager():
+def mock_mcp_manager() -> Generator[MagicMock, None, None]:
     """Create a mock MCPManager for testing."""
     manager = MagicMock()
     manager.invoke = AsyncMock(return_value={})
@@ -101,7 +107,7 @@ def mock_mcp_manager():
 
 # Mock MCP registry for use in tests
 @pytest.fixture
-def mock_mcp_registry():
+def mock_mcp_registry() -> Generator[MagicMock, None, None]:
     """Create a mock MCPClientRegistry for testing."""
     registry = MagicMock()
     registry._registry = {}  # Empty registry
@@ -133,7 +139,7 @@ def mock_mcp_registry():
 
 # Mock MCP wrapper for use in tests
 @pytest.fixture
-def mock_mcp_wrapper():
+def mock_mcp_wrapper() -> MagicMock:
     """Create a generic mock MCP wrapper."""
     wrapper = MagicMock()
     wrapper.invoke_method = AsyncMock()
@@ -161,7 +167,7 @@ class TestResponse(BaseModel):
 
 # Mock response fixtures
 @pytest.fixture
-def mock_successful_response():
+def mock_successful_response() -> TestResponse:
     """Create a successful mock response."""
     return TestResponse(
         results=[
@@ -174,14 +180,14 @@ def mock_successful_response():
 
 
 @pytest.fixture
-def mock_error_response():
+def mock_error_response() -> TestResponse:
     """Create an error mock response."""
     return TestResponse(results=[], total=0, success=False)
 
 
 # Async test utilities
 @pytest.fixture
-def event_loop():
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create an event loop for async tests."""
     loop = asyncio.new_event_loop()
     yield loop
@@ -214,7 +220,7 @@ def create_mock_tool_response(data: Any, error: str | None = None):
 
 # WebOperationsCache fixture
 @pytest.fixture
-def mock_web_operations_cache():
+def mock_web_operations_cache() -> Generator[MagicMock, None, None]:
     """Create a mock WebOperationsCache for testing."""
     from tripsage_core.utils.content_utils import ContentType
 
@@ -241,7 +247,9 @@ def mock_web_operations_cache():
 
 
 @pytest.fixture(autouse=True)
-def mock_settings_and_redis(monkeypatch):
+def mock_settings_and_redis(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[dict[str, Any], None, None]:
     """Mock settings and Redis client to avoid actual connections and
     validation errors."""
     # Set environment variables for testing
@@ -293,7 +301,7 @@ def mock_settings_and_redis(monkeypatch):
 
 # Clean up after tests
 @pytest.fixture(autouse=True)
-def cleanup_after_test():
+def cleanup_after_test() -> Generator[None, None, None]:
     """Clean up resources after each test."""
     yield
     # Add any cleanup logic here if needed

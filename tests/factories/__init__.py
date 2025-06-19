@@ -6,8 +6,10 @@ across the entire test suite. Uses the factory pattern to create realistic
 test data for models, requests, and responses.
 """
 
+from __future__ import annotations
+
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any, override
 from uuid import uuid4
 
 from tripsage_core.models.schemas_common.enums import (
@@ -22,6 +24,9 @@ from tripsage_core.models.schemas_common.enums import (
     TripVisibility,
     UserRole,
 )
+
+if TYPE_CHECKING:
+    from tripsage_core.models.schemas_common.chat import ChatMessage
 
 
 class BaseFactory:

@@ -5,7 +5,7 @@ This module implements a simple, maintainable graph-based orchestration system
 using modern LangGraph patterns with create_react_agent for simplicity.
 """
 
-from typing import Any
+# No typing imports needed - using Python 3.13 built-in types
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -90,8 +90,8 @@ You help users plan comprehensive trips by:
 Start by greeting the user and asking how you can help with their travel planning!"""
 
     async def process_conversation(
-        self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+        self, messages: list[dict[str, any]], config: dict[str, any] | None = None
+    ) -> dict[str, any]:
         """
         Process a conversation using the simple agent.
 
@@ -168,7 +168,7 @@ Start by greeting the user and asking how you can help with their travel plannin
             return "unknown"
 
     async def stream_conversation(
-        self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
+        self, messages: list[dict[str, any]], config: dict[str, any] | None = None
     ):
         """
         Stream a conversation response from the agent.
@@ -209,7 +209,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 "messages": [{"role": "assistant", "content": f"Error: {str(e)}"}],
             }
 
-    async def health_check(self) -> dict[str, Any]:
+    async def health_check(self) -> dict[str, any]:
         """Perform health check on the orchestrator."""
         try:
             # Test basic agent functionality

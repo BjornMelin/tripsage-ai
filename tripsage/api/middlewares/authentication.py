@@ -10,6 +10,8 @@ import hmac
 import logging
 import secrets
 import time
+
+# No typing imports needed - using Python 3.13 built-in types
 from collections.abc import Callable
 from datetime import datetime, timezone
 

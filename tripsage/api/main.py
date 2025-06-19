@@ -6,8 +6,8 @@ including middleware, routers, exception handlers, and startup/shutdown events.
 
 import logging
 from contextlib import asynccontextmanager
-# No typing imports needed - using Python 3.13 built-in types
 
+# No typing imports needed - using Python 3.13 built-in types
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -63,7 +63,9 @@ from tripsage_core.services.mcp_service import mcp_manager
 logger = logging.getLogger(__name__)
 
 
-def format_error_response(exc: CoreTripSageError, request: Request) -> dict[str, str | bool]:
+def format_error_response(
+    exc: CoreTripSageError, request: Request
+) -> dict[str, str | bool]:
     """Format error response with simple, consistent structure.
 
     Modern approach - single error format for all consumers.

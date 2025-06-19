@@ -4,12 +4,19 @@ Modern test configuration for TripSage.
 Simple, clean test setup following 2025 best practices.
 """
 
+from __future__ import annotations
+
 import asyncio
 import os
+from collections.abc import AsyncGenerator, Generator
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 # Set test environment
 os.environ.update(
@@ -25,7 +32,7 @@ os.environ.update(
 
 
 @pytest.fixture
-def event_loop():
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """Create event loop for async tests."""
     loop = asyncio.new_event_loop()
     yield loop
@@ -33,7 +40,7 @@ def event_loop():
 
 
 @pytest.fixture
-async def test_client():
+async def test_client() -> AsyncGenerator[AsyncClient, None]:
     """Create test client with modern dependency overrides."""
     from tripsage.api.main import create_app
     from tripsage_core.config import Settings

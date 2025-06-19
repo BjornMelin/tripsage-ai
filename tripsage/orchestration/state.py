@@ -6,7 +6,7 @@ in the LangGraph-based orchestration system, enhanced for clarity and maintainab
 """
 
 from datetime import datetime, timezone
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from langgraph.graph import add_messages
 from pydantic import BaseModel, Field
@@ -53,8 +53,8 @@ class SearchResult(BaseModel):
     search_id: str
     timestamp: str
     agent: str
-    parameters: dict[str, Any]
-    results: list[dict[str, Any]]
+    parameters: dict[str, any]
+    results: list[dict[str, any]]
     result_count: int
     status: Literal["success", "error", "partial"]
     error_message: str | None = None
@@ -63,9 +63,9 @@ class SearchResult(BaseModel):
 class BookingProgress(BaseModel):
     """Booking progress tracking."""
 
-    flight_booking: dict[str, Any] | None = None
-    accommodation_booking: dict[str, Any] | None = None
-    activity_bookings: list[dict[str, Any]] = Field(default_factory=list)
+    flight_booking: dict[str, any] | None = None
+    accommodation_booking: dict[str, any] | None = None
+    activity_bookings: list[dict[str, any]] = Field(default_factory=list)
     total_cost: float | None = None
     currency: str = "USD"
     status: Literal["planning", "comparing", "booking", "confirmed", "cancelled"] = (
@@ -82,7 +82,7 @@ class HandoffContext(BaseModel):
     routing_reasoning: str
     timestamp: str
     message_analyzed: str
-    additional_context: dict[str, Any] = Field(default_factory=dict)
+    additional_context: dict[str, any] = Field(default_factory=dict)
 
 
 class ErrorInfo(BaseModel):
@@ -91,7 +91,7 @@ class ErrorInfo(BaseModel):
     error_count: int = 0
     last_error: str | None = None
     retry_attempts: dict[str, int] = Field(default_factory=dict)
-    error_history: list[dict[str, Any]] = Field(default_factory=list)
+    error_history: list[dict[str, any]] = Field(default_factory=list)
 
 
 class ToolCallInfo(BaseModel):
@@ -99,8 +99,8 @@ class ToolCallInfo(BaseModel):
 
     tool_name: str
     timestamp: str
-    parameters: dict[str, Any]
-    result: dict[str, Any] | None = None
+    parameters: dict[str, any]
+    result: dict[str, any] | None = None
     status: Literal["pending", "success", "error"] = "pending"
     error_message: str | None = None
     execution_time_ms: float | None = None
@@ -123,38 +123,38 @@ class TravelPlanningState(TypedDict):
     """
 
     # Core conversation data - handled by LangGraph add_messages
-    messages: Annotated[list[dict[str, Any]], add_messages]
+    messages: Annotated[list[dict[str, any]], add_messages]
     user_id: str
     session_id: str
 
     # Structured user context (using Pydantic models for validation)
-    user_preferences: dict[str, Any] | None  # Serialized UserPreferences
-    travel_dates: dict[str, Any] | None  # Serialized TravelDates
-    destination_info: dict[str, Any] | None  # Serialized DestinationInfo
+    user_preferences: dict[str, any] | None  # Serialized UserPreferences
+    travel_dates: dict[str, any] | None  # Serialized TravelDates
+    destination_info: dict[str, any] | None  # Serialized DestinationInfo
 
     # Search results with structured tracking
-    flight_searches: list[dict[str, Any]]  # List of SearchResult dicts
-    accommodation_searches: list[dict[str, Any]]  # List of SearchResult dicts
-    activity_searches: list[dict[str, Any]]  # List of SearchResult dicts
+    flight_searches: list[dict[str, any]]  # List of SearchResult dicts
+    accommodation_searches: list[dict[str, any]]  # List of SearchResult dicts
+    activity_searches: list[dict[str, any]]  # List of SearchResult dicts
 
     # Booking progress tracking
-    booking_progress: dict[str, Any] | None  # Serialized BookingProgress
+    booking_progress: dict[str, any] | None  # Serialized BookingProgress
 
     # Agent orchestration and routing
     current_agent: str | None
     agent_history: list[str]
-    handoff_context: dict[str, Any] | None  # Serialized HandoffContext
+    handoff_context: dict[str, any] | None  # Serialized HandoffContext
 
     # Enhanced error handling and resilience
-    error_info: dict[str, Any]  # Serialized ErrorInfo
+    error_info: dict[str, any]  # Serialized ErrorInfo
 
     # Tool execution tracking with detailed information
-    active_tool_calls: list[dict[str, Any]]  # List of ToolCallInfo dicts
-    completed_tool_calls: list[dict[str, Any]]  # List of ToolCallInfo dicts
+    active_tool_calls: list[dict[str, any]]  # List of ToolCallInfo dicts
+    completed_tool_calls: list[dict[str, any]]  # List of ToolCallInfo dicts
 
     # Memory and context enhancement
     conversation_summary: str | None  # LLM-generated summary for long conversations
-    extracted_entities: dict[str, Any]  # Named entities extracted from conversation
+    extracted_entities: dict[str, any]  # Named entities extracted from conversation
     user_intent: str | None  # Current identified user intent
     confidence_score: float | None  # Confidence in current routing/intent
 

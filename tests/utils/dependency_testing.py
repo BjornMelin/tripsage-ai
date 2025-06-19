@@ -20,10 +20,13 @@ Example usage:
     ```
 """
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
-from typing import Any, Dict
+from collections.abc import AsyncGenerator, Awaitable, Callable, Generator
+from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -36,6 +39,9 @@ from tripsage.api.core.dependencies import (
     reset_dependency_health,
 )
 
+if TYPE_CHECKING:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +49,7 @@ class MockServiceFactory:
     """Factory for creating mock services with common patterns."""
 
     @staticmethod
-    def create_database_service_mock():
+    def create_database_service_mock() -> AsyncMock:
         """Create a mock database service."""
         mock = AsyncMock()
         mock.execute_query.return_value = [{"id": 1, "test": "data"}]
@@ -55,7 +61,7 @@ class MockServiceFactory:
         return mock
 
     @staticmethod
-    def create_cache_service_mock():
+    def create_cache_service_mock() -> AsyncMock:
         """Create a mock cache service."""
         mock = AsyncMock()
         mock.get.return_value = None
@@ -65,7 +71,7 @@ class MockServiceFactory:
         return mock
 
     @staticmethod
-    def create_user_service_mock():
+    def create_user_service_mock() -> AsyncMock:
         """Create a mock user service."""
         mock = AsyncMock()
         mock.get_user_by_id.return_value = {
@@ -82,7 +88,7 @@ class MockServiceFactory:
         return mock
 
     @staticmethod
-    def create_chat_service_mock():
+    def create_chat_service_mock() -> AsyncMock:
         """Create a mock chat service."""
         mock = AsyncMock()
         mock.chat_completion.return_value = {
@@ -99,24 +105,24 @@ class MockServiceFactory:
 class DependencyTestClient:
     """Enhanced test client with dependency override capabilities."""
 
-    def __init__(self, app: FastAPI):
+    def __init__(self, app: FastAPI) -> None:
         self.app = app
         self.client = TestClient(app)
-        self.async_client = None
-        self._overrides: Dict[str, Any] = {}
+        self.async_client: AsyncClient | None = None
+        self._overrides: dict[str, Any] = {}
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> DependencyTestClient:
         """Enter async context manager."""
         self.async_client = AsyncClient(app=self.app, base_url="http://test")
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
         """Exit async context manager."""
         if self.async_client:
             await self.async_client.aclose()
         self.clear_overrides()
 
-    def override_dependency(self, service_name: str, mock_service: Any):
+    def override_dependency(self, service_name: str, mock_service: Any) -> None:
         """Override a dependency with a mock service."""
         self._overrides[service_name] = mock_service
         # Apply override to the app
@@ -125,7 +131,7 @@ class DependencyTestClient:
             # dependency overrides work in the specific version
             pass
 
-    def clear_overrides(self):
+    def clear_overrides(self) -> None:
         """Clear all dependency overrides."""
         self._overrides.clear()
         if hasattr(self.app, "dependency_overrides"):
@@ -134,7 +140,7 @@ class DependencyTestClient:
 
 
 @pytest.fixture
-async def dependency_test_setup():
+async def dependency_test_setup() -> AsyncGenerator[None, None]:
     """Pytest fixture for setting up dependency testing."""
     # Reset dependency health before each test
     reset_dependency_health()
@@ -146,7 +152,7 @@ async def dependency_test_setup():
 
 
 @pytest.fixture
-def mock_services():
+def mock_services() -> dict[str, AsyncMock]:
     """Pytest fixture providing common mock services."""
     return {
         "database": MockServiceFactory.create_database_service_mock(),
@@ -242,7 +248,9 @@ class PerformanceTestUtils:
     """Utilities for testing dependency performance."""
 
     @staticmethod
-    async def measure_dependency_latency(dependency_func, iterations: int = 100):
+    async def measure_dependency_latency(
+        dependency_func: Callable[[], Awaitable[Any]], iterations: int = 100
+    ) -> dict[str, float | int]:
         """Measure average latency of a dependency function."""
         import time
 
@@ -262,8 +270,8 @@ class PerformanceTestUtils:
 
     @staticmethod
     async def test_concurrent_dependency_access(
-        dependency_func, concurrent_requests: int = 50
-    ):
+        dependency_func: Callable[[], Awaitable[Any]], concurrent_requests: int = 50
+    ) -> dict[str, float | int]:
         """Test concurrent access to a dependency."""
         tasks = [dependency_func() for _ in range(concurrent_requests)]
 

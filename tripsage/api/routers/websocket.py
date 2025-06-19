@@ -20,7 +20,8 @@ import logging
 import time
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any
+
+# No typing imports needed - using Python 3.13 built-in types
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -193,7 +194,7 @@ class MessageBatcher:
         self._running = True
         self._send_lock = asyncio.Lock()
 
-    async def add_message(self, message: dict[str, Any]) -> None:
+    async def add_message(self, message: dict[str, any]) -> None:
         """Add message to batch queue."""
         self.batch_queue.append(message)
 
@@ -222,7 +223,7 @@ class MessageBatcher:
             except Exception as e:
                 logger.error(f"Error processing batch for {self.connection_id}: {e}")
 
-    async def _send_batch(self, batch: list[dict[str, Any]]) -> None:
+    async def _send_batch(self, batch: list[dict[str, any]]) -> None:
         """Send a batch of messages with optional compression."""
         async with self._send_lock:
             try:
@@ -346,7 +347,7 @@ class ConnectionPool:
         """Get connection batcher."""
         return self.connections.get(connection_id)
 
-    async def broadcast_to_user(self, user_id: UUID, message: dict[str, Any]) -> int:
+    async def broadcast_to_user(self, user_id: UUID, message: dict[str, any]) -> int:
         """Broadcast message to all user connections."""
         count = 0
         for conn_id in self.user_connections.get(user_id, set()).copy():
@@ -356,7 +357,7 @@ class ConnectionPool:
         return count
 
     async def broadcast_to_session(
-        self, session_id: UUID, message: dict[str, Any]
+        self, session_id: UUID, message: dict[str, any]
     ) -> int:
         """Broadcast message to all session connections."""
         count = 0
