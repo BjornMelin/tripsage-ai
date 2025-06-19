@@ -15,7 +15,7 @@ from uuid import UUID
 import redis.asyncio as redis
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
@@ -52,11 +52,16 @@ class WebSocketBroadcaster:
             redis_url: Redis/DragonflyDB connection URL
         """
         self.settings = get_settings()
-        self.redis_url = redis_url or self.settings.dragonfly.url
+        self.redis_url = redis_url or self.settings.redis_url
         self.redis_client: Optional[redis.Redis] = None
         self.pubsub: Optional[redis.client.PubSub] = None
         self._running = False
         self._subscribers: Dict[str, Set[str]] = {}  # channel -> connection_ids
+
+        # Message deduplication - track recent message IDs to prevent duplicates
+        self._recent_message_ids: Set[str] = set()
+        self._max_recent_messages = 10000  # Keep track of last 10k message IDs
+        self._message_id_cleanup_counter = 0
 
         # Redis key prefixes
         self.BROADCAST_QUEUE_KEY = "tripsage:websocket:broadcast"
@@ -127,6 +132,41 @@ class WebSocketBroadcaster:
 
         logger.info("WebSocket broadcaster stopped")
 
+    def _is_duplicate_message(self, message_id: str) -> bool:
+        """Check if message is a duplicate and update tracking.
+
+        Args:
+            message_id: Unique message identifier
+
+        Returns:
+            True if message is a duplicate, False otherwise
+        """
+        if message_id in self._recent_message_ids:
+            logger.debug(f"Duplicate message detected: {message_id}")
+            return True
+
+        # Add to tracking set
+        self._recent_message_ids.add(message_id)
+
+        # Cleanup old message IDs periodically to prevent memory growth
+        self._message_id_cleanup_counter += 1
+        if self._message_id_cleanup_counter >= 1000:  # Every 1000 messages
+            if len(self._recent_message_ids) > self._max_recent_messages:
+                # Remove oldest half of message IDs (simple cleanup strategy)
+                messages_to_remove = len(self._recent_message_ids) - (
+                    self._max_recent_messages // 2
+                )
+                message_list = list(self._recent_message_ids)
+                for msg_id in message_list[:messages_to_remove]:
+                    self._recent_message_ids.discard(msg_id)
+                logger.debug(
+                    f"Cleaned up {messages_to_remove} old message IDs from "
+                    f"deduplication cache"
+                )
+            self._message_id_cleanup_counter = 0
+
+        return False
+
     async def broadcast_to_connection(
         self, connection_id: str, event: Dict[str, Any], priority: int = 1
     ) -> bool:
@@ -140,8 +180,15 @@ class WebSocketBroadcaster:
         Returns:
             True if broadcast was queued successfully
         """
+        message_id = f"conn_{connection_id}_{event.get('id', '')}"
+
+        # Check for duplicates
+        if self._is_duplicate_message(message_id):
+            logger.debug(f"Skipping duplicate broadcast to connection {connection_id}")
+            return True  # Return True since message was "handled" (by being skipped)
+
         message = BroadcastMessage(
-            id=f"conn_{connection_id}_{event.get('id', '')}",
+            id=message_id,
             event=event,
             target_type="connection",
             target_id=connection_id,
@@ -164,8 +211,15 @@ class WebSocketBroadcaster:
         Returns:
             True if broadcast was queued successfully
         """
+        message_id = f"user_{user_id}_{event.get('id', '')}"
+
+        # Check for duplicates
+        if self._is_duplicate_message(message_id):
+            logger.debug(f"Skipping duplicate broadcast to user {user_id}")
+            return True
+
         message = BroadcastMessage(
-            id=f"user_{user_id}_{event.get('id', '')}",
+            id=message_id,
             event=event,
             target_type="user",
             target_id=str(user_id),
@@ -188,8 +242,15 @@ class WebSocketBroadcaster:
         Returns:
             True if broadcast was queued successfully
         """
+        message_id = f"session_{session_id}_{event.get('id', '')}"
+
+        # Check for duplicates
+        if self._is_duplicate_message(message_id):
+            logger.debug(f"Skipping duplicate broadcast to session {session_id}")
+            return True
+
         message = BroadcastMessage(
-            id=f"session_{session_id}_{event.get('id', '')}",
+            id=message_id,
             event=event,
             target_type="session",
             target_id=str(session_id),
@@ -212,8 +273,15 @@ class WebSocketBroadcaster:
         Returns:
             True if broadcast was queued successfully
         """
+        message_id = f"channel_{channel}_{event.get('id', '')}"
+
+        # Check for duplicates
+        if self._is_duplicate_message(message_id):
+            logger.debug(f"Skipping duplicate broadcast to channel {channel}")
+            return True
+
         message = BroadcastMessage(
-            id=f"channel_{channel}_{event.get('id', '')}",
+            id=message_id,
             event=event,
             target_type="channel",
             target_id=channel,
@@ -233,8 +301,15 @@ class WebSocketBroadcaster:
         Returns:
             True if broadcast was queued successfully
         """
+        message_id = f"broadcast_{event.get('id', '')}"
+
+        # Check for duplicates
+        if self._is_duplicate_message(message_id):
+            logger.debug("Skipping duplicate broadcast to all")
+            return True
+
         message = BroadcastMessage(
-            id=f"broadcast_{event.get('id', '')}",
+            id=message_id,
             event=event,
             target_type="broadcast",
             created_at=datetime.utcnow(),

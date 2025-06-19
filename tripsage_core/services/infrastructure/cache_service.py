@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 import redis.asyncio as redis
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class CacheService:
     - Connection pooling
     """
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """Initialize the cache service.
 
         Args:
@@ -52,12 +52,20 @@ class CacheService:
         if self._is_connected:
             return
 
+        # Skip connection if redis_url is None (testing/disabled mode)
+        if self.settings.redis_url is None:
+            logger.info(
+                "Redis URL not configured, cache service will operate in disabled mode"
+            )
+            self._is_connected = False
+            return
+
         try:
             # Get DragonflyDB URL from settings
-            redis_url = self.settings.dragonfly.url
+            redis_url = self.settings.redis_url
 
             # Add password to URL if configured
-            if self.settings.dragonfly.password:
+            if self.settings.redis_password:
                 # Parse URL and add password
                 from urllib.parse import urlparse, urlunparse
 
@@ -65,11 +73,11 @@ class CacheService:
                 # Reconstruct with password
                 if parsed.username:
                     netloc = (
-                        f"{parsed.username}:{self.settings.dragonfly.password}"
+                        f"{parsed.username}:{self.settings.redis_password}"
                         f"@{parsed.hostname}"
                     )
                 else:
-                    netloc = f":{self.settings.dragonfly.password}@{parsed.hostname}"
+                    netloc = f":{self.settings.redis_password}@{parsed.hostname}"
                 if parsed.port:
                     netloc += f":{parsed.port}"
                 redis_url = urlunparse(
@@ -83,13 +91,13 @@ class CacheService:
                     )
                 )
 
-            safe_url = redis_url.replace(self.settings.dragonfly.password or "", "***")
+            safe_url = redis_url.replace(self.settings.redis_password or "", "***")
             logger.info(f"Connecting to DragonflyDB at {safe_url}")
 
             # Create connection pool for better performance
             self._connection_pool = redis.ConnectionPool.from_url(
                 redis_url,
-                max_connections=self.settings.dragonfly.max_connections,
+                max_connections=self.settings.redis_max_connections,
                 retry_on_timeout=True,
                 decode_responses=False,  # We handle JSON encoding/decoding manually
             )
@@ -153,10 +161,14 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return success in disabled mode
+        if not self.is_connected:
+            return True
+
         try:
-            # Use default TTL if not specified
+            # Use default TTL if not specified (flat config)
             if ttl is None:
-                ttl = self.settings.dragonfly.ttl_medium
+                ttl = 3600  # Default medium TTL (1 hour)
 
             json_value = json.dumps(value, default=str)
             result = await self._client.set(key, json_value, ex=ttl)
@@ -181,6 +193,10 @@ class CacheService:
             Deserialized value or default
         """
         await self.ensure_connected()
+
+        # Return default in disabled mode
+        if not self.is_connected:
+            return default
 
         try:
             value = await self._client.get(key)
@@ -214,9 +230,13 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return success in disabled mode
+        if not self.is_connected:
+            return True
+
         try:
             if ttl is None:
-                ttl = self.settings.dragonfly.ttl_medium
+                ttl = 3600  # Default medium TTL (1 hour)
 
             return await self._client.setex(key, ttl, value)
         except Exception as e:
@@ -238,6 +258,10 @@ class CacheService:
             The value as string or None if not found
         """
         await self.ensure_connected()
+
+        # Return None in disabled mode
+        if not self.is_connected:
+            return None
 
         try:
             value = await self._client.get(key)
@@ -264,6 +288,10 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return length of keys in disabled mode (simulate successful deletion)
+        if not self.is_connected:
+            return len(keys)
+
         try:
             return await self._client.delete(*keys)
         except Exception as e:
@@ -285,6 +313,10 @@ class CacheService:
             Number of existing keys
         """
         await self.ensure_connected()
+
+        # Return 0 in disabled mode (no keys exist)
+        if not self.is_connected:
+            return 0
 
         try:
             return await self._client.exists(*keys)
@@ -309,6 +341,10 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return True in disabled mode (simulate success)
+        if not self.is_connected:
+            return True
+
         try:
             return await self._client.expire(key, seconds)
         except Exception as e:
@@ -331,6 +367,10 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return -2 in disabled mode (key doesn't exist)
+        if not self.is_connected:
+            return -2
+
         try:
             return await self._client.ttl(key)
         except Exception as e:
@@ -350,6 +390,10 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return None in disabled mode (operation not available)
+        if not self.is_connected:
+            return None
+
         try:
             return await self._client.incr(key)
         except Exception as e:
@@ -366,6 +410,10 @@ class CacheService:
             The new counter value or None if failed
         """
         await self.ensure_connected()
+
+        # Return None in disabled mode (operation not available)
+        if not self.is_connected:
+            return None
 
         try:
             return await self._client.decr(key)
@@ -403,6 +451,10 @@ class CacheService:
         """
         await self.ensure_connected()
 
+        # Return list of None values in disabled mode
+        if not self.is_connected:
+            return [None] * len(keys)
+
         try:
             values = await self._client.mget(keys)
             return [v.decode("utf-8") if v else None for v in values]
@@ -425,6 +477,10 @@ class CacheService:
             True if successful
         """
         await self.ensure_connected()
+
+        # Return True in disabled mode (simulate success)
+        if not self.is_connected:
+            return True
 
         try:
             return await self._client.mset(mapping)
@@ -449,6 +505,10 @@ class CacheService:
             List of matching keys
         """
         await self.ensure_connected()
+
+        # Return empty list in disabled mode
+        if not self.is_connected:
+            return []
 
         try:
             keys = await self._client.keys(pattern)
@@ -524,6 +584,11 @@ class CacheService:
         """
         try:
             await self.ensure_connected()
+
+            # Return False in disabled mode (not healthy)
+            if not self.is_connected:
+                return False
+
             return await self._client.ping()
         except Exception as e:
             logger.error(f"Cache health check failed: {e}")
@@ -541,7 +606,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.dragonfly.ttl_short)
+        return await self.set_json(key, value, ttl=300)  # Short TTL (5 minutes)
 
     async def set_medium(self, key: str, value: Any) -> bool:
         """Set a value with medium TTL (1 hour by default).
@@ -553,7 +618,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.dragonfly.ttl_medium)
+        return await self.set_json(key, value, ttl=3600)  # Medium TTL (1 hour)
 
     async def set_long(self, key: str, value: Any) -> bool:
         """Set a value with long TTL (24 hours by default).
@@ -565,7 +630,7 @@ class CacheService:
         Returns:
             True if successful
         """
-        return await self.set_json(key, value, ttl=self.settings.dragonfly.ttl_long)
+        return await self.set_json(key, value, ttl=86400)  # Long TTL (24 hours)
 
 
 # Global service instance

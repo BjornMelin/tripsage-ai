@@ -25,7 +25,7 @@ __version__ = "1.0.0"
 
 # Import key classes for convenience
 from tripsage_core import exceptions
-from tripsage_core.config import CoreAppSettings, get_settings, init_settings, settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.models.base_core_model import (
     TripSageBaseResponse,
     TripSageDBModel,
@@ -42,8 +42,6 @@ __all__ = [
     # Exceptions
     "exceptions",
     # Config
-    "CoreAppSettings",
+    "Settings",
     "get_settings",
-    "init_settings",
-    "settings",
 ]

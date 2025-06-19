@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.config import Settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.websocket_broadcaster import (
     BroadcastMessage,
@@ -85,9 +85,8 @@ class TestWebSocketBroadcaster:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        settings = Mock(spec=CoreAppSettings)
-        settings.dragonfly = Mock()
-        settings.dragonfly.url = "redis://localhost:6379/0"
+        settings = Mock(spec=Settings)
+        settings.redis_url = "redis://localhost:6379/0"
         return settings
 
     @pytest.fixture
