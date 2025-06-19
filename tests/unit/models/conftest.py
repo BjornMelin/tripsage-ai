@@ -5,6 +5,7 @@ from typing import Any, Dict
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from tripsage_core.models.db.price_history import EntityType
 from tripsage_core.models.db.saved_option import OptionType
@@ -221,3 +222,57 @@ def sample_trip_collaborator_dict() -> Dict[str, Any]:
         "added_at": now,
         "updated_at": now,
     }
+
+
+class ValidationHelper:
+    """Helper class for Pydantic validation testing."""
+    
+    def assert_validation_error(self, model_class, data_dict, field_name, expected_error_text):
+        """Assert that creating a model with given data raises a ValidationError for the specified field."""
+        with pytest.raises(ValidationError) as exc_info:
+            model_class(**data_dict)
+        
+        # Check that the error is for the expected field
+        errors = exc_info.value.errors()
+        field_errors = [error for error in errors if error.get('loc') and field_name in error['loc']]
+        
+        assert field_errors, f"No validation error found for field '{field_name}'. All errors: {errors}"
+        
+        # Check that the error message contains expected text
+        error_messages = [error['msg'] for error in field_errors]
+        assert any(expected_error_text in msg for msg in error_messages), \
+            f"Expected error text '{expected_error_text}' not found in error messages: {error_messages}"
+
+
+class SerializationHelper:
+    """Helper class for testing Pydantic model serialization."""
+    
+    def test_json_round_trip(self, model_instance):
+        """Test JSON serialization and deserialization round trip."""
+        # Serialize to JSON
+        json_data = model_instance.model_dump_json()
+        
+        # Deserialize back to model
+        model_class = type(model_instance)
+        return model_class.model_validate_json(json_data)
+    
+    def test_dict_round_trip(self, model_instance):
+        """Test dict serialization and deserialization round trip."""
+        # Serialize to dict
+        dict_data = model_instance.model_dump()
+        
+        # Deserialize back to model
+        model_class = type(model_instance)
+        return model_class.model_validate(dict_data)
+
+
+@pytest.fixture
+def validation_helper():
+    """Provide validation helper for testing Pydantic models."""
+    return ValidationHelper()
+
+
+@pytest.fixture
+def serialization_helper():
+    """Provide serialization helper for testing Pydantic models."""
+    return SerializationHelper()
