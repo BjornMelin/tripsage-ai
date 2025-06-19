@@ -61,7 +61,7 @@ class WebSocketAuthService:
         try:
             payload = jwt.decode(
                 token,
-                self.settings.jwt_secret_key.get_secret_value(),
+                self.settings.database_jwt_secret.get_secret_value(),
                 algorithms=["HS256"],
             )
 
