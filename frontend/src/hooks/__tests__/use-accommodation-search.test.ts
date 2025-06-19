@@ -1,10 +1,10 @@
 import { api } from "@/lib/api/client";
 import { useSearchParamsStore } from "@/stores/search-params-store";
 import { useSearchResultsStore } from "@/stores/search-results-store";
+import { AllTheProviders } from "@/test/test-utils";
 import { renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AllTheProviders } from "@/test/test-utils";
 import { useAccommodationSearch } from "../use-accommodation-search";
 
 // Mock the API
@@ -210,7 +210,7 @@ describe("useAccommodationSearch", () => {
     });
 
     // Resolve the promise
-    resolvePromise!({
+    resolvePromise?.({
       results: [],
       totalResults: 0,
     });

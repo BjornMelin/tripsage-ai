@@ -1,6 +1,11 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAddApiKey, useApiKeys, useDeleteApiKey, useValidateApiKey } from "../use-api-keys";
+import {
+  useAddApiKey,
+  useApiKeys,
+  useDeleteApiKey,
+  useValidateApiKey,
+} from "../use-api-keys";
 
 // Mock the dependencies
 const mockSetKeys = vi.fn();
@@ -47,7 +52,7 @@ describe("useApiKeys", () => {
       error: null,
       refetch: vi.fn(),
     };
-    
+
     mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
@@ -59,7 +64,7 @@ describe("useApiKeys", () => {
     const mockData = {
       keys: {
         "google-maps": { is_valid: true, has_key: true, service: "google-maps" },
-        "openai": { is_valid: false, has_key: true, service: "openai" },
+        openai: { is_valid: false, has_key: true, service: "openai" },
       },
       supported_services: ["google-maps", "openai", "weather"],
     };
@@ -77,7 +82,9 @@ describe("useApiKeys", () => {
 
     await waitFor(() => {
       expect(mockSetKeys).toHaveBeenCalledWith(mockData.keys);
-      expect(mockSetSupportedServices).toHaveBeenCalledWith(mockData.supported_services);
+      expect(mockSetSupportedServices).toHaveBeenCalledWith(
+        mockData.supported_services
+      );
     });
   });
 

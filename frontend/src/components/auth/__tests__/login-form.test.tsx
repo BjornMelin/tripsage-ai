@@ -1,5 +1,5 @@
 import { useAuth } from "@/contexts/auth-context";
-import { render, screen, waitFor, createMockUser } from "@/test/test-utils";
+import { createMockUser, render, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";

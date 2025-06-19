@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type NextRequest, NextResponse } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @supabase/ssr using vi.hoisted to ensure proper hoisting
 const mockCreateServerClient = vi.hoisted(() => vi.fn());

@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 
-import type { Destination } from "@/types/search";
 import { render } from "@/test/test-utils";
+import type { Destination } from "@/types/search";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,3 +1,4 @@
+import { useBudgetStore } from "@/stores/budget-store";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAlerts, useBudget, useBudgetActions, useExpenses } from "../use-budget";
@@ -15,7 +16,6 @@ import {
   useUpdateBudget,
   useUpdateExpense,
 } from "../use-budget";
-import { useBudgetStore } from "@/stores/budget-store";
 
 // Mock all API-related hooks
 vi.mock("../use-api-query", () => ({

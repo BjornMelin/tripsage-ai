@@ -57,9 +57,8 @@ vi.mock("@/lib/api/client", () => ({
           return res.text().then((text) => {
             throw new Error(text);
           });
-        } else {
-          throw new Error("Failed to load keys");
         }
+        throw new Error("Failed to load keys");
       });
   }),
 }));
