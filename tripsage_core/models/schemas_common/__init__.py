@@ -57,12 +57,12 @@ from .flight_schemas import (
 )
 from .geographic import (
     Address,
+    Airport,
     BoundingBox,
     Coordinates,
     Place,
     Region,
     Route,
-    # Airport is available here but we use domain model for consistency
 )
 from .temporal import (
     Availability,
@@ -115,6 +115,7 @@ __all__ = [
     "PriceRange",
     # Geographic
     "Address",
+    "Airport",
     "BoundingBox",
     "Coordinates",
     "Place",

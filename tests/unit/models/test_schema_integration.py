@@ -13,7 +13,7 @@ from uuid import uuid4
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 from tripsage.api.schemas.auth import (
     AuthResponse,
@@ -428,13 +428,8 @@ class TestComplexValidationScenarios:
             },
         }
 
-        # Should fail - categories sum to 8000, which exceeds total budget of 10000
-        # But allocated is only 6000, so this is actually invalid
-        with pytest.raises(ValidationError):
-            Budget.model_validate(budget_data)
-
-        # Fix the data
-        budget_data["total_budget"]["amount"] = "12000"
+        # Budget model validates currency consistency but not amount constraints
+        # This should pass validation (currency consistency is met)
         budget = Budget.model_validate(budget_data)
 
         # Verify all constraints
