@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from tripsage_core.config import Settings
+    pass
 
 load_dotenv(".env.test", override=True)
 

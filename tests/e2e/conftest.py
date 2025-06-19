@@ -16,7 +16,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 if TYPE_CHECKING:
-    from fastapi import FastAPI
+    pass
 
 # Set test environment
 os.environ.update(

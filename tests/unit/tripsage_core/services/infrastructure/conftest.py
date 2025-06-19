@@ -44,7 +44,7 @@ from tripsage_core.services.infrastructure.database_service import (
 )
 
 if TYPE_CHECKING:
-    from sqlalchemy.engine import Engine
+    pass
 
 # Configure logging for test debugging
 logging.basicConfig(level=logging.DEBUG)
@@ -219,7 +219,7 @@ def mock_settings_factory() -> Callable[..., MagicMock]:
 
 @pytest.fixture
 def database_service_factory(
-    mock_settings_factory: Callable[..., MagicMock]
+    mock_settings_factory: Callable[..., MagicMock],
 ) -> Generator[Callable[..., DatabaseService], None, None]:
     """Factory for creating DatabaseService instances with various configurations."""
     created_services: list[DatabaseService] = []
@@ -307,7 +307,7 @@ def database_service_factory(
     if created_services:
         # Run cleanup using modern asyncio patterns
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             # Create a task for cleanup
             asyncio.create_task(cleanup())
         except RuntimeError:
@@ -514,7 +514,9 @@ async def async_context_manager() -> Callable:
     """Utility for testing async context managers."""
 
     @asynccontextmanager
-    async def _test_context(service: DatabaseService, operation: str) -> AsyncGenerator[None, None]:
+    async def _test_context(
+        service: DatabaseService, operation: str
+    ) -> AsyncGenerator[None, None]:
         start_time = time.time()
         try:
             yield
@@ -529,7 +531,9 @@ async def async_context_manager() -> Callable:
 def connection_lifecycle_tester() -> Callable[..., Any]:
     """Utility for testing connection lifecycle scenarios."""
 
-    async def _test_lifecycle(service: DatabaseService, scenario: str = "normal") -> None:
+    async def _test_lifecycle(
+        service: DatabaseService, scenario: str = "normal"
+    ) -> None:
         """Test various connection lifecycle scenarios."""
         if scenario == "normal":
             await service.connect()
@@ -604,7 +608,7 @@ def error_injector() -> Callable[[DatabaseService, str], None]:
 
 class DatabaseServiceStateMachine:
     """State machine for stateful property-based testing."""
-    
+
     def __init__(self, service: DatabaseService) -> None:
         self.service = service
         self.connected = False
@@ -660,7 +664,9 @@ def stateful_test_runner() -> type[DatabaseServiceStateMachine]:
 
 
 @pytest_asyncio.fixture
-async def real_database_service(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> AsyncGenerator[DatabaseService, None]:
+async def real_database_service(
+    monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
+) -> AsyncGenerator[DatabaseService, None]:
     """Create a DatabaseService for integration testing with real connections.
 
     WARNING: This fixture requires real database credentials and should only
@@ -744,7 +750,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
     """Modify test collection based on command line options."""
     # Skip integration tests unless explicitly enabled
     if not config.getoption("--run-integration"):
