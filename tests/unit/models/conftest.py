@@ -2,12 +2,13 @@
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict
+from uuid import uuid4
 
 import pytest
 
 from tripsage_core.models.db.price_history import EntityType
 from tripsage_core.models.db.saved_option import OptionType
-from tripsage_core.models.db.trip import TripType
+from tripsage_core.models.db.trip_collaborator import PermissionLevel
 from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
     AirlineProvider,
@@ -16,6 +17,7 @@ from tripsage_core.models.schemas_common.enums import (
     DataSource,
     TransportationType,
     TripStatus,
+    TripType,
     UserRole,
 )
 
@@ -203,4 +205,19 @@ def sample_transportation_dict() -> Dict[str, Any]:
         "price": 80.00,
         "notes": "Shinkansen to Kyoto",
         "booking_status": BookingStatus.VIEWED,
+    }
+
+
+@pytest.fixture
+def sample_trip_collaborator_dict() -> Dict[str, Any]:
+    """Return a sample trip collaborator dict for testing."""
+    now = datetime.now(timezone.utc)
+    return {
+        "id": 1,
+        "trip_id": 123,
+        "user_id": uuid4(),
+        "permission_level": PermissionLevel.EDIT,
+        "added_by": uuid4(),
+        "added_at": now,
+        "updated_at": now,
     }
