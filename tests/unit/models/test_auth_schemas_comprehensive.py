@@ -123,16 +123,16 @@ class TestRegisterRequestValidation:
         """Test password strength requirements."""
         # Test weak passwords that should fail
         weak_passwords = [
-            "password",  # No uppercase, numbers, or special chars
-            "PASSWORD",  # No lowercase, numbers, or special chars
-            "Password",  # No numbers or special chars
-            "Pass123",  # Too short
-            "password123",  # No uppercase or special chars
-            "PASSWORD123",  # No lowercase or special chars
+            ("password", "Password must contain"),  # No uppercase, numbers, or special chars
+            ("PASSWORD", "Password must contain"),  # No lowercase, numbers, or special chars
+            ("Password", "Password must contain"),  # No numbers or special chars
+            ("Pass123", "String should have at least 8 characters"),  # Too short
+            ("password123", "Password must contain"),  # No uppercase or special chars
+            ("PASSWORD123", "Password must contain"),  # No lowercase or special chars
         ]
         
-        for password in weak_passwords:
-            with pytest.raises(ValidationError, match="Password must contain"):
+        for password, expected_error in weak_passwords:
+            with pytest.raises(ValidationError, match=expected_error):
                 RegisterRequest(
                     username="testuser",
                     email="user@example.com",
