@@ -12,11 +12,15 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.services.business.api_key_monitoring import (
-    AnomalyType,
-    ApiKeyMonitoringService,
-    UsageAlert,
-    UsageDashboard,
+from tripsage_core.services.business.dashboard_service import (
+    DashboardService,
+    AlertData,
+    AlertType,
+    AlertSeverity,
+    DashboardData,
+    RealTimeMetrics,
+    ServiceAnalytics,
+    UserActivityData,
 )
 
 
