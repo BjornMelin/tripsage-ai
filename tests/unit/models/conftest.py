@@ -276,3 +276,17 @@ def validation_helper():
 def serialization_helper():
     """Provide serialization helper for testing Pydantic models."""
     return SerializationHelper()
+
+
+@pytest.fixture
+def edge_case_data():
+    """Provide edge case test data."""
+    return {
+        "min_price": 0.01,
+        "max_price": 10000.0,
+        "max_rating": 5.0,
+        "min_rating": 0.0,
+        "long_string": "x" * 1000,
+        "unicode_string": "Hotel München 🏨",
+        "special_chars": "Hotel & B&B \"Quotes\" <script>alert('xss')</script>",
+    }
