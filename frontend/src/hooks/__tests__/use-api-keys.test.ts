@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAddApiKey, useApiKeys, useDeleteApiKey, useValidateApiKey } from "../use-api-keys";
 
 // Mock the dependencies
@@ -25,10 +25,14 @@ vi.mock("@tanstack/react-query", () => ({
 }));
 
 // Mock the API hooks
+const mockUseApiQuery = vi.fn();
+const mockUseApiMutation = vi.fn();
+const mockUseApiDeleteMutation = vi.fn();
+
 vi.mock("@/hooks/use-api-query", () => ({
-  useApiQuery: vi.fn(),
-  useApiMutation: vi.fn(),
-  useApiDeleteMutation: vi.fn(),
+  useApiQuery: mockUseApiQuery,
+  useApiMutation: mockUseApiMutation,
+  useApiDeleteMutation: mockUseApiDeleteMutation,
 }));
 
 describe("useApiKeys", () => {
@@ -44,8 +48,7 @@ describe("useApiKeys", () => {
       refetch: vi.fn(),
     };
     
-    const { useApiQuery } = await import("@/hooks/use-api-query");
-    vi.mocked(useApiQuery).mockReturnValue(mockQueryResult);
+    mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
 
@@ -68,8 +71,7 @@ describe("useApiKeys", () => {
       refetch: vi.fn(),
     };
 
-    const { useApiQuery } = await import("@/hooks/use-api-query");
-    vi.mocked(useApiQuery).mockReturnValue(mockQueryResult);
+    mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
 
@@ -87,8 +89,7 @@ describe("useApiKeys", () => {
       refetch: vi.fn(),
     };
 
-    const { useApiQuery } = await import("@/hooks/use-api-query");
-    vi.mocked(useApiQuery).mockReturnValue(mockQueryResult);
+    mockUseApiQuery.mockReturnValue(mockQueryResult);
 
     renderHook(() => useApiKeys());
 

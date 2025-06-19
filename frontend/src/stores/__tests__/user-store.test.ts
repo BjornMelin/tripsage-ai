@@ -1,5 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { create } from "zustand";
 import {
   type FavoriteDestination,
   type PersonalInfo,
@@ -13,6 +14,12 @@ import {
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({
   setTimeout: vi.fn((fn) => fn()),
+}));
+
+// Mock the store middleware to avoid persistence issues in tests
+vi.mock("zustand/middleware", () => ({
+  persist: (fn: any) => fn,
+  devtools: (fn: any) => fn,
 }));
 
 describe("User Profile Store", () => {
@@ -108,9 +115,8 @@ describe("User Profile Store", () => {
 
     describe("Update Personal Info", () => {
       beforeEach(() => {
-        const { result } = renderHook(() => useUserProfileStore());
         act(() => {
-          result.current.setProfile(mockProfile);
+          useUserProfileStore.setState({ profile: mockProfile });
         });
       });
 
@@ -177,9 +183,8 @@ describe("User Profile Store", () => {
 
     describe("Update Travel Preferences", () => {
       beforeEach(() => {
-        const { result } = renderHook(() => useUserProfileStore());
         act(() => {
-          result.current.setProfile(mockProfile);
+          useUserProfileStore.setState({ profile: mockProfile });
         });
       });
 
@@ -248,9 +253,8 @@ describe("User Profile Store", () => {
 
     describe("Update Privacy Settings", () => {
       beforeEach(() => {
-        const { result } = renderHook(() => useUserProfileStore());
         act(() => {
-          result.current.setProfile(mockProfile);
+          useUserProfileStore.setState({ profile: mockProfile });
         });
       });
 
@@ -299,15 +303,16 @@ describe("User Profile Store", () => {
 
   describe("Avatar Management", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -408,15 +413,16 @@ describe("User Profile Store", () => {
 
   describe("Favorite Destinations", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -527,15 +533,16 @@ describe("User Profile Store", () => {
 
   describe("Travel Documents", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -934,8 +941,8 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       act(() => {
-        result.current.setProfile(mockProfile);
         useUserProfileStore.setState({
+          profile: mockProfile,
           isLoading: true,
           error: "Some error",
           uploadError: "Upload error",
@@ -957,15 +964,16 @@ describe("User Profile Store", () => {
 
   describe("Loading States", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });

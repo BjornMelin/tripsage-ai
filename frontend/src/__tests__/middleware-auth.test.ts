@@ -1,12 +1,15 @@
-import { createServerClient } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { updateSession } from "../middleware";
+import { type NextRequest, NextResponse } from "next/server";
 
-// Mock @supabase/ssr
+// Mock @supabase/ssr using vi.hoisted to ensure proper hoisting
+const mockCreateServerClient = vi.hoisted(() => vi.fn());
+
 vi.mock("@supabase/ssr", () => ({
-  createServerClient: vi.fn(),
+  createServerClient: mockCreateServerClient,
 }));
+
+import { createServerClient } from "@supabase/ssr";
+import { updateSession } from "../middleware";
 
 // Define proper types for cookie handling
 interface Cookie {
@@ -96,7 +99,7 @@ describe("Middleware - updateSession", () => {
     }
 
     let capturedCookieHandlers: CookieHandlers | null = null;
-    vi.mocked(createServerClient).mockImplementation((url, key, options) => {
+    mockCreateServerClient.mockImplementation((url, key, options) => {
       capturedCookieHandlers = options.cookies as CookieHandlers;
       return mockSupabase as unknown as ReturnType<typeof createServerClient>;
     });
@@ -144,7 +147,7 @@ describe("Middleware - updateSession", () => {
       },
     };
 
-    vi.mocked(createServerClient).mockReturnValue(
+    mockCreateServerClient.mockReturnValue(
       mockSupabase as unknown as ReturnType<typeof createServerClient>
     );
 
@@ -168,7 +171,7 @@ describe("Middleware - updateSession", () => {
       },
     };
 
-    vi.mocked(createServerClient).mockReturnValue(
+    mockCreateServerClient.mockReturnValue(
       mockSupabase as unknown as ReturnType<typeof createServerClient>
     );
 
@@ -204,7 +207,7 @@ describe("Middleware - updateSession", () => {
     }
 
     let capturedCookieHandlers: CookieHandlers | null = null;
-    vi.mocked(createServerClient).mockImplementation((url, key, options) => {
+    mockCreateServerClient.mockImplementation((url, key, options) => {
       capturedCookieHandlers = options.cookies as CookieHandlers;
       return mockSupabase as unknown as ReturnType<typeof createServerClient>;
     });

@@ -37,14 +37,14 @@ const generateTripData = (data: any) => {
 export const createTripStoreMockClient = (): Partial<SupabaseClient> => {
   return {
     auth: {
-      getSession: vi.fn().mockResolvedValue({ 
-        data: { 
+      getSession: vi.fn().mockResolvedValue({
+        data: {
           session: {
             user: { id: "test-user-id" },
             access_token: "test-token",
-          } 
-        }, 
-        error: null 
+          },
+        },
+        error: null,
       }),
       onAuthStateChange: vi.fn().mockReturnValue({
         data: { subscription: { unsubscribe: vi.fn() } },
@@ -64,7 +64,7 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient> => {
         }),
         insert: vi.fn((data: any[]) => {
           // Handle insert operations
-          const insertedData = data.map(item => generateTripData(item));
+          const insertedData = data.map((item) => generateTripData(item));
           globalMockData[table] = [...(globalMockData[table] || []), ...insertedData];
           builder._insertedData = insertedData;
           builder._isInsert = true;
@@ -87,51 +87,64 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient> => {
         order: vi.fn(() => builder),
         range: vi.fn(() => builder),
         single: vi.fn(() => {
-          if (builder._isInsert && builder._insertedData && builder._insertedData.length === 1) {
+          if (
+            builder._isInsert &&
+            builder._insertedData &&
+            builder._insertedData.length === 1
+          ) {
             return Promise.resolve({ data: builder._insertedData[0], error: null });
           }
           if (builder._isSelect || builder._isUpdate || builder._isDelete) {
             const tableData = globalMockData[table] || [];
             let result = tableData;
-            
+
             // Apply filters
             if (builder._filters) {
               builder._filters.forEach((filter: any) => {
-                result = result.filter(item => item[filter.column] === filter.value);
+                result = result.filter((item) => item[filter.column] === filter.value);
               });
             }
-            
+
             // Handle update
             if (builder._isUpdate && result.length > 0) {
-              const updatedItem = { ...result[0], ...builder._updateData, updated_at: new Date().toISOString() };
-              const index = tableData.findIndex(item => item.id === result[0].id);
+              const updatedItem = {
+                ...result[0],
+                ...builder._updateData,
+                updated_at: new Date().toISOString(),
+              };
+              const index = tableData.findIndex((item) => item.id === result[0].id);
               if (index !== -1) {
                 globalMockData[table][index] = updatedItem;
               }
               return Promise.resolve({ data: updatedItem, error: null });
             }
-            
+
             // Handle delete
             if (builder._isDelete && result.length > 0) {
-              globalMockData[table] = tableData.filter(item => item.id !== result[0].id);
+              globalMockData[table] = tableData.filter(
+                (item) => item.id !== result[0].id
+              );
               return Promise.resolve({ data: result[0], error: null });
             }
-            
+
             return Promise.resolve({ data: result[0] || null, error: null });
           }
           return Promise.resolve({ data: null, error: null });
         }),
         maybeSingle: vi.fn(() => builder.single()),
       };
-      
+
       // Make the builder itself a thenable for select queries
       builder.then = (onFulfilled: any) => {
         if (builder._isSelect) {
-          return Promise.resolve({ data: globalMockData[table] || [], error: null }).then(onFulfilled);
+          return Promise.resolve({
+            data: globalMockData[table] || [],
+            error: null,
+          }).then(onFulfilled);
         }
         return Promise.resolve({ data: null, error: null }).then(onFulfilled);
       };
-      
+
       return builder;
     }),
     channel: vi.fn().mockReturnValue({
@@ -146,7 +159,7 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient> => {
 
 // Reset mock data between tests
 export const resetTripStoreMockData = () => {
-  Object.keys(globalMockData).forEach(key => {
+  Object.keys(globalMockData).forEach((key) => {
     globalMockData[key] = [];
   });
 };

@@ -129,7 +129,7 @@ describe("RecentTrips", () => {
   it("displays trip details correctly", () => {
     // Clear any previous mocks
     vi.clearAllMocks();
-    
+
     vi.mocked(useTrips).mockReturnValue({
       data: { items: [mockTrips[0]], total: 1 }, // Tokyo Adventure
       isLoading: false,

@@ -18,19 +18,18 @@ from fastapi import WebSocket
 from jose import jwt
 
 from tripsage_core.config import Settings
-from tripsage_core.services.infrastructure.websocket_manager import (
-    ConnectionStatus,
-    WebSocketManager,
-    WebSocketSubscribeRequest,
-    WebSocketSubscribeResponse,
-)
 from tripsage_core.services.infrastructure.websocket_auth_service import (
     WebSocketAuthRequest,
     WebSocketAuthResponse,
 )
 from tripsage_core.services.infrastructure.websocket_connection_service import (
-    WebSocketConnection,
     ConnectionState,
+    WebSocketConnection,
+)
+from tripsage_core.services.infrastructure.websocket_manager import (
+    WebSocketManager,
+    WebSocketSubscribeRequest,
+    WebSocketSubscribeResponse,
 )
 from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
@@ -111,7 +110,9 @@ class TestWebSocketConnection:
         assert websocket_connection.state == ConnectionState.ERROR
 
     @pytest.mark.asyncio
-    async def test_send_dict_message_success(self, websocket_connection, mock_websocket):
+    async def test_send_dict_message_success(
+        self, websocket_connection, mock_websocket
+    ):
         """Test successful dict message sending."""
         message = {"type": "custom", "data": "test"}
 
@@ -126,7 +127,9 @@ class TestWebSocketConnection:
         assert sent_data == message
 
     @pytest.mark.asyncio
-    async def test_send_dict_message_failure(self, websocket_connection, mock_websocket):
+    async def test_send_dict_message_failure(
+        self, websocket_connection, mock_websocket
+    ):
         """Test dict message sending failure."""
         mock_websocket.send_text.side_effect = Exception("Send failed")
 
@@ -185,8 +188,10 @@ class TestWebSocketConnection:
 
     def test_get_connection_health(self, websocket_connection):
         """Test getting connection health information."""
-        from tripsage_core.services.infrastructure.websocket_connection_service import ConnectionHealth
-        
+        from tripsage_core.services.infrastructure.websocket_connection_service import (
+            ConnectionHealth,
+        )
+
         websocket_connection.subscribe_to_channel("test-channel")
 
         health = websocket_connection.get_health()
@@ -243,12 +248,15 @@ class TestWebSocketManager:
     @pytest.fixture
     def websocket_manager(self, mock_settings):
         """Create a WebSocketManager instance."""
-        with patch(
-            "tripsage_core.services.infrastructure.websocket_manager.get_settings",
-            return_value=mock_settings,
-        ), patch(
-            "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
-            return_value=mock_settings,
+        with (
+            patch(
+                "tripsage_core.services.infrastructure.websocket_manager.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
+                return_value=mock_settings,
+            ),
         ):
             manager = WebSocketManager()
             return manager
@@ -263,7 +271,9 @@ class TestWebSocketManager:
             "exp": int(time.time()) + 3600,  # Expires in 1 hour
         }
         return jwt.encode(
-            payload, mock_settings.database_jwt_secret.get_secret_value(), algorithm="HS256"
+            payload,
+            mock_settings.database_jwt_secret.get_secret_value(),
+            algorithm="HS256",
         )
 
     @pytest.mark.asyncio
@@ -290,22 +300,23 @@ class TestWebSocketManager:
     @pytest.mark.asyncio
     async def test_stop_manager(self, websocket_manager):
         """Test stopping the WebSocket manager."""
+
         # Create async task mocks
         async def mock_coro():
             pass
-        
+
         # Create real tasks that can be cancelled
         websocket_manager._cleanup_task = asyncio.create_task(mock_coro())
         websocket_manager._heartbeat_task = asyncio.create_task(mock_coro())
         websocket_manager._performance_task = asyncio.create_task(mock_coro())
         websocket_manager._redis_listener_task = None
         websocket_manager._priority_processor_task = None
-        
+
         # Complete the tasks to avoid warnings
         await websocket_manager._cleanup_task
         await websocket_manager._heartbeat_task
         await websocket_manager._performance_task
-        
+
         # Now create new ones that can be cancelled
         websocket_manager._cleanup_task = asyncio.create_task(asyncio.sleep(10))
         websocket_manager._heartbeat_task = asyncio.create_task(asyncio.sleep(10))
@@ -344,7 +355,9 @@ class TestWebSocketManager:
         assert "general" in response.available_channels
 
         # Verify connection was added to manager
-        assert response.connection_id in websocket_manager.connection_service.connections
+        assert (
+            response.connection_id in websocket_manager.connection_service.connections
+        )
         assert response.user_id in websocket_manager.messaging_service.user_connections
 
     @pytest.mark.asyncio
@@ -370,7 +383,9 @@ class TestWebSocketManager:
         # Create token with missing required fields
         payload = {"some_field": "value"}  # Missing 'sub' and 'user_id'
         malformed_token = jwt.encode(
-            payload, mock_settings.database_jwt_secret.get_secret_value(), algorithm="HS256"
+            payload,
+            mock_settings.database_jwt_secret.get_secret_value(),
+            algorithm="HS256",
         )
 
         auth_request = WebSocketAuthRequest(token=malformed_token, channels=["general"])
@@ -544,9 +559,13 @@ class TestWebSocketManager:
             )
 
             # Subscribe to channel
-            connection = websocket_manager.connection_service.get_connection(response.connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                response.connection_id
+            )
             connection.subscribe_to_channel(channel)
-            websocket_manager.messaging_service.subscribe_to_channel(response.connection_id, channel)
+            websocket_manager.messaging_service.subscribe_to_channel(
+                response.connection_id, channel
+            )
 
             websockets.append(websocket)
             connection_ids.append(response.connection_id)
@@ -587,7 +606,9 @@ class TestWebSocketManager:
         assert len(response.failed_channels) == 0
 
         # Verify connection was added to channel mappings
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         assert connection.is_subscribed_to_channel("general")
         assert connection.is_subscribed_to_channel("notifications")
 
@@ -624,13 +645,13 @@ class TestWebSocketManager:
 
         assert response.success is True
 
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         assert not connection.is_subscribed_to_channel("general")
         assert connection.is_subscribed_to_channel("notifications")
 
-    def test_get_connection(
-        self, websocket_manager, mock_websocket, valid_jwt_token
-    ):
+    def test_get_connection(self, websocket_manager, mock_websocket, valid_jwt_token):
         """Test getting connection."""
 
         # This needs to be run in async context
@@ -640,7 +661,9 @@ class TestWebSocketManager:
                 mock_websocket, auth_request
             )
 
-            connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                auth_response.connection_id
+            )
 
             assert connection is not None
             assert isinstance(connection, WebSocketConnection)
@@ -651,7 +674,9 @@ class TestWebSocketManager:
 
     def test_get_connection_not_found(self, websocket_manager):
         """Test getting non-existent connection."""
-        connection = websocket_manager.connection_service.get_connection("nonexistent-id")
+        connection = websocket_manager.connection_service.get_connection(
+            "nonexistent-id"
+        )
 
         assert connection is None
 
@@ -742,9 +767,13 @@ class TestWebSocketManager:
             )
 
             # Subscribe to channel
-            connection = websocket_manager.connection_service.get_connection(response.connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                response.connection_id
+            )
             connection.subscribe_to_channel(channel)
-            websocket_manager.messaging_service.subscribe_to_channel(response.connection_id, channel)
+            websocket_manager.messaging_service.subscribe_to_channel(
+                response.connection_id, channel
+            )
 
             websockets.append(websocket)
 
@@ -820,7 +849,9 @@ class TestWebSocketManager:
             mock_websocket, auth_request
         )
 
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         # Make connection stale by setting old heartbeat
         connection.last_heartbeat = datetime.utcnow().replace(year=2020)
 
@@ -835,7 +866,10 @@ class TestWebSocketManager:
             await websocket_manager._cleanup_stale_connections()
 
         # Verify stale connection was cleaned up
-        assert auth_response.connection_id not in websocket_manager.connection_service.connections
+        assert (
+            auth_response.connection_id
+            not in websocket_manager.connection_service.connections
+        )
 
     @pytest.mark.asyncio
     async def test_heartbeat_monitor_task(
@@ -899,7 +933,9 @@ class TestWebSocketManager:
         with (
             patch("asyncio.sleep", side_effect=mock_sleep),
             patch.object(
-                websocket_manager, "connections", side_effect=failing_operation
+                websocket_manager.connection_service,
+                "connections",
+                side_effect=failing_operation,
             ),
         ):
             # Should not raise exception, just log error and continue
@@ -945,7 +981,7 @@ class TestWebSocketManager:
             }
             token = jwt.encode(
                 payload,
-                mock_settings.jwt_secret_key.get_secret_value(),
+                mock_settings.database_jwt_secret.get_secret_value(),
                 algorithm="HS256",
             )
             tokens.append(token)
@@ -996,9 +1032,13 @@ class TestWebSocketManager:
         # Send to channel (all connections)
         channel = "test-channel"
         for connection_id in connection_ids:
-            connection = websocket_manager.connection_service.get_connection(connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                connection_id
+            )
             connection.subscribe_to_channel(channel)
-            websocket_manager.messaging_service.subscribe_to_channel(connection_id, channel)
+            websocket_manager.messaging_service.subscribe_to_channel(
+                connection_id, channel
+            )
 
         sent_count = await websocket_manager.send_to_channel(channel, event)
 
@@ -1006,8 +1046,10 @@ class TestWebSocketManager:
         assert sent_count == 2
 
         # Verify the failed connection has error status
-        failed_connection = websocket_manager.connection_service.connections[connection_ids[1]]
-        assert failed_connection.status == ConnectionStatus.ERROR
+        failed_connection = websocket_manager.connection_service.connections[
+            connection_ids[1]
+        ]
+        assert failed_connection.state == ConnectionState.ERROR
 
     @pytest.mark.asyncio
     async def test_edge_case_empty_channels_subscription(
@@ -1044,7 +1086,9 @@ class TestWebSocketManager:
         )
 
         assert response.success is False
-        assert len(websocket_manager.connection_service.connections) == initial_count  # No new connections
+        assert (
+            len(websocket_manager.connection_service.connections) == initial_count
+        )  # No new connections
 
     def test_websocket_event_model_creation(self):
         """Test WebSocketEvent model creation and serialization."""

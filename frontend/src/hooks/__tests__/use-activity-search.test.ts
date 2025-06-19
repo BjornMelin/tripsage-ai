@@ -137,7 +137,6 @@ describe("useActivitySearch", () => {
     });
   });
 
-
   it("should handle API post requests", async () => {
     const mockResponse = {
       results: {

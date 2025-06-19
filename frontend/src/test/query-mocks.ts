@@ -5,7 +5,11 @@ import { vi } from "vitest";
 import type { UseMutationResult } from "@tanstack/react-query";
 
 // Helper to manually trigger mutation lifecycle
-export interface MutationController<TData = unknown, TError = Error, TVariables = unknown> {
+export interface MutationController<
+  TData = unknown,
+  TError = Error,
+  TVariables = unknown,
+> {
   triggerMutate: (variables: TVariables) => void;
   triggerSuccess: (data: TData) => void;
   triggerError: (error: TError) => void;
@@ -17,7 +21,7 @@ export function createControlledMutation<
   TData = unknown,
   TError = Error,
   TVariables = unknown,
-  TContext = unknown
+  TContext = unknown,
 >(): {
   mutation: UseMutationResult<TData, TError, TVariables, TContext>;
   controller: MutationController<TData, TError, TVariables>;
@@ -28,7 +32,7 @@ export function createControlledMutation<
   let isError = false;
   let isSuccess = false;
   let variables: TVariables | undefined;
-  
+
   // Callbacks
   let onMutateCallback: ((vars: TVariables) => void) | undefined;
   let onSuccessCallback: ((data: TData, vars: TVariables) => void) | undefined;
@@ -40,12 +44,12 @@ export function createControlledMutation<
     isError = false;
     isSuccess = false;
     currentError = null;
-    
+
     // Call onMutate if provided
     if (onMutateCallback) {
       onMutateCallback(vars);
     }
-    
+
     if (options?.onMutate) {
       options.onMutate(vars);
     }
@@ -101,7 +105,7 @@ export function createControlledMutation<
       isPending = false;
       isError = false;
       isSuccess = true;
-      
+
       // Update mutation object
       Object.assign(mutation, {
         data: currentData,
@@ -111,12 +115,12 @@ export function createControlledMutation<
         isSuccess,
         status: "success",
       });
-      
+
       // Call success callbacks
       if (onSuccessCallback && variables) {
         onSuccessCallback(data, variables);
       }
-      
+
       // Resolve async promise if exists
       if ((mutateAsync as any)._resolve) {
         (mutateAsync as any)._resolve(data);
@@ -128,7 +132,7 @@ export function createControlledMutation<
       isPending = false;
       isError = true;
       isSuccess = false;
-      
+
       // Update mutation object
       Object.assign(mutation, {
         data: currentData,
@@ -139,12 +143,12 @@ export function createControlledMutation<
         status: "error",
         failureReason: error,
       });
-      
+
       // Call error callbacks
       if (onErrorCallback && variables) {
         onErrorCallback(error, variables);
       }
-      
+
       // Reject async promise if exists
       if ((mutateAsync as any)._reject) {
         (mutateAsync as any)._reject(error);
@@ -183,23 +187,28 @@ export function mockUseMutation<
   TData = unknown,
   TError = Error,
   TVariables = unknown,
-  TContext = unknown
+  TContext = unknown,
 >(options?: {
   onMutate?: (variables: TVariables) => void;
   onSuccess?: (data: TData, variables: TVariables) => void;
   onError?: (error: TError, variables: TVariables) => void;
 }) {
-  const { mutation, controller } = createControlledMutation<TData, TError, TVariables, TContext>();
-  
+  const { mutation, controller } = createControlledMutation<
+    TData,
+    TError,
+    TVariables,
+    TContext
+  >();
+
   // Store callbacks
   if (options) {
     (mutation as any)._setCallbacks(options);
   }
-  
+
   return { mutation, controller };
 }
 
 // Helper to wait for React updates
 export async function waitForReactUpdate() {
-  return new Promise(resolve => setTimeout(resolve, 0));
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }

@@ -150,8 +150,8 @@ vi.mock("@/hooks/use-supabase-realtime", () => ({
 // Mock search-store and its re-exports
 vi.mock("@/stores/search-store", () => ({
   useSearchStore: vi.fn(() => ({
-    currentSearchType: 'flight',
-    currentParams: { origin: 'NYC', destination: 'LAX' },
+    currentSearchType: "flight",
+    currentParams: { origin: "NYC", destination: "LAX" },
     hasActiveFilters: true,
     hasResults: true,
     isSearching: true,
@@ -159,17 +159,17 @@ vi.mock("@/stores/search-store", () => ({
       // Update internal state simulation
       return type;
     }),
-    executeSearch: vi.fn().mockResolvedValue('search-123'),
+    executeSearch: vi.fn().mockResolvedValue("search-123"),
     resetSearch: vi.fn(),
     loadSavedSearch: vi.fn().mockResolvedValue(true),
-    duplicateCurrentSearch: vi.fn().mockResolvedValue('new-saved-123'),
+    duplicateCurrentSearch: vi.fn().mockResolvedValue("new-saved-123"),
     validateAndExecuteSearch: vi.fn().mockResolvedValue(null),
-    applyFiltersAndSearch: vi.fn().mockResolvedValue('filtered-search-123'),
-    retryLastSearch: vi.fn().mockResolvedValue('new-search-id'),
+    applyFiltersAndSearch: vi.fn().mockResolvedValue("filtered-search-123"),
+    retryLastSearch: vi.fn().mockResolvedValue("new-search-id"),
     syncStores: vi.fn(),
     getSearchSummary: vi.fn(() => ({
-      searchType: 'flight',
-      params: { origin: 'NYC', destination: 'LAX' },
+      searchType: "flight",
+      params: { origin: "NYC", destination: "LAX" },
       hasResults: true,
       resultCount: 10,
       isSearching: true,
@@ -177,10 +177,20 @@ vi.mock("@/stores/search-store", () => ({
     })),
   })),
   useSearchParamsStore: vi.fn(() => ({
-    currentSearchType: 'flight',
-    currentParams: { origin: 'NYC', destination: 'LAX' },
-    paramsValidation: { flight: true, accommodation: true, activity: true, destination: true },
-    isValidating: { flight: false, accommodation: false, activity: false, destination: false },
+    currentSearchType: "flight",
+    currentParams: { origin: "NYC", destination: "LAX" },
+    paramsValidation: {
+      flight: true,
+      accommodation: true,
+      activity: true,
+      destination: true,
+    },
+    isValidating: {
+      flight: false,
+      accommodation: false,
+      activity: false,
+      destination: false,
+    },
     setSearchType: vi.fn().mockImplementation((type) => {
       // Mock implementation that updates internal state
       return { setSearchType: vi.fn() };
@@ -279,7 +289,6 @@ vi.mock("@/stores/api-key-store", () => ({
     reset: vi.fn(),
   })),
 }));
-
 
 // Mock user store
 vi.mock("@/stores/user-store", () => ({

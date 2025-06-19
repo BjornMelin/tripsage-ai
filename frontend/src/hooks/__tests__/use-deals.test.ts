@@ -132,7 +132,7 @@ const createMockStore = () => {
     updateAlert: vi.fn(),
     removeAlert: vi.fn(),
     toggleAlertActive: vi.fn(),
-    getAlertById: vi.fn((id: string) => sampleAlerts.find(a => a.id === id)),
+    getAlertById: vi.fn((id: string) => sampleAlerts.find((a) => a.id === id)),
     setFilters: vi.fn(),
     clearFilters: vi.fn(),
     getFilteredDeals: vi.fn(() => sampleDeals),

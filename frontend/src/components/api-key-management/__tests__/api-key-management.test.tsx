@@ -37,7 +37,9 @@ describe("API Key Management Components", () => {
 
   describe("ApiKeyInput Component", () => {
     it("renders correctly with default props", () => {
-      renderWithProviders(<ApiKeyInput value="" onChange={() => {}} onBlur={() => {}} error="" />);
+      renderWithProviders(
+        <ApiKeyInput value="" onChange={() => {}} onBlur={() => {}} error="" />
+      );
 
       expect(screen.getByPlaceholderText("Enter API key")).toBeInTheDocument();
       expect(
