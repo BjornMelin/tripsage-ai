@@ -253,23 +253,15 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
-    from tripsage_core.config.base_app_settings import CoreAppSettings
+    from tripsage_core.config import Settings
 
-    mock_settings = CoreAppSettings()
-
-    # Mock basic settings
-    mock_settings.environment = "test"
-    mock_settings.debug = True
-    mock_settings.agent.max_retries = 3
-
-    # Mock database settings
-    mock_settings.database.supabase_url = "https://test.supabase.co"
-    mock_settings.database.supabase_anon_key = "test_anon_key"
-
-    # Mock memory service (Mem0)
-    # Note: AppSettings no longer has memory attribute after refactoring
-    # mock_settings.memory.service_type = "mem0"
-    # mock_settings.memory.api_key = "test_mem0_key"
+    mock_settings = Settings(
+        environment="test",
+        debug=True,
+        database_url="https://test.supabase.co",
+        database_public_key="test_anon_key",
+        _env_file=None,
+    )
 
     # Mock Redis client
     mock_redis_client = MagicMock()
@@ -285,10 +277,9 @@ def mock_settings_and_redis(monkeypatch):
     # Apply all the patches we need
     with (
         patch(
-            "tripsage_core.config.base_app_settings.get_settings",
+            "tripsage_core.config.get_settings",
             return_value=mock_settings,
         ),
-        patch("tripsage_core.config.base_app_settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
     ):
