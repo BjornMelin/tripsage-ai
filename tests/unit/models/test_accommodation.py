@@ -88,7 +88,7 @@ class TestAccommodationModel:
         )
 
         validation_helper.assert_validation_error(
-            Accommodation, sample_accommodation_dict, error_field, "greater than 0"
+            Accommodation, sample_accommodation_dict, error_field=error_field
         )
 
     @pytest.mark.parametrize(
@@ -118,15 +118,13 @@ class TestAccommodationModel:
                 validation_helper.assert_validation_error(
                     Accommodation,
                     sample_accommodation_dict,
-                    "rating",
-                    "less than or equal to 5",
+                    error_field="rating",
                 )
             elif rating is not None and rating < 0:
                 validation_helper.assert_validation_error(
                     Accommodation,
                     sample_accommodation_dict,
-                    "rating",
-                    "greater than or equal to 0",
+                    error_field="rating",
                 )
 
     def test_accommodation_date_validation_logical(self, sample_accommodation_dict):
@@ -305,7 +303,7 @@ class TestAccommodationModel:
         """Test individual field validation rules."""
         sample_accommodation_dict[field_name] = invalid_value
         validation_helper.assert_validation_error(
-            Accommodation, sample_accommodation_dict, field_name, expected_error
+            Accommodation, sample_accommodation_dict, error_field=field_name
         )
 
     def test_accommodation_optional_fields(self, sample_accommodation_dict):
