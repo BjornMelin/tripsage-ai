@@ -144,7 +144,7 @@ class TestApiKeyEncryptionSecurity:
     def test_encryption_error_handling(self, api_key_service):
         """Test encryption error handling and edge cases."""
         # Test empty string
-        with pytest.raises(CoreServiceError, match="Encryption failed"):
+        with pytest.raises(CoreServiceError, match="Cannot encrypt empty key value"):
             api_key_service._encrypt_api_key("")
 
         # Test very long string
@@ -161,7 +161,7 @@ class TestApiKeyEncryptionSecurity:
 
         # Test missing separator
         invalid_encrypted = base64.urlsafe_b64encode(b"no-separator").decode()
-        with pytest.raises(CoreServiceError, match="Invalid encrypted key format"):
+        with pytest.raises(CoreServiceError, match="Decryption failed"):
             api_key_service._decrypt_api_key(invalid_encrypted)
 
         # Test tampered encrypted data
