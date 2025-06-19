@@ -4,7 +4,7 @@ import {
   AgentCollaborationHub,
   AgentStatusDashboard,
   type ConnectionAnalytics,
-  EnhancedConnectionStatus,
+  ConnectionStatus,
   type NetworkMetrics,
   useWebSocketAgent,
 } from "@/components/features/agent-monitoring";
@@ -155,13 +155,13 @@ export default function AgentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <EnhancedConnectionStatus
+          <ConnectionStatus
             status={connectionStatus}
             metrics={mockNetworkMetrics}
             analytics={mockConnectionAnalytics}
             onReconnect={connect}
             onOptimize={handleOptimizeConnection}
-            compact
+            variant="compact"
           />
           <Button
             variant="outline"
@@ -282,7 +282,7 @@ export default function AgentsPage() {
 
         <TabsContent value="network" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <EnhancedConnectionStatus
+            <ConnectionStatus
               status={connectionStatus}
               metrics={mockNetworkMetrics}
               analytics={mockConnectionAnalytics}

@@ -3,7 +3,7 @@
 import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
 import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useRef } from "react";
-import { ConnectionStatus } from "./connection-status";
+import { ConnectionStatus } from "../features/shared/connection-status";
 import { MessageItem } from "./message-item";
 import { TypingIndicator } from "./typing-indicator";
 

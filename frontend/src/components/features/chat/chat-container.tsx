@@ -10,7 +10,7 @@ import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback, useEffect, useOptimistic, startTransition } from "react";
 import { AgentStatusPanel } from "./agent-status-panel";
-import { ConnectionStatus } from "./connection-status";
+import { ConnectionStatus } from "../shared/connection-status";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./messages/message-list";
 
