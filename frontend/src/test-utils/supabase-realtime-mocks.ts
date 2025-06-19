@@ -2,13 +2,17 @@
  * Supabase Realtime mock helpers for testing
  * Provides comprehensive mocking for RealtimeChannel and related functionality
  */
-import type { 
-  RealtimeChannel, 
-  RealtimePostgresChangesPayload
+import type {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
 } from "@supabase/supabase-js";
 
 // Define channel states as we use them in tests
-export type REALTIME_CHANNEL_STATES = "SUBSCRIBED" | "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED";
+export type REALTIME_CHANNEL_STATES =
+  | "SUBSCRIBED"
+  | "CHANNEL_ERROR"
+  | "TIMED_OUT"
+  | "CLOSED";
 import { vi } from "vitest";
 
 export type MockRealtimeChannel = {
@@ -57,31 +61,35 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
   };
 
   // Setup method chaining
-  mockChannel.on.mockImplementation((event: string, configOrCallback: any, callbackOrUndefined?: any) => {
-    if (event === "postgres_changes") {
-      const config = configOrCallback;
-      const callback = callbackOrUndefined;
-      mockChannel._callbacks.postgres_changes?.push({
-        event: config.event || "*",
-        schema: config.schema || "public",
-        table: config.table,
-        filter: config.filter,
-        callback,
-      });
-    } else if (event === "system") {
-      const callback = callbackOrUndefined;
-      mockChannel._callbacks.system?.push({ callback });
+  mockChannel.on.mockImplementation(
+    (event: string, configOrCallback: any, callbackOrUndefined?: any) => {
+      if (event === "postgres_changes") {
+        const config = configOrCallback;
+        const callback = callbackOrUndefined;
+        mockChannel._callbacks.postgres_changes?.push({
+          event: config.event || "*",
+          schema: config.schema || "public",
+          table: config.table,
+          filter: config.filter,
+          callback,
+        });
+      } else if (event === "system") {
+        const callback = callbackOrUndefined;
+        mockChannel._callbacks.system?.push({ callback });
+      }
+      return mockChannel;
     }
-    return mockChannel;
-  });
+  );
 
-  mockChannel.subscribe.mockImplementation((callback?: (status: REALTIME_CHANNEL_STATES) => void) => {
-    if (callback) {
-      mockChannel._subscribeCallback = callback;
+  mockChannel.subscribe.mockImplementation(
+    (callback?: (status: REALTIME_CHANNEL_STATES) => void) => {
+      if (callback) {
+        mockChannel._subscribeCallback = callback;
+      }
+      mockChannel._isSubscribed = true;
+      return mockChannel;
     }
-    mockChannel._isSubscribed = true;
-    return mockChannel;
-  });
+  );
 
   mockChannel.unsubscribe.mockImplementation(() => {
     mockChannel._isSubscribed = false;
@@ -94,7 +102,9 @@ export function createMockRealtimeChannel(): MockRealtimeChannel {
 /**
  * Creates a mock Supabase client with realtime capabilities
  */
-export function createMockSupabaseClient(channelOverride?: MockRealtimeChannel): MockSupabaseClient {
+export function createMockSupabaseClient(
+  channelOverride?: MockRealtimeChannel
+): MockSupabaseClient {
   const mockSupabaseClient: MockSupabaseClient = {
     channel: vi.fn(),
     removeChannel: vi.fn(),
@@ -115,7 +125,10 @@ export function createMockSupabaseClient(channelOverride?: MockRealtimeChannel):
 /**
  * Helper to simulate a successful channel subscription
  */
-export function simulateChannelSubscription(channel: MockRealtimeChannel, status: REALTIME_CHANNEL_STATES = "SUBSCRIBED") {
+export function simulateChannelSubscription(
+  channel: MockRealtimeChannel,
+  status: REALTIME_CHANNEL_STATES = "SUBSCRIBED"
+) {
   if (channel._subscribeCallback) {
     channel._subscribeCallback(status);
   }
@@ -124,7 +137,10 @@ export function simulateChannelSubscription(channel: MockRealtimeChannel, status
 /**
  * Helper to simulate a system event (like connection status updates)
  */
-export function simulateSystemEvent(channel: MockRealtimeChannel, status: REALTIME_CHANNEL_STATES) {
+export function simulateSystemEvent(
+  channel: MockRealtimeChannel,
+  status: REALTIME_CHANNEL_STATES
+) {
   const systemCallbacks = channel._callbacks.system || [];
   systemCallbacks.forEach(({ callback }) => {
     callback({ status });
@@ -139,15 +155,15 @@ export function simulatePostgresChange<T = any>(
   payload: RealtimePostgresChangesPayload<T>
 ) {
   const postgresCallbacks = channel._callbacks.postgres_changes || [];
-  
+
   postgresCallbacks.forEach(({ event, schema, table, filter, callback }) => {
     const matchesEvent = event === "*" || event === payload.eventType;
     const matchesSchema = schema === payload.schema;
     const matchesTable = table === payload.table;
-    
+
     // For simplicity, we're not parsing the filter here
     // In a real scenario, you'd want to parse and match the filter condition
-    
+
     if (matchesEvent && matchesSchema && matchesTable) {
       callback(payload);
     }
@@ -183,7 +199,7 @@ export type REALTIME_ERROR = "CHANNEL_ERROR" | "TIMED_OUT" | "CLOSED";
  */
 export function createMockSupabaseWithChannels() {
   const channels = new Map<string, MockRealtimeChannel>();
-  
+
   const mockSupabaseClient: MockSupabaseClient = {
     channel: vi.fn((name: string) => {
       if (!channels.has(name)) {
@@ -206,6 +222,6 @@ export function createMockSupabaseWithChannels() {
       channels: [],
     },
   };
-  
+
   return { mockSupabaseClient, channels };
 }

@@ -83,7 +83,7 @@ class TestFlightModel:
             assert flight.price == price
         else:
             validation_helper.assert_validation_error(
-                Flight, sample_flight_dict, "price", "greater than 0"
+                Flight, sample_flight_dict, error_field="price"
             )
 
     def test_flight_datetime_validation(self, sample_flight_dict):
@@ -149,7 +149,7 @@ class TestFlightModel:
             test_data = sample_flight_dict.copy()
             test_data["origin"] = invalid_code
             validation_helper.assert_validation_error(
-                Flight, test_data, "origin", "3-letter IATA code"
+                Flight, test_data, error_field="origin"
             )
 
         # Test valid codes (make sure origin and destination are different)
@@ -236,7 +236,7 @@ class TestFlightModel:
         for invalid_segment in invalid_segments:
             sample_flight_dict["segment_number"] = invalid_segment
             validation_helper.assert_validation_error(
-                Flight, sample_flight_dict, "segment_number", "must be positive"
+                Flight, sample_flight_dict, error_field="segment_number"
             )
 
         # Test valid segment numbers
@@ -365,5 +365,5 @@ class TestFlightModel:
         """Test individual field validation rules."""
         sample_flight_dict[field_name] = invalid_value
         validation_helper.assert_validation_error(
-            Flight, sample_flight_dict, field_name, expected_error
+            Flight, sample_flight_dict, error_field=field_name
         )

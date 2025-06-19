@@ -61,7 +61,9 @@ describe("TripCard", () => {
       render(<TripCard trip={mockTrip} />);
 
       expect(screen.getByText("European Adventure")).toBeInTheDocument();
-      expect(screen.getByText("A wonderful journey through Europe")).toBeInTheDocument();
+      expect(
+        screen.getByText("A wonderful journey through Europe")
+      ).toBeInTheDocument();
       expect(screen.getByText("View Details")).toBeInTheDocument();
     });
 
@@ -238,7 +240,9 @@ describe("TripCard", () => {
       render(<TripCard trip={noDescTrip} />);
 
       expect(screen.getByText("European Adventure")).toBeInTheDocument();
-      expect(screen.queryByText("A wonderful journey through Europe")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("A wonderful journey through Europe")
+      ).not.toBeInTheDocument();
     });
 
     it("should handle empty destinations array", () => {
@@ -250,7 +254,9 @@ describe("TripCard", () => {
     });
 
     it("should apply custom className", () => {
-      const { container } = render(<TripCard trip={mockTrip} className="custom-class" />);
+      const { container } = render(
+        <TripCard trip={mockTrip} className="custom-class" />
+      );
 
       const card = container.firstChild as HTMLElement;
       expect(card).toHaveClass("custom-class");
@@ -308,7 +314,7 @@ describe("TripCard", () => {
     });
 
     it("should handle decimal budgets", () => {
-      const decimalTrip = { ...mockTrip, budget: 1500.50 };
+      const decimalTrip = { ...mockTrip, budget: 1500.5 };
       render(<TripCard trip={decimalTrip} />);
 
       expect(screen.getByText("Budget: $1,500.50")).toBeInTheDocument();

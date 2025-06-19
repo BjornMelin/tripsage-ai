@@ -79,7 +79,10 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/context/user-123", { params: {} });
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith(
+        "/api/memory/context/user-123",
+        { params: {} }
+      );
       expect(result.current.data).toEqual(mockResponse);
     });
 
@@ -139,7 +142,7 @@ describe("Memory Hooks", () => {
         limit: 10,
         filters: { category: "accommodation" },
       };
-      
+
       result.current.mutate(searchParams);
 
       await waitFor(() => {
@@ -166,7 +169,7 @@ describe("Memory Hooks", () => {
         query: "hotels",
         limit: 20, // default limit
       };
-      
+
       result.current.mutate(searchParams);
 
       await waitFor(() => {
@@ -318,7 +321,10 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/insights/user-123", { params: {} });
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith(
+        "/api/memory/insights/user-123",
+        { params: {} }
+      );
       expect(result.current.data).toEqual(mockInsights);
     });
   });
@@ -346,7 +352,10 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/stats/user-123", { params: {} });
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith(
+        "/api/memory/stats/user-123",
+        { params: {} }
+      );
       expect(result.current.data).toEqual(mockStats);
     });
   });

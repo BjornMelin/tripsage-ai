@@ -21,12 +21,12 @@ export const createCompleteQueryBuilder = (
     single: vi.fn().mockResolvedValue({ data: mockData, error: mockError }),
     maybeSingle: vi.fn().mockResolvedValue({ data: mockData, error: mockError }),
   };
-  
+
   // Make the builder itself a thenable for direct await
   (builder as any).then = (onFulfilled: any) => {
     return Promise.resolve({ data: mockData, error: mockError }).then(onFulfilled);
   };
-  
+
   return builder;
 };
 
@@ -78,13 +78,15 @@ export const createMockSupabaseClient = (): Partial<SupabaseClient> => {
     from: vi.fn((table: string) => {
       const builder: any = {
         select: vi.fn().mockReturnThis(),
-        insert: vi.fn((data: any[]) => {
-          // Handle insert operations
-          const insertedData = data.map(item => generateTripData(item));
-          mockData[table] = [...mockData[table], ...insertedData];
-          builder._insertedData = insertedData;
-          return builder;
-        }).mockReturnThis(),
+        insert: vi
+          .fn((data: any[]) => {
+            // Handle insert operations
+            const insertedData = data.map((item) => generateTripData(item));
+            mockData[table] = [...mockData[table], ...insertedData];
+            builder._insertedData = insertedData;
+            return builder;
+          })
+          .mockReturnThis(),
         update: vi.fn().mockReturnThis(),
         delete: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -96,14 +98,18 @@ export const createMockSupabaseClient = (): Partial<SupabaseClient> => {
           }
           return Promise.resolve({ data: mockData[table]?.[0] || null, error: null });
         }),
-        maybeSingle: vi.fn().mockResolvedValue({ data: mockData[table]?.[0] || null, error: null }),
+        maybeSingle: vi
+          .fn()
+          .mockResolvedValue({ data: mockData[table]?.[0] || null, error: null }),
       };
-      
+
       // Make the builder itself a thenable
       builder.then = (onFulfilled: any) => {
-        return Promise.resolve({ data: mockData[table] || [], error: null }).then(onFulfilled);
+        return Promise.resolve({ data: mockData[table] || [], error: null }).then(
+          onFulfilled
+        );
       };
-      
+
       return builder;
     }),
     channel: vi.fn().mockReturnValue({
@@ -153,9 +159,12 @@ export const createMockUseQueryResult = <T, E = Error>(
 
 // Enhanced error mock
 export class MockApiError extends Error {
-  constructor(message: string, public status = 500) {
+  constructor(
+    message: string,
+    public status = 500
+  ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -231,17 +240,17 @@ export const createMockSearchStore = () => ({
   hasResults: false,
   isSearching: false,
   initializeSearch: vi.fn(),
-  executeSearch: vi.fn().mockResolvedValue('search-123'),
+  executeSearch: vi.fn().mockResolvedValue("search-123"),
   resetSearch: vi.fn(),
   loadSavedSearch: vi.fn().mockResolvedValue(true),
-  duplicateCurrentSearch: vi.fn().mockResolvedValue('new-saved-123'),
+  duplicateCurrentSearch: vi.fn().mockResolvedValue("new-saved-123"),
   validateAndExecuteSearch: vi.fn().mockResolvedValue(null),
-  applyFiltersAndSearch: vi.fn().mockResolvedValue('filtered-search-123'),
-  retryLastSearch: vi.fn().mockResolvedValue('new-search-id'),
+  applyFiltersAndSearch: vi.fn().mockResolvedValue("filtered-search-123"),
+  retryLastSearch: vi.fn().mockResolvedValue("new-search-id"),
   syncStores: vi.fn(),
   getSearchSummary: vi.fn(() => ({
-    searchType: 'flight',
-    params: { origin: 'NYC', destination: 'LAX' },
+    searchType: "flight",
+    params: { origin: "NYC", destination: "LAX" },
     hasResults: true,
     resultCount: 10,
     isSearching: true,
@@ -285,7 +294,7 @@ export const mockProcessEnv = (env: Record<string, string>) => {
       configurable: true,
     });
   });
-  
+
   return () => {
     process.env = originalEnv;
   };

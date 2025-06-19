@@ -1,121 +1,130 @@
 /**
  * Zod validation schemas for configuration management.
- * 
+ *
  * These schemas provide runtime type safety and validation for all configuration
  * data, ensuring consistency between frontend and backend APIs.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 // Agent type enum matching backend
 export const AgentTypeEnum = z.enum([
-  'budget_agent',
-  'destination_research_agent', 
-  'itinerary_agent'
+  "budget_agent",
+  "destination_research_agent",
+  "itinerary_agent",
 ] as const);
 
 export type AgentType = z.infer<typeof AgentTypeEnum>;
 
 // Configuration scope enum
 export const ConfigurationScopeEnum = z.enum([
-  'global',
-  'environment',
-  'agent_specific',
-  'user_override'
+  "global",
+  "environment",
+  "agent_specific",
+  "user_override",
 ] as const);
 
 export type ConfigurationScope = z.infer<typeof ConfigurationScopeEnum>;
 
 // Model name validation with supported models
 export const ModelNameSchema = z.enum([
-  'gpt-4',
-  'gpt-4-turbo',
-  'gpt-4o',
-  'gpt-4o-mini',
-  'gpt-3.5-turbo',
-  'claude-3-sonnet',
-  'claude-3-haiku'
+  "gpt-4",
+  "gpt-4-turbo",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-3.5-turbo",
+  "claude-3-sonnet",
+  "claude-3-haiku",
 ] as const);
 
 export type ModelName = z.infer<typeof ModelNameSchema>;
 
 // Version ID format validation
-export const VersionIdSchema = z.string().regex(
-  /^v\d+_[a-f0-9]{8}$/,
-  'Version ID must match format: v{timestamp}_{hash}'
-);
+export const VersionIdSchema = z
+  .string()
+  .regex(/^v\d+_[a-f0-9]{8}$/, "Version ID must match format: v{timestamp}_{hash}");
 
 export type VersionId = z.infer<typeof VersionIdSchema>;
 
 // Base agent configuration request schema
-export const AgentConfigRequestSchema = z.object({
-  temperature: z.number()
-    .min(0.0, 'Temperature must be at least 0.0')
-    .max(2.0, 'Temperature must be at most 2.0')
-    .multipleOf(0.01, 'Temperature must have at most 2 decimal places')
-    .optional(),
-    
-  max_tokens: z.number()
-    .int('Max tokens must be an integer')
-    .min(1, 'Max tokens must be at least 1')
-    .max(8000, 'Max tokens must be at most 8000')
-    .optional(),
-    
-  top_p: z.number()
-    .min(0.0, 'Top-p must be at least 0.0')
-    .max(1.0, 'Top-p must be at most 1.0')
-    .multipleOf(0.01, 'Top-p must have at most 2 decimal places')
-    .optional(),
-    
-  timeout_seconds: z.number()
-    .int('Timeout must be an integer')
-    .min(5, 'Timeout must be at least 5 seconds')
-    .max(300, 'Timeout must be at most 300 seconds')
-    .optional(),
-    
-  model: ModelNameSchema.optional(),
-  
-  description: z.string()
-    .max(500, 'Description must be at most 500 characters')
-    .trim()
-    .optional()
-    .nullable(),
-}).refine((data) => {
-  // Cross-field validation for model compatibility
-  if (data.model && data.temperature !== undefined) {
-    // GPT-3.5 models work best with lower temperature
-    if (data.model.includes('gpt-3.5') && data.temperature > 1.5) {
-      return false;
+export const AgentConfigRequestSchema = z
+  .object({
+    temperature: z
+      .number()
+      .min(0.0, "Temperature must be at least 0.0")
+      .max(2.0, "Temperature must be at most 2.0")
+      .multipleOf(0.01, "Temperature must have at most 2 decimal places")
+      .optional(),
+
+    max_tokens: z
+      .number()
+      .int("Max tokens must be an integer")
+      .min(1, "Max tokens must be at least 1")
+      .max(8000, "Max tokens must be at most 8000")
+      .optional(),
+
+    top_p: z
+      .number()
+      .min(0.0, "Top-p must be at least 0.0")
+      .max(1.0, "Top-p must be at most 1.0")
+      .multipleOf(0.01, "Top-p must have at most 2 decimal places")
+      .optional(),
+
+    timeout_seconds: z
+      .number()
+      .int("Timeout must be an integer")
+      .min(5, "Timeout must be at least 5 seconds")
+      .max(300, "Timeout must be at most 300 seconds")
+      .optional(),
+
+    model: ModelNameSchema.optional(),
+
+    description: z
+      .string()
+      .max(500, "Description must be at most 500 characters")
+      .trim()
+      .optional()
+      .nullable(),
+  })
+  .refine(
+    (data) => {
+      // Cross-field validation for model compatibility
+      if (data.model && data.temperature !== undefined) {
+        // GPT-3.5 models work best with lower temperature
+        if (data.model.includes("gpt-3.5") && data.temperature > 1.5) {
+          return false;
+        }
+
+        // Claude models have different optimal ranges
+        if (data.model.includes("claude") && data.temperature > 1.0) {
+          return false;
+        }
+      }
+
+      if (data.model && data.max_tokens !== undefined) {
+        // Model-specific token limits
+        const modelLimits: Record<string, number> = {
+          "gpt-3.5-turbo": 4096,
+          "gpt-4": 8192,
+          "gpt-4-turbo": 8192,
+          "gpt-4o": 8192,
+          "claude-3-haiku": 4096,
+          "claude-3-sonnet": 8192,
+        };
+
+        const maxLimit = modelLimits[data.model] || 8000;
+        if (data.max_tokens > maxLimit) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+    {
+      message: "Configuration is not compatible with selected model",
+      path: ["model"],
     }
-    
-    // Claude models have different optimal ranges
-    if (data.model.includes('claude') && data.temperature > 1.0) {
-      return false;
-    }
-  }
-  
-  if (data.model && data.max_tokens !== undefined) {
-    // Model-specific token limits
-    const modelLimits: Record<string, number> = {
-      'gpt-3.5-turbo': 4096,
-      'gpt-4': 8192,
-      'gpt-4-turbo': 8192,
-      'gpt-4o': 8192,
-      'claude-3-haiku': 4096,
-      'claude-3-sonnet': 8192
-    };
-    
-    const maxLimit = modelLimits[data.model] || 8000;
-    if (data.max_tokens > maxLimit) {
-      return false;
-    }
-  }
-  
-  return true;
-}, {
-  message: 'Configuration is not compatible with selected model',
-  path: ['model']
-});
+  );
 
 export type AgentConfigRequest = z.infer<typeof AgentConfigRequestSchema>;
 
@@ -133,7 +142,7 @@ export const AgentConfigResponseSchema = z.object({
   updated_by: z.string().nullable().optional(),
   description: z.string().max(500).nullable().optional(),
   is_active: z.boolean().default(true),
-  
+
   // Computed fields from backend
   estimated_cost_per_1k_tokens: z.string().optional(), // Decimal as string
   creativity_level: z.string().optional(),
@@ -153,7 +162,7 @@ export const ConfigurationVersionSchema = z.object({
   created_by: z.string(),
   description: z.string().max(500).nullable().optional(),
   is_current: z.boolean().default(false),
-  
+
   // Computed fields
   age_in_days: z.number().int().min(0).optional(),
   is_recent: z.boolean().optional(),
@@ -171,7 +180,7 @@ export const PerformanceMetricsSchema = z.object({
   cost_estimate: z.string(), // Decimal as string
   measured_at: z.string().datetime(),
   sample_size: z.number().int().min(1),
-  
+
   // Computed fields
   performance_grade: z.string().optional(),
   tokens_per_second: z.number().min(0).optional(),
@@ -185,11 +194,13 @@ export const ConfigurationValidationErrorSchema = z.object({
   error: z.string(),
   current_value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
   suggested_value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
-  severity: z.enum(['error', 'warning', 'info']).default('error'),
+  severity: z.enum(["error", "warning", "info"]).default("error"),
   error_code: z.string().optional(),
 });
 
-export type ConfigurationValidationError = z.infer<typeof ConfigurationValidationErrorSchema>;
+export type ConfigurationValidationError = z.infer<
+  typeof ConfigurationValidationErrorSchema
+>;
 
 // Configuration validation response schema
 export const ConfigurationValidationResponseSchema = z.object({
@@ -200,7 +211,9 @@ export const ConfigurationValidationResponseSchema = z.object({
   validation_summary: z.string().optional(),
 });
 
-export type ConfigurationValidationResponse = z.infer<typeof ConfigurationValidationResponseSchema>;
+export type ConfigurationValidationResponse = z.infer<
+  typeof ConfigurationValidationResponseSchema
+>;
 
 // WebSocket message schema
 export const WebSocketConfigMessageSchema = z.object({
@@ -221,38 +234,41 @@ export const ConfigurationFormSchema = AgentConfigRequestSchema.extend({
 }).refine((data) => {
   // Agent-specific validation rules
   const recommendedTemperatures: Record<AgentType, number> = {
-    'budget_agent': 0.2,
-    'destination_research_agent': 0.5,
-    'itinerary_agent': 0.4
+    budget_agent: 0.2,
+    destination_research_agent: 0.5,
+    itinerary_agent: 0.4,
   };
-  
+
   if (data.temperature !== undefined) {
     const recommended = recommendedTemperatures[data.agent_type];
     const diff = Math.abs(data.temperature - recommended);
-    
+
     // Warning for temperatures too far from recommended
     if (diff > 0.3) {
       return {
-        warning: `Temperature ${data.temperature} may not be optimal for ${data.agent_type}. Recommended: ${recommended}`
+        warning: `Temperature ${data.temperature} may not be optimal for ${data.agent_type}. Recommended: ${recommended}`,
       };
     }
   }
-  
+
   return true;
 });
 
 export type ConfigurationForm = z.infer<typeof ConfigurationFormSchema>;
 
 // API response wrapper schema
-export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) => z.object({
-  data: dataSchema,
-  success: z.boolean(),
-  message: z.string().optional(),
-  errors: z.array(z.string()).optional(),
-});
+export const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
+  z.object({
+    data: dataSchema,
+    success: z.boolean(),
+    message: z.string().optional(),
+    errors: z.array(z.string()).optional(),
+  });
 
 // Common API responses
-export const AgentConfigApiResponseSchema = ApiResponseSchema(AgentConfigResponseSchema);
+export const AgentConfigApiResponseSchema = ApiResponseSchema(
+  AgentConfigResponseSchema
+);
 export const ConfigurationListApiResponseSchema = ApiResponseSchema(
   z.record(AgentTypeEnum, AgentConfigResponseSchema)
 );
@@ -266,7 +282,7 @@ export const AgentSelectSchema = z.object({
 });
 
 export const EnvironmentSelectSchema = z.object({
-  environment: z.enum(['development', 'production', 'staging', 'test']),
+  environment: z.enum(["development", "production", "staging", "test"]),
 });
 
 // Export statement validation schema for import/export
@@ -278,8 +294,8 @@ export const ConfigurationExportSchema = z.object({
   global_defaults: z.record(z.any()),
   exported_at: z.string().datetime(),
   exported_by: z.string(),
-  format: z.enum(['json', 'yaml']).default('json'),
-  
+  format: z.enum(["json", "yaml"]).default("json"),
+
   // Computed fields
   total_configurations: z.number().int().min(0).optional(),
   export_size_estimate_kb: z.number().min(0).optional(),
@@ -296,10 +312,7 @@ export const validateConfigurationResponse = (data: unknown): AgentConfigRespons
   return AgentConfigResponseSchema.parse(data);
 };
 
-export const validateApiResponse = <T>(
-  schema: z.ZodType<T>,
-  data: unknown
-): T => {
+export const validateApiResponse = <T>(schema: z.ZodType<T>, data: unknown): T => {
   return schema.parse(data);
 };
 
@@ -308,51 +321,51 @@ export const getFieldErrorMessage = (
   error: z.ZodError,
   fieldName: string
 ): string | undefined => {
-  const fieldError = error.errors.find(err => 
-    err.path.includes(fieldName)
-  );
+  const fieldError = error.errors.find((err) => err.path.includes(fieldName));
   return fieldError?.message;
 };
 
 export const getFormErrors = (error: z.ZodError): Record<string, string> => {
   const errors: Record<string, string> = {};
-  
-  error.errors.forEach(err => {
-    const field = err.path.join('.');
+
+  error.errors.forEach((err) => {
+    const field = err.path.join(".");
     errors[field] = err.message;
   });
-  
+
   return errors;
 };
 
 // Default values for forms
 export const getDefaultConfigForAgent = (agentType: AgentType): AgentConfigRequest => {
   const defaults: Record<AgentType, AgentConfigRequest> = {
-    'budget_agent': {
+    budget_agent: {
       temperature: 0.2,
       max_tokens: 1000,
       top_p: 0.9,
       timeout_seconds: 30,
-      model: 'gpt-4',
-      description: 'Budget optimization agent - low creativity, high accuracy'
+      model: "gpt-4",
+      description: "Budget optimization agent - low creativity, high accuracy",
     },
-    'destination_research_agent': {
+    destination_research_agent: {
       temperature: 0.5,
       max_tokens: 1000,
       top_p: 0.9,
       timeout_seconds: 30,
-      model: 'gpt-4',
-      description: 'Destination research agent - moderate creativity for comprehensive research'
+      model: "gpt-4",
+      description:
+        "Destination research agent - moderate creativity for comprehensive research",
     },
-    'itinerary_agent': {
+    itinerary_agent: {
       temperature: 0.4,
       max_tokens: 1000,
       top_p: 0.9,
       timeout_seconds: 30,
-      model: 'gpt-4',
-      description: 'Itinerary planning agent - structured creativity for logical planning'
-    }
+      model: "gpt-4",
+      description:
+        "Itinerary planning agent - structured creativity for logical planning",
+    },
   };
-  
+
   return defaults[agentType];
 };

@@ -98,24 +98,8 @@ export type TravelPreferences = z.infer<typeof TravelPreferencesSchema>;
 export type PersonalInfo = z.infer<typeof PersonalInfoSchema>;
 export type PrivacySettings = z.infer<typeof PrivacySettingsSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
-
-export interface FavoriteDestination {
-  id: string;
-  name: string;
-  country: string;
-  notes?: string;
-  visitCount: number;
-  lastVisited?: string;
-}
-
-export interface TravelDocument {
-  id: string;
-  type: "passport" | "visa" | "license" | "insurance" | "vaccination";
-  number: string;
-  expiryDate: string;
-  issuingCountry: string;
-  notes?: string;
-}
+export type FavoriteDestination = UserProfile["favoriteDestinations"][0];
+export type TravelDocument = UserProfile["travelDocuments"][0];
 
 // User profile store interface (authentication is handled by auth-store)
 interface UserProfileState {

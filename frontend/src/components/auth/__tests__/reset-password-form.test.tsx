@@ -64,7 +64,9 @@ describe("ResetPasswordForm", () => {
     });
 
     it("should accept custom className prop", () => {
-      const { container } = renderWithProviders(<ResetPasswordForm className="custom-class" />);
+      const { container } = renderWithProviders(
+        <ResetPasswordForm className="custom-class" />
+      );
       const card = container.querySelector(".custom-class");
       expect(card).toBeInTheDocument();
     });

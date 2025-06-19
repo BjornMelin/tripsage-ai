@@ -2,47 +2,76 @@
 
 /**
  * Configuration Manager Component
- * 
+ *
  * Advanced React component for managing agent configurations with real-time updates,
  * versioning, and performance tracking following 2025 best practices.
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { toast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
-import { 
-  Settings, 
-  Save, 
-  RotateCcw, 
-  Activity, 
-  Clock, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Activity,
   AlertTriangle,
   CheckCircle,
-  History,
-  Eye,
-  Edit,
+  Clock,
+  DollarSign,
   Download,
-  Upload
-} from 'lucide-react';
+  Edit,
+  Eye,
+  History,
+  RotateCcw,
+  Save,
+  Settings,
+  TrendingUp,
+  Upload,
+} from "lucide-react";
 
 // Types
 interface AgentConfig {
@@ -77,29 +106,47 @@ interface PerformanceMetrics {
 }
 
 const AGENT_TYPES = [
-  { value: 'budget_agent', label: 'Budget Agent', description: 'Handles budget optimization and expense tracking' },
-  { value: 'destination_research_agent', label: 'Research Agent', description: 'Researches destinations and attractions' },
-  { value: 'itinerary_agent', label: 'Itinerary Agent', description: 'Plans and optimizes travel itineraries' }
+  {
+    value: "budget_agent",
+    label: "Budget Agent",
+    description: "Handles budget optimization and expense tracking",
+  },
+  {
+    value: "destination_research_agent",
+    label: "Research Agent",
+    description: "Researches destinations and attractions",
+  },
+  {
+    value: "itinerary_agent",
+    label: "Itinerary Agent",
+    description: "Plans and optimizes travel itineraries",
+  },
 ];
 
 const MODEL_OPTIONS = [
-  'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'
+  "gpt-4",
+  "gpt-4-turbo",
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-3.5-turbo",
 ];
 
 export default function ConfigurationManager() {
   const router = useRouter();
   const { toast } = useToast();
-  
+
   // State management
   const [configs, setConfigs] = useState<Record<string, AgentConfig>>({});
   const [versions, setVersions] = useState<Record<string, ConfigVersion[]>>({});
   const [metrics, setMetrics] = useState<Record<string, PerformanceMetrics>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<string>('budget_agent');
+  const [selectedAgent, setSelectedAgent] = useState<string>("budget_agent");
   const [ws, setWs] = useState<WebSocket | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected');
-  
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected"
+  >("disconnected");
+
   // Form state
   const [editedConfig, setEditedConfig] = useState<Partial<AgentConfig>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -107,42 +154,42 @@ export default function ConfigurationManager() {
   // WebSocket connection for real-time updates
   useEffect(() => {
     const connectWebSocket = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/api/config/ws`;
-      
+
       const websocket = new WebSocket(wsUrl);
-      
+
       websocket.onopen = () => {
-        setConnectionStatus('connected');
+        setConnectionStatus("connected");
         setWs(websocket);
-        console.log('Configuration WebSocket connected');
+        console.log("Configuration WebSocket connected");
       };
-      
+
       websocket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
           handleWebSocketMessage(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error("Error parsing WebSocket message:", error);
         }
       };
-      
+
       websocket.onclose = () => {
-        setConnectionStatus('disconnected');
+        setConnectionStatus("disconnected");
         setWs(null);
         // Reconnect after 5 seconds
         setTimeout(connectWebSocket, 5000);
       };
-      
+
       websocket.onerror = (error) => {
-        console.error('Configuration WebSocket error:', error);
-        setConnectionStatus('disconnected');
+        console.error("Configuration WebSocket error:", error);
+        setConnectionStatus("disconnected");
       };
     };
-    
-    setConnectionStatus('connecting');
+
+    setConnectionStatus("connecting");
     connectWebSocket();
-    
+
     return () => {
       if (ws) {
         ws.close();
@@ -151,31 +198,34 @@ export default function ConfigurationManager() {
   }, []);
 
   // Handle WebSocket messages
-  const handleWebSocketMessage = useCallback((message: any) => {
-    switch (message.type) {
-      case 'agent_config_updated':
-        toast({
-          title: 'Configuration Updated',
-          description: `${message.agent_type} configuration was updated by ${message.updated_by}`,
-          variant: 'default'
-        });
-        // Refresh the specific agent config
-        loadAgentConfig(message.agent_type);
-        break;
-        
-      case 'agent_config_rolled_back':
-        toast({
-          title: 'Configuration Rolled Back',
-          description: `${message.agent_type} was rolled back to version ${message.version_id}`,
-          variant: 'default'
-        });
-        loadAgentConfig(message.agent_type);
-        break;
-        
-      default:
-        console.log('Unknown WebSocket message type:', message.type);
-    }
-  }, [toast]);
+  const handleWebSocketMessage = useCallback(
+    (message: any) => {
+      switch (message.type) {
+        case "agent_config_updated":
+          toast({
+            title: "Configuration Updated",
+            description: `${message.agent_type} configuration was updated by ${message.updated_by}`,
+            variant: "default",
+          });
+          // Refresh the specific agent config
+          loadAgentConfig(message.agent_type);
+          break;
+
+        case "agent_config_rolled_back":
+          toast({
+            title: "Configuration Rolled Back",
+            description: `${message.agent_type} was rolled back to version ${message.version_id}`,
+            variant: "default",
+          });
+          loadAgentConfig(message.agent_type);
+          break;
+
+        default:
+          console.log("Unknown WebSocket message type:", message.type);
+      }
+    },
+    [toast]
+  );
 
   // Load initial data
   useEffect(() => {
@@ -190,15 +240,15 @@ export default function ConfigurationManager() {
         await Promise.all([
           loadAgentConfig(agentType.value),
           loadVersionHistory(agentType.value),
-          loadPerformanceMetrics(agentType.value)
+          loadPerformanceMetrics(agentType.value),
         ]);
       }
     } catch (error) {
-      console.error('Error loading configurations:', error);
+      console.error("Error loading configurations:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to load configurations',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to load configurations",
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -208,11 +258,11 @@ export default function ConfigurationManager() {
   const loadAgentConfig = async (agentType: string) => {
     try {
       const response = await fetch(`/api/config/agents/${agentType}`);
-      if (!response.ok) throw new Error('Failed to load config');
-      
+      if (!response.ok) throw new Error("Failed to load config");
+
       const config = await response.json();
-      setConfigs(prev => ({ ...prev, [agentType]: config }));
-      
+      setConfigs((prev) => ({ ...prev, [agentType]: config }));
+
       // Initialize edited config if this is the selected agent
       if (agentType === selectedAgent) {
         setEditedConfig(config);
@@ -226,10 +276,10 @@ export default function ConfigurationManager() {
   const loadVersionHistory = async (agentType: string) => {
     try {
       const response = await fetch(`/api/config/agents/${agentType}/versions?limit=10`);
-      if (!response.ok) throw new Error('Failed to load versions');
-      
+      if (!response.ok) throw new Error("Failed to load versions");
+
       const versionList = await response.json();
-      setVersions(prev => ({ ...prev, [agentType]: versionList }));
+      setVersions((prev) => ({ ...prev, [agentType]: versionList }));
     } catch (error) {
       console.error(`Error loading versions for ${agentType}:`, error);
     }
@@ -246,13 +296,13 @@ export default function ConfigurationManager() {
         error_rate: Math.random() * 0.05,
         token_usage: {
           input_tokens: Math.floor(Math.random() * 10000),
-          output_tokens: Math.floor(Math.random() * 5000)
+          output_tokens: Math.floor(Math.random() * 5000),
         },
         cost_estimate: Math.random() * 10,
-        sample_size: Math.floor(Math.random() * 1000) + 100
+        sample_size: Math.floor(Math.random() * 1000) + 100,
       };
-      
-      setMetrics(prev => ({ ...prev, [agentType]: mockMetrics }));
+
+      setMetrics((prev) => ({ ...prev, [agentType]: mockMetrics }));
     } catch (error) {
       console.error(`Error loading metrics for ${agentType}:`, error);
     }
@@ -261,11 +311,13 @@ export default function ConfigurationManager() {
   // Handle agent selection change
   const handleAgentChange = (agentType: string) => {
     if (hasUnsavedChanges) {
-      if (!confirm('You have unsaved changes. Are you sure you want to switch agents?')) {
+      if (
+        !confirm("You have unsaved changes. Are you sure you want to switch agents?")
+      ) {
         return;
       }
     }
-    
+
     setSelectedAgent(agentType);
     const config = configs[agentType];
     if (config) {
@@ -276,20 +328,20 @@ export default function ConfigurationManager() {
 
   // Handle configuration field changes
   const handleConfigChange = (field: keyof AgentConfig, value: any) => {
-    setEditedConfig(prev => ({ ...prev, [field]: value }));
+    setEditedConfig((prev) => ({ ...prev, [field]: value }));
     setHasUnsavedChanges(true);
   };
 
   // Save configuration
   const saveConfiguration = async () => {
     if (!selectedAgent || !editedConfig) return;
-    
+
     setSaving(selectedAgent);
     try {
       const response = await fetch(`/api/config/agents/${selectedAgent}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           temperature: editedConfig.temperature,
@@ -297,35 +349,35 @@ export default function ConfigurationManager() {
           top_p: editedConfig.top_p,
           timeout_seconds: editedConfig.timeout_seconds,
           model: editedConfig.model,
-          description: editedConfig.description
-        })
+          description: editedConfig.description,
+        }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to save configuration');
+        throw new Error(error.message || "Failed to save configuration");
       }
-      
+
       const updatedConfig = await response.json();
-      setConfigs(prev => ({ ...prev, [selectedAgent]: updatedConfig }));
+      setConfigs((prev) => ({ ...prev, [selectedAgent]: updatedConfig }));
       setEditedConfig(updatedConfig);
       setHasUnsavedChanges(false);
-      
+
       toast({
-        title: 'Configuration Saved',
+        title: "Configuration Saved",
         description: `${selectedAgent} configuration has been updated successfully`,
-        variant: 'default'
+        variant: "default",
       });
-      
+
       // Reload version history to show the new version
       await loadVersionHistory(selectedAgent);
-      
     } catch (error) {
-      console.error('Error saving configuration:', error);
+      console.error("Error saving configuration:", error);
       toast({
-        title: 'Save Failed',
-        description: error instanceof Error ? error.message : 'Failed to save configuration',
-        variant: 'destructive'
+        title: "Save Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to save configuration",
+        variant: "destructive",
       });
     } finally {
       setSaving(null);
@@ -335,32 +387,35 @@ export default function ConfigurationManager() {
   // Rollback to version
   const rollbackToVersion = async (versionId: string) => {
     if (!selectedAgent) return;
-    
+
     try {
-      const response = await fetch(`/api/config/agents/${selectedAgent}/rollback/${versionId}`, {
-        method: 'POST'
-      });
-      
+      const response = await fetch(
+        `/api/config/agents/${selectedAgent}/rollback/${versionId}`,
+        {
+          method: "POST",
+        }
+      );
+
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to rollback');
+        throw new Error(error.message || "Failed to rollback");
       }
-      
+
       await loadAgentConfig(selectedAgent);
       await loadVersionHistory(selectedAgent);
-      
+
       toast({
-        title: 'Rollback Successful',
+        title: "Rollback Successful",
         description: `Configuration rolled back to version ${versionId}`,
-        variant: 'default'
+        variant: "default",
       });
-      
     } catch (error) {
-      console.error('Error rolling back:', error);
+      console.error("Error rolling back:", error);
       toast({
-        title: 'Rollback Failed',
-        description: error instanceof Error ? error.message : 'Failed to rollback configuration',
-        variant: 'destructive'
+        title: "Rollback Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to rollback configuration",
+        variant: "destructive",
       });
     }
   };
@@ -396,10 +451,10 @@ export default function ConfigurationManager() {
             Manage AI agent parameters and monitor performance
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
-          <Badge variant={connectionStatus === 'connected' ? 'default' : 'destructive'}>
-            {connectionStatus === 'connected' ? 'Live Updates' : 'Disconnected'}
+          <Badge variant={connectionStatus === "connected" ? "default" : "destructive"}>
+            {connectionStatus === "connected" ? "Live Updates" : "Disconnected"}
           </Badge>
         </div>
       </div>
@@ -422,7 +477,9 @@ export default function ConfigurationManager() {
                 <SelectItem key={agent.value} value={agent.value}>
                   <div>
                     <div className="font-medium">{agent.label}</div>
-                    <div className="text-sm text-muted-foreground">{agent.description}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {agent.description}
+                    </div>
                   </div>
                 </SelectItem>
               ))}
@@ -446,10 +503,11 @@ export default function ConfigurationManager() {
                 <div>
                   <CardTitle>Agent Parameters</CardTitle>
                   <CardDescription>
-                    Configure the behavior and performance parameters for the selected agent
+                    Configure the behavior and performance parameters for the selected
+                    agent
                   </CardDescription>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -460,7 +518,7 @@ export default function ConfigurationManager() {
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Reset
                   </Button>
-                  
+
                   <Button
                     onClick={saveConfiguration}
                     disabled={!hasUnsavedChanges || saving === selectedAgent}
@@ -474,14 +532,14 @@ export default function ConfigurationManager() {
                   </Button>
                 </div>
               </CardHeader>
-              
+
               <CardContent className="space-y-6">
                 {/* Model Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="model">Model</Label>
                   <Select
-                    value={editedConfig.model || ''}
-                    onValueChange={(value) => handleConfigChange('model', value)}
+                    value={editedConfig.model || ""}
+                    onValueChange={(value) => handleConfigChange("model", value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a model" />
@@ -501,19 +559,22 @@ export default function ConfigurationManager() {
                   <div className="flex items-center justify-between">
                     <Label>Temperature</Label>
                     <span className="text-sm text-muted-foreground">
-                      {editedConfig.temperature?.toFixed(2) || '0.00'}
+                      {editedConfig.temperature?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <Slider
                     value={[editedConfig.temperature || 0]}
-                    onValueChange={([value]) => handleConfigChange('temperature', value)}
+                    onValueChange={([value]) =>
+                      handleConfigChange("temperature", value)
+                    }
                     min={0}
                     max={2}
                     step={0.01}
                     className="w-full"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Controls randomness. Lower values = more focused, higher values = more creative
+                    Controls randomness. Lower values = more focused, higher values =
+                    more creative
                   </p>
                 </div>
 
@@ -523,8 +584,10 @@ export default function ConfigurationManager() {
                   <Input
                     id="max_tokens"
                     type="number"
-                    value={editedConfig.max_tokens || ''}
-                    onChange={(e) => handleConfigChange('max_tokens', parseInt(e.target.value))}
+                    value={editedConfig.max_tokens || ""}
+                    onChange={(e) =>
+                      handleConfigChange("max_tokens", Number.parseInt(e.target.value))
+                    }
                     min={1}
                     max={8000}
                   />
@@ -538,12 +601,12 @@ export default function ConfigurationManager() {
                   <div className="flex items-center justify-between">
                     <Label>Top P</Label>
                     <span className="text-sm text-muted-foreground">
-                      {editedConfig.top_p?.toFixed(2) || '0.00'}
+                      {editedConfig.top_p?.toFixed(2) || "0.00"}
                     </span>
                   </div>
                   <Slider
                     value={[editedConfig.top_p || 0]}
-                    onValueChange={([value]) => handleConfigChange('top_p', value)}
+                    onValueChange={([value]) => handleConfigChange("top_p", value)}
                     min={0}
                     max={1}
                     step={0.01}
@@ -560,8 +623,13 @@ export default function ConfigurationManager() {
                   <Input
                     id="timeout_seconds"
                     type="number"
-                    value={editedConfig.timeout_seconds || ''}
-                    onChange={(e) => handleConfigChange('timeout_seconds', parseInt(e.target.value))}
+                    value={editedConfig.timeout_seconds || ""}
+                    onChange={(e) =>
+                      handleConfigChange(
+                        "timeout_seconds",
+                        Number.parseInt(e.target.value)
+                      )
+                    }
                     min={5}
                     max={300}
                   />
@@ -575,8 +643,8 @@ export default function ConfigurationManager() {
                   <Label htmlFor="description">Description (Optional)</Label>
                   <Input
                     id="description"
-                    value={editedConfig.description || ''}
-                    onChange={(e) => handleConfigChange('description', e.target.value)}
+                    value={editedConfig.description || ""}
+                    onChange={(e) => handleConfigChange("description", e.target.value)}
                     placeholder="Describe this configuration..."
                   />
                 </div>
@@ -624,9 +692,7 @@ export default function ConfigurationManager() {
                     <div className="text-2xl font-bold">
                       {(currentMetrics.success_rate * 100).toFixed(1)}%
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Successful requests
-                    </p>
+                    <p className="text-xs text-muted-foreground">Successful requests</p>
                   </CardContent>
                 </Card>
 
@@ -654,9 +720,7 @@ export default function ConfigurationManager() {
                     <div className="text-2xl font-bold">
                       {currentMetrics.sample_size.toLocaleString()}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Requests analyzed
-                    </p>
+                    <p className="text-xs text-muted-foreground">Requests analyzed</p>
                   </CardContent>
                 </Card>
               </div>
@@ -698,7 +762,7 @@ export default function ConfigurationManager() {
                             {new Date(version.created_at).toLocaleString()}
                           </TableCell>
                           <TableCell>{version.created_by}</TableCell>
-                          <TableCell>{version.description || '-'}</TableCell>
+                          <TableCell>{version.description || "-"}</TableCell>
                           <TableCell>
                             {version.is_current && (
                               <Badge variant="default">Current</Badge>
@@ -711,34 +775,36 @@ export default function ConfigurationManager() {
                                 size="sm"
                                 onClick={() => {
                                   // TODO: Show version details
-                                  console.log('View version:', version);
+                                  console.log("View version:", version);
                                 }}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              
+
                               {!version.is_current && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                    >
+                                    <Button variant="ghost" size="sm">
                                       <RotateCcw className="h-4 w-4" />
                                     </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
-                                      <AlertDialogTitle>Rollback Configuration</AlertDialogTitle>
+                                      <AlertDialogTitle>
+                                        Rollback Configuration
+                                      </AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Are you sure you want to rollback to version {version.version_id}? 
-                                        This will replace the current configuration and create a new version.
+                                        Are you sure you want to rollback to version{" "}
+                                        {version.version_id}? This will replace the
+                                        current configuration and create a new version.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                                       <AlertDialogAction
-                                        onClick={() => rollbackToVersion(version.version_id)}
+                                        onClick={() =>
+                                          rollbackToVersion(version.version_id)
+                                        }
                                       >
                                         Rollback
                                       </AlertDialogAction>

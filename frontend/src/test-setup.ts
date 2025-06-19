@@ -87,18 +87,18 @@ global.renderWithProviders = testUtils.renderWithProviders;
 
 // Mock environment variables for testing
 // Create a proxy for process.env to avoid descriptor errors
-if (typeof process !== 'undefined' && process.env) {
+if (typeof process !== "undefined" && process.env) {
   const originalEnv = process.env;
   process.env = new Proxy(originalEnv, {
     get(target, prop) {
-      if (prop === 'NODE_ENV' && !target.NODE_ENV) {
-        return 'test';
+      if (prop === "NODE_ENV" && !target.NODE_ENV) {
+        return "test";
       }
       return target[prop as string];
     },
     set(target, prop, value) {
       target[prop as string] = value;
       return true;
-    }
+    },
   });
 }
