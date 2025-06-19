@@ -7,7 +7,7 @@ Updated for Pydantic v2 and modern pytest patterns (2025).
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import Generator
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -19,7 +19,6 @@ from pydantic import SecretStr
 
 if TYPE_CHECKING:
     from tripsage.agents.service_registry import ServiceRegistry
-    from tripsage_core.config import Settings
 
 # Configure pytest-asyncio - updated for pytest-asyncio 1.0
 # No longer need event_loop fixture with pytest-asyncio 1.0

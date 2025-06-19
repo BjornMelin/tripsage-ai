@@ -185,11 +185,11 @@ def query_data_strategies(draw):
 
 
 @pytest.fixture
-def mock_settings_factory():
+def mock_settings_factory() -> Callable[..., MagicMock]:
     """Factory for creating mock settings with various configurations."""
 
-    def _create_settings(**overrides):
-        defaults = {
+    def _create_settings(**overrides: Any) -> MagicMock:
+        defaults: dict[str, Any] = {
             "environment": "testing",
             "debug": True,
             "database_url": "https://test.supabase.com",
@@ -218,11 +218,15 @@ def mock_settings_factory():
 
 
 @pytest.fixture
-def database_service_factory(mock_settings_factory):
+def database_service_factory(
+    mock_settings_factory: Callable[..., MagicMock]
+) -> Generator[Callable[..., DatabaseService], None, None]:
     """Factory for creating DatabaseService instances with various configurations."""
-    created_services: List[DatabaseService] = []
+    created_services: list[DatabaseService] = []
 
-    def _create_service(config: Optional[DatabaseConfig] = None, **legacy_overrides):
+    def _create_service(
+        config: DatabaseConfig | None = None, **legacy_overrides: Any
+    ) -> DatabaseService:
         settings = mock_settings_factory()
 
         if config is None:
@@ -312,7 +316,7 @@ def database_service_factory(mock_settings_factory):
 
 
 @pytest_asyncio.fixture
-async def mock_database_service():
+async def mock_database_service() -> AsyncMock:
     """Create a fully mocked DatabaseService for unit testing."""
     service = AsyncMock(spec=DatabaseService)
 
@@ -356,7 +360,7 @@ async def mock_database_service():
 
 
 @pytest_asyncio.fixture
-async def in_memory_database_service():
+async def in_memory_database_service() -> AsyncGenerator[DatabaseService, None]:
     """Create a DatabaseService with in-memory SQLite for integration testing."""
     # Create in-memory SQLite engine for testing
     engine = create_engine(
@@ -417,11 +421,11 @@ async def in_memory_database_service():
 
 
 @pytest.fixture
-def query_metrics_factory():
+def query_metrics_factory() -> Callable[..., list[QueryMetrics]]:
     """Factory for creating QueryMetrics test data."""
 
-    def _create_metrics(count: int = 5, **overrides) -> List[QueryMetrics]:
-        metrics = []
+    def _create_metrics(count: int = 5, **overrides: Any) -> list[QueryMetrics]:
+        metrics: list[QueryMetrics] = []
         for i in range(count):
             defaults = {
                 "query_type": QueryType.SELECT,
@@ -439,11 +443,11 @@ def query_metrics_factory():
 
 
 @pytest.fixture
-def security_alert_factory():
+def security_alert_factory() -> Callable[..., list[SecurityAlert]]:
     """Factory for creating SecurityAlert test data."""
 
-    def _create_alerts(count: int = 3, **overrides) -> List[SecurityAlert]:
-        alerts = []
+    def _create_alerts(count: int = 3, **overrides: Any) -> list[SecurityAlert]:
+        alerts: list[SecurityAlert] = []
         for i in range(count):
             defaults = {
                 "event_type": SecurityEvent.SLOW_QUERY_DETECTED,
@@ -465,7 +469,7 @@ def security_alert_factory():
 
 
 @pytest.fixture
-def benchmark_config():
+def benchmark_config() -> dict[str, Any]:
     """Configuration for performance benchmarks."""
     return {
         "min_rounds": 5,
@@ -478,7 +482,7 @@ def benchmark_config():
 
 
 @pytest_asyncio.fixture
-async def load_test_data():
+async def load_test_data() -> dict[str, list[Any]]:
     """Generate data for load testing scenarios."""
     users = [{"id": str(uuid4()), "email": f"user{i}@test.com"} for i in range(100)]
     trips = [
@@ -506,11 +510,11 @@ async def load_test_data():
 
 
 @pytest_asyncio.fixture
-async def async_context_manager():
+async def async_context_manager() -> Callable:
     """Utility for testing async context managers."""
 
     @asynccontextmanager
-    async def _test_context(service: DatabaseService, operation: str):
+    async def _test_context(service: DatabaseService, operation: str) -> AsyncGenerator[None, None]:
         start_time = time.time()
         try:
             yield
@@ -522,10 +526,10 @@ async def async_context_manager():
 
 
 @pytest.fixture
-def connection_lifecycle_tester():
+def connection_lifecycle_tester() -> Callable[..., Any]:
     """Utility for testing connection lifecycle scenarios."""
 
-    async def _test_lifecycle(service: DatabaseService, scenario: str = "normal"):
+    async def _test_lifecycle(service: DatabaseService, scenario: str = "normal") -> None:
         """Test various connection lifecycle scenarios."""
         if scenario == "normal":
             await service.connect()
@@ -558,10 +562,10 @@ def connection_lifecycle_tester():
 
 
 @pytest.fixture
-def error_injector():
+def error_injector() -> Callable[[DatabaseService, str], None]:
     """Utility for injecting various types of errors during testing."""
 
-    def _inject_errors(service: DatabaseService, error_type: str):
+    def _inject_errors(service: DatabaseService, error_type: str) -> None:
         """Inject specific types of errors for resilience testing."""
         if error_type == "connection_failure":
             service._supabase_client = None
@@ -598,53 +602,55 @@ def error_injector():
 # ============================================================================
 
 
-@pytest.fixture
-def stateful_test_runner():
-    """Runner for stateful property-based testing scenarios."""
+class DatabaseServiceStateMachine:
+    """State machine for stateful property-based testing."""
+    
+    def __init__(self, service: DatabaseService) -> None:
+        self.service = service
+        self.connected = False
+        self.tables_created: set[str] = set()
+        self.operations_count = 0
 
-    class DatabaseServiceStateMachine:
-        def __init__(self, service: DatabaseService):
-            self.service = service
+    async def connect(self) -> None:
+        if not self.connected:
+            await self.service.connect()
+            self.connected = True
+
+    async def disconnect(self) -> None:
+        if self.connected:
+            await self.service.close()
             self.connected = False
-            self.tables_created = set()
-            self.operations_count = 0
 
-        async def connect(self):
-            if not self.connected:
-                await self.service.connect()
-                self.connected = True
+    async def insert_data(self, table: str, data: dict[str, Any]) -> None:
+        if self.connected:
+            try:
+                await self.service.insert(table, data)
+                self.tables_created.add(table)
+                self.operations_count += 1
+            except Exception as e:
+                logger.debug(f"Insert failed: {e}")
 
-        async def disconnect(self):
-            if self.connected:
-                await self.service.close()
-                self.connected = False
+    async def query_data(self, table: str, filters: dict[str, Any]) -> list[Any]:
+        if self.connected and table in self.tables_created:
+            try:
+                result = await self.service.select(table, filters=filters)
+                self.operations_count += 1
+                return result
+            except Exception as e:
+                logger.debug(f"Query failed: {e}")
+        return []
 
-        async def insert_data(self, table: str, data: Dict[str, Any]):
-            if self.connected:
-                try:
-                    await self.service.insert(table, data)
-                    self.tables_created.add(table)
-                    self.operations_count += 1
-                except Exception as e:
-                    logger.debug(f"Insert failed: {e}")
+    def get_stats(self) -> dict[str, Any]:
+        return {
+            "connected": self.connected,
+            "tables_created": len(self.tables_created),
+            "operations_count": self.operations_count,
+        }
 
-        async def query_data(self, table: str, filters: Dict[str, Any]):
-            if self.connected and table in self.tables_created:
-                try:
-                    result = await self.service.select(table, filters=filters)
-                    self.operations_count += 1
-                    return result
-                except Exception as e:
-                    logger.debug(f"Query failed: {e}")
-            return []
 
-        def get_stats(self):
-            return {
-                "connected": self.connected,
-                "tables_created": len(self.tables_created),
-                "operations_count": self.operations_count,
-            }
-
+@pytest.fixture
+def stateful_test_runner() -> type[DatabaseServiceStateMachine]:
+    """Runner for stateful property-based testing scenarios."""
     return DatabaseServiceStateMachine
 
 
@@ -654,14 +660,14 @@ def stateful_test_runner():
 
 
 @pytest_asyncio.fixture
-async def real_database_service(monkeypatch):
+async def real_database_service(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> AsyncGenerator[DatabaseService, None]:
     """Create a DatabaseService for integration testing with real connections.
 
     WARNING: This fixture requires real database credentials and should only
     be used for integration tests with appropriate test isolation.
     """
     # Only create if integration testing is explicitly enabled
-    if not pytest.config.getoption("--run-integration", default=False):
+    if not request.config.getoption("--run-integration", default=False):
         pytest.skip("Integration tests disabled - use --run-integration to enable")
 
     # Mock settings with real test database
@@ -700,7 +706,7 @@ async def real_database_service(monkeypatch):
 # ============================================================================
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Configure additional markers for database service testing."""
     config.addinivalue_line(
         "markers", "property: Property-based tests using Hypothesis"
@@ -716,7 +722,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "stateful: Stateful property-based testing")
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     """Add command line options for database service testing."""
     parser.addoption(
         "--run-integration",
@@ -738,7 +744,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Modify test collection based on command line options."""
     # Skip integration tests unless explicitly enabled
     if not config.getoption("--run-integration"):

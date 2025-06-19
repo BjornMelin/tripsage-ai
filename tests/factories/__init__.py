@@ -9,7 +9,7 @@ test data for models, requests, and responses.
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from tripsage_core.models.schemas_common.enums import (
@@ -26,7 +26,7 @@ from tripsage_core.models.schemas_common.enums import (
 )
 
 if TYPE_CHECKING:
-    from tripsage_core.models.schemas_common.chat import ChatMessage
+    pass  # Removed unused ChatMessage import
 
 
 class BaseFactory:

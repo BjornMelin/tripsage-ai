@@ -116,7 +116,12 @@ class DependencyTestClient:
         self.async_client = AsyncClient(app=self.app, base_url="http://test")
         return self
 
-    async def __aexit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Exit async context manager."""
         if self.async_client:
             await self.async_client.aclose()
