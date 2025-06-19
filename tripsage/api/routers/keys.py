@@ -9,7 +9,11 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    ApiKeyServiceDep,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.api_keys import (
     ApiKeyCreate,
@@ -17,12 +21,6 @@ from tripsage.api.schemas.api_keys import (
     ApiKeyRotateRequest,
     ApiKeyValidateRequest,
     ApiKeyValidateResponse,
-)
-from tripsage_core.services.business.api_key_service import (
-    ApiKeyService as KeyService,
-)
-from tripsage_core.services.business.api_key_service import (
-    get_api_key_service as get_key_service,
 )
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
@@ -44,8 +42,8 @@ def get_monitoring_service() -> KeyMonitoringService:
     summary="List API keys",
 )
 async def list_keys(
+    key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
-    key_service: KeyService = Depends(get_key_service),
 ):
     """List all API keys for the current user.
 
@@ -68,8 +66,8 @@ async def list_keys(
 )
 async def create_key(
     key_data: ApiKeyCreate,
+    key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
-    key_service: KeyService = Depends(get_key_service),
 ):
     """Create a new API key.
 
@@ -112,9 +110,9 @@ async def create_key(
     summary="Delete an API key",
 )
 async def delete_key(
-    key_id: str = Path(..., description="The API key ID"),
+    key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
-    key_service: KeyService = Depends(get_key_service),
+    key_id: str = Path(..., description="The API key ID"),
 ):
     """Delete an API key.
 
@@ -153,8 +151,8 @@ async def delete_key(
 )
 async def validate_key(
     key_data: ApiKeyValidateRequest,
+    key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
-    key_service: KeyService = Depends(get_key_service),
 ):
     """Validate an API key with the service.
 
@@ -177,9 +175,9 @@ async def validate_key(
 )
 async def rotate_key(
     key_data: ApiKeyRotateRequest,
-    key_id: str = Path(..., description="The API key ID"),
+    key_service: ApiKeyServiceDep,
     principal: Principal = Depends(require_principal),
-    key_service: KeyService = Depends(get_key_service),
+    key_id: str = Path(..., description="The API key ID"),
 ):
     """Rotate an API key.
 

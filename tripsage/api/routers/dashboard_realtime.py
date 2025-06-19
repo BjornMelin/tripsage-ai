@@ -26,8 +26,8 @@ from tripsage.api.core.dependencies import (
     CacheDep,
     DatabaseDep,
 )
-from tripsage_core.services.business.api_key_monitoring import (
-    ApiKeyMonitoringService,
+from tripsage_core.services.business.dashboard_service import (
+    ApiKeyMonitoringService,  # Compatibility adapter for BJO-211
 )
 
 logger = logging.getLogger(__name__)

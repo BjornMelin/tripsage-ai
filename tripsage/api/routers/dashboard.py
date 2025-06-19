@@ -27,12 +27,13 @@ from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
 )
-from tripsage_core.services.business.api_key_monitoring import (
-    ApiKeyMonitoringService,
-)
-from tripsage_core.services.business.api_key_validator import (
-    ApiKeyValidator,
+from tripsage_core.services.business.api_key_service import (
+    ApiKeyService,
     ServiceHealthStatus,
+)
+from tripsage_core.services.business.dashboard_service import (
+    ApiKeyMonitoringService,  # Compatibility adapter for BJO-211
+    ApiKeyValidator,  # Compatibility adapter for BJO-211
 )
 
 logger = logging.getLogger(__name__)

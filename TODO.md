@@ -16,12 +16,15 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **Enhanced Database Connection Pool**: 887.9% throughput increase, 50.9% latency reduction, ML-driven optimization ✅ **[BJO-134](https://linear.app/bjorn-dev/issue/BJO-134)**
 - **Hybrid Routing Architecture**: Three-tier routing, 80% queries <1ms, optional LLM support, complexity reduction ✅ **[BJO-175](https://linear.app/bjorn-dev/issue/BJO-175)**
 - **Memory Service Database Hardening**: CVE-2023-24329 mitigation, secure URL parsing, production monitoring ✅ **[BJO-210](https://linear.app/bjorn-dev/issue/BJO-210)**
+- **Supabase Infrastructure Rebuild**: Complete 17-table production schema with real-time collaboration ✅
+- **Comprehensive Security Implementation**: OAuth with PKCE, MFA with TOTP, session security with threat detection ✅
 - **Real-time WebSocket Infrastructure**: Complete collaboration system with optimistic updates ✅
 - **File Storage & Virus Scanning**: Production-ready file attachment system with security scanning ✅
 - **Edge Functions Deployment**: Trip notifications, file processing, and cache invalidation functions ✅
 - **Test Suite Comprehensive Coverage**: 1,110 Python tests (88.5% pass rate), 1,017 frontend tests passing ✅
 - **Critical Security Fixes**: Session security vulnerabilities resolved, CVE-2024-53382 patched ✅
 - **TypeScript Error Resolution**: Reduced from 215→65 errors (70% improvement) ✅
+- **Authentication System**: Complete OAuth callback handling, PKCE security, and JWT elimination ✅
 - **Backend Foundation**: Complete service consolidation and refactoring with 92% test coverage ✅
 - **LangGraph Migration**: Phases 1-3 completed with production-ready orchestration ✅
 - **Database Consolidation**: Unified Supabase + pgvector architecture ✅
@@ -33,6 +36,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **CI/CD Pipeline**: Backend CI workflow implemented with matrix testing for Python 3.11-3.13 ✅
 - **Test Infrastructure**: Comprehensive unit tests with 92%+ coverage on core modules ✅
 - **Linear Organization**: Complete issue standardization with conventional commits format and proper project assignments ✅
+- **Database Security**: Comprehensive RLS policies implemented with 8 critical security vulnerabilities resolved ✅
 - **API Key Infrastructure**: Complete unified API key validation and monitoring system with modern patterns ✅
 
 > **Note**: See [`tasks/COMPLETED-TODO.md`](tasks/COMPLETED-TODO.md) for comprehensive completion history and architectural details.
@@ -127,6 +131,7 @@ Based on comprehensive research and codebase analysis, critical core service imp
 **Status**: **95% Production Ready** - Major core features completed, minimal remaining work
 **Last Updated**: June 18, 2025 - All critical Linear issues completed with comprehensive verification
 **Achievement**: **7 Major Issues Completed** (BJO-119, 120, 127, 130, 131, 132, 133) - All V1 MVP blockers resolved
+**GitHub ↔ Linear**: Complete synchronization with conventional commit formatting
 
 **🎯 NEW APPROACH: Configurable Complexity for Portfolio Excellence**
 
@@ -200,6 +205,11 @@ ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
   - **Scope**: Origin header validation, WebSocket security hardening
   - **Priority**: Critical security vulnerability fix
 
+- 🧪 **[BJO-190](https://linear.app/bjorn-dev/issue/BJO-190)** - test(e2e): comprehensive integration test coverage
+  - **Status**: 📋 READY - All dependencies resolved
+  - **Scope**: End-to-end authentication, trip creation, search workflows
+  - **Priority**: V1 quality gate
+
 **🟢 SUBSTANTIAL PROGRESS:**
 
 - ✅ **[BJO-185](https://linear.app/bjorn-dev/issue/BJO-185)** - feat(langgraph): orchestration system (95% complete, production ready)
@@ -222,6 +232,37 @@ ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
 - 🔧 **BJO-186**: Pydantic v2 migration test fixes (5-7 days)
 
 **Estimated Remaining**: 3-4 days for V1 MVP production readiness
+
+5. **[BJO-185](https://linear.app/bjorn-dev/issue/BJO-185)** - feat(langgraph): complete orchestration system implementation
+   - **Status**: 🔧 IN PROGRESS - 95% complete, production ready
+   - **Scope**: Finalize tool integrations and error handling
+   - **GitHub**: Closed as substantially complete
+
+6. **[GitHub #36](https://github.com/BjornMelin/tripsage-ai/issues/36) | [BJO-186](https://linear.app/bjorn-dev/issue/BJO-186)** - fix(tests): resolve Pydantic v2 migration test failures
+   - **Status**: 🔧 IN PROGRESS - 35% complete, major infrastructure work needed
+   - **Scope**: Fix 527 failing tests from Pydantic v1→v2 migration
+   - **Note**: Original GitHub #36 closed, focused child issue created
+
+**🟢 COMPLETED - PRODUCTION READY:**
+
+- ✅ **[GitHub #155](https://github.com/BjornMelin/tripsage-ai/issues/155) | [BJO-119](https://linear.app/bjorn-dev/issue/BJO-119)** - feat(auth): unified Supabase Auth integration
+- ✅ **[GitHub #159](https://github.com/BjornMelin/tripsage-ai/issues/159) | [BJO-122](https://linear.app/bjorn-dev/issue/BJO-122)** - fix(frontend): API client token format compatibility
+- ✅ **[GitHub #85](https://github.com/BjornMelin/tripsage-ai/issues/85) | [BJO-185](https://linear.app/bjorn-dev/issue/BJO-185)** - feat(langgraph): orchestration system (95% complete, production ready)
+
+### 📅 Implementation Timeline
+
+**Week 1 (Critical Path):**
+
+- Day 1-2: Complete GitHub #236 | BJO-187 (trip endpoints)
+- Day 3-4: Complete GitHub #237 | BJO-188 (search integration)
+- Day 5: Complete GitHub #238 | BJO-189 (database security)
+
+**Week 2 (Quality & Launch):**
+
+- Day 1-3: Complete GitHub #239 | BJO-190 (integration tests)
+- Day 4-5: Final testing and V1 MVP launch preparation
+
+**Estimated Total**: 8-10 development days for V1 MVP launch readiness
 
 ---
 
@@ -384,6 +425,15 @@ ENTERPRISE_ENABLE_AUTO_ROLLBACK=true
 - ✅ **PROJECT MANAGEMENT**: All Linear issues updated with detailed implementation evidence
 - ✅ **SECURITY & PERFORMANCE**: All critical vulnerabilities resolved, performance targets exceeded
 - ✅ **PRODUCTION READINESS**: 95% complete - minimal remaining work for V1 MVP launch
+  - **Status**: Production-ready security policies in place ✅
+
+**Updated Status (June 16, 2025)**:
+
+- ✅ **ALL MAJOR ISSUES COMPLETED** (BJO-119, BJO-122, BJO-120, BJO-131, BJO-132, BJO-133)
+- ✅ **LINEAR ORGANIZATION COMPLETED**: All issues standardized to conventional commits format
+- ✅ **PROJECT MANAGEMENT**: All Linear issues properly assigned to correct projects
+- ✅ **RLS SECURITY**: All 8 critical RLS vulnerabilities resolved with comprehensive policies
+- ✅ **BJO-170** (Configuration Layer Simplification) COMPLETED and IN REVIEW
 
 ### NEW PRODUCTION READINESS ISSUES CREATED
 

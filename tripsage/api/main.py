@@ -315,6 +315,8 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
+    app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
+    app.include_router(dashboard_realtime.router, prefix="/api", tags=["dashboard_realtime"])
     app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
@@ -343,8 +345,6 @@ def create_app() -> FastAPI:
 
     app.include_router(users.router, prefix="/api/users", tags=["users"])
     app.include_router(config.router, prefix="/api", tags=["configuration"])
-    app.include_router(dashboard.router, tags=["dashboard"])
-    app.include_router(dashboard_realtime.router, tags=["dashboard-realtime"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)

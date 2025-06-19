@@ -16,10 +16,7 @@ from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
     get_accommodation_service,
 )
-from tripsage_core.services.business.api_key_service import (
-    ApiKeyService,
-    get_api_key_service,
-)
+from tripsage_core.services.business.api_key_service import ApiKeyService
 from tripsage_core.services.business.chat_service import ChatService, get_chat_service
 from tripsage_core.services.business.destination_service import (
     DestinationService,
@@ -133,7 +130,7 @@ def get_principal_id(principal: Principal) -> str:
 async def verify_service_access(
     principal: Principal,
     service: str = "openai",
-    key_service=Depends(get_api_key_service),
+    key_service: ApiKeyService = None,
 ) -> bool:
     """Verify that the principal has access to a specific service."""
     # Agents with API keys already have service access
@@ -142,6 +139,13 @@ async def verify_service_access(
 
     # For users, check they have the required service key
     if principal.type == "user":
+        if key_service is None:
+            # Initialize key service if not provided
+            db = await get_database_service()
+            cache = await get_cache_service()
+            settings = get_settings()
+            key_service = ApiKeyService(db=db, cache=cache, settings=settings)
+        
         try:
             keys = await key_service.get_user_api_keys(principal.id)
             service_key = next((k for k in keys if k.service.value == service), None)
