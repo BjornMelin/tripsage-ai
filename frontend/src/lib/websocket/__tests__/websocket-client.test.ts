@@ -514,4 +514,63 @@ describe("WebSocketClient", () => {
       expect(typeof client.setBatchingEnabled).toBe("function");
     });
   });
+
+  describe("Simplified Integration Scenarios", () => {
+    let simpleClient: WebSocketClient;
+
+    beforeEach(() => {
+      // Create client with shorter timeouts for faster tests
+      simpleClient = new WebSocketClient({
+        url: "ws://localhost:8000/api/ws/chat/test-session",
+        token: "test-jwt-token",
+        sessionId: "test-session-id",
+        channels: ["session:test-session"],
+        debug: false,
+        reconnectAttempts: 1,
+        reconnectDelay: 50,
+        heartbeatInterval: 1000,
+        connectionTimeout: 1000,
+      });
+    });
+
+    afterEach(() => {
+      simpleClient.destroy();
+    });
+
+    it("should handle core connection flow", async () => {
+      const connectHandler = vi.fn();
+      simpleClient.on("connect", connectHandler);
+
+      await simpleClient.connect();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(simpleClient.getState().status).toBe(ConnectionStatus.CONNECTED);
+      expect(connectHandler).toHaveBeenCalled();
+    });
+
+    it("should track performance metrics", async () => {
+      await simpleClient.connect();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const initialMetrics = simpleClient.getPerformanceMetrics();
+      expect(initialMetrics.messagesSent).toBe(0);
+
+      await simpleClient.send("test_message", { content: "test" });
+
+      const updatedMetrics = simpleClient.getPerformanceMetrics();
+      expect(updatedMetrics.messagesSent).toBe(1);
+      expect(updatedMetrics.bytesSent).toBeGreaterThan(0);
+    });
+
+    it("should handle invalid JSON gracefully", async () => {
+      await simpleClient.connect();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const ws = (simpleClient as any).ws;
+      ws.onmessage(new MessageEvent("message", { data: "invalid json{" }));
+
+      // Should not crash
+      expect(simpleClient.getState().status).toBe(ConnectionStatus.CONNECTED);
+    });
+  });
 });

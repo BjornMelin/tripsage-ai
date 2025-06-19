@@ -104,7 +104,7 @@ class TestWebSocketCSWSHProtection:
     async def test_validate_websocket_origin_wildcard_origin(
         self, mock_get_settings, mock_websocket
     ):
-        """Test that wildcard origins allow all connections (insecure but configurable)."""
+        """Test wildcard origins allow all connections (insecure but configurable)."""
         # Arrange
         settings = Mock()
         settings.cors_origins = ["*"]

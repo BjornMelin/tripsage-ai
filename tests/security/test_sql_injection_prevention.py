@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from tripsage_core.exceptions.exceptions import CoreServiceError
-from tripsage_core.models.db.api_key import ApiKeyCreateRequest
+from tripsage_core.models.db.api_key import ApiKeyCreate
 from tripsage_core.services.business.api_key_service import ApiKeyService, ServiceType
 
 
@@ -123,7 +123,7 @@ class TestSQLInjectionPrevention:
 
         for payload in sql_injection_payloads:
             # Test injection in key name
-            request_data = ApiKeyCreateRequest(
+            request_data = ApiKeyCreate(
                 name=payload,
                 service=ServiceType.OPENAI,
                 key_value="sk-test-valid-key",
@@ -148,7 +148,7 @@ class TestSQLInjectionPrevention:
                     pass
 
             # Test injection in description
-            request_data = ApiKeyCreateRequest(
+            request_data = ApiKeyCreate(
                 name="Valid Name",
                 service=ServiceType.OPENAI,
                 key_value="sk-test-valid-key",
@@ -340,7 +340,7 @@ class TestSQLInjectionPrevention:
         for test_input in special_chars_test_cases:
             try:
                 # Test API key request creation with special characters
-                request = ApiKeyCreateRequest(
+                request = ApiKeyCreate(
                     name=test_input,
                     service=ServiceType.OPENAI,
                     key_value="sk-test-valid-key",
@@ -371,11 +371,11 @@ class TestSQLInjectionPrevention:
         for num_str in large_numbers:
             try:
                 # Test in user_id context (should be string anyway)
-                from tripsage_core.models.db.api_key import ApiKeyCreateRequest
+                from tripsage_core.models.db.api_key import ApiKeyCreate
 
                 # This should not cause numeric overflow issues
                 # since user_id should be treated as string
-                request = ApiKeyCreateRequest(
+                request = ApiKeyCreate(
                     name="Test",
                     service=ServiceType.OPENAI,
                     key_value="sk-test-key",
