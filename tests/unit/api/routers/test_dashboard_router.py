@@ -17,13 +17,17 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.services.business.api_key_monitoring import (
-    AnomalyType,
-    ApiKeyMonitoringService,
-    UsageAlert,
-    UsageDashboard,
+from tripsage_core.services.business.dashboard_service import (
+    DashboardService,
+    AlertData,
+    AlertType,
+    AlertSeverity,
+    DashboardData,
+    RealTimeMetrics,
+    ServiceAnalytics,
+    UserActivityData,
 )
-from tripsage_core.services.business.api_key_validator import (
+from tripsage_core.services.business.api_key_service import (
     ServiceHealthCheck,
     ServiceHealthStatus,
     ServiceType,
@@ -65,31 +69,94 @@ class TestDashboardRouter:
     @pytest.fixture
     def mock_monitoring_service(self):
         """Create mock monitoring service."""
-        service = AsyncMock(spec=ApiKeyMonitoringService)
+        service = AsyncMock(spec=DashboardService)
 
-        # Mock dashboard data
-        mock_dashboard = UsageDashboard(
+        # Mock dashboard data using new DashboardData structure
+        from datetime import datetime, timezone
+
+        mock_metrics = RealTimeMetrics(
             total_requests=1000,
             total_errors=50,
-            overall_success_rate=0.95,
-            active_keys=5,
-            services_status={"openai": "healthy", "weather": "degraded"},
-            top_users=[
-                {"user_id": "user1", "request_count": 300},
-                {"user_id": "user2", "request_count": 200},
-            ],
-            recent_alerts=[
-                UsageAlert(
-                    alert_id="alert1",
-                    key_id="key123",
-                    user_id="user1",
-                    service="openai",
-                    anomaly_type=AnomalyType.SPIKE,
-                    severity="high",
-                    message="Usage spike detected",
-                ),
-            ],
-            usage_by_service={"openai": 600, "weather": 400},
+            success_rate=0.95,
+            avg_latency_ms=150.0,
+            p95_latency_ms=300.0,
+            p99_latency_ms=500.0,
+            active_keys_count=5,
+            unique_users_count=10,
+            requests_per_minute=16.67,
+            period_start=datetime.now(timezone.utc),
+            period_end=datetime.now(timezone.utc),
+        )
+
+        mock_alert = AlertData(
+            alert_id="alert1",
+            alert_type=AlertType.HIGH_ERROR_RATE,
+            severity=AlertSeverity.HIGH,
+            title="Usage spike detected",
+            message="High error rate detected in OpenAI service",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+            service="openai",
+            user_id="user1",
+            api_key_id="key123",
+        )
+
+        mock_user_activity = [
+            UserActivityData(
+                user_id="user1",
+                request_count=300,
+                error_count=15,
+                success_rate=0.95,
+                avg_latency_ms=150.0,
+                services_used=["openai"],
+                first_activity=datetime.now(timezone.utc),
+                last_activity=datetime.now(timezone.utc),
+                total_api_keys=1,
+            ),
+            UserActivityData(
+                user_id="user2",
+                request_count=200,
+                error_count=10,
+                success_rate=0.95,
+                avg_latency_ms=140.0,
+                services_used=["weather"],
+                first_activity=datetime.now(timezone.utc),
+                last_activity=datetime.now(timezone.utc),
+                total_api_keys=1,
+            ),
+        ]
+
+        mock_services = [
+            ServiceAnalytics(
+                service_name="openai",
+                service_type=ServiceType.OPENAI,
+                total_requests=600,
+                total_errors=30,
+                success_rate=0.95,
+                avg_latency_ms=150.0,
+                active_keys=3,
+                last_health_check=datetime.now(timezone.utc),
+                health_status=ServiceHealthStatus.HEALTHY,
+            ),
+            ServiceAnalytics(
+                service_name="weather",
+                service_type=ServiceType.WEATHER,
+                total_requests=400,
+                total_errors=20,
+                success_rate=0.95,
+                avg_latency_ms=200.0,
+                active_keys=2,
+                last_health_check=datetime.now(timezone.utc),
+                health_status=ServiceHealthStatus.DEGRADED,
+            ),
+        ]
+
+        # Create DashboardData using direct field assignment to avoid alias conflicts
+        mock_dashboard = DashboardData.model_construct(
+            metrics=mock_metrics,
+            services=mock_services,
+            top_users=mock_user_activity,  # This is the real field
+            recent_alerts=[mock_alert],
             usage_trend=[
                 {
                     "timestamp": "2023-01-01T00:00:00Z",
@@ -104,66 +171,64 @@ class TestDashboardRouter:
                     "success_rate": 0.975,
                 },
             ],
+            cache_stats={"connected": True, "hit_rate": 0.85},
+            # Legacy compatibility fields
+            total_requests=mock_metrics.total_requests,
+            total_errors=mock_metrics.total_errors,
+            overall_success_rate=mock_metrics.success_rate,
+            active_keys=mock_metrics.active_keys_count,
+            top_users_legacy=[  # Legacy format for backwards compatibility
+                {"user_id": "user1", "request_count": 300},
+                {"user_id": "user2", "request_count": 200},
+            ],
+            services_status={"openai": "healthy", "weather": "degraded"},
+            usage_by_service={"openai": 600, "weather": 400},
         )
 
         service.get_dashboard_data.return_value = mock_dashboard
         service.get_rate_limit_status.return_value = {
             "requests_in_window": 45,
-            "window_minutes": 60,
             "limit": 100,
             "remaining": 55,
             "reset_at": "2023-01-01T02:00:00Z",
+            "percentage_used": 45.0,
+            "is_throttled": False,
         }
-        service.active_alerts = {
-            "alert1": UsageAlert(
-                alert_id="alert1",
-                key_id="key123",
-                user_id="user1",
-                service="openai",
-                anomaly_type=AnomalyType.SPIKE,
-                severity="high",
-                message="Usage spike detected",
-                acknowledged=False,
-            ),
+        
+        # Update to use new DashboardService alert format
+        service._active_alerts = {
+            "alert1": mock_alert,
         }
-        service.recent_usage = {"key123": [], "key456": []}
-        service._generate_usage_trend.return_value = [
-            {
-                "timestamp": "2023-01-01T00:00:00Z",
-                "requests": 100,
-                "errors": 5,
-                "success_rate": 0.95,
-            },
-            {
-                "timestamp": "2023-01-01T01:00:00Z",
-                "requests": 120,
-                "errors": 3,
-                "success_rate": 0.975,
-            },
-        ]
+        service.acknowledge_alert = AsyncMock(return_value=True)
+        service.resolve_alert = AsyncMock(return_value=True)
 
         return service
 
     @pytest.fixture
     def mock_validator(self):
         """Create mock API key validator."""
-        validator = AsyncMock()
+        from tripsage_core.services.business.dashboard_service import ApiKeyValidator
+        from datetime import datetime, timezone
+        
+        validator = AsyncMock(spec=ApiKeyValidator)
         validator.__aenter__.return_value = validator
         validator.__aexit__.return_value = None
 
-        # Mock health checks
+        # Mock health checks using correct ServiceHealthCheck format
         health_checks = {
-            ServiceType.OPENAI: ServiceHealthCheck(
+            ServiceType.OPENAI: AsyncMock(
                 service=ServiceType.OPENAI,
                 status=ServiceHealthStatus.HEALTHY,
                 latency_ms=150.0,
                 message="Service is healthy",
+                checked_at=datetime.now(timezone.utc),
             ),
-            ServiceType.WEATHER: ServiceHealthCheck(
+            ServiceType.WEATHER: AsyncMock(
                 service=ServiceType.WEATHER,
                 status=ServiceHealthStatus.DEGRADED,
                 latency_ms=300.0,
                 message="Service is degraded",
+                checked_at=datetime.now(timezone.utc),
             ),
         }
 
@@ -180,7 +245,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -227,7 +292,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_validator.ApiKeyValidator",
+                "tripsage_core.services.business.dashboard_service.ApiKeyValidator",
                 return_value=mock_validator,
             ),
         ):
@@ -252,7 +317,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -293,7 +358,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -319,7 +384,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -333,7 +398,7 @@ class TestDashboardRouter:
             alert = data[0]
             assert alert["alert_id"] == "alert1"
             assert alert["severity"] == "high"
-            assert alert["type"] == "spike"
+            assert alert["type"] == "high_error_rate"  # Updated to use AlertType enum value
             assert alert["acknowledged"] is False
 
     def test_get_alerts_with_filters(
@@ -346,7 +411,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -373,7 +438,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -397,7 +462,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -415,7 +480,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -438,7 +503,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -466,7 +531,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -502,7 +567,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -550,7 +615,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -571,7 +636,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -594,7 +659,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
@@ -616,7 +681,7 @@ class TestDashboardRouter:
                 return_value=mock_principal,
             ),
             patch(
-                "tripsage_core.services.business.api_key_monitoring.ApiKeyMonitoringService",
+                "tripsage_core.services.business.dashboard_service.DashboardService",
                 return_value=mock_monitoring_service,
             ),
         ):
