@@ -5,10 +5,11 @@ implementing Mem0's memory system with pgvector for semantic search.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class Memory(BaseModel):
     """Database model for memories using Mem0 + pgvector."""
@@ -129,6 +130,7 @@ class Memory(BaseModel):
         """Update memory metadata."""
         self.metadata.update(updates)
 
+
 class SessionMemory(BaseModel):
     """Database model for session-specific memories."""
 
@@ -241,6 +243,7 @@ class SessionMemory(BaseModel):
         else:
             self.expires_at = new_expiry
 
+
 class MemorySearchResult(BaseModel):
     """Model for memory search results."""
 
@@ -265,6 +268,7 @@ class MemorySearchResult(BaseModel):
         if v < 1:
             raise ValueError("Rank must be positive")
         return v
+
 
 class MemoryCreate(BaseModel):
     """Model for creating a new memory."""
@@ -344,6 +348,7 @@ class MemoryCreate(BaseModel):
         if isinstance(v, dict):
             return v
         return {}
+
 
 class MemoryUpdate(BaseModel):
     """Model for updating an existing memory."""

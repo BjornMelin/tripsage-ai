@@ -6,7 +6,7 @@ that are shared across different parts of the application.
 """
 
 from datetime import date
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
@@ -16,6 +16,7 @@ from .common_validators import PositiveInt, Rating
 from .enums import AccommodationType, TripStatus
 from .financial import Budget, Price
 from .geographic import Coordinates
+
 
 class TripDestination(TripSageModel):
     """Shared model for a trip destination with enhanced geographic support."""
@@ -31,6 +32,7 @@ class TripDestination(TripSageModel):
     departure_date: date | None = Field(None, description="Date of departure")
     duration_days: PositiveInt = Field(None, description="Duration in days")
 
+
 class AccommodationPreferences(TripSageModel):
     """Accommodation preferences for trips."""
 
@@ -45,6 +47,7 @@ class AccommodationPreferences(TripSageModel):
     location_preference: str | None = Field(
         None, description="Location preference (e.g., city_center, beach)"
     )
+
 
 class TransportationPreferences(TripSageModel):
     """Transportation preferences for trips."""
@@ -69,6 +72,7 @@ class TransportationPreferences(TripSageModel):
     max_travel_time_hours: PositiveInt = Field(
         None, description="Maximum acceptable travel time in hours"
     )
+
 
 class TripPreferences(TripSageModel):
     """Enhanced trip preferences using shared financial and accommodation models."""
@@ -101,6 +105,7 @@ class TripPreferences(TripSageModel):
         description="Trip style",
         json_schema_extra={"example": "relaxed"},
     )
+
 
 class TripSummary(TripSageModel):
     """Summary information for a trip."""

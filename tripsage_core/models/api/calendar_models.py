@@ -7,9 +7,10 @@ including event management, reminders, and travel-specific features.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+
 
 class EventVisibility(str, Enum):
     """Event visibility options."""
@@ -19,12 +20,14 @@ class EventVisibility(str, Enum):
     PRIVATE = "private"
     CONFIDENTIAL = "confidential"
 
+
 class EventStatus(str, Enum):
     """Event status options."""
 
     CONFIRMED = "confirmed"
     TENTATIVE = "tentative"
     CANCELLED = "cancelled"
+
 
 class AttendeeResponseStatus(str, Enum):
     """Attendee response status options."""
@@ -34,12 +37,14 @@ class AttendeeResponseStatus(str, Enum):
     TENTATIVE = "tentative"
     ACCEPTED = "accepted"
 
+
 class ReminderMethod(str, Enum):
     """Reminder notification methods."""
 
     EMAIL = "email"
     POPUP = "popup"
     SMS = "sms"
+
 
 class RecurrenceFrequency(str, Enum):
     """Event recurrence frequency options."""
@@ -48,6 +53,7 @@ class RecurrenceFrequency(str, Enum):
     WEEKLY = "WEEKLY"
     MONTHLY = "MONTHLY"
     YEARLY = "YEARLY"
+
 
 class EventDateTime(BaseModel):
     """Date/time representation for events."""
@@ -58,9 +64,7 @@ class EventDateTime(BaseModel):
     date: str | None = Field(
         None, description="Date in YYYY-MM-DD format for all-day events"
     )
-    time_zone: str | None = Field(
-        None, alias="timeZone", description="IANA time zone"
-    )
+    time_zone: str | None = Field(None, alias="timeZone", description="IANA time zone")
 
     @field_validator("date")
     @classmethod
@@ -73,6 +77,7 @@ class EventDateTime(BaseModel):
                 raise ValueError("Date must be in YYYY-MM-DD format") from None
         return v
 
+
 class EventReminder(BaseModel):
     """Event reminder configuration."""
 
@@ -80,6 +85,7 @@ class EventReminder(BaseModel):
     minutes: int = Field(
         ge=0, le=40320, description="Minutes before event (max 4 weeks)"
     )
+
 
 class EventAttendee(BaseModel):
     """Event attendee information."""
@@ -93,23 +99,24 @@ class EventAttendee(BaseModel):
     comment: str | None = None
     additional_guests: int = Field(0, ge=0, alias="additionalGuests")
 
+
 class ConferenceData(BaseModel):
     """Conference/meeting information for events."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     conference_id: str | None = Field(None, alias="conferenceId")
-    conference_solution: dict[str, Any] | None = Field(
-        None, alias="conferenceSolution"
-    )
+    conference_solution: dict[str, Any] | None = Field(None, alias="conferenceSolution")
     entry_points: list[dict[str, Any]] | None = Field(None, alias="entryPoints")
     notes: str | None = None
+
 
 class ExtendedProperties(BaseModel):
     """Extended properties for storing custom metadata."""
 
     private: dict[str, str] = Field(default_factory=dict)
     shared: dict[str, str] = Field(default_factory=dict)
+
 
 class CalendarEvent(BaseModel):
     """Complete calendar event model."""
@@ -134,13 +141,9 @@ class CalendarEvent(BaseModel):
     start: EventDateTime
     end: EventDateTime
     end_time_unspecified: bool = Field(False, alias="endTimeUnspecified")
-    recurrence: list[str] | None = Field(
-        None, description="RFC5545 recurrence rules"
-    )
+    recurrence: list[str] | None = Field(None, description="RFC5545 recurrence rules")
     recurring_event_id: str | None = Field(None, alias="recurringEventId")
-    original_start_time: EventDateTime | None = Field(
-        None, alias="originalStartTime"
-    )
+    original_start_time: EventDateTime | None = Field(None, alias="originalStartTime")
 
     # Visibility and access
     transparency: str = Field("opaque", description="opaque or transparent")
@@ -168,6 +171,7 @@ class CalendarEvent(BaseModel):
     travel_metadata: dict[str, Any] | None = Field(
         None, description="TripSage travel-specific metadata"
     )
+
 
 class CreateEventRequest(BaseModel):
     """Request model for creating calendar events."""
@@ -209,6 +213,7 @@ class CreateEventRequest(BaseModel):
 
         return data
 
+
 class UpdateEventRequest(BaseModel):
     """Request model for updating calendar events."""
 
@@ -248,6 +253,7 @@ class UpdateEventRequest(BaseModel):
 
         return data
 
+
 class CalendarListEntry(BaseModel):
     """Calendar list entry model."""
 
@@ -279,6 +285,7 @@ class CalendarListEntry(BaseModel):
         None, alias="conferenceProperties"
     )
 
+
 class CalendarList(BaseModel):
     """Calendar list response model."""
 
@@ -289,6 +296,7 @@ class CalendarList(BaseModel):
     next_page_token: str | None = Field(None, alias="nextPageToken")
     next_sync_token: str | None = Field(None, alias="nextSyncToken")
     items: list[CalendarListEntry] = Field(default_factory=list)
+
 
 class FreeBusyRequest(BaseModel):
     """Request model for free/busy queries."""
@@ -302,6 +310,7 @@ class FreeBusyRequest(BaseModel):
     calendar_expansion_max: int = Field(50, alias="calendarExpansionMax", ge=1, le=50)
     items: list[dict[str, str]] = Field(..., description="List of calendars to query")
 
+
 class FreeBusyResponse(BaseModel):
     """Free/busy query response model."""
 
@@ -313,6 +322,7 @@ class FreeBusyResponse(BaseModel):
     groups: dict[str, Any] = Field(default_factory=dict)
     calendars: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
+
 class EventsListRequest(BaseModel):
     """Request parameters for listing events."""
 
@@ -323,9 +333,7 @@ class EventsListRequest(BaseModel):
     ical_uid: str | None = Field(None, alias="iCalUID")
     max_attendees: int | None = Field(None, alias="maxAttendees", ge=1)
     max_results: int = Field(250, alias="maxResults", ge=1, le=2500)
-    order_by: str | None = Field(
-        None, alias="orderBy", pattern="^(startTime|updated)$"
-    )
+    order_by: str | None = Field(None, alias="orderBy", pattern="^(startTime|updated)$")
     page_token: str | None = Field(None, alias="pageToken")
     private_extended_property: list[str] | None = Field(
         None, alias="privateExtendedProperty"
@@ -342,6 +350,7 @@ class EventsListRequest(BaseModel):
     time_min: datetime | None = Field(None, alias="timeMin")
     time_zone: str | None = Field(None, alias="timeZone")
     updated_min: datetime | None = Field(None, alias="updatedMin")
+
 
 class EventsListResponse(BaseModel):
     """Response model for event listings."""

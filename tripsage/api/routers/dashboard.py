@@ -13,7 +13,7 @@ This module provides comprehensive dashboard API endpoints for monitoring and in
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
@@ -41,6 +41,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 # Pydantic models for dashboard responses
 
+
 class SystemOverview(BaseModel):
     """System overview data for dashboard."""
 
@@ -55,6 +56,7 @@ class SystemOverview(BaseModel):
     active_users_24h: int
     active_api_keys: int
 
+
 class ServiceStatus(BaseModel):
     """Service status information."""
 
@@ -65,6 +67,7 @@ class ServiceStatus(BaseModel):
     error_rate: float
     uptime_percentage: float
     message: str | None = None
+
 
 class UsageMetrics(BaseModel):
     """Usage metrics for a specific time period."""
@@ -82,6 +85,7 @@ class UsageMetrics(BaseModel):
     top_endpoints: list[dict[str, Any]]
     error_breakdown: dict[str, int]
 
+
 class RateLimitInfo(BaseModel):
     """Rate limit information."""
 
@@ -92,6 +96,7 @@ class RateLimitInfo(BaseModel):
     window_minutes: int
     reset_at: datetime
     percentage_used: float
+
 
 class AlertInfo(BaseModel):
     """Alert information for dashboard."""
@@ -106,6 +111,7 @@ class AlertInfo(BaseModel):
     acknowledged: bool = False
     details: dict[str, Any] = Field(default_factory=dict)
 
+
 class UserActivity(BaseModel):
     """User activity information."""
 
@@ -118,12 +124,14 @@ class UserActivity(BaseModel):
     services_used: list[str]
     avg_latency_ms: float
 
+
 class TrendData(BaseModel):
     """Time series trend data."""
 
     timestamp: datetime
     value: float
     metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class DashboardFilters(BaseModel):
     """Filters for dashboard queries."""
@@ -134,6 +142,7 @@ class DashboardFilters(BaseModel):
     key_id: str | None = None
     severity: str | None = None
     status: str | None = None
+
 
 # Dependency for getting authenticated principal
 async def get_current_principal(request: Request) -> Principal:
@@ -149,7 +158,9 @@ async def get_current_principal(request: Request) -> Principal:
 
     return principal
 
+
 # Dashboard endpoints
+
 
 @router.get("/overview", response_model=SystemOverview)
 async def get_system_overview(
@@ -206,6 +217,7 @@ async def get_system_overview(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system overview: {str(e)}",
         ) from e
+
 
 @router.get("/services", response_model=list[ServiceStatus])
 async def get_services_status(
@@ -269,6 +281,7 @@ async def get_services_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve services status: {str(e)}",
         ) from e
+
 
 @router.get("/metrics", response_model=UsageMetrics)
 async def get_usage_metrics(
@@ -348,6 +361,7 @@ async def get_usage_metrics(
             detail=f"Failed to retrieve usage metrics: {str(e)}",
         ) from e
 
+
 @router.get("/rate-limits", response_model=list[RateLimitInfo])
 async def get_rate_limits_status(
     cache_service: CacheDep,
@@ -417,6 +431,7 @@ async def get_rate_limits_status(
             detail=f"Failed to retrieve rate limits status: {str(e)}",
         ) from e
 
+
 @router.get("/alerts", response_model=list[AlertInfo])
 async def get_alerts(
     cache_service: CacheDep,
@@ -484,6 +499,7 @@ async def get_alerts(
             detail=f"Failed to retrieve alerts: {str(e)}",
         ) from e
 
+
 @router.post("/alerts/{alert_id}/acknowledge")
 async def acknowledge_alert(
     alert_id: str,
@@ -539,6 +555,7 @@ async def acknowledge_alert(
             detail=f"Failed to acknowledge alert: {str(e)}",
         ) from e
 
+
 @router.delete("/alerts/{alert_id}")
 async def dismiss_alert(
     alert_id: str,
@@ -592,6 +609,7 @@ async def dismiss_alert(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to dismiss alert: {str(e)}",
         ) from e
+
 
 @router.get("/users/activity", response_model=list[UserActivity])
 async def get_user_activity(
@@ -657,6 +675,7 @@ async def get_user_activity(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve user activity: {str(e)}",
         ) from e
+
 
 @router.get("/trends/{metric_type}", response_model=list[TrendData])
 async def get_trend_data(
@@ -737,6 +756,7 @@ async def get_trend_data(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve trend data: {str(e)}",
         ) from e
+
 
 @router.get("/analytics/summary", response_model=dict[str, Any])
 async def get_analytics_summary(

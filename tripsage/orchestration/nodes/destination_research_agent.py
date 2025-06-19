@@ -8,7 +8,7 @@ capabilities.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -20,6 +20,7 @@ from tripsage_core.services.configuration_service import get_configuration_servi
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class DestinationResearchAgentNode(BaseAgentNode):
     """
@@ -49,7 +50,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     async def _initialize_tools(self) -> None:
         """Initialize destination research tools using simple tool catalog."""
-        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+        from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Load configuration from database if not already loaded
         if self.agent_config is None:

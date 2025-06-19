@@ -24,7 +24,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, validator
 
@@ -32,6 +32,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class AuditEventType(str, Enum):
     """Types of security events that can be audited."""
@@ -101,6 +102,7 @@ class AuditEventType(str, Enum):
     ADMIN_PRIVILEGE_GRANTED = "admin.privilege.granted"
     ADMIN_PRIVILEGE_REVOKED = "admin.privilege.revoked"
 
+
 class AuditSeverity(str, Enum):
     """Severity levels for audit events following NIST guidelines."""
 
@@ -110,6 +112,7 @@ class AuditSeverity(str, Enum):
     HIGH = "high"  # Significant security events
     CRITICAL = "critical"  # Critical security incidents
 
+
 class AuditOutcome(str, Enum):
     """Outcome of the audited event."""
 
@@ -118,6 +121,7 @@ class AuditOutcome(str, Enum):
     WARNING = "warning"
     ERROR = "error"
     UNKNOWN = "unknown"
+
 
 class AuditSource(BaseModel):
     """Source information for the audit event."""
@@ -131,6 +135,7 @@ class AuditSource(BaseModel):
     is_tor: bool = False
     is_vpn: bool = False
 
+
 class AuditTarget(BaseModel):
     """Target resource or entity of the audit event."""
 
@@ -138,6 +143,7 @@ class AuditTarget(BaseModel):
     resource_id: str
     resource_name: str | None = None
     resource_attributes: dict[str, Any] = Field(default_factory=dict)
+
 
 class AuditActor(BaseModel):
     """Actor (user or system) performing the audited action."""
@@ -149,6 +155,7 @@ class AuditActor(BaseModel):
     permissions: list[str] = Field(default_factory=list)
     session_id: str | None = None
     authentication_method: str | None = None
+
 
 class AuditEvent(TripSageModel):
     """
@@ -199,9 +206,7 @@ class AuditEvent(TripSageModel):
     compliance_tags: list[str] = Field(default_factory=list)
 
     # Data Classification
-    data_classification: str | None = (
-        None  # public, internal, confidential, restricted
-    )
+    data_classification: str | None = None  # public, internal, confidential, restricted
     retention_period_days: int = 2555  # 7 years default
 
     @validator("risk_score")
@@ -225,6 +230,7 @@ class AuditEvent(TripSageModel):
         """Compute HMAC-SHA256 integrity hash for tamper detection."""
         content = self.to_json_log()
         return hashlib.sha256(f"{content}{secret_key}".encode()).hexdigest()
+
 
 class AuditLogConfig(BaseModel):
     """Configuration for audit logging service."""
@@ -270,6 +276,7 @@ class AuditLogConfig(BaseModel):
     compliance_mode: str = "standard"  # standard, hipaa, pci, gdpr
     anonymization_enabled: bool = False
     data_residency_region: str | None = None
+
 
 class SecurityAuditLogger:
     """
@@ -830,8 +837,10 @@ class SecurityAuditLogger:
             self._circuit_breaker_failures = 0
             logger.info("Audit logging circuit breaker reset")
 
+
 # Global audit logger instance
 _audit_logger: SecurityAuditLogger | None = None
+
 
 async def get_audit_logger() -> SecurityAuditLogger:
     """Get or create the global audit logger instance."""
@@ -844,6 +853,7 @@ async def get_audit_logger() -> SecurityAuditLogger:
 
     return _audit_logger
 
+
 async def shutdown_audit_logger():
     """Shutdown the global audit logger instance."""
     global _audit_logger
@@ -851,6 +861,7 @@ async def shutdown_audit_logger():
     if _audit_logger is not None:
         await _audit_logger.stop()
         _audit_logger = None
+
 
 # Convenience functions for common audit events
 async def audit_authentication(
@@ -868,6 +879,7 @@ async def audit_authentication(
         event_type, outcome, user_id, ip_address, user_agent, message, metadata
     )
 
+
 async def audit_api_key(
     event_type: AuditEventType,
     outcome: AuditOutcome,
@@ -882,6 +894,7 @@ async def audit_api_key(
     return await audit_logger.log_api_key_event(
         event_type, outcome, key_id, service, ip_address, message, metadata
     )
+
 
 async def audit_security_event(
     event_type: AuditEventType,
@@ -905,6 +918,7 @@ async def audit_security_event(
         risk_score,
         metadata,
     )
+
 
 async def audit_config_change(
     config_key: str,

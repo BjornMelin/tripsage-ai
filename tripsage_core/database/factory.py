@@ -6,12 +6,13 @@ and connection pooling using asyncpg directly.
 """
 
 import re
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import asyncpg
 
 from tripsage_core.config import Settings, get_settings
+
 
 class DatabaseConnectionFactory:
     """Factory for creating secure database connections with asyncpg."""
@@ -176,8 +177,10 @@ class DatabaseConnectionFactory:
             result = await conn.fetch(query, *args, timeout=timeout)
             return str(result)
 
+
 # Global factory instance
 _factory: DatabaseConnectionFactory | None = None
+
 
 def get_connection_factory() -> DatabaseConnectionFactory:
     """Get or create the global connection factory instance.
@@ -189,6 +192,7 @@ def get_connection_factory() -> DatabaseConnectionFactory:
     if _factory is None:
         _factory = DatabaseConnectionFactory()
     return _factory
+
 
 async def get_database_connection() -> asyncpg.Connection:
     """Get a database connection from the global factory.

@@ -14,6 +14,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+
 class TestModernDockerArchitecture:
     """Test Docker configuration matches current high-performance architecture."""
 
@@ -120,6 +121,7 @@ class TestModernDockerArchitecture:
                             f"{service_name} missing memory reservations"
                         )
 
+
 class TestDockerfileModernization:
     """Test Dockerfiles for modern architecture components."""
 
@@ -185,6 +187,7 @@ class TestDockerfileModernization:
                 assert legacy_mcp not in mcp_names, (
                     f"Legacy MCP {legacy_mcp} should be removed"
                 )
+
 
 class TestEnvironmentConfiguration:
     """Test environment configuration for modern architecture."""
@@ -263,6 +266,7 @@ class TestEnvironmentConfiguration:
                     continue
                 assert found, f"API missing modern environment variable: {pattern}"
 
+
 class TestNetworkAndVolumeConfiguration:
     """Test network isolation and persistent storage configuration."""
 
@@ -310,6 +314,7 @@ class TestNetworkAndVolumeConfiguration:
 
         for volume_name in required_volumes:
             assert volume_name in volumes, f"Missing persistent volume: {volume_name}"
+
 
 class TestPerformanceArchitecture:
     """Test configuration supports high-performance architecture claims."""
@@ -360,6 +365,7 @@ class TestPerformanceArchitecture:
 
         # Mem0 integration should be via direct SDK (no separate container)
         # Configuration should be in API environment variables
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

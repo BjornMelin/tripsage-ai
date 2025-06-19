@@ -13,6 +13,7 @@ from tripsage_core.infrastructure.deployment import (
     ConfigurableDeploymentOrchestrator,
 )
 
+
 async def demonstrate_simple_deployment():
     """Demonstrate simple deployment strategy."""
     print("\n=== SIMPLE DEPLOYMENT DEMONSTRATION ===")
@@ -48,6 +49,7 @@ async def demonstrate_simple_deployment():
         print(f"  Success rate: {result.metrics.get_success_rate():.2%}")
 
     return result
+
 
 async def demonstrate_blue_green_deployment():
     """Demonstrate blue-green deployment strategy."""
@@ -102,6 +104,7 @@ async def demonstrate_blue_green_deployment():
 
     return result
 
+
 async def demonstrate_canary_deployment():
     """Demonstrate canary deployment strategy."""
     print("\n=== CANARY DEPLOYMENT DEMONSTRATION ===")
@@ -154,6 +157,7 @@ async def demonstrate_canary_deployment():
 
     return result
 
+
 async def demonstrate_rolling_deployment():
     """Demonstrate rolling deployment strategy."""
     print("\n=== ROLLING DEPLOYMENT DEMONSTRATION ===")
@@ -196,6 +200,7 @@ async def demonstrate_rolling_deployment():
         print(f"  Success rate: {result.metrics.get_success_rate():.2%}")
 
     return result
+
 
 async def demonstrate_rollback_scenario():
     """Demonstrate rollback scenario with failed deployment."""
@@ -254,6 +259,7 @@ async def demonstrate_rollback_scenario():
 
     return result
 
+
 async def demonstrate_deployment_monitoring():
     """Demonstrate deployment monitoring and statistics."""
     print("\n=== DEPLOYMENT MONITORING DEMONSTRATION ===")
@@ -293,6 +299,7 @@ async def demonstrate_deployment_monitoring():
             f"{deployment.environment} ({duration:.1f}s)"
         )
 
+
 async def main():
     """Run all deployment demonstrations."""
     print("🚀 Configurable Deployment Strategy Demonstration")
@@ -319,6 +326,7 @@ async def main():
         import traceback
 
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -15,6 +15,7 @@ from tripsage_core.utils.url_converters import (
     detect_database_url_type,
 )
 
+
 class TestDatabaseURLConverter:
     """Test database URL converter functionality."""
 
@@ -212,6 +213,7 @@ class TestDatabaseURLConverter:
             is False
         )
 
+
 class TestDatabaseURLDetector:
     """Test database URL detector functionality."""
 
@@ -285,6 +287,7 @@ class TestDatabaseURLDetector:
         assert "PostgreSQL client" in suggestion
         assert "extract Supabase project" in suggestion
 
+
 class TestConvenienceFunctions:
     """Test module-level convenience functions."""
 
@@ -303,6 +306,7 @@ class TestConvenienceFunctions:
 
         assert result["type"] == "supabase"
         assert result["valid"] is True
+
 
 class TestEdgeCases:
     """Test edge cases and error conditions."""

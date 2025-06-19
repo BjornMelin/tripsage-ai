@@ -18,6 +18,7 @@ from tripsage_core.models.schemas_common.enums import (
     CancellationPolicy,
 )
 
+
 class TestAccommodationModel:
     """Test suite for Accommodation model validation and functionality."""
 

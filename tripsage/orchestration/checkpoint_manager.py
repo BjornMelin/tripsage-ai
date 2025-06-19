@@ -8,7 +8,7 @@ session management with enhanced security through validated URL conversion.
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.config import get_settings
 from tripsage_core.utils.connection_utils import (
@@ -35,6 +35,7 @@ except ImportError:
     POSTGRES_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
 
 class SupabaseCheckpointManager:
     """
@@ -342,6 +343,7 @@ class SupabaseCheckpointManager:
         except Exception:
             pass  # Ignore errors during garbage collection
 
+
 class CheckpointConfig:
     """Configuration for checkpoint management."""
 
@@ -366,8 +368,10 @@ class CheckpointConfig:
         self.pool_size = pool_size
         self.enable_stats = enable_stats
 
+
 # Global checkpoint manager instance
 _global_checkpoint_manager: SupabaseCheckpointManager | None = None
+
 
 def get_checkpoint_manager() -> SupabaseCheckpointManager:
     """Get the global checkpoint manager instance."""
@@ -376,10 +380,12 @@ def get_checkpoint_manager() -> SupabaseCheckpointManager:
         _global_checkpoint_manager = SupabaseCheckpointManager()
     return _global_checkpoint_manager
 
+
 async def get_async_checkpointer() -> AsyncPostgresSaver:
     """Get the async PostgreSQL checkpointer."""
     manager = get_checkpoint_manager()
     return await manager.get_async_checkpointer()
+
 
 def get_sync_checkpointer() -> PostgresSaver:
     """Get the sync PostgreSQL checkpointer."""

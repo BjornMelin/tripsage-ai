@@ -5,8 +5,6 @@ tools, and orchestration nodes. It ensures proper initialization and lifecycle
 management of services while enabling easy testing through dependency injection.
 """
 
-from typing import Optional
-
 from tripsage_core.config import get_settings
 from tripsage_core.services.business import MemoryService
 from tripsage_core.services.business.accommodation_service import AccommodationService
@@ -36,6 +34,7 @@ from tripsage_core.services.infrastructure import (
     WebSocketBroadcaster,
     WebSocketManager,
 )
+
 
 class ServiceRegistry:
     """Central registry for all services used in the application.

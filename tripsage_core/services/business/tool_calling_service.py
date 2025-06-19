@@ -7,7 +7,7 @@ with validation, error handling, and result formatting.
 
 import asyncio
 import time
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -23,10 +23,12 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ToolCallError(TripSageError):
     """Error raised when tool calling fails."""
 
     pass
+
 
 class ToolCallRequest(BaseModel):
     """Structured tool call request model."""
@@ -69,14 +71,13 @@ class ToolCallRequest(BaseModel):
             raise ValueError("Timeout must be between 0 and 300 seconds")
         return v
 
+
 class ToolCallResponse(BaseModel):
     """Structured tool call response model."""
 
     id: str = Field(..., description="Tool call identifier")
     status: str = Field(..., description="Response status (success/error/timeout)")
-    result: dict[str, Any] | None = Field(
-        default=None, description="Tool result data"
-    )
+    result: dict[str, Any] | None = Field(default=None, description="Tool result data")
     error: str | None = Field(default=None, description="Error message if failed")
     execution_time: float = Field(..., description="Execution time in seconds")
     service: str = Field(..., description="MCP service used")
@@ -84,6 +85,7 @@ class ToolCallResponse(BaseModel):
     timestamp: float = Field(
         default_factory=time.time, description="Response timestamp"
     )
+
 
 class ToolCallValidationResult(BaseModel):
     """Tool call validation result."""
@@ -93,6 +95,7 @@ class ToolCallValidationResult(BaseModel):
     sanitized_params: dict[str, Any] | None = Field(
         default=None, description="Sanitized parameters"
     )
+
 
 class ToolCallService:
     """
@@ -497,6 +500,7 @@ class ToolCallService:
             "data": result,
             "actions": ["save", "alert"],
         }
+
 
 # Dependency function for FastAPI
 async def get_tool_calling_service() -> ToolCallService:

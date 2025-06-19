@@ -29,6 +29,7 @@ from tripsage_core.services.business.api_key_validator import (
     ServiceType,
 )
 
+
 class TestDashboardRouter:
     """Test class for dashboard monitoring endpoints."""
 

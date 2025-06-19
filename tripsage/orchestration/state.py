@@ -6,12 +6,12 @@ in the LangGraph-based orchestration system, enhanced for clarity and maintainab
 """
 
 from datetime import datetime, timezone
-from typing import Any, Literal, Optional
+from typing import Annotated, Any, Literal
 
 from langgraph.graph import add_messages
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
-from typing import Annotated
+
 
 class UserPreferences(BaseModel):
     """User travel preferences and constraints."""
@@ -25,6 +25,7 @@ class UserPreferences(BaseModel):
     accessibility_needs: list[str] = Field(default_factory=list)
     travel_style: Literal["budget", "comfort", "luxury"] | None = None
 
+
 class TravelDates(BaseModel):
     """Travel date information."""
 
@@ -33,6 +34,7 @@ class TravelDates(BaseModel):
     flexible_dates: bool = False
     date_range_days: int | None = None  # Flexibility range in days
 
+
 class DestinationInfo(BaseModel):
     """Destination information and context."""
 
@@ -40,7 +42,10 @@ class DestinationInfo(BaseModel):
     destination: str | None = None
     intermediate_stops: list[str] = Field(default_factory=list)
     trip_type: Literal["one_way", "round_trip", "multi_city"] | None = None
-    purpose: Literal["business", "leisure", "family", "honeymoon", "adventure"] | None = None
+    purpose: (
+        Literal["business", "leisure", "family", "honeymoon", "adventure"] | None
+    ) = None
+
 
 class SearchResult(BaseModel):
     """Generic search result structure."""
@@ -54,6 +59,7 @@ class SearchResult(BaseModel):
     status: Literal["success", "error", "partial"]
     error_message: str | None = None
 
+
 class BookingProgress(BaseModel):
     """Booking progress tracking."""
 
@@ -66,6 +72,7 @@ class BookingProgress(BaseModel):
         "planning"
     )
 
+
 class HandoffContext(BaseModel):
     """Agent handoff context information."""
 
@@ -77,6 +84,7 @@ class HandoffContext(BaseModel):
     message_analyzed: str
     additional_context: dict[str, Any] = Field(default_factory=dict)
 
+
 class ErrorInfo(BaseModel):
     """Error tracking information."""
 
@@ -84,6 +92,7 @@ class ErrorInfo(BaseModel):
     last_error: str | None = None
     retry_attempts: dict[str, int] = Field(default_factory=dict)
     error_history: list[dict[str, Any]] = Field(default_factory=list)
+
 
 class ToolCallInfo(BaseModel):
     """Tool call tracking information."""
@@ -95,6 +104,7 @@ class ToolCallInfo(BaseModel):
     status: Literal["pending", "success", "error"] = "pending"
     error_message: str | None = None
     execution_time_ms: float | None = None
+
 
 class TravelPlanningState(TypedDict):
     """
@@ -154,6 +164,7 @@ class TravelPlanningState(TypedDict):
     last_activity: str | None
     is_active: bool
 
+
 def create_initial_state(
     user_id: str, message: str, session_id: str | None = None
 ) -> TravelPlanningState:
@@ -205,6 +216,7 @@ def create_initial_state(
         last_activity=now,
         is_active=True,
     )
+
 
 def update_state_timestamp(state: TravelPlanningState) -> TravelPlanningState:
     """

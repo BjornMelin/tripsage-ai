@@ -28,6 +28,7 @@ from .test_utils import (
     patch_openai_in_module,
 )
 
+
 class TestTravelPlanningState:
     """Test enhanced state management system."""
 
@@ -126,6 +127,7 @@ class TestTravelPlanningState:
 
         assert handoff.from_agent == "router"
         assert handoff.routing_confidence == 0.9
+
 
 class TestTripSageOrchestrator:
     """Test the main LangGraph orchestrator."""
@@ -316,6 +318,7 @@ class TestTripSageOrchestrator:
             result = await orchestrator.get_session_state("test_session")
             assert result == {"test": "state", "messages": []}
 
+
 class TestAgentNodes:
     """Test individual agent node implementations."""
 
@@ -367,6 +370,7 @@ class TestAgentNodes:
 
             assert result["current_agent"] == "flight_agent"
             assert "handoff_context" in result
+
 
 class TestStateIntegration:
     """Test state integration across the orchestration system."""

@@ -8,7 +8,7 @@ over traditional Redis implementations.
 
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import redis.asyncio as redis
 
@@ -16,6 +16,7 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
+
 
 class CacheService:
     """
@@ -631,8 +632,10 @@ class CacheService:
         """
         return await self.set_json(key, value, ttl=86400)  # Long TTL (24 hours)
 
+
 # Global service instance
 _cache_service: CacheService | None = None
+
 
 async def get_cache_service() -> CacheService:
     """Get the global cache service instance.
@@ -647,6 +650,7 @@ async def get_cache_service() -> CacheService:
         await _cache_service.connect()
 
     return _cache_service
+
 
 async def close_cache_service() -> None:
     """Close the global cache service instance."""

@@ -26,6 +26,7 @@ from tripsage_core.models.schemas_common.geographic import Coordinates
 from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 from tripsage_core.services.business.trip_service import TripStatus, TripVisibility
 
+
 class TestTripsIntegrationWorkflows:
     """Integration workflow tests for comprehensive trip management scenarios."""
 

@@ -13,6 +13,7 @@ import time
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 
+
 class DragonflyBenchmark:
     """Benchmark suite for DragonflyDB performance testing."""
 
@@ -185,6 +186,7 @@ class DragonflyBenchmark:
         finally:
             await self.teardown()
 
+
 async def main():
     """Run DragonflyDB performance benchmarks."""
     print("🐉 DragonflyDB Performance Benchmark")
@@ -192,6 +194,7 @@ async def main():
 
     benchmark = DragonflyBenchmark()
     await benchmark.run()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

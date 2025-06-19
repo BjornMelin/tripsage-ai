@@ -24,6 +24,7 @@ from tripsage_core.models.schemas_common.enums import (
 # Temporarily commented out until fixed
 # from tripsage_core.models.db.itinerary_item import ItineraryItem, ItemType
 
+
 @pytest.fixture
 def sample_user_dict() -> dict[str, Any]:
     """Return a sample user dict for testing."""
@@ -39,6 +40,7 @@ def sample_user_dict() -> dict[str, Any]:
         "last_login": datetime.now(timezone.utc),
         "preferences": {"theme": "dark", "notifications": True},
     }
+
 
 @pytest.fixture
 def sample_trip_dict() -> dict[str, Any]:
@@ -60,6 +62,7 @@ def sample_trip_dict() -> dict[str, Any]:
         "children": 0,
         "tags": ["vacation", "winter"],
     }
+
 
 @pytest.fixture
 def sample_flight_dict() -> dict[str, Any]:
@@ -83,6 +86,7 @@ def sample_flight_dict() -> dict[str, Any]:
         "cabin_class": "economy",
     }
 
+
 @pytest.fixture
 def sample_accommodation_dict() -> dict[str, Any]:
     """Return a sample accommodation dict for testing."""
@@ -105,6 +109,7 @@ def sample_accommodation_dict() -> dict[str, Any]:
         "images": ["https://example.com/hotel1.jpg", "https://example.com/hotel2.jpg"],
     }
 
+
 @pytest.fixture
 def sample_search_parameters_dict() -> dict[str, Any]:
     """Return a sample search parameters dict for testing."""
@@ -125,6 +130,7 @@ def sample_search_parameters_dict() -> dict[str, Any]:
         },
     }
 
+
 @pytest.fixture
 def sample_trip_note_dict() -> dict[str, Any]:
     """Return a sample trip note dict for testing."""
@@ -134,6 +140,7 @@ def sample_trip_note_dict() -> dict[str, Any]:
         "timestamp": datetime.now(timezone.utc),
         "content": "Remember to exchange currency before departure",
     }
+
 
 @pytest.fixture
 def sample_price_history_dict() -> dict[str, Any]:
@@ -147,6 +154,7 @@ def sample_price_history_dict() -> dict[str, Any]:
         "currency": "USD",
     }
 
+
 @pytest.fixture
 def sample_saved_option_dict() -> dict[str, Any]:
     """Return a sample saved option dict for testing."""
@@ -158,6 +166,7 @@ def sample_saved_option_dict() -> dict[str, Any]:
         "timestamp": datetime.now(timezone.utc),
         "notes": "Best price found so far",
     }
+
 
 @pytest.fixture
 def sample_trip_comparison_dict() -> dict[str, Any]:
@@ -181,6 +190,7 @@ def sample_trip_comparison_dict() -> dict[str, Any]:
         },
     }
 
+
 @pytest.fixture
 def sample_transportation_dict() -> dict[str, Any]:
     """Return a sample transportation dict for testing."""
@@ -196,6 +206,7 @@ def sample_transportation_dict() -> dict[str, Any]:
         "notes": "Shinkansen to Kyoto",
         "booking_status": BookingStatus.VIEWED,
     }
+
 
 @pytest.fixture
 def sample_trip_collaborator_dict() -> dict[str, Any]:

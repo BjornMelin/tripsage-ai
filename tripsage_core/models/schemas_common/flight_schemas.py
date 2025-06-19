@@ -8,7 +8,7 @@ eliminate duplication.
 """
 
 from datetime import date, datetime
-from typing import Any, Optional, Union
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -19,6 +19,7 @@ from .enums import CabinClass, PassengerType
 
 # Removed TYPE_CHECKING imports to avoid circular import issues
 
+
 class Airport(BaseModel):
     """Airport information model."""
 
@@ -26,6 +27,7 @@ class Airport(BaseModel):
     name: str = Field(..., description="Airport name")
     city: str = Field(..., description="City name")
     country: str = Field(..., description="Country name")
+
 
 class FlightPassenger(BaseModel):
     """Passenger information for flight bookings."""
@@ -65,6 +67,7 @@ class FlightPassenger(BaseModel):
         if v and "@" not in v:
             raise ValueError("Invalid email format")
         return v
+
 
 class FlightSearchRequest(BaseModel):
     """Unified flight search request model.
@@ -164,12 +167,14 @@ class FlightSearchRequest(BaseModel):
         """Check if this is a round trip search."""
         return self.return_date is not None
 
+
 class MultiCityFlightSegment(BaseModel):
     """Model for a multi-city flight segment."""
 
     origin: AirportCode = Field(..., description="Origin airport IATA code")
     destination: AirportCode = Field(..., description="Destination airport IATA code")
     departure_date: date | datetime = Field(..., description="Departure date")
+
 
 class MultiCityFlightSearchRequest(BaseModel):
     """Request model for multi-city flight search."""
@@ -218,6 +223,7 @@ class MultiCityFlightSearchRequest(BaseModel):
 
         return self
 
+
 class AirportSearchRequest(BaseModel):
     """Request model for airport search."""
 
@@ -230,16 +236,17 @@ class AirportSearchRequest(BaseModel):
         10, ge=1, le=50, description="Maximum number of results to return"
     )
 
+
 class SavedFlightRequest(BaseModel):
     """Request model for saving a flight offer."""
 
     offer_id: str = Field(description="Flight offer ID")
     trip_id: UUID = Field(description="Trip ID to save the flight for")
-    notes: str | None = Field(
-        default=None, description="Notes about this flight offer"
-    )
+    notes: str | None = Field(default=None, description="Notes about this flight offer")
+
 
 # FlightOffer moved to domain layer - import from tripsage_core.models.domain.flight
+
 
 class FlightSearchResponse(BaseResponse):
     """Response model for flight search results."""
@@ -255,11 +262,13 @@ class FlightSearchResponse(BaseResponse):
         description="Original search request"
     )
 
+
 class AirportSearchResponse(BaseResponse):
     """Response model for airport search results."""
 
     results: list[dict[str, Any]] = Field(description="Airport results")
     count: int = Field(description="Number of results")
+
 
 class SavedFlightResponse(BaseModel):
     """Response model for a saved flight offer."""
@@ -269,9 +278,8 @@ class SavedFlightResponse(BaseModel):
     trip_id: UUID = Field(description="Trip ID")
     offer: Any = Field(description="Flight offer details")  # FlightOffer from domain
     saved_at: datetime = Field(description="Timestamp when flight was saved")
-    notes: str | None = Field(
-        default=None, description="Notes about this flight offer"
-    )
+    notes: str | None = Field(default=None, description="Notes about this flight offer")
+
 
 class UpcomingFlightResponse(BaseModel):
     """Response model for upcoming flights with real-time status."""

@@ -11,7 +11,6 @@ import os
 import sys
 import time
 from datetime import date, datetime, timedelta
-from typing import Optional
 
 import httpx
 import uvicorn
@@ -33,12 +32,14 @@ API_BASE_URL = "http://localhost:8000/api"
 TEST_USER_EMAIL = "test@example.com"
 TEST_USER_PASSWORD = "password123"
 
+
 # Models for test data
 class UserModel(BaseModel):
     email: str
     password: str
     full_name: str | None = None
     auth_token: str | None = None
+
 
 class TripModel(BaseModel):
     name: str
@@ -48,6 +49,7 @@ class TripModel(BaseModel):
     budget: float
     travelers: int = 1
     id: str | None = None
+
 
 class FlightModel(BaseModel):
     trip_id: str
@@ -59,6 +61,7 @@ class FlightModel(BaseModel):
     price: float
     id: str | None = None
 
+
 async def initialize_db():
     """Initialize the database connection."""
     print("Initializing database...")
@@ -69,6 +72,7 @@ async def initialize_db():
         print("Failed to initialize database")
         sys.exit(1)
     print("Database initialized successfully")
+
 
 async def register_user(client: httpx.AsyncClient, user: UserModel) -> bool:
     """Register a test user."""
@@ -91,6 +95,7 @@ async def register_user(client: httpx.AsyncClient, user: UserModel) -> bool:
         print(f"Failed to register user: {response.status_code} - {response.text}")
         return False
 
+
 async def login_user(client: httpx.AsyncClient, user: UserModel) -> bool:
     """Login a test user and get an access token."""
     response = await client.post(
@@ -106,6 +111,7 @@ async def login_user(client: httpx.AsyncClient, user: UserModel) -> bool:
     else:
         print(f"Failed to login user: {response.status_code} - {response.text}")
         return False
+
 
 async def create_trip(
     client: httpx.AsyncClient, user: UserModel, trip: TripModel
@@ -135,6 +141,7 @@ async def create_trip(
         print(f"Failed to create trip: {response.status_code} - {response.text}")
         return False
 
+
 async def get_trips(client: httpx.AsyncClient, user: UserModel) -> list[dict]:
     """Get all trips for the user."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
@@ -151,6 +158,7 @@ async def get_trips(client: httpx.AsyncClient, user: UserModel) -> list[dict]:
     else:
         print(f"Failed to get trips: {response.status_code} - {response.text}")
         return []
+
 
 async def create_flight(
     client: httpx.AsyncClient, user: UserModel, flight: FlightModel
@@ -184,6 +192,7 @@ async def create_flight(
         print(f"Failed to create flight: {response.status_code} - {response.text}")
         return False
 
+
 async def get_flights_for_trip(
     client: httpx.AsyncClient, user: UserModel, trip_id: str
 ) -> list[dict]:
@@ -202,6 +211,7 @@ async def get_flights_for_trip(
     else:
         print(f"Failed to get flights: {response.status_code} - {response.text}")
         return []
+
 
 async def run_tests():
     """Run a series of tests against the API."""
@@ -271,6 +281,7 @@ async def run_tests():
     except Exception as e:
         print(f"Test failed with error: {e}")
 
+
 async def main():
     """Main function to run the test script."""
     # Start the FastAPI server in a separate thread
@@ -301,6 +312,7 @@ async def main():
         # Ensure server is stopped
         if server_process:
             server_process.terminate()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

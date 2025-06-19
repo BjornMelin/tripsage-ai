@@ -21,6 +21,7 @@ from tripsage_core.services.infrastructure.websocket_broadcaster import (
     WebSocketBroadcaster,
 )
 
+
 class TestBroadcastMessage:
     """Test suite for BroadcastMessage model."""
 
@@ -76,6 +77,7 @@ class TestBroadcastMessage:
 
         assert message.priority == 1  # Default priority
         assert message.target_id is None
+
 
 class TestWebSocketBroadcaster:
     """Test suite for WebSocketBroadcaster."""

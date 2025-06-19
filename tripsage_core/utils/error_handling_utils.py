@@ -5,8 +5,8 @@ This module provides standardized error handling functionality for the TripSage
 application, building on top of the core exception system.
 """
 
-from typing import Any, Optional, TypeVar, Union
 from collections.abc import Callable
+from typing import Any, TypeVar
 
 from tripsage_core.exceptions import (
     CoreDatabaseError,
@@ -30,6 +30,7 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
+
 
 def log_exception(exc: Exception, logger_name: str | None = None) -> None:
     """Log an exception with appropriate level and details.
@@ -79,6 +80,7 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
             exc_info=True,
         )
 
+
 def safe_execute_with_logging(
     func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any
 ) -> T | R:
@@ -94,6 +96,7 @@ def safe_execute_with_logging(
         The function result or fallback value
     """
     return core_safe_execute(func, *args, fallback=fallback, logger=logger, **kwargs)
+
 
 def with_error_handling_and_logging(
     fallback: Any = None,
@@ -115,6 +118,7 @@ def with_error_handling_and_logging(
         logger=logger_instance or logger,
         re_raise=re_raise,
     )
+
 
 # Factory functions for creating specific TripSage exceptions
 def create_mcp_error(
@@ -157,6 +161,7 @@ def create_mcp_error(
         params=params,
     )
 
+
 def create_api_error(
     message: str,
     service: str,
@@ -182,6 +187,7 @@ def create_api_error(
         api_response=response,
     )
 
+
 def create_validation_error(
     message: str,
     field: str | None = None,
@@ -205,6 +211,7 @@ def create_validation_error(
         value=value,
         constraint=constraint,
     )
+
 
 def create_database_error(
     message: str,
@@ -230,6 +237,7 @@ def create_database_error(
         operation=operation,
         table=table,
     )
+
 
 # Enhanced error context manager for TripSage operations
 class TripSageErrorContext:
@@ -299,6 +307,7 @@ class TripSageErrorContext:
 
         # Don't suppress the exception
         return False
+
 
 __all__ = [
     "log_exception",

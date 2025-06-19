@@ -7,11 +7,12 @@ the Memory MCP knowledge graph.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class WebCrawlPersistence:
     """Handles persistence of web crawl results."""
@@ -477,8 +478,10 @@ class WebCrawlPersistence:
             logger.error(f"Error storing price history in Supabase: {str(e)}")
             return False
 
+
 # Singleton instance
 persistence_manager = WebCrawlPersistence()
+
 
 def get_persistence_manager() -> WebCrawlPersistence:
     """Get the singleton instance of the web crawl persistence manager.

@@ -6,11 +6,11 @@ price changes over time for various entities.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class EntityType(str, Enum):
     """Enum for entity type values."""
@@ -19,6 +19,7 @@ class EntityType(str, Enum):
     ACCOMMODATION = "accommodation"
     TRANSPORTATION = "transportation"
     ACTIVITY = "activity"
+
 
 class PriceHistory(TripSageModel):
     """PriceHistory model for TripSage.

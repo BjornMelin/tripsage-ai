@@ -36,6 +36,7 @@ REQUIRED_TABLES = [
     "trip_comparison",
 ]
 
+
 async def verify_connection() -> None:
     """
     Verify the connection to the Supabase database and check that required tables exist.
@@ -90,6 +91,7 @@ async def verify_connection() -> None:
     except Exception as e:
         print(f"❌ Error connecting to Supabase: {str(e)}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     asyncio.run(verify_connection())

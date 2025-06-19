@@ -8,16 +8,17 @@ across agent interactions.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
+from tripsage_core.services.mcp_service import SimpleMCPService as MCPManager
 from tripsage_core.utils.session_utils import (
     initialize_session_memory,
     update_session_memory,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class SessionMemoryBridge:
     """
@@ -434,8 +435,10 @@ class SessionMemoryBridge:
         except Exception as e:
             logger.error(f"Failed to store checkpoint reference: {e}")
 
+
 # Global bridge instance
 _global_memory_bridge: SessionMemoryBridge | None = None
+
 
 def get_memory_bridge() -> SessionMemoryBridge:
     """Get the global session memory bridge instance."""

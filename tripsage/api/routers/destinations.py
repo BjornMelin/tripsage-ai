@@ -3,7 +3,6 @@ Router for destination-related endpoints in the TripSage API.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -34,6 +33,7 @@ from tripsage_core.services.business.destination_service import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 @router.post("/search", response_model=DestinationSearchResponse)
 async def search_destinations(
     request: APIDestinationSearchRequest,
@@ -63,6 +63,7 @@ async def search_destinations(
         query=service_response.search_parameters.query,
     )
 
+
 @router.get("/{destination_id}", response_model=DestinationDetailsResponse)
 async def get_destination_details(
     destination_id: str,
@@ -80,6 +81,7 @@ async def get_destination_details(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
+
 
 @router.post("/save/{destination_id}", response_model=SavedDestinationResponse)
 async def save_destination(
@@ -103,6 +105,7 @@ async def save_destination(
             detail=str(e),
         ) from e
 
+
 @router.get("/saved", response_model=list[SavedDestinationResponse])
 async def get_saved_destinations(
     principal: Principal = Depends(require_principal),
@@ -113,6 +116,7 @@ async def get_saved_destinations(
     """
     user_id = get_principal_id(principal)
     return await destination_service.get_saved_destinations(user_id)
+
 
 @router.delete("/saved/{destination_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_destination(
@@ -133,6 +137,7 @@ async def delete_saved_destination(
             detail=str(e),
         ) from e
 
+
 @router.post("/points-of-interest", response_model=list[PointOfInterest])
 async def search_points_of_interest(
     request: PointOfInterestSearchRequest,
@@ -143,6 +148,7 @@ async def search_points_of_interest(
     Search for points of interest in a destination.
     """
     return await destination_service.search_points_of_interest(request)
+
 
 @router.get("/recommendations", response_model=list[Destination])
 async def get_destination_recommendations(

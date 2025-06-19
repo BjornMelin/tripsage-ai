@@ -5,7 +5,6 @@ conversation history, and travel preferences using the unified memory service.
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -19,6 +18,7 @@ from tripsage.api.core.dependencies import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
+
 class ConversationMemoryRequest(BaseModel):
     """Request model for adding conversation memory."""
 
@@ -26,16 +26,19 @@ class ConversationMemoryRequest(BaseModel):
     session_id: str | None = Field(None, description="Session ID")
     context_type: str = Field("travel_planning", description="Context type")
 
+
 class SearchMemoryRequest(BaseModel):
     """Request model for searching user memories."""
 
     query: str = Field(..., description="Search query")
     limit: int = Field(10, description="Maximum results to return")
 
+
 class UpdatePreferencesRequest(BaseModel):
     """Request model for updating user preferences."""
 
     preferences: dict = Field(..., description="User preferences to update")
+
 
 @router.post("/conversation")
 async def add_conversation_memory(
@@ -81,6 +84,7 @@ async def add_conversation_memory(
             detail="Failed to add conversation memory",
         ) from e
 
+
 @router.get("/context")
 async def get_user_context(
     principal: RequiredPrincipalDep,
@@ -106,6 +110,7 @@ async def get_user_context(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user context",
         ) from e
+
 
 @router.post("/search")
 async def search_memories(
@@ -137,6 +142,7 @@ async def search_memories(
             detail="Failed to search memories",
         ) from e
 
+
 @router.put("/preferences")
 async def update_preferences(
     request: UpdatePreferencesRequest,
@@ -166,6 +172,7 @@ async def update_preferences(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update preferences",
         ) from e
+
 
 @router.post("/preference")
 async def add_preference(
@@ -198,6 +205,7 @@ async def add_preference(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add preference",
         ) from e
+
 
 @router.delete("/memory/{memory_id}")
 async def delete_memory(
@@ -235,6 +243,7 @@ async def delete_memory(
             detail="Failed to delete memory",
         ) from e
 
+
 @router.get("/stats")
 async def get_memory_stats(
     principal: RequiredPrincipalDep,
@@ -260,6 +269,7 @@ async def get_memory_stats(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get memory stats",
         ) from e
+
 
 @router.delete("/clear")
 async def clear_user_memory(

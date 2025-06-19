@@ -5,7 +5,7 @@ This module provides the ChatAgent class that integrates with the LangGraph
 orchestration system for processing user messages through specialized agents.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.service_registry import ServiceRegistry
@@ -14,6 +14,7 @@ from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class ChatAgent(BaseAgent):
     """

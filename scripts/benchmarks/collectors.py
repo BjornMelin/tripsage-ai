@@ -15,12 +15,13 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import psutil
 from config import BenchmarkConfig
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class TimingResult:
@@ -31,6 +32,7 @@ class TimingResult:
     success: bool
     timestamp: float
 
+
 @dataclass
 class MemorySnapshot:
     """Memory usage snapshot."""
@@ -38,6 +40,7 @@ class MemorySnapshot:
     timestamp: float
     process_mb: float
     system_percent: float
+
 
 class MetricsCollector:
     """Metrics collector focused on core performance indicators."""
@@ -247,6 +250,7 @@ class MetricsCollector:
         self._start_time = time.time()
         logger.info("Metrics reset")
 
+
 class ReportGenerator:
     """Report generator for benchmark results."""
 
@@ -346,7 +350,7 @@ class ReportGenerator:
         # Query performance metrics
         if "query_performance" in metrics:
             qp = metrics["query_performance"]
-            ops_per_sec = qp.get('operations_per_second', 0)
+            ops_per_sec = qp.get("operations_per_second", 0)
             csv_lines.append(f"operations_per_second,{ops_per_sec:.2f},ops/sec")
             csv_lines.append(
                 f"avg_duration_ms,{qp.get('avg_duration_ms', 0):.2f},milliseconds"
@@ -379,7 +383,7 @@ class ReportGenerator:
             )
 
         # Execution metrics
-        exec_time = data.get('execution_time_seconds', 0)
+        exec_time = data.get("execution_time_seconds", 0)
         csv_lines.append(f"execution_time_seconds,{exec_time:.2f},seconds")
 
         # Write CSV
@@ -431,8 +435,9 @@ class ReportGenerator:
         <div class="header">
             <h1>🚀 TripSage Benchmark Report</h1>
             <h2>{report_type.replace("_", " ").title()}</h2>
-            <p>Generated on {time.strftime("%Y-%m-%d %H:%M:%S UTC", 
-                                          time.gmtime(timestamp))}</p>
+            <p>Generated on {
+            time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))
+        }</p>
             <p>Execution time: {summary.get("execution_time_formatted", "Unknown")}</p>
         </div>
         

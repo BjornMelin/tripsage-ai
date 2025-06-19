@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from tripsage_core.config import Settings, get_settings
 
+
 class TestSettings:
     """Test cases for modern flat Settings class."""
 

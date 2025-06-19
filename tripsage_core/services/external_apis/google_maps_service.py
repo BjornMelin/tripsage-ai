@@ -7,7 +7,7 @@ replacing MCP wrapper with native SDK calls for improved performance.
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import googlemaps
 from googlemaps.exceptions import (
@@ -23,6 +23,7 @@ from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
 
+
 class GoogleMapsServiceError(CoreAPIError):
     """Exception raised for Google Maps service errors."""
 
@@ -34,6 +35,7 @@ class GoogleMapsServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
 
 class GoogleMapsService:
     """Direct Google Maps API service with async support and connection pooling."""
@@ -398,8 +400,10 @@ class GoogleMapsService:
         """Close the service and clean up resources."""
         await self.disconnect()
 
+
 # Global service instance
 _google_maps_service: GoogleMapsService | None = None
+
 
 async def get_google_maps_service() -> GoogleMapsService:
     """
@@ -415,6 +419,7 @@ async def get_google_maps_service() -> GoogleMapsService:
         await _google_maps_service.connect()
 
     return _google_maps_service
+
 
 async def close_google_maps_service() -> None:
     """Close the global Google Maps service instance."""

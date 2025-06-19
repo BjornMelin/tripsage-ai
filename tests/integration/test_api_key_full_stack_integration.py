@@ -19,7 +19,7 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -38,6 +38,7 @@ from tripsage_core.services.business.api_key_service import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 class TestDatabaseService:
     """Lightweight test database service for integration tests."""
@@ -226,6 +227,7 @@ class TestDatabaseService:
             {"id": key_id},
         )
 
+
 class TestCacheService:
     """Lightweight test cache service."""
 
@@ -244,7 +246,9 @@ class TestCacheService:
         """Delete key from cache."""
         return await self.redis.delete(key)
 
+
 # Test Fixtures
+
 
 @pytest.fixture(scope="session")
 async def test_db_engine():
@@ -313,6 +317,7 @@ async def test_db_engine():
     yield engine
     await engine.dispose()
 
+
 @pytest.fixture(scope="session")
 async def test_redis():
     """Create test Redis connection."""
@@ -336,15 +341,18 @@ async def test_redis():
         mock_redis.close.return_value = None
         yield mock_redis
 
+
 @pytest.fixture
 async def test_db_service(test_db_engine):
     """Create test database service."""
     return TestDatabaseService(test_db_engine)
 
+
 @pytest.fixture
 async def test_cache_service(test_redis):
     """Create test cache service."""
     return TestCacheService(test_redis)
+
 
 @pytest.fixture
 async def api_key_service(test_db_service, test_cache_service):
@@ -360,6 +368,7 @@ async def api_key_service(test_db_service, test_cache_service):
     )
 
     return service
+
 
 @pytest.fixture
 async def test_user(test_db_service):
@@ -377,12 +386,15 @@ async def test_user(test_db_service):
     await test_db_service.insert("users", user_data)
     return user_data
 
+
 @pytest.fixture
 def test_client():
     """Create FastAPI test client."""
     return TestClient(app)
 
+
 # Integration Test Classes
+
 
 class TestApiKeyFullStackIntegration:
     """Full stack integration tests for API key management."""
@@ -801,6 +813,7 @@ class TestApiKeyFullStackIntegration:
                 # Verify audit logging was called for deletion
                 assert mock_audit.call_count >= 2
 
+
 class TestApiKeyValidationEdgeCases:
     """Test edge cases and error conditions."""
 
@@ -904,7 +917,9 @@ class TestApiKeyValidationEdgeCases:
             assert result.is_valid is True
             assert mock_get.call_count == 1  # Should have hit external API
 
+
 # Performance and Load Testing
+
 
 class TestApiKeyPerformance:
     """Performance and load testing for API key operations."""

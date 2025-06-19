@@ -19,6 +19,7 @@ from tripsage.tools.memory_tools import (
     search_user_memories,
 )
 
+
 class TestMemoryPerformance:
     """Performance tests for memory operations."""
 
@@ -462,6 +463,7 @@ class TestMemoryPerformance:
             print(f"Total time: {total_time:.3f}s")
             print(f"Throughput with isolation: {throughput:.2f} ops/sec")
 
+
 class TestMemoryPerformanceBenchmarks:
     """Benchmark tests for comparing memory system performance."""
 
@@ -518,6 +520,7 @@ class TestMemoryPerformanceBenchmarks:
             # These are baseline expectations
             assert avg_add_time < 0.2
             assert avg_search_time < 0.1
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

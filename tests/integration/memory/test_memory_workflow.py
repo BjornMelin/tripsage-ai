@@ -19,6 +19,7 @@ from tripsage.tools.memory_tools import (
     search_user_memories,
 )
 
+
 class TestMemoryWorkflowIntegration:
     """Integration tests for complete memory workflow."""
 
@@ -692,6 +693,7 @@ class TestMemoryWorkflowIntegration:
 
             assert len(user_1_search) == 0  # User 1 shouldn't find Jupiter
             assert len(user_2_search) == 0  # User 2 shouldn't find Mars
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=tripsage", "--cov-report=term-missing"])

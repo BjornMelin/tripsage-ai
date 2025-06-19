@@ -10,7 +10,7 @@ while maintaining proper data relationships.
 import logging
 from datetime import date, datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field
@@ -24,6 +24,7 @@ from tripsage_core.exceptions import (
 from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
+
 
 class DestinationCategory(str, Enum):
     """Destination category enumeration."""
@@ -41,6 +42,7 @@ class DestinationCategory(str, Enum):
     BUSINESS = "business"
     OTHER = "other"
 
+
 class SafetyLevel(str, Enum):
     """Safety level enumeration."""
 
@@ -49,6 +51,7 @@ class SafetyLevel(str, Enum):
     MODERATE = "moderate"
     CAUTION = "caution"
     HIGH_RISK = "high_risk"
+
 
 class ClimateType(str, Enum):
     """Climate type enumeration."""
@@ -62,6 +65,7 @@ class ClimateType(str, Enum):
     ARCTIC = "arctic"
     ALPINE = "alpine"
 
+
 class DestinationImage(TripSageModel):
     """Destination image information."""
 
@@ -73,6 +77,7 @@ class DestinationImage(TripSageModel):
     attribution: str | None = Field(None, description="Image attribution/source")
     width: int | None = Field(None, description="Image width in pixels")
     height: int | None = Field(None, description="Image height in pixels")
+
 
 class PointOfInterest(TripSageModel):
     """Point of interest information."""
@@ -86,9 +91,7 @@ class PointOfInterest(TripSageModel):
     longitude: float | None = Field(None, description="Longitude coordinate")
     rating: float | None = Field(None, ge=0, le=5, description="POI rating")
     review_count: int | None = Field(None, ge=0, description="Number of reviews")
-    price_level: int | None = Field(
-        None, ge=1, le=4, description="Price level (1-4)"
-    )
+    price_level: int | None = Field(None, ge=1, le=4, description="Price level (1-4)")
     opening_hours: dict[str, str] | None = Field(
         None, description="Opening hours by day"
     )
@@ -100,6 +103,7 @@ class PointOfInterest(TripSageModel):
     popular_times: dict[str, list[int]] | None = Field(
         None, description="Popular visiting times"
     )
+
 
 class DestinationWeather(TripSageModel):
     """Destination weather information."""
@@ -128,6 +132,7 @@ class DestinationWeather(TripSageModel):
     )
     avoid_months: list[str] = Field(default_factory=list, description="Months to avoid")
 
+
 class TravelAdvisory(TripSageModel):
     """Travel advisory information."""
 
@@ -143,6 +148,7 @@ class TravelAdvisory(TripSageModel):
     embassy_info: dict[str, str] | None = Field(
         None, description="Embassy contact information"
     )
+
 
 class DestinationSearchRequest(TripSageModel):
     """Request model for destination search."""
@@ -174,6 +180,7 @@ class DestinationSearchRequest(TripSageModel):
     )
     include_pois: bool = Field(default=True, description="Include points of interest")
     include_advisory: bool = Field(default=True, description="Include travel advisory")
+
 
 class Destination(TripSageModel):
     """Comprehensive destination information."""
@@ -207,9 +214,7 @@ class Destination(TripSageModel):
     # Ratings and reviews
     rating: float | None = Field(None, ge=0, le=5, description="Overall rating")
     review_count: int | None = Field(None, ge=0, description="Number of reviews")
-    safety_rating: float | None = Field(
-        None, ge=0, le=5, description="Safety rating"
-    )
+    safety_rating: float | None = Field(None, ge=0, le=5, description="Safety rating")
 
     # Travel information
     visa_requirements: str | None = Field(None, description="Visa requirements")
@@ -226,17 +231,13 @@ class Destination(TripSageModel):
     )
 
     # Weather and climate
-    weather: DestinationWeather | None = Field(
-        None, description="Weather information"
-    )
+    weather: DestinationWeather | None = Field(None, description="Weather information")
     best_time_to_visit: list[str] = Field(
         default_factory=list, description="Best months to visit"
     )
 
     # Travel advisory
-    travel_advisory: TravelAdvisory | None = Field(
-        None, description="Travel advisory"
-    )
+    travel_advisory: TravelAdvisory | None = Field(None, description="Travel advisory")
 
     # Metadata
     source: str | None = Field(None, description="Data source")
@@ -246,6 +247,7 @@ class Destination(TripSageModel):
     relevance_score: float | None = Field(
         None, ge=0, le=1, description="Search relevance score"
     )
+
 
 class DestinationSearchResponse(TripSageModel):
     """Destination search response model."""
@@ -264,6 +266,7 @@ class DestinationSearchResponse(TripSageModel):
     )
     cached: bool = Field(default=False, description="Whether results were cached")
 
+
 class SavedDestinationRequest(TripSageModel):
     """Request model for saving a destination."""
 
@@ -278,6 +281,7 @@ class SavedDestinationRequest(TripSageModel):
         None, ge=1, description="Planned duration in days"
     )
 
+
 class SavedDestination(TripSageModel):
     """Saved destination information."""
 
@@ -291,6 +295,7 @@ class SavedDestination(TripSageModel):
     duration_days: int | None = Field(None, description="Planned duration")
     saved_at: datetime = Field(..., description="When destination was saved")
 
+
 class DestinationRecommendationRequest(TripSageModel):
     """Request model for destination recommendations."""
 
@@ -299,9 +304,7 @@ class DestinationRecommendationRequest(TripSageModel):
     budget_range: dict[str, float] | None = Field(
         None, description="Budget range in USD"
     )
-    travel_dates: list[date] | None = Field(
-        None, description="Potential travel dates"
-    )
+    travel_dates: list[date] | None = Field(None, description="Potential travel dates")
     trip_duration_days: int | None = Field(None, ge=1, description="Trip duration")
     group_size: int | None = Field(None, ge=1, description="Travel group size")
     accessibility_needs: list[str] | None = Field(
@@ -311,6 +314,7 @@ class DestinationRecommendationRequest(TripSageModel):
         None, description="Previously visited destinations"
     )
     limit: int = Field(default=5, ge=1, le=20, description="Maximum recommendations")
+
 
 class DestinationRecommendation(TripSageModel):
     """Destination recommendation with reasoning."""
@@ -323,9 +327,8 @@ class DestinationRecommendation(TripSageModel):
     best_for: list[str] = Field(
         default_factory=list, description="What this destination is best for"
     )
-    estimated_cost: dict[str, float] | None = Field(
-        None, description="Estimated costs"
-    )
+    estimated_cost: dict[str, float] | None = Field(None, description="Estimated costs")
+
 
 class DestinationService:
     """
@@ -1198,6 +1201,7 @@ class DestinationService:
                 extra={"saved_id": saved_destination.id, "error": str(e)},
             )
             raise
+
 
 # Dependency function for FastAPI
 async def get_destination_service() -> DestinationService:

@@ -11,6 +11,7 @@ from uuid import uuid4
 
 import pytest
 
+
 @pytest.fixture
 def mock_database_service():
     """Mock database service for tests."""
@@ -55,6 +56,7 @@ def mock_database_service():
 
     return db
 
+
 @pytest.fixture
 def mock_cache_service():
     """Mock cache service for tests."""
@@ -69,6 +71,7 @@ def mock_cache_service():
     cache._connected = True
     return cache
 
+
 @pytest.fixture
 def mock_storage_service():
     """Mock storage service for tests."""
@@ -79,6 +82,7 @@ def mock_storage_service():
     storage.file_exists = AsyncMock(return_value=True)
     return storage
 
+
 @pytest.fixture
 def mock_ai_analysis_service():
     """Mock AI analysis service for tests."""
@@ -88,6 +92,7 @@ def mock_ai_analysis_service():
     ai.analyze_image = AsyncMock()
     return ai
 
+
 @pytest.fixture
 def mock_virus_scanner():
     """Mock virus scanner service for tests."""
@@ -96,20 +101,24 @@ def mock_virus_scanner():
     scanner.scan_file = AsyncMock()
     return scanner
 
+
 @pytest.fixture
 def sample_user_id() -> str:
     """Generate a sample user ID."""
     return str(uuid4())
+
 
 @pytest.fixture
 def sample_trip_id() -> str:
     """Generate a sample trip ID."""
     return str(uuid4())
 
+
 @pytest.fixture
 def sample_timestamp() -> datetime:
     """Generate a sample timestamp."""
     return datetime.now(timezone.utc)
+
 
 @pytest.fixture
 def sample_user_data(sample_user_id: str, sample_timestamp: datetime) -> dict[str, Any]:

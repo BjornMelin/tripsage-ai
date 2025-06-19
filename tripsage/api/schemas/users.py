@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+
 class UserPreferencesRequest(BaseModel):
     """Request model for updating user preferences."""
 
@@ -31,6 +32,7 @@ class UserPreferencesRequest(BaseModel):
             },
         },
     )
+
 
 class UserPreferencesResponse(BaseModel):
     """Response model for user preferences."""

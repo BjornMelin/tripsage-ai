@@ -21,10 +21,10 @@ Enterprise Mode:
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from enum import Enum
 from functools import wraps
-from typing import Any, Optional, Type, Union
-from collections.abc import Callable
+from typing import Any
 
 from tenacity import (
     AsyncRetrying,
@@ -38,12 +38,14 @@ from tenacity import (
 
 logger = logging.getLogger(__name__)
 
+
 class CircuitState(str, Enum):
     """Circuit breaker states."""
 
     CLOSED = "closed"  # Normal operation, requests pass through
     OPEN = "open"  # Circuit is open, requests fail fast
     HALF_OPEN = "half_open"  # Testing if service has recovered
+
 
 class CircuitBreakerError(Exception):
     """Raised when circuit breaker is open."""
@@ -52,6 +54,7 @@ class CircuitBreakerError(Exception):
         super().__init__(message)
         self.circuit_name = circuit_name
         self.failure_count = failure_count
+
 
 class CircuitBreakerMetrics:
     """Metrics collection for circuit breaker analysis."""
@@ -112,6 +115,7 @@ class CircuitBreakerMetrics:
             "last_success_time": self.last_success_time,
             "failure_types": self.failure_types,
         }
+
 
 class SimpleCircuitBreaker:
     """Simple circuit breaker using retry with exponential backoff.
@@ -208,6 +212,7 @@ class SimpleCircuitBreaker:
                 raise
 
         return wrapper
+
 
 class EnterpriseCircuitBreaker:
     """Enterprise circuit breaker with full state management and analytics.
@@ -456,6 +461,7 @@ class EnterpriseCircuitBreaker:
             "metrics": self.metrics.get_summary(),
         }
 
+
 def circuit_breaker(
     name: str,
     failure_threshold: int = 5,
@@ -507,10 +513,12 @@ def circuit_breaker(
             exceptions=exceptions,
         )
 
+
 # Global circuit breaker registry for enterprise monitoring
 _circuit_breaker_registry: dict[
     str, SimpleCircuitBreaker | EnterpriseCircuitBreaker
 ] = {}
+
 
 def get_circuit_breaker_registry() -> dict[
     str, SimpleCircuitBreaker | EnterpriseCircuitBreaker
@@ -518,11 +526,13 @@ def get_circuit_breaker_registry() -> dict[
     """Get the global circuit breaker registry."""
     return _circuit_breaker_registry
 
+
 def register_circuit_breaker(
     breaker: SimpleCircuitBreaker | EnterpriseCircuitBreaker,
 ) -> None:
     """Register a circuit breaker in the global registry."""
     _circuit_breaker_registry[breaker.name] = breaker
+
 
 def get_circuit_breaker_status() -> dict[str, Any]:
     """Get status of all registered circuit breakers."""

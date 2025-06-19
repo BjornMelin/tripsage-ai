@@ -35,6 +35,7 @@ from tripsage_core.utils.connection_utils import (
     validate_database_connection,
 )
 
+
 class TestConnectionCredentials:
     """Test ConnectionCredentials model validation and methods."""
 
@@ -136,6 +137,7 @@ class TestConnectionCredentials:
 
         assert "***MASKED***" in log_string
         assert "secret" not in log_string
+
 
 class TestDatabaseURLParser:
     """Test DatabaseURLParser functionality."""
@@ -267,6 +269,7 @@ class TestDatabaseURLParser:
         with pytest.raises(DatabaseURLParsingError, match="scheme separator"):
             self.parser.parse_url("postgresqluser:pass@localhost/db")
 
+
 class TestConnectionCircuitBreaker:
     """Test ConnectionCircuitBreaker functionality."""
 
@@ -369,6 +372,7 @@ class TestConnectionCircuitBreaker:
         assert self.circuit_breaker.state == ConnectionState.CLOSED
         assert self.circuit_breaker.failure_count == 0
 
+
 class TestExponentialBackoffRetry:
     """Test ExponentialBackoffRetry functionality."""
 
@@ -444,6 +448,7 @@ class TestExponentialBackoffRetry:
             await self.retry.execute_with_retry(failing_operation)
 
         assert call_count == 4  # Initial attempt + 3 retries
+
 
 class TestDatabaseConnectionValidator:
     """Test DatabaseConnectionValidator functionality."""
@@ -524,6 +529,7 @@ class TestDatabaseConnectionValidator:
             call_args = mock_connect.call_args
             assert call_args.kwargs["ssl"] == "require"
 
+
 class TestSecureDatabaseConnectionManager:
     """Test SecureDatabaseConnectionManager functionality."""
 
@@ -586,6 +592,7 @@ class TestSecureDatabaseConnectionManager:
                 async with self.manager.get_validated_connection(url):
                     pass
 
+
 class TestConvenienceFunctions:
     """Test convenience functions for backward compatibility."""
 
@@ -619,6 +626,7 @@ class TestConvenienceFunctions:
 
         result = await validate_database_connection(url)
         assert result is False
+
 
 class TestEdgeCasesAndSecurity:
     """Test edge cases and security scenarios."""
@@ -712,11 +720,13 @@ class TestEdgeCasesAndSecurity:
 
         assert "münchen" in credentials.hostname
 
+
 @pytest.fixture
 def caplog_setup(caplog):
     """Set up logging capture for tests."""
     caplog.set_level(logging.DEBUG)
     return caplog
+
 
 class TestLoggingAndMonitoring:
     """Test logging and monitoring functionality."""
@@ -775,6 +785,7 @@ class TestLoggingAndMonitoring:
         assert "secretpassword" not in log_string
         assert "***MASKED***" in log_string
 
+
 class TestPerformanceCharacteristics:
     """Test performance characteristics of connection utilities."""
 
@@ -817,6 +828,7 @@ class TestPerformanceCharacteristics:
 
         assert 0.08 <= delay1 <= 0.12  # ~0.1s ± 20ms
         assert 0.18 <= delay2 <= 0.22  # ~0.2s ± 20ms
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

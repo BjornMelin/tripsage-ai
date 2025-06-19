@@ -10,7 +10,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Optional
+from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -28,6 +28,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/calendar.events",
 ]
+
 
 def async_retry(
     max_attempts: int = 3,
@@ -65,6 +66,7 @@ def async_retry(
 
     return decorator
 
+
 class GoogleCalendarServiceError(CoreAPIError):
     """Exception raised for Google Calendar service errors."""
 
@@ -76,6 +78,7 @@ class GoogleCalendarServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
 
 class GoogleCalendarService:
     """Service for Google Calendar API operations with Core integration."""
@@ -759,8 +762,10 @@ class GoogleCalendarService:
         """Clean up resources."""
         await self.disconnect()
 
+
 # Global service instance
 _calendar_service: GoogleCalendarService | None = None
+
 
 async def get_calendar_service() -> GoogleCalendarService:
     """
@@ -776,6 +781,7 @@ async def get_calendar_service() -> GoogleCalendarService:
         await _calendar_service.connect()
 
     return _calendar_service
+
 
 async def close_calendar_service() -> None:
     """Close the global Google Calendar service instance."""

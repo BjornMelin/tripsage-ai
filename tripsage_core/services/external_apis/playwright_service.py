@@ -8,7 +8,7 @@ JavaScript execution, complex interactions, or sophisticated browser automation.
 
 import asyncio
 import time
-from typing import Any, Optional, Union
+from typing import Any
 
 from playwright.async_api import (
     Browser,
@@ -22,6 +22,7 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
+
 class PlaywrightServiceError(CoreAPIError):
     """Exception raised for Playwright service errors."""
 
@@ -33,6 +34,7 @@ class PlaywrightServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
 
 class PlaywrightConfig(BaseModel):
     """Configuration for Playwright service."""
@@ -52,6 +54,7 @@ class PlaywrightConfig(BaseModel):
     )
     block_css: bool = Field(False, description="Block CSS loading for faster scraping")
 
+
 class ScrapingResult(BaseModel):
     """Result from web scraping operation."""
 
@@ -69,6 +72,7 @@ class ScrapingResult(BaseModel):
     )
     success: bool = Field(True, description="Whether scraping was successful")
     error: str | None = Field(None, description="Error message if failed")
+
 
 class PlaywrightService:
     """Direct Playwright SDK service for complex web scraping with Core integration."""
@@ -624,8 +628,10 @@ class PlaywrightService:
         """Async context manager exit."""
         await self.close()
 
+
 # Global service instance
 _playwright_service: PlaywrightService | None = None
+
 
 async def get_playwright_service() -> PlaywrightService:
     """
@@ -642,6 +648,7 @@ async def get_playwright_service() -> PlaywrightService:
 
     return _playwright_service
 
+
 async def close_playwright_service() -> None:
     """Close the global Playwright service instance."""
     global _playwright_service
@@ -649,6 +656,7 @@ async def close_playwright_service() -> None:
     if _playwright_service:
         await _playwright_service.close()
         _playwright_service = None
+
 
 # Convenience functions
 async def create_playwright_service(
@@ -659,6 +667,7 @@ async def create_playwright_service(
     service = PlaywrightService(config, settings)
     await service.connect()
     return service
+
 
 async def scrape_with_playwright(
     url: str,
@@ -672,6 +681,7 @@ async def scrape_with_playwright(
         return await service.scrape_url(url, **scrape_options)
     finally:
         await service.close()
+
 
 __all__ = [
     "PlaywrightService",

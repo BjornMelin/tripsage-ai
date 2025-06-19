@@ -16,7 +16,7 @@ Features:
 
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -32,6 +32,7 @@ from tripsage_core.services.business.audit_logging_service import (
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class AuditQuery(BaseModel):
     """Structured audit log query parameters."""
@@ -76,6 +77,7 @@ class AuditQuery(BaseModel):
     group_by: str | None = None  # event_type, actor_id, ip_address, etc.
     include_stats: bool = False
 
+
 class AuditAnalysisResult(TripSageModel):
     """Result of audit log analysis."""
 
@@ -104,6 +106,7 @@ class AuditAnalysisResult(TripSageModel):
     # Query metadata
     query_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     query_duration_ms: float | None = None
+
 
 class ComplianceReport(TripSageModel):
     """Compliance audit report."""
@@ -138,6 +141,7 @@ class ComplianceReport(TripSageModel):
     # Supporting data
     events_summary: dict[str, Any] = Field(default_factory=dict)
     trends: dict[str, Any] = Field(default_factory=dict)
+
 
 class AuditQueryEngine:
     """Engine for querying and analyzing audit logs."""
@@ -545,7 +549,9 @@ class AuditQueryEngine:
 
         return recommendations
 
+
 # Convenience functions for common queries
+
 
 async def query_failed_logins(
     start_time: datetime | None = None,
@@ -566,6 +572,7 @@ async def query_failed_logins(
 
     engine = AuditQueryEngine()
     return await engine.query(query)
+
 
 async def query_high_risk_events(
     start_time: datetime | None = None,
@@ -589,6 +596,7 @@ async def query_high_risk_events(
     engine = AuditQueryEngine()
     return await engine.query(query)
 
+
 async def query_user_activity(
     user_id: str,
     start_time: datetime | None = None,
@@ -609,6 +617,7 @@ async def query_user_activity(
 
     engine = AuditQueryEngine()
     return await engine.query(query)
+
 
 async def query_api_key_events(
     start_time: datetime | None = None,
@@ -638,6 +647,7 @@ async def query_api_key_events(
 
     engine = AuditQueryEngine()
     return await engine.query(query)
+
 
 async def generate_daily_security_report() -> ComplianceReport:
     """Generate a daily security report."""

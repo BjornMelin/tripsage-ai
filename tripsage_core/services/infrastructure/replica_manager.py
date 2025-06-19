@@ -12,7 +12,6 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
@@ -23,6 +22,7 @@ from tripsage_core.exceptions.exceptions import (
 
 logger = logging.getLogger(__name__)
 
+
 class QueryType(Enum):
     """Types of database queries for routing decisions."""
 
@@ -31,11 +31,13 @@ class QueryType(Enum):
     VECTOR_SEARCH = "vector_search"
     ANALYTICS = "analytics"
 
+
 class ReplicaStatus(Enum):
     """Read replica health status."""
 
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
+
 
 class LoadBalancingStrategy(Enum):
     """Load balancing strategies for read replicas."""
@@ -43,6 +45,7 @@ class LoadBalancingStrategy(Enum):
     ROUND_ROBIN = "round_robin"
     LEAST_CONNECTIONS = "least_connections"
     WEIGHTED_ROUND_ROBIN = "weighted_round_robin"
+
 
 @dataclass
 class ReplicaConfig:
@@ -52,6 +55,7 @@ class ReplicaConfig:
     url: str
     api_key: str
     enabled: bool = True
+
 
 @dataclass
 class ReplicaHealth:
@@ -63,6 +67,7 @@ class ReplicaHealth:
     latency_ms: float
     error_count: int = 0
     uptime_percentage: float = 100.0
+
 
 @dataclass
 class ReplicaMetrics:
@@ -80,6 +85,7 @@ class ReplicaMetrics:
         if self.last_updated is None:
             self.last_updated = datetime.now(timezone.utc)
 
+
 @dataclass
 class LoadBalancerStats:
     """Simple load balancer statistics."""
@@ -96,6 +102,7 @@ class LoadBalancerStats:
             self.requests_per_replica = {}
         if self.geographic_routes is None:
             self.geographic_routes = {}
+
 
 class ReplicaManager:
     """
@@ -538,8 +545,10 @@ class ReplicaManager:
 
         logger.info("Replica manager closed")
 
+
 # Global replica manager instance
 _replica_manager: ReplicaManager | None = None
+
 
 async def get_replica_manager() -> ReplicaManager:
     """Get the global replica manager instance.
@@ -554,6 +563,7 @@ async def get_replica_manager() -> ReplicaManager:
         await _replica_manager.initialize()
 
     return _replica_manager
+
 
 async def close_replica_manager() -> None:
     """Close the global replica manager instance."""

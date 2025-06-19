@@ -15,7 +15,7 @@ allowing sharing of cached web search results across multiple application instan
 """
 
 import time
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.utils.cache_utils import (
     CacheStats,
@@ -36,6 +36,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 # NOTE: Temporarily using mock implementation due to missing agents dependency
 # from agents import WebSearchTool
+
 
 class MockWebSearchTool:
     """Mock WebSearchTool for testing and development.
@@ -88,6 +89,7 @@ class MockWebSearchTool:
             },
         }
 
+
 # Use the mock implementation
 WebSearchTool = MockWebSearchTool
 
@@ -95,6 +97,7 @@ logger = get_logger(__name__)
 
 # Default namespace for web cache operations
 WEB_CACHE_NAMESPACE = "web-search"
+
 
 class CachedWebSearchTool(WebSearchTool):
     """Wrapper for WebSearchTool with direct Redis/DragonflyDB caching.
@@ -288,6 +291,7 @@ class CachedWebSearchTool(WebSearchTool):
             # Don't let prefetching errors affect the main flow
             logger.debug(f"Error prefetching related queries: {str(e)}")
 
+
 async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
     """Get statistics for the web cache.
 
@@ -298,6 +302,7 @@ async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
         Cache statistics
     """
     return await get_cache_stats(namespace=WEB_CACHE_NAMESPACE, time_window=time_window)
+
 
 async def invalidate_web_cache_for_query(query: str) -> int:
     """Invalidate cache entries for a specific query.
@@ -325,6 +330,7 @@ async def invalidate_web_cache_for_query(query: str) -> int:
     except Exception as e:
         logger.error(f"Error invalidating web cache for query '{query}': {str(e)}")
         return 0
+
 
 async def batch_web_search(
     queries: list[str], skip_cache: bool = False
@@ -388,6 +394,7 @@ async def batch_web_search(
             {"status": "error", "error": {"message": str(e)}, "search_results": []}
         ] * len(queries)
 
+
 def web_cached(content_type: ContentType, ttl: int | None = None):
     """Decorator for adding web caching to any function.
 
@@ -403,6 +410,7 @@ def web_cached(content_type: ContentType, ttl: int | None = None):
         ttl=ttl,
         namespace=WEB_CACHE_NAMESPACE,
     )
+
 
 # Export API
 __all__ = [

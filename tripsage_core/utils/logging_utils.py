@@ -11,12 +11,13 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 from tripsage_core.config import get_settings
 
 # Cache of loggers to avoid creating multiple loggers for the same module
 _loggers: dict[str, logging.Logger] = {}
+
 
 class ContextAdapter(logging.LoggerAdapter):
     """Adapter that adds context information to log records."""
@@ -43,6 +44,7 @@ class ContextAdapter(logging.LoggerAdapter):
 
         return msg, kwargs
 
+
 def _get_log_level() -> int:
     """Get the log level from settings."""
     settings = get_settings()
@@ -54,6 +56,7 @@ def _get_log_level() -> int:
         "CRITICAL": logging.CRITICAL,
     }
     return level_map.get(settings.log_level.upper(), logging.INFO)
+
 
 def configure_logging(
     name: str,
@@ -113,6 +116,7 @@ def configure_logging(
     # Create and return a logger adapter with context
     return ContextAdapter(logger, {"context": context or {}})
 
+
 def get_logger(
     name: str, level: int | None = None, context: dict[str, Any] | None = None
 ) -> logging.Logger | logging.LoggerAdapter:
@@ -161,6 +165,7 @@ def get_logger(
 
     return _loggers[name]
 
+
 def configure_root_logger(level: int | None = None) -> None:
     """Configure the root logger.
 
@@ -190,6 +195,7 @@ def configure_root_logger(level: int | None = None) -> None:
 
     # Add handler to root logger
     root_logger.addHandler(console_handler)
+
 
 # Utility function for structured logging
 def log_exception(

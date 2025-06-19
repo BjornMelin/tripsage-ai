@@ -5,13 +5,12 @@ This module provides factory functions for creating various specialized agents
 for the TripSage application.
 """
 
-from typing import Optional
-
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
 from tripsage_core.config import get_settings
 
 settings = get_settings()
+
 
 def create_agent(
     agent_type: str,
@@ -54,6 +53,7 @@ def create_agent(
         return ChatAgent(service_registry)
     else:
         raise ValueError(f"Unknown agent type: {agent_type}")
+
 
 __all__ = [
     "BaseAgent",

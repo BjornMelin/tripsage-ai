@@ -17,6 +17,7 @@ from tripsage_core.utils.decorator_utils import (
     with_error_handling,
 )
 
+
 class TestWithErrorHandling:
     """Test the with_error_handling decorator."""
 
@@ -166,6 +167,7 @@ class TestWithErrorHandling:
 
         with pytest.raises(ValueError):
             no_annotation()
+
 
 class TestRetryOnFailure:
     """Test the retry_on_failure decorator."""
@@ -354,6 +356,7 @@ class TestRetryOnFailure:
         assert call_count == 1
         assert (end_time - start_time) < 0.05  # Should be immediate
 
+
 class TestEnsureMemoryClientInitialized:
     """Test the ensure_memory_client_initialized decorator."""
 
@@ -512,6 +515,7 @@ class TestEnsureMemoryClientInitialized:
         assert "error" in result1
         assert "error" in result2
 
+
 class TestDecoratorHelpers:
     """Test decorator helper functions and edge cases."""
 
@@ -529,7 +533,6 @@ class TestDecoratorHelpers:
 
     async def test_complex_return_annotations(self):
         """Test decorators with complex return type annotations."""
-        from typing import Optional
 
         @with_error_handling()
         async def complex_return() -> dict[str, list[str]] | None:

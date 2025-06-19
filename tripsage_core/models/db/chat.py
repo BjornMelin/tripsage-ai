@@ -5,10 +5,11 @@ They are separate from the API models to maintain clean separation of concerns.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class ChatSessionDB(BaseModel):
     """Database model for chat sessions."""
@@ -33,6 +34,7 @@ class ChatSessionDB(BaseModel):
         if isinstance(v, dict):
             return v
         return {}
+
 
 class ChatMessageDB(BaseModel):
     """Database model for chat messages."""
@@ -75,6 +77,7 @@ class ChatMessageDB(BaseModel):
             return v
         return {}
 
+
 class ChatToolCallDB(BaseModel):
     """Database model for tool calls within chat messages."""
 
@@ -114,6 +117,7 @@ class ChatToolCallDB(BaseModel):
             return v
         return {}
 
+
 class ChatSessionWithStats(ChatSessionDB):
     """Chat session with additional statistics."""
 
@@ -122,10 +126,12 @@ class ChatSessionWithStats(ChatSessionDB):
         None, description="Timestamp of last message"
     )
 
+
 class MessageWithTokenEstimate(ChatMessageDB):
     """Chat message with token estimation."""
 
     estimated_tokens: int = Field(..., description="Estimated token count")
+
 
 # Response models for queries
 class RecentMessagesResponse(BaseModel):

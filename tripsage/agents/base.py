@@ -10,8 +10,8 @@ import importlib
 import inspect
 import time
 import uuid
-from typing import Any, Optional, Type, Union
 from collections.abc import Callable
+from typing import Any
 
 try:
     from agents import Agent, Runner, function_tool
@@ -31,6 +31,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()
+
 
 class BaseAgent:
     """Base class for all TripSage agents using the OpenAI Agents SDK."""
@@ -302,9 +303,7 @@ class BaseAgent:
 
     def register_multiple_delegations(
         self,
-        target_agents: dict[
-            str, dict[str, type["BaseAgent"] | str | list[str] | str]
-        ],
+        target_agents: dict[str, dict[str, type["BaseAgent"] | str | list[str] | str]],
     ) -> int:
         """Register multiple delegation tools at once.
 
@@ -324,9 +323,7 @@ class BaseAgent:
             self, target_agents, service_registry=self.service_registry
         )
 
-    async def _initialize_session(
-        self, user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def _initialize_session(self, user_id: str | None = None) -> dict[str, Any]:
         """Initialize a new session with memory data.
 
         Args:

@@ -7,7 +7,7 @@ in the database.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
@@ -17,6 +17,7 @@ from tripsage_core.services.infrastructure.database_service import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 class SearchHistoryService:
     """Service for managing user search history."""
@@ -191,6 +192,7 @@ class SearchHistoryService:
             return type_map.get(resource_types[0], "unified")
 
         return "unified"
+
 
 async def get_search_history_service() -> SearchHistoryService:
     """Get an instance of the search history service.

@@ -6,13 +6,13 @@ Consolidates both request and response schemas for authentication operations.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from tripsage_core.models.schemas_common import CommonValidators
 
 # ===== Request Schemas =====
+
 
 class RegisterRequest(BaseModel):
     """User registration request model."""
@@ -54,6 +54,7 @@ class RegisterRequest(BaseModel):
             CommonValidators.passwords_match(info.data["password"], v)
         return v
 
+
 class LoginRequest(BaseModel):
     """User login request model."""
 
@@ -61,10 +62,12 @@ class LoginRequest(BaseModel):
     password: str = Field(description="User password")
     remember_me: bool = Field(False, description="Remember user session")
 
+
 class RefreshTokenRequest(BaseModel):
     """Refresh token request model."""
 
     refresh_token: str = Field(description="JWT refresh token")
+
 
 class ChangePasswordRequest(BaseModel):
     """Change password request model."""
@@ -101,10 +104,12 @@ class ChangePasswordRequest(BaseModel):
             )
         return v
 
+
 class ForgotPasswordRequest(BaseModel):
     """Forgot password request model."""
 
     email: EmailStr = Field(description="Email address for password reset")
+
 
 class ResetPasswordRequest(BaseModel):
     """Reset password request model."""
@@ -135,7 +140,9 @@ class ResetPasswordRequest(BaseModel):
             CommonValidators.passwords_match(info.data["new_password"], v)
         return v
 
+
 # ===== Response Schemas =====
+
 
 class Token(BaseModel):
     """Token response model."""
@@ -145,6 +152,7 @@ class Token(BaseModel):
     token_type: str = Field(default="bearer", description="Token type")
     expires_at: datetime = Field(description="Token expiration timestamp")
 
+
 class TokenResponse(BaseModel):
     """Enhanced token response model."""
 
@@ -153,6 +161,7 @@ class TokenResponse(BaseModel):
     token_type: str = Field(default="bearer", description="Token type")
     expires_in: int = Field(description="Token expiration in seconds")
     user: "UserResponse" = Field(description="User information")
+
 
 class UserResponse(BaseModel):
     """User response model."""
@@ -169,12 +178,14 @@ class UserResponse(BaseModel):
     )
     preferences: dict | None = Field(default=None, description="User preferences")
 
+
 class UserPreferencesResponse(BaseModel):
     """User preferences response model."""
 
     user_id: str = Field(description="User ID")
     preferences: dict = Field(description="User preferences dictionary")
     updated_at: datetime = Field(description="Last update timestamp")
+
 
 class MessageResponse(BaseModel):
     """Generic message response model."""
@@ -183,11 +194,13 @@ class MessageResponse(BaseModel):
     success: bool = Field(default=True, description="Whether operation was successful")
     details: dict | None = Field(default=None, description="Additional details")
 
+
 class AuthResponse(BaseModel):
     """Authentication response with user and tokens."""
 
     user: UserResponse = Field(description="User information")
     tokens: Token = Field(description="Authentication tokens")
+
 
 class PasswordResetResponse(BaseModel):
     """Password reset response model."""

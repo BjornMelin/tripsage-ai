@@ -18,6 +18,7 @@ from tripsage_core.database.factory import (
     get_database_connection,
 )
 
+
 @pytest.fixture
 def mock_settings():
     """Create mock settings for testing."""
@@ -30,10 +31,12 @@ def mock_settings():
     )
     return settings
 
+
 @pytest.fixture
 def factory(mock_settings):
     """Create a factory instance with mock settings."""
     return DatabaseConnectionFactory(mock_settings)
+
 
 class TestDatabaseConnectionFactory:
     """Test DatabaseConnectionFactory class."""
@@ -358,6 +361,7 @@ class TestDatabaseConnectionFactory:
 
             mock_create.assert_called_once()
 
+
 class TestModuleLevelFunctions:
     """Test module-level factory functions."""
 
@@ -383,6 +387,7 @@ class TestModuleLevelFunctions:
 
             assert conn == mock_connection
             mock_factory.get_connection.assert_called_once()
+
 
 class TestSecurityPatterns:
     """Test security validation patterns."""

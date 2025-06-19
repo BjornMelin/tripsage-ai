@@ -1,6 +1,7 @@
 """Business services for TripSage core functionality."""
 
-# Use async memory service as the default implementation (50-70% performance improvement)
+# Use async memory service as the default implementation
+# (50-70% performance improvement)
 from tripsage_core.services.business.memory_service_async import (
     AsyncMemoryService as MemoryService,
 )

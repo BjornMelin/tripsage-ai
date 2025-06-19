@@ -4,6 +4,7 @@ from io import BytesIO
 
 from fastapi import status
 
+
 class TestAttachmentsRouter:
     """Test suite for attachments router endpoints."""
 

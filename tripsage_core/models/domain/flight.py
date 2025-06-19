@@ -6,7 +6,7 @@ entities. These models represent the essential flight data structures
 independent of storage implementation or API specifics.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
@@ -20,6 +20,7 @@ from tripsage_core.models.schemas_common.common_validators import (
     PositiveInt,
 )
 from tripsage_core.models.schemas_common.enums import CabinClass
+
 
 class Airport(TripSageDomainModel):
     """Core airport information business entity.
@@ -35,6 +36,7 @@ class Airport(TripSageDomainModel):
     longitude: Longitude = Field(None, description="Longitude coordinate")
     timezone: str | None = Field(None, description="Timezone")
 
+
 class FlightSegment(TripSageDomainModel):
     """A segment of a flight (one leg of the journey)."""
 
@@ -47,6 +49,7 @@ class FlightSegment(TripSageDomainModel):
     carrier: str | None = Field(None, description="Carrier code")
     flight_number: str | None = Field(None, description="Flight number")
     duration_minutes: PositiveInt = Field(None, description="Duration in minutes")
+
 
 class FlightOffer(TripSageDomainModel):
     """Core flight offer business entity.
@@ -69,9 +72,7 @@ class FlightOffer(TripSageDomainModel):
     segments: list[FlightSegment] | None = Field(
         None, description="Parsed flight segments"
     )
-    origin_airport: Airport | None = Field(
-        None, description="Origin airport details"
-    )
+    origin_airport: Airport | None = Field(None, description="Origin airport details")
     destination_airport: Airport | None = Field(
         None, description="Destination airport details"
     )

@@ -20,6 +20,7 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
+
 class TestXSSProtection:
     """Test suite for Cross-Site Scripting (XSS) protection."""
 
@@ -299,6 +300,7 @@ class TestXSSProtection:
             assert payload not in response_text
             assert "<script>" not in response_text
 
+
 class TestCSRFProtection:
     """Test suite for Cross-Site Request Forgery (CSRF) protection."""
 
@@ -476,6 +478,7 @@ class TestCSRFProtection:
         # Should be handled by authentication middleware
         assert response.status_code in [401, 403]  # Invalid token
 
+
 class TestHTTPSecurityHeaders:
     """Test suite for HTTP security header configurations."""
 
@@ -603,6 +606,7 @@ class TestHTTPSecurityHeaders:
             varies_on_security = any(header in vary for header in security_headers)
             # If Vary is set, should consider security headers
             assert varies_on_security or "Accept" in vary
+
 
 class TestInputValidationSecurity:
     """Test suite for input validation security measures."""

@@ -6,12 +6,13 @@ replacing the over-engineered 677-line abstraction system with simple direct cal
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage_core.config import get_settings
 
 logger = logging.getLogger(__name__)
+
 
 class SimpleMCPService:
     """Direct MCP service without abstraction layers."""
@@ -212,8 +213,10 @@ class SimpleMCPService:
             except Exception as e:
                 logger.error(f"Error disconnecting Airbnb client: {e}")
 
+
 # Global instance
 _mcp_service: SimpleMCPService | None = None
+
 
 def get_mcp_service() -> SimpleMCPService:
     """Get the global MCP service instance."""
@@ -221,6 +224,7 @@ def get_mcp_service() -> SimpleMCPService:
     if _mcp_service is None:
         _mcp_service = SimpleMCPService()
     return _mcp_service
+
 
 # Backwards compatibility alias
 mcp_manager = get_mcp_service()

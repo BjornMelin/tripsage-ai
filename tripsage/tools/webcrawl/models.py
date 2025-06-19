@@ -1,9 +1,10 @@
 """Unified web crawl output schema for normalizing results from different crawlers."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 class UnifiedCrawlResult(BaseModel):
     """
@@ -11,18 +12,14 @@ class UnifiedCrawlResult(BaseModel):
     """
 
     url: str = Field(..., description="The URL that was crawled")
-    title: str | None = Field(
-        None, description="Page title extracted from the content"
-    )
+    title: str | None = Field(None, description="Page title extracted from the content")
     main_content_markdown: str | None = Field(
         None, description="Main content in markdown format"
     )
     main_content_text: str | None = Field(
         None, description="Main content as plain text"
     )
-    html_content: str | None = Field(
-        None, description="Raw HTML content if available"
-    )
+    html_content: str | None = Field(None, description="Raw HTML content if available")
     structured_data: dict[str, Any] | None = Field(
         None,
         description=(
@@ -33,9 +30,7 @@ class UnifiedCrawlResult(BaseModel):
         default_factory=dict,
         description="Additional metadata about the crawl operation",
     )
-    error_message: str | None = Field(
-        None, description="Error message if crawl failed"
-    )
+    error_message: str | None = Field(None, description="Error message if crawl failed")
     status: str = Field("success", description="Status of the crawl operation")
 
     model_config = {

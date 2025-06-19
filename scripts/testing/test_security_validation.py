@@ -27,6 +27,7 @@ from security.security_validation import (
     main,
 )
 
+
 class TestSecurityValidation(unittest.TestCase):
     """Test cases for security validation functionality."""
 
@@ -92,7 +93,7 @@ class TestSecurityValidation(unittest.TestCase):
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout="file.py:password = 'fallback-secret'\n"
-                  "other.py:key = 'test-password'",
+            "other.py:key = 'test-password'",
         )
 
         check_hardcoded_secrets()
@@ -316,6 +317,7 @@ class TestSecurityValidation(unittest.TestCase):
         result = main()
         self.assertEqual(result, 0)
 
+
 class TestSecurityValidationIntegration(unittest.TestCase):
     """Integration tests for security validation."""
 
@@ -328,9 +330,9 @@ class TestSecurityValidationIntegration(unittest.TestCase):
                 "safe.py": "password = get_from_env('PASSWORD')",
                 "vulnerable.py": "password = 'hardcoded-secret-123'",
                 "sql_safe.py": "cursor.execute('SELECT * FROM users WHERE id = ?', "
-                              "(user_id,))",
+                "(user_id,))",
                 "sql_vulnerable.py": "cursor.execute('SELECT * FROM users WHERE "
-                                    "id = ' + user_id)",
+                "id = ' + user_id)",
             }
 
             for filename, content in test_files.items():
@@ -359,6 +361,7 @@ class TestSecurityValidationIntegration(unittest.TestCase):
 
             finally:
                 os.chdir(original_cwd)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

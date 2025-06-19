@@ -15,6 +15,7 @@ from starlette.types import ASGIApp
 
 logger = logging.getLogger(__name__)
 
+
 class LoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for logging requests and responses.
 

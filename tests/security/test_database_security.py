@@ -18,6 +18,7 @@ from tripsage_core.utils.connection_utils import (
 )
 from tripsage_core.utils.url_converters import DatabaseURLConverter
 
+
 class TestDatabaseSecurity:
     """Test database connection security measures after migration."""
 

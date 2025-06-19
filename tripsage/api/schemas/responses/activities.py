@@ -3,15 +3,17 @@
 This module defines Pydantic models for activity-related API responses.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 class ActivityCoordinates(BaseModel):
     """Geographic coordinates."""
 
     lat: float = Field(..., ge=-90, le=90, description="Latitude")
     lng: float = Field(..., ge=-180, le=180, description="Longitude")
+
 
 class ActivityResponse(BaseModel):
     """Activity response model."""
@@ -47,6 +49,7 @@ class ActivityResponse(BaseModel):
         None, description="Instant confirmation available"
     )
 
+
 class ActivitySearchResponse(BaseModel):
     """Activity search response model."""
 
@@ -67,6 +70,7 @@ class ActivitySearchResponse(BaseModel):
         None, description="Number of results from each provider"
     )
 
+
 class SavedActivityResponse(BaseModel):
     """Saved activity response model."""
 
@@ -77,6 +81,4 @@ class SavedActivityResponse(BaseModel):
     notes: str | None = Field(None, description="User notes about the activity")
 
     # Optional activity details (for list views)
-    activity: ActivityResponse | None = Field(
-        None, description="Full activity details"
-    )
+    activity: ActivityResponse | None = Field(None, description="Full activity details")

@@ -15,7 +15,7 @@ Key Features:
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 try:
     from agents import function_tool
@@ -36,6 +36,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 # Set up logger
 logger = get_logger(__name__)
+
 
 @function_tool
 async def add_conversation_memory(
@@ -111,6 +112,7 @@ async def add_conversation_memory(
 
     return await _do_add_conversation_memory()
 
+
 @function_tool
 @with_error_handling()
 async def search_user_memories(
@@ -147,6 +149,7 @@ async def search_user_memories(
         logger.error(f"Error searching user memories: {str(e)}")
         return []
 
+
 @function_tool
 async def get_user_context(
     user_id: str,
@@ -177,6 +180,7 @@ async def get_user_context(
         return context
 
     return await _do_get_user_context()
+
 
 @function_tool
 @with_error_handling()
@@ -217,6 +221,7 @@ async def update_user_preferences(
     except Exception as e:
         logger.error(f"Error updating user preferences: {str(e)}")
         return {"status": "error", "error": str(e)}
+
 
 @function_tool
 @with_error_handling()
@@ -290,6 +295,7 @@ async def save_session_summary(
         logger.error(f"Error saving session summary: {str(e)}")
         return {"status": "error", "error": str(e)}
 
+
 @function_tool
 @with_error_handling()
 async def get_travel_insights(
@@ -332,6 +338,7 @@ async def get_travel_insights(
         logger.error(f"Error getting travel insights: {str(e)}")
         return {"status": "error", "error": str(e), "insights": {}}
 
+
 @function_tool
 @with_error_handling()
 async def find_similar_travelers(
@@ -372,6 +379,7 @@ async def find_similar_travelers(
     except Exception as e:
         logger.error(f"Error finding similar travelers: {str(e)}")
         return {"status": "error", "error": str(e), "similar_travelers": []}
+
 
 @function_tool
 @with_error_handling()
@@ -416,6 +424,7 @@ async def get_destination_memories(
     except Exception as e:
         logger.error(f"Error getting destination memories: {str(e)}")
         return {"status": "error", "error": str(e), "memories": []}
+
 
 @function_tool
 @with_error_handling()
@@ -470,6 +479,7 @@ async def track_user_activity(
         logger.error(f"Error tracking user activity: {str(e)}")
         return {"status": "error", "error": str(e)}
 
+
 # Health check function
 @function_tool
 @with_error_handling()
@@ -500,6 +510,7 @@ async def memory_health_check(service_registry: ServiceRegistry) -> dict[str, An
             "error": str(e),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
 
 # Compatibility aliases for legacy test imports
 search_memory_tool = search_user_memories

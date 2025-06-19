@@ -29,6 +29,7 @@ from tripsage_core.services.business.chat_service import (
     get_chat_service,
 )
 
+
 class TestChatService:
     """Test suite for ChatService."""
 

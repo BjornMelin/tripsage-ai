@@ -9,7 +9,7 @@ clean abstractions over external services while maintaining proper data relation
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field, field_validator
@@ -36,12 +36,14 @@ from tripsage_core.models.schemas_common.flight_schemas import (
 
 logger = logging.getLogger(__name__)
 
+
 class FlightType(str, Enum):
     """Flight type enumeration."""
 
     ROUND_TRIP = "round_trip"
     ONE_WAY = "one_way"
     MULTI_CITY = "multi_city"
+
 
 # Note: Using BookingStatus, CabinClass, PassengerType from schemas_common.enums
 # Re-export for convenience
@@ -61,6 +63,7 @@ __all__ = [
     "get_flight_service",
 ]
 
+
 class FlightSegment(TripSageModel):
     """Flight segment information."""
 
@@ -71,9 +74,7 @@ class FlightSegment(TripSageModel):
     airline: str | None = Field(None, description="Airline code")
     flight_number: str | None = Field(None, description="Flight number")
     aircraft_type: str | None = Field(None, description="Aircraft type")
-    duration_minutes: int | None = Field(
-        None, description="Flight duration in minutes"
-    )
+    duration_minutes: int | None = Field(None, description="Flight duration in minutes")
 
     @field_validator("origin", "destination")
     @classmethod
@@ -82,6 +83,7 @@ class FlightSegment(TripSageModel):
         if len(v) != 3 or not v.isalpha():
             raise ValueError("Airport code must be 3 letters")
         return v.upper()
+
 
 class FlightOffer(TripSageModel):
     """Flight offer response model."""
@@ -103,18 +105,14 @@ class FlightOffer(TripSageModel):
     cabin_class: CabinClass = Field(..., description="Cabin class")
     booking_class: str | None = Field(None, description="Booking class code")
 
-    total_duration: int | None = Field(
-        None, description="Total travel time in minutes"
-    )
+    total_duration: int | None = Field(None, description="Total travel time in minutes")
     stops_count: int = Field(default=0, description="Number of stops")
     airlines: list[str] = Field(default_factory=list, description="Airlines involved")
 
     expires_at: datetime | None = Field(None, description="Offer expiration time")
     bookable: bool = Field(default=True, description="Whether offer can be booked")
 
-    source: str | None = Field(
-        None, description="Source API (duffel, amadeus, etc.)"
-    )
+    source: str | None = Field(None, description="Source API (duffel, amadeus, etc.)")
     source_offer_id: str | None = Field(
         None, description="Original offer ID from source"
     )
@@ -127,6 +125,7 @@ class FlightOffer(TripSageModel):
     convenience_score: float | None = Field(
         None, ge=0, le=1, description="Convenience score"
     )
+
 
 class FlightBooking(TripSageModel):
     """Flight booking response model."""
@@ -162,6 +161,7 @@ class FlightBooking(TripSageModel):
         default_factory=dict, description="Additional metadata"
     )
 
+
 class FlightSearchResponse(TripSageModel):
     """Flight search response model."""
 
@@ -175,6 +175,7 @@ class FlightSearchResponse(TripSageModel):
         None, description="Search duration in milliseconds"
     )
     cached: bool = Field(default=False, description="Whether results were cached")
+
 
 class FlightBookingRequest(TripSageModel):
     """Request model for flight booking."""
@@ -197,6 +198,7 @@ class FlightBookingRequest(TripSageModel):
             if not passenger.given_name or not passenger.family_name:
                 raise ValueError("Given name and family name are required for booking")
         return v
+
 
 class FlightService:
     """
@@ -881,6 +883,7 @@ class FlightService:
                 "External cancellation failed",
                 extra={"booking_id": booking.id, "error": str(e)},
             )
+
 
 # Dependency function for FastAPI
 async def get_flight_service() -> FlightService:

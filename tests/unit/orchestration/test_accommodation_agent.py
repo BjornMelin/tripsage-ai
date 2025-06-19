@@ -14,6 +14,7 @@ from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
 from tripsage.orchestration.state import create_initial_state
 
+
 class TestAccommodationAgentNode:
     """Test suite for AccommodationAgentNode."""
 

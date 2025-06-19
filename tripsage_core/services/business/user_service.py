@@ -9,7 +9,7 @@ principles with proper dependency injection and error handling.
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from passlib.context import CryptContext
 from pydantic import EmailStr, Field, field_validator
@@ -33,6 +33,7 @@ pwd_context = CryptContext(
     deprecated="auto",
     bcrypt__rounds=12,  # Higher rounds for better security
 )
+
 
 class UserCreateRequest(TripSageModel):
     """Request model for user creation."""
@@ -60,6 +61,7 @@ class UserCreateRequest(TripSageModel):
 
         return v
 
+
 class UserUpdateRequest(TripSageModel):
     """Request model for user updates."""
 
@@ -67,6 +69,7 @@ class UserUpdateRequest(TripSageModel):
     username: str | None = Field(None, min_length=3, max_length=30)
     preferences: dict[str, Any] | None = Field(None)
     is_active: bool | None = Field(None)
+
 
 class UserResponse(TripSageModel):
     """Response model for user data."""
@@ -82,6 +85,7 @@ class UserResponse(TripSageModel):
     preferences: dict[str, Any] = Field(
         default_factory=dict, description="User preferences"
     )
+
 
 class PasswordChangeRequest(TripSageModel):
     """Request model for password changes."""
@@ -103,6 +107,7 @@ class PasswordChangeRequest(TripSageModel):
             raise ValueError("Password must contain at least one letter and one digit")
 
         return v
+
 
 class UserService:
     """
@@ -646,6 +651,7 @@ class UserService:
             True if password matches
         """
         return self._pwd_context.verify(plain_password, hashed_password)
+
 
 # Dependency function for FastAPI
 async def get_user_service(database_service=None) -> UserService:

@@ -6,7 +6,7 @@ for Airbnb accommodation searches and listing details.
 """
 
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class AirbnbSearchParams(BaseModel):
     """Parameters for Airbnb search."""
@@ -33,6 +34,7 @@ class AirbnbSearchParams(BaseModel):
         False, description="Ignore robots.txt (development only)"
     )
 
+
 class AirbnbListingDetailsParams(BaseModel):
     """Parameters for fetching Airbnb listing details."""
 
@@ -43,6 +45,7 @@ class AirbnbListingDetailsParams(BaseModel):
     children: int | None = Field(0, description="Number of children for pricing")
     infants: int | None = Field(0, description="Number of infants for pricing")
     pets: int | None = Field(0, description="Number of pets for pricing")
+
 
 class AirbnbMCPClient:
     """Client for interacting with the Airbnb MCP Server (OpenBnB)."""

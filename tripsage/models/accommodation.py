@@ -7,7 +7,6 @@ requests, listings, and bookings.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 
@@ -19,6 +18,7 @@ from tripsage_core.models.schemas_common.enums import AccommodationType as Prope
 
 # PropertyType moved to tripsage_core.models.domain.accommodation
 
+
 class AccommodationSearchRequest(MCPRequestBase):
     """Parameters for accommodation search."""
 
@@ -29,12 +29,8 @@ class AccommodationSearchRequest(MCPRequestBase):
     children: int = Field(0, ge=0, le=10, description="Number of children")
     rooms: int = Field(1, ge=1, le=8, description="Number of rooms")
     property_type: PropertyType | None = Field(None, description="Type of property")
-    min_price: float | None = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: float | None = Field(
-        None, ge=0, description="Maximum price per night"
-    )
+    min_price: float | None = Field(None, ge=0, description="Minimum price per night")
+    max_price: float | None = Field(None, ge=0, description="Maximum price per night")
     amenities: list[str] | None = Field(
         None, description="Required amenities (e.g., wifi, pool)"
     )
@@ -77,8 +73,10 @@ class AccommodationSearchRequest(MCPRequestBase):
                 raise ValueError("Maximum price must be greater than minimum price")
         return self
 
+
 # AccommodationAmenity, AccommodationImage, AccommodationLocation, AccommodationListing
 # moved to tripsage_core.models.domain.accommodation
+
 
 class AccommodationSearchResponse(MCPResponseBase):
     """Response for accommodation search."""
@@ -92,6 +90,7 @@ class AccommodationSearchResponse(MCPResponseBase):
     cheapest_price: float | None = Field(None, description="Cheapest price found")
     average_price: float | None = Field(None, description="Average price found")
 
+
 class AccommodationDetailsRequest(MCPRequestBase):
     """Parameters for retrieving accommodation details."""
 
@@ -104,6 +103,7 @@ class AccommodationDetailsRequest(MCPRequestBase):
         None, description="Source of the listing (e.g., 'airbnb', 'booking')"
     )
 
+
 class AccommodationDetailsResponse(MCPResponseBase):
     """Response for accommodation details."""
 
@@ -114,6 +114,7 @@ class AccommodationDetailsResponse(MCPResponseBase):
     total_price: float | None = Field(
         None, description="Total price for the stay (if dates provided)"
     )
+
 
 class AccommodationBookingRequest(MCPRequestBase):
     """Parameters for accommodation booking."""
@@ -128,6 +129,7 @@ class AccommodationBookingRequest(MCPRequestBase):
     guest_phone: str = Field(..., description="Guest phone number")
     special_requests: str | None = Field(None, description="Special requests")
     payment_method: str = Field(..., description="Payment method")
+
 
 class AccommodationBookingResponse(MCPResponseBase):
     """Response for accommodation booking."""
@@ -146,6 +148,7 @@ class AccommodationBookingResponse(MCPResponseBase):
     host_instructions: str | None = Field(
         None, description="Instructions from the host"
     )
+
 
 # Note: Core accommodation domain models (AccommodationListing,
 # AccommodationAmenity, etc.) have moved to tripsage_core.models.domain.accommodation

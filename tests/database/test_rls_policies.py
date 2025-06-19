@@ -12,12 +12,12 @@ Tests all RLS policies across the TripSage database to ensure:
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Optional
 from unittest.mock import MagicMock, Mock
 from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel, Field
+
 
 class RLSTestUser(BaseModel):
     """Test user model for RLS testing."""
@@ -32,6 +32,7 @@ class RLSTestUser(BaseModel):
 
         arbitrary_types_allowed = True
 
+
 class RLSTestResult(BaseModel):
     """Model for RLS test results."""
 
@@ -44,6 +45,7 @@ class RLSTestResult(BaseModel):
     passed: bool
     error: str | None = None
     performance_ms: float | None = None
+
 
 class RLSPolicyTester:
     """Comprehensive RLS policy testing framework."""
@@ -1227,12 +1229,14 @@ Generated: {datetime.now().isoformat()}
 
         return report
 
+
 @pytest.fixture
 def mock_supabase_env(monkeypatch):
     """Mock Supabase environment variables."""
     monkeypatch.setenv("SUPABASE_URL", "https://mock.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "mock-anon-key")
     return {"url": "https://mock.supabase.co", "key": "mock-anon-key"}
+
 
 @pytest.mark.asyncio
 async def test_rls_policies(mock_supabase_env):
@@ -1269,6 +1273,7 @@ async def test_rls_policies(mock_supabase_env):
     finally:
         # Cleanup
         await tester.cleanup_test_users()
+
 
 if __name__ == "__main__":
     asyncio.run(test_rls_policies())

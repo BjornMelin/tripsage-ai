@@ -5,11 +5,12 @@ comparison data between different trip options.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class TripComparison(TripSageModel):
     """TripComparison model for TripSage.

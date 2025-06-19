@@ -5,11 +5,11 @@ Consolidates both request and response schemas for API key operations.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 # ===== Request Schemas =====
+
 
 class ApiKeyCreate(BaseModel):
     """API key creation request model."""
@@ -20,18 +20,22 @@ class ApiKeyCreate(BaseModel):
     description: str | None = None
     expires_at: datetime | None = None
 
+
 class ApiKeyValidateRequest(BaseModel):
     """API key validation request model."""
 
     key: str
     service: str
 
+
 class ApiKeyRotateRequest(BaseModel):
     """API key rotation request model."""
 
     new_key: str
 
+
 # ===== Response Schemas =====
+
 
 class ApiKeyResponse(BaseModel):
     """API key response model."""
@@ -46,12 +50,14 @@ class ApiKeyResponse(BaseModel):
     is_valid: bool = True
     last_used: datetime | None = None
 
+
 class ApiKeyValidateResponse(BaseModel):
     """API key validation response model."""
 
     is_valid: bool
     service: str
     message: str
+
 
 class ApiKeyListResponse(BaseModel):
     """API key list response model."""

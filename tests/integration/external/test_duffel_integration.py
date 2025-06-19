@@ -19,6 +19,7 @@ from tripsage_core.services.business.flight_service import (
 )
 from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 
+
 class TestDuffelAPIIntegration:
     """Test Duffel API integration."""
 

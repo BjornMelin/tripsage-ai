@@ -5,13 +5,12 @@ This module contains location-related models including coordinates,
 addresses, places, and geographic utilities used across the application.
 """
 
-from typing import Optional
-
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
 
 from .common_validators import AirportCode, Latitude, Longitude
+
 
 class Coordinates(TripSageModel):
     """Geographic coordinates."""
@@ -40,6 +39,7 @@ class Coordinates(TripSageModel):
         # Earth's radius in kilometers
         r = 6371
         return c * r
+
 
 class Address(TripSageModel):
     """Structured address information."""
@@ -70,13 +70,12 @@ class Address(TripSageModel):
 
         return ", ".join(parts)
 
+
 class Place(TripSageModel):
     """A geographic place with coordinates and address."""
 
     name: str = Field(description="Place name")
-    coordinates: Coordinates | None = Field(
-        None, description="Geographic coordinates"
-    )
+    coordinates: Coordinates | None = Field(None, description="Geographic coordinates")
     address: Address | None = Field(None, description="Structured address")
     place_id: str | None = Field(
         None, description="External place identifier (e.g., Google Place ID)"
@@ -85,6 +84,7 @@ class Place(TripSageModel):
         None, description="Type of place (e.g., city, airport, hotel)"
     )
     timezone: str | None = Field(None, description="IANA timezone identifier")
+
 
 class BoundingBox(TripSageModel):
     """Geographic bounding box."""
@@ -107,19 +107,17 @@ class BoundingBox(TripSageModel):
         center_lon = (self.east + self.west) / 2
         return Coordinates(latitude=center_lat, longitude=center_lon)
 
+
 class Region(TripSageModel):
     """Geographic region with metadata."""
 
     name: str = Field(description="Region name")
-    code: str | None = Field(
-        None, description="Region code (e.g., ISO country code)"
-    )
+    code: str | None = Field(None, description="Region code (e.g., ISO country code)")
     bounding_box: BoundingBox | None = Field(None, description="Region boundaries")
     center: Coordinates | None = Field(None, description="Region center point")
     population: int | None = Field(None, description="Population count", ge=0)
-    area_km2: float | None = Field(
-        None, description="Area in square kilometers", ge=0
-    )
+    area_km2: float | None = Field(None, description="Area in square kilometers", ge=0)
+
 
 class Airport(TripSageModel):
     """Airport information."""
@@ -134,14 +132,13 @@ class Airport(TripSageModel):
     coordinates: Coordinates | None = Field(None, description="Airport coordinates")
     timezone: str | None = Field(None, description="Airport timezone")
 
+
 class Route(TripSageModel):
     """Geographic route between two places."""
 
     origin: Place = Field(description="Starting place")
     destination: Place = Field(description="Ending place")
-    distance_km: float | None = Field(
-        None, description="Distance in kilometers", ge=0
-    )
+    distance_km: float | None = Field(None, description="Distance in kilometers", ge=0)
     duration_minutes: int | None = Field(
         None, description="Estimated duration in minutes", ge=0
     )

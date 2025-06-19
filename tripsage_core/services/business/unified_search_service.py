@@ -10,7 +10,6 @@ to avoid code duplication while providing enhanced search capabilities.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import (
@@ -39,6 +38,7 @@ RESOURCE_TYPES = {
 # Default search types if none specified
 DEFAULT_SEARCH_TYPES = ["destination", "activity", "accommodation"]
 
+
 class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
@@ -55,6 +55,7 @@ class UnifiedSearchServiceError(CoreServiceError):
             details=details,
         )
         self.original_error = original_error
+
 
 class UnifiedSearchService:
     """Service for unified search across multiple resource types."""
@@ -500,8 +501,10 @@ class UnifiedSearchService:
             logger.error(f"Failed to get search suggestions: {e}")
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
 
+
 # Global service instance
 _unified_search_service: UnifiedSearchService | None = None
+
 
 async def get_unified_search_service() -> UnifiedSearchService:
     """Get the global unified search service instance."""
@@ -512,6 +515,7 @@ async def get_unified_search_service() -> UnifiedSearchService:
         await _unified_search_service.ensure_services()
 
     return _unified_search_service
+
 
 async def close_unified_search_service() -> None:
     """Close the global unified search service instance."""

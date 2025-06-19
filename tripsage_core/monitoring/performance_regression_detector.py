@@ -14,13 +14,14 @@ import asyncio
 import logging
 import statistics
 from collections import defaultdict, deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Optional
-from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
 
 class RegressionSeverity(Enum):
     """Severity levels for performance regressions."""
@@ -30,6 +31,7 @@ class RegressionSeverity(Enum):
     CRITICAL = "critical"
     EMERGENCY = "emergency"
 
+
 class TrendDirection(Enum):
     """Performance trend directions."""
 
@@ -37,6 +39,7 @@ class TrendDirection(Enum):
     STABLE = "stable"
     DEGRADING = "degrading"
     VOLATILE = "volatile"
+
 
 @dataclass
 class PerformanceDataPoint:
@@ -52,6 +55,7 @@ class PerformanceDataPoint:
     def age_minutes(self) -> float:
         """Get age of data point in minutes."""
         return (datetime.now(timezone.utc) - self.timestamp).total_seconds() / 60
+
 
 @dataclass
 class StatisticalBaseline:
@@ -105,6 +109,7 @@ class StatisticalBaseline:
         else:
             return RegressionSeverity.INFO
 
+
 @dataclass
 class PerformanceTrend:
     """Performance trend analysis."""
@@ -125,6 +130,7 @@ class PerformanceTrend:
     def is_significant(self) -> bool:
         """Check if trend is statistically significant."""
         return abs(self.correlation) > 0.7 and abs(self.change_percent) > 10.0
+
 
 @dataclass
 class RegressionAlert:
@@ -158,6 +164,7 @@ class RegressionAlert:
         self.metadata["resolved_at"] = datetime.now(timezone.utc).isoformat()
         if note:
             self.metadata["resolution_note"] = note
+
 
 class PerformanceRegressionDetector:
     """
@@ -691,8 +698,10 @@ class PerformanceRegressionDetector:
             },
         }
 
+
 # Global regression detector instance
 _regression_detector: PerformanceRegressionDetector | None = None
+
 
 async def get_regression_detector(**kwargs) -> PerformanceRegressionDetector:
     """Get or create global regression detector instance."""
@@ -703,6 +712,7 @@ async def get_regression_detector(**kwargs) -> PerformanceRegressionDetector:
         await _regression_detector.start()
 
     return _regression_detector
+
 
 async def close_regression_detector():
     """Close global regression detector instance."""

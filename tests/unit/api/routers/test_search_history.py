@@ -19,6 +19,7 @@ from tripsage.api.routers.search import (
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage_core.services.business.search_history_service import SearchHistoryService
 
+
 class TestSearchHistoryEndpoints:
     """Test search history endpoints functionality."""
 

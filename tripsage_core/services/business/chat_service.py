@@ -11,7 +11,7 @@ import logging
 import re
 import time
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
@@ -32,6 +32,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
+
 class MessageRole(str):
     """Message role constants."""
 
@@ -39,6 +40,7 @@ class MessageRole(str):
     ASSISTANT = "assistant"
     SYSTEM = "system"
     TOOL = "tool"
+
 
 class ToolCallStatus(str):
     """Tool call status constants."""
@@ -48,12 +50,14 @@ class ToolCallStatus(str):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class ChatSessionCreateRequest(TripSageModel):
     """Request model for chat session creation."""
 
     title: str | None = Field(None, max_length=200, description="Session title")
     trip_id: str | None = Field(None, description="Associated trip ID")
     metadata: dict[str, Any] | None = Field(None, description="Session metadata")
+
 
 class ChatSessionResponse(TripSageModel):
     """Response model for chat session."""
@@ -69,9 +73,8 @@ class ChatSessionResponse(TripSageModel):
         default_factory=dict, description="Session metadata"
     )
     message_count: int = Field(default=0, description="Number of messages")
-    last_message_at: datetime | None = Field(
-        None, description="Last message timestamp"
-    )
+    last_message_at: datetime | None = Field(None, description="Last message timestamp")
+
 
 class MessageCreateRequest(TripSageModel):
     """Request model for message creation."""
@@ -79,9 +82,7 @@ class MessageCreateRequest(TripSageModel):
     role: str = Field(..., description="Message role")
     content: str = Field(..., min_length=1, description="Message content")
     metadata: dict[str, Any] | None = Field(None, description="Message metadata")
-    tool_calls: list[dict[str, Any]] | None = Field(
-        None, description="Tool calls data"
-    )
+    tool_calls: list[dict[str, Any]] | None = Field(None, description="Tool calls data")
 
     @field_validator("role")
     @classmethod
@@ -96,6 +97,7 @@ class MessageCreateRequest(TripSageModel):
         if v not in valid_roles:
             raise ValueError(f"Role must be one of: {', '.join(valid_roles)}")
         return v
+
 
 class MessageResponse(TripSageModel):
     """Response model for chat message."""
@@ -113,6 +115,7 @@ class MessageResponse(TripSageModel):
     )
     estimated_tokens: int | None = Field(None, description="Estimated token count")
 
+
 class ToolCallResponse(TripSageModel):
     """Response model for tool call."""
 
@@ -127,6 +130,7 @@ class ToolCallResponse(TripSageModel):
     completed_at: datetime | None = Field(None, description="Completion timestamp")
     error_message: str | None = Field(None, description="Error message if failed")
 
+
 class RecentMessagesRequest(TripSageModel):
     """Request model for recent messages retrieval."""
 
@@ -136,6 +140,7 @@ class RecentMessagesRequest(TripSageModel):
     max_tokens: int = Field(default=8000, ge=100, description="Maximum total tokens")
     offset: int = Field(default=0, ge=0, description="Number of messages to skip")
 
+
 class RecentMessagesResponse(TripSageModel):
     """Response model for recent messages."""
 
@@ -144,6 +149,7 @@ class RecentMessagesResponse(TripSageModel):
     )
     total_tokens: int = Field(..., description="Total estimated tokens")
     truncated: bool = Field(..., description="Whether results were truncated")
+
 
 class RateLimiter:
     """Simple in-memory rate limiter for message creation."""
@@ -197,6 +203,7 @@ class RateLimiter:
         """Reset rate limit for a user."""
         if user_id in self.user_windows:
             del self.user_windows[user_id]
+
 
 class ChatService:
     """
@@ -978,9 +985,7 @@ class ChatService:
             return []
 
     # Router-compatible methods with simplified signatures
-    async def get_session(
-        self, user_id: str, session_id: str
-    ) -> dict[str, Any] | None:
+    async def get_session(self, user_id: str, session_id: str) -> dict[str, Any] | None:
         """
         Get chat session (router-compatible method).
 
@@ -1010,6 +1015,7 @@ class ChatService:
         """
         messages = await self._get_messages_internal(session_id, user_id, limit, 0)
         return [message.model_dump() for message in messages]
+
 
 # Dependency function for FastAPI
 async def get_chat_service() -> ChatService:

@@ -20,6 +20,7 @@ from tripsage_core.services.business.api_key_validator import (
     ServiceType,
 )
 
+
 class TestEnhancedHealthEndpoints:
     """Test suite for enhanced health check endpoints."""
 
@@ -590,6 +591,7 @@ class TestEnhancedHealthEndpoints:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         assert (end_time - start_time) < 1.0  # Should respond within 1 second
+
 
 class TestHealthModels:
     """Test health check data models."""

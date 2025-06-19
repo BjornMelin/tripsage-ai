@@ -21,6 +21,7 @@ from tripsage_core.services.infrastructure.replica_manager import (
     ReplicaStatus,
 )
 
+
 class TestReplicaPerformanceIntegration:
     """Integration tests for replica performance under realistic loads."""
 

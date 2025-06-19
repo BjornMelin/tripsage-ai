@@ -6,7 +6,6 @@ Consolidates both request and response schemas for accommodation operations.
 """
 
 from datetime import date
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
@@ -14,6 +13,7 @@ from pydantic import BaseModel, Field, field_validator
 from tripsage_core.models.schemas_common import AccommodationType, BookingStatus
 
 # ===== Request Schemas =====
+
 
 class AccommodationSearchRequest(BaseModel):
     """Request model for searching accommodations."""
@@ -31,12 +31,8 @@ class AccommodationSearchRequest(BaseModel):
     property_type: AccommodationType | None = Field(
         None, description="Type of property"
     )
-    min_price: float | None = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: float | None = Field(
-        None, ge=0, description="Maximum price per night"
-    )
+    min_price: float | None = Field(None, ge=0, description="Minimum price per night")
+    max_price: float | None = Field(None, ge=0, description="Maximum price per night")
     amenities: list[str] | None = Field(
         None, description="Required amenities (e.g., wifi, pool)"
     )
@@ -72,6 +68,7 @@ class AccommodationSearchRequest(BaseModel):
                 raise ValueError("Maximum price must be greater than minimum price")
         return v
 
+
 class AccommodationDetailsRequest(BaseModel):
     """Request model for retrieving accommodation details."""
 
@@ -98,6 +95,7 @@ class AccommodationDetailsRequest(BaseModel):
                 raise ValueError("Check-out date must be after check-in date")
         return v
 
+
 class SavedAccommodationRequest(BaseModel):
     """Request model for saving an accommodation listing."""
 
@@ -115,7 +113,9 @@ class SavedAccommodationRequest(BaseModel):
             raise ValueError("Check-out date must be after check-in date")
         return v
 
+
 # ===== Response Schemas =====
+
 
 class AccommodationLocation(BaseModel):
     """Location details for an accommodation."""
@@ -127,10 +127,12 @@ class AccommodationLocation(BaseModel):
     neighborhood: str | None = None
     distance_to_center: float | None = None
 
+
 class AccommodationAmenity(BaseModel):
     """Amenity information."""
 
     name: str
+
 
 class AccommodationImage(BaseModel):
     """Image information for an accommodation."""
@@ -138,6 +140,7 @@ class AccommodationImage(BaseModel):
     url: str
     caption: str | None = None
     is_primary: bool = False
+
 
 class AccommodationListing(BaseModel):
     """Complete accommodation listing information."""
@@ -163,6 +166,7 @@ class AccommodationListing(BaseModel):
     source: str | None = None
     total_price: float | None = None
 
+
 class AccommodationSearchResponse(BaseModel):
     """Response model for accommodation search results."""
 
@@ -180,6 +184,7 @@ class AccommodationSearchResponse(BaseModel):
         description="Original search request"
     )
 
+
 class AccommodationDetailsResponse(BaseModel):
     """Response model for accommodation details."""
 
@@ -190,6 +195,7 @@ class AccommodationDetailsResponse(BaseModel):
     total_price: float | None = Field(
         default=None, description="Total price for the stay (if dates provided)"
     )
+
 
 class SavedAccommodationResponse(BaseModel):
     """Response model for a saved accommodation listing."""

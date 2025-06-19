@@ -6,12 +6,11 @@ entities. These models represent the essential accommodation data structures
 independent of storage implementation or API specifics.
 """
 
-from typing import Optional
-
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageDomainModel
 from tripsage_core.models.schemas_common.enums import AccommodationType as PropertyType
+
 
 class AccommodationAmenity(TripSageDomainModel):
     """Amenity offered by an accommodation."""
@@ -20,12 +19,14 @@ class AccommodationAmenity(TripSageDomainModel):
     category: str | None = Field(None, description="Amenity category")
     description: str | None = Field(None, description="Amenity description")
 
+
 class AccommodationImage(TripSageDomainModel):
     """Image of an accommodation."""
 
     url: str = Field(..., description="Image URL")
     caption: str | None = Field(None, description="Image caption")
     is_primary: bool = Field(False, description="Whether this is the primary image")
+
 
 class AccommodationLocation(TripSageDomainModel):
     """Location information for an accommodation."""
@@ -38,6 +39,7 @@ class AccommodationLocation(TripSageDomainModel):
     latitude: float | None = Field(None, description="Latitude coordinate")
     longitude: float | None = Field(None, description="Longitude coordinate")
     neighborhood: str | None = Field(None, description="Neighborhood name")
+
 
 class AccommodationListing(TripSageDomainModel):
     """Core accommodation listing business entity.

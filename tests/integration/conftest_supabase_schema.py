@@ -9,7 +9,7 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -17,6 +17,7 @@ import pytest
 # Configure test logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 class TestConfig:
     """Configuration for schema integration tests."""
@@ -62,6 +63,7 @@ class TestConfig:
         "search_session_memories",
     ]
 
+
 class TestUser:
     """Test user representation for collaboration testing."""
 
@@ -106,6 +108,7 @@ class TestUser:
         }
         return permission_map.get(role, permission_map["viewer"])
 
+
 class TestTrip:
     """Test trip representation for collaboration testing."""
 
@@ -133,6 +136,7 @@ class TestTrip:
 
         collab = self.collaborators.get(user_id)
         return collab["permission_level"] if collab else None
+
 
 class MockSupabaseClient:
     """Mock Supabase client for testing schema interactions."""
@@ -354,6 +358,7 @@ class MockSupabaseClient:
         """Handle DELETE queries with RLS validation."""
         logger.info(f"DELETE query: {query[:50]}... with params: {params}")
 
+
 class SchemaValidator:
     """Validator for database schema components."""
 
@@ -421,12 +426,15 @@ class SchemaValidator:
 
         return errors
 
+
 # Test Fixtures
+
 
 @pytest.fixture
 def test_config():
     """Provide test configuration."""
     return TestConfig()
+
 
 @pytest.fixture
 def schema_files():
@@ -460,10 +468,12 @@ def schema_files():
 
     return files
 
+
 @pytest.fixture
 def mock_supabase_client():
     """Provide mock Supabase client."""
     return MockSupabaseClient()
+
 
 @pytest.fixture
 def test_users():
@@ -475,6 +485,7 @@ def test_users():
         "viewer": TestUser("viewer"),
         "unauthorized": TestUser("viewer"),  # Extra user for isolation tests
     }
+
 
 @pytest.fixture
 def test_trips(test_users):
@@ -493,6 +504,7 @@ def test_trips(test_users):
     trip3 = TestTrip(editor, "Editor's Trip")
 
     return {"collaborative": trip1, "owner_only": trip2, "editor_owned": trip3}
+
 
 @pytest.fixture
 async def populated_database(mock_supabase_client, test_users, test_trips):
@@ -528,10 +540,12 @@ async def populated_database(mock_supabase_client, test_users, test_trips):
 
     return client
 
+
 @pytest.fixture
 def schema_validator(schema_files):
     """Provide schema validator."""
     return SchemaValidator(schema_files)
+
 
 @pytest.fixture
 def performance_tracker():
@@ -591,6 +605,7 @@ def performance_tracker():
 
     return Tracker()
 
+
 @pytest.fixture(autouse=True)
 async def cleanup_after_test():
     """Automatic cleanup after each test."""
@@ -599,7 +614,9 @@ async def cleanup_after_test():
     # In a real implementation, this would clean up test data from the database
     logger.info("Test cleanup completed")
 
+
 # Utility functions for tests
+
 
 def assert_performance_threshold(duration: float, threshold: float, operation: str):
     """Assert operation meets performance threshold."""
@@ -607,6 +624,7 @@ def assert_performance_threshold(duration: float, threshold: float, operation: s
         pytest.fail(
             f"{operation} took {duration:.3f}s, exceeding threshold of {threshold:.3f}s"
         )
+
 
 def assert_rls_isolation(
     user1_data: list[Any], user2_data: list[Any], user1_id: UUID, user2_id: UUID
@@ -634,12 +652,14 @@ def assert_rls_isolation(
                 "User2 can see User1's data - RLS violation"
             )
 
+
 def create_test_memory_embedding() -> list[float]:
     """Create a test embedding vector for memory operations."""
     import random
 
     random.seed(42)  # Deterministic for testing
     return [random.uniform(-1, 1) for _ in range(1536)]
+
 
 async def simulate_concurrent_access(
     operations: list[callable], max_concurrent: int = 3
@@ -653,6 +673,7 @@ async def simulate_concurrent_access(
 
     tasks = [run_operation(op) for op in operations]
     return await asyncio.gather(*tasks, return_exceptions=True)
+
 
 # Test markers
 pytestmark = [

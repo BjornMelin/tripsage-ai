@@ -6,7 +6,6 @@ retrieving, updating, and deleting trips.
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -44,6 +43,7 @@ from tripsage_core.services.business.trip_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["trips"])
+
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
@@ -214,6 +214,7 @@ async def create_trip(
             detail="Failed to create trip",
         ) from e
 
+
 @router.get("/{trip_id}", response_model=TripResponse)
 async def get_trip(
     trip_id: UUID,
@@ -253,6 +254,7 @@ async def get_trip(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip",
         ) from e
+
 
 @router.get("/", response_model=TripListResponse)
 async def list_trips(
@@ -312,6 +314,7 @@ async def list_trips(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trips",
         ) from e
+
 
 @router.put("/{trip_id}", response_model=TripResponse)
 async def update_trip(
@@ -393,6 +396,7 @@ async def update_trip(
             detail="Failed to update trip",
         ) from e
 
+
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_trip(
     trip_id: UUID,
@@ -426,6 +430,7 @@ async def delete_trip(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete trip",
         ) from e
+
 
 @router.get("/{trip_id}/summary", response_model=TripSummaryResponse)
 async def get_trip_summary(
@@ -499,6 +504,7 @@ async def get_trip_summary(
             detail="Failed to get trip summary",
         ) from e
 
+
 @router.put("/{trip_id}/preferences", response_model=TripResponse)
 async def update_trip_preferences(
     trip_id: UUID,
@@ -543,6 +549,7 @@ async def update_trip_preferences(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip preferences",
         ) from e
+
 
 @router.post(
     "/{trip_id}/duplicate",
@@ -614,6 +621,7 @@ async def duplicate_trip(
             detail="Failed to duplicate trip",
         ) from e
 
+
 @router.get("/search", response_model=TripListResponse)
 async def search_trips(
     q: str | None = Query(default=None, description="Search query"),
@@ -679,6 +687,7 @@ async def search_trips(
             detail="Failed to search trips",
         ) from e
 
+
 @router.get("/{trip_id}/itinerary")
 async def get_trip_itinerary(
     trip_id: UUID,
@@ -740,6 +749,7 @@ async def get_trip_itinerary(
             detail="Failed to get trip itinerary",
         ) from e
 
+
 @router.post("/{trip_id}/export")
 async def export_trip(
     trip_id: UUID,
@@ -789,6 +799,7 @@ async def export_trip(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to export trip",
         ) from e
+
 
 # Core endpoints
 @router.get("/suggestions", response_model=list[TripSuggestionResponse])
@@ -934,6 +945,7 @@ async def get_trip_suggestions(
 
     return filtered_suggestions
 
+
 def _adapt_trip_response(core_response) -> TripResponse:
     """Adapt core trip response to API model."""
     # Convert TripLocation to TripDestination
@@ -1005,7 +1017,9 @@ def _adapt_trip_response(core_response) -> TripResponse:
         updated_at=updated_at,
     )
 
+
 # ===== Trip Collaboration Endpoints =====
+
 
 @router.post("/{trip_id}/share", response_model=list[TripCollaboratorResponse])
 async def share_trip(
@@ -1079,6 +1093,7 @@ async def share_trip(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to share trip",
         ) from e
+
 
 @router.get("/{trip_id}/collaborators", response_model=TripCollaboratorsListResponse)
 async def list_trip_collaborators(
@@ -1155,6 +1170,7 @@ async def list_trip_collaborators(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trip collaborators",
         ) from e
+
 
 @router.put(
     "/{trip_id}/collaborators/{user_id}", response_model=TripCollaboratorResponse
@@ -1246,6 +1262,7 @@ async def update_collaborator_permissions(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update collaborator permissions",
         ) from e
+
 
 @router.delete(
     "/{trip_id}/collaborators/{user_id}", status_code=status.HTTP_204_NO_CONTENT

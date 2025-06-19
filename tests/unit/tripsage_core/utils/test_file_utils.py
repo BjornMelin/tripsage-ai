@@ -30,6 +30,7 @@ from tripsage_core.utils.file_utils import (
     validate_file,
 )
 
+
 class TestValidationResult:
     """Test ValidationResult model."""
 
@@ -60,6 +61,7 @@ class TestValidationResult:
         assert result.file_size == 2048
         assert result.detected_type == "application/pdf"
         assert result.file_hash is None
+
 
 class TestFilenameValidation:
     """Test filename validation functionality."""
@@ -141,6 +143,7 @@ class TestFilenameValidation:
             is_valid, error = _validate_filename(filename)
             assert not is_valid, f"Expected {filename} to be flagged regardless of case"
 
+
 class TestMimeTypeDetection:
     """Test MIME type detection functionality."""
 
@@ -191,6 +194,7 @@ class TestMimeTypeDetection:
         """Test fallback for unknown file types."""
         detected = _detect_mime_type("unknown.xyz", b"\x00\x01\x02\x03")
         assert detected == "application/octet-stream"
+
 
 class TestContentValidation:
     """Test file content validation functionality."""
@@ -277,6 +281,7 @@ class TestContentValidation:
         is_valid, error = _validate_file_content(b"\x00\x01\x02", "application/unknown")
         assert is_valid
         assert error is None
+
 
 class TestFileValidation:
     """Test main file validation functionality."""
@@ -385,6 +390,7 @@ class TestFileValidation:
         assert result.is_valid
         assert result.file_hash == expected_hash
 
+
 class TestBatchUploadValidation:
     """Test batch upload validation functionality."""
 
@@ -472,6 +478,7 @@ class TestBatchUploadValidation:
         result = await validate_batch_upload(files, max_total_size=150)
         assert not result.is_valid
         assert "exceeds maximum" in result.error_message
+
 
 class TestSafeFilenameGeneration:
     """Test safe filename generation functionality."""
@@ -566,6 +573,7 @@ class TestSafeFilenameGeneration:
         assert len(hash_part) == 8
         assert hash_part.isalnum()
 
+
 class TestConstants:
     """Test file utility constants."""
 
@@ -607,6 +615,7 @@ class TestConstants:
         assert ".exe" in SUSPICIOUS_PATTERNS
         assert "/" in SUSPICIOUS_PATTERNS
         assert "\\" in SUSPICIOUS_PATTERNS
+
 
 class TestEdgeCases:
     """Test edge cases and error conditions."""

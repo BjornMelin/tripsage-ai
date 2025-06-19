@@ -6,11 +6,11 @@ such as flights, accommodations, or transportation options.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class OptionType(str, Enum):
     """Enum for option type values."""
@@ -19,6 +19,7 @@ class OptionType(str, Enum):
     ACCOMMODATION = "accommodation"
     TRANSPORTATION = "transportation"
     ACTIVITY = "activity"
+
 
 class SavedOption(TripSageModel):
     """SavedOption model for TripSage.

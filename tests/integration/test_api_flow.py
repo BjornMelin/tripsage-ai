@@ -21,6 +21,7 @@ from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
+
 class TestApiDatabaseFlow:
     """Test complete API to database flow."""
 

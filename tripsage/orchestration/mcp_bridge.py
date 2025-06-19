@@ -7,19 +7,20 @@ maintaining compatibility with the simplified MCPManager architecture.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from langchain_core.tools import Tool, tool
 from pydantic import BaseModel, Field
 
-from tripsage_core.services.simple_mcp_service import (
+from tripsage_core.services.mcp_service import (
     SimpleMCPService as MCPManager,
 )
-from tripsage_core.services.simple_mcp_service import (
+from tripsage_core.services.mcp_service import (
     mcp_manager as global_mcp_manager,
 )
 
 logger = logging.getLogger(__name__)
+
 
 class AirbnbToolWrapper(BaseModel):
     """Wrapper for Airbnb tool metadata with LangGraph compatibility."""
@@ -28,6 +29,7 @@ class AirbnbToolWrapper(BaseModel):
     description: str = Field(description="Tool description")
     parameters: dict[str, Any] = Field(description="Tool parameters schema")
     mcp_method: str = Field(description="Airbnb MCP method name")
+
 
 class LangGraphMCPBridge:
     """
@@ -319,8 +321,10 @@ class LangGraphMCPBridge:
         self._initialized = False
         await self.initialize()
 
+
 # Global bridge instance for easy access
 _global_bridge: LangGraphMCPBridge | None = None
+
 
 async def get_mcp_bridge() -> LangGraphMCPBridge:
     """Get the global Airbnb MCP bridge instance."""
@@ -330,10 +334,12 @@ async def get_mcp_bridge() -> LangGraphMCPBridge:
         await _global_bridge.initialize()
     return _global_bridge
 
+
 async def get_airbnb_tools() -> list[Tool]:
     """Get all available Airbnb tools for LangGraph."""
     bridge = await get_mcp_bridge()
     return await bridge.get_tools()
+
 
 # Convenience function for creating Airbnb tools
 def create_airbnb_tool(name: str, description: str, mcp_method: str):

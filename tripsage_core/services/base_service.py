@@ -7,12 +7,13 @@ and external service initialization.
 """
 
 import logging
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from tripsage_core.exceptions import CoreServiceError
 from tripsage_core.utils.decorator_utils import with_error_handling
 
 ServiceType = TypeVar("ServiceType")
+
 
 class BaseService:
     """
@@ -344,6 +345,7 @@ class BaseService:
         """String representation of the service."""
         return f"{self.__class__.__name__}(name='{self.service_name}')"
 
+
 class BaseCRUDService(BaseService):
     """
     Base service class with common CRUD operations.
@@ -452,5 +454,6 @@ class BaseCRUDService(BaseService):
             )
 
         return await self.db.delete_entity(entity_id, entity_type)
+
 
 __all__ = ["BaseService", "BaseCRUDService"]

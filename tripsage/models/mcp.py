@@ -6,7 +6,7 @@ MCP (Model Context Protocol) servers and validation of requests and responses.
 """
 
 from datetime import datetime
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import (
     ConfigDict,
@@ -16,6 +16,7 @@ from pydantic import (
 )
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class MCPRequestBase(TripSageModel):
     """Base model for all MCP requests."""
@@ -31,6 +32,7 @@ class MCPRequestBase(TripSageModel):
     )
     timestamp: datetime | None = Field(None, description="Request timestamp")
 
+
 class MCPResponseBase(TripSageModel):
     """Base model for all MCP responses."""
 
@@ -40,13 +42,12 @@ class MCPResponseBase(TripSageModel):
 
     # Common response fields
     success: bool = Field(True, description="Whether the request was successful")
-    error: str | None = Field(
-        None, description="Error message if the request failed"
-    )
+    error: str | None = Field(None, description="Error message if the request failed")
     request_id: str | None = Field(None, description="The request ID for tracing")
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="Response timestamp"
     )
+
 
 class ErrorResponse(MCPResponseBase):
     """Standard error response model."""
@@ -58,6 +59,7 @@ class ErrorResponse(MCPResponseBase):
         None, description="Additional error details"
     )
 
+
 class PaginatedResponseBase(MCPResponseBase):
     """Base model for paginated responses."""
 
@@ -67,6 +69,7 @@ class PaginatedResponseBase(MCPResponseBase):
     total_pages: int | None = Field(None, description="Total number of pages")
     has_next: bool = Field(False, description="Whether there is a next page")
     has_previous: bool = Field(False, description="Whether there is a previous page")
+
 
 class PaginatedRequest(MCPRequestBase):
     """Base model for paginated requests."""
@@ -92,6 +95,7 @@ class PaginatedRequest(MCPRequestBase):
             raise ValueError("Page size must be at most 100")
         return value
 
+
 class DateRangeRequest(MCPRequestBase):
     """Base model for date range requests."""
 
@@ -105,6 +109,7 @@ class DateRangeRequest(MCPRequestBase):
             raise ValueError("Start date must be before end date")
         return self
 
+
 class SearchRequest(MCPRequestBase):
     """Base model for search requests."""
 
@@ -113,6 +118,7 @@ class SearchRequest(MCPRequestBase):
         10, ge=1, le=100, description="Maximum number of results to return"
     )
     offset: int | None = Field(None, ge=0, description="Offset for pagination")
+
 
 class LocationRequest(MCPRequestBase):
     """Base model for location-based requests."""
@@ -136,6 +142,7 @@ class LocationRequest(MCPRequestBase):
             raise ValueError("Longitude must be between -180 and 180")
         return value
 
+
 class CacheConfig(TripSageModel):
     """Configuration model for caching behavior."""
 
@@ -145,6 +152,7 @@ class CacheConfig(TripSageModel):
     )
     cache_key_prefix: str | None = Field(None, description="Prefix for cache keys")
 
+
 class TimeZoneRequest(MCPRequestBase):
     """Base model for timezone-related requests."""
 
@@ -152,7 +160,9 @@ class TimeZoneRequest(MCPRequestBase):
         ..., min_length=1, description="IANA timezone name (e.g. 'America/New_York')"
     )
 
+
 T = TypeVar("T")
+
 
 class GenericResponse(MCPResponseBase, Generic[T]):
     """Generic response model for any data type."""

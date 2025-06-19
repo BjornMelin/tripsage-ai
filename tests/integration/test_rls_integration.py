@@ -5,7 +5,6 @@ They complement the mock tests and ensure production behavior matches expectatio
 """
 
 import os
-from typing import Optional
 
 import pytest
 from dotenv import load_dotenv
@@ -14,6 +13,7 @@ from supabase import Client, create_client
 
 # Load environment variables
 load_dotenv()
+
 
 @pytest.fixture
 def supabase_client() -> Client | None:
@@ -27,6 +27,7 @@ def supabase_client() -> Client | None:
 
     return create_client(url, key)
 
+
 @pytest.fixture
 def service_client() -> Client | None:
     """Create service role client for test setup."""
@@ -38,6 +39,7 @@ def service_client() -> Client | None:
         return None
 
     return create_client(url, key)
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -101,6 +103,7 @@ async def test_trip_user_isolation(supabase_client: Client, service_client: Clie
             # Delete test users
             service_client.auth.admin.delete_user(auth1.user.id)
             service_client.auth.admin.delete_user(auth2.user.id)
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio
@@ -219,6 +222,7 @@ async def test_trip_collaboration_permissions(
                 service_client.auth.admin.delete_user(viewer_id)
             if editor_id:
                 service_client.auth.admin.delete_user(editor_id)
+
 
 @pytest.mark.integration
 @pytest.mark.asyncio

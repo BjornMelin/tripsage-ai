@@ -12,11 +12,12 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.services.business.memory_service import (
+from tripsage_core.services.business.memory_service_async import (
     ConversationMemoryRequest,
     MemorySearchRequest,
     MemoryService,
 )
+
 
 class TestMemoryPGVectorIntegration:
     """Test memory service integration with PGVectorService."""

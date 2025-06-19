@@ -14,6 +14,7 @@ from tripsage_core.models.db.memory import (
     SessionMemory,
 )
 
+
 class TestMemoryModel:
     """Test Memory model creation, validation, and methods."""
 
@@ -149,6 +150,7 @@ class TestMemoryModel:
         memory.is_deleted = True
         assert memory.is_active is False
 
+
 class TestSessionMemoryModel:
     """Test SessionMemory model creation and validation."""
 
@@ -242,6 +244,7 @@ class TestSessionMemoryModel:
         with pytest.raises(ValidationError):
             SessionMemory(**{**base_session_data, "user_id": "invalid-uuid"})
 
+
 class TestMemorySearchResult:
     """Test MemorySearchResult model."""
 
@@ -298,6 +301,7 @@ class TestMemorySearchResult:
                 similarity=0.85,
                 rank=invalid_rank,
             )
+
 
 class TestMemoryCreateUpdate:
     """Test MemoryCreate and MemoryUpdate models."""

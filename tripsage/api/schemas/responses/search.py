@@ -3,9 +3,10 @@
 This module defines Pydantic models for search-related API responses.
 """
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
+
 
 class SearchResultItem(BaseModel):
     """Individual search result item that can represent any resource type."""
@@ -50,6 +51,7 @@ class SearchResultItem(BaseModel):
         description="Available quick actions (view, book, save, etc.)",
     )
 
+
 class SearchFacet(BaseModel):
     """Search facet for filtering results."""
 
@@ -63,6 +65,7 @@ class SearchFacet(BaseModel):
         ...,
         description="Facet values with counts",
     )
+
 
 class SearchMetadata(BaseModel):
     """Metadata about the search operation."""
@@ -89,6 +92,7 @@ class SearchMetadata(BaseModel):
         None,
         description="Errors from specific providers",
     )
+
 
 class UnifiedSearchResponse(BaseModel):
     """Unified search response containing results from multiple resource types."""
@@ -128,11 +132,13 @@ class UnifiedSearchResponse(BaseModel):
         description="Non-fatal errors by provider or type",
     )
 
+
 class SavedSearchResponse(BaseModel):
     """Response model for saved search operation."""
 
     id: str = Field(..., description="ID of the saved search")
     message: str = Field(..., description="Success message")
+
 
 class SearchHistoryEntry(BaseModel):
     """Individual search history entry."""
@@ -143,11 +149,10 @@ class SearchHistoryEntry(BaseModel):
     resource_types: list[str] | None = Field(
         None, description="Types of resources searched"
     )
-    filters: dict[str, Any] | None = Field(
-        None, description="Applied search filters"
-    )
+    filters: dict[str, Any] | None = Field(None, description="Applied search filters")
     destination: str | None = Field(None, description="Search destination")
     created_at: str = Field(..., description="ISO timestamp when search was performed")
+
 
 class SearchHistoryResponse(BaseModel):
     """Response model for search history."""

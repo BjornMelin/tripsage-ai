@@ -5,11 +5,10 @@ This module handles content type optimization for the direct Crawl4AI SDK,
 focusing on performance and specialized extraction patterns.
 """
 
-from typing import Optional
-
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class WebCrawlSourceSelector:
     """Optimized content type selector for direct Crawl4AI SDK integration.

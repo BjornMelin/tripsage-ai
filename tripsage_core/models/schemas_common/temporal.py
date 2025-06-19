@@ -6,11 +6,11 @@ across the application for consistent time handling.
 """
 
 from datetime import date, datetime, time, timedelta
-from typing import Optional
 
 from pydantic import Field, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class DateRange(TripSageModel):
     """Date range with validation."""
@@ -39,6 +39,7 @@ class DateRange(TripSageModel):
             self.end_date < other.start_date or other.end_date < self.start_date
         )
 
+
 class TimeRange(TripSageModel):
     """Time range within a day."""
 
@@ -61,6 +62,7 @@ class TimeRange(TripSageModel):
     def contains(self, check_time: time) -> bool:
         """Check if a time falls within this range."""
         return self.start_time <= check_time <= self.end_time
+
 
 class Duration(TripSageModel):
     """Duration with multiple representations."""
@@ -102,6 +104,7 @@ class Duration(TripSageModel):
 
         return cls(days=days, hours=hours, minutes=minutes)
 
+
 class DateTimeRange(TripSageModel):
     """DateTime range with timezone awareness."""
 
@@ -130,6 +133,7 @@ class DateTimeRange(TripSageModel):
             self.end_datetime <= other.start_datetime
             or other.end_datetime <= self.start_datetime
         )
+
 
 class RecurrenceRule(TripSageModel):
     """Recurrence rule for repeating events."""
@@ -177,6 +181,7 @@ class RecurrenceRule(TripSageModel):
 
         return self
 
+
 class BusinessHours(TripSageModel):
     """Business hours for a location or service."""
 
@@ -210,6 +215,7 @@ class BusinessHours(TripSageModel):
             return False
 
         return day_hours.contains(check_datetime.time())
+
 
 class Availability(TripSageModel):
     """Availability information for a resource."""

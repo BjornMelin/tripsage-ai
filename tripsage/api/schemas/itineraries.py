@@ -6,13 +6,13 @@ Consolidates both request and response schemas for itinerary operations.
 
 from datetime import date, time
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.models.schemas_common import PaginatedResponse
 
 # ===== Enums =====
+
 
 class ItineraryItemType(str, Enum):
     """Types of items that can be in an itinerary."""
@@ -22,12 +22,14 @@ class ItineraryItemType(str, Enum):
     TRANSPORT = "transport"
     MEAL = "meal"
 
+
 class ItineraryStatus(str, Enum):
     """Status of an itinerary."""
 
     DRAFT = "draft"
     ACTIVE = "active"
     COMPLETED = "completed"
+
 
 class ItineraryShareSettings(str, Enum):
     """Sharing settings for an itinerary."""
@@ -36,6 +38,7 @@ class ItineraryShareSettings(str, Enum):
     PUBLIC = "public"
     SHARED = "shared"
 
+
 class OptimizationSetting(str, Enum):
     """Optimization settings for itinerary planning."""
 
@@ -43,7 +46,9 @@ class OptimizationSetting(str, Enum):
     COST = "cost"
     CONVENIENCE = "convenience"
 
+
 # ===== Common Models =====
+
 
 class Location(BaseModel):
     """Location information for itinerary items."""
@@ -51,6 +56,7 @@ class Location(BaseModel):
     latitude: float = Field(description="Latitude coordinate", ge=-90, le=90)
     longitude: float = Field(description="Longitude coordinate", ge=-180, le=180)
     name: str | None = Field(None, description="Name of the location")
+
 
 class TimeSlot(BaseModel):
     """Time slot for itinerary items."""
@@ -66,7 +72,9 @@ class TimeSlot(BaseModel):
             raise ValueError("End time must be after start time")
         return v
 
+
 # ===== Request Schemas =====
+
 
 class ItineraryCreateRequest(BaseModel):
     """Request model for creating a new itinerary."""
@@ -107,6 +115,7 @@ class ItineraryCreateRequest(BaseModel):
         if "start_date" in info.data and v < info.data["start_date"]:
             raise ValueError("End date must be after or equal to start date")
         return v
+
 
 class ItineraryUpdateRequest(BaseModel):
     """Request model for updating an existing itinerary."""
@@ -154,6 +163,7 @@ class ItineraryUpdateRequest(BaseModel):
         None,
         description="Sharing settings for the itinerary",
     )
+
 
 class ItineraryItemCreateRequest(BaseModel):
     """Request model for adding an item to an itinerary."""
@@ -215,6 +225,7 @@ class ItineraryItemCreateRequest(BaseModel):
         None,
         description="Transportation-specific details if type is TRANSPORT",
     )
+
 
 class ItineraryItemUpdateRequest(BaseModel):
     """Request model for updating an itinerary item."""
@@ -280,6 +291,7 @@ class ItineraryItemUpdateRequest(BaseModel):
         description="Transportation-specific details if type is TRANSPORT",
     )
 
+
 class ItinerarySearchRequest(BaseModel):
     """Request model for searching itineraries."""
 
@@ -327,6 +339,7 @@ class ItinerarySearchRequest(BaseModel):
         le=100,
     )
 
+
 class ItineraryOptimizeRequest(BaseModel):
     """Request model for optimizing an itinerary."""
 
@@ -337,7 +350,9 @@ class ItineraryOptimizeRequest(BaseModel):
         description="Optimization settings",
     )
 
+
 # ===== Response Schemas =====
+
 
 class ItineraryItemResponse(BaseModel):
     """Response model for itinerary item."""
@@ -352,6 +367,7 @@ class ItineraryItemResponse(BaseModel):
     booking_reference: str | None = Field(None, description="Booking reference")
     notes: str | None = Field(None, description="Additional notes")
     is_flexible: bool = Field(False, description="Whether item time is flexible")
+
 
 class ItineraryResponse(BaseModel):
     """Response model for itinerary."""
@@ -371,10 +387,12 @@ class ItineraryResponse(BaseModel):
     created_at: str | None = Field(None, description="Creation timestamp")
     updated_at: str | None = Field(None, description="Last update timestamp")
 
+
 class ItinerarySearchResponse(PaginatedResponse[ItineraryResponse]):
     """Response model for itinerary search results."""
 
     pass
+
 
 class ItineraryConflictCheckResponse(BaseModel):
     """Response model for checking conflicting items in an itinerary."""
@@ -386,6 +404,7 @@ class ItineraryConflictCheckResponse(BaseModel):
         default_factory=list,
         description="List of conflicts found",
     )
+
 
 class ItineraryOptimizeResponse(BaseModel):
     """Response model for optimized itinerary."""

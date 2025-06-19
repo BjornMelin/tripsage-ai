@@ -11,6 +11,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 def get_supabase_settings() -> dict[str, str]:
     """Get Supabase database connection settings.
 
@@ -35,6 +36,7 @@ def get_supabase_settings() -> dict[str, str]:
         "pgvector_enabled": "true",  # Default enabled
         "vector_dimensions": "1536",  # Default OpenAI embedding dimensions
     }
+
 
 class DatabaseConnectionFactory:
     """Factory for creating Supabase database connections."""

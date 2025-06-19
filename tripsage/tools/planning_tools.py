@@ -6,7 +6,7 @@ TravelPlanningAgent, including plan creation, updates, and persistence.
 """
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +17,7 @@ from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class TravelPlanInput(BaseModel):
     """Input model for travel plan creation and updates."""
@@ -30,12 +31,14 @@ class TravelPlanInput(BaseModel):
     budget: float | None = Field(None, description="Total budget")
     preferences: dict[str, Any] | None = Field(None, description="User preferences")
 
+
 class TravelPlanUpdate(BaseModel):
     """Input model for travel plan updates."""
 
     plan_id: str = Field(..., description="Travel plan ID")
     user_id: str = Field(..., description="User ID")
     updates: dict[str, Any] = Field(..., description="Fields to update")
+
 
 class SearchResultInput(BaseModel):
     """Input model for combining search results."""
@@ -55,6 +58,7 @@ class SearchResultInput(BaseModel):
     user_preferences: dict[str, Any] | None = Field(
         None, description="User preferences"
     )
+
 
 @with_error_handling()
 async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
@@ -163,6 +167,7 @@ async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         log_exception(e)
         return {"success": False, "error": f"Travel plan creation error: {str(e)}"}
 
+
 @with_error_handling()
 async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Update an existing travel plan with new information.
@@ -263,6 +268,7 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         logger.error(f"Error updating travel plan: {str(e)}")
         log_exception(e)
         return {"success": False, "error": f"Travel plan update error: {str(e)}"}
+
 
 @with_error_handling()
 async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
@@ -388,6 +394,7 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
         log_exception(e)
         return {"success": False, "error": f"Result combination error: {str(e)}"}
 
+
 @with_error_handling()
 async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
     """Generate a comprehensive summary of a travel plan.
@@ -446,6 +453,7 @@ async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
         logger.error(f"Error generating travel summary: {str(e)}")
         log_exception(e)
         return {"success": False, "error": f"Summary generation error: {str(e)}"}
+
 
 def _generate_markdown_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a markdown summary of a travel plan.
@@ -525,6 +533,7 @@ def _generate_markdown_summary(travel_plan: dict[str, Any]) -> str:
 
     return summary
 
+
 def _generate_text_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a plain text summary of a travel plan.
 
@@ -540,6 +549,7 @@ def _generate_text_summary(travel_plan: dict[str, Any]) -> str:
     text = markdown.replace("# ", "").replace("## ", "").replace("### ", "")
     text = text.replace("**", "").replace("*", "").replace("\n\n", "\n")
     return text
+
 
 def _generate_html_summary(travel_plan: dict[str, Any]) -> str:
     """Generate an HTML summary of a travel plan.
@@ -558,6 +568,7 @@ def _generate_html_summary(travel_plan: dict[str, Any]) -> str:
         html.replace("\n\n", "</p><p>").replace("**", "<strong>").replace("*", "<em>")
     )
     return f"<html><body><p>{html}</p></body></html>"
+
 
 @with_error_handling()
 async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:

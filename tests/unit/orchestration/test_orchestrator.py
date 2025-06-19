@@ -10,18 +10,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 
-from tripsage.orchestration.simple_graph import (
+from tripsage.orchestration.graph import (
     SimpleTripSageOrchestrator,
     get_orchestrator,
 )
 
+
 class TestSimpleTripSageOrchestrator:
     """Test the simplified LangGraph orchestrator."""
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     def test_orchestrator_initialization(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
     ):
@@ -59,10 +60,10 @@ class TestSimpleTripSageOrchestrator:
         assert call_args[1]["model"] == mock_llm
         assert call_args[1]["tools"] == mock_tools
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     @pytest.mark.asyncio
     async def test_process_conversation(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
@@ -105,10 +106,10 @@ class TestSimpleTripSageOrchestrator:
         # Verify agent was called
         mock_agent.ainvoke.assert_called_once()
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     @pytest.mark.asyncio
     async def test_process_conversation_error_handling(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
@@ -140,10 +141,10 @@ class TestSimpleTripSageOrchestrator:
         assert len(result["messages"]) == 2  # Original + error message
         assert "error" in result["messages"][1]["content"].lower()
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     @pytest.mark.asyncio
     async def test_stream_conversation(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
@@ -184,10 +185,10 @@ class TestSimpleTripSageOrchestrator:
         assert len(chunks) == 3
         assert "messages" in chunks[0]
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     @pytest.mark.asyncio
     async def test_health_check(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
@@ -218,10 +219,10 @@ class TestSimpleTripSageOrchestrator:
         assert result["agent_responsive"] is True
         assert "tools_count" in result
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     @pytest.mark.asyncio
     async def test_health_check_failure(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
@@ -275,10 +276,11 @@ class TestSimpleTripSageOrchestrator:
         assert "weather" in prompt.lower()
         assert "memory" in prompt.lower()
 
+
 class TestOrchestratorGlobalAccess:
     """Test global orchestrator access patterns."""
 
-    @patch("tripsage.orchestration.simple_graph.SimpleTripSageOrchestrator")
+    @patch("tripsage.orchestration.graph.SimpleTripSageOrchestrator")
     def test_get_orchestrator_singleton(self, mock_orchestrator_class):
         """Test that get_orchestrator returns singleton instance."""
         mock_instance = MagicMock()
@@ -295,11 +297,11 @@ class TestOrchestratorGlobalAccess:
         # Should not call constructor again
         assert mock_orchestrator_class.call_count == 1
 
-    @patch("tripsage.orchestration.simple_graph.SimpleTripSageOrchestrator")
+    @patch("tripsage.orchestration.graph.SimpleTripSageOrchestrator")
     def test_get_orchestrator_with_service_registry(self, mock_orchestrator_class):
         """Test that providing service_registry creates new instance."""
         # Reset the global state by clearing the global orchestrator
-        import tripsage.orchestration.simple_graph as sg
+        import tripsage.orchestration.graph as sg
 
         sg._global_orchestrator = None
 
@@ -326,6 +328,7 @@ class TestOrchestratorGlobalAccess:
         assert result3 == mock_instance2  # Same as result2
         # Should not create another instance
         assert mock_orchestrator_class.call_count == 2
+
 
 class TestOrchestratorBackwardsCompatibility:
     """Test backwards compatibility features."""
@@ -354,13 +357,14 @@ class TestOrchestratorBackwardsCompatibility:
         assert get_orchestrator is not None
         assert TravelPlanningState is not None
 
+
 class TestIntegrationScenarios:
     """Integration test scenarios for realistic usage."""
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     @pytest.mark.asyncio
     async def test_travel_planning_conversation_flow(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
@@ -416,10 +420,10 @@ class TestIntegrationScenarios:
         assert result2["success"] is True
         assert "March" in result2["messages"][-1]["content"]
 
-    @patch("tripsage.orchestration.simple_graph.ChatOpenAI")
-    @patch("tripsage.orchestration.simple_graph.create_react_agent")
-    @patch("tripsage.orchestration.simple_graph.get_all_tools")
-    @patch("tripsage.orchestration.simple_graph.get_settings")
+    @patch("tripsage.orchestration.graph.ChatOpenAI")
+    @patch("tripsage.orchestration.graph.create_react_agent")
+    @patch("tripsage.orchestration.graph.get_all_tools")
+    @patch("tripsage.orchestration.graph.get_settings")
     def test_configuration_persistence(
         self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
     ):

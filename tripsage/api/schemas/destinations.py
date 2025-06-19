@@ -6,7 +6,6 @@ Consolidates both request and response schemas for destination operations.
 
 from datetime import date
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -15,6 +14,7 @@ from tripsage_core.models.schemas_common.geographic import Place as Destination
 
 # ===== Enums =====
 
+
 class DestinationCategory(str, Enum):
     CULTURE = "culture"
     NATURE = "nature"
@@ -22,13 +22,16 @@ class DestinationCategory(str, Enum):
     RELAXATION = "relaxation"
     FOOD = "food"
 
+
 class DestinationVisitSchedule(str, Enum):
     MORNING = "morning"
     AFTERNOON = "afternoon"
     EVENING = "evening"
     FULL_DAY = "full_day"
 
+
 # ===== Request Schemas =====
+
 
 class DestinationSearchRequest(BaseModel):
     """Request model for searching destinations."""
@@ -57,6 +60,7 @@ class DestinationSearchRequest(BaseModel):
         default=False, description="Whether to include points of interest"
     )
 
+
 class DestinationDetailsRequest(BaseModel):
     """Request model for retrieving destination details."""
 
@@ -71,18 +75,18 @@ class DestinationDetailsRequest(BaseModel):
         default=None, description="Travel date for seasonal information"
     )
 
+
 class SavedDestinationRequest(BaseModel):
     """Request model for saving a destination to a trip."""
 
     destination_id: str = Field(description="Destination ID")
     trip_id: UUID = Field(description="Trip ID to save the destination for")
-    notes: str | None = Field(
-        default=None, description="Notes about this destination"
-    )
+    notes: str | None = Field(default=None, description="Notes about this destination")
     visit_schedule: DestinationVisitSchedule | None = Field(
         default=None, description="Visit schedule details"
     )
     priority: int = Field(1, ge=1, le=5, description="Priority (1=highest, 5=lowest)")
+
 
 class DestinationSuggestionRequest(BaseModel):
     """Request model for getting destination suggestions."""
@@ -103,12 +107,11 @@ class DestinationSuggestionRequest(BaseModel):
     preferred_continents: list[str] | None = Field(
         default=None, description="Preferred continents"
     )
-    preferred_climate: str | None = Field(
-        default=None, description="Preferred climate"
-    )
+    preferred_climate: str | None = Field(default=None, description="Preferred climate")
     limit: int = Field(
         5, ge=1, le=20, description="Maximum number of suggestions to return"
     )
+
 
 class PointOfInterestSearchRequest(BaseModel):
     """Request model for searching points of interest."""
@@ -121,7 +124,9 @@ class PointOfInterestSearchRequest(BaseModel):
     )
     offset: int = Field(0, ge=0, description="Number of results to skip")
 
+
 # ===== Response Schemas =====
+
 
 class DestinationSearchResponse(BaseModel):
     """Response model for destination search results."""
@@ -130,10 +135,12 @@ class DestinationSearchResponse(BaseModel):
     count: int = Field(description="Number of destinations found")
     query: str = Field(description="Original search query")
 
+
 class DestinationDetailsResponse(BaseModel):
     """Response model for destination details."""
 
     destination: Destination = Field(description="Destination details")
+
 
 class SavedDestinationResponse(BaseModel):
     """Response model for a saved destination."""
@@ -143,13 +150,12 @@ class SavedDestinationResponse(BaseModel):
     trip_id: UUID = Field(description="Trip ID")
     destination: Destination = Field(description="Destination details")
     saved_at: date = Field(description="Date when the destination was saved")
-    notes: str | None = Field(
-        default=None, description="Notes about this destination"
-    )
+    notes: str | None = Field(default=None, description="Notes about this destination")
     visit_schedule: DestinationVisitSchedule | None = Field(
         default=None, description="Visit schedule details"
     )
     priority: int = Field(description="Priority (1=highest, 5=lowest)")
+
 
 class DestinationSuggestionResponse(BaseModel):
     """Response model for destination suggestions."""
@@ -160,6 +166,7 @@ class DestinationSuggestionResponse(BaseModel):
         default=None,
         description="Reasoning for each suggestion (destination_id -> explanation)",
     )
+
 
 # Keep these aliases as they represent different semantic concepts
 DestinationRecommendation = DestinationSuggestionResponse

@@ -19,7 +19,7 @@ import time
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -36,6 +36,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ThreatLevel(str, Enum):
     """Threat severity levels for security incidents."""
 
@@ -43,6 +44,7 @@ class ThreatLevel(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
 
 class ThreatCategory(str, Enum):
     """Categories of security threats."""
@@ -58,6 +60,7 @@ class ThreatCategory(str, Enum):
     RATE_LIMIT_EVASION = "rate_limit_evasion"
     MALICIOUS_PAYLOAD = "malicious_payload"
 
+
 class ThreatIndicator(BaseModel):
     """A single threat indicator detected from analysis."""
 
@@ -72,6 +75,7 @@ class ThreatIndicator(BaseModel):
     last_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     count: int = 1
     metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class SecurityIncident(TripSageModel):
     """A security incident composed of multiple threat indicators."""
@@ -104,6 +108,7 @@ class SecurityIncident(TripSageModel):
     tags: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+
 class ActivityPattern(BaseModel):
     """Pattern detection configuration for suspicious activities."""
 
@@ -129,6 +134,7 @@ class ActivityPattern(BaseModel):
     auto_block: bool = False
     alert_threshold: float = 0.7
     escalate_threshold: float = 0.9
+
 
 class SecurityMonitoringService:
     """
@@ -861,8 +867,10 @@ class SecurityMonitoringService:
             # Remove from active incidents
             del self._active_incidents[incident_id]
 
+
 # Global monitoring service instance
 _monitoring_service: SecurityMonitoringService | None = None
+
 
 async def get_monitoring_service() -> SecurityMonitoringService:
     """Get or create the global monitoring service instance."""
@@ -873,6 +881,7 @@ async def get_monitoring_service() -> SecurityMonitoringService:
         await _monitoring_service.start()
 
     return _monitoring_service
+
 
 async def shutdown_monitoring_service():
     """Shutdown the global monitoring service instance."""

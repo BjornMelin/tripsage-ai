@@ -11,6 +11,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class MemoryUpdateNode(BaseAgentNode):
     """
     Node for updating persistent memory and session state.
@@ -25,7 +26,7 @@ class MemoryUpdateNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Initialize memory management tools using simple tool catalog."""
-        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+        from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Get tools for memory update agent using simple catalog
         self.available_tools = get_tools_for_agent("memory_update")

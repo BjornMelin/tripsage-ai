@@ -7,7 +7,7 @@ booking, and management operations.
 import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from pydantic import ValidationError as PydanticValidationError
@@ -40,6 +40,7 @@ from tripsage_core.utils.logging_utils import get_logger
 settings = get_settings()
 
 logger = get_logger(__name__)
+
 
 class DuffelFlightsService(BaseService):
     """Service for interacting with Duffel Flights API."""

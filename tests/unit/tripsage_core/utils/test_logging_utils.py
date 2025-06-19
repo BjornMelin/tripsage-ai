@@ -21,6 +21,7 @@ from tripsage_core.utils.logging_utils import (
     log_exception,
 )
 
+
 class TestLoggingUtils:
     """Test logging utilities by testing functions directly."""
 

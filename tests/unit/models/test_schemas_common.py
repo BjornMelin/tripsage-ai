@@ -54,6 +54,7 @@ from tripsage_core.models.schemas_common import (  # noqa: E402
     ValidationErrorResponse,
 )
 
+
 class TestEnums:
     """Test all centralized enums."""
 
@@ -90,6 +91,7 @@ class TestEnums:
         """Test UserRole enum values."""
         assert UserRole.USER == "user"
         assert UserRole.ADMIN == "admin"
+
 
 class TestBaseModels:
     """Test base response models."""
@@ -158,6 +160,7 @@ class TestBaseModels:
         assert response.error_code == "VALIDATION_ERROR"
         assert len(response.validation_errors) == 2
         assert response.validation_errors[0].field == "email"
+
 
 class TestFinancialModels:
     """Test financial models."""
@@ -261,6 +264,7 @@ class TestFinancialModels:
         inverse = rate.inverse()
         assert inverse.from_currency == CurrencyCode.EUR
         assert inverse.to_currency == CurrencyCode.USD
+
 
 class TestGeographicModels:
     """Test geographic models."""
@@ -389,6 +393,7 @@ class TestGeographicModels:
         assert route.destination.name == "LAX"
         assert route.distance_km == 4000.0
 
+
 class TestTemporalModels:
     """Test temporal models."""
 
@@ -497,16 +502,19 @@ class TestTemporalModels:
         weekend_time = datetime(2025, 6, 7, 14, 0)  # Saturday 2PM
         assert not business_hours.is_open_at(weekend_time)
 
+
 # Test data and fixtures
 @pytest.fixture
 def sample_coordinates():
     """Sample coordinates for testing."""
     return Coordinates(latitude=40.7128, longitude=-74.0060)
 
+
 @pytest.fixture
 def sample_price():
     """Sample price for testing."""
     return Price(amount=Decimal("99.99"), currency=CurrencyCode.USD)
+
 
 @pytest.fixture
 def sample_address():
@@ -518,6 +526,7 @@ def sample_address():
         country="USA",
         postal_code="10001",
     )
+
 
 class TestIntegration:
     """Test integration between different schema models."""
@@ -585,6 +594,7 @@ class TestIntegration:
         assert len(response.data) == 2
         assert response.data[0].name == "Place 1"
         assert response.pagination.total_items == 2
+
 
 class TestEdgeCases:
     """Test edge cases and error conditions."""

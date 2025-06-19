@@ -6,7 +6,7 @@ retrieval, updates, sharing, and collaboration features.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import Field, field_validator
@@ -34,6 +34,7 @@ from tripsage_core.models.trip import (
 
 logger = logging.getLogger(__name__)
 
+
 class TripLocation(TripSageModel):
     """Trip location information."""
 
@@ -44,6 +45,7 @@ class TripLocation(TripSageModel):
         None, description="Lat/lng coordinates"
     )
     timezone: str | None = Field(None, description="Location timezone")
+
 
 class TripCreateRequest(TripSageModel):
     """Request model for trip creation."""
@@ -75,6 +77,7 @@ class TripCreateRequest(TripSageModel):
             raise ValueError("End date must be after start date")
         return v
 
+
 class TripUpdateRequest(TripSageModel):
     """Request model for trip updates."""
 
@@ -91,6 +94,7 @@ class TripUpdateRequest(TripSageModel):
     tags: list[str] | None = Field(None)
     preferences: TripPreferences | None = Field(None)
     status: TripStatus | None = Field(None)
+
 
 class TripResponse(TripSageModel):
     """Response model for trip data."""
@@ -122,6 +126,7 @@ class TripResponse(TripSageModel):
     shared_with: list[str] = Field(
         default_factory=list, description="User IDs trip is shared with"
     )
+
 
 class TripService:
     """Service for managing trips."""
@@ -668,6 +673,7 @@ class TripService:
             shared_with=shared_with,
         )
 
+
 async def get_trip_service() -> TripService:
     """Get a configured TripService instance.
 
@@ -675,6 +681,7 @@ async def get_trip_service() -> TripService:
         TripService: Configured trip service instance
     """
     return TripService()
+
 
 __all__ = [
     "TripService",

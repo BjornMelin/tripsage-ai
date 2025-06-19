@@ -7,12 +7,14 @@ from pydantic import ValidationError
 
 from tripsage_core.models.db.trip_note import TripNote
 
+
 def test_trip_note_creation(sample_trip_note_dict):
     """Test creating a TripNote model with valid data."""
     trip_note = TripNote(**sample_trip_note_dict)
     assert trip_note.id == 1
     assert trip_note.trip_id == 1
     assert trip_note.content == "Remember to exchange currency before departure"
+
 
 def test_trip_note_optional_fields():
     """Test creating a TripNote model with minimal required fields."""
@@ -27,6 +29,7 @@ def test_trip_note_optional_fields():
     assert minimal_trip_note.id is None
     assert minimal_trip_note.timestamp == now
 
+
 def test_trip_note_validation_content():
     """Test content validation."""
     now = datetime.now(timezone.utc)
@@ -39,6 +42,7 @@ def test_trip_note_validation_content():
             content="",  # Empty content
         )
     assert "ensure this value has at least 1 character" in str(excinfo.value)
+
 
 def test_trip_note_content_snippet(sample_trip_note_dict):
     """Test the content_snippet property."""
@@ -53,12 +57,14 @@ def test_trip_note_content_snippet(sample_trip_note_dict):
     assert len(trip_note.content_snippet) <= 100
     assert trip_note.content_snippet.endswith("...")
 
+
 def test_trip_note_formatted_timestamp(sample_trip_note_dict):
     """Test the formatted_timestamp property."""
     trip_note = TripNote(**sample_trip_note_dict)
     # This is a basic check since the exact format depends on the implementation
     assert isinstance(trip_note.formatted_timestamp, str)
     assert len(trip_note.formatted_timestamp) > 0
+
 
 def test_trip_note_model_dump(sample_trip_note_dict):
     """Test model_dump method."""

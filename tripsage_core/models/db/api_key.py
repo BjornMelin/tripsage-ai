@@ -5,10 +5,10 @@ This module defines the database model for API keys used in the BYOK
 """
 
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class ApiKeyDB(BaseModel):
     """Database model for API keys.
@@ -118,6 +118,7 @@ class ApiKeyDB(BaseModel):
         """Check if the API key can be used."""
         return self.is_active and not self.is_expired()
 
+
 class ApiKeyCreate(BaseModel):
     """Model for creating a new API key."""
 
@@ -158,6 +159,7 @@ class ApiKeyCreate(BaseModel):
         default=None,
         description="Optional expiration timestamp for the API key",
     )
+
 
 class ApiKeyUpdate(BaseModel):
     """Model for updating an existing API key."""

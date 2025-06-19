@@ -26,6 +26,7 @@ from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
 # Configure logging
 logger = configure_logging(__name__)
 
+
 async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool:
     """Check SQL database connection."""
     try:
@@ -45,6 +46,7 @@ async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool
     except Exception as e:
         logger.error(f"SQL connection check failed: {e}")
         return False
+
 
 async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
     """Initialize SQL database with basic schema."""
@@ -110,6 +112,7 @@ async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
         logger.error(f"SQL initialization failed: {e}")
         return False
 
+
 async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
     """Load sample data into SQL database."""
     logger.info("Loading sample data...")
@@ -139,6 +142,7 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
     except Exception as e:
         logger.error(f"Sample data loading failed: {e}")
         return False
+
 
 async def main():
     """Main database initialization function."""
@@ -190,6 +194,7 @@ async def main():
         # Clean up MCP manager
         if "mcp_manager" in locals():
             await mcp_manager.cleanup()
+
 
 if __name__ == "__main__":
     success = asyncio.run(main())

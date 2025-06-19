@@ -8,7 +8,7 @@ error handling, and logging.
 
 import asyncio
 import time
-from typing import Any, Optional
+from typing import Any
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from pydantic import BaseModel, Field
@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
 
 class WebCrawlServiceError(CoreAPIError):
     """Exception raised for web crawl service errors."""
@@ -28,6 +29,7 @@ class WebCrawlServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
 
 class WebCrawlParams(BaseModel):
     """Parameters for web crawling operations."""
@@ -47,12 +49,11 @@ class WebCrawlParams(BaseModel):
     css_selector: str | None = Field(
         default=None, description="CSS selector for content extraction"
     )
-    excluded_tags: list | None = Field(
-        default=None, description="HTML tags to exclude"
-    )
+    excluded_tags: list | None = Field(default=None, description="HTML tags to exclude")
     screenshot: bool = Field(default=False, description="Take screenshot")
     pdf: bool = Field(default=False, description="Generate PDF")
     timeout: int = Field(default=30, description="Request timeout in seconds")
+
 
 class WebCrawlResult(BaseModel):
     """Result from web crawling operation."""
@@ -69,6 +70,7 @@ class WebCrawlResult(BaseModel):
     error_message: str | None = None
     status_code: int | None = None
     performance_metrics: dict[str, Any] = Field(default_factory=dict)
+
 
 class WebCrawlService:
     """
@@ -475,8 +477,10 @@ class WebCrawlService:
         """Async context manager exit."""
         await self.close()
 
+
 # Global service instance
 _webcrawl_service: WebCrawlService | None = None
+
 
 async def get_webcrawl_service() -> WebCrawlService:
     """
@@ -492,6 +496,7 @@ async def get_webcrawl_service() -> WebCrawlService:
         await _webcrawl_service.connect()
 
     return _webcrawl_service
+
 
 async def close_webcrawl_service() -> None:
     """Close the global WebCrawl service instance."""

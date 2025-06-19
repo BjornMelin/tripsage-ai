@@ -19,6 +19,7 @@ from tripsage_core.utils.logging_utils import configure_logging
 
 logger = configure_logging(__name__)
 
+
 def get_supabase_client() -> Client:
     """Get a Supabase client instance."""
     settings = get_settings()
@@ -26,6 +27,7 @@ def get_supabase_client() -> Client:
         settings.database_url,
         settings.database_public_key.get_secret_value(),
     )
+
 
 async def initialize_databases(
     run_migrations_on_startup: bool = False,
@@ -81,6 +83,7 @@ async def initialize_databases(
         logger.error(f"Error initializing databases: {e}")
         return False
 
+
 async def verify_database_schema() -> dict[str, Any]:
     """
     Verify that the database schema is correctly set up.
@@ -118,6 +121,7 @@ async def verify_database_schema() -> dict[str, Any]:
     except Exception as e:
         logger.error(f"Error verifying database schema: {e}")
         return {"sql": {"error": str(e)}}
+
 
 async def create_sample_data() -> bool:
     """
@@ -194,6 +198,7 @@ async def create_sample_data() -> bool:
     except Exception as e:
         logger.error(f"Error creating sample data: {e}")
         return False
+
 
 if __name__ == "__main__":
     import argparse

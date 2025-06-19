@@ -14,7 +14,7 @@ import mimetypes
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field
@@ -35,6 +35,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
+
 class FileType(str, Enum):
     """File type enumeration."""
 
@@ -47,6 +48,7 @@ class FileType(str, Enum):
     AUDIO = "audio"
     OTHER = "other"
 
+
 class ProcessingStatus(str, Enum):
     """File processing status enumeration."""
 
@@ -58,6 +60,7 @@ class ProcessingStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class StorageProvider(str, Enum):
     """Storage provider enumeration."""
 
@@ -66,12 +69,14 @@ class StorageProvider(str, Enum):
     AZURE_BLOB = "azure_blob"
     GOOGLE_CLOUD = "google_cloud"
 
+
 class FileVisibility(str, Enum):
     """File visibility enumeration."""
 
     PRIVATE = "private"
     SHARED = "shared"
     PUBLIC = "public"
+
 
 class FileValidationResult(TripSageModel):
     """File validation result model."""
@@ -87,15 +92,14 @@ class FileValidationResult(TripSageModel):
         default_factory=list, description="Security warnings"
     )
 
+
 class FileMetadata(TripSageModel):
     """File metadata model."""
 
     dimensions: dict[str, int] | None = Field(
         None, description="Image/video dimensions"
     )
-    duration: float | None = Field(
-        None, description="Audio/video duration in seconds"
-    )
+    duration: float | None = Field(None, description="Audio/video duration in seconds")
     page_count: int | None = Field(None, description="Document page count")
     word_count: int | None = Field(None, description="Text word count")
     character_count: int | None = Field(None, description="Text character count")
@@ -108,6 +112,7 @@ class FileMetadata(TripSageModel):
     title: str | None = Field(None, description="Document title")
     keywords: list[str] = Field(default_factory=list, description="Extracted keywords")
     language: str | None = Field(None, description="Detected language")
+
 
 class FileAnalysisResult(TripSageModel):
     """AI analysis result for file content."""
@@ -133,6 +138,7 @@ class FileAnalysisResult(TripSageModel):
     travel_context: dict[str, Any] | None = Field(
         None, description="Travel-specific context"
     )
+
 
 class ProcessedFile(TripSageModel):
     """Processed file model."""
@@ -172,13 +178,12 @@ class ProcessedFile(TripSageModel):
     tags: list[str] = Field(default_factory=list, description="File tags")
 
     version: int = Field(default=1, description="File version")
-    parent_file_id: str | None = Field(
-        None, description="Parent file ID for versions"
-    )
+    parent_file_id: str | None = Field(None, description="Parent file ID for versions")
 
     # Usage tracking
     download_count: int = Field(default=0, description="Download count")
     last_accessed: datetime | None = Field(None, description="Last access timestamp")
+
 
 class FileUploadRequest(TripSageModel):
     """File upload request model."""
@@ -194,6 +199,7 @@ class FileUploadRequest(TripSageModel):
         default=True, description="Whether to perform AI analysis"
     )
 
+
 class FileBatchUploadRequest(TripSageModel):
     """Batch file upload request model."""
 
@@ -202,6 +208,7 @@ class FileBatchUploadRequest(TripSageModel):
     max_total_size: int = Field(
         default=50 * 1024 * 1024, description="Maximum total size in bytes"
     )
+
 
 class FileSearchRequest(TripSageModel):
     """File search request model."""
@@ -218,6 +225,7 @@ class FileSearchRequest(TripSageModel):
     limit: int = Field(default=20, ge=1, le=100, description="Result limit")
     offset: int = Field(default=0, ge=0, description="Result offset")
 
+
 class FileUsageStats(TripSageModel):
     """File usage statistics model."""
 
@@ -227,6 +235,7 @@ class FileUsageStats(TripSageModel):
     storage_by_type: dict[str, int] = Field(..., description="Storage used by type")
     recent_uploads: int = Field(..., description="Files uploaded in last 7 days")
     most_accessed: list[str] = Field(..., description="Most accessed file IDs")
+
 
 class FileProcessingService:
     """
@@ -1157,6 +1166,7 @@ class FileProcessingService:
                 "Failed to update file record",
                 extra={"file_id": processed_file.id, "error": str(e)},
             )
+
 
 # Dependency function for FastAPI
 async def get_file_processing_service() -> FileProcessingService:

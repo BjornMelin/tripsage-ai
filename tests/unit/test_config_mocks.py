@@ -6,11 +6,12 @@ to enable isolated testing without external dependencies.
 """
 
 import os
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import SecretStr
+
 
 class MockSettings:
     """Mock version of flat Settings for testing."""
@@ -61,13 +62,16 @@ class MockSettings:
     def is_testing(self) -> bool:
         return self.environment in ("test", "testing")
 
+
 # Legacy mock configuration classes removed - no longer needed with flat Settings
 # structure. The flat Settings structure handles all configuration directly.
+
 
 @pytest.fixture
 def mock_settings():
     """Fixture providing mock settings for tests."""
     return MockSettings()
+
 
 def setup_test_environment():
     """Set up test environment variables."""
@@ -103,12 +107,14 @@ def setup_test_environment():
     for key, value in test_env.items():
         os.environ[key] = value
 
+
 @pytest.fixture(autouse=True)
 def setup_test_env():
     """Automatically set up test environment for all tests."""
     setup_test_environment()
     yield
     # Cleanup is handled by test isolation
+
 
 class MockServiceRegistry:
     """Mock service registry for dependency injection testing."""
@@ -214,10 +220,12 @@ class MockServiceRegistry:
         )
         return service
 
+
 @pytest.fixture
 def mock_service_registry():
     """Fixture providing mock service registry."""
     return MockServiceRegistry()
+
 
 class MockMCPManager:
     """Mock MCP Manager for testing."""
@@ -248,10 +256,12 @@ class MockMCPManager:
         else:
             return {"status": "success", "result": "mock_result"}
 
+
 @pytest.fixture
 def mock_mcp_manager():
     """Fixture providing mock MCP manager."""
     return MockMCPManager()
+
 
 def mock_pydantic_settings():
     """Mock Pydantic settings to avoid validation errors."""
@@ -263,6 +273,7 @@ def mock_pydantic_settings():
             setattr(self, key, value)
 
     return mock_init
+
 
 # Test configuration validation
 def test_mock_settings_validation():
@@ -282,6 +293,7 @@ def test_mock_settings_validation():
     # Config validation (flat structure)
     assert settings.database_url is not None
     assert settings.redis_url is None  # Optional in test config
+
 
 def test_mock_service_registry():
     """Test mock service registry functionality."""

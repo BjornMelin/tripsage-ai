@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 from tripsage.api.routers.websocket import router
 from tripsage_core.services.business.chat_service import ChatService as CoreChatService
 
+
 class TestWebSocketRouterEndpoints:
     """Test WebSocket router endpoint functionality."""
 
@@ -68,6 +69,7 @@ class TestWebSocketRouterEndpoints:
             assert data["websocket_manager_running"] is True
             assert data["connection_stats"]["total_connections"] == 2
 
+
 class TestWebSocketDependencyInjection:
     """Test WebSocket dependency injection functionality."""
 
@@ -119,6 +121,7 @@ class TestWebSocketDependencyInjection:
         # Verify they have Depends() defaults
         assert db_param.default is not None
         assert chat_service_param.default is not None
+
 
 class TestWebSocketEventModels:
     """Test WebSocket event model functionality."""
@@ -207,6 +210,7 @@ class TestWebSocketEventModels:
         assert issubclass(ConnectionEvent, WebSocketEvent)
         assert issubclass(ErrorEvent, WebSocketEvent)
 
+
 class TestWebSocketManagerIntegration:
     """Test WebSocket manager integration."""
 
@@ -273,6 +277,7 @@ class TestWebSocketManagerIntegration:
             assert data["total_count"] == 2
             assert len(data["connections"]) == 2
 
+
 class TestWebSocketCoreServiceIntegration:
     """Test WebSocket integration with core services."""
 
@@ -312,6 +317,7 @@ class TestWebSocketCoreServiceIntegration:
         # The WebSocket router should have access to both unified and core services
         # This allows it to work with the new architecture while maintaining
         # compatibility with existing WebSocket functionality
+
 
 class TestWebSocketErrorHandling:
     """Test error handling in WebSocket router."""

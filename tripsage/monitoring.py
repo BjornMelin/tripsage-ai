@@ -5,7 +5,6 @@ This module configures OpenTelemetry for distributed tracing of MCP operations.
 """
 
 import logging
-from typing import Optional
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -18,6 +17,7 @@ from opentelemetry.sdk.trace.export import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 def configure_opentelemetry(
     service_name: str = "tripsage",
@@ -68,6 +68,7 @@ def configure_opentelemetry(
         f"OpenTelemetry configured for service '{service_name}' "
         f"version '{service_version}'"
     )
+
 
 def get_tracer(component_name: str) -> trace.Tracer:
     """

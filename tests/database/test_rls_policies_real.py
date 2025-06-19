@@ -16,12 +16,12 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta
-from typing import Optional
 
 import pytest
 
 from supabase import create_client
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class RLSTestResult(TripSageModel):
     """Model for RLS test results."""
@@ -35,6 +35,7 @@ class RLSTestResult(TripSageModel):
     passed: bool
     error: str | None = None
     performance_ms: float | None = None
+
 
 class RealRLSPolicyTester:
     """Real RLS policy testing against actual Supabase database."""
@@ -794,6 +795,7 @@ Database: {self.supabase_url}
 
         return report
 
+
 @pytest.mark.asyncio
 @pytest.mark.skipif(
     not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"),
@@ -829,6 +831,7 @@ async def test_real_rls_policies():
     finally:
         # Cleanup
         await tester.cleanup_test_data()
+
 
 if __name__ == "__main__":
     asyncio.run(test_real_rls_policies())

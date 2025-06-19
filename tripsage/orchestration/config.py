@@ -8,9 +8,10 @@ the LangGraph-based orchestration system settings.
 import os
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.config import get_settings
+
 
 class CheckpointStorage(Enum):
     """Available checkpoint storage backends."""
@@ -18,6 +19,7 @@ class CheckpointStorage(Enum):
     MEMORY = "memory"
     POSTGRES = "postgres"
     REDIS = "redis"
+
 
 @dataclass
 class LangGraphConfig:
@@ -221,6 +223,7 @@ class LangGraphConfig:
 
         if self.max_message_history < 1:
             raise ValueError("Max message history must be positive")
+
 
 def get_default_config() -> LangGraphConfig:
     """

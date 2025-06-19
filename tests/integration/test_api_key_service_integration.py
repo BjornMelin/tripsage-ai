@@ -8,8 +8,8 @@ and external API providers using modern async testing patterns.
 import asyncio
 import os
 import uuid
-from datetime import datetime, timezone
 from collections.abc import AsyncGenerator
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -23,6 +23,7 @@ from tripsage_core.services.business.api_key_service import (
     ServiceType,
     ValidationStatus,
 )
+
 
 @pytest.fixture(scope="session")
 async def test_db_engine():
@@ -77,6 +78,7 @@ async def test_db_engine():
 
     await engine.dispose()
 
+
 @pytest.fixture(scope="session")
 async def test_redis():
     """Create test Redis connection."""
@@ -100,12 +102,14 @@ async def test_redis():
         mock_redis.delete.return_value = 1
         yield mock_redis
 
+
 @pytest.fixture
 async def db_session(test_db_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create database session for each test."""
     async with AsyncSession(test_db_engine) as session:
         yield session
         await session.rollback()
+
 
 @pytest.fixture
 async def api_service_integration(db_session, test_redis):
@@ -235,6 +239,7 @@ async def api_service_integration(db_session, test_redis):
 
     await service.initialize()
     return service
+
 
 class TestApiKeyServiceIntegration:
     """Integration tests with real database and cache."""

@@ -18,6 +18,7 @@ from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
 )
 
+
 @pytest.fixture
 def accommodation_service():
     """Create AccommodationService with mocked dependencies."""
@@ -26,6 +27,7 @@ def accommodation_service():
     service._search_external_api = AsyncMock()
     service._generate_mock_listings = AsyncMock()
     return service
+
 
 @pytest.fixture
 def sample_search_request():
@@ -38,6 +40,7 @@ def sample_search_request():
         min_price=100.0,
         max_price=300.0,
     )
+
 
 @pytest.fixture
 def sample_accommodation_listing():
@@ -58,6 +61,7 @@ def sample_accommodation_listing():
         "amenities": ["wifi", "pool", "gym"],
         "images": [{"url": "https://example.com/image1.jpg", "is_primary": True}],
     }
+
 
 class TestAccommodationWorkflow:
     """Integration tests for accommodation search workflows."""

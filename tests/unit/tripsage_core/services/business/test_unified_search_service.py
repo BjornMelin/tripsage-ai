@@ -42,6 +42,7 @@ from tripsage_core.services.business.unified_search_service import (
     get_unified_search_service,
 )
 
+
 class TestUnifiedSearchServiceError:
     """Test UnifiedSearchServiceError exception."""
 
@@ -70,6 +71,7 @@ class TestUnifiedSearchServiceError:
         """Test that UnifiedSearchServiceError inherits from CoreServiceError."""
         error = UnifiedSearchServiceError("Test error")
         assert isinstance(error, CoreServiceError)
+
 
 class TestUnifiedSearchService:
     """Test UnifiedSearchService class."""
@@ -939,6 +941,7 @@ class TestUnifiedSearchService:
                 with raises(UnifiedSearchServiceError):
                     await unified_search_service.get_search_suggestions("test")
 
+
 class TestGlobalServiceFunctions:
     """Test global service management functions."""
 
@@ -997,6 +1000,7 @@ class TestGlobalServiceFunctions:
             assert result == mock_instance
             MockService.assert_called_once()
 
+
 class TestConstants:
     """Test module constants."""
 
@@ -1014,6 +1018,7 @@ class TestConstants:
         assert "destination" in DEFAULT_SEARCH_TYPES
         assert "activity" in DEFAULT_SEARCH_TYPES
         assert "accommodation" in DEFAULT_SEARCH_TYPES
+
 
 class TestSearchCacheMixin:
     """Test SearchCacheMixin functionality."""
@@ -1034,6 +1039,7 @@ class TestSearchCacheMixin:
         # Test _get_response_class method
         response_class = unified_search_service._get_response_class()
         assert response_class == UnifiedSearchResponse
+
 
 class TestConcurrency:
     """Test concurrent operations."""
@@ -1097,6 +1103,7 @@ class TestConcurrency:
             # Both should be called
             mock_dest.assert_called_once()
             mock_act.assert_called_once()
+
 
 class TestEdgeCases:
     """Test edge cases and error conditions."""

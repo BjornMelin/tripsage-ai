@@ -26,6 +26,7 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     secure_random_token,
 )
 
+
 class TestKeyOperation:
     """Test suite for KeyOperation enum."""
 
@@ -42,6 +43,7 @@ class TestKeyOperation:
         """Test KeyOperation string conversion."""
         assert str(KeyOperation.CREATE) == "create"
         assert KeyOperation.CREATE.value == "create"
+
 
 class TestKeyMonitoringService:
     """Test suite for KeyMonitoringService."""
@@ -600,6 +602,7 @@ class TestKeyMonitoringService:
         """Test pattern detection timeframe."""
         assert key_monitoring_service.pattern_timeframe == 600  # 10 minutes
 
+
 class TestKeyOperationRateLimitMiddleware:
     """Test suite for KeyOperationRateLimitMiddleware."""
 
@@ -783,6 +786,7 @@ class TestKeyOperationRateLimitMiddleware:
 
         assert result is None
 
+
 class TestMonitorKeyOperationDecorator:
     """Test suite for monitor_key_operation decorator."""
 
@@ -899,6 +903,7 @@ class TestMonitorKeyOperationDecorator:
         assert "execution_time" in call_args[1]["metadata"]
         assert call_args[1]["metadata"]["execution_time"] > 0
 
+
 class TestSecurityFunctions:
     """Test suite for security utility functions."""
 
@@ -1014,6 +1019,7 @@ class TestSecurityFunctions:
         result = clear_sensitive_data(data, [])
 
         assert result == data
+
 
 class TestHealthAndExpirationFunctions:
     """Test suite for health and expiration utility functions."""
@@ -1145,6 +1151,7 @@ class TestHealthAndExpirationFunctions:
         assert result["expiring_count"] == 0
         assert result["service_count"] == []
         assert result["user_count"] == []
+
 
 class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""

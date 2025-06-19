@@ -26,6 +26,7 @@ import numpy as np
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
+
 # Simple table formatting function if tabulate is not available
 def simple_table(data, headers):
     """Simple table formatting without external dependencies."""
@@ -52,12 +53,15 @@ def simple_table(data, headers):
 
     return "\n".join(lines)
 
+
 # Use simple table formatting without external dependencies
 def tabulate(data, headers=None, tablefmt="grid"):
     return simple_table(data, headers)
 
+
 # Note: We now use the unified DatabaseService (consolidates 7 previous services)
 # This benchmark validates the unified service performance
+
 
 class BenchmarkResult:
     """Container for benchmark results."""
@@ -104,6 +108,7 @@ class BenchmarkResult:
             self.durations.append(duration_ms)
         else:
             self.errors += 1
+
 
 class DatabaseBenchmark:
     """Database service benchmark runner."""
@@ -461,6 +466,7 @@ class DatabaseBenchmark:
 
         print(f"\nDetailed results saved to: {filename}")
 
+
 async def main():
     """Main benchmark runner."""
     import argparse
@@ -480,6 +486,7 @@ async def main():
     )
 
     await benchmark.run_all_benchmarks()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -58,6 +58,7 @@ from tripsage_core.services.business.audit_logging_service import (
 
 logger = logging.getLogger(__name__)
 
+
 class ServiceType(str, Enum):
     """Supported external service types."""
 
@@ -70,6 +71,7 @@ class ServiceType(str, Enum):
     CALENDAR = "calendar"
     EMAIL = "email"
 
+
 class ValidationStatus(str, Enum):
     """API key validation status."""
 
@@ -80,6 +82,7 @@ class ValidationStatus(str, Enum):
     SERVICE_ERROR = "service_error"
     FORMAT_ERROR = "format_error"
 
+
 class ServiceHealthStatus(str, Enum):
     """Service health status."""
 
@@ -87,6 +90,7 @@ class ServiceHealthStatus(str, Enum):
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     UNKNOWN = "unknown"
+
 
 class ApiKeyCreateRequest(TripSageModel):
     """Modern request model for API key creation with Pydantic V2 optimizations."""
@@ -117,6 +121,7 @@ class ApiKeyCreateRequest(TripSageModel):
             raise ValueError("API key must be at least 8 characters long")
         return v.strip()
 
+
 class ApiKeyResponse(TripSageModel):
     """Modern response model with computed fields."""
 
@@ -136,9 +141,7 @@ class ApiKeyResponse(TripSageModel):
     expires_at: datetime | None = Field(
         default=None, description="Expiration timestamp"
     )
-    last_used: datetime | None = Field(
-        default=None, description="Last usage timestamp"
-    )
+    last_used: datetime | None = Field(default=None, description="Last usage timestamp")
     last_validated: datetime | None = Field(
         default=None, description="Last validation timestamp"
     )
@@ -160,6 +163,7 @@ class ApiKeyResponse(TripSageModel):
             return None
         delta = self.expires_at - datetime.now(timezone.utc)
         return max(0, delta.days)
+
 
 class ValidationResult(TripSageModel):
     """Enhanced validation result with Pydantic V2 optimizations."""
@@ -189,6 +193,7 @@ class ValidationResult(TripSageModel):
         """Categorize based on success."""
         return "success" if self.is_valid else "failure"
 
+
 class ServiceHealthCheck(TripSageModel):
     """Health check result for a service."""
 
@@ -210,6 +215,7 @@ class ServiceHealthCheck(TripSageModel):
     def is_healthy(self) -> bool:
         """Simple health check."""
         return self.status == ServiceHealthStatus.HEALTHY
+
 
 class ApiKeyService:
     """
@@ -1229,7 +1235,9 @@ class ApiKeyService:
             usage_count=result["usage_count"],
         )
 
+
 # Dependency functions for FastAPI
+
 
 async def get_api_key_service(
     db: Annotated["DatabaseService", Depends("get_database_service")],
@@ -1246,6 +1254,7 @@ async def get_api_key_service(
         Configured ApiKeyService instance
     """
     return ApiKeyService(db=db, cache=cache)
+
 
 # Type alias for easier use in endpoints
 ApiKeyServiceDep = Annotated[ApiKeyService, Depends(get_api_key_service)]

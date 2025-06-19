@@ -9,6 +9,7 @@ import os
 import sys
 from pathlib import Path
 
+
 class DatabaseTester:
     """Database integration tester for TripSage Supabase schema."""
 
@@ -375,6 +376,7 @@ class DatabaseTester:
             print(f"❌ {total_tests - passed_tests} tests failed - Review issues above")
             return False
 
+
 def main():
     """Main test function."""
     # Change to project directory (parent of supabase dir)
@@ -399,6 +401,7 @@ def main():
     print("   📈 Monitor vector search performance with production data")
 
     return 0 if success else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

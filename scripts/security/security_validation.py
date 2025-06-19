@@ -14,6 +14,7 @@ from typing import Any
 # Security checks
 SECURITY_CHECKS = {"critical": [], "high": [], "medium": [], "low": [], "info": []}
 
+
 def log_finding(
     severity: str, category: str, message: str, details: dict[str, Any] = None
 ):
@@ -21,6 +22,7 @@ def log_finding(
     finding = {"category": category, "message": message, "details": details or {}}
     SECURITY_CHECKS[severity].append(finding)
     print(f"[{severity.upper()}] {category}: {message}")
+
 
 def check_hardcoded_secrets():
     """Check for hardcoded secrets in the codebase."""
@@ -98,6 +100,7 @@ def check_hardcoded_secrets():
     except Exception as e:
         log_finding("medium", "Hardcoded Secrets", f"Could not scan for secrets: {e}")
 
+
 def check_sql_injection_protection():
     """Check for SQL injection protection."""
     print("\n=== Checking SQL injection protection ===")
@@ -151,6 +154,7 @@ def check_sql_injection_protection():
             "info", "SQL Injection", "No obvious SQL injection vulnerabilities found"
         )
 
+
 def check_xss_protection():
     """Check for XSS protection."""
     print("\n=== Checking XSS protection ===")
@@ -193,6 +197,7 @@ def check_xss_protection():
 
     if not found_issues:
         log_finding("info", "XSS Protection", "No obvious XSS vulnerabilities found")
+
 
 def check_authentication_security():
     """Check authentication security."""
@@ -273,6 +278,7 @@ def check_authentication_security():
         f"Authentication security: {checks_passed}/{total_checks} checks passed",
     )
 
+
 def check_input_validation():
     """Check input validation."""
     print("\n=== Checking input validation ===")
@@ -322,6 +328,7 @@ def check_input_validation():
             "medium", "Input Validation", f"Could not check session validation: {e}"
         )
 
+
 def check_cors_configuration():
     """Check CORS configuration."""
     print("\n=== Checking CORS configuration ===")
@@ -359,6 +366,7 @@ def check_cors_configuration():
 
     if not cors_found:
         log_finding("medium", "CORS", "No CORS configuration found")
+
 
 def check_https_enforcement():
     """Check HTTPS enforcement."""
@@ -401,6 +409,7 @@ def check_https_enforcement():
     else:
         log_finding("medium", "HTTPS", "No explicit HTTPS enforcement found")
 
+
 def check_dependency_security():
     """Check dependency security."""
     print("\n=== Checking dependency security ===")
@@ -437,6 +446,7 @@ def check_dependency_security():
             "medium", "Dependencies", f"Error checking frontend dependencies: {e}"
         )
 
+
 def generate_security_report():
     """Generate a comprehensive security report."""
     print("\n" + "=" * 60)
@@ -465,6 +475,7 @@ def generate_security_report():
     else:
         print(f"\n⚠️  Found {total_issues} critical/high severity security issues")
         return 1
+
 
 def main():
     """Main security validation function."""
@@ -504,6 +515,7 @@ def main():
         print(f"\n❌ Could not save report: {e}")
 
     return exit_code
+
 
 if __name__ == "__main__":
     sys.exit(main())

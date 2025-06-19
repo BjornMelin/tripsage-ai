@@ -20,7 +20,7 @@ import logging
 import time
 from collections import defaultdict, deque
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -57,6 +57,7 @@ except ImportError:
     MSGPACK_AVAILABLE = False
     msgpack = None
 
+
 # Performance configuration
 class PerformanceConfig:
     """WebSocket performance configuration."""
@@ -85,6 +86,7 @@ class PerformanceConfig:
     MAX_QUEUE_SIZE = 10000  # Max messages in queue before backpressure
     BACKPRESSURE_THRESHOLD = 0.8  # Trigger backpressure at 80% capacity
 
+
 # WebSocket Security Configuration
 def get_allowed_origins() -> list[str]:
     """Get allowed origins from settings or use defaults."""
@@ -100,6 +102,7 @@ def get_allowed_origins() -> list[str]:
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
     ]
+
 
 async def validate_websocket_origin(websocket: WebSocket) -> bool:
     """Validate WebSocket Origin header to prevent CSWSH attacks.
@@ -128,16 +131,19 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
     logger.warning(f"WebSocket connection rejected: Invalid origin '{origin}'")
     return False
 
+
 # Create event classes here temporarily until they are properly organized
 class ChatMessageEvent(WebSocketEvent):
     type: str = Field(default=WebSocketEventType.CHAT_MESSAGE, description="Event type")
     message: WebSocketMessage
+
 
 class ChatMessageChunkEvent(WebSocketEvent):
     type: str = Field(default=WebSocketEventType.CHAT_TYPING, description="Event type")
     content: str
     chunk_index: int = 0
     is_final: bool = False
+
 
 class ConnectionEvent(WebSocketEvent):
     type: str = Field(
@@ -146,12 +152,14 @@ class ConnectionEvent(WebSocketEvent):
     status: str = Field(..., description="Connection status")
     connection_id: str = Field(..., description="Connection ID")
 
+
 class ErrorEvent(WebSocketEvent):
     type: str = Field(
         default=WebSocketEventType.CONNECTION_ERROR, description="Event type"
     )
     error_code: str
     error_message: str
+
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +178,7 @@ performance_metrics = {
     "concurrent_connections": 0,
     "message_processing_time_ms": deque(maxlen=1000),
 }
+
 
 # Message batching system
 class MessageBatcher:
@@ -278,6 +287,7 @@ class MessageBatcher:
         # This would be determined during handshake
         return getattr(self.websocket, "_supports_binary", False)
 
+
 # Connection pool manager
 class ConnectionPool:
     """Manages WebSocket connections with pooling."""
@@ -367,8 +377,10 @@ class ConnectionPool:
             except Exception as e:
                 logger.error(f"Error in connection pool cleanup: {e}")
 
+
 # Global connection pool
 connection_pool = ConnectionPool()
+
 
 def get_service_registry() -> ServiceRegistry:
     """Get or create the service registry singleton."""
@@ -377,6 +389,7 @@ def get_service_registry() -> ServiceRegistry:
         _service_registry = ServiceRegistry()
     return _service_registry
 
+
 def get_chat_agent() -> ChatAgent:
     """Get or create the chat agent singleton."""
     global _chat_agent
@@ -384,6 +397,7 @@ def get_chat_agent() -> ChatAgent:
         service_registry = get_service_registry()
         _chat_agent = ChatAgent(service_registry=service_registry)
     return _chat_agent
+
 
 async def get_core_chat_service(db=Depends(get_db)) -> CoreChatService:
     """Get CoreChatService instance with database dependency.
@@ -395,6 +409,7 @@ async def get_core_chat_service(db=Depends(get_db)) -> CoreChatService:
         CoreChatService instance
     """
     return CoreChatService(database_service=db)
+
 
 @router.websocket("/ws/chat/{session_id}")
 async def chat_websocket(
@@ -539,14 +554,24 @@ async def chat_websocket(
                 # Clean up completed handlers
                 message_handlers = {h for h in message_handlers if not h.done()}
 
-                # Check concurrent handler limit
+                # Check concurrent handler limit using TaskGroup for better task
+                # management
                 if len(message_handlers) >= PerformanceConfig.CONCURRENT_HANDLERS:
-                    # Wait for at least one to complete
-                    if message_handlers:
-                        done, message_handlers = await asyncio.wait(
-                            message_handlers, return_when=asyncio.FIRST_COMPLETED
-                        )
-                        message_handlers = set(message_handlers)
+                    # Use TaskGroup for better structured concurrency
+                    async with asyncio.TaskGroup():
+                        # Wait for the first task to complete
+                        first_completed_task = None
+                        for handler in message_handlers:
+                            if handler.done():
+                                first_completed_task = handler
+                                break
+
+                        if not first_completed_task and message_handlers:
+                            # If no task is done, wait for one to complete
+                            done, pending = await asyncio.wait(
+                                message_handlers, return_when=asyncio.FIRST_COMPLETED
+                            )
+                            message_handlers = pending
 
                 if message_type == "chat_message":
                     # Handle chat message concurrently
@@ -674,6 +699,7 @@ async def chat_websocket(
         # Clean up from websocket manager
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
+
 
 @router.websocket("/ws/agent-status/{user_id}")
 async def agent_status_websocket(
@@ -864,6 +890,7 @@ async def agent_status_websocket(
         # Clean up connection
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
+
 
 async def handle_chat_message(
     connection_id: str,
@@ -1087,6 +1114,7 @@ async def handle_chat_message(
         )
         await websocket_manager.send_to_connection(connection_id, error_event)
 
+
 # Health check endpoint for WebSocket service
 @router.get("/ws/health")
 async def websocket_health():
@@ -1120,6 +1148,7 @@ async def websocket_health():
         "timestamp": datetime.utcnow().isoformat(),
     }
 
+
 # WebSocket connection management endpoints
 @router.get("/ws/connections")
 async def list_websocket_connections():
@@ -1138,6 +1167,7 @@ async def list_websocket_connections():
         "connections": connections,
         "total_count": len(connections),
     }
+
 
 @router.delete("/ws/connections/{connection_id}")
 async def disconnect_websocket_connection(connection_id: str):

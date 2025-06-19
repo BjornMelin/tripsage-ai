@@ -22,6 +22,7 @@ mock_qrcode = MagicMock()
 mock_qr_instance = MagicMock()
 mock_img = MagicMock()
 
+
 # Initialize mock state
 def reset_mocks():
     """Reset mock state for each test."""
@@ -42,6 +43,7 @@ def reset_mocks():
     mock_qr_instance.make_image.return_value = mock_img
     mock_qrcode.QRCode.return_value = mock_qr_instance
     mock_qrcode.constants.ERROR_CORRECT_L = 1
+
 
 # Initialize with defaults
 reset_mocks()
@@ -65,6 +67,7 @@ from tripsage_core.services.business.mfa_service import (  # noqa: E402
     MFAVerificationResponse,
     get_mfa_service,
 )
+
 
 class TestMFAServiceModels:
     """Test MFA service Pydantic models for validation and serialization."""
@@ -158,6 +161,7 @@ class TestMFAServiceModels:
         assert reconstructed.enabled is True
         assert reconstructed.enrolled_at == now
         assert reconstructed.backup_codes_remaining == 5
+
 
 class TestMFAService:
     """Test suite for MFAService core functionality."""
@@ -606,6 +610,7 @@ class TestMFAService:
 
         assert exc_info.value.code == "BACKUP_CODES_REGENERATION_FAILED"
 
+
 class TestMFAServicePrivateMethods:
     """Test private methods of MFAService."""
 
@@ -688,6 +693,7 @@ class TestMFAServicePrivateMethods:
                 assert len(part) == 5
                 assert part.isdigit()
                 assert 0 <= int(part) <= 99999
+
 
 class TestMFAServiceSecurity:
     """Security-focused tests for MFAService."""
@@ -792,6 +798,7 @@ class TestMFAServiceSecurity:
         # Verify it's valid base64 data
         assert len(img_data) > 0
 
+
 class TestMFAServiceIntegration:
     """Integration tests for MFAService with real dependencies."""
 
@@ -876,6 +883,7 @@ class TestMFAServiceIntegration:
 
         assert exc_info.value.code == "MFA_VERIFICATION_FAILED"
         assert exc_info.value.details.service == "MFAService"
+
 
 class TestMFAServiceEdgeCases:
     """Edge case and boundary condition tests."""
@@ -1003,6 +1011,7 @@ class TestMFAServiceEdgeCases:
         assert result1.valid is True
         assert result2.valid is False
 
+
 # Property-based testing for backup codes
 @pytest.mark.parametrize("count", [1, 5, 10, 25, 50])
 def test_backup_codes_property_count(count):
@@ -1010,6 +1019,7 @@ def test_backup_codes_property_count(count):
     service = MFAService(database_service=AsyncMock())
     codes = service._generate_backup_codes(count=count)
     assert len(codes) == count
+
 
 @pytest.mark.parametrize(
     "code_format",

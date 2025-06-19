@@ -16,6 +16,7 @@ from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
 
+
 class TestableAgentNode(BaseAgentNode):
     """Concrete implementation of BaseAgentNode for testing."""
 
@@ -53,6 +54,7 @@ class TestableAgentNode(BaseAgentNode):
                 }
             )
             return state
+
 
 class TestBaseAgentNode:
     """Test suite for BaseAgentNode."""

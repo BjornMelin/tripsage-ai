@@ -12,6 +12,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 def analyze_schema_files() -> dict[str, any]:
     """Analyze schema files for completeness and consistency."""
     schema_dir = Path("supabase/schemas")
@@ -58,6 +59,7 @@ def analyze_schema_files() -> dict[str, any]:
 
     return results
 
+
 def check_trip_collaborators_integration() -> list[str]:
     """Check if trip_collaborators table is properly integrated."""
     issues = []
@@ -100,6 +102,7 @@ def check_trip_collaborators_integration() -> list[str]:
 
     return issues
 
+
 def analyze_foreign_key_constraints() -> list[str]:
     """Analyze foreign key relationships for data integrity."""
     issues = []
@@ -125,6 +128,7 @@ def analyze_foreign_key_constraints() -> list[str]:
             issues.append(f"⚠️  No {description} found - check foreign key integrity")
 
     return issues
+
 
 def check_memory_table_consistency() -> list[str]:
     """Check memory tables for Mem0 integration consistency."""
@@ -154,6 +158,7 @@ def check_memory_table_consistency() -> list[str]:
         )
 
     return issues
+
 
 def generate_recommendations() -> list[str]:
     """Generate actionable recommendations for database improvements."""
@@ -190,6 +195,7 @@ def generate_recommendations() -> list[str]:
     )
 
     return recommendations
+
 
 def main():
     """Main validation function."""
@@ -257,6 +263,7 @@ def main():
     else:
         print("\n✅ No critical issues found - database schema is production-ready")
         return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

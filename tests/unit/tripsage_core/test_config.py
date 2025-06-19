@@ -17,6 +17,7 @@ from tripsage_core.config import (
     get_settings,
 )
 
+
 class TestSettings:
     """Test unified Settings configuration class."""
 
@@ -131,6 +132,7 @@ class TestSettings:
             assert "secret-openai-key" not in settings_repr
             assert "secret-public-key" not in settings_repr
 
+
 class TestConfigurationLoading:
     """Test configuration loading patterns and caching."""
 
@@ -197,6 +199,7 @@ class TestConfigurationLoading:
         # Clean up
         os.unlink(f.name)
 
+
 class TestConfigurationErrorHandling:
     """Test error handling and edge cases in configuration."""
 
@@ -227,6 +230,7 @@ class TestConfigurationErrorHandling:
             assert settings.openai_api_key.get_secret_value() == "sk-test-1234567890"
             assert settings.database_url == "https://test.supabase.com"
             assert settings.environment == "development"
+
 
 class TestModernBestPractices:
     """Test that the config follows 2025 best practices."""
@@ -295,6 +299,7 @@ class TestModernBestPractices:
             assert hasattr(settings, "api_title")  # API config
             assert hasattr(settings, "cors_origins")  # API config
             assert hasattr(settings, "environment")  # App config
+
 
 class TestPostgresURLConfiguration:
     """Test PostgreSQL URL configuration and conversion."""

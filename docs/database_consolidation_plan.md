@@ -56,19 +56,23 @@ ConsolidatedDatabaseService
 ## Migration Strategy
 
 ### Phase 1: Setup (Day 1)
+
 1. Deploy consolidated service alongside existing services
 2. Create compatibility layer for gradual migration
 3. Set up monitoring and metrics collection
 4. Run initial benchmarks
 
 ### Phase 2: Migration (Days 2-5)
+
 1. Run migration script on development environment
 2. Update all service imports automatically
 3. Test each migrated service thoroughly
 4. Deploy to staging for integration testing
 
 ### Phase 3: RLS Implementation (Days 6-7)
+
 1. Enable RLS on all tables:
+
    ```sql
    ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
    ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -76,6 +80,7 @@ ConsolidatedDatabaseService
    ```
 
 2. Create RLS policies:
+
    ```sql
    -- Users can only see their own data
    CREATE POLICY "Users see own trips" ON trips
@@ -87,6 +92,7 @@ ConsolidatedDatabaseService
    ```
 
 ### Phase 4: Rollout (Days 8-10)
+
 1. Deploy to production with feature flag
 2. Monitor performance metrics closely
 3. Gradually increase traffic to new service
@@ -95,13 +101,15 @@ ConsolidatedDatabaseService
 ## Risk Mitigation
 
 ### 1. Performance Risks
+
 - **Risk**: New service slower than expected
-- **Mitigation**: 
+- **Mitigation**:
   - Comprehensive benchmarking before deployment
   - Feature flag for instant rollback
   - Keep old services available for 30 days
 
 ### 2. Compatibility Risks
+
 - **Risk**: Breaking changes in API
 - **Mitigation**:
   - Compatibility layer maintains old API
@@ -109,6 +117,7 @@ ConsolidatedDatabaseService
   - Gradual migration service by service
 
 ### 3. Security Risks
+
 - **Risk**: RLS policies too restrictive/permissive
 - **Mitigation**:
   - Thorough testing of all RLS policies
@@ -118,23 +127,28 @@ ConsolidatedDatabaseService
 ## Rollback Plan
 
 ### Immediate Rollback (< 1 hour)
+
 1. Switch feature flag to route traffic to old services
 2. No data migration needed (same database)
 3. Monitor for any lingering issues
 
 ### Standard Rollback (< 24 hours)
+
 1. Revert code deployment
 2. Restore old service configurations
 3. Update connection strings if needed
 
 ### Emergency Procedures
+
 1. **Connection Pool Exhaustion**:
+
    ```python
    # Increase pool size via Supabase dashboard
    # Or temporarily use direct connections
    ```
 
 2. **RLS Policy Issues**:
+
    ```sql
    -- Temporarily disable RLS (emergency only)
    ALTER TABLE affected_table DISABLE ROW LEVEL SECURITY;
@@ -172,6 +186,7 @@ ConsolidatedDatabaseService
 ## Implementation Checklist
 
 ### Pre-Migration
+
 - [ ] Review all database services for unique features
 - [ ] Create comprehensive test suite
 - [ ] Set up monitoring infrastructure
@@ -179,6 +194,7 @@ ConsolidatedDatabaseService
 - [ ] Create rollback procedures
 
 ### Migration
+
 - [ ] Run migration script in development
 - [ ] Test all affected services
 - [ ] Deploy to staging
@@ -186,6 +202,7 @@ ConsolidatedDatabaseService
 - [ ] Performance benchmarking
 
 ### Post-Migration
+
 - [ ] Monitor metrics for 48 hours
 - [ ] Address any performance issues
 - [ ] Update documentation

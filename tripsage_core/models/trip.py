@@ -6,7 +6,7 @@ tags, preferences, and detailed budget breakdown.
 """
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator, model_validator
@@ -17,6 +17,7 @@ from tripsage_core.models.schemas_common.enums import (
     TripType,
     TripVisibility,
 )
+
 
 class BudgetBreakdown(TripSageModel):
     """Detailed budget breakdown by category."""
@@ -29,6 +30,7 @@ class BudgetBreakdown(TripSageModel):
     activities: float = Field(default=0.0, ge=0, description="Activities budget")
     miscellaneous: float = Field(default=0.0, ge=0, description="Miscellaneous budget")
 
+
 class EnhancedBudget(TripSageModel):
     """Enhanced budget structure with breakdown."""
 
@@ -38,6 +40,7 @@ class EnhancedBudget(TripSageModel):
     breakdown: BudgetBreakdown = Field(
         default_factory=BudgetBreakdown, description="Budget breakdown by category"
     )
+
 
 class TripPreferences(TripSageModel):
     """Extended trip preferences and requirements."""
@@ -64,6 +67,7 @@ class TripPreferences(TripSageModel):
     accessibility_needs: list[str] = Field(
         default_factory=list, description="Accessibility requirements"
     )
+
 
 class Trip(TripSageModel):
     """Unified Trip model for TripSage.
@@ -254,6 +258,7 @@ class Trip(TripSageModel):
             self.updated_at = datetime.utcnow()
             return True
         return False
+
 
 # Export the models
 __all__ = [

@@ -14,9 +14,9 @@ This module provides production-ready rate limiting with:
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from fastapi import Request, Response
 from pydantic import BaseModel, Field
@@ -34,6 +34,7 @@ from tripsage_core.services.business.audit_logging_service import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 class RateLimitConfig(BaseModel):
     """Configuration for rate limiting with enhanced features."""
@@ -92,6 +93,7 @@ class RateLimitConfig(BaseModel):
             "burst_size": int(self.burst_size * multiplier),
         }
 
+
 class RateLimitResult(BaseModel):
     """Result of a rate limit check."""
 
@@ -107,6 +109,7 @@ class RateLimitResult(BaseModel):
     tokens_remaining: float | None = None
     window_start: datetime | None = None
     algorithm: str = "sliding_window"  # 'sliding_window', 'token_bucket'
+
 
 class RateLimiter:
     """Base rate limiter interface with enhanced capabilities."""
@@ -143,6 +146,7 @@ class RateLimiter:
             True if reset successful, False otherwise
         """
         raise NotImplementedError
+
 
 class InMemoryRateLimiter(RateLimiter):
     """Enhanced in-memory rate limiter with sliding window and token bucket."""
@@ -247,6 +251,7 @@ class InMemoryRateLimiter(RateLimiter):
         if key in self.token_buckets:
             del self.token_buckets[key]
         return True
+
 
 class DragonflyRateLimiter(RateLimiter):
     """Production-ready DragonflyDB-based rate limiter with hybrid algorithms."""
@@ -593,6 +598,7 @@ class DragonflyRateLimiter(RateLimiter):
         except Exception as e:
             logger.error(f"Failed to reset rate limits for {key}: {e}")
             return False
+
 
 class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     """Production-ready rate limiting middleware with comprehensive features.
@@ -1196,10 +1202,12 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 logger.debug(f"Failed to track successful request: {e}")
 
+
 # Configuration helper functions
 def create_rate_limit_config_from_dict(config_dict: dict[str, Any]) -> RateLimitConfig:
     """Create a RateLimitConfig from a dictionary (useful for dynamic configuration)."""
     return RateLimitConfig(**config_dict)
+
 
 def create_rate_limit_config_from_settings(
     settings: Settings, tier: str = "user"
@@ -1244,6 +1252,7 @@ def create_rate_limit_config_from_settings(
 
     return base_config
 
+
 def get_default_rate_limit_middleware(
     app: ASGIApp,
     settings: Settings | None = None,
@@ -1263,6 +1272,7 @@ def get_default_rate_limit_middleware(
         use_dragonfly=use_dragonfly,
         monitoring_service=monitoring_service,
     )
+
 
 def create_middleware_from_settings(
     app: ASGIApp, settings: Settings | None = None

@@ -32,6 +32,7 @@ from tripsage_core.infrastructure.resilience.circuit_breaker import (
     circuit_breaker,
 )
 
+
 class TestRateLimitingSecurity:
     """Security tests for rate limiting middleware."""
 
@@ -377,6 +378,7 @@ class TestRateLimitingSecurity:
             # Should apply rate limiting regardless of override attempts
             assert response.status_code in [200, 405, 429]
 
+
 class TestCircuitBreakerSecurity:
     """Security tests for circuit breaker functionality."""
 
@@ -695,6 +697,7 @@ class TestCircuitBreakerSecurity:
 
             # Should not have significant timing differences
             assert time_variance < 0.01, "Circuit breaker timing attack vulnerability"
+
 
 class TestRateLimitingCircuitBreakerIntegration:
     """Integration security tests for rate limiting and circuit breaker."""

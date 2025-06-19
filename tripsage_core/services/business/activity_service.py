@@ -9,7 +9,7 @@ and web crawling for additional information.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
@@ -48,6 +48,7 @@ ACTIVITY_TYPE_MAPPING = {
     "wellness": ["spa", "beauty_salon", "gym"],
 }
 
+
 class ActivityServiceError(CoreServiceError):
     """Exception raised for activity service errors."""
 
@@ -59,6 +60,7 @@ class ActivityServiceError(CoreServiceError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
 
 class ActivityService:
     """Service for managing activity operations."""
@@ -440,9 +442,7 @@ class ActivityService:
         return filtered
 
     @with_error_handling()
-    async def get_activity_details(
-        self, activity_id: str
-    ) -> ActivityResponse | None:
+    async def get_activity_details(self, activity_id: str) -> ActivityResponse | None:
         """
         Get detailed information about a specific activity.
 
@@ -564,8 +564,10 @@ class ActivityService:
             instant_confirmation=False,
         )
 
+
 # Global service instance
 _activity_service: ActivityService | None = None
+
 
 async def get_activity_service() -> ActivityService:
     """Get the global activity service instance."""
@@ -576,6 +578,7 @@ async def get_activity_service() -> ActivityService:
         await _activity_service.ensure_services()
 
     return _activity_service
+
 
 async def close_activity_service() -> None:
     """Close the global activity service instance."""

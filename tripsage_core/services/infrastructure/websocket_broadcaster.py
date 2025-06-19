@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 import redis.asyncio as redis
@@ -19,6 +19,7 @@ from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
 logger = logging.getLogger(__name__)
+
 
 class BroadcastMessage(BaseModel):
     """Message for broadcasting across WebSocket connections."""
@@ -30,6 +31,7 @@ class BroadcastMessage(BaseModel):
     created_at: datetime
     expires_at: datetime | None = None
     priority: int = Field(default=1)  # 1=high, 2=medium, 3=low
+
 
 class WebSocketBroadcaster:
     """
@@ -660,6 +662,7 @@ class WebSocketBroadcaster:
                     f"Failed to unsubscribe connection {connection_id} from channel "
                     f"{channel}: {e}"
                 )
+
 
 # Global broadcaster instance
 websocket_broadcaster = WebSocketBroadcaster()

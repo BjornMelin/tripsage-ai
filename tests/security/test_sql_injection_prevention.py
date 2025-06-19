@@ -13,6 +13,7 @@ from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.models.db.api_key import ApiKeyCreateRequest
 from tripsage_core.services.business.api_key_service import ApiKeyService, ServiceType
 
+
 class TestSQLInjectionPrevention:
     """Test SQL injection prevention in API key operations."""
 

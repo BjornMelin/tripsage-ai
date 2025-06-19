@@ -10,7 +10,7 @@ This module defines all Pydantic models for memory operations with:
 """
 
 from datetime import datetime
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -118,6 +118,7 @@ ActivityName = Annotated[
 
 # === CORE MEMORY MODELS ===
 
+
 class ConversationMessage(BaseModel):
     """
     Message model for conversation memory using modern Pydantic 2.0 patterns.
@@ -143,6 +144,7 @@ class ConversationMessage(BaseModel):
     timestamp: datetime | None = Field(
         default=None, description="Message timestamp, auto-generated if not provided"
     )
+
 
 class UserPreferences(BaseModel):
     """
@@ -202,6 +204,7 @@ class UserPreferences(BaseModel):
         ],
     )
 
+
 class MemorySearchQuery(BaseModel):
     """
     Memory search query model using modern Pydantic 2.0 patterns.
@@ -228,6 +231,7 @@ class MemorySearchQuery(BaseModel):
         ),
     )
 
+
 class TravelMemoryQuery(BaseModel):
     """
     Travel-specific memory search query model.
@@ -250,6 +254,7 @@ class TravelMemoryQuery(BaseModel):
         alias="category_filter",
         description="Memory category filter for travel-specific searches",
     )
+
 
 class SessionSummary(BaseModel):
     """

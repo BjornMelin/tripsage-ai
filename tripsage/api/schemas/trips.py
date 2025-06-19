@@ -5,7 +5,7 @@ Consolidates both request and response schemas for trip operations.
 """
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 
 # ===== Request Schemas =====
+
 
 class CreateTripRequest(BaseModel):
     """Request model for creating a trip."""
@@ -45,6 +46,7 @@ class CreateTripRequest(BaseModel):
             raise ValueError("End date must be after start date")
         return self
 
+
 class UpdateTripRequest(BaseModel):
     """Request model for updating a trip."""
 
@@ -73,12 +75,15 @@ class UpdateTripRequest(BaseModel):
             raise ValueError("End date must be after start date")
         return self
 
+
 class TripPreferencesRequest(TripPreferences):
     """Request model for updating trip preferences."""
 
     pass
 
+
 # ===== Response Schemas =====
+
 
 class TripResponse(BaseModel):
     """Response model for trip details."""
@@ -173,6 +178,7 @@ class TripResponse(BaseModel):
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
 
+
 class TripListItem(BaseModel):
     """Response model for trip list items."""
 
@@ -185,6 +191,7 @@ class TripListItem(BaseModel):
     status: str = Field(description="Trip status")
     created_at: datetime = Field(description="Creation timestamp")
 
+
 class TripListResponse(BaseModel):
     """Response model for a list of trips."""
 
@@ -192,6 +199,7 @@ class TripListResponse(BaseModel):
     total: int = Field(description="Total number of trips")
     skip: int = Field(description="Number of trips skipped")
     limit: int = Field(description="Maximum number of trips returned")
+
 
 class TripSummaryResponse(BaseModel):
     """Response model for trip summary."""
@@ -246,6 +254,7 @@ class TripSummaryResponse(BaseModel):
         ge=0,
         le=100,
     )
+
 
 class TripSuggestionResponse(BaseModel):
     """Response model for trip suggestions."""
@@ -322,7 +331,9 @@ class TripSuggestionResponse(BaseModel):
         default=None, description="Additional metadata"
     )
 
+
 # ===== Trip Collaboration Schemas =====
+
 
 class TripShareRequest(BaseModel):
     """Request model for sharing a trip with other users."""
@@ -343,6 +354,7 @@ class TripShareRequest(BaseModel):
         max_length=500,
     )
 
+
 class TripCollaboratorResponse(BaseModel):
     """Response model for trip collaborator information."""
 
@@ -356,6 +368,7 @@ class TripCollaboratorResponse(BaseModel):
         default=True, description="Whether the collaborator is active"
     )
 
+
 class TripCollaboratorUpdateRequest(BaseModel):
     """Request model for updating collaborator permissions."""
 
@@ -363,6 +376,7 @@ class TripCollaboratorUpdateRequest(BaseModel):
         description="New permission level (view, edit, admin)",
         pattern="^(view|edit|admin)$",
     )
+
 
 class TripCollaboratorsListResponse(BaseModel):
     """Response model for listing trip collaborators."""

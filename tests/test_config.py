@@ -17,6 +17,7 @@ import pytest
 
 from tripsage_core.config import Settings
 
+
 def setup_test_environment() -> None:
     """Set up comprehensive test environment variables."""
     test_env = {
@@ -47,6 +48,7 @@ def setup_test_environment() -> None:
     for key, value in test_env.items():
         os.environ[key] = value
 
+
 def create_test_settings(**overrides) -> Settings:
     """
     Create a test settings instance with proper defaults.
@@ -75,6 +77,7 @@ def create_test_settings(**overrides) -> Settings:
     # Create settings instance - Pydantic v2 reads from environment variables
     # Don't pass any config to the constructor
     return Settings()
+
 
 class MockCacheService:
     """Simple, reliable mock cache service for tests."""
@@ -108,6 +111,7 @@ class MockCacheService:
     async def health_check(self) -> bool:
         return True
 
+
 class MockDatabaseService:
     """Simple, reliable mock database service for tests."""
 
@@ -132,6 +136,7 @@ class MockDatabaseService:
 
     async def health_check(self) -> bool:
         return True
+
 
 @pytest.fixture(autouse=True)
 def clean_test_environment():
@@ -170,20 +175,24 @@ def clean_test_environment():
             "database": mock_db,
         }
 
+
 @pytest.fixture
 def test_settings():
     """Provide test settings instance."""
     return create_test_settings()
+
 
 @pytest.fixture
 def mock_cache_service():
     """Provide mock cache service."""
     return MockCacheService()
 
+
 @pytest.fixture
 def mock_database_service():
     """Provide mock database service."""
     return MockDatabaseService()
+
 
 def create_mock_api_settings(**overrides) -> Any:
     """
@@ -241,10 +250,12 @@ def create_mock_api_settings(**overrides) -> Any:
 
     return mock_settings
 
+
 @pytest.fixture
 def mock_api_settings():
     """Provide mock API settings."""
     return create_mock_api_settings()
+
 
 # Export convenience functions
 __all__ = [

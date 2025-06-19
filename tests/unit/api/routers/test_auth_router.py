@@ -6,6 +6,7 @@ Tests basic structure and imports without requiring full app startup.
 
 import pytest
 
+
 class TestAuthRouterStructure:
     """Test auth router basic structure."""
 
@@ -48,6 +49,7 @@ class TestAuthRouterStructure:
             assert get_user_service is not None
         except ImportError as e:
             pytest.fail(f"Required import failed: {e}")
+
 
 class TestAuthSchemas:
     """Test auth-related schemas."""
@@ -104,6 +106,7 @@ class TestAuthSchemas:
             # Schema might have different required fields than expected
             pytest.skip(f"UserResponse schema structure different than expected: {e}")
 
+
 class TestUserService:
     """Test user service basic functionality."""
 
@@ -134,6 +137,7 @@ class TestUserService:
         except ImportError:
             pytest.skip("UserService not available")
 
+
 class TestAuthRouterConfiguration:
     """Test auth router configuration."""
 
@@ -161,6 +165,7 @@ class TestAuthRouterConfiguration:
         # The register function should exist
         assert hasattr(auth, "register")
         assert callable(auth.register)
+
 
 class TestBasicFunctionality:
     """Test basic functionality without external dependencies."""

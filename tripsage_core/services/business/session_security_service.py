@@ -11,7 +11,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from ipaddress import AddressValueError
 from ipaddress import ip_address as parse_ip_address
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -21,6 +21,7 @@ from tripsage_core.exceptions import (
 from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
+
 
 class UserSession(TripSageModel):
     """User session model with enhanced security validation."""
@@ -155,6 +156,7 @@ class UserSession(TripSageModel):
 
         return v
 
+
 class SecurityEvent(TripSageModel):
     """Security event model."""
 
@@ -210,6 +212,7 @@ class SecurityEvent(TripSageModel):
             raise ValueError("Risk score must be between 0 and 100")
         return v
 
+
 class SessionSecurityMetrics(TripSageModel):
     """Security metrics for a user."""
 
@@ -227,6 +230,7 @@ class SessionSecurityMetrics(TripSageModel):
     password_changed_at: datetime | None = Field(
         None, description="Last password change"
     )
+
 
 class SessionSecurityService:
     """
@@ -707,9 +711,7 @@ class SessionSecurityService:
             )
             return SessionSecurityMetrics(user_id=user_id)
 
-    def _calculate_login_risk_score(
-        self, user_id: str, ip_address: str | None
-    ) -> int:
+    def _calculate_login_risk_score(self, user_id: str, ip_address: str | None) -> int:
         """Calculate risk score for login attempt."""
         risk_score = 0
 
@@ -931,6 +933,7 @@ class SessionSecurityService:
         except Exception as e:
             logger.error(f"Failed to cleanup expired sessions: {e}")
             return 0
+
 
 # Dependency function for FastAPI
 async def get_session_security_service() -> SessionSecurityService:

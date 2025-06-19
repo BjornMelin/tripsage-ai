@@ -8,7 +8,7 @@ Refactored to support dependency injection and service-based architecture.
 
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.state import TravelPlanningState, update_state_timestamp
@@ -16,10 +16,12 @@ from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageErr
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
+
 class BaseAgentNodeError(TripSageError):
     """Error raised when agent node operations fail."""
 
     pass
+
 
 class BaseAgentNode(ABC):
     """

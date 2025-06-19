@@ -7,11 +7,11 @@ used across different storage backends.
 from datetime import date as Date
 from datetime import time as dt_time
 from enum import Enum
-from typing import Optional
 
 from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class ItemType(str, Enum):
     """Enum for itinerary item type values."""
@@ -21,6 +21,7 @@ class ItemType(str, Enum):
     TRANSPORT = "transport"
     ACCOMMODATION = "accommodation"
     OTHER = "other"
+
 
 class ItineraryItem(TripSageModel):
     """ItineraryItem model for TripSage.

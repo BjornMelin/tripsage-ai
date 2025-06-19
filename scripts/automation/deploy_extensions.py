@@ -15,6 +15,7 @@ from rich.panel import Panel
 
 console = Console()
 
+
 class ExtensionDeployer:
     def __init__(self, database_url: str, schema_path: Path):
         self.database_url = database_url
@@ -331,6 +332,7 @@ class ExtensionDeployer:
 
         return all_steps_passed and all_verifications_passed
 
+
 def get_database_url() -> str:
     """Get database URL from environment."""
     database_url = os.getenv("SUPABASE_DB_URL")
@@ -345,6 +347,7 @@ def get_database_url() -> str:
         sys.exit(1)
 
     return database_url
+
 
 async def main():
     """Main deployment function."""
@@ -362,6 +365,7 @@ async def main():
     success = await deployer.full_deployment()
 
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

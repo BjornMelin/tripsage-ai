@@ -8,7 +8,7 @@ capabilities.
 
 import json
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -19,6 +19,7 @@ from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class ItineraryAgentNode(BaseAgentNode):
     """
@@ -55,7 +56,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Initialize itinerary-specific tools using simple tool catalog."""
-        from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
+        from tripsage.orchestration.tools.tools import get_tools_for_agent
 
         # Get tools for itinerary agent using simple catalog
         self.available_tools = get_tools_for_agent("itinerary_agent")

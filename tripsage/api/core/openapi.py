@@ -373,6 +373,7 @@ EXAMPLES = {
     },
 }
 
+
 def custom_openapi(app):
     """Create a custom OpenAPI schema for the FastAPI application.
 

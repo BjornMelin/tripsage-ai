@@ -7,19 +7,23 @@ Simplified authentication using direct JWT verification.
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import (
+    RequiredPrincipalDep,
+    UserServiceDep,
+    get_principal_id,
+)
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
-from tripsage_core.services.business.user_service import UserService, get_user_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+
 @router.get("/preferences", response_model=UserPreferencesResponse)
 async def get_user_preferences(
-    principal=Depends(require_principal),
-    user_service: UserService = Depends(get_user_service),
+    principal: RequiredPrincipalDep,
+    user_service: UserServiceDep,
 ) -> UserPreferencesResponse:
     """Get the authenticated user's preferences.
 
@@ -57,11 +61,12 @@ async def get_user_preferences(
             detail="Failed to retrieve preferences",
         ) from e
 
+
 @router.put("/preferences", response_model=UserPreferencesResponse)
 async def update_user_preferences(
     preferences_request: UserPreferencesRequest,
-    principal=Depends(require_principal),
-    user_service: UserService = Depends(get_user_service),
+    principal: RequiredPrincipalDep,
+    user_service: UserServiceDep,
 ) -> UserPreferencesResponse:
     """Update the authenticated user's preferences.
 

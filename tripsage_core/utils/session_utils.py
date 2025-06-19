@@ -13,7 +13,7 @@ Key Features:
 - Integration with Core memory service
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -21,12 +21,14 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 # Session memory models
 class ConversationMessage(BaseModel):
     """Model for conversation messages."""
 
     role: str = Field(..., description="Message role (system/user/assistant)")
     content: str = Field(..., description="Message content")
+
 
 class SessionSummary(BaseModel):
     """Model for session summary data."""
@@ -41,6 +43,7 @@ class SessionSummary(BaseModel):
         None, description="Decisions made during the session"
     )
 
+
 class UserPreferences(BaseModel):
     """Model for user preferences."""
 
@@ -50,6 +53,7 @@ class UserPreferences(BaseModel):
     accommodation_preferences: dict[str, Any] | None = None
     dietary_restrictions: list[str] | None = None
     accessibility_needs: list[str] | None = None
+
 
 async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any]:
     """Initialize session memory by retrieving relevant user context.
@@ -123,6 +127,7 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
 
     return session_data
 
+
 async def update_session_memory(
     user_id: str, updates: dict[str, Any]
 ) -> dict[str, Any]:
@@ -185,6 +190,7 @@ async def update_session_memory(
         result["success"] = False
 
     return result
+
 
 async def store_session_summary(
     user_id: str,
@@ -255,7 +261,9 @@ async def store_session_summary(
         logger.error(f"Error storing session summary: {str(e)}")
         return {"status": "error", "error": str(e), "memories_created": 0}
 
+
 # Private helper functions
+
 
 async def _update_user_preferences_memory(
     user_id: str, preferences: dict[str, Any], result: dict[str, Any], memory_service
@@ -290,6 +298,7 @@ async def _update_user_preferences_memory(
         logger.error(f"Error updating preferences: {str(e)}")
         result["errors"].append(f"Preference processing error: {str(e)}")
 
+
 async def _process_learned_facts(
     user_id: str, facts: list[dict[str, Any]], result: dict[str, Any], memory_service
 ) -> None:
@@ -318,6 +327,7 @@ async def _process_learned_facts(
     except Exception as e:
         logger.error(f"Error processing learned facts: {str(e)}")
         result["errors"].append(f"Facts processing error: {str(e)}")
+
 
 async def _process_conversation_context(
     user_id: str, context: dict[str, Any], result: dict[str, Any], memory_service
@@ -358,6 +368,7 @@ async def _process_conversation_context(
     except Exception as e:
         logger.error(f"Error processing conversation context: {str(e)}")
         result["errors"].append(f"Context processing error: {str(e)}")
+
 
 # Simple SessionMemory utility class for API dependencies
 class SessionMemory:
@@ -422,6 +433,7 @@ class SessionMemory:
             "user_id": self.user_id,
             "data": self._memory_data.copy(),
         }
+
 
 __all__ = [
     "ConversationMessage",

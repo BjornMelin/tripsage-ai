@@ -11,7 +11,7 @@ This service consolidates all WebSocket message sending logic including:
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,6 +20,7 @@ from .websocket_auth_service import WebSocketAuthService
 from .websocket_connection_service import WebSocketConnection
 
 logger = logging.getLogger(__name__)
+
 
 class WebSocketEvent(BaseModel):
     """Enhanced WebSocket event model."""
@@ -52,6 +53,7 @@ class WebSocketEvent(BaseModel):
             "retry_count": self.retry_count,
             "expires_at": self.expires_at.isoformat() if self.expires_at else None,
         }
+
 
 class WebSocketEventType:
     """WebSocket event type constants."""
@@ -92,6 +94,7 @@ class WebSocketEventType:
     # Rate limiting events
     RATE_LIMIT_WARNING = "rate_limit.warning"
     RATE_LIMIT_EXCEEDED = "rate_limit.exceeded"
+
 
 class WebSocketMessagingService:
     """Service for consolidating WebSocket messaging operations."""

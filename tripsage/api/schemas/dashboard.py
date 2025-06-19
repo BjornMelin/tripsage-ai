@@ -6,9 +6,10 @@ including validation schemas for monitoring and analytics endpoints.
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, validator
+
 
 class TimeRange(str, Enum):
     """Predefined time ranges for dashboard queries."""
@@ -18,6 +19,7 @@ class TimeRange(str, Enum):
     LAST_24_HOURS = "24h"
     LAST_7_DAYS = "7d"
     LAST_30_DAYS = "30d"
+
 
 class MetricType(str, Enum):
     """Types of metrics available for trending."""
@@ -30,6 +32,7 @@ class MetricType(str, Enum):
     ACTIVE_KEYS = "active_keys"
     THROUGHPUT = "throughput"
 
+
 class AlertSeverity(str, Enum):
     """Alert severity levels."""
 
@@ -37,6 +40,7 @@ class AlertSeverity(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
 
 class AlertType(str, Enum):
     """Types of alerts."""
@@ -49,6 +53,7 @@ class AlertType(str, Enum):
     SECURITY = "security"
     RATE_LIMIT = "rate_limit"
 
+
 class ServiceHealthStatus(str, Enum):
     """Service health status values."""
 
@@ -56,6 +61,7 @@ class ServiceHealthStatus(str, Enum):
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     UNKNOWN = "unknown"
+
 
 class SystemStatus(str, Enum):
     """Overall system status values."""
@@ -65,7 +71,9 @@ class SystemStatus(str, Enum):
     UNHEALTHY = "unhealthy"
     MAINTENANCE = "maintenance"
 
+
 # Request schemas
+
 
 class DashboardQueryParams(BaseModel):
     """Base query parameters for dashboard endpoints."""
@@ -90,12 +98,14 @@ class DashboardQueryParams(BaseModel):
         }
         return time_range_mapping.get(time_range, 24)
 
+
 class MetricsQueryParams(DashboardQueryParams):
     """Query parameters for metrics endpoints."""
 
     metric_type: MetricType | None = Field(default=None)
     interval_minutes: int | None = Field(default=60, ge=5, le=1440)
     aggregation: str | None = Field(default="avg", regex="^(avg|sum|min|max|count)$")
+
 
 class AlertsQueryParams(BaseModel):
     """Query parameters for alerts endpoints."""
@@ -107,6 +117,7 @@ class AlertsQueryParams(BaseModel):
     limit: int | None = Field(default=50, ge=1, le=200)
     offset: int | None = Field(default=0, ge=0)
 
+
 class UserActivityQueryParams(DashboardQueryParams):
     """Query parameters for user activity endpoints."""
 
@@ -117,6 +128,7 @@ class UserActivityQueryParams(DashboardQueryParams):
     )
     sort_order: str | None = Field(default="desc", regex="^(asc|desc)$")
 
+
 class RateLimitQueryParams(BaseModel):
     """Query parameters for rate limit endpoints."""
 
@@ -125,7 +137,9 @@ class RateLimitQueryParams(BaseModel):
     threshold_percentage: float | None = Field(default=80.0, ge=0.0, le=100.0)
     limit: int | None = Field(default=20, ge=1, le=100)
 
+
 # Response schemas
+
 
 class ComponentHealth(BaseModel):
     """Health status of a system component."""
@@ -140,6 +154,7 @@ class ComponentHealth(BaseModel):
     details: dict[str, Any] = Field(
         default_factory=dict, description="Additional details"
     )
+
 
 class SystemOverviewResponse(BaseModel):
     """System overview dashboard response."""
@@ -167,6 +182,7 @@ class SystemOverviewResponse(BaseModel):
         default_factory=list, description="Component health status"
     )
 
+
 class ServiceStatusResponse(BaseModel):
     """Service status response."""
 
@@ -182,6 +198,7 @@ class ServiceStatusResponse(BaseModel):
     )
     message: str | None = Field(default=None, description="Status message")
     endpoint_health: dict[str, ServiceHealthStatus] = Field(default_factory=dict)
+
 
 class UsageMetricsResponse(BaseModel):
     """Usage metrics response."""
@@ -217,6 +234,7 @@ class UsageMetricsResponse(BaseModel):
         default_factory=dict, description="Request count by service"
     )
 
+
 class RateLimitInfoResponse(BaseModel):
     """Rate limit information response."""
 
@@ -237,6 +255,7 @@ class RateLimitInfoResponse(BaseModel):
         """Calculate if approaching limit based on percentage used."""
         percentage = values.get("percentage_used", 0.0)
         return percentage >= 80.0
+
 
 class AlertInfoResponse(BaseModel):
     """Alert information response."""
@@ -275,6 +294,7 @@ class AlertInfoResponse(BaseModel):
         default_factory=list, description="Suggested resolution steps"
     )
 
+
 class UserActivityResponse(BaseModel):
     """User activity response."""
 
@@ -304,6 +324,7 @@ class UserActivityResponse(BaseModel):
         default=None, description="Hour with most activity"
     )
 
+
 class TrendDataPoint(BaseModel):
     """Single data point in a trend series."""
 
@@ -312,6 +333,7 @@ class TrendDataPoint(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional context"
     )
+
 
 class TrendDataResponse(BaseModel):
     """Trend data response."""
@@ -354,6 +376,7 @@ class TrendDataResponse(BaseModel):
         else:
             return "stable"
 
+
 class AnalyticsSummaryResponse(BaseModel):
     """Comprehensive analytics summary response."""
 
@@ -380,7 +403,9 @@ class AnalyticsSummaryResponse(BaseModel):
         default_factory=list, description="Improvement recommendations"
     )
 
+
 # Action request schemas
+
 
 class AcknowledgeAlertRequest(BaseModel):
     """Request to acknowledge an alert."""
@@ -389,6 +414,7 @@ class AcknowledgeAlertRequest(BaseModel):
         default=None, max_length=500, description="Acknowledgment note"
     )
 
+
 class DismissAlertRequest(BaseModel):
     """Request to dismiss an alert."""
 
@@ -396,6 +422,7 @@ class DismissAlertRequest(BaseModel):
     note: str | None = Field(
         default=None, max_length=500, description="Additional notes"
     )
+
 
 class ConfigureAlertRequest(BaseModel):
     """Request to configure alert thresholds."""
@@ -407,7 +434,9 @@ class ConfigureAlertRequest(BaseModel):
         default_factory=list, description="Notification channels"
     )
 
+
 # Bulk operation schemas
+
 
 class BulkAlertActionRequest(BaseModel):
     """Request for bulk alert actions."""
@@ -420,6 +449,7 @@ class BulkAlertActionRequest(BaseModel):
     )
     note: str | None = Field(default=None, max_length=500, description="Action note")
 
+
 class BulkAlertActionResponse(BaseModel):
     """Response for bulk alert actions."""
 
@@ -430,7 +460,9 @@ class BulkAlertActionResponse(BaseModel):
         default_factory=list, description="Error details"
     )
 
+
 # Export monitoring data schemas
+
 
 class ExportRequest(BaseModel):
     """Request to export monitoring data."""
@@ -450,6 +482,7 @@ class ExportRequest(BaseModel):
         default_factory=dict, description="Additional filters"
     )
 
+
 class ExportResponse(BaseModel):
     """Response for data export request."""
 
@@ -460,6 +493,4 @@ class ExportResponse(BaseModel):
     )
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = Field(..., description="Export expiration time")
-    file_size_bytes: int | None = Field(
-        default=None, description="File size in bytes"
-    )
+    file_size_bytes: int | None = Field(default=None, description="File size in bytes")

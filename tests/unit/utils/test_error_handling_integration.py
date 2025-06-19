@@ -25,6 +25,7 @@ from tripsage_core.utils.error_handling_utils import (
     with_error_handling_and_logging,
 )
 
+
 class TestBackwardsCompatibility:
     """Test backwards compatibility aliases."""
 
@@ -47,6 +48,7 @@ class TestBackwardsCompatibility:
         assert alias_exc.code == core_exc.code
         assert alias_exc.status_code == core_exc.status_code
         assert type(alias_exc) is type(core_exc)
+
 
 class TestUpdatedUtilityFunctions:
     """Test updated utility functions that use core exceptions."""
@@ -168,6 +170,7 @@ class TestUpdatedUtilityFunctions:
         assert result == "error_result"
         mock_logger.error.assert_called_once()
 
+
 class TestFactoryFunctions:
     """Test factory functions for creating TripSage-specific exceptions."""
 
@@ -245,6 +248,7 @@ class TestFactoryFunctions:
         assert exc.code == "DATABASE_ERROR"
         assert exc.details.operation == "SELECT"
         assert exc.details.additional_context["table"] == "users"
+
 
 class TestTripSageErrorContext:
     """Test TripSageErrorContext context manager."""
@@ -335,6 +339,7 @@ class TestTripSageErrorContext:
         assert extra["service"] is None
         assert extra["user_id"] is None
         assert extra["request_id"] is None
+
 
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""

@@ -23,6 +23,7 @@ from tripsage_core.services.infrastructure.replica_manager import (
     get_replica_manager,
 )
 
+
 @pytest.fixture
 def mock_settings():
     """Create mock settings for testing."""
@@ -58,6 +59,7 @@ def mock_settings():
 
     return settings
 
+
 @pytest.fixture
 def replica_config():
     """Create a test replica configuration."""
@@ -67,6 +69,7 @@ def replica_config():
         api_key="test-key",
         enabled=True,
     )
+
 
 @pytest.fixture
 def mock_supabase_client():
@@ -82,6 +85,7 @@ def mock_supabase_client():
     query_mock.execute.return_value = MagicMock(data=[{"id": "test"}])
 
     return client
+
 
 class TestReplicaManager:
     """Test cases for the simplified ReplicaManager class."""
@@ -587,6 +591,7 @@ class TestReplicaManager:
         assert not self.replica_manager._enabled
         assert len(self.replica_manager._replicas) == 0
 
+
 @pytest.mark.asyncio
 class TestReplicaManagerGlobalInstance:
     """Test global replica manager instance functions."""
@@ -636,6 +641,7 @@ class TestReplicaManagerGlobalInstance:
 
         # Should not raise exception
         await close_replica_manager()
+
 
 @pytest.mark.asyncio
 class TestReplicaManagerIntegration:
@@ -730,6 +736,7 @@ class TestReplicaManagerIntegration:
         assert health.error_count == 1  # Decremented
 
         await self.replica_manager.close()
+
 
 class TestReplicaDataClasses:
     """Test the data classes used by replica manager."""

@@ -6,7 +6,7 @@ external MCP services for basic time and timezone calculations.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Union
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
 
 class TimeServiceError(CoreAPIError):
     """Exception raised for time service errors."""
@@ -27,6 +28,7 @@ class TimeServiceError(CoreAPIError):
         )
         self.original_error = original_error
 
+
 class TimeZoneInfo(BaseModel):
     """Timezone information."""
 
@@ -35,6 +37,7 @@ class TimeZoneInfo(BaseModel):
     offset: str = Field(..., description="UTC offset (e.g., '-05:00')")
     dst_active: bool = Field(..., description="Whether daylight saving time is active")
     current_time: datetime = Field(..., description="Current time in this timezone")
+
 
 class TimeConversion(BaseModel):
     """Time conversion result."""
@@ -45,6 +48,7 @@ class TimeConversion(BaseModel):
     target_timezone: str = Field(..., description="Target timezone")
     time_difference: str = Field(..., description="Time difference description")
 
+
 class WorldClock(BaseModel):
     """World clock entry."""
 
@@ -54,6 +58,7 @@ class WorldClock(BaseModel):
     local_date: str = Field(..., description="Local date string")
     local_time: str = Field(..., description="Local time string")
     utc_offset: str = Field(..., description="UTC offset")
+
 
 class TimeService:
     """Service for timezone and time operations with Core integration."""
@@ -696,8 +701,10 @@ class TimeService:
         """Async context manager exit."""
         await self.close()
 
+
 # Global service instance
 _time_service: TimeService | None = None
+
 
 async def get_time_service() -> TimeService:
     """
@@ -714,6 +721,7 @@ async def get_time_service() -> TimeService:
 
     return _time_service
 
+
 async def close_time_service() -> None:
     """Close the global time service instance."""
     global _time_service
@@ -722,21 +730,25 @@ async def close_time_service() -> None:
         await _time_service.close()
         _time_service = None
 
+
 # Convenience functions
 async def get_current_time_utc() -> datetime:
     """Get current UTC time."""
     service = await get_time_service()
     return await service.get_current_time("UTC")
 
+
 async def convert_timezone(time_str: str, from_tz: str, to_tz: str) -> TimeConversion:
     """Quick timezone conversion."""
     service = await get_time_service()
     return await service.convert_time(time_str, from_tz, to_tz)
 
+
 async def get_world_time() -> list[WorldClock]:
     """Get world clock for major cities."""
     service = await get_time_service()
     return await service.get_world_clock()
+
 
 __all__ = [
     "TimeService",

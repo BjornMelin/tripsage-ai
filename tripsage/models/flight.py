@@ -34,6 +34,7 @@ from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
 # AirportSearchResponse moved to tripsage_core.models.schemas_common.flight_schemas
 # Import it from there if needed for MCP operations
 
+
 class FlightBookingRequest(MCPRequestBase):
     """Parameters for flight booking."""
 
@@ -43,6 +44,7 @@ class FlightBookingRequest(MCPRequestBase):
     )
     contact_email: str = Field(..., description="Contact email address")
     contact_phone: str = Field(..., description="Contact phone number")
+
 
 class FlightBookingResponse(MCPResponseBase):
     """Response for flight booking."""

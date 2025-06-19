@@ -23,6 +23,7 @@ from tripsage_core.services.business.session_security_service import (
     UserSession,
 )
 
+
 class TestSessionSecurityAttackScenarios:
     """Test security against various attack scenarios."""
 
@@ -392,6 +393,7 @@ class TestSessionSecurityAttackScenarios:
         assert session.session_token != "plaintext_token"
         assert len(session.session_token) == 64  # SHA256 hex length
 
+
 class TestSecurityBoundaryTesting:
     """Test security boundaries and edge cases."""
 
@@ -560,6 +562,7 @@ class TestSecurityBoundaryTesting:
             assert len(session.id) > 0
             assert isinstance(session.user_id, str)
 
+
 class TestPropertyBasedSecurityTesting:
     """Property-based security testing using Hypothesis."""
 
@@ -711,6 +714,7 @@ class TestPropertyBasedSecurityTesting:
         if len(mock_sessions) >= max_sessions:
             # Should have called update to terminate old sessions
             hypothesis_service.db.update.assert_called()
+
 
 class TestSecurityEventCorrelation:
     """Test security event correlation and pattern detection."""
@@ -867,6 +871,7 @@ class TestSecurityEventCorrelation:
             e.get("details", {}).get("session_id") for e in anomaly_events
         )
         assert normal_session.id in session_ids
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

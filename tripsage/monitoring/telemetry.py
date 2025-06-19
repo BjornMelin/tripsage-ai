@@ -5,10 +5,10 @@ for the memory service and other critical components.
 """
 
 import os
+from collections.abc import Callable
 from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Optional
-from collections.abc import Callable
+from typing import Any
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc import (
@@ -32,6 +32,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()
+
 
 class TelemetryService:
     """Centralized telemetry service for monitoring and observability."""
@@ -305,18 +306,22 @@ class TelemetryService:
 
         return decorator
 
+
 # Global telemetry instance
 telemetry = TelemetryService()
+
 
 def initialize_telemetry() -> None:
     """Initialize global telemetry service."""
     telemetry.initialize()
+
 
 def get_telemetry() -> TelemetryService:
     """Get global telemetry service instance."""
     if not telemetry._initialized:
         telemetry.initialize()
     return telemetry
+
 
 # Convenience decorators
 traced = telemetry.create_span_decorator

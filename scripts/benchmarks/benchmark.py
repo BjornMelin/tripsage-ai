@@ -18,13 +18,14 @@ import asyncio
 import logging
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import click
 from collectors import MetricsCollector, ReportGenerator
 from config import BenchmarkConfig
 
 logger = logging.getLogger(__name__)
+
 
 class BenchmarkRunner:
     """Benchmark runner focused on core metrics."""
@@ -346,6 +347,7 @@ class BenchmarkRunner:
 
         return validation
 
+
 @click.group()
 def main():
     """TripSage Database Performance Benchmarking Suite."""
@@ -353,6 +355,7 @@ def main():
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
+
 
 @main.command()
 @click.option(
@@ -390,6 +393,7 @@ def quick(output_dir: str, iterations: int, concurrent: int):
     exit_code = asyncio.run(run())
     exit(exit_code)
 
+
 @main.command()
 @click.option(
     "--output-dir",
@@ -416,6 +420,7 @@ def database_only(output_dir: str):
     exit_code = asyncio.run(run())
     exit(exit_code)
 
+
 @main.command()
 @click.option(
     "--output-dir",
@@ -441,6 +446,7 @@ def vector_only(output_dir: str):
 
     exit_code = asyncio.run(run())
     exit(exit_code)
+
 
 @main.command()
 @click.option(
@@ -484,6 +490,7 @@ def full_suite(output_dir: str, timeout: int):
 
     exit_code = asyncio.run(run())
     exit(exit_code)
+
 
 if __name__ == "__main__":
     main()

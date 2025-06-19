@@ -20,6 +20,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class RouterNode(BaseAgentNode):
     """
     Intelligent routing node using semantic analysis to determine agent routing.

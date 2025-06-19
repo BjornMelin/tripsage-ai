@@ -5,7 +5,7 @@ This module provides function tools for searching accommodations.
 Refactored to be lean wrappers that delegate to core services.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 try:
     from agents import function_tool
@@ -20,6 +20,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 # Set up logger
 logger = get_logger(__name__)
+
 
 @function_tool
 @with_error_handling()
@@ -146,6 +147,7 @@ async def search_airbnb_rentals_tool(
             "cache_hit": False,
         }
 
+
 @function_tool
 @with_error_handling()
 async def get_airbnb_listing_details_tool(
@@ -213,6 +215,7 @@ async def get_airbnb_listing_details_tool(
             "listing_id": listing_id,
         }
 
+
 @function_tool
 @with_error_handling()
 async def search_accommodations_tool(
@@ -275,6 +278,7 @@ async def search_accommodations_tool(
                 "releases."
             ),
         }
+
 
 @function_tool
 @with_error_handling()

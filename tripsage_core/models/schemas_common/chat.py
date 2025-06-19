@@ -6,10 +6,10 @@ services, and core business logic.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Annotated, Any
 
 from pydantic import BaseModel, BeforeValidator, Field
-from typing import Annotated
+
 
 class ToolCallStatus(str, Enum):
     """Valid tool call statuses."""
@@ -19,6 +19,7 @@ class ToolCallStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class MessageRole(str, Enum):
     """Valid message roles."""
 
@@ -26,6 +27,7 @@ class MessageRole(str, Enum):
     ASSISTANT = "assistant"
     SYSTEM = "system"
     TOOL = "tool"
+
 
 # Custom validators for chat models
 def ensure_dict(v: Any) -> dict[str, Any]:
@@ -36,7 +38,9 @@ def ensure_dict(v: Any) -> dict[str, Any]:
         return v
     return {}
 
+
 DictOrEmpty = Annotated[dict[str, Any], BeforeValidator(ensure_dict)]
+
 
 class ToolCall(BaseModel):
     """Common model for tool calls in chat messages."""
@@ -50,6 +54,7 @@ class ToolCall(BaseModel):
     )
     error: str | None = Field(None, description="Error message if failed")
 
+
 class ChatMessage(BaseModel):
     """Common model for chat messages."""
 
@@ -58,6 +63,7 @@ class ChatMessage(BaseModel):
     tool_calls: list[ToolCall] | None = Field(None, description="Tool calls made")
     timestamp: datetime | None = Field(None, description="Message timestamp")
     metadata: DictOrEmpty | None = Field(None, description="Message metadata")
+
 
 class ChatSession(BaseModel):
     """Common model for chat sessions."""
@@ -68,6 +74,7 @@ class ChatSession(BaseModel):
     updated_at: datetime = Field(..., description="Last update timestamp")
     metadata: DictOrEmpty = Field(default_factory=dict, description="Session metadata")
 
+
 class ChatContext(BaseModel):
     """Common model for chat context and memory."""
 
@@ -76,8 +83,6 @@ class ChatContext(BaseModel):
         default_factory=list, description="Conversation messages"
     )
     system_prompt: str | None = Field(None, description="System prompt")
-    temperature: float | None = Field(
-        None, description="Model temperature", ge=0, le=2
-    )
+    temperature: float | None = Field(None, description="Model temperature", ge=0, le=2)
     max_tokens: int | None = Field(None, description="Maximum tokens", gt=0)
     tools: list[str] | None = Field(None, description="Available tools")

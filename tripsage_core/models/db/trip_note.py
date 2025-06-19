@@ -5,11 +5,11 @@ and comments associated with trips.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class TripNote(TripSageModel):
     """TripNote model for TripSage.

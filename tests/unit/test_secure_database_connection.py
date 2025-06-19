@@ -23,6 +23,7 @@ from tripsage_core.utils.connection_utils import (
     SecureDatabaseConnectionManager,
 )
 
+
 class TestSecureDatabaseConnection:
     """Test secure database connection functionality."""
 

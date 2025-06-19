@@ -7,7 +7,7 @@ service reliability and response times across all integrations.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+
 
 @dataclass
 class ServiceMetrics:
@@ -82,6 +82,7 @@ class ServiceMetrics:
             "last_updated": self.last_updated.isoformat(),
             "custom_metrics": self.custom_metrics,
         }
+
 
 @dataclass
 class PerformanceMetrics:
@@ -161,8 +162,10 @@ class PerformanceMetrics:
         """Reset all metrics."""
         self.services.clear()
 
+
 # Global performance metrics instance
 _performance_metrics: PerformanceMetrics | None = None
+
 
 def get_performance_metrics() -> PerformanceMetrics:
     """Get the global performance metrics instance."""
@@ -171,15 +174,18 @@ def get_performance_metrics() -> PerformanceMetrics:
         _performance_metrics = PerformanceMetrics()
     return _performance_metrics
 
+
 def reset_performance_metrics() -> None:
     """Reset all performance metrics (useful for testing)."""
     global _performance_metrics
     _performance_metrics = PerformanceMetrics()
 
+
 # Convenience functions for common services
 def record_webcrawl_request(duration_ms: float, success: bool) -> None:
     """Record a webcrawl request."""
     get_performance_metrics().record_request("webcrawl", duration_ms, success)
+
 
 def record_api_request(api_name: str, duration_ms: float, success: bool) -> None:
     """Record an API request.
@@ -190,6 +196,7 @@ def record_api_request(api_name: str, duration_ms: float, success: bool) -> None
         success: Whether the request succeeded
     """
     get_performance_metrics().record_request(f"api_{api_name}", duration_ms, success)
+
 
 def record_database_request(operation: str, duration_ms: float, success: bool) -> None:
     """Record a database request.

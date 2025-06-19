@@ -15,6 +15,7 @@ import asyncpg
 
 from supabase import Client, create_client
 
+
 class StorageDeployment:
     """Handles deployment of storage infrastructure to Supabase."""
 
@@ -319,6 +320,7 @@ class StorageDeployment:
                 "Please review and fix issues before proceeding."
             )
 
+
 async def main():
     """Main deployment function."""
     # Get environment variables
@@ -342,6 +344,7 @@ async def main():
         sys.exit(0)
     else:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -10,13 +10,14 @@ import logging
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import DeploymentStrategy, get_enterprise_config
 
 logger = logging.getLogger(__name__)
+
 
 class DeploymentPhase(str, Enum):
     """Deployment phases for tracking progress."""
@@ -30,6 +31,7 @@ class DeploymentPhase(str, Enum):
     FAILED = "failed"
     ROLLING_BACK = "rolling_back"
 
+
 class HealthCheckResult(BaseModel):
     """Result of a health check during deployment."""
 
@@ -42,6 +44,7 @@ class HealthCheckResult(BaseModel):
     )
     message: str = Field(default="", description="Health check message")
     timestamp: float = Field(default_factory=time.time, description="Check timestamp")
+
 
 class DeploymentMetrics(BaseModel):
     """Metrics collected during deployment."""
@@ -86,6 +89,7 @@ class DeploymentMetrics(BaseModel):
 
         successful_checks = sum(1 for check in self.health_checks if check.healthy)
         return successful_checks / len(self.health_checks)
+
 
 class BaseDeploymentStrategy(ABC):
     """Base class for deployment strategies."""
@@ -164,6 +168,7 @@ class BaseDeploymentStrategy(ABC):
                 checks={},
                 message=f"Health check error: {str(e)}",
             )
+
 
 class SimpleDeploymentStrategy(BaseDeploymentStrategy):
     """Simple deployment strategy for direct deployments.
@@ -270,6 +275,7 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
+
 
 class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
     """Blue-green deployment strategy for zero-downtime deployments.
@@ -430,6 +436,7 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
+
 
 class CanaryDeploymentStrategy(BaseDeploymentStrategy):
     """Canary deployment strategy for gradual rollouts.
@@ -622,6 +629,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
             metrics.end_time = time.time()
             return metrics
 
+
 class RollingDeploymentStrategy(BaseDeploymentStrategy):
     """Rolling deployment strategy for gradual instance updates.
 
@@ -773,6 +781,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
             return metrics
+
 
 def get_deployment_strategy(
     strategy: DeploymentStrategy | None = None,

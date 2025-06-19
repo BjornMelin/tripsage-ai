@@ -5,7 +5,7 @@ Consolidates both request and response schemas for chat operations.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from tripsage_core.models.schemas_common.chat import ChatMessage, ToolCall
 
 # ===== Request Schemas =====
+
 
 class ChatRequest(BaseModel):
     """Chat API request."""
@@ -31,11 +32,13 @@ class ChatRequest(BaseModel):
         None, description="Specific tools to enable for this request"
     )
 
+
 class SessionCreateRequest(BaseModel):
     """Request model for creating a new chat session."""
 
     title: str = Field(..., description="Session title")
     metadata: dict | None = Field(None, description="Session metadata")
+
 
 class CreateMessageRequest(BaseModel):
     """Request model for creating a message in a session."""
@@ -43,7 +46,9 @@ class CreateMessageRequest(BaseModel):
     content: str = Field(..., description="Message content")
     role: str = Field(default="user", description="Message role")
 
+
 # ===== Response Schemas =====
+
 
 class ChatResponse(BaseModel):
     """Chat API response for non-streaming requests."""
@@ -58,12 +63,14 @@ class ChatResponse(BaseModel):
         default_factory=datetime.utcnow, description="Response timestamp"
     )
 
+
 class ChatStreamChunk(BaseModel):
     """Individual chunk in a streaming response."""
 
     type: str = Field(..., description="Chunk type")
     content: str = Field(..., description="Chunk content")
     metadata: dict[str, Any] | None = Field(None, description="Chunk metadata")
+
 
 class SessionHistoryResponse(BaseModel):
     """Response for session history request."""

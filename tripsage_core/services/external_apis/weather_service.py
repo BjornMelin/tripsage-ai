@@ -7,13 +7,14 @@ forecasts, current conditions, and travel-specific weather analysis.
 
 import asyncio
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
 
 class WeatherServiceError(CoreAPIError):
     """Exception raised for weather service errors."""
@@ -26,6 +27,7 @@ class WeatherServiceError(CoreAPIError):
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
+
 
 class WeatherService:
     """Service for interacting with OpenWeatherMap API."""
@@ -785,8 +787,10 @@ class WeatherService:
         """Async context manager exit."""
         await self.close()
 
+
 # Global service instance
 _weather_service: WeatherService | None = None
+
 
 async def get_weather_service() -> WeatherService:
     """
@@ -802,6 +806,7 @@ async def get_weather_service() -> WeatherService:
         await _weather_service.connect()
 
     return _weather_service
+
 
 async def close_weather_service() -> None:
     """Close the global weather service instance."""

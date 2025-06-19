@@ -32,6 +32,7 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
+
 class TestApiKeyPerformance:
     """Performance tests for API key service operations."""
 

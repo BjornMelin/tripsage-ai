@@ -1,8 +1,9 @@
 """
 Consolidated Database Service for TripSage Core.
 
-This module provides a unified, high-performance database service that consolidates
-all functionality from 7 previous database services into a single, maintainable solution.
+This module provides a unified, high-performance database service that
+consolidates all functionality from 7 previous database services into
+a single, maintainable solution.
 
 Key Features:
 - LIFO connection pooling with SQLAlchemy 2.0+ (pool_size=100, max_overflow=500)
@@ -22,10 +23,10 @@ import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, TypeVar
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import create_engine, event, pool, text
 from sqlalchemy.engine import Engine
 
@@ -38,7 +39,274 @@ from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 
+# Python 3.13 type parameters (PEP 695)
+type DatabaseResult[T] = dict[str, T] | list[dict[str, T]]
+type FilterDict = dict[str, Any]
+type MetricsDict = dict[str, Any | int | float]
+
+# Generic type variables for enhanced type safety
+T = TypeVar("T")
+ConfigT = TypeVar("ConfigT", bound="DatabasePoolConfig")
+ResultT = TypeVar("ResultT")
+
 logger = logging.getLogger(__name__)
+
+
+# Configuration Classes using Pydantic 2.x
+
+
+class DatabasePoolConfig(BaseModel):
+    """Configuration for database connection pooling."""
+
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    pool_size: int = Field(
+        default=100,
+        description="Number of connections to maintain in pool",
+        ge=1,
+        le=1000,
+    )
+    max_overflow: int = Field(
+        default=500, description="Maximum overflow connections allowed", ge=0, le=2000
+    )
+    pool_use_lifo: bool = Field(
+        default=True,
+        description="Use LIFO connection strategy for better cache locality",
+    )
+    pool_pre_ping: bool = Field(
+        default=True, description="Enable connection validation before use"
+    )
+    pool_recycle: int = Field(
+        default=3600,
+        description="Connection recycle time in seconds",
+        ge=300,
+        le=86400,  # 24 hours max
+    )
+    pool_timeout: float = Field(
+        default=30.0,
+        description="Timeout for getting connection from pool in seconds",
+        gt=0.0,
+        le=300.0,
+    )
+
+    @field_validator("pool_size")
+    @classmethod
+    def validate_pool_size(cls, v):
+        if v <= 0:
+            raise ValueError("Pool size must be positive")
+        return v
+
+    @field_validator("pool_timeout")
+    @classmethod
+    def validate_pool_timeout(cls, v):
+        if v <= 0:
+            raise ValueError("Timeout must be positive")
+        return v
+
+
+class DatabaseMonitoringConfig(BaseModel):
+    """Configuration for database monitoring and metrics."""
+
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    enable_monitoring: bool = Field(
+        default=True, description="Enable comprehensive monitoring"
+    )
+    enable_metrics: bool = Field(
+        default=True, description="Enable Prometheus metrics collection"
+    )
+    enable_query_tracking: bool = Field(
+        default=True, description="Track individual query performance"
+    )
+    slow_query_threshold: float = Field(
+        default=1.0,
+        description="Threshold in seconds for slow query detection",
+        gt=0.0,
+        le=60.0,
+    )
+
+    @field_validator("slow_query_threshold")
+    @classmethod
+    def validate_slow_query_threshold(cls, v):
+        if v <= 0:
+            raise ValueError("Slow query threshold must be positive")
+        return v
+
+
+class DatabaseSecurityConfig(BaseModel):
+    """Configuration for database security features."""
+
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    enable_security: bool = Field(default=True, description="Enable security features")
+    enable_rate_limiting: bool = Field(default=True, description="Enable rate limiting")
+    enable_audit_logging: bool = Field(
+        default=True, description="Enable audit logging for compliance"
+    )
+    rate_limit_requests: int = Field(
+        default=1000, description="Requests per minute limit", ge=1, le=100000
+    )
+    rate_limit_burst: int = Field(
+        default=2000, description="Burst limit for rate limiting", ge=1, le=200000
+    )
+
+    @field_validator("rate_limit_burst")
+    @classmethod
+    def validate_rate_limit_burst(cls, v, info):
+        if "rate_limit_requests" in info.data and v < info.data["rate_limit_requests"]:
+            raise ValueError("Rate limit burst must be >= rate_limit_requests")
+        return v
+
+
+class DatabasePerformanceConfig(BaseModel):
+    """Configuration for database performance features."""
+
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    enable_read_replicas: bool = Field(
+        default=True, description="Enable read replica support"
+    )
+    enable_circuit_breaker: bool = Field(
+        default=True, description="Enable circuit breaker pattern"
+    )
+    circuit_breaker_threshold: int = Field(
+        default=5, description="Failures before circuit breaker opens", ge=1, le=100
+    )
+    circuit_breaker_timeout: float = Field(
+        default=60.0,
+        description="Circuit breaker timeout in seconds",
+        gt=0.0,
+        le=3600.0,
+    )
+
+    @field_validator("circuit_breaker_threshold")
+    @classmethod
+    def validate_circuit_breaker_threshold(cls, v):
+        if v <= 0:
+            raise ValueError("Circuit breaker threshold must be positive")
+        return v
+
+    @field_validator("circuit_breaker_timeout")
+    @classmethod
+    def validate_circuit_breaker_timeout(cls, v):
+        if v <= 0:
+            raise ValueError("Circuit breaker timeout must be positive")
+        return v
+
+
+class DatabaseConfig(BaseModel):
+    """Main database configuration combining all sub-configurations."""
+
+    model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
+
+    pool: DatabasePoolConfig = Field(
+        default_factory=DatabasePoolConfig, description="Connection pool configuration"
+    )
+    monitoring: DatabaseMonitoringConfig = Field(
+        default_factory=DatabaseMonitoringConfig,
+        description="Monitoring and metrics configuration",
+    )
+    security: DatabaseSecurityConfig = Field(
+        default_factory=DatabaseSecurityConfig, description="Security configuration"
+    )
+    performance: DatabasePerformanceConfig = Field(
+        default_factory=DatabasePerformanceConfig,
+        description="Performance configuration",
+    )
+
+    @classmethod
+    def create_default(cls) -> "DatabaseConfig":
+        """Create default production-ready configuration."""
+        return cls()
+
+    @classmethod
+    def create_production(cls) -> "DatabaseConfig":
+        """Create production-optimized configuration."""
+        return cls(
+            pool=DatabasePoolConfig(
+                pool_size=100, max_overflow=500, pool_use_lifo=True, pool_recycle=3600
+            ),
+            monitoring=DatabaseMonitoringConfig(
+                enable_monitoring=True,
+                enable_metrics=True,
+                enable_query_tracking=True,
+                slow_query_threshold=1.0,
+            ),
+            security=DatabaseSecurityConfig(
+                enable_security=True,
+                enable_rate_limiting=True,
+                enable_audit_logging=True,
+                rate_limit_requests=1000,
+                rate_limit_burst=2000,
+            ),
+            performance=DatabasePerformanceConfig(
+                enable_read_replicas=True,
+                enable_circuit_breaker=True,
+                circuit_breaker_threshold=5,
+                circuit_breaker_timeout=60.0,
+            ),
+        )
+
+    @classmethod
+    def create_development(cls) -> "DatabaseConfig":
+        """Create development-friendly configuration."""
+        return cls(
+            pool=DatabasePoolConfig(
+                pool_size=10, max_overflow=20, pool_use_lifo=True, pool_recycle=1800
+            ),
+            monitoring=DatabaseMonitoringConfig(
+                enable_monitoring=True,
+                enable_metrics=True,
+                enable_query_tracking=True,
+                slow_query_threshold=0.5,
+            ),
+            security=DatabaseSecurityConfig(
+                enable_security=True,
+                enable_rate_limiting=False,  # More permissive for dev
+                enable_audit_logging=False,
+                rate_limit_requests=10000,
+                rate_limit_burst=20000,
+            ),
+            performance=DatabasePerformanceConfig(
+                enable_read_replicas=False,  # Simpler for dev
+                enable_circuit_breaker=True,
+                circuit_breaker_threshold=10,
+                circuit_breaker_timeout=30.0,
+            ),
+        )
+
+    @classmethod
+    def create_testing(cls) -> "DatabaseConfig":
+        """Create test-optimized configuration."""
+        return cls(
+            pool=DatabasePoolConfig(
+                pool_size=5,
+                max_overflow=10,
+                pool_use_lifo=False,  # Deterministic for tests
+                pool_recycle=300,
+                pool_timeout=10.0,
+            ),
+            monitoring=DatabaseMonitoringConfig(
+                enable_monitoring=False,  # Reduce noise in tests
+                enable_metrics=False,
+                enable_query_tracking=False,
+                slow_query_threshold=5.0,  # More lenient for tests
+            ),
+            security=DatabaseSecurityConfig(
+                enable_security=False,  # Permissive for tests
+                enable_rate_limiting=False,
+                enable_audit_logging=False,
+                rate_limit_requests=100000,
+                rate_limit_burst=200000,
+            ),
+            performance=DatabasePerformanceConfig(
+                enable_read_replicas=False,
+                enable_circuit_breaker=False,  # Don't fail tests
+                circuit_breaker_threshold=100,
+                circuit_breaker_timeout=300.0,
+            ),
+        )
+
 
 class QueryType(Enum):
     """Database query operation types."""
@@ -57,6 +325,7 @@ class QueryType(Enum):
     WRITE = "WRITE"  # Generic write operation
     ANALYTICS = "ANALYTICS"  # Analytics queries
 
+
 class HealthStatus(Enum):
     """Database health status levels."""
 
@@ -64,6 +333,7 @@ class HealthStatus(Enum):
     WARNING = "warning"
     CRITICAL = "critical"
     UNKNOWN = "unknown"
+
 
 class SecurityEvent(Enum):
     """Security event types."""
@@ -75,6 +345,7 @@ class SecurityEvent(Enum):
     HIGH_ERROR_RATE = "high_error_rate"
     SQL_INJECTION_ATTEMPT = "sql_injection_attempt"
     UNAUTHORIZED_ACCESS = "unauthorized_access"
+
 
 class QueryMetrics(BaseModel):
     """Query execution metrics."""
@@ -88,6 +359,7 @@ class QueryMetrics(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: str | None = None
     replica_id: str | None = None
+
 
 class ConnectionStats(BaseModel):
     """Connection pool statistics."""
@@ -104,6 +376,7 @@ class ConnectionStats(BaseModel):
     avg_query_time_ms: float = 0
     pool_utilization: float = 0
 
+
 class SecurityAlert(BaseModel):
     """Security alert information."""
 
@@ -115,6 +388,7 @@ class SecurityAlert(BaseModel):
     user_id: str | None = None
     ip_address: str | None = None
     action_taken: str | None = None
+
 
 class DatabaseService:
     """
@@ -133,34 +407,35 @@ class DatabaseService:
     def __init__(
         self,
         settings: Settings | None = None,
-        # Connection pooling configuration
-        pool_size: int = 100,  # As per research recommendations
-        max_overflow: int = 500,  # As per research recommendations
-        pool_use_lifo: bool = True,  # LIFO for better cache locality
-        pool_pre_ping: bool = True,  # Connection validation
-        pool_recycle: int = 3600,  # Recycle connections after 1 hour
-        pool_timeout: float = 30.0,  # Connection timeout
-        # Monitoring configuration
-        enable_monitoring: bool = True,
-        enable_metrics: bool = True,
-        enable_query_tracking: bool = True,
-        slow_query_threshold: float = 1.0,  # seconds
-        # Security configuration
-        enable_security: bool = True,
-        enable_rate_limiting: bool = True,
-        enable_audit_logging: bool = True,
-        rate_limit_requests: int = 1000,  # per minute
-        rate_limit_burst: int = 2000,
-        # Performance configuration
-        enable_read_replicas: bool = True,
-        enable_circuit_breaker: bool = True,
-        circuit_breaker_threshold: int = 5,  # failures before opening
-        circuit_breaker_timeout: float = 60.0,  # seconds before retry
+        config: DatabaseConfig | None = None,
+        # Legacy parameters for backward compatibility
+        pool_size: int | None = None,
+        max_overflow: int | None = None,
+        pool_use_lifo: bool | None = None,
+        pool_pre_ping: bool | None = None,
+        pool_recycle: int | None = None,
+        pool_timeout: float | None = None,
+        enable_monitoring: bool | None = None,
+        enable_metrics: bool | None = None,
+        enable_query_tracking: bool | None = None,
+        slow_query_threshold: float | None = None,
+        enable_security: bool | None = None,
+        enable_rate_limiting: bool | None = None,
+        enable_audit_logging: bool | None = None,
+        rate_limit_requests: int | None = None,
+        rate_limit_burst: int | None = None,
+        enable_read_replicas: bool | None = None,
+        enable_circuit_breaker: bool | None = None,
+        circuit_breaker_threshold: int | None = None,
+        circuit_breaker_timeout: float | None = None,
     ):
         """Initialize the consolidated database service.
 
         Args:
             settings: Application settings
+            config: DatabaseConfig object (preferred approach)
+
+            # Legacy parameters (deprecated - use config object instead)
             pool_size: Number of connections to maintain in pool
             max_overflow: Maximum overflow connections allowed
             pool_use_lifo: Use LIFO connection strategy
@@ -183,24 +458,55 @@ class DatabaseService:
         """
         self.settings = settings or get_settings()
 
-        # Connection pooling configuration
-        self.pool_size = pool_size
-        self.max_overflow = max_overflow
-        self.pool_use_lifo = pool_use_lifo
-        self.pool_pre_ping = pool_pre_ping
-        self.pool_recycle = pool_recycle
-        self.pool_timeout = pool_timeout
+        # Initialize configuration using config object or legacy parameters
+        self._config = self._initialize_config(
+            config=config,
+            pool_size=pool_size,
+            max_overflow=max_overflow,
+            pool_use_lifo=pool_use_lifo,
+            pool_pre_ping=pool_pre_ping,
+            pool_recycle=pool_recycle,
+            pool_timeout=pool_timeout,
+            enable_monitoring=enable_monitoring,
+            enable_metrics=enable_metrics,
+            enable_query_tracking=enable_query_tracking,
+            slow_query_threshold=slow_query_threshold,
+            enable_security=enable_security,
+            enable_rate_limiting=enable_rate_limiting,
+            enable_audit_logging=enable_audit_logging,
+            rate_limit_requests=rate_limit_requests,
+            rate_limit_burst=rate_limit_burst,
+            enable_read_replicas=enable_read_replicas,
+            enable_circuit_breaker=enable_circuit_breaker,
+            circuit_breaker_threshold=circuit_breaker_threshold,
+            circuit_breaker_timeout=circuit_breaker_timeout,
+        )
 
-        # Feature flags
-        self.enable_monitoring = enable_monitoring
-        self.enable_metrics = enable_metrics
-        self.enable_query_tracking = enable_query_tracking
-        self.slow_query_threshold = slow_query_threshold
-        self.enable_security = enable_security
-        self.enable_rate_limiting = enable_rate_limiting
-        self.enable_audit_logging = enable_audit_logging
-        self.enable_read_replicas = enable_read_replicas
-        self.enable_circuit_breaker = enable_circuit_breaker
+        # Expose configuration values as instance attributes for compatibility
+        self.pool_size = self._config.pool.pool_size
+        self.max_overflow = self._config.pool.max_overflow
+        self.pool_use_lifo = self._config.pool.pool_use_lifo
+        self.pool_pre_ping = self._config.pool.pool_pre_ping
+        self.pool_recycle = self._config.pool.pool_recycle
+        self.pool_timeout = self._config.pool.pool_timeout
+
+        self.enable_monitoring = self._config.monitoring.enable_monitoring
+        self.enable_metrics = self._config.monitoring.enable_metrics
+        self.enable_query_tracking = self._config.monitoring.enable_query_tracking
+        self.slow_query_threshold = self._config.monitoring.slow_query_threshold
+
+        self.enable_security = self._config.security.enable_security
+        self.enable_rate_limiting = self._config.security.enable_rate_limiting
+        self.enable_audit_logging = self._config.security.enable_audit_logging
+        self.rate_limit_requests = self._config.security.rate_limit_requests
+        self.rate_limit_burst = self._config.security.rate_limit_burst
+
+        self.enable_read_replicas = self._config.performance.enable_read_replicas
+        self.enable_circuit_breaker = self._config.performance.enable_circuit_breaker
+        self.circuit_breaker_threshold = (
+            self._config.performance.circuit_breaker_threshold
+        )
+        self.circuit_breaker_timeout = self._config.performance.circuit_breaker_timeout
 
         # Service state
         self._supabase_client: Client | None = None
@@ -212,30 +518,150 @@ class DatabaseService:
         self._query_metrics: list[QueryMetrics] = []
         self._security_alerts: list[SecurityAlert] = []
         self._connection_stats = ConnectionStats(
-            pool_size=pool_size, max_overflow=max_overflow
+            pool_size=self.pool_size, max_overflow=self.max_overflow
         )
 
         # Circuit breaker state
         self._circuit_breaker_failures = 0
         self._circuit_breaker_last_failure = 0
         self._circuit_breaker_open = False
-        self.circuit_breaker_threshold = circuit_breaker_threshold
-        self.circuit_breaker_timeout = circuit_breaker_timeout
 
         # Rate limiting state
         self._rate_limit_window = {}  # user_id -> (count, window_start)
-        self.rate_limit_requests = rate_limit_requests
-        self.rate_limit_burst = rate_limit_burst
 
         # Initialize metrics if enabled
         self._metrics = None
-        if enable_metrics:
+        if self.enable_metrics:
             self._initialize_metrics()
 
         logger.info(
             f"Consolidated Database Service initialized with "
-            f"pool_size={pool_size}, max_overflow={max_overflow}, "
-            f"LIFO={'enabled' if pool_use_lifo else 'disabled'}"
+            f"pool_size={self.pool_size}, max_overflow={self.max_overflow}, "
+            f"LIFO={'enabled' if self.pool_use_lifo else 'disabled'}"
+        )
+
+    def _initialize_config(
+        self, config: DatabaseConfig | None = None, **legacy_params
+    ) -> DatabaseConfig:
+        """Initialize configuration from config object or legacy parameters.
+
+        Args:
+            config: DatabaseConfig object if provided
+            **legacy_params: Legacy parameter values for backward compatibility
+
+        Returns:
+            DatabaseConfig object
+        """
+        if config is not None:
+            # Use provided config object
+            return config
+
+        # Check if any legacy parameters were provided
+        provided_params = {k: v for k, v in legacy_params.items() if v is not None}
+
+        if not provided_params:
+            # No parameters provided, use default configuration
+            return DatabaseConfig.create_default()
+
+        # Build configuration from legacy parameters
+        pool_config_params = {}
+        monitoring_config_params = {}
+        security_config_params = {}
+        performance_config_params = {}
+
+        # Map legacy parameters to config structures
+        if legacy_params.get("pool_size") is not None:
+            pool_config_params["pool_size"] = legacy_params["pool_size"]
+        if legacy_params.get("max_overflow") is not None:
+            pool_config_params["max_overflow"] = legacy_params["max_overflow"]
+        if legacy_params.get("pool_use_lifo") is not None:
+            pool_config_params["pool_use_lifo"] = legacy_params["pool_use_lifo"]
+        if legacy_params.get("pool_pre_ping") is not None:
+            pool_config_params["pool_pre_ping"] = legacy_params["pool_pre_ping"]
+        if legacy_params.get("pool_recycle") is not None:
+            pool_config_params["pool_recycle"] = legacy_params["pool_recycle"]
+        if legacy_params.get("pool_timeout") is not None:
+            pool_config_params["pool_timeout"] = legacy_params["pool_timeout"]
+
+        if legacy_params.get("enable_monitoring") is not None:
+            monitoring_config_params["enable_monitoring"] = legacy_params[
+                "enable_monitoring"
+            ]
+        if legacy_params.get("enable_metrics") is not None:
+            monitoring_config_params["enable_metrics"] = legacy_params["enable_metrics"]
+        if legacy_params.get("enable_query_tracking") is not None:
+            monitoring_config_params["enable_query_tracking"] = legacy_params[
+                "enable_query_tracking"
+            ]
+        if legacy_params.get("slow_query_threshold") is not None:
+            monitoring_config_params["slow_query_threshold"] = legacy_params[
+                "slow_query_threshold"
+            ]
+
+        if legacy_params.get("enable_security") is not None:
+            security_config_params["enable_security"] = legacy_params["enable_security"]
+        if legacy_params.get("enable_rate_limiting") is not None:
+            security_config_params["enable_rate_limiting"] = legacy_params[
+                "enable_rate_limiting"
+            ]
+        if legacy_params.get("enable_audit_logging") is not None:
+            security_config_params["enable_audit_logging"] = legacy_params[
+                "enable_audit_logging"
+            ]
+        if legacy_params.get("rate_limit_requests") is not None:
+            security_config_params["rate_limit_requests"] = legacy_params[
+                "rate_limit_requests"
+            ]
+        if legacy_params.get("rate_limit_burst") is not None:
+            security_config_params["rate_limit_burst"] = legacy_params[
+                "rate_limit_burst"
+            ]
+
+        if legacy_params.get("enable_read_replicas") is not None:
+            performance_config_params["enable_read_replicas"] = legacy_params[
+                "enable_read_replicas"
+            ]
+        if legacy_params.get("enable_circuit_breaker") is not None:
+            performance_config_params["enable_circuit_breaker"] = legacy_params[
+                "enable_circuit_breaker"
+            ]
+        if legacy_params.get("circuit_breaker_threshold") is not None:
+            performance_config_params["circuit_breaker_threshold"] = legacy_params[
+                "circuit_breaker_threshold"
+            ]
+        if legacy_params.get("circuit_breaker_timeout") is not None:
+            performance_config_params["circuit_breaker_timeout"] = legacy_params[
+                "circuit_breaker_timeout"
+            ]
+
+        # Create sub-configurations with provided parameters, using defaults for
+        # missing ones
+        pool_config = (
+            DatabasePoolConfig(**pool_config_params)
+            if pool_config_params
+            else DatabasePoolConfig()
+        )
+        monitoring_config = (
+            DatabaseMonitoringConfig(**monitoring_config_params)
+            if monitoring_config_params
+            else DatabaseMonitoringConfig()
+        )
+        security_config = (
+            DatabaseSecurityConfig(**security_config_params)
+            if security_config_params
+            else DatabaseSecurityConfig()
+        )
+        performance_config = (
+            DatabasePerformanceConfig(**performance_config_params)
+            if performance_config_params
+            else DatabasePerformanceConfig()
+        )
+
+        return DatabaseConfig(
+            pool=pool_config,
+            monitoring=monitoring_config,
+            security=security_config,
+            performance=performance_config,
         )
 
     def _initialize_metrics(self):
@@ -501,34 +927,56 @@ class DatabaseService:
                 self._connection_stats.last_error = str(exception)
 
     async def _test_connections(self) -> None:
-        """Test both Supabase and SQLAlchemy connections."""
-        # Test Supabase connection
-        try:
-            await asyncio.to_thread(
-                lambda: self._supabase_client.table("users")
-                .select("id")
-                .limit(1)
-                .execute()
+        """
+        Test both Supabase and SQLAlchemy connections using TaskGroup for
+        concurrent execution.
+        """
+        # Python 3.13 TaskGroup for concurrent connection testing
+        async with asyncio.TaskGroup() as tg:
+            # Test Supabase connection concurrently
+            supabase_task = tg.create_task(
+                asyncio.to_thread(
+                    lambda: self._supabase_client.table("users")
+                    .select("id")
+                    .limit(1)
+                    .execute()
+                ),
+                name="supabase_connection_test",
             )
+
+            # Test SQLAlchemy connection concurrently if available
+            sqlalchemy_task = None
+            if self._sqlalchemy_engine:
+                sqlalchemy_task = tg.create_task(
+                    asyncio.to_thread(lambda: self._test_sqlalchemy_connection()),
+                    name="sqlalchemy_connection_test",
+                )
+
+        # Handle results with proper error context
+        try:
+            await supabase_task
             logger.debug("Supabase connection test passed")
         except Exception as e:
             raise CoreDatabaseError(
-                message=f"Supabase connection test failed: {str(e)}",
+                message=f"Supabase connection test failed: {e!s}",
                 code="SUPABASE_CONNECTION_TEST_FAILED",
             ) from e
 
-        # Test SQLAlchemy connection
-        if self._sqlalchemy_engine:
+        if sqlalchemy_task:
             try:
-                with self._sqlalchemy_engine.connect() as conn:
-                    result = conn.execute(text("SELECT 1"))
-                    result.scalar()
+                await sqlalchemy_task
                 logger.debug("SQLAlchemy connection test passed")
             except Exception as e:
                 raise CoreDatabaseError(
-                    message=f"SQLAlchemy connection test failed: {str(e)}",
+                    message=f"SQLAlchemy connection test failed: {e!s}",
                     code="SQLALCHEMY_CONNECTION_TEST_FAILED",
                 ) from e
+
+    def _test_sqlalchemy_connection(self) -> None:
+        """Helper method for SQLAlchemy connection testing."""
+        with self._sqlalchemy_engine.connect() as conn:
+            result = conn.execute(text("SELECT 1"))
+            result.scalar()
 
     async def close(self) -> None:
         """Close database connections and cleanup resources."""
@@ -602,7 +1050,8 @@ class DatabaseService:
         if self._circuit_breaker_failures >= self.circuit_breaker_threshold:
             self._circuit_breaker_open = True
             logger.warning(
-                f"Circuit breaker opened after {self._circuit_breaker_failures} failures"
+                f"Circuit breaker opened after {self._circuit_breaker_failures} "
+                "failures"
             )
 
     # Rate limiting implementation
@@ -719,7 +1168,9 @@ class DatabaseService:
                         alert = SecurityAlert(
                             event_type=SecurityEvent.SLOW_QUERY_DETECTED,
                             severity="low",
-                            message=f"Slow query detected: {query_type.value} on {table}",
+                            message=(
+                                f"Slow query detected: {query_type.value} on {table}"
+                            ),
                             details={
                                 "query_type": query_type.value,
                                 "table": table,
@@ -774,12 +1225,12 @@ class DatabaseService:
 
     # Core database operations
 
-    async def insert(
+    async def insert[T](
         self,
         table: str,
         data: dict[str, Any] | list[dict[str, Any]],
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> DatabaseResult[T]:
         """Insert data into table with monitoring and security."""
         await self.ensure_connected()
 
@@ -809,16 +1260,16 @@ class DatabaseService:
                     details={"error": str(e)},
                 ) from e
 
-    async def select(
+    async def select[T](
         self,
         table: str,
         columns: str = "*",
-        filters: dict[str, Any] | None = None,
+        filters: FilterDict | None = None,
         order_by: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
         user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> DatabaseResult[T]:
         """Select data from table with monitoring."""
         await self.ensure_connected()
 
@@ -1042,7 +1493,10 @@ class DatabaseService:
                         # Add similarity threshold if provided
                         if similarity_threshold:
                             distance_threshold = 1 - similarity_threshold
-                            sql += f" AND ({vector_column} <-> {vector_str}::vector) < {distance_threshold}"
+                            sql += (
+                                f" AND ({vector_column} <-> {vector_str}::vector) < "
+                                f"{distance_threshold}"
+                            )
 
                         # Add filters
                         params = {}
@@ -1052,7 +1506,10 @@ class DatabaseService:
                                 params[f"param_{i}"] = value
 
                         # Order by similarity and limit
-                        sql += f" ORDER BY {vector_column} <-> {vector_str}::vector LIMIT {limit}"
+                        sql += (
+                            f" ORDER BY {vector_column} <-> {vector_str}::vector "
+                            f"LIMIT {limit}"
+                        )
 
                         # Execute query
                         result = conn.execute(text(sql), params)
@@ -1716,10 +2173,13 @@ class DatabaseService:
 
         except Exception as e:
             logger.error(
-                f"Failed to get trip collaborator for trip {trip_id}, user {user_id}: {e}"
+                f"Failed to get trip collaborator for trip {trip_id}, "
+                f"user {user_id}: {e}"
             )
             raise CoreDatabaseError(
-                message=f"Failed to get collaborator for trip {trip_id} and user {user_id}",
+                message=(
+                    f"Failed to get collaborator for trip {trip_id} and user {user_id}"
+                ),
                 code="GET_COLLABORATOR_FAILED",
                 operation="GET_TRIP_COLLABORATOR",
                 table="trip_collaborators",
@@ -1946,7 +2406,8 @@ class DatabaseService:
         # In a real implementation, this would write to an audit log table
         logger.info(
             f"AUDIT: user={user_id}, action={action}, table={table}, "
-            f"records={records_affected}, timestamp={datetime.now(timezone.utc).isoformat()}"
+            f"records={records_affected}, "
+            f"timestamp={datetime.now(timezone.utc).isoformat()}"
         )
 
     def _get_queries_by_type(self) -> dict[str, int]:
@@ -2026,8 +2487,10 @@ class DatabaseService:
         self._security_alerts.clear()
         logger.info("Metrics and alerts cleared")
 
+
 # Global database service instance
 _database_service: DatabaseService | None = None
+
 
 async def get_database_service() -> DatabaseService:
     """Get the global database service instance.
@@ -2042,6 +2505,7 @@ async def get_database_service() -> DatabaseService:
         await _database_service.connect()
 
     return _database_service
+
 
 async def close_database_service() -> None:
     """Close the global database service instance."""

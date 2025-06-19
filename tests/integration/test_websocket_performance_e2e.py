@@ -21,6 +21,7 @@ from fastapi.testclient import TestClient
 from tripsage.api.main import app
 from tripsage.api.routers.websocket import PerformanceConfig
 
+
 class TestWebSocketPerformanceE2E:
     """End-to-end WebSocket performance tests."""
 
@@ -228,7 +229,7 @@ class TestWebSocketPerformanceE2E:
                     try:
                         resp = websocket.receive_json(timeout=0.1)
                         responses.append(resp)
-                    except:
+                    except (TimeoutError, ConnectionError, Exception):
                         break
 
                 # All messages should be processed quickly
@@ -303,7 +304,7 @@ class TestWebSocketPerformanceE2E:
                         if response.get("type") == "connection.pong":
                             pong_received = True
                             break
-                    except:
+                    except Exception:
                         continue
 
                 assert pong_received, "No pong response received"
@@ -350,7 +351,7 @@ class TestWebSocketPerformanceE2E:
                         # Check for rate limit response
                         if resp.get("type") == "rate_limit.exceeded":
                             break
-                    except:
+                    except Exception:
                         continue
 
                 # Should have received some responses
@@ -412,7 +413,7 @@ class TestWebSocketPerformanceE2E:
                         responses.append(
                             {"response": resp, "time": time.time() - start}
                         )
-                    except:
+                    except Exception:
                         continue
 
                 # Verify concurrent processing (responses should overlap in time)

@@ -6,7 +6,6 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from supabase import Client, create_client
 from tripsage_core.config import get_settings
@@ -16,6 +15,7 @@ settings = get_settings()
 
 # Migration directory
 MIGRATIONS_DIR = Path(__file__).parent.parent.parent.parent / "migrations"
+
 
 class MigrationRunner:
     """Handles database migrations using direct Supabase SQL execution."""
@@ -234,12 +234,14 @@ class MigrationRunner:
 
         return succeeded, failed
 
+
 async def run_migrations_cli(
     project_id: str | None = None, up_to: str | None = None, dry_run: bool = False
 ) -> tuple[int, int]:
     """CLI entry point for running migrations."""
     runner = MigrationRunner(project_id)
     return await runner.run_migrations(up_to=up_to, dry_run=dry_run)
+
 
 # Alias for backward compatibility
 run_migrations = run_migrations_cli

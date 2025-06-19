@@ -4,12 +4,12 @@ This module defines Pydantic models for WebSocket-related API requests and respo
 Consolidates both request and response schemas for WebSocket operations.
 """
 
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 # ===== Request Schemas =====
+
 
 class WebSocketAuthRequest(BaseModel):
     """WebSocket authentication request."""
@@ -20,6 +20,7 @@ class WebSocketAuthRequest(BaseModel):
         default_factory=list, description="Channels to subscribe to"
     )
 
+
 class WebSocketSubscribeRequest(BaseModel):
     """WebSocket channel subscription request."""
 
@@ -28,7 +29,9 @@ class WebSocketSubscribeRequest(BaseModel):
         default_factory=list, description="Channels to unsubscribe from"
     )
 
+
 # ===== Response Schemas =====
+
 
 class WebSocketAuthResponse(BaseModel):
     """WebSocket authentication response."""
@@ -43,6 +46,7 @@ class WebSocketAuthResponse(BaseModel):
     available_channels: list[str] = Field(
         default_factory=list, description="Available channels"
     )
+
 
 class WebSocketSubscribeResponse(BaseModel):
     """WebSocket channel subscription response."""

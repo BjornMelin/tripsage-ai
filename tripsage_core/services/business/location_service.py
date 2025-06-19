@@ -7,7 +7,7 @@ including geocoding, place search, directions, distance calculations, and timezo
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsServiceError,
@@ -17,10 +17,12 @@ from tripsage_core.utils.decorator_utils import with_error_handling
 
 logger = logging.getLogger(__name__)
 
+
 class LocationServiceError(Exception):
     """Raised when location service operations fail."""
 
     pass
+
 
 class LocationService:
     """Google Maps location service providing comprehensive geographic operations."""
@@ -243,8 +245,10 @@ class LocationService:
             logger.error(f"Timezone request failed for location {location}: {e}")
             raise LocationServiceError(f"Timezone request failed: {e}") from e
 
+
 # Singleton instance for global use
 location_service = LocationService()
+
 
 def get_location_service() -> LocationService:
     """Get the global location service instance.

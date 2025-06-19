@@ -17,6 +17,7 @@ from tripsage_core.utils.connection_utils import (
 
 logger = logging.getLogger(__name__)
 
+
 class DatabaseURLConverter:
     """
     Convert between Supabase HTTPS URLs and PostgreSQL connection strings.
@@ -247,6 +248,7 @@ class DatabaseURLConverter:
             self.logger.error(f"Validation failed: {e}")
             return False
 
+
 class DatabaseURLDetector:
     """
     Detect and classify database URLs for appropriate handling.
@@ -331,6 +333,7 @@ class DatabaseURLDetector:
         else:
             return "Unknown URL type - manual inspection required"
 
+
 # Convenience functions
 def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> str:
     """
@@ -346,6 +349,7 @@ def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> 
     """
     converter = DatabaseURLConverter()
     return converter.supabase_to_postgres(supabase_url, password, **kwargs)
+
 
 def detect_database_url_type(url: str) -> dict[str, any]:
     """

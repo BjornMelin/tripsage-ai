@@ -6,13 +6,13 @@ used across the application for consistent financial data handling.
 """
 
 from decimal import Decimal
-from typing import Optional
 
 from pydantic import Field, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
 from .enums import CurrencyCode
+
 
 class Currency(TripSageModel):
     """Currency information with metadata."""
@@ -21,6 +21,7 @@ class Currency(TripSageModel):
     symbol: str | None = Field(None, description="Currency symbol")
     name: str | None = Field(None, description="Currency name")
     decimal_places: int = Field(2, ge=0, le=4, description="Number of decimal places")
+
 
 class Price(TripSageModel):
     """Price with currency and optional breakdown."""
@@ -48,6 +49,7 @@ class Price(TripSageModel):
         new_amount = self.amount * exchange_rate
         return Price(amount=new_amount, currency=target_currency)
 
+
 class PriceRange(TripSageModel):
     """Price range with minimum and maximum values."""
 
@@ -73,6 +75,7 @@ class PriceRange(TripSageModel):
         """Calculate average price in the range."""
         avg_amount = (self.min_price.amount + self.max_price.amount) / 2
         return Price(amount=avg_amount, currency=self.min_price.currency)
+
 
 class PriceBreakdown(TripSageModel):
     """Detailed price breakdown with components."""
@@ -114,6 +117,7 @@ class PriceBreakdown(TripSageModel):
 
         return self
 
+
 class Budget(TripSageModel):
     """Budget allocation and tracking."""
 
@@ -121,9 +125,7 @@ class Budget(TripSageModel):
     allocated: Price | None = Field(None, description="Allocated amount")
     spent: Price | None = Field(None, description="Spent amount")
     remaining: Price | None = Field(None, description="Remaining amount")
-    categories: dict[str, Price] | None = Field(
-        None, description="Budget by category"
-    )
+    categories: dict[str, Price] | None = Field(None, description="Budget by category")
 
     @model_validator(mode="after")
     def validate_budget_currencies(self) -> "Budget":
@@ -172,6 +174,7 @@ class Budget(TripSageModel):
             return False
         return self.spent.amount > self.total_budget.amount
 
+
 class PaymentInfo(TripSageModel):
     """Payment information and metadata."""
 
@@ -180,6 +183,7 @@ class PaymentInfo(TripSageModel):
     transaction_id: str | None = Field(None, description="Transaction identifier")
     reference: str | None = Field(None, description="Payment reference")
     status: str | None = Field(None, description="Payment status")
+
 
 class ExchangeRate(TripSageModel):
     """Currency exchange rate information."""
@@ -204,6 +208,7 @@ class ExchangeRate(TripSageModel):
             source=self.source,
         )
 
+
 class TaxInfo(TripSageModel):
     """Tax information for prices."""
 
@@ -211,6 +216,7 @@ class TaxInfo(TripSageModel):
     rate: Decimal = Field(description="Tax rate as decimal (0.20 for 20%)", ge=0, le=1)
     amount: Price = Field(description="Tax amount")
     included: bool = Field(False, description="Whether tax is included in base price")
+
 
 class Deal(TripSageModel):
     """Deal or discount information."""

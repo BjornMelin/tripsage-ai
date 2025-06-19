@@ -4,9 +4,9 @@ This module defines Pydantic models for search-related API requests.
 """
 
 from datetime import date
-from typing import Optional, Union
 
 from pydantic import BaseModel, Field
+
 
 class SearchFilters(BaseModel):
     """Common search filters across all types."""
@@ -16,9 +16,7 @@ class SearchFilters(BaseModel):
     rating_min: float | None = Field(None, ge=0, le=5, description="Minimum rating")
 
     # Location filters
-    latitude: float | None = Field(
-        None, ge=-90, le=90, description="Center latitude"
-    )
+    latitude: float | None = Field(None, ge=-90, le=90, description="Center latitude")
     longitude: float | None = Field(
         None, ge=-180, le=180, description="Center longitude"
     )
@@ -27,9 +25,10 @@ class SearchFilters(BaseModel):
     )
 
     # Additional filters as key-value pairs
-    custom_filters: dict[str, str | int | float | bool | list[str]] | None = (
-        Field(None, description="Additional type-specific filters")
+    custom_filters: dict[str, str | int | float | bool | list[str]] | None = Field(
+        None, description="Additional type-specific filters"
     )
+
 
 class UnifiedSearchRequest(BaseModel):
     """Unified search request across multiple resource types."""

@@ -7,7 +7,7 @@ This module provides common fixtures and utilities used across all test suites.
 import asyncio
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -59,11 +59,13 @@ os.environ.update(
     }
 )
 
+
 @pytest.fixture(autouse=True)
 def mock_environment_variables():
     """Ensure environment variables are available for tests."""
     # Environment already set above, just yield
     yield os.environ
+
 
 # Mock MCP manager for use in tests
 @pytest.fixture
@@ -94,6 +96,7 @@ def mock_mcp_manager():
 
     with patch("tripsage.mcp_abstraction.manager.mcp_manager", manager):
         yield manager
+
 
 # Mock MCP registry for use in tests
 @pytest.fixture
@@ -126,6 +129,7 @@ def mock_mcp_registry():
     with patch("tripsage.mcp_abstraction.registry.registry", registry):
         yield registry
 
+
 # Mock MCP wrapper for use in tests
 @pytest.fixture
 def mock_mcp_wrapper():
@@ -136,6 +140,7 @@ def mock_mcp_wrapper():
     wrapper.shutdown = AsyncMock()
     yield wrapper
 
+
 # Common test data models
 class TestRequest(BaseModel):
     """Generic test request model."""
@@ -144,12 +149,14 @@ class TestRequest(BaseModel):
     limit: int = 10
     include_details: bool = False
 
+
 class TestResponse(BaseModel):
     """Generic test response model."""
 
     results: list[dict[str, Any]]
     total: int
     success: bool = True
+
 
 # Mock response fixtures
 @pytest.fixture
@@ -164,10 +171,12 @@ def mock_successful_response():
         success=True,
     )
 
+
 @pytest.fixture
 def mock_error_response():
     """Create an error mock response."""
     return TestResponse(results=[], total=0, success=False)
+
 
 # Async test utilities
 @pytest.fixture
@@ -176,6 +185,7 @@ def event_loop():
     loop = asyncio.new_event_loop()
     yield loop
     loop.close()
+
 
 # Common test utilities
 def assert_mcp_invoked(
@@ -193,11 +203,13 @@ def assert_mcp_invoked(
     if params:
         assert call_args[2] == params
 
+
 def create_mock_tool_response(data: Any, error: str | None = None):
     """Create a standardized tool response for testing."""
     if error:
         return {"error": error, "success": False}
     return {"data": data, "success": True}
+
 
 # WebOperationsCache fixture
 @pytest.fixture
@@ -225,6 +237,7 @@ def mock_web_operations_cache():
 
     with patch("tripsage.tools.web_tools.web_cache", cache):
         yield cache
+
 
 @pytest.fixture(autouse=True)
 def mock_settings_and_redis(monkeypatch):
@@ -275,6 +288,7 @@ def mock_settings_and_redis(monkeypatch):
             "settings": mock_settings,
             "redis": mock_redis_client,
         }
+
 
 # Clean up after tests
 @pytest.fixture(autouse=True)

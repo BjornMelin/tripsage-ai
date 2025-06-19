@@ -15,13 +15,14 @@ import time
 from collections import deque
 from datetime import datetime
 from enum import Enum
-from typing import Any, Deque, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
 
 class ConnectionState(str, Enum):
     """Enhanced connection state management."""
@@ -34,6 +35,7 @@ class ConnectionState(str, Enum):
     ERROR = "error"
     SUSPENDED = "suspended"
     DEGRADED = "degraded"
+
 
 class ConnectionHealth(BaseModel):
     """Connection health metrics."""
@@ -48,6 +50,7 @@ class ConnectionHealth(BaseModel):
     backpressure_active: bool = Field(description="Whether backpressure is active")
     dropped_messages: int = Field(description="Number of dropped messages")
 
+
 class ExponentialBackoffException(Exception):
     """Custom exception for exponential backoff failures."""
 
@@ -55,6 +58,7 @@ class ExponentialBackoffException(Exception):
         super().__init__(message)
         self.max_attempts = max_attempts
         self.last_delay = last_delay
+
 
 class MonitoredDeque(deque):
     """Deque that logs when items are dropped due to maxlen."""
@@ -86,6 +90,7 @@ class MonitoredDeque(deque):
                 f"Total dropped: {self.dropped_count}"
             )
         super().appendleft(item)
+
 
 class WebSocketConnection:
     """Enhanced WebSocket connection wrapper with health monitoring."""
@@ -585,6 +590,7 @@ class WebSocketConnection:
     def is_subscribed_to_channel(self, channel: str) -> bool:
         """Check if subscribed to a channel."""
         return channel in self.subscribed_channels
+
 
 class WebSocketConnectionService:
     """Service for managing individual WebSocket connections."""

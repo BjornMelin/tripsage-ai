@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage_core.models.db.user import User
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.business.memory_service_async import MemoryService
+
 
 class TestMemorySystemIntegration:
     """Test complete memory system integration across backend and frontend."""

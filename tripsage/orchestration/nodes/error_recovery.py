@@ -14,6 +14,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ErrorRecoveryNode(BaseAgentNode):
     """
     Sophisticated error handling and recovery node.

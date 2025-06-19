@@ -8,8 +8,8 @@ from across the application into a single, consistent system.
 
 import functools
 import traceback
-from typing import Any, Optional, TypeVar, Union
 from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 from fastapi import status
 from pydantic import BaseModel, Field
@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 # Type variables for generic functions
 T = TypeVar("T")
 R = TypeVar("R")
+
 
 class ErrorDetails(BaseModel):
     """Structured error details for enhanced debugging and logging."""
@@ -29,6 +30,7 @@ class ErrorDetails(BaseModel):
     additional_context: dict[str, Any] | None = Field(
         default_factory=dict, description="Additional context information"
     )
+
 
 class CoreTripSageError(Exception):
     """
@@ -95,6 +97,7 @@ class CoreTripSageError(Exception):
             f"status_code={self.status_code})"
         )
 
+
 # Authentication and Authorization Errors
 class CoreAuthenticationError(CoreTripSageError):
     """Raised when authentication fails."""
@@ -119,6 +122,7 @@ class CoreAuthenticationError(CoreTripSageError):
             details=details,
         )
 
+
 class CoreAuthorizationError(CoreTripSageError):
     """Raised when a user is not authorized to perform an action."""
 
@@ -141,6 +145,7 @@ class CoreAuthorizationError(CoreTripSageError):
             status_code=status.HTTP_403_FORBIDDEN,
             details=details,
         )
+
 
 class CoreSecurityError(CoreTripSageError):
     """Raised when a security violation or security-related error occurs."""
@@ -165,6 +170,7 @@ class CoreSecurityError(CoreTripSageError):
             details=details,
         )
 
+
 # Resource and Validation Errors
 class CoreResourceNotFoundError(CoreTripSageError):
     """Raised when a requested resource is not found."""
@@ -188,6 +194,7 @@ class CoreResourceNotFoundError(CoreTripSageError):
             status_code=status.HTTP_404_NOT_FOUND,
             details=details,
         )
+
 
 class CoreValidationError(CoreTripSageError):
     """Raised when input validation fails."""
@@ -233,6 +240,7 @@ class CoreValidationError(CoreTripSageError):
             details=details,
         )
 
+
 # Service and Infrastructure Errors
 class CoreServiceError(CoreTripSageError):
     """Raised when a service operation fails."""
@@ -268,6 +276,7 @@ class CoreServiceError(CoreTripSageError):
             details=details,
         )
 
+
 class CoreRateLimitError(CoreTripSageError):
     """Raised when a rate limit is exceeded."""
 
@@ -302,6 +311,7 @@ class CoreRateLimitError(CoreTripSageError):
             details=details,
         )
 
+
 class CoreKeyValidationError(CoreTripSageError):
     """Raised when a user-provided API key is invalid."""
 
@@ -335,6 +345,7 @@ class CoreKeyValidationError(CoreTripSageError):
             status_code=status.HTTP_400_BAD_REQUEST,
             details=details,
         )
+
 
 # Database and Storage Errors
 class CoreDatabaseError(CoreTripSageError):
@@ -374,6 +385,7 @@ class CoreDatabaseError(CoreTripSageError):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             details=details,
         )
+
 
 # External API and Integration Errors
 class CoreExternalAPIError(CoreTripSageError):
@@ -421,6 +433,7 @@ class CoreExternalAPIError(CoreTripSageError):
             details=details,
         )
 
+
 # Specialized MCP and Agent Errors
 class CoreMCPError(CoreServiceError):
     """Raised when an MCP server operation fails."""
@@ -467,6 +480,7 @@ class CoreMCPError(CoreServiceError):
             service=server,
         )
 
+
 class CoreAgentError(CoreServiceError):
     """Raised when an agent operation fails."""
 
@@ -505,6 +519,7 @@ class CoreAgentError(CoreServiceError):
             service=agent_type,
         )
 
+
 # Utility Functions
 def format_exception(exc: Exception) -> dict[str, Any]:
     """Format an exception into a standardized structure.
@@ -528,6 +543,7 @@ def format_exception(exc: Exception) -> dict[str, Any]:
             },
         }
 
+
 def create_error_response(
     exc: Exception, include_traceback: bool = False
 ) -> dict[str, Any]:
@@ -546,6 +562,7 @@ def create_error_response(
         error_data["details"].pop("traceback", None)
 
     return error_data
+
 
 def safe_execute(
     func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any
@@ -568,6 +585,7 @@ def safe_execute(
         if logger:
             logger.error(f"Error executing {func.__name__}: {e}")
         return fallback
+
 
 def with_error_handling(
     fallback: Any = None,
@@ -616,6 +634,7 @@ def with_error_handling(
 
     return decorator
 
+
 # Factory functions for common exceptions
 def create_authentication_error(
     message: str = "Authentication failed", details: dict[str, Any] | None = None
@@ -623,11 +642,13 @@ def create_authentication_error(
     """Create an authentication error with standard parameters."""
     return CoreAuthenticationError(message=message, details=details)
 
+
 def create_authorization_error(
     message: str = "Access denied", details: dict[str, Any] | None = None
 ) -> CoreAuthorizationError:
     """Create an authorization error with standard parameters."""
     return CoreAuthorizationError(message=message, details=details)
+
 
 def create_validation_error(
     message: str = "Validation failed", details: dict[str, Any] | None = None
@@ -635,11 +656,13 @@ def create_validation_error(
     """Create a validation error with standard parameters."""
     return CoreValidationError(message=message, details=details)
 
+
 def create_not_found_error(
     message: str = "Resource not found", details: dict[str, Any] | None = None
 ) -> CoreResourceNotFoundError:
     """Create a not found error with standard parameters."""
     return CoreResourceNotFoundError(message=message, details=details)
+
 
 # Export all exception classes and utilities
 __all__ = [

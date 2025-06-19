@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+
 
 class DatabaseDeployer:
     """Handles TripSage database schema deployment to Supabase."""
@@ -332,6 +332,7 @@ $$;
         self.save_deployment_log()
         return True
 
+
 def main():
     """Main deployment function."""
     import argparse
@@ -361,6 +362,7 @@ def main():
     success = deployer.deploy(args.target)
 
     return 0 if success else 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

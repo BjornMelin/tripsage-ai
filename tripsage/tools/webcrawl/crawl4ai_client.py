@@ -5,7 +5,7 @@ This module provides an adapter for the Crawl4AI MCP server to be used by TripSa
 agent tools.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -17,6 +17,7 @@ from tripsage_core.utils.logging_utils import get_logger
 settings = get_settings()
 
 logger = get_logger(__name__)
+
 
 class Crawl4AIClient:
     """Client adapter for the Crawl4AI MCP server."""
@@ -492,8 +493,10 @@ class Crawl4AIClient:
 
         return combined_result
 
+
 # Singleton instance
 crawl4ai_client = Crawl4AIClient()
+
 
 def get_client() -> Crawl4AIClient:
     """Get the singleton instance of the Crawl4AI client.

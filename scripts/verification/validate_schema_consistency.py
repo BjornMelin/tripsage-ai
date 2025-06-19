@@ -14,6 +14,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+
 @dataclass
 class SchemaIssue:
     """Represents a schema consistency issue."""
@@ -24,6 +25,7 @@ class SchemaIssue:
     description: str
     severity: str  # 'error', 'warning', 'info'
 
+
 @dataclass
 class TableDefinition:
     """Represents a parsed table definition."""
@@ -33,6 +35,7 @@ class TableDefinition:
     line_number: int
     columns: dict[str, str]  # column_name -> column_type
     foreign_keys: list[tuple[str, str]]  # (column, references)
+
 
 class SchemaValidator:
     """Validates PostgreSQL schema files for consistency."""
@@ -319,6 +322,7 @@ class SchemaValidator:
 
         return len(errors) == 0
 
+
 def main():
     """Main entry point."""
     # Determine schema directory
@@ -335,6 +339,7 @@ def main():
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()

@@ -17,6 +17,7 @@ from tripsage_core.infrastructure.resilience import (
     get_circuit_breaker_status,
 )
 
+
 class MockService:
     """Mock service that can simulate failures for testing circuit breakers."""
 
@@ -62,6 +63,7 @@ class MockService:
             else 0,
         }
 
+
 async def demonstrate_simple_mode():
     """Demonstrate circuit breaker in simple mode."""
     print("\n=== SIMPLE MODE DEMONSTRATION ===")
@@ -105,6 +107,7 @@ async def demonstrate_simple_mode():
 
     print(f"\nService stats: {service.get_stats()}")
     print(f"Circuit breaker stats: {breaker.metrics.get_summary()}")
+
 
 async def demonstrate_enterprise_mode():
     """Demonstrate circuit breaker in enterprise mode."""
@@ -168,6 +171,7 @@ async def demonstrate_enterprise_mode():
         print(f"Circuit breaker state: {breaker.get_state()}")
     else:
         print(f"Circuit breaker stats: {breaker.metrics.get_summary()}")
+
 
 async def demonstrate_recovery():
     """Demonstrate circuit breaker recovery in enterprise mode."""
@@ -243,6 +247,7 @@ async def demonstrate_recovery():
     if hasattr(breaker, "get_state"):
         print(f"Final circuit state: {breaker.get_state()}")
 
+
 async def main():
     """Run all demonstrations."""
     print("🔧 Configurable Circuit Breaker Demonstration")
@@ -263,6 +268,7 @@ async def main():
         import traceback
 
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -6,10 +6,10 @@ allowing users to share trips with others with different permission levels.
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class PermissionLevel(str, Enum):
     """Permission levels for trip collaborators.
@@ -22,6 +22,7 @@ class PermissionLevel(str, Enum):
     VIEW = "view"
     EDIT = "edit"
     ADMIN = "admin"
+
 
 class TripCollaboratorDB(BaseModel):
     """Database model for trip collaborators.
@@ -99,6 +100,7 @@ class TripCollaboratorDB(BaseModel):
 
         return current_level >= required_level_value
 
+
 class TripCollaboratorCreate(BaseModel):
     """Model for creating a new trip collaborator."""
 
@@ -145,6 +147,7 @@ class TripCollaboratorCreate(BaseModel):
         """Validate added_by user ID format."""
         # UUID validation is handled by pydantic, but we can add custom logic here
         return v
+
 
 class TripCollaboratorUpdate(BaseModel):
     """Model for updating an existing trip collaborator."""

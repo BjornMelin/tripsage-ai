@@ -23,6 +23,7 @@ from tripsage.orchestration.state import (
     update_state_timestamp,
 )
 
+
 class TestUserPreferences:
     """Test UserPreferences Pydantic model."""
 
@@ -76,6 +77,7 @@ class TestUserPreferences:
         with pytest.raises(ValidationError):
             UserPreferences(travel_style="invalid_style")
 
+
 class TestTravelDates:
     """Test TravelDates Pydantic model."""
 
@@ -109,6 +111,7 @@ class TestTravelDates:
         assert dates.departure_date == "2024-06-15"
         assert dates.return_date is None
         assert dates.flexible_dates is False
+
 
 class TestDestinationInfo:
     """Test DestinationInfo Pydantic model."""
@@ -148,6 +151,7 @@ class TestDestinationInfo:
         """Test DestinationInfo with invalid purpose."""
         with pytest.raises(ValidationError):
             DestinationInfo(purpose="invalid_purpose")
+
 
 class TestSearchResult:
     """Test SearchResult Pydantic model."""
@@ -203,6 +207,7 @@ class TestSearchResult:
                 status="invalid_status",
             )
 
+
 class TestBookingProgress:
     """Test BookingProgress Pydantic model."""
 
@@ -245,6 +250,7 @@ class TestBookingProgress:
         with pytest.raises(ValidationError):
             BookingProgress(status="invalid_status")
 
+
 class TestHandoffContext:
     """Test HandoffContext Pydantic model."""
 
@@ -285,6 +291,7 @@ class TestHandoffContext:
 
         assert context.additional_context == {}
 
+
 class TestErrorInfo:
     """Test ErrorInfo Pydantic model."""
 
@@ -316,6 +323,7 @@ class TestErrorInfo:
         assert error_info.last_error is None
         assert error_info.retry_attempts == {}
         assert error_info.error_history == []
+
 
 class TestToolCallInfo:
     """Test ToolCallInfo Pydantic model."""
@@ -371,6 +379,7 @@ class TestToolCallInfo:
                 parameters={},
                 status="invalid_status",
             )
+
 
 class TestTravelPlanningState:
     """Test TravelPlanningState TypedDict and related functions."""
@@ -451,6 +460,7 @@ class TestTravelPlanningState:
 
         assert updated_state["updated_at"] != original_timestamp
         assert updated_state is state  # Should modify in place
+
 
 class TestStateModels:
     """Test state model serialization and validation."""
@@ -555,6 +565,7 @@ class TestStateModels:
         assert handoff.routing_confidence == 0.9
         assert "extracted_entities" in handoff.additional_context
         assert handoff.additional_context["extracted_entities"]["origin"] == "NYC"
+
 
 class TestStateIntegration:
     """Integration tests for state management."""

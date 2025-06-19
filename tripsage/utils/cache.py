@@ -10,17 +10,13 @@ import functools
 import hashlib
 import json
 import time
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import (
     Any,
-    Dict,
-    List,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
-from collections.abc import AsyncIterator, Callable
 
 from pydantic import BaseModel, Field
 
@@ -38,12 +34,14 @@ F = TypeVar("F", bound=Callable[..., Any])
 # Global cache service instance
 _cache_service = None
 
+
 async def get_cache_instance():
     """Get the global cache service instance (DragonflyDB/Redis)."""
     global _cache_service
     if _cache_service is None:
         _cache_service = await get_cache_service()
     return _cache_service
+
 
 class CacheStats(BaseModel):
     """Cache statistics model."""
@@ -55,6 +53,7 @@ class CacheStats(BaseModel):
     deletes: int = Field(0, description="Number of cache deletes")
     key_count: int = Field(0, description="Number of keys in cache")
     size_mb: float = Field(0.0, description="Estimated cache size in MB")
+
 
 class InMemoryCache:
     """Simple in-memory cache implementation for single-instance deployments."""
@@ -112,6 +111,7 @@ class InMemoryCache:
             total = self._stats.hits + self._stats.misses
             self._stats.hit_ratio = self._stats.hits / total if total > 0 else 0.0
             return self._stats.model_copy()
+
 
 class DragonflyCache:
     """DragonflyDB-based cache implementation for distributed deployments."""
@@ -300,6 +300,7 @@ class DragonflyCache:
             logger.error(f"Error getting cache stats: {e}")
             return CacheStats()
 
+
 def generate_cache_key(
     prefix: str, query: str, args: list[Any] | None = None, **kwargs: Any
 ) -> str:
@@ -324,6 +325,7 @@ def generate_cache_key(
     query_hash = hash_obj.hexdigest()
 
     return f"{prefix}:{query_hash}"
+
 
 def cached(
     content_type: ContentType | str | None = None,
@@ -401,26 +403,32 @@ def cached(
 
     return decorator
 
+
 # Content-specific cache decorators
 def cached_realtime(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching realtime data (short TTL)."""
     return cached(content_type=ContentType.REALTIME, ttl=ttl or 60, **kwargs)
 
+
 def cached_time_sensitive(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching time-sensitive data."""
     return cached(content_type=ContentType.TIME_SENSITIVE, ttl=ttl or 300, **kwargs)
+
 
 def cached_daily(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching daily data."""
     return cached(content_type=ContentType.DAILY, ttl=ttl or 3600, **kwargs)
 
+
 def cached_semi_static(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching semi-static data."""
     return cached(content_type=ContentType.SEMI_STATIC, ttl=ttl or 28800, **kwargs)
 
+
 def cached_static(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching static data."""
     return cached(content_type=ContentType.STATIC, ttl=ttl or 86400, **kwargs)
+
 
 async def batch_cache_set(
     items: list[dict[str, Any]], namespace: str = "tripsage", use_redis: bool = True
@@ -486,6 +494,7 @@ async def batch_cache_set(
         logger.error(f"Batch cache set failed: {e}")
         return [False] * len(items)
 
+
 async def batch_cache_get(
     keys: list[str], namespace: str = "tripsage", use_redis: bool = True
 ) -> list[Any | None]:
@@ -533,6 +542,7 @@ async def batch_cache_get(
     except Exception as e:
         logger.error(f"Batch cache get failed: {e}")
         return [None] * len(keys)
+
 
 @asynccontextmanager
 async def cache_lock(
@@ -590,6 +600,7 @@ async def cache_lock(
             if current_value == lock_value:
                 await cache_service.delete(lock_key)
 
+
 # Create alias for backward compatibility
 RedisCache = DragonflyCache
 
@@ -597,10 +608,12 @@ RedisCache = DragonflyCache
 memory_cache = InMemoryCache()
 redis_cache = DragonflyCache()
 
+
 # Export convenience functions using DragonflyDB by default
 async def get_cache(key: str, namespace: str = "tripsage") -> Any | None:
     """Get a value from the cache (DragonflyDB by default)."""
     return await redis_cache.get(key)
+
 
 async def set_cache(
     key: str,
@@ -616,13 +629,16 @@ async def set_cache(
         ttl = get_ttl_for_content_type(content_type)
     return await redis_cache.set(key, value, ttl=ttl)
 
+
 async def delete_cache(key: str, namespace: str = "tripsage") -> bool:
     """Delete a value from the cache (DragonflyDB by default)."""
     return await redis_cache.delete(key)
 
+
 async def get_cache_stats() -> CacheStats:
     """Get cache statistics (DragonflyDB by default)."""
     return await redis_cache.get_stats()
+
 
 __all__ = [
     # Cache instances

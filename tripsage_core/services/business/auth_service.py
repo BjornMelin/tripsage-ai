@@ -13,8 +13,6 @@ Based on research from:
 - Performance optimization recommendations
 """
 
-from typing import Optional
-
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -22,6 +20,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from supabase import Client, create_client
 from tripsage_core.config import get_settings
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class TokenData(TripSageModel):
     """Token data extracted from Supabase JWT tokens."""
@@ -31,8 +30,10 @@ class TokenData(TripSageModel):
     role: str | None = None
     aud: str = "authenticated"
 
+
 # Security scheme for extracting Bearer tokens
 security = HTTPBearer()
+
 
 def get_supabase_client() -> Client:
     """
@@ -46,6 +47,7 @@ def get_supabase_client() -> Client:
         settings.database_url,
         settings.database_service_key.get_secret_value(),
     )
+
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
@@ -97,6 +99,7 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Token validation failed: {str(e)}",
         ) from e
+
 
 async def get_user_with_client(
     token_data: TokenData = Depends(get_current_user),

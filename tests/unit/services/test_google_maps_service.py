@@ -17,6 +17,7 @@ from tripsage_core.services.external_apis.google_maps_service import (
     get_google_maps_service,
 )
 
+
 class TestGoogleMapsService:
     """Test cases for GoogleMapsService."""
 
@@ -381,6 +382,7 @@ class TestGoogleMapsService:
         with pytest.raises(Exception, match="Unexpected error"):
             await google_maps_service.geocode("test address")
 
+
 class TestGoogleMapsServiceErrorException:
     """Test the GoogleMapsServiceError exception."""
 
@@ -393,6 +395,7 @@ class TestGoogleMapsServiceErrorException:
         """Test that GoogleMapsServiceError inherits from Exception."""
         error = GoogleMapsServiceError("Test error")
         assert isinstance(error, Exception)
+
 
 class TestAsyncToThreadIntegration:
     """Test async integration with blocking Google Maps client."""

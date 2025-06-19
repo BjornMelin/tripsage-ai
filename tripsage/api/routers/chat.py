@@ -5,7 +5,6 @@ chat service for clean separation of concerns.
 """
 
 import logging
-
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -19,6 +18,7 @@ from tripsage.api.schemas.chat import ChatRequest, ChatResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
 
 @router.post("/", response_model=ChatResponse)
 async def chat(
@@ -49,6 +49,7 @@ async def chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Chat request failed",
         ) from e
+
 
 @router.post("/sessions", response_model=dict)
 async def create_session(
@@ -83,6 +84,7 @@ async def create_session(
             detail="Session creation failed",
         ) from e
 
+
 @router.get("/sessions", response_model=list[dict])
 async def list_sessions(
     principal: RequiredPrincipalDep,
@@ -108,6 +110,7 @@ async def list_sessions(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session listing failed",
         ) from e
+
 
 @router.get("/sessions/{session_id}", response_model=dict)
 async def get_session(
@@ -145,6 +148,7 @@ async def get_session(
             detail="Session retrieval failed",
         ) from e
 
+
 @router.get("/sessions/{session_id}/messages", response_model=list[dict])
 async def get_session_messages(
     session_id: UUID,
@@ -174,6 +178,7 @@ async def get_session_messages(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message retrieval failed",
         ) from e
+
 
 @router.post("/sessions/{session_id}/messages", response_model=dict)
 async def create_message(
@@ -213,6 +218,7 @@ async def create_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message creation failed",
         ) from e
+
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(

@@ -14,6 +14,7 @@ Key principles:
 import pytest
 from fastapi import status
 
+
 class TestAccommodationRouterValidation:
     """Test suite focusing on validation behavior that works reliably."""
 
@@ -216,6 +217,7 @@ class TestAccommodationRouterValidation:
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
+
 class TestAccommodationRouterCoverageBasics:
     """Simple tests to improve coverage without complex model validation."""
 
@@ -257,6 +259,7 @@ class TestAccommodationRouterCoverageBasics:
         assert service_request.adults == 1
         assert service_request.min_price == 100.0
         assert service_request.max_price == 500.0
+
 
 class TestAccommodationRouterBehavior:
     """Test behavior that we can verify without complex service integration."""
@@ -356,7 +359,9 @@ class TestAccommodationRouterBehavior:
             service_request.children == 0
         )  # API doesn't provide children, so defaults to 0
 
+
 # === MODULE TESTS ===
+
 
 def test_accommodation_router_module_structure():
     """Test that the accommodation router module has expected structure."""

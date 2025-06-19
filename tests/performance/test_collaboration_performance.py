@@ -8,7 +8,6 @@ of collaboration-related database operations.
 import statistics
 import time
 from datetime import datetime, timedelta
-
 from uuid import uuid4
 
 import pytest
@@ -22,6 +21,7 @@ from tests.integration.conftest_supabase_schema import (
     create_test_memory_embedding,
     simulate_concurrent_access,
 )
+
 
 class CollaborationPerformanceTestSuite:
     """Performance test suite for collaboration features."""
@@ -468,6 +468,7 @@ class CollaborationPerformanceTestSuite:
             (user_id, trip_id, required_permission),
         )
 
+
 class PerformanceRegressionTests:
     """Tests to detect performance regressions."""
 
@@ -561,6 +562,7 @@ class PerformanceRegressionTests:
 
         logger = logging.getLogger(__name__)
         logger.info(f"Performance summary: {summary}")
+
 
 # Test configuration
 pytestmark = [

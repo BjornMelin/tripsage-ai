@@ -8,12 +8,13 @@ including search, booking, and management features.
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 # CabinClass enum moved to tripsage_core.models.schemas_common.enums
 from tripsage_core.models.schemas_common.enums import CabinClass
+
 
 class PassengerType(str, Enum):
     """Types of passengers."""
@@ -22,11 +23,13 @@ class PassengerType(str, Enum):
     CHILD = "child"
     INFANT_WITHOUT_SEAT = "infant_without_seat"
 
+
 class FareType(str, Enum):
     """Types of fares."""
 
     CONTRACT = "contract"
     PUBLISHED = "published"
+
 
 class OrderState(str, Enum):
     """Order states."""
@@ -35,12 +38,14 @@ class OrderState(str, Enum):
     CONFIRMED = "confirmed"
     CANCELLED = "cancelled"
 
+
 class PaymentType(str, Enum):
     """Payment types."""
 
     ARC_BSP_CASH = "arc_bsp_cash"
     BALANCE = "balance"
     CARD = "card"
+
 
 class Currency(BaseModel):
     """Currency representation."""
@@ -49,11 +54,13 @@ class Currency(BaseModel):
     name: str | None = None
     symbol: str | None = None
 
+
 class Location(BaseModel):
     """Geographic location."""
 
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
+
 
 class Airport(BaseModel):
     """Airport information model."""
@@ -73,6 +80,7 @@ class Airport(BaseModel):
     longitude: float | None = Field(None, ge=-180, le=180)
     time_zone: str | None = None
 
+
 class Airline(BaseModel):
     """Airline information model."""
 
@@ -86,6 +94,7 @@ class Airline(BaseModel):
     logo_url: HttpUrl | None = None
     logo_lockup_url: HttpUrl | None = None
 
+
 class Aircraft(BaseModel):
     """Aircraft information model."""
 
@@ -96,6 +105,7 @@ class Aircraft(BaseModel):
     iata_code: str
     icao_code: str | None = None
     name: str
+
 
 class Place(BaseModel):
     """Place (airport or city) information."""
@@ -109,6 +119,7 @@ class Place(BaseModel):
     city: dict[str, Any] | None = None
     airports: list[Airport] | None = None
 
+
 class Duration(BaseModel):
     """Duration representation."""
 
@@ -120,11 +131,13 @@ class Duration(BaseModel):
         """Get total duration in minutes."""
         return self.hours * 60 + self.minutes
 
+
 class Distance(BaseModel):
     """Distance representation."""
 
     value: float = Field(..., ge=0)
     unit: str = "km"
+
 
 class BaggageAllowance(BaseModel):
     """Baggage allowance information."""
@@ -134,6 +147,7 @@ class BaggageAllowance(BaseModel):
     quantity: int = Field(..., ge=0)
     weight: float | None = Field(None, ge=0)
     weight_unit: str | None = Field(None, pattern="^(kg|lb)$")
+
 
 class Segment(BaseModel):
     """Flight segment model."""
@@ -164,6 +178,7 @@ class Segment(BaseModel):
             f"{self.marketing_carrier.iata_code}{self.marketing_carrier_flight_number}"
         )
 
+
 class Slice(BaseModel):
     """Flight slice (one-way journey) model."""
 
@@ -183,6 +198,7 @@ class Slice(BaseModel):
         """Get number of stops."""
         return len(self.segments) - 1 if self.segments else 0
 
+
 class OfferSliceSegment(BaseModel):
     """Segment within an offer slice."""
 
@@ -193,6 +209,7 @@ class OfferSliceSegment(BaseModel):
     cabin_class_marketing_name: str | None = None
     fare_basis_code: str | None = None
 
+
 class OfferSlice(BaseModel):
     """Slice within an offer."""
 
@@ -201,6 +218,7 @@ class OfferSlice(BaseModel):
     slice: Slice
     segments: list[OfferSliceSegment]
     fare_brand_name: str | None = None
+
 
 class PriceBreakdown(BaseModel):
     """Price breakdown details."""
@@ -217,6 +235,7 @@ class PriceBreakdown(BaseModel):
         if v < 0:
             raise ValueError("Amount must be non-negative")
         return v
+
 
 class PassengerIdentity(BaseModel):
     """Passenger identity information."""
@@ -240,6 +259,7 @@ class PassengerIdentity(BaseModel):
             raise ValueError("Birth date cannot be in the future")
         return v
 
+
 class Passenger(BaseModel):
     """Passenger information model."""
 
@@ -251,6 +271,7 @@ class Passenger(BaseModel):
     family_name: str | None = None
     age: int | None = Field(None, ge=0, le=150)
     born_on: date | None = None
+
 
 class FlightOffer(BaseModel):
     """Flight offer model."""
@@ -283,10 +304,9 @@ class FlightOffer(BaseModel):
     available_services: list[dict[str, Any]] | None = None
 
     # TripSage extensions
-    score: float | None = Field(
-        None, ge=0, le=1, description="TripSage quality score"
-    )
+    score: float | None = Field(None, ge=0, le=1, description="TripSage quality score")
     user_preferences_match: dict[str, Any] | None = None
+
 
 class FlightOfferRequest(BaseModel):
     """Flight offer request model."""
@@ -309,6 +329,7 @@ class FlightOfferRequest(BaseModel):
     only_airlines: list[str] | None = None
     exclude_airlines: list[str] | None = None
 
+
 class OrderPassenger(BaseModel):
     """Passenger in an order."""
 
@@ -325,6 +346,7 @@ class OrderPassenger(BaseModel):
     email: str | None = None
     passenger_type: PassengerType = Field(..., alias="type")
 
+
 class OrderSlice(BaseModel):
     """Slice in an order."""
 
@@ -339,6 +361,7 @@ class OrderSlice(BaseModel):
     duration: str | None = None
     segments: list[dict[str, Any]]
 
+
 class Payment(BaseModel):
     """Payment information."""
 
@@ -349,6 +372,7 @@ class Payment(BaseModel):
     currency: str = Field(..., pattern="^[A-Z]{3}$")
     created_at: datetime | None = None
 
+
 class PaymentRequest(BaseModel):
     """Payment request for creating orders."""
 
@@ -357,6 +381,7 @@ class PaymentRequest(BaseModel):
     type: PaymentType = PaymentType.CARD
     amount: Decimal = Field(..., decimal_places=2)
     currency: str = Field(..., pattern="^[A-Z]{3}$")
+
 
 class Order(BaseModel):
     """Flight order model."""
@@ -392,6 +417,7 @@ class Order(BaseModel):
     conditions: dict[str, Any] | None = None
     metadata: dict[str, Any] | None = None
 
+
 class OrderCreateRequest(BaseModel):
     """Request to create an order."""
 
@@ -403,6 +429,7 @@ class OrderCreateRequest(BaseModel):
     payments: list[Payment]
     services: list[dict[str, Any]] | None = None
     metadata: dict[str, Any] | None = None
+
 
 class OrderCancellation(BaseModel):
     """Order cancellation model."""
@@ -419,6 +446,7 @@ class OrderCancellation(BaseModel):
     refund_amount: Decimal | None = Field(None, decimal_places=2)
     refund_currency: str | None = Field(None, pattern="^[A-Z]{3}$")
 
+
 class SeatMap(BaseModel):
     """Seat map model."""
 
@@ -430,6 +458,7 @@ class SeatMap(BaseModel):
     segment_id: str
     aircraft: Aircraft
     cabins: list[dict[str, Any]]
+
 
 class SearchParameters(BaseModel):
     """Flight search parameters."""

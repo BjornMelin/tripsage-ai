@@ -5,7 +5,7 @@ used across different storage backends.
 """
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field, field_validator, model_validator
 
@@ -15,6 +15,7 @@ from tripsage_core.models.schemas_common.enums import (
     BookingStatus,
     CancellationPolicy,
 )
+
 
 class Accommodation(TripSageModel):
     """Accommodation model for TripSage.

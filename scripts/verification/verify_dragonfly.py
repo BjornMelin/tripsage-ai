@@ -16,6 +16,7 @@ if __name__ == "__main__":
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 
+
 async def verify_dragonfly_connection():
     """Verify DragonflyDB is properly configured and accessible."""
     print("🔍 Verifying DragonflyDB Configuration...")
@@ -81,6 +82,7 @@ async def verify_dragonfly_connection():
         print("   3. Verify environment variables are set correctly")
         print("   4. Check docker logs: docker logs tripsage-dragonfly")
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(verify_dragonfly_connection())

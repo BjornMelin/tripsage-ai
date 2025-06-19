@@ -23,6 +23,7 @@ from tripsage_core.models.schemas_common.enums import (
     UserRole,
 )
 
+
 class BaseFactory:
     """Base factory with common utilities."""
 
@@ -40,6 +41,7 @@ class BaseFactory:
     def future_datetime(days: int = 30, hours: int = 0) -> datetime:
         """Generate a future datetime for testing."""
         return datetime.now(timezone.utc) + timedelta(days=days, hours=hours)
+
 
 class UserFactory(BaseFactory):
     """Factory for creating test user data."""
@@ -81,6 +83,7 @@ class UserFactory(BaseFactory):
             )
             for i in range(1, count + 1)
         ]
+
 
 class TripFactory(BaseFactory):
     """Factory for creating test trip data."""
@@ -124,6 +127,7 @@ class TripFactory(BaseFactory):
         return cls.create(
             name="Family Vacation", travelers_count=4, budget=8000.00, **kwargs
         )
+
 
 class AccommodationFactory(BaseFactory):
     """Factory for creating test accommodation data."""
@@ -178,6 +182,7 @@ class AccommodationFactory(BaseFactory):
             **kwargs,
         )
 
+
 class FlightFactory(BaseFactory):
     """Factory for creating test flight data."""
 
@@ -228,6 +233,7 @@ class FlightFactory(BaseFactory):
             price=200.00,
             **kwargs,
         )
+
 
 class ChatFactory(BaseFactory):
     """Factory for creating test chat data."""
@@ -313,6 +319,7 @@ class ChatFactory(BaseFactory):
         }
         return {**defaults, **kwargs}
 
+
 class APIKeyFactory(BaseFactory):
     """Factory for creating test API key data."""
 
@@ -344,6 +351,7 @@ class APIKeyFactory(BaseFactory):
             )
             for i, service in enumerate(services)
         ]
+
 
 class SearchFactory(BaseFactory):
     """Factory for creating test search data."""
@@ -387,6 +395,7 @@ class SearchFactory(BaseFactory):
             "page": 1,
             "has_more": False,
         }
+
 
 class DestinationFactory(BaseFactory):
     """Factory for creating test destination data."""
@@ -455,6 +464,7 @@ class DestinationFactory(BaseFactory):
             "trip_id": None,
         }
         return {**defaults, **kwargs}
+
 
 class ItineraryFactory(BaseFactory):
     """Factory for creating test itinerary data."""
@@ -539,6 +549,7 @@ class ItineraryFactory(BaseFactory):
             "cost_saved": 500.0,
         }
         return {**defaults, **kwargs}
+
 
 class MemoryFactory(BaseFactory):
     """Factory for creating test memory data."""
@@ -629,6 +640,7 @@ class MemoryFactory(BaseFactory):
             "oldest_memory": cls.future_datetime(-30).isoformat(),
         }
         return {**defaults, **kwargs}
+
 
 class WebSocketFactory(BaseFactory):
     """Factory for creating test WebSocket data."""
@@ -751,6 +763,7 @@ class WebSocketFactory(BaseFactory):
             "last_updated": cls.future_datetime().isoformat(),
         }
         return {**defaults, **kwargs}
+
 
 # Export all factories
 __all__ = [

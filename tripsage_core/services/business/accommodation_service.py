@@ -9,7 +9,7 @@ provides clean abstractions over external services with proper data relationship
 import logging
 from datetime import date, datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field, field_validator
@@ -27,6 +27,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
+
 class PropertyType(str, Enum):
     """Property type enumeration."""
 
@@ -40,6 +41,7 @@ class PropertyType(str, Enum):
     GUEST_HOUSE = "guest_house"
     OTHER = "other"
 
+
 class BookingStatus(str, Enum):
     """Accommodation booking status enumeration."""
 
@@ -52,6 +54,7 @@ class BookingStatus(str, Enum):
     CANCELLED = "cancelled"
     COMPLETED = "completed"
 
+
 class CancellationPolicy(str, Enum):
     """Cancellation policy enumeration."""
 
@@ -62,6 +65,7 @@ class CancellationPolicy(str, Enum):
     FREE_CANCELLATION = "free_cancellation"
     NO_REFUND = "no_refund"
 
+
 class AccommodationAmenity(TripSageModel):
     """Accommodation amenity information."""
 
@@ -69,6 +73,7 @@ class AccommodationAmenity(TripSageModel):
     category: str | None = Field(None, description="Amenity category")
     icon: str | None = Field(None, description="Amenity icon identifier")
     description: str | None = Field(None, description="Amenity description")
+
 
 class AccommodationImage(TripSageModel):
     """Accommodation image information."""
@@ -80,6 +85,7 @@ class AccommodationImage(TripSageModel):
     )
     width: int | None = Field(None, description="Image width in pixels")
     height: int | None = Field(None, description="Image height in pixels")
+
 
 class AccommodationLocation(TripSageModel):
     """Accommodation location information."""
@@ -96,6 +102,7 @@ class AccommodationLocation(TripSageModel):
         None, description="Distance to city center in km"
     )
 
+
 class AccommodationHost(TripSageModel):
     """Accommodation host information."""
 
@@ -104,14 +111,13 @@ class AccommodationHost(TripSageModel):
     avatar_url: str | None = Field(None, description="Host avatar URL")
     rating: float | None = Field(None, ge=0, le=5, description="Host rating")
     review_count: int | None = Field(None, ge=0, description="Host review count")
-    response_rate: float | None = Field(
-        None, ge=0, le=1, description="Response rate"
-    )
+    response_rate: float | None = Field(None, ge=0, le=1, description="Response rate")
     response_time: str | None = Field(None, description="Response time")
     is_superhost: bool = Field(default=False, description="Whether host is a superhost")
     verification_badges: list[str] = Field(
         default_factory=list, description="Host verification badges"
     )
+
 
 class AccommodationSearchRequest(TripSageModel):
     """Request model for accommodation search."""
@@ -127,12 +133,8 @@ class AccommodationSearchRequest(TripSageModel):
     property_types: list[PropertyType] | None = Field(
         None, description="Preferred property types"
     )
-    min_price: float | None = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: float | None = Field(
-        None, ge=0, description="Maximum price per night"
-    )
+    min_price: float | None = Field(None, ge=0, description="Minimum price per night")
+    max_price: float | None = Field(None, ge=0, description="Maximum price per night")
     currency: str = Field(default="USD", description="Currency code")
 
     bedrooms: int | None = Field(
@@ -172,6 +174,7 @@ class AccommodationSearchRequest(TripSageModel):
         if info.data.get("check_in") and v <= info.data["check_in"]:
             raise ValueError("Check-out date must be after check-in date")
         return v
+
 
 class AccommodationListing(TripSageModel):
     """Accommodation listing response model."""
@@ -235,6 +238,7 @@ class AccommodationListing(TripSageModel):
         None, ge=0, le=1, description="Location convenience"
     )
 
+
 class AccommodationBooking(TripSageModel):
     """Accommodation booking response model."""
 
@@ -282,6 +286,7 @@ class AccommodationBooking(TripSageModel):
         default_factory=dict, description="Additional booking metadata"
     )
 
+
 class AccommodationSearchResponse(TripSageModel):
     """Accommodation search response model."""
 
@@ -302,6 +307,7 @@ class AccommodationSearchResponse(TripSageModel):
         None, description="Search duration in milliseconds"
     )
     cached: bool = Field(default=False, description="Whether results were cached")
+
 
 class AccommodationBookingRequest(TripSageModel):
     """Request model for accommodation booking."""
@@ -324,6 +330,7 @@ class AccommodationBookingRequest(TripSageModel):
     metadata: dict[str, Any] | None = Field(
         None, description="Additional booking metadata"
     )
+
 
 class AccommodationService:
     """
@@ -1097,6 +1104,7 @@ class AccommodationService:
                 "External cancellation failed",
                 extra={"booking_id": booking.id, "error": str(e)},
             )
+
 
 # Dependency function for FastAPI
 async def get_accommodation_service() -> AccommodationService:

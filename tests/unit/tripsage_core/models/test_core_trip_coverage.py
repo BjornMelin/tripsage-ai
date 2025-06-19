@@ -10,6 +10,7 @@ from uuid import uuid4
 from tripsage_core.models.trip import EnhancedBudget as TripBudget
 from tripsage_core.models.trip import Trip as DbTrip
 
+
 class TestDbTripModelCoverage:
     """Test actual DbTrip model functionality for coverage."""
 

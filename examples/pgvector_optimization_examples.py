@@ -30,6 +30,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 async def demo_auto_tuning():
     """Demonstrate automatic parameter tuning based on data characteristics."""
     logger.info("=== Demo: Auto-tuning HNSW Parameters ===")
@@ -67,6 +68,7 @@ async def demo_auto_tuning():
 
     except Exception as e:
         logger.error(f"Auto-tuning demo failed: {e}")
+
 
 async def demo_index_creation():
     """Demonstrate creating optimized HNSW indexes with different configurations."""
@@ -115,6 +117,7 @@ async def demo_index_creation():
 
     except Exception as e:
         logger.error(f"Index creation demo failed: {e}")
+
 
 async def demo_index_optimization():
     """Demonstrate index optimization for memory and performance."""
@@ -174,6 +177,7 @@ async def demo_index_optimization():
 
     except Exception as e:
         logger.error(f"Index optimization demo failed: {e}")
+
 
 async def demo_query_optimization():
     """Demonstrate query optimization and performance analysis."""
@@ -236,6 +240,7 @@ async def demo_query_optimization():
 
     except Exception as e:
         logger.error(f"Query optimization demo failed: {e}")
+
 
 async def demo_benchmarking():
     """Demonstrate benchmarking different HNSW configurations."""
@@ -319,6 +324,7 @@ async def demo_benchmarking():
     except Exception as e:
         logger.error(f"Benchmarking demo failed: {e}")
 
+
 async def demo_optimization_recommendations():
     """Demonstrate getting optimization recommendations for existing tables."""
     logger.info("=== Demo: Optimization Recommendations ===")
@@ -388,6 +394,7 @@ async def demo_optimization_recommendations():
     except Exception as e:
         logger.error(f"Recommendations demo failed: {e}")
 
+
 async def demo_quick_optimization():
     """Demonstrate the quick optimization utility function."""
     logger.info("=== Demo: Quick Table Optimization ===")
@@ -452,6 +459,7 @@ async def demo_quick_optimization():
     except Exception as e:
         logger.error(f"Quick optimization demo failed: {e}")
 
+
 async def main():
     """Run all pgvector optimization demos."""
     print("🚀 TripSage pgvector HNSW Optimizer Demo")
@@ -502,6 +510,7 @@ async def main():
     print("2. Initialize: optimizer = PGVectorService(database_service)")
     print("3. Optimize: await optimizer.create_hnsw_index(...)")
     print("4. Or use quick optimization: await optimize_vector_table(...)")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

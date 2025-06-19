@@ -17,11 +17,12 @@ Dependencies: PostgreSQL, pgvector, Supabase auth
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
+
 
 class MockSupabaseAuthUser:
     """Mock Supabase auth user for testing."""
@@ -30,6 +31,7 @@ class MockSupabaseAuthUser:
         self.id = user_id
         self.email = email or f"user{user_id.hex[:8]}@test.com"
         self.created_at = datetime.utcnow()
+
 
 class MockDatabaseService:
     """Mock database service that simulates Supabase behavior."""
@@ -205,6 +207,7 @@ class MockDatabaseService:
             },
         ]
 
+
 class TestSupabaseCollaborationSchema:
     """
     Comprehensive test suite for enhanced Supabase schema and collaboration features.
@@ -246,6 +249,7 @@ class TestSupabaseCollaborationSchema:
                 ).read_text(),
             },
         }
+
 
 class TestRLSPolicyValidation:
     """Test RLS policies for collaborative access patterns."""
@@ -409,6 +413,7 @@ class TestRLSPolicyValidation:
 
         assert len(user2_memories) == 0
 
+
 class TestForeignKeyConstraints:
     """Test foreign key constraints and data integrity."""
 
@@ -494,6 +499,7 @@ class TestForeignKeyConstraints:
                 owner.id,
             )
 
+
 class TestIndexPerformance:
     """Test index performance and query optimization."""
 
@@ -551,6 +557,7 @@ class TestIndexPerformance:
 
         assert len(trips) == 2
         assert execution_time < 1.0  # Should be fast with proper indexing
+
 
 class TestDatabaseFunctions:
     """Test database function correctness."""
@@ -652,6 +659,7 @@ class TestDatabaseFunctions:
         assert len(memories) == 1
         assert memories[0]["user_id"] == str(user.id)
 
+
 class TestMigrationCompatibility:
     """Test migration compatibility and rollback safety."""
 
@@ -716,6 +724,7 @@ class TestMigrationCompatibility:
 
         assert len(migrated_data) == 1
         assert migrated_data[0]["content"] == "Existing memory"  # Content preserved
+
 
 class TestCollaborationWorkflows:
     """Test end-to-end collaboration workflows."""
@@ -838,6 +847,7 @@ class TestCollaborationWorkflows:
         )
 
         assert trip is None
+
 
 class TestMultiUserScenarios:
     """Test complex multi-user scenarios."""
@@ -962,6 +972,7 @@ class TestMultiUserScenarios:
         assert admin_perm["can_add_collaborators"] is True
         assert editor_perm["can_add_collaborators"] is False
 
+
 class TestSecurityIsolation:
     """Test security isolation and boundary enforcement."""
 
@@ -1036,6 +1047,7 @@ class TestSecurityIsolation:
         assert len(user1_memories) == 1
         assert len(user2_memories) == 0
         assert user1_memories[0]["user_id"] == str(user1.id)
+
 
 class TestPerformanceOptimization:
     """Test performance optimization for collaboration queries."""
@@ -1116,6 +1128,7 @@ class TestPerformanceOptimization:
         assert len(memories) == 10
         assert execution_time < 1.0  # Vector search should be efficient
         assert all(m["user_id"] == str(user.id) for m in memories)
+
 
 class TestDatabaseFixtures:
     """Test database fixtures and cleanup patterns."""
@@ -1265,6 +1278,7 @@ class TestDatabaseFixtures:
         permissions = {c["user_id"]: c["permission_level"] for c in collaborators}
         assert permissions[str(data["collaborators"]["editor"]["user"].id)] == "edit"
         assert permissions[str(data["collaborators"]["viewer"]["user"].id)] == "view"
+
 
 # Integration test execution markers
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio, pytest.mark.database]

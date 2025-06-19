@@ -4,14 +4,16 @@ Test utilities for orchestration tests.
 Provides common mocking utilities for LangChain and OpenAI API calls.
 """
 
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import AsyncMock, Mock
+
 
 class MockLLMResponse:
     """Mock response for LLM calls."""
 
     def __init__(self, content: str):
         self.content = content
+
 
 class MockChatOpenAI:
     """Mock ChatOpenAI that doesn't make real API calls."""
@@ -160,11 +162,13 @@ class MockChatOpenAI:
 
         return asyncio.run(self.ainvoke(messages, **kwargs))
 
+
 def create_mock_llm(default_response: str = "Test response") -> MockChatOpenAI:
     """Create a mock LLM instance."""
     mock_llm = MockChatOpenAI()
     mock_llm.set_default_response(default_response)
     return mock_llm
+
 
 def patch_openai_in_module(module_path: str):
     """
@@ -180,6 +184,7 @@ def patch_openai_in_module(module_path: str):
     from unittest.mock import patch
 
     return patch(f"{module_path}.ChatOpenAI", MockChatOpenAI)
+
 
 def create_mock_service_registry(services: dict[str, Any] | None = None) -> Mock:
     """
@@ -225,6 +230,7 @@ def create_mock_service_registry(services: dict[str, Any] | None = None) -> Mock
 
     return registry
 
+
 def create_mock_tool_registry():
     """Create a mock tool registry."""
     registry = Mock()
@@ -239,6 +245,7 @@ def create_mock_tool_registry():
     registry.get_tool = Mock(return_value=mock_tool)
 
     return registry
+
 
 # Common test responses for different agents
 AGENT_TEST_RESPONSES = {

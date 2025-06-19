@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from tripsage_core.models.db.saved_option import OptionType, SavedOption
 
+
 class TestSavedOptionModel:
     """Test SavedOption model creation, validation, and methods."""
 
@@ -183,6 +184,7 @@ class TestSavedOptionModel:
         saved_option.update_notes("")
         assert saved_option.notes == ""
         assert saved_option.has_notes is False
+
 
 class TestOptionTypeEnum:
     """Test OptionType enum values and behavior."""

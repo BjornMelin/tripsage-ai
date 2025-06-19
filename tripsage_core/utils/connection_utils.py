@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 logger = logging.getLogger(__name__)
 
+
 class ConnectionState(Enum):
     """Connection circuit breaker states."""
 
@@ -24,20 +25,24 @@ class ConnectionState(Enum):
     OPEN = "open"
     HALF_OPEN = "half_open"
 
+
 class DatabaseURLParsingError(Exception):
     """Raised when database URL parsing fails."""
 
     pass
+
 
 class DatabaseConnectionError(Exception):
     """Raised when database connection fails."""
 
     pass
 
+
 class DatabaseValidationError(Exception):
     """Raised when database connection validation fails."""
 
     pass
+
 
 class ConnectionCredentials(BaseModel):
     """Secure model for database connection credentials."""
@@ -86,6 +91,7 @@ class ConnectionCredentials(BaseModel):
     def sanitized_for_logging(self) -> str:
         """Get sanitized connection string safe for logging."""
         return self.to_connection_string(mask_password=True)
+
 
 class DatabaseURLParser:
     """
@@ -223,6 +229,7 @@ class DatabaseURLParser:
             "query_params": query_params,
         }
 
+
 class ConnectionCircuitBreaker:
     """
     Circuit breaker for database connections to prevent cascade failures.
@@ -297,6 +304,7 @@ class ConnectionCircuitBreaker:
             self.logger.error(
                 f"Circuit breaker opening after {self.failure_count} failures"
             )
+
 
 class ExponentialBackoffRetry:
     """
@@ -391,6 +399,7 @@ class ExponentialBackoffRetry:
 
         raise last_exception
 
+
 class DatabaseConnectionValidator:
     """
     Database connection validator with health checks.
@@ -479,6 +488,7 @@ class DatabaseConnectionValidator:
             error_msg = f"Connection validation failed: {e}"
             self.logger.error(error_msg, extra={"hostname": credentials.hostname})
             raise DatabaseValidationError(error_msg) from e
+
 
 class SecureDatabaseConnectionManager:
     """
@@ -592,6 +602,7 @@ class SecureDatabaseConnectionManager:
         finally:
             await conn.close()
 
+
 # Convenience functions for backward compatibility
 async def parse_database_url(url: str) -> ConnectionCredentials:
     """
@@ -605,6 +616,7 @@ async def parse_database_url(url: str) -> ConnectionCredentials:
     """
     parser = DatabaseURLParser()
     return parser.parse_url(url)
+
 
 async def validate_database_connection(url: str) -> bool:
     """

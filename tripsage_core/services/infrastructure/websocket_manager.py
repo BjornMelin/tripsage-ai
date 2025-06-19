@@ -19,10 +19,10 @@ import logging
 import random
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
-from collections.abc import Callable
+from typing import Any
 from uuid import UUID, uuid4
 
 import redis.asyncio as redis
@@ -48,6 +48,7 @@ from .websocket_messaging_service import (
 
 logger = logging.getLogger(__name__)
 
+
 class ConnectionStatus(str, Enum):
     """WebSocket connection status."""
 
@@ -56,6 +57,7 @@ class ConnectionStatus(str, Enum):
     DISCONNECTED = "disconnected"
     ERROR = "error"
     RECONNECTING = "reconnecting"
+
 
 def redis_with_fallback(fallback_method: str | None = None):
     """Decorator to handle Redis operations with fallback to local methods.
@@ -109,6 +111,7 @@ def redis_with_fallback(fallback_method: str | None = None):
 
     return decorator
 
+
 # Lua script for atomic rate limiting
 RATE_LIMIT_LUA_SCRIPT = """
     local user_key = KEYS[1]
@@ -146,11 +149,13 @@ RATE_LIMIT_LUA_SCRIPT = """
 
 # Duplicate classes removed - now using imported services
 
+
 class WebSocketSubscribeRequest(BaseModel):
     """WebSocket subscription request."""
 
     channels: list[str] = Field(default_factory=list)
     unsubscribe_channels: list[str] = Field(default_factory=list)
+
 
 class WebSocketSubscribeResponse(BaseModel):
     """WebSocket subscription response."""
@@ -159,6 +164,7 @@ class WebSocketSubscribeResponse(BaseModel):
     subscribed_channels: list[str] = Field(default_factory=list)
     failed_channels: list[str] = Field(default_factory=list)
     error: str | None = None
+
 
 class RateLimitConfig(BaseModel):
     """Rate limiting configuration."""
@@ -169,12 +175,14 @@ class RateLimitConfig(BaseModel):
     max_messages_per_user_per_minute: int = 100
     window_seconds: int = 60
 
+
 class CircuitBreakerState(str, Enum):
     """Circuit breaker states."""
 
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
+
 
 class CircuitBreaker:
     """Circuit breaker for Redis operations."""
@@ -210,6 +218,7 @@ class CircuitBreaker:
 
         if self.failure_count >= self.failure_threshold:
             self.state = CircuitBreakerState.OPEN
+
 
 class ExponentialBackoff:
     """Exponential backoff with jitter for reconnection attempts."""
@@ -257,6 +266,7 @@ class ExponentialBackoff:
     def reset(self):
         """Reset attempt counter on successful connection."""
         self.attempt_count = 0
+
 
 class RateLimiter:
     """Hierarchical rate limiter using Redis sliding window."""
@@ -361,7 +371,9 @@ class RateLimiter:
             - counter["count"],
         }
 
+
 # WebSocketConnection class moved to websocket_connection_service.py
+
 
 class WebSocketManager:
     """Enhanced WebSocket connection manager with broadcasting integration.
@@ -920,6 +932,7 @@ class WebSocketManager:
             except Exception as e:
                 logger.error(f"Error in priority queue processor: {e}")
                 await asyncio.sleep(1)
+
 
 # Global WebSocket manager instance
 websocket_manager = WebSocketManager()

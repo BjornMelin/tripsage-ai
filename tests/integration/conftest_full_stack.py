@@ -7,8 +7,8 @@ with real database and cache dependencies.
 
 import os
 import uuid
-from typing import Any
 from collections.abc import AsyncGenerator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from tripsage.api.main import app
 from tripsage_core.config import get_settings
+
 
 @pytest.fixture(scope="session")
 def integration_test_settings():
@@ -56,6 +57,7 @@ def integration_test_settings():
             else:
                 os.environ[key] = original_value
 
+
 @pytest.fixture(scope="session")
 async def integration_redis():
     """Create Redis connection for integration tests."""
@@ -86,6 +88,7 @@ async def integration_redis():
         mock_redis.flushdb.return_value = True
         mock_redis.close.return_value = None
         yield mock_redis
+
 
 @pytest.fixture(scope="session")
 async def integration_db_engine():
@@ -199,6 +202,7 @@ async def integration_db_engine():
     yield engine
     await engine.dispose()
 
+
 @pytest.fixture
 async def integration_db_session(
     integration_db_engine,
@@ -208,6 +212,7 @@ async def integration_db_session(
         yield session
         # Clean up after each test
         await session.rollback()
+
 
 @pytest.fixture
 async def test_user_factory(integration_db_session):
@@ -244,6 +249,7 @@ async def test_user_factory(integration_db_session):
 
     return create_user
 
+
 @pytest.fixture
 async def authenticated_test_client(test_user_factory):
     """Create TestClient with authenticated user."""
@@ -261,6 +267,7 @@ async def authenticated_test_client(test_user_factory):
             client = TestClient(app)
             client.user = user  # Attach user data for test access
             yield client
+
 
 @pytest.fixture
 def mock_external_apis():
@@ -312,6 +319,7 @@ def mock_external_apis():
 
         yield mock_get
 
+
 @pytest.fixture
 def mock_encryption():
     """Mock encryption for faster tests."""
@@ -333,6 +341,7 @@ def mock_encryption():
 
             yield {"encrypt": mock_encrypt, "decrypt": mock_decrypt}
 
+
 @pytest.fixture(autouse=True)
 async def cleanup_redis_after_test(integration_redis):
     """Clean up Redis after each test."""
@@ -344,8 +353,10 @@ async def cleanup_redis_after_test(integration_redis):
     except Exception:
         pass  # Ignore cleanup errors
 
+
 # Test markers for different test categories
 pytest_plugins = ["pytest_asyncio"]
+
 
 def pytest_configure(config):
     """Configure pytest with custom markers for integration tests."""
@@ -359,6 +370,7 @@ def pytest_configure(config):
     )
     config.addinivalue_line("markers", "database: Tests requiring database operations")
     config.addinivalue_line("markers", "cache: Tests requiring cache operations")
+
 
 def pytest_collection_modifyitems(config, items):
     """Modify test collection for integration tests."""

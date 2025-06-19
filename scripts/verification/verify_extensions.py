@@ -8,7 +8,6 @@ import asyncio
 import os
 import sys
 from datetime import datetime
-from typing import Optional
 
 import asyncpg
 from rich.console import Console
@@ -43,6 +42,7 @@ REALTIME_TABLES = [
     "itinerary_items",
     "chat_tool_calls",
 ]
+
 
 class ExtensionVerifier:
     def __init__(self, database_url: str):
@@ -356,6 +356,7 @@ class ExtensionVerifier:
 
         return all_passed
 
+
 async def main():
     """Main function."""
     # Get database URL from environment
@@ -376,6 +377,7 @@ async def main():
     success = await verifier.run_comprehensive_check()
 
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

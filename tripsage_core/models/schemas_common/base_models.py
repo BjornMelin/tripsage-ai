@@ -6,7 +6,7 @@ schemas used across API endpoints and services.
 """
 
 from datetime import datetime
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import Field
 
@@ -14,6 +14,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 # Type variable for generic responses
 T = TypeVar("T")
+
 
 class BaseResponse(TripSageModel):
     """Base response model for all API responses."""
@@ -24,20 +25,21 @@ class BaseResponse(TripSageModel):
         default_factory=datetime.utcnow, description="Response timestamp"
     )
 
+
 class SuccessResponse(BaseResponse):
     """Standard success response."""
 
     success: bool = Field(True, description="Always true for success responses")
     data: dict[str, Any] | None = Field(None, description="Response data")
 
+
 class ErrorResponse(BaseResponse):
     """Standard error response."""
 
     success: bool = Field(False, description="Always false for error responses")
     error_code: str | None = Field(None, description="Machine-readable error code")
-    details: dict[str, Any] | None = Field(
-        None, description="Additional error details"
-    )
+    details: dict[str, Any] | None = Field(None, description="Additional error details")
+
 
 class PaginationMeta(TripSageModel):
     """Pagination metadata."""
@@ -49,11 +51,13 @@ class PaginationMeta(TripSageModel):
     has_next: bool = Field(description="Whether there are more pages")
     has_prev: bool = Field(description="Whether there are previous pages")
 
+
 class PaginatedResponse(BaseResponse, Generic[T]):
     """Paginated response with metadata."""
 
     data: list[T] = Field(description="List of items")
     pagination: PaginationMeta = Field(description="Pagination metadata")
+
 
 class HealthCheckResponse(TripSageModel):
     """Health check response."""
@@ -61,9 +65,8 @@ class HealthCheckResponse(TripSageModel):
     status: str = Field(description="Service status")
     version: str | None = Field(None, description="Service version")
     uptime: float | None = Field(None, description="Uptime in seconds")
-    checks: dict[str, Any] | None = Field(
-        None, description="Individual health checks"
-    )
+    checks: dict[str, Any] | None = Field(None, description="Individual health checks")
+
 
 class ValidationErrorDetail(TripSageModel):
     """Validation error detail."""
@@ -71,6 +74,7 @@ class ValidationErrorDetail(TripSageModel):
     field: str = Field(description="Field that failed validation")
     message: str = Field(description="Validation error message")
     value: Any | None = Field(None, description="Invalid value")
+
 
 class ValidationErrorResponse(ErrorResponse):
     """Validation error response with field details."""
@@ -80,6 +84,7 @@ class ValidationErrorResponse(ErrorResponse):
         description="Field validation errors"
     )
 
+
 class SearchFilters(TripSageModel):
     """Base search filters."""
 
@@ -87,17 +92,20 @@ class SearchFilters(TripSageModel):
     limit: int = Field(10, ge=1, le=100, description="Maximum number of results")
     offset: int = Field(0, ge=0, description="Number of results to skip")
 
+
 class SortOptions(TripSageModel):
     """Sort options for search results."""
 
     sort_by: str = Field(description="Field to sort by")
     sort_order: str = Field("asc", pattern="^(asc|desc)$", description="Sort order")
 
+
 class DateFilter(TripSageModel):
     """Date range filter."""
 
     start_date: datetime | None = Field(None, description="Start date filter")
     end_date: datetime | None = Field(None, description="End date filter")
+
 
 class PriceFilter(TripSageModel):
     """Price range filter."""
@@ -106,22 +114,23 @@ class PriceFilter(TripSageModel):
     max_price: float | None = Field(None, ge=0, description="Maximum price")
     currency: str | None = Field(None, description="Currency code")
 
+
 class LocationFilter(TripSageModel):
     """Location-based filter."""
 
     latitude: float | None = Field(None, ge=-90, le=90, description="Latitude")
     longitude: float | None = Field(None, ge=-180, le=180, description="Longitude")
-    radius: float | None = Field(
-        None, gt=0, description="Search radius in kilometers"
-    )
+    radius: float | None = Field(None, gt=0, description="Search radius in kilometers")
     city: str | None = Field(None, description="City name")
     country: str | None = Field(None, description="Country name")
+
 
 class RatingFilter(TripSageModel):
     """Rating filter."""
 
     min_rating: float | None = Field(None, ge=0, le=5, description="Minimum rating")
     max_rating: float | None = Field(None, ge=0, le=5, description="Maximum rating")
+
 
 class BulkOperationResponse(BaseResponse):
     """Response for bulk operations."""
@@ -133,6 +142,7 @@ class BulkOperationResponse(BaseResponse):
         None, description="List of errors for failed items"
     )
 
+
 class FileUploadResponse(BaseResponse):
     """Response for file upload operations."""
 
@@ -142,6 +152,7 @@ class FileUploadResponse(BaseResponse):
     content_type: str = Field(description="MIME content type")
     url: str | None = Field(None, description="File access URL")
 
+
 class TaskResponse(BaseResponse):
     """Response for asynchronous task operations."""
 
@@ -150,7 +161,5 @@ class TaskResponse(BaseResponse):
     progress: float | None = Field(
         None, ge=0, le=100, description="Task progress percentage"
     )
-    result: dict[str, Any] | None = Field(
-        None, description="Task result if completed"
-    )
+    result: dict[str, Any] | None = Field(None, description="Task result if completed")
     error: str | None = Field(None, description="Error message if failed")

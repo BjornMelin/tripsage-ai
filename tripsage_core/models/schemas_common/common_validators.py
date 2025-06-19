@@ -7,12 +7,13 @@ code reuse and consistency across the application.
 """
 
 import re
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 from pydantic import (
     AfterValidator,
     BeforeValidator,
 )
+
 
 def validate_airport_code(value: str) -> str:
     """
@@ -40,6 +41,7 @@ def validate_airport_code(value: str) -> str:
 
     return value
 
+
 def validate_rating_range(value: float | None) -> float | None:
     """
     Validate that rating is between 0.0 and 5.0.
@@ -64,6 +66,7 @@ def validate_rating_range(value: float | None) -> float | None:
 
     return float(value)
 
+
 def validate_email_lowercase(value: str | None) -> str | None:
     """
     Validate and normalize email addresses to lowercase.
@@ -81,6 +84,7 @@ def validate_email_lowercase(value: str | None) -> str | None:
         raise ValueError("Email must be a string")
 
     return value.strip().lower()
+
 
 def validate_positive_integer(value: int | None) -> int | None:
     """
@@ -106,6 +110,7 @@ def validate_positive_integer(value: int | None) -> int | None:
 
     return value
 
+
 def validate_non_negative_number(value: float | None) -> float | None:
     """
     Validate that value is a non-negative number.
@@ -129,6 +134,7 @@ def validate_non_negative_number(value: float | None) -> float | None:
         raise ValueError("Value must be non-negative (>= 0)")
 
     return float(value)
+
 
 def validate_currency_code(value: str) -> str:
     """
@@ -155,6 +161,7 @@ def validate_currency_code(value: str) -> str:
         raise ValueError("Currency code must contain only letters")
 
     return value
+
 
 def validate_string_length_range(min_len: int, max_len: int):
     """
@@ -186,6 +193,7 @@ def validate_string_length_range(min_len: int, max_len: int):
         return value
 
     return validator
+
 
 def validate_password_strength(value: str) -> str:
     """
@@ -228,6 +236,7 @@ def validate_password_strength(value: str) -> str:
 
     return value
 
+
 def validate_latitude(value: float | None) -> float | None:
     """
     Validate geographic latitude.
@@ -252,6 +261,7 @@ def validate_latitude(value: float | None) -> float | None:
 
     return float(value)
 
+
 def validate_longitude(value: float | None) -> float | None:
     """
     Validate geographic longitude.
@@ -275,6 +285,7 @@ def validate_longitude(value: float | None) -> float | None:
         raise ValueError("Longitude must be between -180.0 and 180.0")
 
     return float(value)
+
 
 def create_enum_validator(enum_class):
     """
@@ -306,6 +317,7 @@ def create_enum_validator(enum_class):
 
     return validator
 
+
 def truncate_string(max_length: int):
     """
     Create a before validator that truncates strings to max length.
@@ -326,23 +338,20 @@ def truncate_string(max_length: int):
 
     return validator
 
+
 # Pre-configured common validators using Annotated types for reusability
 AirportCode = Annotated[str, AfterValidator(validate_airport_code)]
 Rating = Annotated[float | None, AfterValidator(validate_rating_range)]
 EmailLowercase = Annotated[str | None, AfterValidator(validate_email_lowercase)]
 PositiveInt = Annotated[int | None, AfterValidator(validate_positive_integer)]
-NonNegativeFloat = Annotated[
-    float | None, AfterValidator(validate_non_negative_number)
-]
+NonNegativeFloat = Annotated[float | None, AfterValidator(validate_non_negative_number)]
 CurrencyCode = Annotated[str, AfterValidator(validate_currency_code)]
 PasswordStrength = Annotated[str, AfterValidator(validate_password_strength)]
 Latitude = Annotated[float | None, AfterValidator(validate_latitude)]
 Longitude = Annotated[float | None, AfterValidator(validate_longitude)]
 
 # Common string length validators
-ShortString = Annotated[
-    str | None, AfterValidator(validate_string_length_range(1, 50))
-]
+ShortString = Annotated[str | None, AfterValidator(validate_string_length_range(1, 50))]
 MediumString = Annotated[
     str | None, AfterValidator(validate_string_length_range(1, 255))
 ]
@@ -353,6 +362,7 @@ LongString = Annotated[
 # Truncating string validators for user input
 TruncatedShortString = Annotated[str, BeforeValidator(truncate_string(50))]
 TruncatedMediumString = Annotated[str, BeforeValidator(truncate_string(255))]
+
 
 class CommonValidators:
     """

@@ -5,11 +5,12 @@ used for finding flights, accommodations, and other travel options.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 class SearchParameters(TripSageModel):
     """SearchParameters model for TripSage.

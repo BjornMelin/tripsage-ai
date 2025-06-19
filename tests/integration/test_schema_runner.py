@@ -12,7 +12,8 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+
 
 class SchemaTestRunner:
     """Orchestrates schema integration tests with comprehensive setup and reporting."""
@@ -476,6 +477,7 @@ class SchemaTestRunner:
         # In a real implementation, this would clean up test databases, files, etc.
         pass
 
+
 # CLI interface for running tests
 async def main():
     """Main entry point for test runner."""
@@ -525,6 +527,7 @@ async def main():
 
     # Exit with appropriate code
     sys.exit(0 if result["success"] else 1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

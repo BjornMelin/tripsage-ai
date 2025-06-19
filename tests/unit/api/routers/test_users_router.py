@@ -20,6 +20,7 @@ from tripsage.api.schemas.users import (
 )
 from tripsage_core.services.business.user_service import UserService
 
+
 class TestUsersRouter:
     """Test users router functionality."""
 

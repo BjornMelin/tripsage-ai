@@ -5,7 +5,6 @@ searching for accommodations, managing saved accommodations, and retrieving deta
 """
 
 import logging
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -35,6 +34,7 @@ from tripsage_core.services.business.accommodation_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
 
 def _convert_api_to_service_search_request(
     api_request: AccommodationSearchRequest,
@@ -95,6 +95,7 @@ def _convert_api_to_service_search_request(
 
     return ServiceAccommodationSearchRequest(**service_data)
 
+
 @router.post("/search", response_model=AccommodationSearchResponse)
 async def search_accommodations(
     request: AccommodationSearchRequest,
@@ -138,6 +139,7 @@ async def search_accommodations(
 
     return api_response
 
+
 @router.post("/details", response_model=AccommodationDetailsResponse)
 async def get_accommodation_details(
     request: AccommodationDetailsRequest,
@@ -174,6 +176,7 @@ async def get_accommodation_details(
         availability=True,  # Default to available - service could provide this
         total_price=None,  # Could be calculated based on check-in/out dates
     )
+
 
 @router.post(
     "/saved",
@@ -234,6 +237,7 @@ async def save_accommodation(
         status=BookingStatus.SAVED,
     )
 
+
 @router.delete(
     "/saved/{saved_accommodation_id}", status_code=status.HTTP_204_NO_CONTENT
 )
@@ -262,6 +266,7 @@ async def delete_saved_accommodation(
             message=f"Saved accommodation with ID {saved_accommodation_id} not found",
             details={"saved_accommodation_id": str(saved_accommodation_id)},
         )
+
 
 @router.get("/saved", response_model=list[SavedAccommodationResponse])
 async def list_saved_accommodations(
@@ -307,6 +312,7 @@ async def list_saved_accommodations(
             )
 
     return saved_accommodations
+
 
 @router.patch(
     "/saved/{saved_accommodation_id}/status",

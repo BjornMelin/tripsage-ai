@@ -14,6 +14,7 @@ from tripsage_core.utils.decorator_utils import (
     with_error_handling,
 )
 
+
 class TestWithErrorHandling:
     """Tests for the with_error_handling decorator."""
 
@@ -91,6 +92,7 @@ class TestWithErrorHandling:
         # Should re-raise the exception
         with pytest.raises(ValueError, match="Value cannot be negative"):
             test_func(-5)
+
 
 @pytest.mark.asyncio
 class TestEnsureMemoryClientInitialized:

@@ -8,7 +8,7 @@ for MCP operations, following Phase 5 implementation patterns.
 import asyncio
 import time
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -26,6 +26,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ErrorSeverity(Enum):
     """Error severity levels for MCP operations."""
 
@@ -33,6 +34,7 @@ class ErrorSeverity(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
 
 class FallbackStrategy(Enum):
     """Fallback strategies for failed MCP operations."""
@@ -42,6 +44,7 @@ class FallbackStrategy(Enum):
     CACHED_RESPONSE = "cached_response"
     GRACEFUL_DEGRADATION = "graceful_degradation"
     FAIL_FAST = "fail_fast"
+
 
 class MCPOperationError(TripSageError):
     """Error raised when MCP operation fails."""
@@ -73,6 +76,7 @@ class MCPOperationError(TripSageError):
         self.original_error = original_error
         self.timestamp = time.time()
 
+
 class FallbackResult(BaseModel):
     """Result of fallback operation."""
 
@@ -86,6 +90,7 @@ class FallbackResult(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
+
 
 class ErrorRecoveryService:
     """

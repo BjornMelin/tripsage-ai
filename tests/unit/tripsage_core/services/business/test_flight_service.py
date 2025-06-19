@@ -30,6 +30,7 @@ from tripsage_core.services.business.flight_service import (
     PassengerType,
 )
 
+
 class TestFlightService:
     """Test suite for FlightService."""
 

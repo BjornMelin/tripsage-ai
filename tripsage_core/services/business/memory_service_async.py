@@ -1,16 +1,18 @@
 """
 Async-optimized memory service for AI conversation memory and user context management.
 
-This service provides native async operations with connection pooling, batch operations,
-and DragonflyDB integration for 50-70% throughput improvement over the original implementation.
+This service provides native async operations with connection pooling,
+batch operations, and DragonflyDB integration for 50-70% throughput improvement
+over the original implementation.
 """
 
 import asyncio
 import hashlib
 import json
 import logging
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
-from typing import Any, Optional, cast
+from typing import Any
 
 import asyncpg
 from pydantic import Field, field_validator
@@ -582,8 +584,8 @@ class AsyncMemoryService:
             return {"results": []}
 
     async def search_memories_batch(
-        self, user_queries: list[tuple[str, MemorySearchRequest]]
-    ) -> dict[str, list[MemorySearchResult]]:
+        self, user_queries: Sequence[tuple[str, MemorySearchRequest]]
+    ) -> Mapping[str, Sequence[MemorySearchResult]]:
         """
         Batch search memories for multiple users efficiently.
 
@@ -619,24 +621,26 @@ class AsyncMemoryService:
             else:
                 uncached_queries.append((user_id, search_request))
 
-        # Process uncached queries
+        # Process uncached queries using TaskGroup for better error handling
         if uncached_queries:
-            # Execute searches in parallel
-            search_tasks = [
-                self.search_memories(user_id, search_request)
-                for user_id, search_request in uncached_queries
-            ]
-            search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+            # Python 3.13 TaskGroup for structured concurrency
+            async with asyncio.TaskGroup() as tg:
+                search_tasks = {}
+                for user_id, search_request in uncached_queries:
+                    task = tg.create_task(
+                        self.search_memories(user_id, search_request),
+                        name=f"memory_search_{user_id}",
+                    )
+                    search_tasks[task] = (user_id, search_request)
 
-            # Process results
-            for i, (user_id, _search_request) in enumerate(uncached_queries):
-                result = search_results[i]
-                if isinstance(result, Exception):
-                    logger.error(f"Batch search failed for user {user_id}: {result}")
+            # Process results from TaskGroup
+            for task, (user_id, _search_request) in search_tasks.items():
+                try:
+                    result = task.result()
+                    results[user_id] = result
+                except Exception as e:
+                    logger.error(f"Batch search failed for user {user_id}: {e}")
                     results[user_id] = []
-                else:
-                    # Type narrowing: if not Exception, then it's list[MemorySearchResult]
-                    results[user_id] = cast(list[MemorySearchResult], result)
 
         return results
 

@@ -13,6 +13,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class WorkloadType(str, Enum):
     """Types of database workloads to benchmark."""
 
@@ -20,11 +21,13 @@ class WorkloadType(str, Enum):
     VECTOR_SEARCH = "vector_search"
     MIXED = "mixed"
 
+
 class OptimizationLevel(str, Enum):
     """Optimization levels to benchmark."""
 
     NONE = "none"  # Baseline without optimizations
     FULL = "full"  # All optimizations enabled
+
 
 @dataclass
 class PerformanceThresholds:
@@ -43,6 +46,7 @@ class PerformanceThresholds:
     query_performance_tolerance: float = 0.5  # ±50% tolerance
     vector_performance_tolerance: float = 5.0  # ±5x tolerance
     memory_reduction_tolerance: float = 0.1  # ±10% tolerance
+
 
 class BenchmarkConfig(BaseModel):
     """Simple benchmark configuration focused on core metrics."""
@@ -97,6 +101,7 @@ class BenchmarkConfig(BaseModel):
         default_factory=PerformanceThresholds,
         description="Performance validation thresholds",
     )
+
 
 # Default configuration instance
 DEFAULT_BENCHMARK_CONFIG = BenchmarkConfig()

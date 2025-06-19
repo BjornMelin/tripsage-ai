@@ -11,7 +11,7 @@ import logging
 from datetime import date as DateType
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field, field_validator
@@ -29,6 +29,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
+
 class ItineraryItemType(str, Enum):
     """Itinerary item type enumeration."""
 
@@ -41,6 +42,7 @@ class ItineraryItemType(str, Enum):
     MEETING = "meeting"
     OTHER = "other"
 
+
 class ItineraryStatus(str, Enum):
     """Itinerary status enumeration."""
 
@@ -51,12 +53,14 @@ class ItineraryStatus(str, Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
 
+
 class ItineraryVisibility(str, Enum):
     """Itinerary visibility enumeration."""
 
     PRIVATE = "private"
     SHARED = "shared"
     PUBLIC = "public"
+
 
 class ConflictType(str, Enum):
     """Conflict type enumeration."""
@@ -67,6 +71,7 @@ class ConflictType(str, Enum):
     IMPOSSIBLE_TRAVEL = "impossible_travel"
     BOOKING_CONFLICT = "booking_conflict"
 
+
 class OptimizationGoal(str, Enum):
     """Optimization goal enumeration."""
 
@@ -75,6 +80,7 @@ class OptimizationGoal(str, Enum):
     MAXIMIZE_EXPERIENCES = "maximize_experiences"
     BALANCE_ACTIVITIES = "balance_activities"
     MINIMIZE_STRESS = "minimize_stress"
+
 
 class TimeSlot(TripSageModel):
     """Time slot information."""
@@ -111,6 +117,7 @@ class TimeSlot(TripSageModel):
 
         return v
 
+
 class Location(TripSageModel):
     """Location information."""
 
@@ -120,9 +127,8 @@ class Location(TripSageModel):
     country: str | None = Field(None, description="Country")
     latitude: float | None = Field(None, description="Latitude coordinate")
     longitude: float | None = Field(None, description="Longitude coordinate")
-    place_id: str | None = Field(
-        None, description="External place ID (Google, etc.)"
-    )
+    place_id: str | None = Field(None, description="External place ID (Google, etc.)")
+
 
 class ItineraryItem(TripSageModel):
     """Base itinerary item model."""
@@ -147,6 +153,7 @@ class ItineraryItem(TripSageModel):
         default_factory=dict, description="Type-specific data"
     )
 
+
 class ItineraryConflict(TripSageModel):
     """Conflict information."""
 
@@ -159,6 +166,7 @@ class ItineraryConflict(TripSageModel):
         default_factory=list, description="Resolution suggestions"
     )
     auto_resolvable: bool = Field(default=False, description="Whether auto-resolvable")
+
 
 class ItineraryDay(TripSageModel):
     """Itinerary day model."""
@@ -184,6 +192,7 @@ class ItineraryDay(TripSageModel):
 
         return sorted(self.items, key=get_sort_key)
 
+
 class ItineraryShareSettings(TripSageModel):
     """Itinerary sharing settings."""
 
@@ -201,6 +210,7 @@ class ItineraryShareSettings(TripSageModel):
         default=False, description="Whether password protected"
     )
     expires_at: datetime | None = Field(None, description="Share link expiration")
+
 
 class ItineraryCreateRequest(TripSageModel):
     """Request model for creating an itinerary."""
@@ -224,6 +234,7 @@ class ItineraryCreateRequest(TripSageModel):
             raise ValueError("End date must be after or equal to start date")
         return v
 
+
 class ItineraryUpdateRequest(TripSageModel):
     """Request model for updating an itinerary."""
 
@@ -241,6 +252,7 @@ class ItineraryUpdateRequest(TripSageModel):
     share_settings: ItineraryShareSettings | None = Field(
         None, description="Share settings"
     )
+
 
 class Itinerary(TripSageModel):
     """Complete itinerary model."""
@@ -283,6 +295,7 @@ class Itinerary(TripSageModel):
         """Calculate duration in days."""
         return (self.end_date - self.start_date).days + 1
 
+
 class ItineraryItemCreateRequest(TripSageModel):
     """Request model for creating an itinerary item."""
 
@@ -301,6 +314,7 @@ class ItineraryItemCreateRequest(TripSageModel):
         None, description="Type-specific data"
     )
 
+
 class OptimizationSettings(TripSageModel):
     """Itinerary optimization settings."""
 
@@ -318,6 +332,7 @@ class OptimizationSettings(TripSageModel):
         None, ge=0, description="Maximum daily budget"
     )
 
+
 class ItineraryOptimizeRequest(TripSageModel):
     """Request model for optimizing an itinerary."""
 
@@ -326,6 +341,7 @@ class ItineraryOptimizeRequest(TripSageModel):
     preserve_confirmed: bool = Field(
         default=True, description="Preserve confirmed items"
     )
+
 
 class ItineraryOptimizeResponse(TripSageModel):
     """Response model for itinerary optimization."""
@@ -338,6 +354,7 @@ class ItineraryOptimizeResponse(TripSageModel):
         None, description="Estimated savings"
     )
 
+
 class ItinerarySearchRequest(TripSageModel):
     """Request model for searching itineraries."""
 
@@ -346,14 +363,13 @@ class ItinerarySearchRequest(TripSageModel):
     start_date_from: DateType | None = Field(
         None, description="Start date filter (from)"
     )
-    start_date_to: DateType | None = Field(
-        None, description="Start date filter (to)"
-    )
+    start_date_to: DateType | None = Field(None, description="Start date filter (to)")
     destinations: list[str] | None = Field(None, description="Destination filters")
     tags: list[str] | None = Field(None, description="Tag filters")
     shared_only: bool = Field(default=False, description="Only shared itineraries")
     limit: int = Field(default=20, ge=1, le=100, description="Result limit")
     offset: int = Field(default=0, ge=0, description="Result offset")
+
 
 class ItineraryService:
     """
@@ -1293,9 +1309,7 @@ class ItineraryService:
         if cache_key in self._itinerary_cache:
             del self._itinerary_cache[cache_key]
 
-    def _get_cached_conflicts(
-        self, cache_key: str
-    ) -> list[ItineraryConflict] | None:
+    def _get_cached_conflicts(self, cache_key: str) -> list[ItineraryConflict] | None:
         """Get cached conflicts if still valid."""
         if cache_key in self._conflict_cache:
             result, timestamp = self._conflict_cache[cache_key]
@@ -1327,6 +1341,7 @@ class ItineraryService:
                 extra={"itinerary_id": itinerary.id, "error": str(e)},
             )
             raise
+
 
 # Dependency function for FastAPI
 async def get_itinerary_service() -> ItineraryService:

@@ -15,6 +15,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ResultNormalizer:
     """
     Normalizes results from different web crawling sources into UnifiedCrawlResult.
@@ -344,8 +345,10 @@ class ResultNormalizer:
 
         return text.strip()
 
+
 # Singleton instance
 result_normalizer = ResultNormalizer()
+
 
 def get_normalizer() -> ResultNormalizer:
     """Get the singleton instance of the result normalizer.

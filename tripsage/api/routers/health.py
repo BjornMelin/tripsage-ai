@@ -11,7 +11,6 @@ This module provides comprehensive health check endpoints including:
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field
@@ -20,6 +19,8 @@ from tripsage.api.core.dependencies import (
     CacheDep,
     DatabaseDep,
     SettingsDep,
+    get_all_dependency_health,
+    reset_dependency_health,
 )
 from tripsage_core.services.business.api_key_validator import (
     ApiKeyValidator,
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["health"])
 
+
 class ComponentHealth(BaseModel):
     """Health status of a system component."""
 
@@ -40,6 +42,7 @@ class ComponentHealth(BaseModel):
     latency_ms: float | None = None
     message: str | None = None
     details: dict = Field(default_factory=dict)
+
 
 class SystemHealth(BaseModel):
     """Overall system health status."""
@@ -51,6 +54,7 @@ class SystemHealth(BaseModel):
     components: list[ComponentHealth]
     external_services: dict[str, ServiceHealthCheck] = Field(default_factory=dict)
 
+
 class ReadinessCheck(BaseModel):
     """Readiness check result."""
 
@@ -58,6 +62,7 @@ class ReadinessCheck(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     checks: dict[str, bool]
     details: dict[str, str] = Field(default_factory=dict)
+
 
 @router.get("/health", response_model=SystemHealth)
 async def comprehensive_health_check(
@@ -133,6 +138,7 @@ async def comprehensive_health_check(
         external_services=external_services,
     )
 
+
 @router.get("/health/liveness")
 async def liveness_check():
     """Basic liveness check for container orchestration.
@@ -144,6 +150,7 @@ async def liveness_check():
         "status": "alive",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
 
 @router.get("/health/readiness", response_model=ReadinessCheck)
 async def readiness_check(
@@ -199,6 +206,7 @@ async def readiness_check(
         details=details,
     )
 
+
 @router.get("/health/services/{service_type}")
 async def check_specific_service_health(
     service_type: ServiceType,
@@ -236,6 +244,7 @@ async def check_specific_service_health(
             message=f"Health check error: {str(e)}",
         )
 
+
 @router.get("/health/database")
 async def database_health_check(db_service: DatabaseDep):
     """Detailed database health check.
@@ -256,6 +265,7 @@ async def database_health_check(db_service: DatabaseDep):
             logger.warning(f"Failed to get pool stats: {e}")
 
     return health
+
 
 @router.get("/health/cache")
 async def cache_health_check(cache_service: CacheDep):
@@ -283,6 +293,7 @@ async def cache_health_check(cache_service: CacheDep):
             logger.warning(f"Failed to get cache info: {e}")
 
     return health
+
 
 async def _check_database_health(db_service) -> ComponentHealth:
     """Check database health and connectivity."""
@@ -320,6 +331,7 @@ async def _check_database_health(db_service) -> ComponentHealth:
             message=f"Database error: {str(e)}",
             details={"error": str(e)},
         )
+
 
 async def _check_cache_health(cache_service) -> ComponentHealth:
     """Check cache (DragonflyDB) health and connectivity."""
@@ -363,3 +375,82 @@ async def _check_cache_health(cache_service) -> ComponentHealth:
             message=f"Cache error: {str(e)}",
             details={"error": str(e)},
         )
+
+
+@router.get("/health/dependencies")
+async def dependency_health_check():
+    """Get health status of all dependency services.
+
+    Returns comprehensive health information for all tracked dependencies
+    including response times, error counts, and circuit breaker states.
+    """
+    dependency_health = get_all_dependency_health()
+
+    overall_status = "healthy"
+    for health in dependency_health.values():
+        if not health.healthy:
+            overall_status = "unhealthy"
+            break
+        elif health.response_time_ms > 1000:  # Slow response threshold
+            overall_status = "degraded"
+
+    return {
+        "status": overall_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "dependencies": dependency_health,
+        "summary": {
+            "total_dependencies": len(dependency_health),
+            "healthy_dependencies": sum(
+                1 for h in dependency_health.values() if h.healthy
+            ),
+            "unhealthy_dependencies": sum(
+                1 for h in dependency_health.values() if not h.healthy
+            ),
+        },
+    }
+
+
+@router.post("/health/dependencies/reset")
+async def reset_dependency_health_monitoring():
+    """Reset dependency health monitoring (useful for tests and debugging).
+
+    This endpoint clears all health tracking data and circuit breaker states.
+    Use with caution in production environments.
+    """
+    reset_dependency_health()
+    return {
+        "message": "Dependency health monitoring reset successfully",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/health/dependencies/{dependency_name}")
+async def get_specific_dependency_health(dependency_name: str):
+    """Get health status for a specific dependency.
+
+    Args:
+        dependency_name: Name of the dependency to check
+
+    Returns:
+        Detailed health information for the specified dependency
+    """
+    from fastapi.responses import JSONResponse
+
+    dependency_health = get_all_dependency_health()
+
+    if dependency_name not in dependency_health:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "error": True,
+                "message": f"Dependency '{dependency_name}' not found",
+                "available_dependencies": list(dependency_health.keys()),
+            },
+        )
+
+    health = dependency_health[dependency_name]
+    return {
+        "dependency": dependency_name,
+        "health": health,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }

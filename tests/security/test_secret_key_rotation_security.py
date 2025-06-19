@@ -29,6 +29,7 @@ from tripsage_core.services.business.api_key_service import (
     ServiceType,
 )
 
+
 class TestSecretKeyRotationSecurity:
     """Security tests for secret key rotation scenarios."""
 
@@ -695,6 +696,7 @@ class TestSecretKeyRotationSecurity:
 
         await legacy_service.client.aclose()
         await new_service.client.aclose()
+
 
 class TestCryptographicEdgeCases:
     """Security tests for cryptographic edge cases and error conditions."""

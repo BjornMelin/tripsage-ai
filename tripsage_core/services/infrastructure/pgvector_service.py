@@ -15,11 +15,12 @@ Key principles:
 
 import logging
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
 
 class DistanceFunction(str, Enum):
     """Standard pgvector distance functions."""
@@ -28,12 +29,14 @@ class DistanceFunction(str, Enum):
     COSINE = "vector_cosine_ops"
     INNER_PRODUCT = "vector_ip_ops"
 
+
 class OptimizationProfile(str, Enum):
     """Optimization profiles based on research."""
 
     SPEED = "speed"  # Use defaults: fast queries, good enough accuracy
     BALANCED = "balanced"  # Slightly better recall: ef_search=100
     QUALITY = "quality"  # Best recall: ef_construction=100, ef_search=200
+
 
 class IndexConfig(BaseModel):
     """Configuration for HNSW index creation."""
@@ -44,6 +47,7 @@ class IndexConfig(BaseModel):
     )
     ef_search: int = Field(default=40, description="Query quality (adjust per query)")
 
+
 class IndexStats(BaseModel):
     """Index performance statistics."""
 
@@ -53,6 +57,7 @@ class IndexStats(BaseModel):
     row_count: int
     index_usage_count: int
     last_used: str | None = None
+
 
 class PGVectorService:
     """
@@ -425,6 +430,7 @@ class PGVectorService:
         result = await self.db.execute_sql(tables_sql)
         return [dict(row) for row in result] if result else []
 
+
 # Utility function for quick optimization
 async def optimize_vector_table(
     database_service, table_name: str, column_name: str, query_load: str = "medium"
@@ -443,6 +449,7 @@ async def optimize_vector_table(
     """
     service = PGVectorService(database_service)
     return await service.optimize_for_table(table_name, column_name, query_load)
+
 
 # Export main classes and functions
 __all__ = [

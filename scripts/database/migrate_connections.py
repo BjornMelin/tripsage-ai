@@ -36,6 +36,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 class ConnectionMigrationTester:
     """Test all database connections after migration to secure utilities."""
 
@@ -493,6 +494,7 @@ class ConnectionMigrationTester:
             logger.info("\n✅ All database connections successfully migrated!")
             logger.info("The secure connection utilities are working correctly.")
 
+
 async def main():
     """Main entry point for migration testing."""
     tester = ConnectionMigrationTester()
@@ -500,6 +502,7 @@ async def main():
 
     # Exit with appropriate code
     sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

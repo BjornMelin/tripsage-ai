@@ -12,6 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+
 @pytest.fixture(autouse=True)
 def setup_test_environment():
     """Set up clean test environment for agent API tests."""
@@ -41,6 +42,7 @@ def setup_test_environment():
         else:
             os.environ[key] = original_value
 
+
 @pytest.fixture
 def temp_env_file():
     """Create a temporary .env file for testing environment loading."""
@@ -55,6 +57,7 @@ def temp_env_file():
     # Clean up
     Path(temp_file).unlink(missing_ok=True)
 
+
 @pytest.fixture
 def mock_redis():
     """Mock Redis client for caching tests."""
@@ -65,6 +68,7 @@ def mock_redis():
 
     with patch("redis.from_url", return_value=mock_redis_client):
         yield mock_redis_client
+
 
 @pytest.fixture
 def patch_core_settings():

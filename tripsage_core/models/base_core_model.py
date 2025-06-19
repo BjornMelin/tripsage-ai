@@ -8,6 +8,7 @@ domain models and database models.
 
 from pydantic import BaseModel, ConfigDict
 
+
 class TripSageModel(BaseModel):
     """Base model for all TripSage models.
 
@@ -28,6 +29,7 @@ class TripSageModel(BaseModel):
         extra="ignore",
     )
 
+
 class TripSageBaseResponse(TripSageModel):
     """Base model for all TripSage API responses.
 
@@ -40,6 +42,7 @@ class TripSageBaseResponse(TripSageModel):
         validate_assignment=True,
         extra="allow",  # Allow extra fields for API compatibility
     )
+
 
 class TripSageDomainModel(TripSageModel):
     """Base model for core business domain entities.
@@ -55,6 +58,7 @@ class TripSageDomainModel(TripSageModel):
         extra="ignore",
         # Additional domain-specific configuration can be added here
     )
+
 
 class TripSageDBModel(TripSageModel):
     """Base model for database-related models.

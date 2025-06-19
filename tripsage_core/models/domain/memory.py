@@ -7,11 +7,12 @@ data structures independent of storage implementation or API specifics.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageDomainModel
+
 
 class Entity(TripSageDomainModel):
     """Core knowledge graph entity business model.
@@ -39,6 +40,7 @@ class Entity(TripSageDomainModel):
         {}, description="Additional metadata about the entity"
     )
 
+
 class Relation(TripSageDomainModel):
     """Core knowledge graph relation business model.
 
@@ -61,12 +63,11 @@ class Relation(TripSageDomainModel):
     properties: dict[str, Any] | None = Field(
         {}, description="Additional properties of the relation"
     )
-    source: str | None = Field(
-        None, description="Source of the relation information"
-    )
+    source: str | None = Field(None, description="Source of the relation information")
     bidirectional: bool = Field(
         False, description="Whether the relation is bidirectional"
     )
+
 
 class TravelMemory(TripSageDomainModel):
     """Core travel memory business entity.
@@ -103,6 +104,7 @@ class TravelMemory(TripSageDomainModel):
     updated_at: datetime | None = Field(None, description="Last update timestamp")
     expires_at: datetime | None = Field(None, description="Expiration timestamp")
 
+
 class SessionMemory(TripSageDomainModel):
     """Core session memory business entity.
 
@@ -130,6 +132,4 @@ class SessionMemory(TripSageDomainModel):
         {}, description="Session-specific user preferences"
     )
     interaction_count: int = Field(0, description="Number of interactions in session")
-    last_activity: datetime | None = Field(
-        None, description="Last activity timestamp"
-    )
+    last_activity: datetime | None = Field(None, description="Last activity timestamp")

@@ -10,9 +10,8 @@ import hmac
 import logging
 import secrets
 import time
-from datetime import datetime, timezone
-from typing import Optional, Union
 from collections.abc import Callable
+from datetime import datetime, timezone
 
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict
@@ -39,6 +38,7 @@ from tripsage_core.services.business.audit_logging_service import (
 
 logger = logging.getLogger(__name__)
 
+
 def constant_time_compare(a: str, b: str) -> bool:
     """Constant-time string comparison to prevent timing attacks.
 
@@ -56,6 +56,7 @@ def constant_time_compare(a: str, b: str) -> bool:
 
     # Use hmac.compare_digest for constant-time comparison
     return hmac.compare_digest(a.encode("utf-8"), b.encode("utf-8"))
+
 
 def secure_token_validation(token: str, expected_format: str = "jwt") -> bool:
     """Secure token format validation with timing attack protection.
@@ -98,6 +99,7 @@ def secure_token_validation(token: str, expected_format: str = "jwt") -> bool:
         time.sleep(0.001)
         return False
 
+
 def _validate_jwt_format(token: str) -> bool:
     """Internal JWT format validation."""
     if len(token) < 20 or len(token) > 4096:
@@ -121,6 +123,7 @@ def _validate_jwt_format(token: str) -> bool:
             return False
 
     return True
+
 
 def _validate_api_key_format(api_key: str) -> bool:
     """Internal API key format validation."""
@@ -153,6 +156,7 @@ def _validate_api_key_format(api_key: str) -> bool:
 
     # For non-sk_ format, require minimum length and printable ASCII
     return len(api_key) >= 20 and all(32 <= ord(c) <= 126 for c in api_key)
+
 
 class AuthenticationAuditLogger:
     """Enhanced audit logging for authentication events."""
@@ -223,8 +227,10 @@ class AuthenticationAuditLogger:
 
         return request.client.host if request.client else "unknown"
 
+
 # Global audit logger instance
 auth_audit_logger = AuthenticationAuditLogger()
+
 
 class Principal(BaseModel):
     """Represents an authenticated principal (user or agent)."""
@@ -249,6 +255,7 @@ class Principal(BaseModel):
     def user_id(self) -> str:
         """Get user ID (alias for id field)."""
         return self.id
+
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """Enhanced middleware for JWT and API Key authentication.
@@ -405,7 +412,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             api_key_header = request.headers.get("X-API-Key")
             if api_key_header:
                 try:
-                    # Enhanced security: validate API key format with timing attack protection
+                    # Enhanced security: validate API key format with timing attack
+                    # protection
                     if not secure_token_validation(api_key_header, "api_key"):
                         raise KeyValidationError("Invalid API key format")
                     principal = await self._authenticate_api_key(api_key_header)

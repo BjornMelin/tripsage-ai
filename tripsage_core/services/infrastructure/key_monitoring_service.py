@@ -8,11 +8,11 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
-from typing import Any, Optional, TypeVar, cast
-from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -36,6 +36,7 @@ F = TypeVar("F", bound=Callable[..., Any])
 # Create logger
 logger = get_logger("key_operations")
 
+
 class KeyOperation(str, Enum):
     """API key operations for monitoring."""
 
@@ -45,6 +46,7 @@ class KeyOperation(str, Enum):
     VALIDATE = "validate"
     ROTATE = "rotate"
     ACCESS = "access"
+
 
 class KeyMonitoringService:
     """
@@ -319,6 +321,7 @@ class KeyMonitoringService:
         await self.cache_service.incr(rate_limit_key)
         return False
 
+
 class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
     """
     Middleware for rate limiting API key operations.
@@ -425,6 +428,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
 
         return None
 
+
 def monitor_key_operation(
     operation: KeyOperation,
 ) -> Callable[[F], F]:
@@ -528,6 +532,7 @@ def monitor_key_operation(
 
     return decorator
 
+
 def secure_random_token(length: int = 64) -> str:
     """Generate a secure random token.
 
@@ -538,6 +543,7 @@ def secure_random_token(length: int = 64) -> str:
         A secure random token
     """
     return secrets.token_hex(length // 2)
+
 
 def constant_time_compare(a: str, b: str) -> bool:
     """Compare two strings in constant time.
@@ -555,6 +561,7 @@ def constant_time_compare(a: str, b: str) -> bool:
     """
     return secrets.compare_digest(a.encode(), b.encode())
 
+
 def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any]:
     """Clear sensitive data from a dictionary.
 
@@ -570,6 +577,7 @@ def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any
         if key in result:
             result[key] = "[REDACTED]"
     return result
+
 
 async def check_key_expiration(
     monitoring_service: KeyMonitoringService, days_before: int = 7
@@ -600,6 +608,7 @@ async def check_key_expiration(
     except Exception as e:
         logger.error(f"Failed to check key expiration: {e}")
         return []
+
 
 async def get_key_health_metrics() -> dict[str, Any]:
     """Get health metrics for API keys.

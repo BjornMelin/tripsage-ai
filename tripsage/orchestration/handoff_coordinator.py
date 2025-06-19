@@ -9,13 +9,14 @@ between specialized agents.
 import logging
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tripsage.orchestration.state import TravelPlanningState
 
 logger = logging.getLogger(__name__)
+
 
 class HandoffTrigger(str, Enum):
     """Enumeration of handoff trigger types."""
@@ -27,6 +28,7 @@ class HandoffTrigger(str, Enum):
     TIMEOUT = "timeout"
     QUALITY_THRESHOLD = "quality_threshold"
 
+
 class AgentCapability(str, Enum):
     """Enumeration of agent capabilities."""
 
@@ -37,6 +39,7 @@ class AgentCapability(str, Enum):
     ITINERARY_PLANNING = "itinerary_planning"
     GENERAL_ASSISTANCE = "general_assistance"
     ERROR_HANDLING = "error_handling"
+
 
 class HandoffRule(BaseModel):
     """Configuration for agent handoff rules."""
@@ -51,6 +54,7 @@ class HandoffRule(BaseModel):
     context_keys: list[str] = Field(
         default_factory=list, description="State keys to preserve in handoff"
     )
+
 
 class HandoffContext(BaseModel):
     """Context information for agent handoffs."""
@@ -68,6 +72,7 @@ class HandoffContext(BaseModel):
     handoff_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
+
 
 class AgentHandoffCoordinator:
     """
@@ -530,8 +535,10 @@ class AgentHandoffCoordinator:
         self.handoff_history.clear()
         logger.info("Handoff history cleared")
 
+
 # Global coordinator instance
 _global_handoff_coordinator: AgentHandoffCoordinator | None = None
+
 
 def get_handoff_coordinator() -> AgentHandoffCoordinator:
     """Get the global handoff coordinator instance."""

@@ -11,7 +11,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -25,6 +25,7 @@ from tripsage_core.models.attachments import (
     FileType,
 )
 
+
 class DocumentAnalyzerError(CoreAPIError):
     """Exception raised for document analyzer errors."""
 
@@ -37,6 +38,7 @@ class DocumentAnalyzerError(CoreAPIError):
         )
         self.original_error = original_error
 
+
 class AnalysisContext(BaseModel):
     """Context for document analysis."""
 
@@ -45,6 +47,7 @@ class AnalysisContext(BaseModel):
     mime_type: str = Field(..., description="MIME type of file")
     file_type: FileType = Field(..., description="Categorized file type")
     user_context: str | None = Field(None, description="User-provided context")
+
 
 class TravelInformation(BaseModel):
     """Extracted travel-related information."""
@@ -68,6 +71,7 @@ class TravelInformation(BaseModel):
     contact_info: list[dict[str, str]] = Field(
         default_factory=list, description="Important contact information"
     )
+
 
 class DocumentAnalyzer:
     """
@@ -770,8 +774,10 @@ class DocumentAnalyzer:
         """Async context manager exit."""
         await self.close()
 
+
 # Global service instance
 _document_analyzer: DocumentAnalyzer | None = None
+
 
 async def get_document_analyzer() -> DocumentAnalyzer:
     """
@@ -788,6 +794,7 @@ async def get_document_analyzer() -> DocumentAnalyzer:
 
     return _document_analyzer
 
+
 async def close_document_analyzer() -> None:
     """Close the global document analyzer instance."""
     global _document_analyzer
@@ -795,6 +802,7 @@ async def close_document_analyzer() -> None:
     if _document_analyzer:
         await _document_analyzer.close()
         _document_analyzer = None
+
 
 __all__ = [
     "DocumentAnalyzer",

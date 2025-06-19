@@ -10,7 +10,7 @@ import logging
 import time
 import uuid
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,7 @@ from tripsage_core.infrastructure.deployment.strategies import (
 
 logger = logging.getLogger(__name__)
 
+
 class DeploymentStatus(str, Enum):
     """Overall deployment status."""
 
@@ -31,6 +32,7 @@ class DeploymentStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     ROLLED_BACK = "rolled_back"
+
 
 class DeploymentResult(BaseModel):
     """Result of a deployment operation."""
@@ -85,6 +87,7 @@ class DeploymentResult(BaseModel):
             "auto_rollback": self.auto_rollback_triggered,
             "monitoring": self.monitoring_enabled,
         }
+
 
 class ConfigurableDeploymentOrchestrator:
     """Orchestrator for managing configurable deployment strategies.
@@ -490,8 +493,10 @@ class ConfigurableDeploymentOrchestrator:
 
         logger.info(f"Monitoring completed for deployment {deployment_id}")
 
+
 # Global orchestrator instance
 _orchestrator: ConfigurableDeploymentOrchestrator | None = None
+
 
 def get_deployment_orchestrator() -> ConfigurableDeploymentOrchestrator:
     """Get the global deployment orchestrator instance.

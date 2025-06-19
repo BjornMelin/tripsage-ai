@@ -8,10 +8,10 @@ import hashlib
 import json
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Optional
-from collections.abc import Callable
+from typing import Any
 
 from cryptography.fernet import Fernet
 from pydantic import BaseModel, Field
@@ -24,6 +24,7 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 settings = get_settings()
 telemetry = get_telemetry()
+
 
 class SecurityConfig(BaseModel):
     """Security configuration for memory service."""
@@ -58,6 +59,7 @@ class SecurityConfig(BaseModel):
         description="Fields requiring extra protection",
     )
 
+
 class AuditLog(BaseModel):
     """Audit log entry for memory operations."""
 
@@ -70,6 +72,7 @@ class AuditLog(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     ip_address: str | None = None
     session_id: str | None = None
+
 
 class MemoryEncryption:
     """Handles encryption/decryption of memory content."""
@@ -144,6 +147,7 @@ class MemoryEncryption:
                     pass
         return result
 
+
 class RateLimiter:
     """Token bucket rate limiter for memory operations."""
 
@@ -210,6 +214,7 @@ class RateLimiter:
         )
 
         return False
+
 
 class AuditLogger:
     """Handles audit logging for memory operations."""
@@ -305,6 +310,7 @@ class AuditLogger:
                 success=False,
                 error=f"high_frequency_access:{count}",
             )
+
 
 class MemorySecurity:
     """Main security service for memory operations."""
@@ -453,10 +459,12 @@ class MemorySecurity:
                 session_id=session_id,
             )
 
+
 class SecurityError(Exception):
     """Security-related error."""
 
     pass
+
 
 # Decorator for securing functions
 def secure_memory_operation(operation: str):

@@ -8,7 +8,7 @@ rate limiting, and timeout handling integrated with TripSage Core.
 
 import asyncio
 import uuid
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urljoin
 
 import httpx
@@ -22,6 +22,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
     CoreServiceError,
 )
+
 
 class DuffelAPIError(CoreAPIError):
     """Base exception for Duffel API errors."""
@@ -42,6 +43,7 @@ class DuffelAPIError(CoreAPIError):
         self.status_code = status_code
         self.response_data = response_data or {}
 
+
 class DuffelRateLimitError(CoreRateLimitError):
     """Exception raised when rate limit is exceeded."""
 
@@ -52,6 +54,7 @@ class DuffelRateLimitError(CoreRateLimitError):
             retry_after=retry_after,
         )
         self.retry_after = retry_after
+
 
 class DuffelHTTPClient:
     """
@@ -439,8 +442,10 @@ class DuffelHTTPClient:
         """Async context manager exit."""
         await self.close()
 
+
 # Global service instance
 _duffel_client: DuffelHTTPClient | None = None
+
 
 async def get_duffel_client() -> DuffelHTTPClient:
     """
@@ -456,6 +461,7 @@ async def get_duffel_client() -> DuffelHTTPClient:
         await _duffel_client.connect()
 
     return _duffel_client
+
 
 async def close_duffel_client() -> None:
     """Close the global Duffel HTTP client instance."""

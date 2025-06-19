@@ -12,11 +12,13 @@ from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+
 class IntegrationMode(str, Enum):
     """Integration mode for service implementations."""
 
     MCP = "mcp"
     DIRECT = "direct"
+
 
 class FeatureFlags(BaseSettings):
     """Feature flags for service integration management.
@@ -137,8 +139,10 @@ class FeatureFlags(BaseSettings):
             },
         }
 
+
 # Global feature flags instance
 feature_flags = FeatureFlags()
+
 
 def get_feature_flags() -> FeatureFlags:
     """Get the global feature flags instance.
@@ -147,6 +151,7 @@ def get_feature_flags() -> FeatureFlags:
         Global FeatureFlags instance
     """
     return feature_flags
+
 
 def is_direct_integration(service_name: str) -> bool:
     """Check if a service is using direct SDK integration.
@@ -164,6 +169,7 @@ def is_direct_integration(service_name: str) -> bool:
         # Default to MCP for unknown services
         return False
 
+
 def enable_direct_integration(service_name: str) -> None:
     """Enable direct SDK integration for a service.
 
@@ -171,6 +177,7 @@ def enable_direct_integration(service_name: str) -> None:
         service_name: Name of the service to enable direct integration for
     """
     feature_flags.set_integration_mode(service_name, IntegrationMode.DIRECT)
+
 
 def enable_mcp_integration(service_name: str) -> None:
     """Enable MCP wrapper integration for a service.

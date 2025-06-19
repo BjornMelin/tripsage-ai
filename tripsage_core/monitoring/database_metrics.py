@@ -9,7 +9,6 @@ and error rates for the TripSage database services.
 import logging
 import time
 from contextlib import contextmanager
-from typing import Optional
 
 from prometheus_client import (
     CollectorRegistry,
@@ -21,6 +20,7 @@ from prometheus_client import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 class DatabaseMetrics:
     """
@@ -345,8 +345,10 @@ class DatabaseMetrics:
             logger.error(f"Failed to start metrics server: {e}")
             raise
 
+
 # Global metrics instance
 _database_metrics: DatabaseMetrics | None = None
+
 
 def get_database_metrics() -> DatabaseMetrics:
     """Get or create global database metrics instance.
@@ -360,6 +362,7 @@ def get_database_metrics() -> DatabaseMetrics:
         _database_metrics = DatabaseMetrics()
 
     return _database_metrics
+
 
 def reset_database_metrics():
     """Reset global database metrics instance (for testing)."""

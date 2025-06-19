@@ -7,7 +7,7 @@ and real-time updates following 2025 best practices.
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import text
@@ -24,6 +24,7 @@ from tripsage_core.utils.cache_utils import (
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
 
 class ConfigurationService:
     """Service for managing agent configurations with database persistence."""
@@ -492,8 +493,10 @@ class ConfigurationService:
         except Exception as e:
             logger.error(f"Error recording performance metrics: {e}")
 
+
 # Global service instance
 _configuration_service: ConfigurationService | None = None
+
 
 def get_configuration_service() -> ConfigurationService:
     """Get the global configuration service instance."""

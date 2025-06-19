@@ -23,7 +23,7 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 from watchdog.events import FileSystemEventHandler
@@ -40,6 +40,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ConfigChangeType(str, enum.Enum):
     """Types of configuration changes."""
 
@@ -51,6 +52,7 @@ class ConfigChangeType(str, enum.Enum):
     RUNTIME_CONFIG_CHANGED = "runtime_config_changed"
     SECURITY_SETTING_CHANGED = "security_setting_changed"
     API_CONFIG_CHANGED = "api_config_changed"
+
 
 class ConfigChange(TripSageModel):
     """Represents a single configuration change event."""
@@ -83,6 +85,7 @@ class ConfigChange(TripSageModel):
     file_size: int | None = None
     file_permissions: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
 
 class ConfigurationAuditService:
     """
@@ -668,6 +671,7 @@ class ConfigurationAuditService:
             else None,
         }
 
+
 class ConfigFileHandler(FileSystemEventHandler):
     """File system event handler for configuration changes."""
 
@@ -692,8 +696,10 @@ class ConfigFileHandler(FileSystemEventHandler):
                 self.audit_service._handle_file_change(event.src_path, "deleted")
             )
 
+
 # Global configuration audit service instance
 _config_audit_service: ConfigurationAuditService | None = None
+
 
 async def get_config_audit_service() -> ConfigurationAuditService:
     """Get or create the global configuration audit service instance."""
@@ -705,6 +711,7 @@ async def get_config_audit_service() -> ConfigurationAuditService:
 
     return _config_audit_service
 
+
 async def shutdown_config_audit_service():
     """Shutdown the global configuration audit service instance."""
     global _config_audit_service
@@ -712,6 +719,7 @@ async def shutdown_config_audit_service():
     if _config_audit_service is not None:
         await _config_audit_service.stop()
         _config_audit_service = None
+
 
 # Convenience function for manual configuration changes
 async def record_config_change(

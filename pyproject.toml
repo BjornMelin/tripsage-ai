@@ -3,7 +3,7 @@ name = "tripsage-ai"
 version = "0.1.0"
 description = "AI-powered travel planning system with multi-source data integration"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
     # Core web framework and async support
@@ -90,7 +90,7 @@ addopts = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py313"
 lint.select = ["E", "F", "B", "I"]
 
 # Per-file ignores: Allow FastAPI Depends() only in API router files
@@ -139,6 +139,7 @@ dev = [
     "radon>=6.0.1",
     "bandit>=1.8.3",
     "mypy>=1.16.0",
+    "mutmut>=3.3.0",
 ]
 
 # Scripts and benchmarking with visualization

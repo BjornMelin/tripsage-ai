@@ -32,6 +32,7 @@ from tripsage_core.services.business.trip_service import (
     get_trip_service,
 )
 
+
 class TestTripService:
     """Test suite for TripService functionality."""
 

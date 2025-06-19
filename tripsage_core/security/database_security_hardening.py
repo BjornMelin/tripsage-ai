@@ -14,13 +14,14 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import ValidationError
 
 logger = logging.getLogger(__name__)
+
 
 class SecurityLevel(Enum):
     """Security threat levels."""
@@ -29,6 +30,7 @@ class SecurityLevel(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
 
 class ThreatType(Enum):
     """Types of security threats."""
@@ -42,6 +44,7 @@ class ThreatType(Enum):
     RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
     CONNECTION_ABUSE = "connection_abuse"
     PRIVILEGE_ESCALATION = "privilege_escalation"
+
 
 class AuditEventType(Enum):
     """Types of audit events."""
@@ -57,6 +60,7 @@ class AuditEventType(Enum):
     RATE_LIMIT_HIT = "rate_limit_hit"
     THREAT_DETECTED = "threat_detected"
 
+
 @dataclass
 class SecurityMetrics:
     """Security metrics for monitoring."""
@@ -69,6 +73,7 @@ class SecurityMetrics:
     failed_authentications: int = 0
     last_threat_time: datetime | None = None
     threat_score: float = 0.0
+
 
 @dataclass
 class ThreatAlert:
@@ -83,6 +88,7 @@ class ThreatAlert:
     blocked: bool = False
     acknowledged: bool = False
 
+
 @dataclass
 class AuditEvent:
     """Security audit event."""
@@ -95,6 +101,7 @@ class AuditEvent:
     table_accessed: str | None
     success: bool
     metadata: dict[str, Any] = field(default_factory=dict)
+
 
 class ConnectionSecurityValidator(BaseModel):
     """Enhanced connection security validation with Pydantic."""
@@ -186,6 +193,7 @@ class ConnectionSecurityValidator(BaseModel):
 
         return self
 
+
 class IPBasedRateLimiter:
     """Advanced IP-based rate limiting with geographic and behavioral analysis."""
 
@@ -265,7 +273,10 @@ class IPBasedRateLimiter:
                 severity=SecurityLevel.MEDIUM,
                 source_ip=ip_address,
                 timestamp=now,
-                message=f"Rate limit exceeded: {current_requests}/{self.requests_per_minute}",
+                message=(
+                    f"Rate limit exceeded: "
+                    f"{current_requests}/{self.requests_per_minute}"
+                ),
                 metadata={"requests_per_minute": current_requests},
             )
 
@@ -380,6 +391,7 @@ class IPBasedRateLimiter:
             "blocked": ip_address in self.blocked_ips,
         }
 
+
 class SQLInjectionDetector:
     """Advanced SQL injection pattern detection."""
 
@@ -461,7 +473,10 @@ class SQLInjectionDetector:
                                 severity=SecurityLevel.CRITICAL,
                                 source_ip="unknown",
                                 timestamp=datetime.now(timezone.utc),
-                                message=f"SQL injection in parameter '{key}': {self.sql_patterns[i]}",
+                                message=(
+                                    f"SQL injection in parameter '{key}': "
+                                    f"{self.sql_patterns[i]}"
+                                ),
                                 metadata={
                                     "parameter": key,
                                     "pattern_matched": self.sql_patterns[i],
@@ -473,6 +488,7 @@ class SQLInjectionDetector:
                             )
 
         return None
+
 
 class DatabaseAuditLogger:
     """Comprehensive database audit logging."""
@@ -559,6 +575,7 @@ class DatabaseAuditLogger:
         )
 
         return summary
+
 
 class SecurityConfigurationValidator:
     """Validate security configuration and compliance."""
@@ -792,6 +809,7 @@ class SecurityConfigurationValidator:
             "score": score,
             "recommendations": recommendations,
         }
+
 
 class DatabaseSecurityManager:
     """Main security hardening manager coordinating all security components."""

@@ -5,18 +5,20 @@ used across different storage backends.
 """
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.common_validators import EmailLowercase
 
+
 class UserRole(str, Enum):
     """Enum for user role values."""
 
     USER = "user"
     ADMIN = "admin"
+
 
 class User(TripSageModel):
     """User model for TripSage.

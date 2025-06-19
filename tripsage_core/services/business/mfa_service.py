@@ -12,7 +12,6 @@ import base64
 import logging
 import secrets
 from io import BytesIO
-from typing import Optional
 
 import pyotp
 import qrcode
@@ -26,6 +25,7 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 logger = logging.getLogger(__name__)
 
+
 class MFAEnrollmentRequest(TripSageModel):
     """Request to enroll in MFA."""
 
@@ -34,12 +34,14 @@ class MFAEnrollmentRequest(TripSageModel):
         ..., min_length=6, max_length=6, description="TOTP verification code"
     )
 
+
 class MFAEnrollmentResponse(TripSageModel):
     """Response for MFA enrollment."""
 
     backup_codes: list[str] = Field(..., description="One-time backup codes")
     enrolled_at: str = Field(..., description="Enrollment timestamp")
     success: bool = Field(..., description="Whether enrollment was successful")
+
 
 class MFASetupResponse(TripSageModel):
     """Response for MFA setup initiation."""
@@ -48,6 +50,7 @@ class MFASetupResponse(TripSageModel):
     qr_code_url: str = Field(..., description="QR code data URL")
     backup_codes: list[str] = Field(..., description="One-time backup codes")
     manual_entry_key: str = Field(..., description="Manual entry key for apps")
+
 
 class MFAVerificationRequest(TripSageModel):
     """Request to verify MFA code."""
@@ -60,6 +63,7 @@ class MFAVerificationRequest(TripSageModel):
         description="TOTP (6 chars) or backup code (11 chars)",
     )
 
+
 class MFAVerificationResponse(TripSageModel):
     """Response for MFA verification."""
 
@@ -68,6 +72,7 @@ class MFAVerificationResponse(TripSageModel):
     remaining_backup_codes: int | None = Field(
         None, description="Remaining backup codes"
     )
+
 
 class MFAStatus(TripSageModel):
     """MFA status for a user."""
@@ -78,6 +83,7 @@ class MFAStatus(TripSageModel):
         default=0, description="Number of backup codes remaining"
     )
     last_used: str | None = Field(None, description="Last successful verification")
+
 
 class MFAService:
     """
@@ -479,6 +485,7 @@ class MFAService:
             f"{secrets.randbelow(100000):05d}-{secrets.randbelow(100000):05d}"
             for _ in range(count)
         ]
+
 
 # Dependency function for FastAPI
 async def get_mfa_service() -> MFAService:

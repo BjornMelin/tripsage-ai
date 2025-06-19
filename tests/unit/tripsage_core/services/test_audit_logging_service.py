@@ -38,6 +38,7 @@ from tripsage_core.services.business.audit_logging_service import (
     get_audit_logger,
 )
 
+
 class TestAuditEventModels:
     """Test audit event model validation and serialization."""
 
@@ -176,6 +177,7 @@ class TestAuditEventModels:
         hash3 = event.compute_integrity_hash("different_secret")
         assert hash1 != hash3
 
+
 class TestAuditLogConfig:
     """Test audit log configuration validation."""
 
@@ -214,6 +216,7 @@ class TestAuditLogConfig:
         assert config.external_forwarding_enabled is True
         assert len(config.external_endpoints) == 1
         assert config.compliance_mode == "hipaa"
+
 
 class TestSecurityAuditLogger:
     """Test the main security audit logger functionality."""
@@ -453,6 +456,7 @@ class TestSecurityAuditLogger:
         user_events = await audit_logger.query_events(actor_id="user123")
         assert len(user_events) == 3
 
+
 class TestConvenienceFunctions:
     """Test convenience functions for common audit events."""
 
@@ -544,6 +548,7 @@ class TestConvenienceFunctions:
 
             assert result is True
             mock_logger.log_configuration_change.assert_called_once()
+
 
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
@@ -716,6 +721,7 @@ class TestIntegrationScenarios:
         finally:
             # Restore original function
             audit_module.get_audit_logger = original_get_audit_logger
+
 
 class TestPerformanceAndReliability:
     """Test performance and reliability aspects."""

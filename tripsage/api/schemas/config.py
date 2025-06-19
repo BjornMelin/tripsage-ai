@@ -10,7 +10,7 @@ import hashlib
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Annotated, Any, Optional, Union
+from typing import Annotated, Any, Self
 
 from pydantic import (
     BaseModel,
@@ -22,7 +22,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing import Self
 
 # Type aliases for better type safety
 ModelName = Annotated[
@@ -39,6 +38,7 @@ VersionId = Annotated[
 DescriptionText = Annotated[
     str, StringConstraints(max_length=500, strip_whitespace=True)
 ]
+
 
 class AgentType(str, Enum):
     """Enumeration of available agent types with metadata."""
@@ -65,6 +65,7 @@ class AgentType(str, Enum):
             "itinerary_agent": 0.4,  # Structured creativity
         }[self.value]
 
+
 class ConfigurationScope(str, Enum):
     """Enumeration of configuration scopes."""
 
@@ -72,6 +73,7 @@ class ConfigurationScope(str, Enum):
     ENVIRONMENT = "environment"
     AGENT_SPECIFIC = "agent_specific"
     USER_OVERRIDE = "user_override"
+
 
 class BaseConfigModel(BaseModel):
     """Base configuration model with common settings."""
@@ -86,20 +88,54 @@ class BaseConfigModel(BaseModel):
         populate_by_name=True,
     )
 
+
 class AgentConfigRequest(BaseConfigModel):
     """Request schema for agent configuration updates with advanced validation."""
 
-    temperature: Annotated[float, Field(ge=0.0, le=2.0, description="Controls randomness in responses" " (0.0=deterministic, 2.0=very creative)")] | None = None
+    temperature: (
+        Annotated[
+            float,
+            Field(
+                ge=0.0,
+                le=2.0,
+                description="Controls randomness in responses"
+                " (0.0=deterministic, 2.0=very creative)",
+            ),
+        ]
+        | None
+    ) = None
 
-    max_tokens: Annotated[int, Field(ge=1, le=8000, description="Maximum tokens in response" " (affects cost and response length)")] | None = None
+    max_tokens: (
+        Annotated[
+            int,
+            Field(
+                ge=1,
+                le=8000,
+                description="Maximum tokens in response"
+                " (affects cost and response length)",
+            ),
+        ]
+        | None
+    ) = None
 
-    top_p: Annotated[float, Field(ge=0.0, le=1.0, description="Nucleus sampling parameter (0.1=focused, 1.0=diverse)")] | None = None
+    top_p: (
+        Annotated[
+            float,
+            Field(
+                ge=0.0,
+                le=1.0,
+                description="Nucleus sampling parameter (0.1=focused, 1.0=diverse)",
+            ),
+        ]
+        | None
+    ) = None
 
-    timeout_seconds: Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")] | None = None
+    timeout_seconds: (
+        Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")]
+        | None
+    ) = None
 
-    model: ModelName | None = Field(
-        None, description="AI model to use for this agent"
-    )
+    model: ModelName | None = Field(None, description="AI model to use for this agent")
 
     description: DescriptionText | None = Field(
         None, description="Description of configuration changes"
@@ -171,6 +207,7 @@ class AgentConfigRequest(BaseConfigModel):
             if getattr(self, field_name) != getattr(other, field_name):
                 changed.append(field_name)
         return changed
+
 
 class AgentConfigResponse(BaseConfigModel):
     """Response schema for agent configuration with computed metrics."""
@@ -281,6 +318,7 @@ class AgentConfigResponse(BaseConfigModel):
 
         return suggestions
 
+
 class ConfigurationVersion(BaseConfigModel):
     """Schema for configuration version history with enhanced metadata."""
 
@@ -310,6 +348,7 @@ class ConfigurationVersion(BaseConfigModel):
         """Check if this version was created recently (within 7 days)."""
         return self.age_in_days <= 7
 
+
 class ConfigurationDiff(BaseConfigModel):
     """Schema for configuration differences."""
 
@@ -329,6 +368,7 @@ class ConfigurationDiff(BaseConfigModel):
             return "Medium"
         else:
             return "Low"
+
 
 class PerformanceMetrics(BaseConfigModel):
     """Schema for configuration performance metrics with trends."""
@@ -372,6 +412,7 @@ class PerformanceMetrics(BaseConfigModel):
             return total_tokens / self.average_response_time
         return 0.0
 
+
 class ConfigurationRecommendation(BaseConfigModel):
     """Schema for AI-driven configuration optimization recommendations."""
 
@@ -411,6 +452,7 @@ class ConfigurationRecommendation(BaseConfigModel):
 
         return self
 
+
 class WebSocketConfigMessage(BaseConfigModel):
     """Schema for real-time WebSocket configuration messages."""
 
@@ -432,6 +474,7 @@ class WebSocketConfigMessage(BaseConfigModel):
             raise ValueError("Rollback messages must include version_id")
 
         return self
+
 
 class ConfigurationExport(BaseConfigModel):
     """Schema for configuration export with metadata."""
@@ -458,6 +501,7 @@ class ConfigurationExport(BaseConfigModel):
         # Rough estimation based on typical configuration sizes
         return len(self.model_dump_json().encode()) / 1024
 
+
 class ConfigurationImport(BaseConfigModel):
     """Schema for configuration import with validation."""
 
@@ -482,6 +526,7 @@ class ConfigurationImport(BaseConfigModel):
 
         return self
 
+
 class ConfigurationValidationError(BaseConfigModel):
     """Schema for detailed configuration validation errors."""
 
@@ -498,6 +543,7 @@ class ConfigurationValidationError(BaseConfigModel):
         field_code = self.field.upper().replace("_", "")
         severity_code = self.severity.upper()[:1]
         return f"CFG{severity_code}{field_code}"
+
 
 class ConfigurationValidationResponse(BaseConfigModel):
     """Response schema for comprehensive configuration validation."""
@@ -518,6 +564,7 @@ class ConfigurationValidationResponse(BaseConfigModel):
                 f"❌ Invalid configuration ({len(self.errors)} errors, "
                 f"{len(self.warnings)} warnings)"
             )
+
 
 class ConfigurationImportResult(BaseConfigModel):
     """Schema for configuration import operation results."""

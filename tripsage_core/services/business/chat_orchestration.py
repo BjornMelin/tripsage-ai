@@ -8,7 +8,7 @@ for improved performance and simplified architecture.
 import asyncio
 import json
 import time
-from typing import Any, Optional
+from typing import Any
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.mcp_abstraction.manager import MCPManager
@@ -23,10 +23,12 @@ from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
+
 class ChatOrchestrationError(TripSageError):
     """Error raised when chat orchestration operations fail."""
 
     pass
+
 
 class ChatOrchestrationService:
     """Orchestrate chat interactions with direct database operations."""
@@ -635,6 +637,7 @@ class ChatOrchestrationService:
             self.logger.error(f"Failed to end chat session: {e}")
             raise ChatOrchestrationError(f"Failed to end chat session: {str(e)}") from e
 
+
 async def main():
     """Main function for testing chat orchestration service."""
     # Initialize the service
@@ -663,6 +666,7 @@ async def main():
         print(f"Chat orchestration error: {e}")
     except Exception as e:
         print(f"Unexpected error: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

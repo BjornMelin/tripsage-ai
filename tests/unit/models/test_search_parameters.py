@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from tripsage_core.models.db.search_parameters import SearchParameters
 
+
 def test_search_parameters_creation(sample_search_parameters_dict):
     """Test creating a SearchParameters model with valid data."""
     search_params = SearchParameters(**sample_search_parameters_dict)
@@ -12,6 +13,7 @@ def test_search_parameters_creation(sample_search_parameters_dict):
     assert search_params.parameter_json["type"] == "flight"
     assert search_params.parameter_json["origin"] == "LAX"
     assert search_params.parameter_json["destination"] == "NRT"
+
 
 def test_search_parameters_optional_fields():
     """Test creating a SearchParameters model with minimal required fields."""
@@ -27,6 +29,7 @@ def test_search_parameters_optional_fields():
     assert minimal_search_params.timestamp == now
     assert minimal_search_params.parameter_json["type"] == "accommodation"
 
+
 def test_is_flight_search(sample_search_parameters_dict):
     """Test the is_flight_search property."""
     search_params = SearchParameters(**sample_search_parameters_dict)
@@ -35,6 +38,7 @@ def test_is_flight_search(sample_search_parameters_dict):
     # Change to accommodation search
     search_params.parameter_json["type"] = "accommodation"
     assert search_params.is_flight_search is False
+
 
 def test_is_accommodation_search(sample_search_parameters_dict):
     """Test the is_accommodation_search property."""
@@ -45,6 +49,7 @@ def test_is_accommodation_search(sample_search_parameters_dict):
     search_params.parameter_json["type"] = "accommodation"
     assert search_params.is_accommodation_search is True
 
+
 def test_is_activity_search(sample_search_parameters_dict):
     """Test the is_activity_search property."""
     search_params = SearchParameters(**sample_search_parameters_dict)
@@ -53,6 +58,7 @@ def test_is_activity_search(sample_search_parameters_dict):
     # Change to activity search
     search_params.parameter_json["type"] = "activity"
     assert search_params.is_activity_search is True
+
 
 def test_is_transportation_search(sample_search_parameters_dict):
     """Test the is_transportation_search property."""
@@ -63,11 +69,13 @@ def test_is_transportation_search(sample_search_parameters_dict):
     search_params.parameter_json["type"] = "transportation"
     assert search_params.is_transportation_search is True
 
+
 def test_search_summary(sample_search_parameters_dict):
     """Test the search_summary property for flight search."""
     search_params = SearchParameters(**sample_search_parameters_dict)
     expected_summary = "Flight from LAX to NRT (Economy, 2 adults, 0 children)"
     assert search_params.search_summary == expected_summary
+
 
 def test_search_summary_accommodation():
     """Test the search_summary property for accommodation search."""
@@ -87,6 +95,7 @@ def test_search_summary_accommodation():
     expected_summary = "Hotel in Tokyo, Japan (2023-10-15 to 2023-10-22, 2 adults)"
     assert search_params.search_summary == expected_summary
 
+
 def test_search_summary_activity():
     """Test the search_summary property for activity search."""
     now = datetime.now(timezone.utc)
@@ -102,6 +111,7 @@ def test_search_summary_activity():
     )
     expected_summary = "Sightseeing activity in Tokyo, Japan (2023-10-16)"
     assert search_params.search_summary == expected_summary
+
 
 def test_search_summary_transportation():
     """Test the search_summary property for transportation search."""
@@ -120,6 +130,7 @@ def test_search_summary_transportation():
     expected_summary = "Train from Tokyo Station to Kyoto Station (2023-10-16)"
     assert search_params.search_summary == expected_summary
 
+
 def test_search_summary_unknown_type():
     """Test the search_summary property for unknown search type."""
     now = datetime.now(timezone.utc)
@@ -132,6 +143,7 @@ def test_search_summary_unknown_type():
         "Search for unknown with parameters: {'type': 'unknown', 'query': 'something'}"
     )
     assert search_params.search_summary == expected_summary
+
 
 def test_model_dump(sample_search_parameters_dict):
     """Test model_dump method."""

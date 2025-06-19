@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     """Modern, unified application configuration.
 
@@ -188,7 +189,10 @@ class Settings(BaseSettings):
         default=True, description="Enable comprehensive security headers"
     )
     csp_policy: str = Field(
-        default="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'",
+        default=(
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'"
+        ),
         description="Content Security Policy",
     )
     hsts_max_age: int = Field(
@@ -360,6 +364,7 @@ class Settings(BaseSettings):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
         return url
+
 
 @lru_cache
 def get_settings() -> Settings:

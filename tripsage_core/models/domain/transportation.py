@@ -6,12 +6,11 @@ entities. These models represent the essential transportation data structures
 independent of storage implementation or API specifics.
 """
 
-from typing import Optional
-
 from pydantic import Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageDomainModel
 from tripsage_core.models.schemas_common.enums import TransportationType
+
 
 class TransportationProvider(TripSageDomainModel):
     """Transportation provider information."""
@@ -20,6 +19,7 @@ class TransportationProvider(TripSageDomainModel):
     code: str | None = Field(None, description="Provider code")
     contact_info: str | None = Field(None, description="Contact information")
     rating: float | None = Field(None, description="Provider rating")
+
 
 class TransportationVehicle(TripSageDomainModel):
     """Vehicle information for transportation."""
@@ -39,6 +39,7 @@ class TransportationVehicle(TripSageDomainModel):
             raise ValueError("Capacity must be positive")
         return v
 
+
 class TransportationLocation(TripSageDomainModel):
     """Location information for transportation."""
 
@@ -50,6 +51,7 @@ class TransportationLocation(TripSageDomainModel):
     postal_code: str | None = Field(None, description="Postal/zip code")
     latitude: float | None = Field(None, description="Latitude coordinate")
     longitude: float | None = Field(None, description="Longitude coordinate")
+
 
 class TransportationOffer(TripSageDomainModel):
     """Core transportation offer business entity.

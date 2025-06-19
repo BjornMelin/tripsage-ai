@@ -26,8 +26,9 @@ from tripsage.api.core.dependencies import (
 )
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
-from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
+from tripsage_core.services.mcp_service import SimpleMCPService as MCPManager
 from tripsage_core.utils.session_utils import SessionMemory
+
 
 class TestSettingsDependency:
     """Test settings dependency functionality."""
@@ -39,6 +40,7 @@ class TestSettingsDependency:
         # Should return the same instance (singleton pattern)
         settings2 = get_settings_dependency()
         assert settings is settings2
+
 
 class TestDatabaseDependency:
     """Test database dependency functionality."""
@@ -59,6 +61,7 @@ class TestDatabaseDependency:
             # Should return the database service directly
             assert result == mock_service
             mock_get_service.assert_called_once()
+
 
 class TestSessionMemoryDependency:
     """Test session memory dependency functionality."""
@@ -98,6 +101,7 @@ class TestSessionMemoryDependency:
 
         memory = await get_session_memory(request)
         assert memory == existing_memory
+
 
 class TestPrincipalDependencies:
     """Test Principal-based authentication dependencies."""
@@ -222,6 +226,7 @@ class TestPrincipalDependencies:
 
         assert exc_info.value.code == "AGENT_AUTH_REQUIRED"
 
+
 class TestPrincipalUtilities:
     """Test principal utility functions."""
 
@@ -236,6 +241,7 @@ class TestPrincipalUtilities:
 
         result = get_principal_id(principal)
         assert result == "test-id-123"
+
 
 class TestServiceAccess:
     """Test service access verification."""
@@ -322,6 +328,7 @@ class TestServiceAccess:
             principal, "openai", mock_db, mock_key_service
         )
         assert result is False
+
 
 class TestUtilityDependencies:
     """Test utility dependencies."""

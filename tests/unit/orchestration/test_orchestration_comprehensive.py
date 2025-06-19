@@ -26,6 +26,7 @@ from tripsage.orchestration.state import (
     create_initial_state,
 )
 
+
 class MockAgentNode(BaseAgentNode):
     """Mock agent node for testing base functionality.
 
@@ -88,6 +89,7 @@ class MockAgentNode(BaseAgentNode):
 
         return state
 
+
 @pytest.fixture(scope="session")
 def event_loop():
     """Create event loop for session-scoped async fixtures.
@@ -99,6 +101,7 @@ def event_loop():
     asyncio.set_event_loop(loop)
     yield loop
     loop.close()
+
 
 @pytest.fixture
 def comprehensive_service_registry():
@@ -179,6 +182,7 @@ def comprehensive_service_registry():
 
     return registry
 
+
 @pytest.fixture
 def mock_memory_bridge():
     """Create mock memory bridge for testing.
@@ -193,6 +197,7 @@ def mock_memory_bridge():
     )
     return bridge
 
+
 @pytest.fixture
 def mock_handoff_coordinator():
     """Create mock handoff coordinator for testing.
@@ -203,6 +208,7 @@ def mock_handoff_coordinator():
     coordinator = MagicMock()
     coordinator.determine_next_agent = MagicMock(return_value=None)
     return coordinator
+
 
 @pytest.fixture
 def optimized_orchestrator(
@@ -232,6 +238,7 @@ def optimized_orchestrator(
                     checkpointer=MemorySaver(),
                 )
                 return orchestrator
+
 
 class TestBaseAgentNodeComprehensive:
     """Comprehensive tests for BaseAgentNode following ULTRATHINK principles."""
@@ -350,6 +357,7 @@ class TestBaseAgentNodeComprehensive:
         comprehensive_service_registry.get_optional_service.return_value = None
         none_service = node.get_optional_service("nonexistent_service")
         assert none_service is None
+
 
 class TestTravelPlanningStateModels:
     """Comprehensive tests for Pydantic state models."""
@@ -510,6 +518,7 @@ class TestTravelPlanningStateModels:
 
         booking = BookingProgress.model_validate(state["booking_progress"])
         assert booking.status == "planning"
+
 
 class TestTripSageOrchestratorOptimized:
     """Optimized orchestrator tests following ULTRATHINK principles."""

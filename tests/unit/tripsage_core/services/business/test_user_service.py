@@ -30,6 +30,7 @@ from tripsage_core.services.business.user_service import (
     get_user_service,
 )
 
+
 class TestUserService:
     """Test suite for UserService."""
 

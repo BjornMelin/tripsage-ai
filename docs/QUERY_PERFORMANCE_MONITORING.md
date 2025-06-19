@@ -32,30 +32,35 @@ The Query Performance Monitoring System is designed to provide deep insights int
 ## Features
 
 ### ✅ Core Monitoring
+
 - Sub-millisecond precision query timing
 - Automatic query categorization (SELECT, INSERT, UPDATE, DELETE, etc.)
 - Connection pool utilization monitoring
 - Real-time performance metrics collection
 
 ### ✅ Pattern Detection
+
 - N+1 query pattern detection with configurable thresholds
 - Repetitive query identification
 - Query frequency analysis
 - Performance degradation detection
 
 ### ✅ Analytics & Reporting
+
 - Real-time performance dashboards
 - Historical trend analysis
 - Per-table and per-user statistics
 - Percentile-based performance metrics (P95, P99)
 
 ### ✅ Alerting & Notifications
+
 - Configurable slow query alerts
 - Performance degradation notifications
 - High error rate detection
 - Custom alert callbacks
 
 ### ✅ Integration
+
 - Seamless DatabaseService integration
 - Prometheus metrics export
 - Context manager and decorator support
@@ -355,6 +360,7 @@ async def get_performance_alerts(limit: int = 100, severity: Optional[AlertSever
 The system automatically detects N+1 query patterns - a common performance anti-pattern where an application executes multiple similar queries instead of a single optimized query.
 
 **Example N+1 Pattern:**
+
 ```python
 # BAD: N+1 pattern - will be detected
 posts = await db.select("posts", "*")
@@ -364,6 +370,7 @@ for post in posts:
 ```
 
 **Configuration:**
+
 ```python
 config = QueryMonitorConfig(
     n_plus_one_threshold=10,      # Detect after 10 similar queries
@@ -372,6 +379,7 @@ config = QueryMonitorConfig(
 ```
 
 **Detection Result:**
+
 ```python
 patterns = await monitor.get_query_patterns()
 for pattern in patterns:
@@ -385,6 +393,7 @@ for pattern in patterns:
 The system monitors performance trends and detects degradation compared to historical baselines.
 
 **Configuration:**
+
 ```python
 config = QueryMonitorConfig(
     degradation_threshold=0.5,             # 50% performance degradation

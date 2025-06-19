@@ -6,8 +6,9 @@ in tests without requiring a real DragonflyDB connection.
 """
 
 import json
-from typing import Any, Optional, Union
+from typing import Any
 from unittest.mock import AsyncMock
+
 
 class MockCacheService:
     """Mock implementation of CacheService for testing."""
@@ -117,18 +118,14 @@ class MockCacheService:
         """Mock mget_json."""
         return [await self.get_json(key) for key in keys]
 
-    async def mset_json(
-        self, mapping: dict[str, Any], ttl: int | None = None
-    ) -> bool:
+    async def mset_json(self, mapping: dict[str, Any], ttl: int | None = None) -> bool:
         """Mock mset_json."""
         for key, value in mapping.items():
             await self.set_json(key, value, ttl)
         return True
 
     # Additional methods for compatibility
-    async def set(
-        self, key: str, value: str | bytes, ttl: int | None = None
-    ) -> bool:
+    async def set(self, key: str, value: str | bytes, ttl: int | None = None) -> bool:
         """Mock set method."""
         self._storage[key] = value if isinstance(value, str) else value.decode("utf-8")
         if ttl:
@@ -146,9 +143,11 @@ class MockCacheService:
         self._storage[key] = str(new_value)
         return new_value
 
+
 def create_mock_cache_service():
     """Create a mock cache service instance."""
     return MockCacheService()
+
 
 async def mock_get_cache_service():
     """Mock get_cache_service function that returns a mock instance."""

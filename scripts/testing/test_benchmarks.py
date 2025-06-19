@@ -25,6 +25,7 @@ from config import (
     WorkloadType,
 )
 
+
 class TestBenchmarkConfig:
     """Test cases for benchmark configuration."""
 
@@ -63,6 +64,7 @@ class TestBenchmarkConfig:
         assert OptimizationLevel.NONE == "none"
         assert OptimizationLevel.FULL == "full"
 
+
 class TestTimingResult:
     """Test cases for timing result data class."""
 
@@ -80,6 +82,7 @@ class TestTimingResult:
         assert result.success is True
         assert isinstance(result.timestamp, float)
 
+
 class TestMemorySnapshot:
     """Test cases for memory snapshot data class."""
 
@@ -92,6 +95,7 @@ class TestMemorySnapshot:
         assert isinstance(snapshot.timestamp, float)
         assert snapshot.process_mb == 100.5
         assert snapshot.system_percent == 75.2
+
 
 class TestMetricsCollector:
     """Test cases for metrics collection."""
@@ -175,6 +179,7 @@ class TestMetricsCollector:
         assert len(self.collector._timings) == 0
         assert len(self.collector._memory_snapshots) == 0
         assert self.collector._connection_stats == {"reuses": 0, "creations": 0}
+
 
 class TestReportGenerator:
     """Test cases for report generation."""
@@ -281,6 +286,7 @@ class TestReportGenerator:
             assert "150.5 ops/sec" in content
             assert "✅" in content  # Success icon
 
+
 class TestBenchmarkRunner:
     """Test cases for benchmark runner."""
 
@@ -367,6 +373,7 @@ class TestBenchmarkRunner:
         assert "details" in validation
         assert "overall_success" in validation
 
+
 @pytest.mark.asyncio
 async def test_end_to_end_quick_benchmark():
     """Test end-to-end quick benchmark execution."""
@@ -390,6 +397,7 @@ async def test_end_to_end_quick_benchmark():
     assert len(json_files) == 1
     assert len(csv_files) == 1
     assert len(html_files) == 1
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
