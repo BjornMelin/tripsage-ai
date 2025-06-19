@@ -1,650 +1,341 @@
-"""
-Global test configuration and fixtures.
+"""Root test configuration for TripSage test suite.
 
-This module provides centralized test configuration, fixtures, and setup
-for the entire TripSage test suite with proper async support and mocking.
+This module provides shared fixtures and configuration for all tests.
+Updated for Pydantic v2 and modern pytest patterns (2025).
 """
 
-import asyncio
 import os
-import sys
-from datetime import date, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from uuid import uuid4
 
 import pytest
+import pytest_asyncio
+from pydantic import SecretStr
 
-# Load test environment variables FIRST - before any other imports
-from dotenv import load_dotenv
-
-# Load test environment immediately
-load_dotenv(".env.test", override=True)
-
-
-# Set up test environment variables before any TripSage imports
-def setup_test_environment():
-    """Set up comprehensive test environment variables."""
-    test_env = {
-        # Core application settings
-        "TRIPSAGE_TEST_MODE": "true",
-        "ENVIRONMENT": "testing",
-        "DEBUG": "true",
-        "LOG_LEVEL": "INFO",
-        # Database configuration
-        "SUPABASE_URL": "https://test-project.supabase.co",
-        "SUPABASE_ANON_KEY": "test-anon-key-1234567890abcdef",
-        "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key-1234567890abcdef",
-        "SUPABASE_PROJECT_ID": "test-project-id",
-        # Cache configuration
-        "DRAGONFLY_URL": "redis://localhost:6379/1",
-        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
-        # API Keys (safe test values)
-        "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
-        "ANTHROPIC_API_KEY": "sk-ant-test-anthropic-key-1234567890abcdef",
-        "GOOGLE_MAPS_API_KEY": "test-google-maps-key-1234567890",
-        "GOOGLE_CLIENT_ID": "test-google-client-id",
-        "GOOGLE_CLIENT_SECRET": "test-google-client-secret",
-        "DUFFEL_API_KEY": "test-duffel-api-key-1234567890",
-        "OPENWEATHERMAP_API_KEY": "test-weather-api-key-1234567890",
-        "VISUAL_CROSSING_API_KEY": "test-visual-crossing-key-1234567890",
-        # Security
-        "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-only",
-        "API_KEY_MASTER_SECRET": "test-master-secret-for-byok-encryption",
-        # External services
-        "CRAWL4AI_API_URL": "http://localhost:8000/api",
-        "CRAWL4AI_API_KEY": "test-crawl4ai-key-1234567890",
-        "WEBCRAWL_CRAWL4AI_API_KEY": "test-crawl-key",
-        "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
-        # MCP Endpoints - All required MCP configurations
-        "TIME_MCP_ENDPOINT": "http://localhost:3006",
-        "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
-        "WEATHER_MCP_OPENWEATHERMAP_API_KEY": "test-weather-api-key",
-        "GOOGLEMAPS_MCP_ENDPOINT": "http://localhost:3008",
-        "GOOGLEMAPS_MCP_MAPS_API_KEY": "test-maps-api-key",
-        "MEMORY_MCP_ENDPOINT": "http://localhost:3009",
-        "WEBCRAWL_MCP_ENDPOINT": "http://localhost:3010",
-        "FLIGHTS_MCP_ENDPOINT": "http://localhost:3011",
-        "FLIGHTS_MCP_DUFFEL_API_KEY": "test-duffel-key",
-        "ACCOMMODATIONS_MCP_AIRBNB_ENDPOINT": "http://localhost:3012",
-        "PLAYWRIGHT_MCP_ENDPOINT": "http://localhost:3013",
-        "CALENDAR_MCP_ENDPOINT": "http://localhost:3014",
-        "CALENDAR_MCP_GOOGLE_CLIENT_ID": "test-client-id",
-        "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
-        "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
-        "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
-        # Feature flags for testing
-        "ENABLE_STREAMING_RESPONSES": "false",
-        "ENABLE_RATE_LIMITING": "false",
-        "ENABLE_CACHING": "false",
-        "ENABLE_DEBUG_MODE": "true",
-        "ENABLE_TRACING": "false",
-        "ENABLE_AGENT_MEMORY": "true",
-        "ENABLE_PARALLEL_AGENTS": "true",
-        "ENABLE_CRAWL4AI": "true",
-        "ENABLE_MEM0": "true",
-        "ENABLE_LANGGRAPH": "true",
-    }
-
-    # Apply all environment variables
-    for key, value in test_env.items():
-        os.environ[key] = value
+# Configure pytest-asyncio - updated for pytest-asyncio 1.0
+# No longer need event_loop fixture with pytest-asyncio 1.0
 
 
-# Set up test environment immediately
-setup_test_environment()
+# Global mock for cache service to prevent Redis connection errors in tests
+@pytest.fixture(scope="session", autouse=True)
+def mock_cache_globally():
+    """Mock cache service globally to prevent Redis connection issues."""
+    mock_cache = AsyncMock()
+    mock_cache.get = AsyncMock(return_value=None)
+    mock_cache.set = AsyncMock(return_value=True)
+    mock_cache.delete = AsyncMock(return_value=True)
+    mock_cache.exists = AsyncMock(return_value=False)
+    mock_cache.connect = AsyncMock()
+    mock_cache.disconnect = AsyncMock()
+    mock_cache.ping = AsyncMock(return_value=True)
+    mock_cache.health_check = AsyncMock(return_value=True)
+    mock_cache.is_connected = True
+    mock_cache._connected = True
 
-# Now safe to import pydantic and TripSage modules
-from pydantic import BaseModel
-
-from tripsage_core.models.schemas_common.enums import (
-    AccommodationType,
-    BookingStatus,
-    CancellationPolicy,
-)
-
-# Add the project root directory to the path so tests can import modules directly
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-
-def mock_problematic_imports():
-    """Mock problematic imports that might cause test failures."""
-    import importlib.util
-
-    # Check and mock langchain modules
-    if importlib.util.find_spec("langchain_core") is None:
-        sys.modules["langchain_core"] = MagicMock()
-        sys.modules["langchain_core.language_models"] = MagicMock()
-        sys.modules["langchain_core.language_models.chat_models"] = MagicMock()
-
-    if importlib.util.find_spec("langchain_openai") is None:
-        sys.modules["langchain_openai"] = MagicMock()
-        sys.modules["langchain_openai.chat_models"] = MagicMock()
-        # Mock ChatOpenAI class
-        mock_chat_openai = MagicMock()
-        mock_chat_openai.return_value = AsyncMock()
-        sys.modules["langchain_openai"].ChatOpenAI = mock_chat_openai
-
-    if importlib.util.find_spec("langgraph") is None:
-        sys.modules["langgraph"] = MagicMock()
-        sys.modules["langgraph.graph"] = MagicMock()
-        sys.modules["langgraph.checkpoint"] = MagicMock()
-
-    if importlib.util.find_spec("mem0ai") is None:
-        sys.modules["mem0ai"] = MagicMock()
-        sys.modules["mem0"] = MagicMock()
-
-
-# Mock problematic imports immediately
-mock_problematic_imports()
-
-
-@pytest.fixture(autouse=True)
-def mock_environment_variables():
-    """Ensure environment variables are available for tests."""
-    # Environment already set above, just yield
-    yield os.environ
-
-
-# Mock MCP manager for use in tests
-@pytest.fixture
-def mock_mcp_manager():
-    """Create a mock MCPManager for testing (Airbnb only)."""
-    manager = MagicMock()
-    manager.invoke = AsyncMock(return_value={})
-    manager.initialize = AsyncMock()
-    manager.get_available_methods = Mock(
-        return_value=["search_listings", "get_listing_details", "check_availability"]
-    )
-
-    # Create a side effect that returns Airbnb-specific responses
-    def invoke_side_effect(method_name, params=None, **kwargs):
-        if method_name in ["search_listings", "search_accommodations", "search"]:
-            return {"listings": [], "count": 0}
-        elif method_name in ["get_listing_details", "get_listing", "get_details"]:
-            return {"id": "123", "name": "Test Listing", "price_per_night": 100}
-        elif method_name in ["check_availability", "check_listing_availability"]:
-            return {"available": True, "dates": []}
-        return {}
-
-    manager.invoke.side_effect = invoke_side_effect
-
-    with patch("tripsage.mcp_abstraction.manager.mcp_manager", manager):
-        yield manager
-
-
-# Mock MCP registry for use in tests
-@pytest.fixture
-def mock_mcp_registry():
-    """Create a mock MCPRegistry for testing (Airbnb only)."""
-    registry = MagicMock()
-    registry._wrapper_class = None
-    registry.register_airbnb = Mock()
-    registry.get_airbnb_wrapper = Mock()
-
-    # Mock the AirbnbMCPWrapper class
-    mock_wrapper_class = MagicMock()
-    mock_wrapper_class.__name__ = "AirbnbMCPWrapper"
-    registry.get_airbnb_wrapper.return_value = mock_wrapper_class
-
-    with patch("tripsage.mcp_abstraction.registry.registry", registry):
-        yield registry
-
-
-# Mock MCP wrapper for use in tests
-@pytest.fixture
-def mock_mcp_wrapper():
-    """Create a generic mock MCP wrapper."""
-    wrapper = MagicMock()
-    wrapper.invoke_method = AsyncMock()
-    wrapper.initialize = AsyncMock()
-    wrapper.shutdown = AsyncMock()
-    yield wrapper
-
-
-# Common test data models
-class TestRequest(BaseModel):
-    """Generic test request model."""
-
-    query: str
-    limit: int = 10
-    include_details: bool = False
-
-
-class TestResponse(BaseModel):
-    """Generic test response model."""
-
-    results: List[Dict[str, Any]]
-    total: int
-    success: bool = True
-
-
-# Mock response fixtures
-@pytest.fixture
-def mock_successful_response():
-    """Create a successful mock response."""
-    return TestResponse(
-        results=[
-            {"id": "1", "name": "Test Item 1", "score": 0.95},
-            {"id": "2", "name": "Test Item 2", "score": 0.85},
-        ],
-        total=2,
-        success=True,
-    )
-
-
-@pytest.fixture
-def mock_error_response():
-    """Create an error mock response."""
-    return TestResponse(results=[], total=0, success=False)
-
-
-# Async test utilities
-@pytest.fixture
-def event_loop():
-    """Create an event loop for async tests."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-# Common test utilities
-def assert_mcp_invoked(
-    mock_manager,
-    service_name: str,
-    method_name: str,
-    params: Optional[Dict[str, Any]] = None,
-):
-    """Assert that MCPManager.invoke was called with expected parameters."""
-    mock_manager.invoke.assert_called_once()
-    call_args = mock_manager.invoke.call_args[0]
-
-    assert call_args[0] == service_name
-    assert call_args[1] == method_name
-    if params:
-        assert call_args[2] == params
-
-
-def create_mock_tool_response(data: Any, error: Optional[str] = None):
-    """Create a standardized tool response for testing."""
-    if error:
-        return {"error": error, "success": False}
-    return {"data": data, "success": True}
-
-
-# WebOperationsCache fixture
-@pytest.fixture
-def mock_web_operations_cache():
-    """Create a mock WebOperationsCache for testing."""
-    from tripsage_core.utils.content_utils import ContentType
-
-    cache = MagicMock()
-    cache.get = AsyncMock(return_value=None)
-    cache.set = AsyncMock(return_value=True)
-    cache.delete = AsyncMock(return_value=True)
-    cache.invalidate_pattern = AsyncMock(return_value=0)
-    cache.get_stats = AsyncMock(
-        return_value={"hits": 0, "misses": 0, "hit_ratio": 0.0, "total": 0}
-    )
-    cache.determine_content_type = Mock(return_value=ContentType.DAILY)
-    cache.generate_cache_key = Mock(return_value="test-key")
-
-    # Add cached response helper
-    def set_cached_response(key, value, content_type=ContentType.DAILY):
-        cache.get.return_value = value
-        cache.determine_content_type.return_value = content_type
-
-    cache.set_cached_response = set_cached_response
-
-    with patch("tripsage.tools.web_tools.web_cache", cache):
-        yield cache
-
-
-@pytest.fixture(autouse=True)
-def mock_settings_and_redis(monkeypatch):
-    """Mock settings and Redis client to avoid actual connections and
-    validation errors."""
-    # Set environment variables for testing
-    monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
-    monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")
-
-    # Set API keys
-    monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
-
-    # Create a comprehensive mock settings object
-    mock_settings = MagicMock()
-    mock_settings.agent.model_name = "gpt-4"
-    mock_settings.agent.temperature = 0.7
-    mock_settings.agent.max_tokens = 4096
-    mock_settings.agent.timeout = 120
-    mock_settings.agent.max_retries = 3
-
-    # Mock database settings
-    mock_settings.database.supabase_url = "https://test.supabase.co"
-    mock_settings.database.supabase_anon_key = "test_anon_key"
-
-    # Mock memory service (Mem0)
-    mock_settings.memory.service_type = "mem0"
-    mock_settings.memory.api_key = "test_mem0_key"
-
-    # Mock Redis client
-    mock_redis_client = MagicMock()
-    mock_redis_client.get = AsyncMock(return_value=None)
-    mock_redis_client.set = AsyncMock(return_value=True)
-    mock_redis_client.delete = AsyncMock(return_value=1)
-    mock_redis_client.scan_iter = AsyncMock(return_value=[])
-    mock_redis_client.incr = AsyncMock(return_value=1)
-    mock_redis_client.expire = AsyncMock(return_value=True)
-
-    mock_from_url = MagicMock(return_value=mock_redis_client)
-
-    # Apply all the patches we need
+    # Patch the service getter AND the CacheService class itself
     with (
         patch(
-            "tripsage_core.config.base_app_settings.get_settings",
-            return_value=mock_settings,
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+            return_value=mock_cache,
         ),
-        patch("tripsage_core.config.base_app_settings.settings", mock_settings),
-        patch("redis.asyncio.from_url", mock_from_url),
-        patch("redis.from_url", mock_from_url),
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.CacheService",
+            return_value=mock_cache,
+        ),
     ):
-        yield {
-            "settings": mock_settings,
-            "redis": mock_redis_client,
-        }
+        yield mock_cache
 
 
-# Sample data fixtures using factories
-from tests.factories import (
-    AccommodationFactory,
-    APIKeyFactory,
-    ChatFactory,
-    DestinationFactory,
-    FlightFactory,
-    ItineraryFactory,
-    TripFactory,
-    UserFactory,
-    WebSocketFactory,
-)
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_environment():
+    """Set up test environment variables."""
+    test_env = {
+        "ENVIRONMENT": "testing",
+        "DEBUG": "True",
+        "DATABASE_URL": "https://test.supabase.com",
+        "DATABASE_PUBLIC_KEY": "test-public-key",
+        "DATABASE_SERVICE_KEY": "test-service-key",
+        "DATABASE_JWT_SECRET": "test-jwt-secret-for-testing-only",
+        "SECRET_KEY": "test-application-secret-key-for-testing-only",
+        "REDIS_URL": "redis://localhost:6379/1",
+        "REDIS_PASSWORD": "test-password",
+        "OPENAI_API_KEY": "sk-test-1234567890",
+        "WEATHER_API_KEY": "test-weather-key",
+        "GOOGLE_MAPS_API_KEY": "test-maps-key",
+        "DUFFEL_API_KEY": "test-duffel-key",
+    }
 
+    # Save original environment
+    original_env = {}
+    for key, value in test_env.items():
+        original_env[key] = os.environ.get(key)
+        os.environ[key] = value
 
-@pytest.fixture
-def sample_accommodation_dict():
-    """Sample accommodation data for testing."""
-    return AccommodationFactory.create()
+    yield
 
-
-@pytest.fixture
-def sample_flight_dict():
-    """Sample flight data for testing."""
-    return FlightFactory.create()
-
-
-@pytest.fixture
-def sample_trip_dict():
-    """Sample trip data for testing."""
-    return TripFactory.create()
-
-
-@pytest.fixture
-def sample_user_dict():
-    """Sample user data for testing."""
-    return UserFactory.create()
-
-
-# Additional factory-based fixtures
-@pytest.fixture
-def sample_chat_message_dict():
-    """Sample chat message for testing."""
-    return ChatFactory.create_message()
+    # Restore original environment
+    for key, original_value in original_env.items():
+        if original_value is None:
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = original_value
 
 
 @pytest.fixture
-def sample_chat_conversation():
-    """Sample chat conversation with multiple messages."""
-    return ChatFactory.create_conversation()
+def mock_settings():
+    """Create mock settings for testing."""
+    from tripsage_core.config import Settings
+
+    settings = MagicMock(spec=Settings)
+    settings.environment = "testing"
+    settings.debug = True
+    settings.database_url = "https://test.supabase.com"
+    settings.database_public_key = SecretStr("test-public-key")
+    settings.database_service_key = SecretStr("test-service-key")
+    settings.database_jwt_secret = SecretStr("test-jwt-secret-for-testing-only")
+    settings.secret_key = SecretStr("test-application-secret-key-for-testing-only")
+    settings.redis_url = "redis://localhost:6379/1"
+    settings.redis_password = "test-password"
+    settings.redis_max_connections = 50
+    settings.openai_api_key = SecretStr("sk-test-1234567890")
+    settings.openai_model = "gpt-4"
+    settings.weather_api_key = SecretStr("test-weather-key")
+    settings.google_maps_api_key = SecretStr("test-maps-key")
+    settings.duffel_api_key = SecretStr("test-duffel-key")
+    settings.rate_limit_requests = 100
+    settings.rate_limit_window = 60
+
+    # Add commonly used methods
+    settings.validate_critical_settings = MagicMock()
+
+    return settings
 
 
-@pytest.fixture
-def sample_api_key_dict():
-    """Sample API key data for testing."""
-    return APIKeyFactory.create()
-
-
-@pytest.fixture
-def sample_destination_dict():
-    """Sample destination data for testing."""
-    return DestinationFactory.create()
-
-
-@pytest.fixture
-def sample_itinerary_dict():
-    """Sample itinerary data for testing."""
-    return ItineraryFactory.create()
-
-
-@pytest.fixture
-def sample_websocket_message():
-    """Sample WebSocket message for testing."""
-    return WebSocketFactory.create_chat_message()
-
-
-# Mock service fixtures
 @pytest.fixture
 def mock_database_service():
-    """Mock database service with async methods."""
-    mock = MagicMock()
-    mock.get_session = AsyncMock()
-    mock.execute = AsyncMock()
-    mock.fetch_one = AsyncMock()
-    mock.fetch_all = AsyncMock()
-    mock.save = AsyncMock()
-    mock.delete = AsyncMock()
-    mock.update = AsyncMock()
-    return mock
+    """Create mock database service."""
+    db_service = AsyncMock()
+
+    # Common database operations
+    db_service.fetch_one = AsyncMock(return_value=None)
+    db_service.fetch_all = AsyncMock(return_value=[])
+    db_service.execute = AsyncMock(return_value=None)
+    db_service.execute_many = AsyncMock(return_value=None)
+
+    # Transaction support
+    db_service.begin = AsyncMock()
+    db_service.commit = AsyncMock()
+    db_service.rollback = AsyncMock()
+
+    return db_service
 
 
 @pytest.fixture
 def mock_cache_service():
-    """Mock cache service with async methods."""
-    mock = MagicMock()
-    mock.get = AsyncMock(return_value=None)
-    mock.set = AsyncMock(return_value=True)
-    mock.delete = AsyncMock(return_value=True)
-    mock.invalidate_pattern = AsyncMock(return_value=0)
-    mock.get_ttl = Mock(return_value=3600)
-    return mock
+    """Create mock cache service."""
+    cache_service = AsyncMock()
+
+    # Common cache operations
+    cache_service.get = AsyncMock(return_value=None)
+    cache_service.set = AsyncMock(return_value=True)
+    cache_service.delete = AsyncMock(return_value=True)
+    cache_service.exists = AsyncMock(return_value=False)
+    cache_service.expire = AsyncMock(return_value=True)
+    cache_service.ttl = AsyncMock(return_value=-1)
+
+    # Connection state
+    cache_service.is_connected = True
+    cache_service.connect = AsyncMock()
+    cache_service.disconnect = AsyncMock()
+
+    return cache_service
 
 
 @pytest.fixture
-def mock_auth_service():
-    """Mock authentication service."""
-    mock = MagicMock()
-    mock.verify_token = AsyncMock(
-        return_value={"user_id": 1, "email": "test@example.com"}
+def sample_user_id() -> str:
+    """Generate a sample user ID."""
+    return str(uuid4())
+
+
+@pytest.fixture
+def sample_trip_id() -> str:
+    """Generate a sample trip ID."""
+    return str(uuid4())
+
+
+@pytest.fixture
+def sample_timestamp() -> datetime:
+    """Generate a sample timestamp."""
+    return datetime.now(timezone.utc)
+
+
+@pytest.fixture
+def sample_user_data(sample_user_id: str) -> Dict[str, Any]:
+    """Create sample user data."""
+    return {
+        "id": sample_user_id,
+        "email": "test@example.com",
+        "username": "testuser",
+        "full_name": "Test User",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "is_active": True,
+        "is_verified": True,
+    }
+
+
+@pytest.fixture
+def sample_trip_data(sample_trip_id: str, sample_user_id: str) -> Dict[str, Any]:
+    """Create sample trip data."""
+    return {
+        "id": sample_trip_id,
+        "user_id": sample_user_id,
+        "name": "Test Trip to Paris",
+        "description": "A wonderful trip to the City of Light",
+        "start_date": "2025-07-01",
+        "end_date": "2025-07-10",
+        "destination": "Paris, France",
+        "status": "planning",
+        "budget": 5000.00,
+        "currency": "USD",
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+    }
+
+
+@pytest_asyncio.fixture
+async def mock_supabase_client():
+    """Create mock Supabase client."""
+    client = AsyncMock()
+
+    # Table operations
+    table_mock = AsyncMock()
+    table_mock.select = AsyncMock(return_value=table_mock)
+    table_mock.insert = AsyncMock(return_value=table_mock)
+    table_mock.update = AsyncMock(return_value=table_mock)
+    table_mock.delete = AsyncMock(return_value=table_mock)
+    table_mock.eq = AsyncMock(return_value=table_mock)
+    table_mock.neq = AsyncMock(return_value=table_mock)
+    table_mock.gt = AsyncMock(return_value=table_mock)
+    table_mock.gte = AsyncMock(return_value=table_mock)
+    table_mock.lt = AsyncMock(return_value=table_mock)
+    table_mock.lte = AsyncMock(return_value=table_mock)
+    table_mock.like = AsyncMock(return_value=table_mock)
+    table_mock.ilike = AsyncMock(return_value=table_mock)
+    table_mock.is_ = AsyncMock(return_value=table_mock)
+    table_mock.in_ = AsyncMock(return_value=table_mock)
+    table_mock.order = AsyncMock(return_value=table_mock)
+    table_mock.limit = AsyncMock(return_value=table_mock)
+    table_mock.single = AsyncMock(return_value=table_mock)
+    table_mock.execute = AsyncMock(return_value=Mock(data=[], count=0))
+
+    client.table = AsyncMock(return_value=table_mock)
+
+    # Auth operations
+    auth_mock = AsyncMock()
+    auth_mock.sign_up = AsyncMock()
+    auth_mock.sign_in_with_password = AsyncMock()
+    auth_mock.sign_out = AsyncMock()
+    auth_mock.get_user = AsyncMock()
+    auth_mock.update_user = AsyncMock()
+
+    client.auth = auth_mock
+
+    # Storage operations
+    storage_mock = AsyncMock()
+    bucket_mock = AsyncMock()
+    bucket_mock.upload = AsyncMock()
+    bucket_mock.download = AsyncMock()
+    bucket_mock.remove = AsyncMock()
+    bucket_mock.list = AsyncMock(return_value=[])
+    bucket_mock.get_public_url = Mock(
+        return_value="https://test.supabase.com/storage/v1/object/public/test/file.jpg"
     )
-    mock.create_access_token = Mock(return_value="test-jwt-token")
-    mock.create_refresh_token = Mock(return_value="test-refresh-token")
-    mock.hash_password = Mock(return_value="hashed-password")
-    mock.verify_password = Mock(return_value=True)
-    return mock
+
+    storage_mock.from_ = Mock(return_value=bucket_mock)
+    client.storage = storage_mock
+
+    return client
 
 
 @pytest.fixture
-def mock_memory_service():
-    """Mock memory service (Mem0)."""
-    mock = MagicMock()
-    mock.add_memory = AsyncMock(return_value={"memory_id": "test-memory-id"})
-    mock.get_memories = AsyncMock(return_value=[])
-    mock.search_memories = AsyncMock(return_value=[])
-    mock.delete_memory = AsyncMock(return_value=True)
-    return mock
+def mock_openai_client():
+    """Create mock OpenAI client."""
+    client = AsyncMock()
 
+    # Chat completions
+    chat_mock = AsyncMock()
+    completions_mock = AsyncMock()
 
-# Validation test helpers
-class ValidationTestHelper:
-    """Helper class for testing Pydantic model validation."""
+    # Create a mock response
+    response_mock = Mock()
+    response_mock.choices = [
+        Mock(message=Mock(content="Test AI response"), finish_reason="stop")
+    ]
+    response_mock.usage = Mock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
-    @staticmethod
-    def assert_validation_error(model_class, data, field_name, error_message_part):
-        """Assert that creating a model with invalid data raises ValidationError."""
-        from pydantic import ValidationError
+    completions_mock.create = AsyncMock(return_value=response_mock)
+    chat_mock.completions = completions_mock
+    client.chat = chat_mock
 
-        with pytest.raises(ValidationError) as exc_info:
-            model_class(**data)
+    # Embeddings
+    embeddings_mock = AsyncMock()
+    embedding_response = Mock()
+    embedding_response.data = [Mock(embedding=[0.1] * 1536)]
+    embeddings_mock.create = AsyncMock(return_value=embedding_response)
+    client.embeddings = embeddings_mock
 
-        errors = exc_info.value.errors()
-        field_errors = [e for e in errors if e["loc"][0] == field_name]
-        assert len(field_errors) > 0, (
-            f"No validation error found for field '{field_name}'"
-        )
-        actual_msg = field_errors[0]["msg"]
-        assert error_message_part in str(actual_msg), (
-            f"Expected error message containing '{error_message_part}' "
-            f"but got '{actual_msg}'"
-        )
-
-    @staticmethod
-    def assert_field_valid(model_class, data, field_name, valid_value):
-        """Assert that a field accepts a valid value."""
-        test_data = data.copy()
-        test_data[field_name] = valid_value
-        instance = model_class(**test_data)
-        assert getattr(instance, field_name) == valid_value
-
-
-# Serialization test helpers
-class SerializationTestHelper:
-    """Helper class for testing model serialization."""
-
-    @staticmethod
-    def test_json_round_trip(model_instance):
-        """Test that a model can be serialized to JSON and back."""
-        json_str = model_instance.model_dump_json()
-        reconstructed = model_instance.__class__.model_validate_json(json_str)
-        return reconstructed
-
-    @staticmethod
-    def test_dict_round_trip(model_instance):
-        """Test that a model can be converted to dict and back."""
-        data_dict = model_instance.model_dump()
-        reconstructed = model_instance.__class__.model_validate(data_dict)
-        return reconstructed
+    return client
 
 
 @pytest.fixture
-def validation_helper():
-    """Fixture providing validation test utilities."""
-    return ValidationTestHelper()
+def mock_service_registry():
+    """Create mock service registry."""
+    from tripsage.agents.service_registry import ServiceRegistry
+
+    registry = ServiceRegistry()
+
+    # Add commonly used services
+    registry.register("database", AsyncMock())
+    registry.register("cache", AsyncMock())
+    registry.register("openai", AsyncMock())
+    registry.register("memory", AsyncMock())
+    registry.register("websocket", AsyncMock())
+
+    return registry
 
 
-@pytest.fixture
-def serialization_helper():
-    """Fixture providing serialization test utilities."""
-    return SerializationTestHelper()
+# Markers for test categorization
+def pytest_configure(config):
+    """Configure pytest with custom markers."""
+    config.addinivalue_line("markers", "unit: Unit tests")
+    config.addinivalue_line("markers", "integration: Integration tests")
+    config.addinivalue_line("markers", "e2e: End-to-end tests")
+    config.addinivalue_line("markers", "slow: Slow running tests")
+    config.addinivalue_line("markers", "external: Tests requiring external services")
+    config.addinivalue_line("markers", "asyncio: Async tests")
 
 
-# Performance testing fixtures
-@pytest.fixture
-def large_dataset():
-    """Large dataset for performance testing."""
-    today = date.today()
-    return {
-        "accommodations": [
-            {
-                "id": i,
-                "trip_id": 1,
-                "name": f"Hotel {i}",
-                "accommodation_type": AccommodationType.HOTEL,
-                "check_in": today + timedelta(days=i),
-                "check_out": today + timedelta(days=i + 7),
-                "price_per_night": 100.0 + i,
-                "total_price": (100.0 + i) * 7,
-                "location": f"City {i}",
-                "rating": min(5.0, 3.0 + (i % 3)),
-                "booking_status": BookingStatus.VIEWED,
-            }
-            for i in range(1000)
-        ]
-    }
+# Skip slow tests by default
+def pytest_collection_modifyitems(config, items):
+    """Modify test collection based on markers."""
+    if not config.getoption("--run-slow"):
+        skip_slow = pytest.mark.skip(reason="need --run-slow option to run")
+        for item in items:
+            if "slow" in item.keywords:
+                item.add_marker(skip_slow)
 
 
-# Edge case testing data
-@pytest.fixture
-def edge_case_data():
-    """Edge case data for testing boundary conditions."""
-    today = date.today()
-    return {
-        "min_price": 0.01,
-        "max_price": 99999.99,
-        "min_rating": 0.0,
-        "max_rating": 5.0,
-        "past_date": today - timedelta(days=365),
-        "far_future_date": today + timedelta(days=365 * 5),
-        "empty_string": "",
-        "very_long_string": "x" * 1000,
-        "unicode_string": "🏨🌟✈️🏝️",
-    }
-
-
-# Parametrized test data
-@pytest.fixture
-def accommodation_types():
-    """All accommodation types for parametrized testing."""
-    return list(AccommodationType)
-
-
-@pytest.fixture
-def booking_statuses():
-    """All booking statuses for parametrized testing."""
-    return list(BookingStatus)
-
-
-@pytest.fixture
-def cancellation_policies():
-    """All cancellation policies for parametrized testing."""
-    return list(CancellationPolicy)
-
-
-# Mock external API responses
-@pytest.fixture
-def mock_airbnb_search_response():
-    """Mock Airbnb search response."""
-    return {
-        "listings": [
-            {
-                "id": "12345",
-                "name": "Beautiful Apartment in Tokyo",
-                "price_per_night": 150.00,
-                "rating": 4.8,
-                "location": "Shibuya, Tokyo",
-                "amenities": ["wifi", "kitchen", "tv"],
-            }
-        ],
-        "count": 1,
-        "has_more": False,
-    }
-
-
-# Database mock fixtures
-@pytest.fixture
-def mock_database_session():
-    """Mock database session for testing."""
-    session = MagicMock()
-    session.add = Mock()
-    session.commit = Mock()
-    session.rollback = Mock()
-    session.close = Mock()
-    session.query = Mock()
-    session.execute = Mock()
-    return session
-
-
-# Clean up after tests
-@pytest.fixture(autouse=True)
-def cleanup_after_test():
-    """Clean up resources after each test."""
-    yield
-    # Add any cleanup logic here if needed
+def pytest_addoption(parser):
+    """Add custom command line options."""
+    parser.addoption(
+        "--run-slow", action="store_true", default=False, help="run slow tests"
+    )
+    parser.addoption(
+        "--run-external",
+        action="store_true",
+        default=False,
+        help="run tests requiring external services",
+    )
