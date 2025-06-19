@@ -261,7 +261,8 @@ class TestApiKeyServiceCoverageFocused:
             multiple_separator_data
         ).decode()
 
-        # This should actually work since split(b"::", 1) only splits on first occurrence
+        # This should actually work since split(b"::", 1) only splits on first
+        # occurrence
         # But let's test it behaves correctly
         try:
             api_service._decrypt_api_key(multiple_separator_key)
@@ -391,7 +392,7 @@ class TestApiKeyServiceCoverageFocused:
         mock_transaction.execute.side_effect = Exception("Database error")
         mock_dependencies["db"].transaction.return_value = mock_transaction
 
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError, match="Database error"):
             await api_service.delete_api_key(key_id, user_id)
 
     @pytest.mark.asyncio
@@ -416,7 +417,7 @@ class TestApiKeyServiceCoverageFocused:
         mock_transaction.__aexit__.side_effect = Exception("Transaction cleanup failed")
         mock_dependencies["db"].transaction.return_value = mock_transaction
 
-        with pytest.raises(Exception):
+        with pytest.raises(RuntimeError, match="Transaction cleanup failed"):
             await api_service.delete_api_key(key_id, user_id)
 
         # When __aexit__ fails immediately, transaction operations might not be called
@@ -620,7 +621,8 @@ class TestApiKeyServiceCoverageFocused:
     async def test_cache_service_unavailable_scenarios(
         self, api_service, mock_dependencies
     ):
-        """Test validation caching when cache service fails - targets lines 1128-1159."""
+        """Test validation caching when cache service fails - targets lines
+        1128-1159."""
         user_id = str(uuid.uuid4())
 
         # Mock cache service to raise exceptions
@@ -662,7 +664,8 @@ class TestApiKeyServiceCoverageFocused:
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
-            # The @retry decorator specifically handles httpx.TimeoutException and httpx.ConnectError
+            # The @retry decorator specifically handles httpx.TimeoutException and
+            # httpx.ConnectError
             # First call fails with httpx.TimeoutException, second succeeds
             mock_get.side_effect = [
                 httpx.TimeoutException("Request timeout"),
@@ -786,7 +789,8 @@ class TestServiceValidationFailures:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.ConnectError("Connection failed")
 
-            # ConnectError will propagate since Google Maps health check doesn't handle it
+            # ConnectError will propagate since Google Maps health check doesn't
+            # handle it
             with pytest.raises(httpx.ConnectError, match="Connection failed"):
                 await api_service._check_googlemaps_health()
 

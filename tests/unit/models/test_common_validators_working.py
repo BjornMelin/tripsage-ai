@@ -1,6 +1,5 @@
 """Working comprehensive tests for Pydantic v2 common validators."""
 
-
 import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st

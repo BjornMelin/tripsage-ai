@@ -339,3 +339,70 @@ def pytest_addoption(parser):
         default=False,
         help="run tests requiring external services",
     )
+
+
+# Validation testing utilities for Pydantic v2
+class ValidationHelper:
+    """Helper class for validation testing."""
+
+    def assert_validation_error(
+        self, model_class, data, error_count=None, error_field=None
+    ):
+        """Assert that model validation raises ValidationError."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError) as exc_info:
+            model_class.model_validate(data)
+
+        if error_count is not None:
+            assert len(exc_info.value.errors()) == error_count
+
+        if error_field:
+            error_fields = [error["loc"][-1] for error in exc_info.value.errors()]
+            assert error_field in error_fields
+
+
+class SerializationHelper:
+    """Helper class for serialization testing."""
+
+    def assert_round_trip(self, model_instance):
+        """Assert that model can be serialized and deserialized."""
+        # Test JSON serialization round trip
+        json_data = model_instance.model_dump_json()
+        restored = model_instance.__class__.model_validate_json(json_data)
+        assert restored == model_instance
+
+        # Test dict serialization round trip
+        dict_data = model_instance.model_dump()
+        restored_dict = model_instance.__class__.model_validate(dict_data)
+        assert restored_dict == model_instance
+
+
+@pytest.fixture
+def validation_helper():
+    """Provide validation testing utilities."""
+    return ValidationHelper()
+
+
+@pytest.fixture
+def serialization_helper():
+    """Provide serialization testing utilities."""
+    return SerializationHelper()
+
+
+@pytest.fixture
+def edge_case_data():
+    """Provide edge case data for testing."""
+    return {
+        "empty_string": "",
+        "whitespace_only": "   ",
+        "very_long_string": "x" * 10000,
+        "unicode_string": "🌟 测试 🚀",
+        "special_chars": "!@#$%^&*()_+-=[]{}|;':\",./<>?",
+        "sql_injection": "'; DROP TABLE users; --",
+        "xss_payload": "<script>alert('xss')</script>",
+        "large_number": 999999999999999999,
+        "negative_number": -999999999999999999,
+        "zero": 0,
+        "float_precision": 3.141592653589793,
+    }

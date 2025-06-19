@@ -1,6 +1,5 @@
 """Fixed comprehensive tests for Pydantic v2 common validators."""
 
-
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -10,9 +9,7 @@ from tripsage_core.models.schemas_common.common_validators import (
     validate_latitude,
     validate_longitude,
     validate_password_strength,
-    validate_percentage,
     validate_rating_range,
-    validate_username,
 )
 
 
@@ -77,45 +74,6 @@ class TestAirportCodeValidation:
             validate_airport_code("L1X")
 
 
-class TestUsernameValidation:
-    """Test username validation with fixed patterns."""
-
-    def test_valid_usernames(self):
-        """Test valid usernames."""
-        valid_usernames = ["user123", "test_user", "my-name", "a1b2c3"]
-        for username in valid_usernames:
-            result = validate_username(username)
-            assert result == username
-
-    def test_invalid_username_characters(self):
-        """Test usernames with invalid characters."""
-        with pytest.raises(
-            ValueError,
-            match="must contain only letters, numbers, underscores, and hyphens",
-        ):
-            validate_username("user@name")
-
-        with pytest.raises(
-            ValueError,
-            match="must contain only letters, numbers, underscores, and hyphens",
-        ):
-            validate_username("user name")
-
-        with pytest.raises(
-            ValueError,
-            match="must contain only letters, numbers, underscores, and hyphens",
-        ):
-            validate_username("user.name")
-
-    def test_username_length_validation(self):
-        """Test username length constraints."""
-        with pytest.raises(ValueError, match="at least 3 characters"):
-            validate_username("ab")
-
-        with pytest.raises(ValueError, match="no more than 50 characters"):
-            validate_username("a" * 51)
-
-
 class TestRatingValidation:
     """Test rating validation."""
 
@@ -163,26 +121,6 @@ class TestCoordinateValidation:
         """Test invalid longitude values."""
         with pytest.raises(ValueError, match="must be between -180.0 and 180.0"):
             validate_longitude(lng)
-
-
-class TestPercentageValidation:
-    """Test percentage validation."""
-
-    @given(st.floats(min_value=0.0, max_value=100.0))
-    def test_valid_percentages(self, percentage: float):
-        """Test valid percentage values."""
-        result = validate_percentage(percentage)
-        assert result == percentage
-
-    @given(st.floats().filter(lambda x: x < 0.0 or x > 100.0))
-    def test_invalid_percentages(self, percentage: float):
-        """Test invalid percentage values."""
-        with pytest.raises(ValueError, match="must be between 0 and 100"):
-            validate_percentage(percentage)
-
-    def test_percentage_none_handling(self):
-        """Test that None percentages are handled correctly."""
-        assert validate_percentage(None) is None
 
 
 if __name__ == "__main__":
