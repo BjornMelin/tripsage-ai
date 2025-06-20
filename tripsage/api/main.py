@@ -5,7 +5,6 @@ including middleware, routers, exception handlers, and startup/shutdown events.
 """
 
 import logging
-import traceback
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -18,157 +17,63 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares import (
-    AuthenticationMiddleware,
+    # AuthenticationMiddleware,  # Temporarily disabled - awaiting Supabase Auth
     EnhancedRateLimitMiddleware,
     LoggingMiddleware,
 )
 from tripsage.api.routers import (
     accommodations,
+    activities,
     attachments,
     auth,
     chat,
+    config,
+    dashboard,
+    dashboard_realtime,
     destinations,
     flights,
     health,
     itineraries,
     keys,
     memory,
+    search,
     trips,
+    users,
     websocket,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
-    CoreAuthorizationError,
     CoreExternalAPIError,
     CoreKeyValidationError,
     CoreMCPError,
     CoreRateLimitError,
-    CoreResourceNotFoundError,
     CoreTripSageError,
     CoreValidationError,
 )
-from tripsage_core.mcp_abstraction import mcp_manager
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )
+from tripsage_core.services.infrastructure.websocket_broadcaster import (
+    websocket_broadcaster,
+)
 from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
+from tripsage_core.services.simple_mcp_service import mcp_manager
 
 logger = logging.getLogger(__name__)
 
 
-def format_error_response(
-    exc: CoreTripSageError,
-    request: Request,
-    is_agent_request: bool = False,
-) -> dict[str, Any]:
-    """Format error response based on consumer type.
+def format_error_response(exc: CoreTripSageError, request: Request) -> dict[str, Any]:
+    """Format error response with simple, consistent structure.
 
-    Args:
-        exc: The exception to format
-        request: The request object
-        is_agent_request: Whether this is an agent request needing detailed error data
-
-    Returns:
-        Formatted error response dictionary
+    Modern approach - single error format for all consumers.
     """
-    # Base response structure
-    response = {
-        "status": "error",
+    return {
+        "error": True,
         "message": exc.message,
-        "error_code": exc.code,
-        "error_type": exc.__class__.__name__.replace("Core", "")
-        .replace("Error", "")
-        .lower(),
+        "code": exc.code,
+        "type": exc.__class__.__name__.replace("Core", "").replace("Error", "").lower(),
     }
-
-    # Add correlation ID if available
-    correlation_id = getattr(request.state, "correlation_id", None)
-    if correlation_id:
-        response["correlation_id"] = correlation_id
-
-    # Format details based on consumer type
-    if is_agent_request:
-        # Agents get full error details for debugging
-        response["details"] = exc.details.model_dump(exclude_none=True)
-        response["status_code"] = exc.status_code
-        response["traceback_hint"] = (
-            f"{exc.__class__.__module__}.{exc.__class__.__name__}"
-        )
-    else:
-        # Frontend gets user-friendly filtered details
-        details = exc.details.model_dump(exclude_none=True)
-        # Remove sensitive internal details for frontend
-        filtered_details = {
-            k: v
-            for k, v in details.items()
-            if k not in ["request_id", "operation", "additional_context"]
-        }
-        if filtered_details:
-            response["details"] = filtered_details
-
-    # Add retry guidance based on error type
-    retry_guidance = {
-        "authentication": "Please check your authentication credentials and try again",
-        "key_validation": (
-            f"Verify your {exc.details.service or 'API'} key is correct and has "
-            "required permissions"
-        ),
-        "rate_limit": (
-            f"Wait {exc.details.additional_context.get('retry_after', 60)} seconds "
-            "before retrying"
-        ),
-        "mcp_service": (
-            "The external service is temporarily unavailable. Please try again later"
-        ),
-        "external_api": "External service error. Check service status and try again",
-        "validation": (
-            "Check the request parameters and ensure they meet the required format"
-        ),
-        "resource_not_found": "The requested resource was not found",
-        "authorization": "You don't have permission to access this resource",
-        "database": "A database error occurred. Please try again later",
-        "service": "An internal service error occurred. Please try again",
-    }
-
-    response["retry_guidance"] = retry_guidance.get(
-        response["error_type"],
-        "An error occurred. Please check your request and try again",
-    )
-
-    return response
-
-
-def is_agent_request(request: Request) -> bool:
-    """Determine if the request is from an agent based on headers or path.
-
-    Args:
-        request: The request object
-
-    Returns:
-        True if this appears to be an agent request
-    """
-    # Check for agent-specific headers
-    user_agent = request.headers.get("user-agent", "").lower()
-    if any(agent in user_agent for agent in ["agent", "bot", "ai", "llm"]):
-        return True
-
-    # Check for agent-specific accept headers
-    accept = request.headers.get("accept", "").lower()
-    if "application/vnd.api+json" in accept:  # JSON API format often used by agents
-        return True
-
-    # Check for X-Consumer-Type header
-    consumer_type = request.headers.get("x-consumer-type", "").lower()
-    if consumer_type in ["agent", "ai", "bot"]:
-        return True
-
-    # Check for specific API paths that agents typically use
-    agent_paths = ["/api/v1/chat", "/api/agents", "/api/memory"]
-    if any(request.url.path.startswith(path) for path in agent_paths):
-        return True
-
-    return False
 
 
 @asynccontextmanager
@@ -178,7 +83,7 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    # Startup: Initialize MCP Manager and WebSocket Manager
+    # Startup: Initialize MCP Manager and WebSocket Services
     logger.info("Initializing MCP Manager on API startup")
     await mcp_manager.initialize_all_enabled()
 
@@ -187,15 +92,23 @@ async def lifespan(app: FastAPI):
     logger.info(f"Available MCPs: {available_mcps}")
     logger.info(f"Initialized MCPs: {initialized_mcps}")
 
-    # Initialize WebSocket Manager
-    logger.info("Starting WebSocket Manager")
+    # Initialize WebSocket Broadcaster first
+    logger.info("Starting WebSocket Broadcaster")
+    await websocket_broadcaster.start()
+
+    # Initialize WebSocket Manager with broadcaster integration
+    logger.info("Starting WebSocket Manager with broadcaster integration")
+    websocket_manager.broadcaster = websocket_broadcaster
     await websocket_manager.start()
 
     yield  # Application runs here
 
-    # Shutdown: Clean up resources
+    # Shutdown: Clean up resources (reverse order)
     logger.info("Stopping WebSocket Manager")
     await websocket_manager.stop()
+
+    logger.info("Stopping WebSocket Broadcaster")
+    await websocket_broadcaster.stop()
 
     logger.info("Shutting down MCP Manager")
     await mcp_manager.shutdown()
@@ -209,24 +122,24 @@ def create_app() -> FastAPI:
     """
     settings = get_settings()
 
-    # Create FastAPI app with OpenAPI configuration
+    # Create FastAPI app with unified configuration
     app = FastAPI(
         title=settings.api_title,
-        description=settings.api_description,
+        description="TripSage AI Travel Planning API",
         version=settings.api_version,
-        docs_url="/api/docs" if settings.environment != "production" else None,
-        redoc_url="/api/redoc" if settings.environment != "production" else None,
-        openapi_url="/api/openapi.json"
-        if settings.environment != "production"
-        else None,
+        docs_url="/api/docs" if not settings.is_production else None,
+        redoc_url="/api/redoc" if not settings.is_production else None,
+        openapi_url="/api/openapi.json" if not settings.is_production else None,
         lifespan=lifespan,
     )
 
-    # Configure CORS
-    cors_config = settings.get_cors_config()
+    # Configure CORS with unified settings
     app.add_middleware(
         CORSMiddleware,
-        **cors_config,
+        allow_origins=settings.cors_origins,
+        allow_credentials=settings.cors_credentials,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # Add custom middleware (order matters - first added is last executed)
@@ -234,13 +147,14 @@ def create_app() -> FastAPI:
     app.add_middleware(LoggingMiddleware)
 
     # Enhanced rate limiting middleware with principal-based limits
-    use_dragonfly = bool(settings.dragonfly.url)
+    use_dragonfly = bool(settings.redis_url)
     app.add_middleware(
         EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
     )
 
     # Enhanced authentication middleware supporting JWT and API keys
-    app.add_middleware(AuthenticationMiddleware, settings=settings)
+    # Temporarily disabled - awaiting Supabase Auth
+    # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Add key operation rate limiting middleware
     key_monitoring_service = KeyMonitoringService(settings)
@@ -249,283 +163,165 @@ def create_app() -> FastAPI:
         monitoring_service=key_monitoring_service,
     )
 
-    # Add exception handlers for detailed agent API error responses
+    # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)
     async def authentication_error_handler(
-        request: Request,
-        exc: CoreAuthenticationError,
+        request: Request, exc: CoreAuthenticationError
     ):
-        """Handle authentication errors with detailed agent context."""
+        """Handle authentication errors."""
         logger.error(
-            f"Authentication error: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "status_code": exc.status_code,
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-                "user_id": exc.details.user_id,
-            },
+            f"Authentication error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
-            content=format_error_response(exc, request, is_agent_request(request)),
+            content=format_error_response(exc, request),
         )
 
     @app.exception_handler(CoreKeyValidationError)
     async def key_validation_error_handler(
-        request: Request,
-        exc: CoreKeyValidationError,
+        request: Request, exc: CoreKeyValidationError
     ):
-        """Handle API key validation errors with service-specific guidance."""
+        """Handle API key validation errors."""
         logger.error(
-            f"API key validation error: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "service": exc.details.service,
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
+            f"Key validation error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
-            content=format_error_response(exc, request, is_agent_request(request)),
+            content=format_error_response(exc, request),
         )
 
     @app.exception_handler(CoreRateLimitError)
     async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):
-        """Handle rate limit errors with retry information."""
-        retry_after = exc.details.additional_context.get("retry_after", 60)
+        """Handle rate limit errors."""
         logger.warning(
-            f"Rate limit exceeded: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "retry_after": retry_after,
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
+            f"Rate limit exceeded: {exc.message}", extra={"path": request.url.path}
         )
-        response_content = format_error_response(
-            exc,
-            request,
-            is_agent_request(request),
-        )
-        response_content["retry_after"] = retry_after
         return JSONResponse(
             status_code=exc.status_code,
-            content=response_content,
-            headers={"Retry-After": str(retry_after)},
+            content=format_error_response(exc, request),
+            headers={"Retry-After": "60"},
         )
 
     @app.exception_handler(CoreMCPError)
     async def mcp_error_handler(request: Request, exc: CoreMCPError):
-        """Handle MCP server errors with tool-specific context."""
-        logger.error(
-            f"MCP error: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "service": exc.details.service,
-                "tool": exc.details.additional_context.get("tool"),
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
-        )
+        """Handle MCP server errors."""
+        logger.error(f"MCP error: {exc.message}", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
-            content=format_error_response(exc, request, is_agent_request(request)),
+            content=format_error_response(exc, request),
         )
 
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
-        """Handle external API errors with service context."""
+        """Handle external API errors."""
         logger.error(
-            f"External API error: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "service": exc.details.service,
-                "api_status_code": exc.details.additional_context.get(
-                    "api_status_code",
-                ),
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
+            f"External API error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
-            content=format_error_response(exc, request, is_agent_request(request)),
+            content=format_error_response(exc, request),
         )
 
     @app.exception_handler(CoreValidationError)
     async def validation_error_handler(request: Request, exc: CoreValidationError):
-        """Handle validation errors with field-specific context."""
+        """Handle validation errors."""
         logger.warning(
-            f"Validation error: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "field": exc.details.additional_context.get("field"),
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
+            f"Validation error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,  # Use 400 for validation errors
-            content=format_error_response(exc, request, is_agent_request(request)),
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content=format_error_response(exc, request),
         )
 
     @app.exception_handler(CoreTripSageError)
     async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):
         """Handle all other core TripSage exceptions."""
-        logger.error(
-            f"Core TripSage error: {exc.message}",
-            extra={
-                "error_code": exc.code,
-                "status_code": exc.status_code,
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
-        )
+        logger.error(f"Core error: {exc.message}", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
-            content=format_error_response(exc, request, is_agent_request(request)),
+            content=format_error_response(exc, request),
         )
 
     @app.exception_handler(RequestValidationError)
     async def request_validation_error_handler(
-        request: Request,
-        exc: RequestValidationError,
+        request: Request, exc: RequestValidationError
     ):
         """Handle FastAPI request validation errors."""
-        error_details = []
-        for error in exc.errors():
-            error_details.append(
-                {
-                    "field": ".".join(str(x) for x in error["loc"]),
-                    "message": error["msg"],
-                    "type": error["type"],
-                    "input": error.get("input"),
-                },
-            )
+        errors = [
+            {
+                "field": ".".join(str(x) for x in error["loc"]),
+                "message": error["msg"],
+                "type": error["type"],
+            }
+            for error in exc.errors()
+        ]
 
         logger.warning(
-            f"Request validation error: {len(error_details)} validation errors",
-            extra={
-                "errors": error_details,
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
+            f"Validation errors: {len(errors)}", extra={"path": request.url.path}
         )
-
-        # Create a CoreValidationError to use our formatting
-        validation_exc = CoreValidationError(
-            message="Request validation failed",
-            code="REQUEST_VALIDATION_ERROR",
-            details={"additional_context": {"validation_errors": error_details}},
-        )
-
-        response_content = format_error_response(
-            validation_exc,
-            request,
-            is_agent_request(request),
-        )
-
-        # Add validation errors to the response for both frontend and agents
-        response_content["validation_errors"] = error_details
 
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content=response_content,
+            content={
+                "error": True,
+                "message": "Request validation failed",
+                "code": "VALIDATION_ERROR",
+                "type": "validation",
+                "errors": errors,
+            },
         )
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """Handle HTTP exceptions."""
         logger.warning(
-            f"HTTP exception: {exc.detail}",
-            extra={
-                "status_code": exc.status_code,
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-            },
+            f"HTTP {exc.status_code}: {exc.detail}", extra={"path": request.url.path}
         )
-
-        # Map common HTTP errors to appropriate core exceptions
-        if exc.status_code == 404:
-            core_exc = CoreResourceNotFoundError(
-                message=exc.detail or "Resource not found",
-                code=f"HTTP_{exc.status_code}",
-            )
-        elif exc.status_code == 401:
-            core_exc = CoreAuthenticationError(
-                message=exc.detail or "Authentication required",
-                code=f"HTTP_{exc.status_code}",
-            )
-        elif exc.status_code == 403:
-            core_exc = CoreAuthorizationError(
-                message=exc.detail or "Access forbidden",
-                code=f"HTTP_{exc.status_code}",
-            )
-        else:
-            core_exc = CoreTripSageError(
-                message=exc.detail or f"HTTP {exc.status_code} error",
-                code=f"HTTP_{exc.status_code}",
-                status_code=exc.status_code,
-            )
-
         return JSONResponse(
             status_code=exc.status_code,
-            content=format_error_response(core_exc, request, is_agent_request(request)),
+            content={
+                "error": True,
+                "message": exc.detail or f"HTTP {exc.status_code} error",
+                "code": f"HTTP_{exc.status_code}",
+                "type": "http",
+            },
         )
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle all other unhandled exceptions."""
         logger.exception(
-            f"Unhandled exception: {exc!s}",
-            extra={
-                "path": request.url.path,
-                "correlation_id": getattr(request.state, "correlation_id", None),
-                "exception_type": type(exc).__name__,
-            },
+            f"Unhandled exception: {exc}", extra={"path": request.url.path}
         )
 
-        # Create a generic CoreTripSageError for unexpected exceptions
-        generic_exc = CoreTripSageError(
-            message="Internal server error",
-            code="INTERNAL_ERROR",
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            details={
-                "additional_context": {
-                    "exception_type": type(exc).__name__,
-                    "exception_message": str(exc) if settings.debug else None,
-                },
-            },
-        )
+        content = {
+            "error": True,
+            "message": "Internal server error",
+            "code": "INTERNAL_ERROR",
+            "type": "internal",
+        }
 
-        response_content = format_error_response(
-            generic_exc,
-            request,
-            is_agent_request(request),
-        )
-
-        # Add debug information if in debug mode
+        # Add debug info in development
         if settings.debug:
-            response_content["debug_info"] = {
+            content["debug"] = {
                 "exception_type": type(exc).__name__,
                 "exception_message": str(exc),
-                "traceback": traceback.format_exc()
-                if is_agent_request(request)
-                else None,
             }
 
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=response_content,
+            content=content,
         )
 
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
+    app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
+    app.include_router(
+        dashboard_realtime.router, prefix="/api", tags=["dashboard_realtime"]
+    )
     app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-    app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
+    app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(
         attachments.router, prefix="/api/attachments", tags=["attachments"]
     )
@@ -544,11 +340,13 @@ def create_app() -> FastAPI:
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
+    app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
+    app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 
-    # TODO: Include additional routers as they are implemented
-    # app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(users.router, prefix="/api/users", tags=["users"])
+    app.include_router(config.router, prefix="/api", tags=["configuration"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)

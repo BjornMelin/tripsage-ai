@@ -1,8 +1,7 @@
 "use client";
 
-import { FileArchiveIcon, FileIcon, FileTextIcon, ImageIcon } from "lucide-react";
+import { FileArchiveIcon, FileIcon, FileTextIcon } from "lucide-react";
 import Image from "next/image";
-import React from "react";
 
 interface MessageAttachmentsProps {
   attachments: string[];
@@ -14,7 +13,7 @@ export function MessageAttachments({ attachments }: MessageAttachmentsProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {attachments.map((url, index) => (
-        <AttachmentItem key={index} url={url} />
+        <AttachmentItem key={`attachment-${url}-${index}`} url={url} />
       ))}
     </div>
   );

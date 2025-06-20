@@ -17,7 +17,7 @@ from googlemaps.exceptions import (
     TransportError,
 )
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
@@ -31,7 +31,7 @@ class GoogleMapsServiceError(CoreAPIError):
         super().__init__(
             message=message,
             code="GOOGLE_MAPS_API_ERROR",
-            service="GoogleMapsService",
+            api_service="GoogleMapsService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error
@@ -40,7 +40,7 @@ class GoogleMapsServiceError(CoreAPIError):
 class GoogleMapsService:
     """Direct Google Maps API service with async support and connection pooling."""
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None) -> None:
+    def __init__(self, settings: Optional[Settings] = None) -> None:
         """
         Initialize Google Maps service.
 

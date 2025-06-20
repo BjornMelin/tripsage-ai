@@ -43,6 +43,18 @@ from .financial import (
     PriceBreakdown,
     PriceRange,
 )
+from .flight_schemas import (
+    AirportSearchRequest,
+    AirportSearchResponse,
+    FlightPassenger,
+    FlightSearchRequest,
+    FlightSearchResponse,
+    MultiCityFlightSearchRequest,
+    MultiCityFlightSegment,
+    SavedFlightRequest,
+    SavedFlightResponse,
+    UpcomingFlightResponse,
+)
 from .geographic import (
     Address,
     Airport,
@@ -122,6 +134,17 @@ __all__ = [
     "TripDestination",
     "TripPreferences",
     "TripSummary",
+    # Flight schemas
+    "AirportSearchRequest",
+    "AirportSearchResponse",
+    "FlightPassenger",
+    "FlightSearchRequest",
+    "FlightSearchResponse",
+    "MultiCityFlightSearchRequest",
+    "MultiCityFlightSegment",
+    "SavedFlightRequest",
+    "SavedFlightResponse",
+    "UpcomingFlightResponse",
     # Validators
     "CommonValidators",
 ]

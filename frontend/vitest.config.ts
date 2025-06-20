@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
@@ -45,13 +45,15 @@ export default defineConfig({
       all: true,
     },
     // Performance optimizations
-    pool: "threads",
+    pool: "forks",
     poolOptions: {
-      threads: {
-        singleThread: false,
-        useAtomics: true,
+      forks: {
+        singleFork: true, // Better for memory-constrained environments
       },
     },
+    isolate: true, // Ensure test isolation
+    clearMocks: true, // Clear all mocks between tests
+    restoreMocks: true, // Restore original implementations
     // Better error handling
     logHeapUsage: true,
     passWithNoTests: true,

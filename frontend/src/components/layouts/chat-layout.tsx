@@ -2,10 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useChatStore } from "@/stores/chat-store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
 
 interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
   onNewChat?: () => void;
@@ -45,6 +43,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
       {/* New Chat Button */}
       <div className="p-4 border-b">
         <button
+          type="button"
           onClick={onNewChat}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
         >
@@ -53,6 +52,8 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            role="img"
+            aria-label="New chat"
           >
             <path
               strokeLinecap="round"
@@ -102,6 +103,8 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            role="img"
+            aria-label="Settings"
           >
             <path
               strokeLinecap="round"
@@ -126,13 +129,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
 interface AgentStatusPanelProps extends React.HTMLAttributes<HTMLElement> {}
 
 function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
-  const { agents, isLoading } = useAgentStatusStore();
-
-  // Get active agents
-  const activeAgents = useMemo(
-    () => agents.filter((agent) => agent.status === "active"),
-    [agents]
-  );
+  const { activeAgents, isMonitoring } = useAgentStatusStore();
 
   return (
     <div
@@ -146,7 +143,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
           <div
             className={cn(
               "w-2 h-2 rounded-full",
-              isLoading
+              isMonitoring
                 ? "bg-yellow-500"
                 : activeAgents.length > 0
                   ? "bg-green-500"
@@ -170,7 +167,10 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {agent.currentTask || "Waiting for tasks..."}
+                  {agent.currentTaskId
+                    ? agent.tasks.find((t) => t.id === agent.currentTaskId)
+                        ?.description || "Task in progress..."
+                    : "Waiting for tasks..."}
                 </div>
                 {agent.progress && (
                   <div className="mt-2">
@@ -196,6 +196,8 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                role="img"
+                aria-label="No active agents"
               >
                 <path
                   strokeLinecap="round"

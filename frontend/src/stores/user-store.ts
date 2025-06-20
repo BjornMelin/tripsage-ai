@@ -98,24 +98,8 @@ export type TravelPreferences = z.infer<typeof TravelPreferencesSchema>;
 export type PersonalInfo = z.infer<typeof PersonalInfoSchema>;
 export type PrivacySettings = z.infer<typeof PrivacySettingsSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
-
-export interface FavoriteDestination {
-  id: string;
-  name: string;
-  country: string;
-  notes?: string;
-  visitCount: number;
-  lastVisited?: string;
-}
-
-export interface TravelDocument {
-  id: string;
-  type: "passport" | "visa" | "license" | "insurance" | "vaccination";
-  number: string;
-  expiryDate: string;
-  issuingCountry: string;
-  notes?: string;
-}
+export type FavoriteDestination = UserProfile["favoriteDestinations"][0];
+export type TravelDocument = UserProfile["travelDocuments"][0];
 
 // User profile store interface (authentication is handled by auth-store)
 interface UserProfileState {
@@ -170,6 +154,19 @@ interface UserProfileState {
   clearError: () => void;
   reset: () => void;
 }
+
+// Validation schema for the user profile store state
+// const userProfileStoreSchema = z.object({ // Future validation
+//   profile: UserProfileSchema.nullable(),
+//   isLoading: z.boolean(),
+//   isUpdatingProfile: z.boolean(),
+//   isUploadingAvatar: z.boolean(),
+//   error: z.string().nullable(),
+//   uploadError: z.string().nullable(),
+//   displayName: z.string(),
+//   hasCompleteProfile: z.boolean(),
+//   upcomingDocumentExpirations: z.array(z.any()), // Could be more specific with TravelDocument schema
+// });
 
 // Helper functions
 const generateId = () =>
@@ -247,11 +244,11 @@ export const useUserProfileStore = create<UserProfileState>()(
         },
 
         // Profile management actions
-        setProfile: (profile) => {
+        setProfile: (profile: UserProfile | null) => {
           set({ profile });
         },
 
-        updatePersonalInfo: async (info) => {
+        updatePersonalInfo: async (info: Partial<PersonalInfo>) => {
           const { profile } = get();
           if (!profile) return false;
 
@@ -292,7 +289,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           }
         },
 
-        updateTravelPreferences: async (preferences) => {
+        updateTravelPreferences: async (preferences: Partial<TravelPreferences>) => {
           const { profile } = get();
           if (!profile) return false;
 
@@ -336,7 +333,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           }
         },
 
-        updatePrivacySettings: async (settings) => {
+        updatePrivacySettings: async (settings: Partial<PrivacySettings>) => {
           const { profile } = get();
           if (!profile) return false;
 
@@ -381,7 +378,7 @@ export const useUserProfileStore = create<UserProfileState>()(
         },
 
         // Avatar management
-        uploadAvatar: async (file) => {
+        uploadAvatar: async (file: File) => {
           set({ isUploadingAvatar: true, uploadError: null });
 
           try {
@@ -443,14 +440,16 @@ export const useUserProfileStore = create<UserProfileState>()(
             });
 
             return true;
-          } catch (error) {
+          } catch (_error) {
             set({ isUpdatingProfile: false });
             return false;
           }
         },
 
         // Favorite destinations
-        addFavoriteDestination: (destination) => {
+        addFavoriteDestination: (
+          destination: Omit<FavoriteDestination, "id" | "visitCount">
+        ) => {
           const { profile } = get();
           if (!profile) return;
 
@@ -469,7 +468,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           });
         },
 
-        removeFavoriteDestination: (destinationId) => {
+        removeFavoriteDestination: (destinationId: string) => {
           const { profile } = get();
           if (!profile) return;
 
@@ -477,29 +476,33 @@ export const useUserProfileStore = create<UserProfileState>()(
             profile: {
               ...profile,
               favoriteDestinations: profile.favoriteDestinations.filter(
-                (d) => d.id !== destinationId
+                (d: FavoriteDestination) => d.id !== destinationId
               ),
               updatedAt: getCurrentTimestamp(),
             },
           });
         },
 
-        updateFavoriteDestination: (destinationId, updates) => {
+        updateFavoriteDestination: (
+          destinationId: string,
+          updates: Partial<FavoriteDestination>
+        ) => {
           const { profile } = get();
           if (!profile) return;
 
           set({
             profile: {
               ...profile,
-              favoriteDestinations: profile.favoriteDestinations.map((d) =>
-                d.id === destinationId ? { ...d, ...updates } : d
+              favoriteDestinations: profile.favoriteDestinations.map(
+                (d: FavoriteDestination) =>
+                  d.id === destinationId ? { ...d, ...updates } : d
               ),
               updatedAt: getCurrentTimestamp(),
             },
           });
         },
 
-        incrementDestinationVisit: (destinationId) => {
+        incrementDestinationVisit: (destinationId: string) => {
           const { profile } = get();
           if (!profile) return;
 
@@ -508,10 +511,11 @@ export const useUserProfileStore = create<UserProfileState>()(
           set({
             profile: {
               ...profile,
-              favoriteDestinations: profile.favoriteDestinations.map((d) =>
-                d.id === destinationId
-                  ? { ...d, visitCount: d.visitCount + 1, lastVisited: now }
-                  : d
+              favoriteDestinations: profile.favoriteDestinations.map(
+                (d: FavoriteDestination) =>
+                  d.id === destinationId
+                    ? { ...d, visitCount: d.visitCount + 1, lastVisited: now }
+                    : d
               ),
               updatedAt: now,
             },
@@ -519,7 +523,7 @@ export const useUserProfileStore = create<UserProfileState>()(
         },
 
         // Travel documents
-        addTravelDocument: (document) => {
+        addTravelDocument: (document: Omit<TravelDocument, "id">) => {
           const { profile } = get();
           if (!profile) return;
 
@@ -537,7 +541,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           });
         },
 
-        removeTravelDocument: (documentId) => {
+        removeTravelDocument: (documentId: string) => {
           const { profile } = get();
           if (!profile) return;
 
@@ -545,21 +549,24 @@ export const useUserProfileStore = create<UserProfileState>()(
             profile: {
               ...profile,
               travelDocuments: profile.travelDocuments.filter(
-                (d) => d.id !== documentId
+                (d: TravelDocument) => d.id !== documentId
               ),
               updatedAt: getCurrentTimestamp(),
             },
           });
         },
 
-        updateTravelDocument: (documentId, updates) => {
+        updateTravelDocument: (
+          documentId: string,
+          updates: Partial<TravelDocument>
+        ) => {
           const { profile } = get();
           if (!profile) return;
 
           set({
             profile: {
               ...profile,
-              travelDocuments: profile.travelDocuments.map((d) =>
+              travelDocuments: profile.travelDocuments.map((d: TravelDocument) =>
                 d.id === documentId ? { ...d, ...updates } : d
               ),
               updatedAt: getCurrentTimestamp(),
@@ -581,7 +588,7 @@ export const useUserProfileStore = create<UserProfileState>()(
           return JSON.stringify(exportData, null, 2);
         },
 
-        importProfile: async (data) => {
+        importProfile: async (data: string) => {
           try {
             const importData = JSON.parse(data);
 
@@ -590,9 +597,8 @@ export const useUserProfileStore = create<UserProfileState>()(
               if (result.success) {
                 set({ profile: result.data });
                 return true;
-              } else {
-                throw new Error("Invalid profile data");
               }
+              throw new Error("Invalid profile data");
             }
 
             return false;

@@ -12,7 +12,6 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.services.business.error_handling_service import ErrorRecoveryService
 from tripsage_core.services.business.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,
@@ -36,9 +35,10 @@ def mock_mcp_manager():
 @pytest.fixture
 def mock_error_recovery_service():
     """Mock error recovery service."""
-    mock_service = AsyncMock(spec=ErrorRecoveryService)
+    mock_service = AsyncMock()
     mock_service.store_successful_result.return_value = None
     mock_service.handle_retry.return_value = True
+    mock_service.handle_mcp_error = AsyncMock()
     return mock_service
 
 

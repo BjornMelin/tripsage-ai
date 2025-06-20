@@ -9,7 +9,7 @@ from typing import Optional
 
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 
 settings = get_settings()
 
@@ -39,8 +39,8 @@ def create_agent(
         ValueError: If the agent type is not recognized
     """
     # Default to settings if not provided
-    model = model or settings.agent.model_name
-    temperature = temperature or settings.agent.temperature
+    model = model or settings.openai_model
+    temperature = temperature or settings.model_temperature
 
     # Create the appropriate agent type
     if agent_type == "base":

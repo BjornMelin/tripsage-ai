@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from supabase import Client, create_client
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -27,14 +27,14 @@ class MigrationRunner:
         Args:
             project_id: Supabase project ID (optional, uses settings if not provided)
         """
-        self.project_id = project_id or settings.database.supabase_project_id
+        self.project_id = project_id or settings.database_project_id
         self.client = self._get_supabase_client()
 
     def _get_supabase_client(self) -> Client:
         """Get a Supabase client instance."""
         return create_client(
-            settings.database.supabase_url,
-            settings.database.supabase_anon_key.get_secret_value(),
+            settings.database_url,
+            settings.database_public_key.get_secret_value(),
         )
 
     def _calculate_checksum(self, content: str) -> str:

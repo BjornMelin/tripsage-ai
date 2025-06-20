@@ -5,22 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   useMemoryInsights,
   useMemoryStats,
-  useUpdatePreferences,
+  // useUpdatePreferences, // Future implementation
 } from "@/hooks/use-memory";
 import { cn } from "@/lib/utils";
-import type {
-  MemoryInsight,
-  PersonalizationInsightsProps,
-  UserPreferences,
-} from "@/types/memory";
+import type { PersonalizationInsightsProps } from "@/types/memory";
+// import type { UserPreferences } from "@/types/memory"; // Future implementation
 import {
   BarChart3,
   Brain,
-  Calendar,
   DollarSign,
   Info,
   Lightbulb,
@@ -33,15 +28,15 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 export function PersonalizationInsights({
   userId,
   className,
   showRecommendations = true,
-  onPreferenceUpdate,
+  onPreferenceUpdate: _onPreferenceUpdate, // Future implementation
 }: PersonalizationInsightsProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
+  // const [isUpdating, setIsUpdating] = useState(false); // Future implementation
   const [selectedView, setSelectedView] = useState<
     "overview" | "budget" | "destinations" | "recommendations"
   >("overview");
@@ -55,7 +50,7 @@ export function PersonalizationInsights({
 
   const { data: stats, isLoading: statsLoading } = useMemoryStats(userId, !!userId);
 
-  const updatePreferences = useUpdatePreferences(userId);
+  // const updatePreferences = useUpdatePreferences(userId); // Future implementation
 
   const formatCurrency = (amount: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
@@ -75,27 +70,30 @@ export function PersonalizationInsights({
     }
   };
 
-  const handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => {
-    setIsUpdating(true);
-    try {
-      await updatePreferences.mutateAsync({
-        preferences,
-        merge_strategy: "merge",
-      });
-      onPreferenceUpdate?.(preferences);
-      await refetchInsights();
-    } catch (error) {
-      console.error("Failed to update preferences:", error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  // const handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => { // Future implementation
+  //   setIsUpdating(true);
+  //   try {
+  //     await updatePreferences.mutateAsync({
+  //       preferences,
+  //       merge_strategy: "merge",
+  //     });
+  //     onPreferenceUpdate?.(preferences);
+  //     await refetchInsights();
+  //   } catch (error) {
+  //     console.error("Failed to update preferences:", error);
+  //   } finally {
+  //     setIsUpdating(false);
+  //   }
+  // };
 
   const renderOverview = () => {
     if (!insights?.insights) return null;
 
-    const { travelPersonality, budgetPatterns, destinationPreferences } =
-      insights.insights;
+    const {
+      travelPersonality,
+      budgetPatterns: _budgetPatterns,
+      destinationPreferences,
+    } = insights.insights;
 
     return (
       <div className="space-y-6">
@@ -418,7 +416,11 @@ export function PersonalizationInsights({
             variant={selectedView === id ? "secondary" : "ghost"}
             size="sm"
             className="flex-1"
-            onClick={() => setSelectedView(id as any)}
+            onClick={() =>
+              setSelectedView(
+                id as "overview" | "budget" | "destinations" | "recommendations"
+              )
+            }
           >
             <Icon className="h-4 w-4 mr-2" />
             {label}

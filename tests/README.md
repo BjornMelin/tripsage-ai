@@ -5,7 +5,9 @@ This directory contains the organized test suite for TripSage, restructured for 
 ## Directory Structure
 
 ### `unit/`
+
 Unit tests for individual components and modules:
+
 - `unit/api/` - API endpoint unit tests (auth, health, keys, trips, chat)
 - `unit/agents/` - Agent class unit tests (base, chat, flight, travel planning)
 - `unit/services/` - Service layer unit tests (memory, chat orchestration, error handling)
@@ -14,32 +16,42 @@ Unit tests for individual components and modules:
 - `unit/utils/` - Utility function unit tests (decorators, settings, cache, storage)
 
 ### `integration/`
+
 Integration tests that test component interactions:
+
 - `integration/api/` - API integration tests (BYOK, endpoints, memory integration)
 - `integration/database/` - Database integration tests (migrations, connections)
 - `integration/memory/` - Memory system integration tests (workflows, system integration)
 - `integration/agents/` - Agent integration tests (handoffs, LangGraph migration, travel flows)
 
 ### `e2e/`
+
 End-to-end tests that simulate complete user workflows:
+
 - Complete chat authentication flows
 - Chat session management
 - Full API workflows
 
 ### `performance/`
+
 Performance and benchmark tests:
+
 - Memory system performance tests
 - Migration performance benchmarks
 - SDK migration structure tests
 
 ### `security/`
+
 Security and compliance tests:
+
 - Memory system security tests
 - Data isolation validation
 - GDPR compliance tests
 
 ### `deprecate/`
+
 Deprecated tests that are no longer relevant due to:
+
 - MCP to SDK migration (per docs/REFACTOR/API_INTEGRATION/)
 - Service deprecations (Firecrawl → Crawl4AI)
 - Obsolete test variants and duplicates
@@ -47,11 +59,13 @@ Deprecated tests that are no longer relevant due to:
 ## Running Tests
 
 ### All Tests
+
 ```bash
 uv run pytest
 ```
 
 ### By Category
+
 ```bash
 # Unit tests only
 uv run pytest tests/unit/
@@ -70,6 +84,7 @@ uv run pytest tests/security/
 ```
 
 ### By Component
+
 ```bash
 # Memory system tests
 uv run pytest tests/unit/services/test_memory_service*.py tests/integration/memory/
@@ -86,6 +101,7 @@ uv run pytest tests/unit/agents/ tests/integration/agents/
 Target: ≥90% coverage across all test categories.
 
 Current coverage can be checked with:
+
 ```bash
 uv run pytest --cov=tripsage --cov-report=html
 ```
@@ -105,24 +121,28 @@ The following changes were made to improve organization:
 The following types of tests have been moved to `deprecate/`:
 
 ### MCP-Related Tests (per API_INTEGRATION migration docs)
+
 - MCP wrapper tests for services being migrated to direct SDKs
 - MCP abstraction layer tests
 - MCP configuration tests
 - Phase 3 MCP bridge tests
 
 ### Service Migration Tests (per migration roadmap)
+
 - Firecrawl tests (deprecated in favor of Crawl4AI)
 - Cached websearch tests (deprecated)
 - Redis migration tests (completed)
 - Duffel HTTP client tests (migrated to direct SDK)
 
 ### Obsolete Test Variants
+
 - Multiple chat agent test variants (demo, isolated, phase5, proper, simple, working)
 - Basic decorator tests (replaced by unit tests)
 - Flight search decorator tests (migrated)
 - Calendar decorator tests (migrated)
 
 ### Legacy Integration Tests
+
 - Phase 3 orchestration tests (completed)
 - Missing operations tests (resolved)
 - Final verification tests (completed)
@@ -149,6 +169,7 @@ When adding new tests:
 ## Dependencies
 
 All test dependencies are defined in:
+
 - `conftest.py` files in each directory for shared fixtures
 - `requirements.txt` for external test dependencies
 - Test configuration in `pytest.ini`
@@ -156,6 +177,7 @@ All test dependencies are defined in:
 ## Writing Tests
 
 ### Unit Tests
+
 Focus on testing individual functions and classes in isolation:
 
 ```python
@@ -168,6 +190,7 @@ def test_memory_extraction():
 ```
 
 ### Integration Tests
+
 Test component interactions and data flow:
 
 ```python
@@ -178,6 +201,7 @@ async def test_complete_memory_workflow():
 ```
 
 ### E2E Tests
+
 Test complete user journeys:
 
 ```python

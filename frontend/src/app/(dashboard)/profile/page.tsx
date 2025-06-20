@@ -19,7 +19,7 @@ import { Settings, Shield, Sliders, User } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, isLoading } = useAuthStore();
-  const { profile, isLoading: isProfileLoading } = useUserProfileStore();
+  const { profile: _profile, isLoading: isProfileLoading } = useUserProfileStore();
 
   if (isLoading || isProfileLoading) {
     return (

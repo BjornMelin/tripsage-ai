@@ -252,14 +252,16 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
-    # Create a comprehensive mock settings object
+    # Create a comprehensive mock settings object using current structure
     from tripsage_core.config import Settings
 
     mock_settings = Settings(
-        environment="test",
+        environment="testing",
         debug=True,
         database_url="https://test.supabase.co",
+        database_service_key="test_service_key",
         database_public_key="test_anon_key",
+        openai_api_key="test_openai_key",
         _env_file=None,
     )
 

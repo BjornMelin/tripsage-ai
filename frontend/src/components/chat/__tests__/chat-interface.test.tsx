@@ -1,6 +1,6 @@
 import { useChatStore } from "@/stores/chat-store";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatInterface } from "../chat-interface";
 
 // Mock the chat store
@@ -10,7 +10,7 @@ vi.mock("@/stores/chat-store", () => ({
 
 describe("ChatInterface", () => {
   beforeEach(() => {
-    (useChatStore as any).mockReturnValue({
+    vi.mocked(useChatStore).mockReturnValue({
       sessions: [],
       currentSessionId: null,
       sendMessage: vi.fn(),
@@ -18,7 +18,7 @@ describe("ChatInterface", () => {
   });
 
   it("renders chat header with title and status", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     expect(screen.getByText("AI Assistant")).toBeInTheDocument();
     expect(
@@ -28,7 +28,7 @@ describe("ChatInterface", () => {
   });
 
   it("renders sample messages", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     expect(
       screen.getByText(/Hello! I'm your TripSage AI assistant/)
@@ -39,21 +39,21 @@ describe("ChatInterface", () => {
   });
 
   it("renders message input with placeholder", () => {
-    render(<ChatInterface placeholder="Custom placeholder" />);
+    renderWithProviders(<ChatInterface placeholder="Custom placeholder" />);
 
     const input = screen.getByPlaceholderText("Custom placeholder");
     expect(input).toBeInTheDocument();
   });
 
   it("uses default placeholder when none provided", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText("Type your message...");
     expect(input).toBeInTheDocument();
   });
 
   it("allows typing in the message input", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText(
       "Type your message..."
@@ -65,7 +65,7 @@ describe("ChatInterface", () => {
   });
 
   it("sends message when form is submitted", async () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText(
       "Type your message..."
@@ -85,7 +85,7 @@ describe("ChatInterface", () => {
   });
 
   it("sends message when Enter key is pressed (without Shift)", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText("Type your message...");
 
@@ -97,7 +97,7 @@ describe("ChatInterface", () => {
   });
 
   it("does not send message when Enter key is pressed with Shift", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText("Type your message...");
 
@@ -109,7 +109,7 @@ describe("ChatInterface", () => {
   });
 
   it("disables input when disabled prop is true", () => {
-    render(<ChatInterface disabled={true} />);
+    renderWithProviders(<ChatInterface disabled={true} />);
 
     const input = screen.getByPlaceholderText("Type your message...");
     const sendButton = screen.getByRole("button", { name: /send/i });
@@ -119,7 +119,7 @@ describe("ChatInterface", () => {
   });
 
   it("disables send button when input is empty", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const sendButton = screen.getByRole("button", { name: /send/i });
 
@@ -127,7 +127,7 @@ describe("ChatInterface", () => {
   });
 
   it("enables send button when input has content", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText("Type your message...");
     const sendButton = screen.getByRole("button", { name: /send/i });
@@ -138,7 +138,7 @@ describe("ChatInterface", () => {
   });
 
   it("shows loading indicator when AI is responding", async () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     const input = screen.getByPlaceholderText("Type your message...");
     const sendButton = screen.getByRole("button", { name: /send/i });
@@ -154,7 +154,7 @@ describe("ChatInterface", () => {
   });
 
   it("displays message timestamps", () => {
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     // Check that timestamps are present (they should be formatted times)
     const timeElements = screen.getAllByText(/\d{1,2}:\d{2}\s*(AM|PM)?/i);
@@ -164,20 +164,20 @@ describe("ChatInterface", () => {
   it("scrolls to bottom when new messages are added", () => {
     // This test would require more complex setup with refs and DOM manipulation
     // For now, we'll just verify the component renders without errors
-    render(<ChatInterface />);
+    renderWithProviders(<ChatInterface />);
 
     expect(screen.getByText("AI Assistant")).toBeInTheDocument();
   });
 
   it("applies custom className", () => {
-    render(<ChatInterface className="custom-class" />);
+    renderWithProviders(<ChatInterface className="custom-class" />);
 
     const container = screen.getByText("AI Assistant").closest(".custom-class");
     expect(container).toBeInTheDocument();
   });
 
   it("handles sessionId prop correctly", () => {
-    render(<ChatInterface sessionId="test-session-123" />);
+    renderWithProviders(<ChatInterface sessionId="test-session-123" />);
 
     // Component should render normally with sessionId
     expect(screen.getByText("AI Assistant")).toBeInTheDocument();

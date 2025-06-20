@@ -2,15 +2,11 @@ import {
   type Deal,
   type DealAlert,
   DealAlertSchema,
-  DealNotification,
-  DealNotificationSchema,
   DealSchema,
   type DealState,
   type DealStats,
   type DealType,
-  SearchDealsRequest,
 } from "@/types/deals";
-import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -66,14 +62,14 @@ const generateId = () =>
 const getCurrentTimestamp = () => new Date().toISOString();
 
 // Utility for validating deal objects
-const validateDeal = (deal: unknown): deal is Deal => {
-  return DealSchema.safeParse(deal).success;
-};
+// const validateDeal = (deal: unknown): deal is Deal => {
+//   return DealSchema.safeParse(deal).success;
+// }; // Future validation
 
 // Utility for validating alert objects
-const validateAlert = (alert: unknown): alert is DealAlert => {
-  return DealAlertSchema.safeParse(alert).success;
-};
+// const validateAlert = (alert: unknown): alert is DealAlert => {
+//   return DealAlertSchema.safeParse(alert).success;
+// }; // Future validation
 
 // Calculate percentage discount
 const calculateDiscountPercentage = (originalPrice: number, price: number): number => {

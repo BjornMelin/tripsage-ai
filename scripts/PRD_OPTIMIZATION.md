@@ -3,6 +3,7 @@
 ## PRD Structure for Optimal Task Generation
 
 ### 1. Overview Section
+
 ```markdown
 # Overview
 - **Product Name:** TripSage AI
@@ -13,6 +14,7 @@
 ```
 
 ### 2. Core Features (High-Level)
+
 ```markdown
 # Core Features
 ## Feature 1: [Name]
@@ -26,6 +28,7 @@
 ```
 
 ### 3. Technical Architecture
+
 ```markdown
 # Technical Architecture
 ## System Components
@@ -43,6 +46,7 @@
 ```
 
 ### 4. Development Phases
+
 ```markdown
 # Development Roadmap
 ## Phase 1: Foundation (Weeks 1-2)
@@ -65,6 +69,7 @@
 ```
 
 ### 5. Detailed Requirements
+
 ```markdown
 # Detailed Requirements
 ## Database Schema
@@ -88,6 +93,7 @@
 ```
 
 ### 6. Testing Requirements
+
 ```markdown
 # Testing Requirements
 - Unit test coverage: ≥90%
@@ -99,18 +105,22 @@
 ## PRD Best Practices for Task Generation
 
 ### 1. Be Specific and Measurable
+
 ❌ Bad: "Implement search functionality"
 ✅ Good: "Implement flight search with filters for dates, passengers, cabin class, and price range"
 
 ### 2. Include Technical Details
+
 ❌ Bad: "Add caching"
 ✅ Good: "Implement Redis caching for flight search results with 5-minute TTL"
 
 ### 3. Define Clear Dependencies
+
 ❌ Bad: "Build recommendation engine"
 ✅ Good: "Build recommendation engine (requires: user profile data, search history, Neo4j integration)"
 
 ### 4. Specify Acceptance Criteria
+
 ```markdown
 ## Acceptance Criteria
 - [ ] User can search flights by origin/destination
@@ -120,6 +130,7 @@
 ```
 
 ### 5. Include Non-Functional Requirements
+
 ```markdown
 ## Non-Functional Requirements
 - Performance: <100ms API response time
@@ -130,13 +141,15 @@
 
 ## PRD Parsing Tips
 
-### For Better Task Extraction:
+### For Better Task Extraction
+
 1. **Use Hierarchical Structure:** Main features → Sub-features → Tasks
 2. **Number Your Requirements:** Makes dependency tracking easier
 3. **Include Time Estimates:** Helps with complexity scoring
 4. **Separate MVP from Future:** Clear phase boundaries
 
-### Task Generation Patterns:
+### Task Generation Patterns
+
 ```markdown
 # From PRD Feature:
 "User Authentication with JWT tokens and refresh mechanism"
@@ -151,7 +164,8 @@
 
 ## PRD Templates
 
-### Feature Template:
+### Feature Template
+
 ```markdown
 ## Feature: [Name]
 **ID:** F-[number]
@@ -176,7 +190,8 @@
 - [ ] [User-facing result]
 ```
 
-### Integration Template:
+### Integration Template
+
 ```markdown
 ## Integration: [Service Name]
 **Type:** [API/MCP/Database]
@@ -198,7 +213,8 @@
 
 ## Taskmaster Parsing Configuration
 
-### Optimal Parse Settings:
+### Optimal Parse Settings
+
 ```bash
 # For comprehensive task generation
 mcp__taskmaster-ai__parse_prd \
@@ -213,7 +229,8 @@ mcp__taskmaster-ai__parse_prd \
   --prompt "Focus on Phase 1 foundation tasks only"
 ```
 
-### Post-Parse Optimization:
+### Post-Parse Optimization
+
 1. Review generated tasks for completeness
 2. Add missing dependencies
 3. Adjust complexity scores
@@ -230,19 +247,22 @@ mcp__taskmaster-ai__parse_prd \
 
 ## PRD Evolution Strategy
 
-### Version Control:
+### Version Control
+
 - Keep PRD in version control
 - Tag major versions
 - Document changes in CHANGELOG
 
-### Iteration Process:
+### Iteration Process
+
 1. Initial PRD → Parse to tasks
 2. Development reveals gaps → Update PRD
 3. Re-parse affected sections
 4. Update existing tasks
 5. Continue development
 
-### Living Document:
+### Living Document
+
 - PRD should evolve with project
 - Regular reviews during development
 - Stakeholder sign-off on changes

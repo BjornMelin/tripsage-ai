@@ -72,11 +72,11 @@ def mock_redis():
 
 @pytest.fixture
 def patch_core_settings():
-    """Patch to prevent CoreAppSettings from making external calls during testing."""
+    """Patch to prevent Settings from making external calls during testing."""
     # Mock external service calls that might be triggered during settings validation
     with (
         patch(
-            "tripsage_core.config.base_app_settings.CoreAppSettings.validate_critical_settings",
+            "tripsage_core.config.Settings.validate_critical_settings",
             return_value=[],
         ),
         patch("redis.from_url", return_value=Mock()),

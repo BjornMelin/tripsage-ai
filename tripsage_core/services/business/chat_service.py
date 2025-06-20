@@ -14,8 +14,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_openai import ChatOpenAI
 from pydantic import Field, field_validator
 
+from tripsage_core.config import get_settings
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
 )
@@ -301,50 +304,7 @@ class ChatService:
             )
             raise
 
-    async def get_session(
-        self, session_id: str, user_id: str
-    ) -> Optional[ChatSessionResponse]:
-        """
-        Get chat session by ID.
-
-        Args:
-            session_id: Session ID
-            user_id: User ID (for access control)
-
-        Returns:
-            Chat session or None if not found/accessible
-        """
-        try:
-            result = await self.db.get_chat_session(session_id, user_id)
-            if not result:
-                return None
-
-            # Get message statistics
-            stats = await self.db.get_session_stats(session_id)
-
-            return ChatSessionResponse(
-                id=result["id"],
-                user_id=result["user_id"],
-                title=result.get("title"),
-                trip_id=result.get("trip_id"),
-                created_at=datetime.fromisoformat(result["created_at"]),
-                updated_at=datetime.fromisoformat(result["updated_at"]),
-                ended_at=datetime.fromisoformat(result["ended_at"])
-                if result.get("ended_at")
-                else None,
-                metadata=result.get("metadata", {}),
-                message_count=stats.get("message_count", 0),
-                last_message_at=datetime.fromisoformat(stats["last_message_at"])
-                if stats.get("last_message_at")
-                else None,
-            )
-
-        except Exception as e:
-            logger.error(
-                "Failed to get chat session",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
-            )
-            return None
+    # This method is replaced by _get_session_internal to avoid router conflicts
 
     async def get_user_sessions(
         self, user_id: str, limit: int = 10, include_ended: bool = False
@@ -426,7 +386,7 @@ class ChatService:
                     )
 
             # Verify session access
-            session = await self.get_session(session_id, user_id)
+            session = await self._get_session_internal(session_id, user_id)
             if not session:
                 raise NotFoundError("Chat session not found")
 
@@ -490,59 +450,7 @@ class ChatService:
             )
             raise
 
-    async def get_messages(
-        self,
-        session_id: str,
-        user_id: str,
-        limit: Optional[int] = None,
-        offset: int = 0,
-    ) -> List[MessageResponse]:
-        """
-        Get messages for a session.
-
-        Args:
-            session_id: Session ID
-            user_id: User ID (for access control)
-            limit: Maximum number of messages
-            offset: Number of messages to skip
-
-        Returns:
-            List of messages
-        """
-        try:
-            # Verify session access
-            session = await self.get_session(session_id, user_id)
-            if not session:
-                return []
-
-            results = await self.db.get_session_messages(session_id, limit, offset)
-
-            messages = []
-            for result in results:
-                # Get tool calls for this message
-                tool_calls = await self.db.get_message_tool_calls(result["id"])
-
-                messages.append(
-                    MessageResponse(
-                        id=result["id"],
-                        session_id=result["session_id"],
-                        role=result["role"],
-                        content=result["content"],
-                        created_at=datetime.fromisoformat(result["created_at"]),
-                        metadata=result.get("metadata", {}),
-                        tool_calls=[tc for tc in tool_calls],
-                        estimated_tokens=self._estimate_tokens(result["content"]),
-                    )
-                )
-
-            return messages
-
-        except Exception as e:
-            logger.error(
-                "Failed to get messages",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
-            )
-            return []
+    # This method is replaced by _get_messages_internal to avoid router conflicts
 
     async def get_recent_messages(
         self, session_id: str, user_id: str, request: RecentMessagesRequest
@@ -560,7 +468,7 @@ class ChatService:
         """
         try:
             # Verify session access
-            session = await self.get_session(session_id, user_id)
+            session = await self._get_session_internal(session_id, user_id)
             if not session:
                 return RecentMessagesResponse(
                     messages=[], total_tokens=0, truncated=False
@@ -634,7 +542,7 @@ class ChatService:
         """
         try:
             # Verify session access
-            session = await self.get_session(session_id, user_id)
+            session = await self._get_session_internal(session_id, user_id)
             if not session:
                 raise NotFoundError("Chat session not found")
 
@@ -819,6 +727,300 @@ class ChatService:
             status=result["status"],
             created_at=datetime.fromisoformat(result["created_at"]),
         )
+
+    # ===== Router Compatibility Methods =====
+    # These methods provide compatibility with the router's expected interface
+
+    async def chat_completion(self, user_id: str, request) -> Dict[str, Any]:
+        """
+        Handle chat completion requests (main chat endpoint).
+
+        This method provides AI chat functionality by processing messages,
+        managing sessions, and returning AI responses.
+
+        Args:
+            user_id: User ID
+            request: Chat request containing messages and options
+
+        Returns:
+            Chat response with AI assistant message
+        """
+        try:
+            # Generate or use existing session ID
+            session_id = str(request.session_id) if request.session_id else str(uuid4())
+
+            logger.info(
+                "Chat completion request",
+                extra={
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "message_count": len(request.messages),
+                },
+            )
+
+            # Initialize ChatOpenAI with settings
+            settings = get_settings()
+            model_name = getattr(request, "model", "gpt-4")
+            temperature = getattr(request, "temperature", 0.7)
+            max_tokens = getattr(request, "max_tokens", 4096)
+
+            llm = ChatOpenAI(
+                model=model_name,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                api_key=settings.openai_api_key.get_secret_value(),
+            )
+
+            # Convert request messages to LangChain format
+            langchain_messages = []
+
+            # Add system message for travel assistant context
+            system_prompt = (
+                "You are TripSage AI, an expert travel planning assistant. "
+                "You help users plan trips, find flights and accommodations, "
+                "create itineraries, and provide destination recommendations. "
+                "Be helpful, informative, and personalized in your responses."
+            )
+            langchain_messages.append(SystemMessage(content=system_prompt))
+
+            # Process user messages
+            for msg in request.messages:
+                role = msg.get("role", "user")
+                content = msg.get("content", "")
+
+                if role == "user":
+                    langchain_messages.append(HumanMessage(content=content))
+                elif role == "assistant":
+                    langchain_messages.append(AIMessage(content=content))
+                elif role == "system":
+                    langchain_messages.append(SystemMessage(content=content))
+
+            # Get AI response
+            response = await llm.ainvoke(langchain_messages)
+
+            # Extract token usage information
+            usage_metadata = getattr(response, "response_metadata", {})
+            token_usage = usage_metadata.get("token_usage", {})
+            finish_reason = usage_metadata.get("finish_reason", "stop")
+
+            # Store the conversation in the session if we have a session ID
+            if session_id and hasattr(self, "db"):
+                try:
+                    # Create session if it doesn't exist
+                    session = await self._get_session_internal(session_id, user_id)
+                    if not session:
+                        session_data = ChatSessionCreateRequest(
+                            title="Chat with TripSage AI",
+                            metadata={"model": model_name},
+                        )
+                        await self.create_session(user_id, session_data)
+
+                    # Add user message to session
+                    if request.messages:
+                        last_user_msg = request.messages[-1]
+                        if last_user_msg.get("role") == "user":
+                            user_msg_data = MessageCreateRequest(
+                                role="user",
+                                content=last_user_msg.get("content", ""),
+                            )
+                            await self.add_message(session_id, user_id, user_msg_data)
+
+                    # Add AI response to session
+                    ai_msg_data = MessageCreateRequest(
+                        role="assistant",
+                        content=response.content,
+                        metadata={"model": model_name, "usage": token_usage},
+                    )
+                    await self.add_message(session_id, user_id, ai_msg_data)
+
+                except Exception as e:
+                    logger.warning(
+                        "Failed to store chat in session",
+                        extra={"session_id": session_id, "error": str(e)},
+                    )
+
+            # Return formatted response
+            return {
+                "content": response.content,
+                "session_id": session_id,
+                "model": model_name,
+                "usage": {
+                    "prompt_tokens": token_usage.get("prompt_tokens", 0),
+                    "completion_tokens": token_usage.get("completion_tokens", 0),
+                    "total_tokens": token_usage.get("total_tokens", 0),
+                },
+                "finish_reason": finish_reason,
+            }
+
+        except Exception as e:
+            logger.error(
+                "Chat completion failed",
+                extra={"user_id": user_id, "error": str(e)},
+            )
+            raise
+
+    async def list_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        List chat sessions for a user (router compatibility method).
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of user's chat sessions
+        """
+        sessions = await self.get_user_sessions(user_id)
+        return [session.model_dump() for session in sessions]
+
+    async def create_message(
+        self, user_id: str, session_id: str, message_request
+    ) -> Dict[str, Any]:
+        """
+        Create a message in a session (router compatibility method).
+
+        Args:
+            user_id: User ID
+            session_id: Session ID
+            message_request: Message creation request
+
+        Returns:
+            Created message data
+        """
+        # Convert the API request to service request
+        service_request = MessageCreateRequest(
+            role=message_request.role,
+            content=message_request.content,
+        )
+
+        message = await self.add_message(session_id, user_id, service_request)
+        return message.model_dump()
+
+    async def delete_session(self, user_id: str, session_id: str) -> bool:
+        """
+        Delete a chat session (router compatibility method).
+
+        Args:
+            user_id: User ID
+            session_id: Session ID
+
+        Returns:
+            True if session was deleted successfully
+        """
+        return await self.end_session(session_id, user_id)
+
+    # Rename original methods to avoid conflicts with router compatibility methods
+    async def _get_session_internal(
+        self, session_id: str, user_id: str
+    ) -> Optional[ChatSessionResponse]:
+        """Internal get_session method with original signature."""
+        try:
+            result = await self.db.get_chat_session(session_id, user_id)
+            if not result:
+                return None
+
+            # Get message statistics
+            stats = await self.db.get_session_stats(session_id)
+
+            return ChatSessionResponse(
+                id=result["id"],
+                user_id=result["user_id"],
+                title=result.get("title"),
+                trip_id=result.get("trip_id"),
+                created_at=datetime.fromisoformat(result["created_at"]),
+                updated_at=datetime.fromisoformat(result["updated_at"]),
+                ended_at=datetime.fromisoformat(result["ended_at"])
+                if result.get("ended_at")
+                else None,
+                metadata=result.get("metadata", {}),
+                message_count=stats.get("message_count", 0),
+                last_message_at=datetime.fromisoformat(stats["last_message_at"])
+                if stats.get("last_message_at")
+                else None,
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to get chat session",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
+            return None
+
+    async def _get_messages_internal(
+        self,
+        session_id: str,
+        user_id: str,
+        limit: Optional[int] = None,
+        offset: int = 0,
+    ) -> List[MessageResponse]:
+        """Internal get_messages method with original signature."""
+        try:
+            # Verify session access
+            session = await self._get_session_internal(session_id, user_id)
+            if not session:
+                return []
+
+            results = await self.db.get_session_messages(session_id, limit, offset)
+
+            messages = []
+            for result in results:
+                # Get tool calls for this message
+                tool_calls = await self.db.get_message_tool_calls(result["id"])
+
+                messages.append(
+                    MessageResponse(
+                        id=result["id"],
+                        session_id=result["session_id"],
+                        role=result["role"],
+                        content=result["content"],
+                        created_at=datetime.fromisoformat(result["created_at"]),
+                        metadata=result.get("metadata", {}),
+                        tool_calls=[tc for tc in tool_calls],
+                        estimated_tokens=self._estimate_tokens(result["content"]),
+                    )
+                )
+
+            return messages
+
+        except Exception as e:
+            logger.error(
+                "Failed to get messages",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
+            return []
+
+    # Router-compatible methods with simplified signatures
+    async def get_session(
+        self, user_id: str, session_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get chat session (router-compatible method).
+
+        Args:
+            user_id: User ID (router parameter order)
+            session_id: Session ID (router parameter order)
+
+        Returns:
+            Chat session data as dictionary or None if not found
+        """
+        session = await self._get_session_internal(session_id, user_id)
+        return session.model_dump() if session else None
+
+    async def get_messages(
+        self, user_id: str, session_id: str, limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get messages (router-compatible method).
+
+        Args:
+            user_id: User ID (router parameter order)
+            session_id: Session ID (router parameter order)
+            limit: Maximum number of messages
+
+        Returns:
+            List of messages as dictionaries
+        """
+        messages = await self._get_messages_internal(session_id, user_id, limit, 0)
+        return [message.model_dump() for message in messages]
 
 
 # Dependency function for FastAPI

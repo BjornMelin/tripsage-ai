@@ -13,38 +13,53 @@ export interface BaseSearchParams {
 }
 
 // Flight specific search parameters
-export interface FlightSearchParams extends BaseSearchParams {
-  origin: string;
-  cabinClass: "economy" | "premium_economy" | "business" | "first";
-  directOnly: boolean;
+export interface FlightSearchParams {
+  origin?: string;
+  destination?: string;
+  departureDate?: string;
+  returnDate?: string;
+  cabinClass?: "economy" | "premium_economy" | "business" | "first";
+  directOnly?: boolean;
   maxStops?: number;
   preferredAirlines?: string[];
-  departureTime?: "morning" | "afternoon" | "evening" | "night";
-  returnTime?: "morning" | "afternoon" | "evening" | "night";
+  excludedAirlines?: string[];
+  adults?: number;
+  children?: number;
+  infants?: number;
 }
 
 // Accommodation specific search parameters
-export interface AccommodationSearchParams extends BaseSearchParams {
-  rooms: number;
+export interface AccommodationSearchParams {
+  destination?: string;
+  checkIn?: string;
+  checkOut?: string;
+  rooms?: number;
   amenities?: string[];
-  propertyType?: string[];
+  propertyType?: "hotel" | "apartment" | "villa" | "hostel" | "resort";
   priceRange?: {
-    min: number;
-    max: number;
+    min?: number;
+    max?: number;
   };
-  rating?: number;
-  distance?: number;
+  minRating?: number;
+  adults?: number;
+  children?: number;
+  infants?: number;
 }
 
 // Activity specific search parameters
-export interface ActivitySearchParams extends BaseSearchParams {
-  categories?: string[];
-  duration?: number;
-  priceRange?: {
-    min: number;
-    max: number;
+export interface ActivitySearchParams {
+  destination?: string;
+  date?: string;
+  category?: string;
+  duration?: {
+    min?: number;
+    max?: number;
   };
-  rating?: number;
+  difficulty?: "easy" | "moderate" | "challenging" | "extreme";
+  indoor?: boolean;
+  adults?: number;
+  children?: number;
+  infants?: number;
 }
 
 // Destination specific search parameters

@@ -12,12 +12,12 @@ if (typeof TransformStream === "undefined") {
     readable: ReadableStream;
     writable: WritableStream;
 
-    constructor(transformer?: any) {
+    constructor(_transformer?: Transformer<unknown, unknown>) {
       const { readable, writable } = new TransformStream();
       this.readable = readable;
       this.writable = writable;
     }
-  } as any;
+  } as unknown as typeof TransformStream;
 }
 
 // Mock environment variables

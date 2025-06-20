@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { type Destination, type Trip, useTripStore } from "@/stores/trip-store";
+import type { Destination, Trip } from "@/stores/trip-store";
 import { differenceInDays, format, parseISO } from "date-fns";
 import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
 import { useMemo } from "react";
@@ -82,7 +82,7 @@ export function TripTimeline({
               ? new Date(
                   startDate.getTime() +
                     ((activityIndex + 1) * (endDate.getTime() - startDate.getTime())) /
-                      (destination.activities!.length + 1)
+                      ((destination.activities?.length ?? 0) + 1)
                 )
               : startDate || new Date();
 
@@ -123,9 +123,9 @@ export function TripTimeline({
     return format(date, "MMM dd, yyyy");
   };
 
-  const formatEventTime = (date: Date) => {
-    return format(date, "h:mm a");
-  };
+  // const formatEventTime = (date: Date) => { // Future implementation
+  //   return format(date, "h:mm a");
+  // };
 
   const getEventColor = (type: TimelineEvent["type"]) => {
     switch (type) {
@@ -193,7 +193,7 @@ export function TripTimeline({
           <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border" />
 
           <div className="space-y-6">
-            {timelineEvents.map((event, index) => (
+            {timelineEvents.map((event, _index) => (
               <div key={event.id} className="relative flex items-start gap-4">
                 {/* Timeline dot */}
                 <div

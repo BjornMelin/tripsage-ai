@@ -6,7 +6,7 @@ export interface Memory {
   type: string;
   userId: string;
   sessionId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -44,7 +44,7 @@ export interface ConversationMessage {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // API Request/Response Types
@@ -77,7 +77,7 @@ export interface SearchMemoriesRequest {
       start: string;
       end: string;
     };
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   };
   limit?: number;
   similarity_threshold?: number;
@@ -158,7 +158,7 @@ export interface AddConversationMemoryRequest {
   userId: string;
   sessionId?: string;
   context_type?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AddConversationMemoryResponse {

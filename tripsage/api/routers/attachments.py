@@ -10,7 +10,7 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
@@ -26,7 +26,7 @@ router = APIRouter()
 # File configuration now imported from centralized config
 
 # Module-level dependencies to avoid B008 warnings
-require_principal_module_dep = require_principal_dep
+require_principal_module_dep = Depends(require_principal)
 
 # Module-level dependency for file uploads
 file_upload_dep = File(...)
@@ -308,4 +308,109 @@ async def list_user_files(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
+        ) from e
+
+
+@router.get("/files/{file_id}/download")
+async def download_file(
+    file_id: str,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
+):
+    """Download a file securely.
+
+    Only allows download of files owned by the current user.
+    Returns the file content with appropriate headers for download.
+    """
+    try:
+        import io
+
+        from fastapi.responses import StreamingResponse
+
+        user_id = get_principal_id(principal)
+
+        # Get file metadata and verify ownership
+        file_info = await service.get_file(file_id, user_id)
+        if not file_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found or access denied",
+            )
+
+        # Get file content
+        file_content = await service.get_file_content(file_id, user_id)
+        if not file_content:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File content not found",
+            )
+
+        # Create streaming response
+        _file_stream = io.BytesIO(file_content)
+
+        headers = {
+            "Content-Disposition": (
+                f'attachment; filename="{file_info.original_filename}"'
+            ),
+            "Content-Type": file_info.mime_type,
+        }
+
+        logger.info(f"File {file_id} downloaded by user {user_id}")
+
+        return StreamingResponse(
+            io.BytesIO(file_content),
+            media_type=file_info.mime_type,
+            headers=headers,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to download file {file_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to download file",
+        ) from e
+
+
+@router.get("/trips/{trip_id}/attachments")
+async def list_trip_attachments(
+    trip_id: str,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """List all attachments for a specific trip.
+
+    Only returns attachments for trips the user has access to.
+    """
+    try:
+        user_id = get_principal_id(principal)
+
+        # TODO: Verify user has access to the trip
+        # For now, just search files by trip_id
+
+        # Create search request filtered by trip
+        search_request = FileSearchRequest(
+            limit=limit,
+            offset=offset,
+            filters={"trip_id": trip_id},
+        )
+
+        files = await service.search_files(user_id, search_request)
+
+        return {
+            "trip_id": trip_id,
+            "files": files,
+            "limit": limit,
+            "offset": offset,
+            "total": len(files),
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to list trip attachments for trip {trip_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve trip attachments",
         ) from e

@@ -21,7 +21,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import React, { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -41,10 +41,10 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const isUser = message.role === "USER";
-  const isAssistant = message.role === "ASSISTANT";
-  const isSystem = message.role === "SYSTEM";
-  const isTool = message.role === "TOOL";
+  const isUser = message.role === "user";
+  const isAssistant = message.role === "assistant";
+  const isSystem = message.role === "system";
+  const isTool = false; // 'tool' role not supported in current Message type
 
   // Enhanced role-based styling configuration
   const bubbleConfig = useMemo(() => {

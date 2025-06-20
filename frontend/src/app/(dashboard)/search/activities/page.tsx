@@ -2,20 +2,49 @@
 
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
-import { SearchResults } from "@/components/features/search/search-results";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useActivitySearch } from "@/hooks/use-activity-search";
+import {
+  type ActivitySearchParams,
+  useActivitySearch,
+} from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
-import type { Activity, ActivitySearchParams } from "@/types/search";
-import { useState } from "react";
+import type { Activity } from "@/types/search";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+
+// URL search parameters are handled inline
 
 export default function ActivitiesSearchPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { searchActivities, isSearching, searchError } = useActivitySearch();
   const { hasResults, isSearching: storeIsSearching } = useSearchStore();
+  const searchParams = useSearchParams();
 
-  const handleSearch = (params: ActivitySearchParams) => {
-    searchActivities(params);
+  // Initialize search with URL parameters
+  useEffect(() => {
+    const destination = searchParams.get("destination");
+    // const date = searchParams.get("date"); // Future use
+    const category = searchParams.get("category");
+    // const maxPrice = searchParams.get("maxPrice"); // Future use
+
+    if (destination) {
+      const initialParams: ActivitySearchParams = {
+        destination,
+        category: category || undefined,
+      };
+      searchActivities(initialParams);
+    }
+  }, [searchParams, searchActivities]);
+
+  const handleSearch = (params: import("@/types/search").ActivitySearchParams) => {
+    // Convert the params to the hook's expected format
+    if (params.destination) {
+      const hookParams: ActivitySearchParams = {
+        destination: params.destination,
+        category: params.category,
+      };
+      searchActivities(hookParams);
+    }
   };
 
   const handleSelectActivity = (activity: Activity) => {
@@ -29,9 +58,9 @@ export default function ActivitiesSearchPage() {
     // TODO: Add to comparison list
   };
 
-  // For now, use mock data since we're focusing on UI testing
+  // Mock activities data - in real implementation, this would come from the search results
   const activities: Activity[] = [];
-  const hasActiveResults = hasResults;
+  const hasActiveResults = hasResults && activities.length > 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">

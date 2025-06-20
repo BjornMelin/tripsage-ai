@@ -1,13 +1,32 @@
 import { cleanup } from "@testing-library/react";
-import { afterEach, beforeAll, vi } from "vitest";
+import { afterEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 
-// Mock zustand middleware
+// Mock useToast hook BEFORE anything else
+const mockToast = vi.fn((_props: any) => ({
+  id: `toast-${Date.now()}`,
+  dismiss: vi.fn(),
+  update: vi.fn(),
+}));
+
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: vi.fn(() => ({
+    toast: mockToast,
+    dismiss: vi.fn(),
+    toasts: [],
+  })),
+  toast: mockToast,
+}));
+
+// Setup Supabase mocks before any tests run
+import "./test/setup-supabase-mocks";
+
+// Mock zustand middleware - preserve store functionality
 vi.mock("zustand/middleware", () => ({
-  persist: vi.fn((fn: any) => fn),
-  devtools: vi.fn((fn: any) => fn),
-  subscribeWithSelector: vi.fn((fn: any) => fn),
-  combine: vi.fn((fn: any) => fn),
+  persist: (fn: any, _config?: any) => fn,
+  devtools: (fn: any, _config?: any) => fn,
+  subscribeWithSelector: (fn: any) => fn,
+  combine: (fn: any) => fn,
 }));
 
 // Clean up after each test
@@ -30,6 +49,21 @@ Object.defineProperty(window, "navigator", {
     userAgent: "Test User Agent",
   },
   writable: true,
+});
+
+// Mock window.matchMedia for theme detection
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
 });
 
 // Mock storage
@@ -62,5 +96,30 @@ global.console = {
   info: vi.fn(),
 };
 
+// Make test utils available globally
+import * as testUtils from "./test/test-utils";
+
+// Type-safe global assignment
+declare global {
+  var renderWithProviders: typeof testUtils.renderWithProviders;
+}
+
+(globalThis as any).renderWithProviders = testUtils.renderWithProviders;
+
 // Mock environment variables for testing
-process.env.NODE_ENV = "test";
+// Create a proxy for process.env to avoid descriptor errors
+if (typeof process !== "undefined" && process.env) {
+  const originalEnv = process.env;
+  process.env = new Proxy(originalEnv, {
+    get(target, prop) {
+      if (prop === "NODE_ENV" && !target.NODE_ENV) {
+        return "test";
+      }
+      return target[prop as string];
+    },
+    set(target, prop, value) {
+      target[prop as string] = value;
+      return true;
+    },
+  });
+}

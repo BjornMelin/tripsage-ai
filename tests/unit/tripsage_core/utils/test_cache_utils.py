@@ -365,8 +365,8 @@ class TestCachedDecorator:
     def mock_settings(self):
         """Mock settings for testing."""
         settings = MagicMock()
-        settings.feature_flags.enable_caching = True
-        settings.dragonfly.ttl_medium = 1800
+        settings.enable_caching = True
+        settings.cache_ttl_medium = 1800
         return settings
 
     async def test_cached_function_execution(self, mock_settings):
@@ -424,7 +424,7 @@ class TestCachedDecorator:
             return f"result_{param}"
 
         settings = MagicMock()
-        settings.feature_flags.enable_caching = False
+        settings.enable_caching = False
 
         with patch(
             "tripsage_core.utils.cache_utils.get_settings", return_value=settings
@@ -489,7 +489,7 @@ class TestBatchOperations:
         ]
 
         with patch("tripsage_core.utils.cache_utils.get_settings") as mock_settings:
-            mock_settings.return_value.feature_flags.enable_caching = True
+            mock_settings.return_value.enable_caching = True
 
             results = await batch_cache_set(items, use_redis=False)
             assert len(results) == 3
@@ -504,7 +504,7 @@ class TestBatchOperations:
         keys = ["batch_key1", "batch_key2", "nonexistent_key"]
 
         with patch("tripsage_core.utils.cache_utils.get_settings") as mock_settings:
-            mock_settings.return_value.feature_flags.enable_caching = True
+            mock_settings.return_value.enable_caching = True
 
             results = await batch_cache_get(keys, use_redis=False)
             assert len(results) == 3
@@ -517,7 +517,7 @@ class TestBatchOperations:
         items = [{"key": "key1", "value": "value1"}]
 
         with patch("tripsage_core.utils.cache_utils.get_settings") as mock_settings:
-            mock_settings.return_value.feature_flags.enable_caching = False
+            mock_settings.return_value.enable_caching = False
 
             # Should still work but use memory cache
             results = await batch_cache_set(items, use_redis=True)
@@ -558,7 +558,7 @@ class TestCacheLock:
     async def test_cache_lock_disabled_caching(self):
         """Test cache lock when caching is disabled."""
         with patch("tripsage_core.utils.cache_utils.get_settings") as mock_settings:
-            mock_settings.return_value.feature_flags.enable_caching = False
+            mock_settings.return_value.enable_caching = False
 
             async with cache_lock("test_lock") as acquired:
                 assert acquired is True  # Should always succeed in development

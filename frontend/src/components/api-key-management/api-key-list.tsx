@@ -47,7 +47,7 @@ export function ApiKeyList() {
     if (!timestamp) return "Never";
     try {
       return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
-    } catch (e) {
+    } catch (_e) {
       return "Invalid date";
     }
   };
@@ -61,7 +61,7 @@ export function ApiKeyList() {
   };
 
   // Handle validation
-  const handleValidate = (service: string, apiKey: ApiKey) => {
+  const handleValidate = (service: string, _apiKey: ApiKey) => {
     validateKey({
       service,
       api_key: "", // We don't need to pass the actual key, the backend will use the stored one

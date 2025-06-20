@@ -18,7 +18,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
@@ -87,7 +87,7 @@ class GoogleCalendarService:
         self,
         credentials_file: Optional[str] = None,
         token_file: Optional[str] = None,
-        settings: Optional[CoreAppSettings] = None,
+        settings: Optional[Settings] = None,
     ):
         """
         Initialize the Google Calendar service.

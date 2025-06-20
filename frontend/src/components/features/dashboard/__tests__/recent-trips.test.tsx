@@ -1,13 +1,14 @@
-import { useTripStore } from "@/stores/trip-store";
+import { useTrips } from "@/hooks/use-trips";
 import type { Trip } from "@/stores/trip-store";
-import { render, screen, waitFor } from "@testing-library/react";
+import { renderWithProviders } from "@/test/test-utils";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RecentTrips } from "../recent-trips";
 
-// Mock the trip store
-vi.mock("@/stores/trip-store", () => ({
-  useTripStore: vi.fn(),
+// Mock the useTrips hook
+vi.mock("@/hooks/use-trips", () => ({
+  useTrips: vi.fn(),
 }));
 
 // Mock Next.js Link component
@@ -19,7 +20,8 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const mockTrips: Trip[] = [
+// Mock trips as they come from the API
+const mockTrips: any[] = [
   {
     id: "trip-1",
     name: "Tokyo Adventure",
@@ -37,8 +39,8 @@ const mockTrips: Trip[] = [
     budget: 3000,
     currency: "USD",
     isPublic: false,
-    createdAt: "2024-01-15T00:00:00Z",
-    updatedAt: "2024-01-16T00:00:00Z",
+    created_at: "2024-01-15T00:00:00Z",
+    updated_at: "2024-01-16T00:00:00Z",
   },
   {
     id: "trip-2",
@@ -61,16 +63,16 @@ const mockTrips: Trip[] = [
     budget: 5000,
     currency: "USD",
     isPublic: true,
-    createdAt: "2024-01-10T00:00:00Z",
-    updatedAt: "2024-01-20T00:00:00Z",
+    created_at: "2024-01-10T00:00:00Z",
+    updated_at: "2024-01-20T00:00:00Z",
   },
   {
     id: "trip-3",
     name: "Beach Getaway",
     destinations: [],
     isPublic: false,
-    createdAt: "2024-01-05T00:00:00Z",
-    updatedAt: "2024-01-05T00:00:00Z",
+    created_at: "2024-01-05T00:00:00Z",
+    updated_at: "2024-01-05T00:00:00Z",
   },
 ];
 
@@ -80,12 +82,14 @@ describe("RecentTrips", () => {
   });
 
   it("renders loading state correctly", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [],
+    vi.mocked(useTrips).mockReturnValue({
+      data: null,
       isLoading: true,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("Recent Trips")).toBeInTheDocument();
     expect(screen.getByText("Your latest travel plans")).toBeInTheDocument();
@@ -94,24 +98,28 @@ describe("RecentTrips", () => {
   });
 
   it("renders empty state when no trips exist", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [],
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [], total: 0 },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
     expect(screen.getByText("Create your first trip")).toBeInTheDocument();
   });
 
   it("renders trip cards for existing trips", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: mockTrips,
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: mockTrips, total: mockTrips.length },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
     expect(screen.getByText("European Tour")).toBeInTheDocument();
@@ -119,12 +127,17 @@ describe("RecentTrips", () => {
   });
 
   it("displays trip details correctly", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [mockTrips[0]], // Tokyo Adventure
-      isLoading: false,
-    });
+    // Clear any previous mocks
+    vi.clearAllMocks();
 
-    render(<RecentTrips />);
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [mockTrips[0]], total: 1 }, // Tokyo Adventure
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    } as any);
+
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
     expect(screen.getByText("Tokyo")).toBeInTheDocument();
@@ -134,24 +147,28 @@ describe("RecentTrips", () => {
   });
 
   it("handles trips with multiple destinations", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [mockTrips[1]], // European Tour
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [mockTrips[1]], total: 1 }, // European Tour
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("European Tour")).toBeInTheDocument();
     expect(screen.getByText("Paris (+1 more)")).toBeInTheDocument();
   });
 
   it("handles trips without dates", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [mockTrips[2]], // Beach Getaway
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [mockTrips[2]], total: 1 }, // Beach Getaway
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("Beach Getaway")).toBeInTheDocument();
     expect(screen.getByText("No destinations")).toBeInTheDocument();
@@ -159,12 +176,14 @@ describe("RecentTrips", () => {
   });
 
   it("limits the number of trips displayed", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: mockTrips,
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: mockTrips, total: mockTrips.length },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips limit={2} />);
+    renderWithProviders(<RecentTrips limit={2} />);
 
     // Should show only 2 trips (sorted by updatedAt desc)
     expect(screen.getByText("European Tour")).toBeInTheDocument(); // Most recent
@@ -173,12 +192,14 @@ describe("RecentTrips", () => {
   });
 
   it("sorts trips by updated date in descending order", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: mockTrips,
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: mockTrips, total: mockTrips.length },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     const tripCards = screen.getAllByRole("link");
     const tripTitles = tripCards.map((card) => card.textContent);
@@ -188,25 +209,29 @@ describe("RecentTrips", () => {
   });
 
   it("navigates to trip details when card is clicked", async () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [mockTrips[0]],
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [mockTrips[0]], total: 1 },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    const user = userEvent.setup();
-    render(<RecentTrips />);
+    userEvent.setup(); // Set up user event utilities
+    renderWithProviders(<RecentTrips />);
 
     const tripCard = screen.getByRole("link", { name: /Tokyo Adventure/i });
     expect(tripCard).toHaveAttribute("href", "/dashboard/trips/trip-1");
   });
 
   it("shows 'View All Trips' button when trips exist", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: mockTrips,
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: mockTrips, total: mockTrips.length },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     const viewAllButton = screen.getByRole("link", { name: /View All Trips/i });
     expect(viewAllButton).toBeInTheDocument();
@@ -214,12 +239,14 @@ describe("RecentTrips", () => {
   });
 
   it("handles showEmpty prop correctly", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [],
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [], total: 0 },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    const { rerender } = render(<RecentTrips showEmpty={false} />);
+    const { rerender } = renderWithProviders(<RecentTrips showEmpty={false} />);
 
     expect(screen.queryByText("Create your first trip")).not.toBeInTheDocument();
     expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
@@ -244,24 +271,28 @@ describe("RecentTrips", () => {
       endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
     };
 
-    (useTripStore as any).mockReturnValue({
-      trips: [pastTrip, ongoingTrip],
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [pastTrip, ongoingTrip], total: 2 },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("completed")).toBeInTheDocument();
     expect(screen.getByText("ongoing")).toBeInTheDocument();
   });
 
   it("formats dates correctly", () => {
-    (useTripStore as any).mockReturnValue({
-      trips: [mockTrips[0]],
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [mockTrips[0]], total: 1 },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     // Should format dates as "Jun 15, 2024 - Jun 22, 2024"
     expect(screen.getByText(/Jun 15, 2024 - Jun 22, 2024/)).toBeInTheDocument();
@@ -273,12 +304,14 @@ describe("RecentTrips", () => {
       description: undefined,
     };
 
-    (useTripStore as any).mockReturnValue({
-      trips: [tripWithoutDescription],
+    vi.mocked(useTrips).mockReturnValue({
+      data: { items: [tripWithoutDescription], total: 1 },
       isLoading: false,
-    });
+      error: null,
+      refetch: vi.fn(),
+    } as any);
 
-    render(<RecentTrips />);
+    renderWithProviders(<RecentTrips />);
 
     expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
     // Description should not be present

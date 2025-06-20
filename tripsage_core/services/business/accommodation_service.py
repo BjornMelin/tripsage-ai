@@ -799,14 +799,14 @@ class AccommodationService:
                 "location": search_request.location,
                 "check_in": search_request.check_in,
                 "check_out": search_request.check_out,
-                "guests": search_request.guests,
-                "property_types": [pt.value for pt in search_request.property_types]
-                if search_request.property_types
+                "guests": search_request.adults + search_request.children,
+                "property_types": [search_request.property_type.value]
+                if search_request.property_type
                 else None,
                 "min_price": search_request.min_price,
                 "max_price": search_request.max_price,
                 "amenities": search_request.amenities,
-                "instant_book": search_request.instant_book,
+                "instant_book": getattr(search_request, "instant_book", None),
             }
 
             # Call external API
@@ -879,10 +879,10 @@ class AccommodationService:
                 ),
                 price_per_night=base_price + (i * 30),
                 total_price=(base_price + (i * 30)) * nights,
-                currency=search_request.currency,
+                currency=getattr(search_request, "currency", "USD"),
                 rating=4.0 + (i * 0.3),
                 review_count=50 + (i * 25),
-                max_guests=search_request.guests + i,
+                max_guests=search_request.adults + search_request.children + i,
                 bedrooms=1 + i,
                 beds=1 + i,
                 bathrooms=1.0 + (i * 0.5),
@@ -966,7 +966,8 @@ class AccommodationService:
 
         key_data = (
             f"{search_request.location}:{search_request.check_in}:"
-            f"{search_request.check_out}:{search_request.guests}:"
+            f"{search_request.check_out}:"
+            f"{(search_request.adults or 1) + (search_request.children or 0)}:"
             f"{search_request.min_price}:{search_request.max_price}"
         )
 
@@ -1011,7 +1012,7 @@ class AccommodationService:
                 "location": search_request.location,
                 "check_in": search_request.check_in.isoformat(),
                 "check_out": search_request.check_out.isoformat(),
-                "guests": search_request.guests,
+                "guests": search_request.adults + search_request.children,
                 "listings_count": len(listings),
                 "search_timestamp": datetime.now(timezone.utc).isoformat(),
             }

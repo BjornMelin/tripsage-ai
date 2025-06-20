@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 import httpx
 from pydantic import ValidationError as PydanticValidationError
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.config.service_registry import BaseService
 from tripsage_core.models.api.flights_models import (
     Airport,

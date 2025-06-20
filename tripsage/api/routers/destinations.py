@@ -7,25 +7,29 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.destinations import (
-    DestinationSearchRequest,
-)
-from tripsage.api.schemas.responses.destinations import (
+from tripsage.api.schemas.destinations import (
     DestinationDetailsResponse,
     DestinationSearchResponse,
+    PointOfInterestSearchRequest,
     SavedDestinationResponse,
 )
-from tripsage.api.services.destination import (
-    DestinationService,
-    get_destination_service,
+from tripsage.api.schemas.destinations import (
+    DestinationSearchRequest as APIDestinationSearchRequest,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.models.schemas_common.geographic import Place as Destination
 from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
+from tripsage_core.services.business.destination_service import (
+    DestinationSearchRequest as ServiceDestinationSearchRequest,
+)
+from tripsage_core.services.business.destination_service import (
+    DestinationService,
+    get_destination_service,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -33,20 +37,38 @@ logger = logging.getLogger(__name__)
 
 @router.post("/search", response_model=DestinationSearchResponse)
 async def search_destinations(
-    request: DestinationSearchRequest,
-    principal: Principal = require_principal_dep,
+    request: APIDestinationSearchRequest,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Search for destinations based on provided criteria.
     """
-    return await destination_service.search_destinations(request)
+    # Convert API schema to service schema
+    service_request = ServiceDestinationSearchRequest(
+        query=request.query,
+        categories=request.categories,
+        min_safety_rating=request.min_safety_rating,
+        travel_month=request.travel_month,
+        limit=request.limit,
+        include_weather=request.include_weather,
+        include_pois=request.include_attractions,  # Map API field to service field
+    )
+
+    service_response = await destination_service.search_destinations(service_request)
+
+    # Convert service response to API response
+    return DestinationSearchResponse(
+        destinations=service_response.destinations,
+        count=service_response.total_results,
+        query=service_response.search_parameters.query,
+    )
 
 
 @router.get("/{destination_id}", response_model=DestinationDetailsResponse)
 async def get_destination_details(
     destination_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
@@ -66,7 +88,7 @@ async def get_destination_details(
 async def save_destination(
     destination_id: str,
     notes: Optional[str] = None,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
@@ -87,7 +109,7 @@ async def save_destination(
 
 @router.get("/saved", response_model=List[SavedDestinationResponse])
 async def get_saved_destinations(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
@@ -100,7 +122,7 @@ async def get_saved_destinations(
 @router.delete("/saved/{destination_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_destination(
     destination_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
@@ -119,8 +141,8 @@ async def delete_saved_destination(
 
 @router.post("/points-of-interest", response_model=List[PointOfInterest])
 async def search_points_of_interest(
-    request: DestinationSearchRequest,
-    principal: Principal = require_principal_dep,
+    request: PointOfInterestSearchRequest,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
@@ -131,7 +153,7 @@ async def search_points_of_interest(
 
 @router.get("/recommendations", response_model=List[Destination])
 async def get_destination_recommendations(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """

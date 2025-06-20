@@ -4,12 +4,10 @@ import { useApiQuery } from "@/hooks/use-api-query";
 import { useCurrencyStore } from "@/stores/currency-store";
 import type {
   ConversionResult,
-  Currency,
   CurrencyCode,
-  CurrencyPair,
   UpdateExchangeRatesResponse,
 } from "@/types/currency";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { z } from "zod";
 
 /**
@@ -135,23 +133,28 @@ export function useFetchExchangeRates() {
     timestamp: z.string().datetime(),
   });
 
-  return useApiQuery<UpdateExchangeRatesResponse>(
+  const query = useApiQuery<UpdateExchangeRatesResponse>(
     "/api/currencies/rates",
     {},
     {
-      onSuccess: (data) => {
-        try {
-          // Validate the response
-          const validated = responseSchema.parse(data);
-          updateAllExchangeRates(validated.rates, validated.timestamp);
-        } catch (error) {
-          console.error("Invalid exchange rate data:", error);
-        }
-      },
       // Refresh rates every hour
       refetchInterval: 60 * 60 * 1000,
     }
   );
+
+  useEffect(() => {
+    if (query.data) {
+      try {
+        // Validate the response
+        const validated = responseSchema.parse(query.data);
+        updateAllExchangeRates(validated.rates, validated.timestamp);
+      } catch (error) {
+        console.error("Invalid exchange rate data:", error);
+      }
+    }
+  }, [query.data, updateAllExchangeRates]);
+
+  return query;
 }
 
 /**
@@ -160,14 +163,19 @@ export function useFetchExchangeRates() {
 export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
   const { baseCurrency, updateExchangeRate } = useCurrencyStore();
 
-  return useApiQuery<{ rate: number; timestamp: string }>(
+  const query = useApiQuery<{ rate: number; timestamp: string }>(
     `/api/currencies/rates/${targetCurrency}`,
     {},
     {
-      onSuccess: (data) => {
-        updateExchangeRate(targetCurrency, data.rate, data.timestamp);
-      },
       enabled: !!targetCurrency && targetCurrency !== baseCurrency,
     }
   );
+
+  useEffect(() => {
+    if (query.data) {
+      updateExchangeRate(targetCurrency, query.data.rate, query.data.timestamp);
+    }
+  }, [query.data, targetCurrency, updateExchangeRate]);
+
+  return query;
 }
