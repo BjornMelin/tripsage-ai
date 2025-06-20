@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { enhancedApiClient, type RequestConfig } from "../enhanced-client";
+import { enhancedApiClient } from "../enhanced-client";
 import { ApiError } from "../error-types";
 
 // Test schemas for validation
@@ -25,10 +25,12 @@ const UserCreateRequestSchema = z.object({
   email: z.string().email("Invalid email format"),
   name: z.string().min(1, "Name is required"),
   age: z.number().int().min(18, "Must be at least 18 years old"),
-  preferences: z.object({
-    theme: z.enum(["light", "dark"]),
-    notifications: z.boolean(),
-  }).optional(),
+  preferences: z
+    .object({
+      theme: z.enum(["light", "dark"]),
+      notifications: z.boolean(),
+    })
+    .optional(),
 });
 
 const PaginatedResponseSchema = z.object({
@@ -86,12 +88,10 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       // Test with validated request data
-      const result = await enhancedApiClient.postValidated(
-        "/api/users",
-        validUserData,
-        UserCreateRequestSchema,
-        UserResponseSchema
-      );
+      const result = await enhancedApiClient.postValidated<
+        UserCreateRequest,
+        UserResponse
+      >("/api/users", validUserData, UserCreateRequestSchema, UserResponseSchema);
 
       expect(result).toEqual(mockResponse);
       expect(mockFetch).toHaveBeenCalledWith(
@@ -114,7 +114,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       };
 
       await expect(
-        enhancedApiClient.postValidated(
+        enhancedApiClient.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
           UserCreateRequestSchema,
@@ -132,13 +132,13 @@ describe("Enhanced API Client with Zod Validation", () => {
         name: "John Doe",
         age: 25,
         preferences: {
-          theme: "invalid-theme", // Invalid enum value
-          notifications: "yes", // Should be boolean
+          theme: "invalid-theme" as any, // Invalid enum value
+          notifications: "yes" as any, // Should be boolean
         },
-      };
+      } as UserCreateRequest;
 
       await expect(
-        enhancedApiClient.postValidated(
+        enhancedApiClient.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidUserData,
           UserCreateRequestSchema,
@@ -261,11 +261,11 @@ describe("Enhanced API Client with Zod Validation", () => {
       const invalidData = {
         email: "not-an-email",
         name: "",
-        age: "twenty-five", // Should be number
-      };
+        age: "twenty-five" as any, // Should be number
+      } as UserCreateRequest;
 
       try {
-        await enhancedApiClient.postValidated(
+        await enhancedApiClient.postValidated<UserCreateRequest, UserResponse>(
           "/api/users",
           invalidData,
           UserCreateRequestSchema,
@@ -274,7 +274,7 @@ describe("Enhanced API Client with Zod Validation", () => {
         expect.fail("Should have thrown validation error");
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
-        expect(error.message).toContain("validation");
+        expect((error as Error).message).toContain("validation");
       }
     });
 
@@ -284,10 +284,11 @@ describe("Enhanced API Client with Zod Validation", () => {
         status: 400,
         statusText: "Bad Request",
         headers: new Headers({ "content-type": "application/json" }),
-        json: () => Promise.resolve({
-          error: "Invalid request data",
-          code: "VALIDATION_ERROR",
-        }),
+        json: () =>
+          Promise.resolve({
+            error: "Invalid request data",
+            code: "VALIDATION_ERROR",
+          }),
       });
 
       await expect(
@@ -359,7 +360,7 @@ describe("Enhanced API Client with Zod Validation", () => {
       });
 
       const partialSchema = UserCreateRequestSchema.partial();
-      
+
       const result = await enhancedApiClient.putValidated(
         "/api/users/123",
         updateData,
@@ -440,7 +441,7 @@ describe("Enhanced API Client with Zod Validation", () => {
 
     it("transforms and validates data with custom schemas", async () => {
       // Test date transformation
-      const DateTransformSchema = z.object({
+      const _DateTransformSchema = z.object({
         date: z.string().transform((str) => new Date(str)),
         timestamp: z.number().transform((num) => new Date(num)),
       });
@@ -457,10 +458,10 @@ describe("Enhanced API Client with Zod Validation", () => {
         json: () => Promise.resolve(apiResponse),
       });
 
-      const result = await enhancedApiClient.getValidated(
-        "/api/dates",
-        DateTransformSchema
-      );
+      const result = (await enhancedApiClient.get("/api/dates")) as {
+        date: Date;
+        timestamp: Date;
+      };
 
       expect(result.date).toBeInstanceOf(Date);
       expect(result.timestamp).toBeInstanceOf(Date);

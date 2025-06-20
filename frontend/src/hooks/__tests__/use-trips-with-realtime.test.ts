@@ -3,6 +3,7 @@
  * Tests trip data synchronization with real-time updates and connection monitoring.
  */
 
+import type { AppError } from "@/lib/api/error-types";
 import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
@@ -82,7 +83,7 @@ function createMockSuccessQueryResult<TData, TError = Error>(
   } as UseQueryResult<TData, TError>;
 }
 
-function createMockErrorQueryResult<TData, TError = Error>(
+function createMockErrorQueryResult<TData, TError = AppError>(
   error: TError,
   overrides: Partial<UseQueryResult<TData, TError>> = {}
 ): UseQueryResult<TData, TError> {
@@ -299,7 +300,7 @@ describe("useTripsWithRealtime", () => {
     });
 
     it("should reflect trip data error state", () => {
-      const error = new Error("Failed to fetch trips");
+      const error = new Error("Failed to fetch trips") as AppError;
       vi.mocked(useTrips).mockReturnValueOnce(createMockErrorQueryResult(error));
 
       const { result } = renderHook(() => useTripsWithRealtime(), {
@@ -735,7 +736,7 @@ describe("useTripCollaboration", () => {
     });
 
     it("should handle collaborator error state", () => {
-      const error = new Error("Failed to fetch collaborators");
+      const error = new Error("Failed to fetch collaborators") as AppError;
       vi.mocked(useTripCollaborators).mockReturnValueOnce(
         createMockErrorQueryResult<TripCollaborator[]>(error)
       );

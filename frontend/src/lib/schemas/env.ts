@@ -211,13 +211,13 @@ const envSchema = baseEnvSchema
 
 // Client-side environment schema (only NEXT_PUBLIC_ variables)
 const clientEnvSchema = z.object({
-  NEXT_PUBLIC_SITE_URL: nextEnvSchema.shape.NEXT_PUBLIC_SITE_URL,
-  NEXT_PUBLIC_APP_NAME: nextEnvSchema.shape.NEXT_PUBLIC_APP_NAME,
-  NEXT_PUBLIC_APP_VERSION: nextEnvSchema.shape.NEXT_PUBLIC_APP_VERSION,
-  NEXT_PUBLIC_API_BASE_URL: nextEnvSchema.shape.NEXT_PUBLIC_API_BASE_URL,
-  NEXT_PUBLIC_WS_URL: nextEnvSchema.shape.NEXT_PUBLIC_WS_URL,
-  NEXT_PUBLIC_SUPABASE_URL: supabaseEnvSchema.shape.NEXT_PUBLIC_SUPABASE_URL,
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseEnvSchema.shape.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_APP_NAME: z.string().default("TripSage"),
+  NEXT_PUBLIC_APP_VERSION: z.string().optional(),
+  NEXT_PUBLIC_API_BASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_WS_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
 });
 
 // Environment validation functions
@@ -293,10 +293,14 @@ export const getEnvVar = <T extends keyof z.infer<typeof envSchema>>(
   }
 
   // Type-safe conversion based on schema
-  const fieldSchema = envSchema.shape[key];
   try {
-    return fieldSchema.parse(value);
-  } catch (error) {
+    // Use safeParse instead of accessing .shape which is not available in Zod v4
+    const result = envSchema.safeParse(process.env);
+    if (result.success && result.data[key] !== undefined) {
+      return result.data[key];
+    }
+    throw new Error(`Environment variable ${String(key)} not found`);
+  } catch (_error) {
     if (fallback !== undefined) {
       return fallback;
     }

@@ -1,9 +1,16 @@
 import type {
+  QueryClient,
+  UseInfiniteQueryResult,
   UseMutationResult,
   UseQueryResult,
-  UseInfiniteQueryResult,
-  QueryClient,
 } from "@tanstack/react-query";
+
+// MutationContext type matching the one from use-api-query.ts
+interface MutationContext<TVariables = unknown> {
+  previousData?: unknown;
+  optimisticData?: unknown;
+  variables?: TVariables;
+}
 /**
  * Enhanced React Query mock utilities for testing React Query v5
  */
@@ -205,7 +212,7 @@ export function mockUseMutation<
   TData = unknown,
   TError = Error,
   TVariables = unknown,
-  TContext = unknown,
+  TContext = MutationContext<TVariables>,
 >(options?: {
   onMutate?: (variables: TVariables) => void;
   onSuccess?: (data: TData, variables: TVariables) => void;
@@ -229,10 +236,7 @@ export function mockUseMutation<
 /**
  * Create a controlled mock query for testing
  */
-export function createControlledQuery<
-  TData = unknown,
-  TError = Error,
->(): {
+export function createControlledQuery<TData = unknown, TError = Error>(): {
   query: UseQueryResult<TData, TError>;
   controller: QueryController<TData, TError>;
 } {
@@ -244,10 +248,38 @@ export function createControlledQuery<
   let isLoading = true;
   let isFetching = false;
 
-  const refetch = vi.fn(() => Promise.resolve({
-    data: currentData,
-    error: currentError,
-  }));
+  const refetch = vi.fn(() =>
+    Promise.resolve({
+      data: currentData,
+      error: currentError,
+      status: isPending ? "pending" : isError ? "error" : "success",
+      fetchStatus: isFetching ? "fetching" : "idle",
+      isPending,
+      isError,
+      isSuccess,
+      isLoading,
+      isFetching,
+      isLoadingError: false,
+      isRefetchError: false,
+      isFetched: !isPending,
+      isFetchedAfterMount: !isPending,
+      isRefetching: false,
+      isStale: false,
+      isPlaceholderData: false,
+      failureCount: 0,
+      failureReason: currentError,
+      errorUpdatedAt: 0,
+      dataUpdatedAt: Date.now(),
+      errorUpdateCount: 0,
+      isInitialLoading: isPending,
+      isPaused: false,
+      refetch,
+      promise: Promise.resolve({
+        data: currentData,
+        error: currentError,
+      } as any),
+    } as UseQueryResult<TData, TError>)
+  );
 
   const query = {
     data: currentData,
@@ -274,7 +306,10 @@ export function createControlledQuery<
     errorUpdateCount: 0,
     isInitialLoading: isPending,
     isPaused: false,
-    promise: Promise.resolve({ data: currentData, error: currentError }),
+    promise: Promise.resolve({
+      data: currentData,
+      error: currentError,
+    } as any),
   } as UseQueryResult<TData, TError>;
 
   const controller: QueryController<TData, TError> = {
@@ -412,10 +447,7 @@ export function createMockQueryClient(): QueryClient {
 /**
  * Create a mock infinite query
  */
-export function createControlledInfiniteQuery<
-  TData = unknown,
-  TError = Error,
->(): {
+export function createControlledInfiniteQuery<TData = unknown, TError = Error>(): {
   query: UseInfiniteQueryResult<any, TError>;
   controller: {
     triggerLoading: () => void;
@@ -469,7 +501,10 @@ export function createControlledInfiniteQuery<
     errorUpdateCount: 0,
     isInitialLoading: isPending,
     isPaused: false,
-    promise: Promise.resolve({ data: pages.length > 0 ? { pages, pageParams: [] } : undefined, error: currentError }),
+    promise: Promise.resolve({
+      data: pages.length > 0 ? { pages, pageParams: [] } : undefined,
+      error: currentError,
+    }),
   } as UseInfiniteQueryResult<any, TError>;
 
   const controller = {
@@ -565,11 +600,11 @@ export function mockUseQuery<TData = unknown, TError = Error>(
   initialError?: TError
 ) {
   const { query, controller } = createControlledQuery<TData, TError>();
-  
+
   if (initialData) {
     controller.triggerSuccess(initialData);
   }
-  
+
   if (initialError) {
     controller.triggerError(initialError);
   }
@@ -584,7 +619,7 @@ export function mockUseInfiniteQuery<TData = unknown, TError = Error>(
   initialPages?: TData[][]
 ) {
   const { query, controller } = createControlledInfiniteQuery<TData, TError>();
-  
+
   if (initialPages) {
     controller.triggerSuccess(initialPages);
   }
@@ -596,8 +631,8 @@ export function mockUseInfiniteQuery<TData = unknown, TError = Error>(
  * Utility to create query test wrapper
  */
 export function createQueryTestWrapper(queryClient?: QueryClient) {
-  const client = queryClient || createMockQueryClient();
-  
+  const _client = queryClient || createMockQueryClient();
+
   return ({ children }: { children: React.ReactNode }) => (
     <div data-testid="query-wrapper">{children}</div>
   );
@@ -619,6 +654,6 @@ export async function waitForQueryUpdate(controller: QueryController<any, any>) 
 /**
  * Helper to simulate network delay in tests
  */
-export function simulateNetworkDelay(ms: number = 100) {
+export function simulateNetworkDelay(ms = 100) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

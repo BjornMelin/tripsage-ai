@@ -1,5 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
-import { ApiError, type FetchOptions, fetchApi } from "@/lib/api/client";
+import { type FetchOptions, fetchApi } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/error-types";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { useCallback, useMemo, useRef } from "react";
 
@@ -70,12 +71,20 @@ export function useAuthenticatedApi() {
     async <T = any>(endpoint: string, options: FetchOptions = {}): Promise<T> => {
       // Check if user is authenticated
       if (!isAuthenticated || !user) {
-        throw new ApiError("User not authenticated", 401);
+        throw new ApiError({
+          message: "User not authenticated",
+          status: 401,
+          code: "UNAUTHORIZED",
+        });
       }
 
       // Check if Supabase client is available (might be null during SSG)
       if (!supabase) {
-        throw new ApiError("Supabase client not available", 500);
+        throw new ApiError({
+          message: "Supabase client not available",
+          status: 500,
+          code: "INTERNAL_SERVER_ERROR",
+        });
       }
 
       // Cancel any previous request
@@ -94,7 +103,11 @@ export function useAuthenticatedApi() {
         } = await supabase.auth.getSession();
 
         if (sessionError) {
-          throw new ApiError(`Session error: ${sessionError.message}`, 401);
+          throw new ApiError({
+            message: `Session error: ${sessionError.message}`,
+            status: 401,
+            code: "SESSION_ERROR",
+          });
         }
 
         let activeSession = session;
@@ -109,7 +122,11 @@ export function useAuthenticatedApi() {
           if (refreshError || !refreshedSession?.access_token) {
             // If refresh fails, user needs to log in again
             await signOut();
-            throw new ApiError("Authentication session expired", 401);
+            throw new ApiError({
+              message: "Authentication session expired",
+              status: 401,
+              code: "SESSION_EXPIRED",
+            });
           }
 
           // Use the refreshed session
@@ -155,14 +172,19 @@ export function useAuthenticatedApi() {
 
         // Handle abort errors
         if (error instanceof DOMException && error.name === "AbortError") {
-          throw new ApiError("Request cancelled", 499);
+          throw new ApiError({
+            message: "Request cancelled",
+            status: 499,
+            code: "REQUEST_CANCELLED",
+          });
         }
 
         // Handle network or other errors
-        throw new ApiError(
-          error instanceof Error ? error.message : "Request failed",
-          0 // Network error
-        );
+        throw new ApiError({
+          message: error instanceof Error ? error.message : "Request failed",
+          status: 0, // Network error
+          code: "NETWORK_ERROR",
+        });
       }
     },
     [isAuthenticated, user, supabase?.auth, signOut]

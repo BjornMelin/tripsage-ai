@@ -3,15 +3,14 @@
  * Provides runtime type safety for all API interactions
  */
 
-import { z } from "zod";
+import type { z } from "zod";
 import {
   TripSageValidationError,
   ValidationContext,
+  type ValidationResult,
   validateApiResponse,
   validateStrict,
-  type ValidationResult,
 } from "../validation";
-import { apiResponseSchema } from "../schemas/api";
 
 // Enhanced API error class
 export class EnhancedApiError extends Error {
@@ -94,7 +93,7 @@ interface EnhancedClientConfig {
 // Response interceptor function type
 type ResponseInterceptor<T = unknown> = (
   response: T,
-  config: EnhancedRequestConfig
+  config: EnhancedRequestConfig<unknown, T>
 ) => T | Promise<T>;
 
 // Request interceptor function type
@@ -150,7 +149,10 @@ export class EnhancedApiClient {
     // Apply request interceptors
     let finalConfig = config;
     for (const interceptor of this.requestInterceptors) {
-      finalConfig = await interceptor(finalConfig);
+      finalConfig = (await interceptor(finalConfig)) as EnhancedRequestConfig<
+        TRequest,
+        TResponse
+      >;
     }
 
     // Validate request data if schema provided
@@ -231,11 +233,13 @@ export class EnhancedApiClient {
 
         // Handle HTTP errors
         if (!response.ok) {
-          const errorData = await this.parseResponseBody(response);
+          const errorData = (await this.parseResponseBody(response)) as any;
+          const errorObject =
+            typeof errorData === "object" && errorData !== null ? errorData : {};
           throw new EnhancedApiError(
-            errorData?.message || `HTTP ${response.status}: ${response.statusText}`,
+            errorObject.message || `HTTP ${response.status}: ${response.statusText}`,
             response.status,
-            errorData?.code || `HTTP_${response.status}`,
+            errorObject.code || `HTTP_${response.status}`,
             errorData,
             finalConfig.endpoint
           );
@@ -273,7 +277,7 @@ export class EnhancedApiClient {
           responseData = await interceptor(responseData, finalConfig);
         }
 
-        return responseData;
+        return responseData as TResponse;
       } catch (error) {
         lastError = error as Error;
 
@@ -591,3 +595,9 @@ export const createTypedApiClient = <TApiSchema extends Record<string, z.ZodSche
 
 // Export types
 export type { EnhancedRequestConfig, ResponseInterceptor, RequestInterceptor };
+
+// Legacy type alias for backward compatibility
+export type RequestConfig<
+  TRequest = unknown,
+  TResponse = unknown,
+> = EnhancedRequestConfig<TRequest, TResponse>;

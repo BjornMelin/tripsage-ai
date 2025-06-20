@@ -5,17 +5,9 @@ export interface FetchOptions extends RequestInit {
   auth?: string; // Optional authorization header value
 }
 
-export class ApiError extends Error {
-  status: number;
-  data: any;
-
-  constructor(message: string, status: number, data?: any) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.data = data;
-  }
-}
+// Import and re-export ApiError from error-types for consistency
+import { ApiError } from "./error-types";
+export { ApiError };
 
 async function handleResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type");
@@ -25,11 +17,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
   const data = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    throw new ApiError(
-      data.message || response.statusText || "API Error",
-      response.status,
-      data
-    );
+    throw new ApiError({
+      message: data.message || response.statusText || "API Error",
+      status: response.status,
+      code: data.code,
+      details: data.details || data,
+      path: response.url,
+    });
   }
 
   return data as T;

@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
-import type { ApiError } from "@/lib/api/client";
+import type { AppError } from "@/lib/api/error-types";
 import { createMockUseQueryResult } from "@/test/mock-helpers";
 import { createMockUser, render, screen, waitFor } from "@/test/test-utils";
 import type { AllKeysResponse } from "@/types/api-keys";
@@ -50,7 +50,7 @@ describe("SecurityDashboard", () => {
       supported_services: ["openai", "anthropic"],
     };
     mockUseApiKeys.mockReturnValue(
-      createMockUseQueryResult<AllKeysResponse, ApiError>(mockKeysData)
+      createMockUseQueryResult<AllKeysResponse, AppError>(mockKeysData)
     );
   });
 
@@ -220,7 +220,7 @@ describe("SecurityDashboard", () => {
       supported_services: [],
     };
     mockUseApiKeys.mockReturnValue(
-      createMockUseQueryResult<AllKeysResponse, ApiError>(mockEmptyKeysData)
+      createMockUseQueryResult<AllKeysResponse, AppError>(mockEmptyKeysData)
     );
 
     render(<SecurityDashboard />);

@@ -82,12 +82,12 @@ export function useWebVitals() {
 
     // Dynamically import web-vitals to avoid increasing bundle size
     import("web-vitals")
-      .then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-        getCLS(console.log);
-        getFID(console.log);
-        getFCP(console.log);
-        getLCP(console.log);
-        getTTFB(console.log);
+      .then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
+        onCLS(console.log);
+        onINP(console.log); // Replaced getFID with onINP in v5
+        onFCP(console.log);
+        onLCP(console.log);
+        onTTFB(console.log);
       })
       .catch(() => {
         // Silently fail if web-vitals is not available

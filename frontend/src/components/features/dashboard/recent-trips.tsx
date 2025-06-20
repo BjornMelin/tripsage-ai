@@ -156,7 +156,10 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
   const { data: tripsResponse, isLoading } = useTrips();
 
   // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
-  const recentTrips = (tripsResponse?.items || [])
+  const tripsData = Array.isArray(tripsResponse)
+    ? tripsResponse
+    : (tripsResponse as any)?.data || [];
+  const recentTrips = tripsData
     .sort((a: any, b: any) => {
       const dateA = new Date(a.updated_at || a.created_at);
       const dateB = new Date(b.updated_at || b.created_at);

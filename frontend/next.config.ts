@@ -1,25 +1,26 @@
 import type { NextConfig } from "next";
 
 // Dynamic import for bundle analyzer to avoid adding it to main bundle
-const withBundleAnalyzer = process.env.ANALYZE === "true" 
-  ? require("@next/bundle-analyzer")({ enabled: true })
-  : (config: NextConfig) => config;
+const withBundleAnalyzer =
+  process.env.ANALYZE === "true"
+    ? require("@next/bundle-analyzer")({ enabled: true })
+    : (config: NextConfig) => config;
 
 const nextConfig: NextConfig = {
   experimental: {
     // Enable React 19 Compiler when available
     // reactCompiler: true, // Uncomment when react-compiler is installed
-    
+
     // Optimize package imports for better tree shaking
     optimizePackageImports: [
-      'lucide-react',
-      '@radix-ui/react-icons',
-      'framer-motion',
-      'recharts',
-      '@supabase/supabase-js',
-      'zod',
+      "lucide-react",
+      "@radix-ui/react-icons",
+      "framer-motion",
+      "recharts",
+      "@supabase/supabase-js",
+      "zod",
     ],
-    
+
     // Enable partial pre-rendering for faster page loads
     ppr: false, // Enable when ready for production
 
@@ -61,11 +62,11 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 86400, // 24 hours
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    
+
     // Enable image optimization for better performance
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    
+
     // Define remote patterns for external images if needed
     remotePatterns: [
       // Add patterns for external image domains if needed
@@ -103,22 +104,22 @@ const nextConfig: NextConfig = {
             ...config.optimization.splitChunks?.cacheGroups,
             // Create separate chunks for UI libraries
             ui: {
-              name: 'ui',
-              chunks: 'all',
+              name: "ui",
+              chunks: "all",
               test: /[\\/]node_modules[\\/](@radix-ui|@headlessui|framer-motion)[\\/]/,
               priority: 30,
             },
             // Create separate chunks for data fetching libraries
             data: {
-              name: 'data',
-              chunks: 'all',
+              name: "data",
+              chunks: "all",
               test: /[\\/]node_modules[\\/](@tanstack|@supabase|zod)[\\/]/,
               priority: 25,
             },
             // Create separate chunks for chart libraries
             charts: {
-              name: 'charts',
-              chunks: 'all',
+              name: "charts",
+              chunks: "all",
               test: /[\\/]node_modules[\\/](recharts|d3)[\\/]/,
               priority: 20,
             },
@@ -126,7 +127,7 @@ const nextConfig: NextConfig = {
         },
       };
     }
-    
+
     return config;
   },
 

@@ -1,11 +1,11 @@
 "use client";
 
-import { type UseQueryResult, type UseMutationResult } from "@tanstack/react-query";
-import { ReactNode } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { InlineQueryError } from "@/components/providers/query-error-boundary";
-import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { AlertCircle, Loader2 } from "lucide-react";
+import type { ReactNode } from "react";
 
 interface QueryStateHandlerProps<TData = unknown, TError = Error> {
   query: UseQueryResult<TData, TError>;
@@ -39,7 +39,12 @@ export function QueryStateHandler<TData = unknown, TError = Error>({
     if (errorFallback) {
       return <>{errorFallback(error, refetch)}</>;
     }
-    return <InlineQueryError error={error as Error} retry={refetch} />;
+    // Convert error to Error type for InlineQueryError
+    const errorObject =
+      error instanceof Error
+        ? error
+        : new Error(typeof error === "string" ? error : "An error occurred");
+    return <InlineQueryError error={errorObject} retry={refetch} />;
   }
 
   // Empty state
@@ -97,7 +102,15 @@ export function MutationStateHandler<
       )}
 
       {/* Error state */}
-      {isError && error && <InlineQueryError error={error as Error} />}
+      {isError && error && (
+        <InlineQueryError
+          error={
+            error instanceof Error
+              ? error
+              : new Error(typeof error === "string" ? error : "An error occurred")
+          }
+        />
+      )}
 
       {/* Success state */}
       {showSuccess && isSuccess && (
