@@ -1,81 +1,76 @@
 /**
- * Types for Agent Status tracking
+ * Agent Status tracking types - now using Zod schemas for runtime validation
+ *
+ * @deprecated Direct type imports - use Zod schemas from /lib/schemas/agent-status.ts instead
+ * This file now re-exports types from the Zod schemas for backward compatibility
  */
 
-export type AgentStatusType =
-  | "idle"
-  | "initializing"
-  | "active"
-  | "waiting"
-  | "paused"
-  | "thinking"
-  | "executing"
-  | "error"
-  | "completed";
+// Re-export types from Zod schemas for backward compatibility
+export type {
+  AgentStatusType,
+  TaskStatus,
+  SessionStatus,
+  AgentTask,
+  Agent,
+  AgentActivity,
+  ResourceUsage,
+  AgentSession,
+  WorkflowConnection,
+  AgentWorkflow,
+  AgentConfig,
+  AgentMetrics,
+  AgentState,
+  CreateAgentTaskRequest,
+  UpdateAgentTaskRequest,
+  CreateAgentRequest,
+  UpdateAgentRequest,
+  CreateWorkflowRequest,
+  UpdateWorkflowRequest,
+  AgentStatusUpdate,
+  TaskStatusUpdate,
+  ResourceUsageUpdate,
+  AgentWebSocketMessage,
+  AgentFormData,
+  TaskFormData,
+  WorkflowFormData,
+} from "../lib/schemas/agent-status";
 
-export interface AgentTask {
-  id: string;
-  title: string;
-  description: string;
-  status: "pending" | "in_progress" | "completed" | "failed";
-  progress?: number;
-  createdAt: string;
-  updatedAt: string;
-  completedAt?: string;
-  error?: string;
-}
-
-export interface Agent {
-  id: string;
-  name: string;
-  type: string;
-  description?: string;
-  status: AgentStatusType;
-  currentTaskId?: string;
-  progress: number; // 0-100
-  tasks: AgentTask[];
-  createdAt: string;
-  updatedAt: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface AgentActivity {
-  id: string;
-  agentId: string;
-  type: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-  timestamp: string;
-}
-
-export interface ResourceUsage {
-  cpuUsage: number;
-  memoryUsage: number;
-  networkRequests: number;
-  activeAgents: number;
-  timestamp: string;
-}
-
-export interface AgentSession {
-  id: string;
-  agents: Agent[];
-  activities: AgentActivity[];
-  resourceUsage: ResourceUsage[];
-  startedAt: string;
-  endedAt?: string;
-  status: "active" | "completed" | "error";
-}
-
-export interface AgentWorkflow {
-  id: string;
-  name: string;
-  description?: string;
-  agents: string[]; // Agent IDs
-  connections: Array<{
-    from: string; // Agent ID
-    to: string; // Agent ID
-    condition?: string;
-  }>;
-  createdAt: string;
-  updatedAt: string;
-}
+// Re-export schemas for validation
+export {
+  agentStatusTypeSchema,
+  taskStatusSchema,
+  sessionStatusSchema,
+  agentTaskSchema,
+  agentSchema,
+  agentActivitySchema,
+  resourceUsageSchema,
+  agentSessionSchema,
+  workflowConnectionSchema,
+  agentWorkflowSchema,
+  agentConfigSchema,
+  agentMetricsSchema,
+  agentStateSchema,
+  createAgentTaskRequestSchema,
+  updateAgentTaskRequestSchema,
+  createAgentRequestSchema,
+  updateAgentRequestSchema,
+  createWorkflowRequestSchema,
+  updateWorkflowRequestSchema,
+  agentStatusUpdateSchema,
+  taskStatusUpdateSchema,
+  resourceUsageUpdateSchema,
+  agentWebSocketMessageSchema,
+  agentFormSchema,
+  taskFormSchema,
+  workflowFormSchema,
+  validateAgentData,
+  validateAgentTask,
+  validateWorkflow,
+  safeValidateAgent,
+  safeValidateTask,
+  safeValidateWorkflow,
+  calculateSuccessRate,
+  isAgentActive,
+  getAgentLoad,
+  canAcceptNewTask,
+} from "../lib/schemas/agent-status";

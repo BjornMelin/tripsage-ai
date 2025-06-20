@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
 
 // Zod schemas for validation
-const _SessionIdSchema = z.string().min(1, "Session ID cannot be empty").optional();
+// const SessionIdSchema = z.string().min(1, "Session ID cannot be empty").optional(); // Future validation
 
 const MessageContentSchema = z.string().min(1, "Message content cannot be empty");
 
@@ -373,36 +373,36 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
       // Parse error for specific handling
       let errorMessage = "An error occurred while processing your request";
-      let _errorStatus = "error";
+      // let errorStatus = "error"; // Future use
 
       if (error.message) {
         // Check for specific error patterns
         if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
           errorMessage = "Request timed out. Please try again.";
-          _errorStatus = "timeout";
+          // errorStatus = "timeout"; // Future use
         } else if (
           error.message.includes("Authentication required") ||
           error.message.includes("AUTH_REQUIRED")
         ) {
           errorMessage = "Authentication required. Please check your API keys.";
-          _errorStatus = "auth_error";
+          // errorStatus = "auth_error"; // Future use
         } else if (
           error.message.includes("Rate limited") ||
           error.message.includes("RATE_LIMITED")
         ) {
           errorMessage = "Too many requests. Please wait a moment and try again.";
-          _errorStatus = "rate_limited";
+          // errorStatus = "rate_limited"; // Future use
         } else if (
           error.message.includes("Service unavailable") ||
           error.message.includes("SERVICE_UNAVAILABLE")
         ) {
           errorMessage =
             "AI service is temporarily unavailable. Please try again later.";
-          _errorStatus = "service_unavailable";
+          // errorStatus = "service_unavailable"; // Future use
         } else if (error.message.includes("Model not available")) {
           errorMessage =
             "The selected AI model is not available. Please try a different model.";
-          _errorStatus = "model_unavailable";
+          // errorStatus = "model_unavailable"; // Future use
         } else {
           errorMessage = error.message;
         }
@@ -470,7 +470,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         });
 
         // Create a unique ID for this message
-        const _messageId = uuidv4();
+        uuidv4(); // Generated for future message tracking
 
         // Add the user message to our store
         addMessage(sessionIdRef.current, {

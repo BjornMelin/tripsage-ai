@@ -74,7 +74,7 @@ export default function TripCollaborationPage() {
     name?: string;
     visibility?: string;
   } | null;
-  const _collaboration = useTripCollaboration(tripId);
+  useTripCollaboration(tripId); // Initialize collaboration state
 
   const currentUserId = user?.id;
 

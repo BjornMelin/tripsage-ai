@@ -2,21 +2,6 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Theme, useUIStore } from "../ui-store";
 
-// Mock window.matchMedia for theme detection
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
-
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({
   setTimeout: vi.fn((fn, delay) => {
@@ -844,14 +829,14 @@ describe("UI Store", () => {
 
       // Add notifications
       let infoId: string;
-      let _warningId: string;
+      // let warningId: string; // Future use
       act(() => {
         infoId = result.current.addNotification({
           type: "info",
           title: "Data Loading",
           isRead: false,
         });
-        _warningId = result.current.addNotification({
+        result.current.addNotification({
           type: "warning",
           title: "Network Slow",
           isRead: false,

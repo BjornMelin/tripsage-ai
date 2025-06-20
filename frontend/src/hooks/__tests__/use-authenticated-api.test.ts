@@ -1,38 +1,42 @@
-import { ApiError } from "@/lib/api/client";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "../use-authenticated-api";
 
-// Mock the dependencies
+// Re-mock to override global mocks for this specific test
 vi.mock("@/contexts/auth-context", () => ({
   useAuth: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(),
+  useSupabase: vi.fn(),
 }));
 
 vi.mock("@/lib/api/client", () => ({
   fetchApi: vi.fn(),
-  ApiError: vi.fn((message: string, status: number) => {
-    const error = new Error(message) as any;
-    error.status = status;
-    error.name = "ApiError";
-    return error;
-  }),
+  ApiError: class MockApiError extends Error {
+    status: number;
+    data: any;
+
+    constructor(message: string, status: number, data?: any) {
+      super(message);
+      this.name = "ApiError";
+      this.status = status;
+      this.data = data;
+    }
+  },
 }));
 
-const { useAuth } = vi.hoisted(() => ({ useAuth: vi.fn() }));
-const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
-const { fetchApi } = vi.hoisted(() => ({ fetchApi: vi.fn() }));
-
 describe("useAuthenticatedApi", () => {
+  // Import the mocked modules once and cast them
+  let mockUseAuth: any;
+  let mockCreateBrowserClient: any;
+  let mockFetchApi: any;
+  let ApiError: any;
+
   const mockSignOut = vi.fn();
   const mockGetSession = vi.fn();
   const mockRefreshSession = vi.fn();
-  const mockUseAuth = vi.mocked(useAuth);
-  const mockCreateBrowserClient = vi.mocked(createClient);
-  const mockFetchApi = vi.mocked(fetchApi);
 
   const mockAuthContext = {
     user: { id: "test-user-id", email: "test@example.com" },
@@ -47,14 +51,23 @@ describe("useAuthenticatedApi", () => {
     },
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { useAuth } = require("@/contexts/auth-context");
-    const { createClient } = require("@/lib/supabase/client");
+    // Import and configure the mocked functions
+    const { useAuth } = await import("@/contexts/auth-context");
+    const { createClient } = await import("@/lib/supabase/client");
+    const { fetchApi } = await import("@/lib/api/client");
+    const apiModule = await import("@/lib/api/client");
 
-    vi.mocked(useAuth).mockReturnValue(mockAuthContext);
-    vi.mocked(createClient).mockReturnValue(mockSupabaseClient);
+    mockUseAuth = vi.mocked(useAuth);
+    mockCreateBrowserClient = vi.mocked(createClient);
+    mockFetchApi = vi.mocked(fetchApi);
+    ApiError = apiModule.ApiError;
+
+    mockUseAuth.mockReturnValue(mockAuthContext);
+    mockCreateBrowserClient.mockReturnValue(mockSupabaseClient);
+    mockFetchApi.mockResolvedValue({ success: true });
   });
 
   describe("Authentication State", () => {
@@ -297,7 +310,7 @@ describe("useAuthenticatedApi", () => {
       const { result } = renderHook(() => useAuthenticatedApi());
 
       // Start first request
-      const _promise1 = result.current.makeAuthenticatedRequest("/api/test1");
+      result.current.makeAuthenticatedRequest("/api/test1");
 
       // Start second request (should cancel first)
       const promise2 = result.current.makeAuthenticatedRequest("/api/test2");

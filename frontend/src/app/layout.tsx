@@ -5,17 +5,24 @@ import { Navbar } from "@/components/layouts/navbar";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { PerformanceMonitor } from "@/components/providers/performance-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
+  preload: true,
+  fallback: ["system-ui", "arial"],
+  adjustFontFallback: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
   display: "swap",
+  preload: true,
+  fallback: ["ui-monospace", "SFMono-Regular", "Consolas", "monospace"],
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
@@ -40,20 +47,22 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen`}
       >
-        <TanStackQueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <main className="flex-1">{children}</main>
-            </div>
-            <Toaster />
-          </ThemeProvider>
-        </TanStackQueryProvider>
+        <PerformanceMonitor>
+          <TanStackQueryProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-1">{children}</main>
+              </div>
+              <Toaster />
+            </ThemeProvider>
+          </TanStackQueryProvider>
+        </PerformanceMonitor>
       </body>
     </html>
   );

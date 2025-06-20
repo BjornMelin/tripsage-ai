@@ -866,7 +866,7 @@ describe("Integration Tests", () => {
       wrapper,
     });
 
-    const _initialRefetch = result.current.refetch;
+    result.current.refetch; // Access refetch function
 
     rerender();
 

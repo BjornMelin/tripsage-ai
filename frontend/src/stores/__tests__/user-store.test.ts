@@ -1143,7 +1143,7 @@ describe("User Profile Store", () => {
 
       // Export profile
       const exportedData = result.current.exportProfile();
-      const _originalProfile = result.current.profile;
+      result.current.profile; // Access original profile
 
       // Reset profile
       act(() => {

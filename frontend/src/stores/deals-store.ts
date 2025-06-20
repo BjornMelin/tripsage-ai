@@ -62,14 +62,14 @@ const generateId = () =>
 const getCurrentTimestamp = () => new Date().toISOString();
 
 // Utility for validating deal objects
-const _validateDeal = (deal: unknown): deal is Deal => {
-  return DealSchema.safeParse(deal).success;
-};
+// const validateDeal = (deal: unknown): deal is Deal => {
+//   return DealSchema.safeParse(deal).success;
+// }; // Future validation
 
 // Utility for validating alert objects
-const _validateAlert = (alert: unknown): alert is DealAlert => {
-  return DealAlertSchema.safeParse(alert).success;
-};
+// const validateAlert = (alert: unknown): alert is DealAlert => {
+//   return DealAlertSchema.safeParse(alert).success;
+// }; // Future validation
 
 // Calculate percentage discount
 const calculateDiscountPercentage = (originalPrice: number, price: number): number => {

@@ -9,6 +9,9 @@ export * from "./forms";
 export * from "./memory";
 export * from "./search";
 export * from "./stores";
+export * from "./budget";
+export * from "./agent-status";
+export * from "./env";
 
 // Selective exports to avoid conflicts
 export {
@@ -42,6 +45,9 @@ import * as loadingSchemas from "./loading";
 import * as memorySchemas from "./memory";
 import * as searchSchemas from "./search";
 import * as storeSchemas from "./stores";
+import * as budgetSchemas from "./budget";
+import * as agentStatusSchemas from "./agent-status";
+import * as envSchemas from "./env";
 
 // Central schema registry
 export const schemas = {
@@ -53,6 +59,9 @@ export const schemas = {
   memory: memorySchemas,
   search: searchSchemas,
   stores: storeSchemas,
+  budget: budgetSchemas,
+  agentStatus: agentStatusSchemas,
+  env: envSchemas,
 } as const;
 
 // Commonly used validation patterns
@@ -208,6 +217,21 @@ export const schemaMetadata = {
     description: "Loading state and skeleton component schemas",
     schemas: Object.keys(loadingSchemas).length,
     categories: ["loading", "skeleton"],
+  },
+  budget: {
+    description: "Budget and expense management validation schemas",
+    schemas: Object.keys(budgetSchemas).length,
+    categories: ["budget", "expenses", "categories", "alerts", "currency"],
+  },
+  agentStatus: {
+    description: "Agent status and workflow management schemas",
+    schemas: Object.keys(agentStatusSchemas).length,
+    categories: ["agents", "tasks", "workflows", "sessions", "metrics"],
+  },
+  env: {
+    description: "Environment variable validation schemas",
+    schemas: Object.keys(envSchemas).length,
+    categories: ["server", "client", "features", "security", "integrations"],
   },
 } as const;
 

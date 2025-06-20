@@ -17,17 +17,17 @@ const TableNameSchema = z.string().min(1, "Table name cannot be empty");
 
 const ColumnsSchema = z.string().min(1, "Columns cannot be empty").default("*");
 
-const _PageSizeSchema = z
-  .number()
-  .positive()
-  .max(100, "Page size cannot exceed 100")
-  .default(20);
+// const PageSizeSchema = z
+//   .number()
+//   .positive()
+//   .max(100, "Page size cannot exceed 100")
+//   .default(20); // Future validation
 
 const IdSchema = z.union([z.string(), z.number()]).nullable();
 
-const _SearchQuerySchema = z
-  .string()
-  .min(2, "Search query must be at least 2 characters");
+// const SearchQuerySchema = z // Future validation
+//   .string()
+//   .min(2, "Search query must be at least 2 characters");
 
 const DebounceSchema = z.number().min(0).max(5000).default(300);
 

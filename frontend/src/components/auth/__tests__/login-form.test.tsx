@@ -313,7 +313,7 @@ describe("LoginForm", () => {
     const user = userEvent.setup();
     render(<LoginForm />);
 
-    const _form = screen.getByRole("button", { name: "Sign In" }).closest("form");
+    screen.getByRole("button", { name: "Sign In" }).closest("form");
     await user.click(screen.getByRole("button", { name: "Sign In" }));
 
     expect(mockSignIn).not.toHaveBeenCalled();

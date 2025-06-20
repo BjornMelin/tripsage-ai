@@ -197,9 +197,7 @@ describe("SecurityDashboard", () => {
 
     // Icons should be rendered (we can't easily test the specific icons,
     // but we can ensure the container elements are present)
-    const _eventContainers = document.querySelectorAll(
-      '[data-testid="security-event"]'
-    );
+    document.querySelectorAll('[data-testid="security-event"]');
     // Note: This would need to be added to the component if we want to test it properly
   });
 
@@ -211,7 +209,7 @@ describe("SecurityDashboard", () => {
     });
 
     // Should format dates properly (exact format depends on locale)
-    const _timeElements = document.querySelectorAll("time, .timestamp");
+    document.querySelectorAll("time, .timestamp");
     // This is a simplified test - in reality we'd check for proper formatting
   });
 

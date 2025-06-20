@@ -141,6 +141,9 @@ export function useAuthenticatedApi() {
                   auth: `Bearer ${session.access_token}`,
                   signal: abortControllerRef.current?.signal,
                 });
+              } else {
+                // Refresh failed or returned invalid session, user needs to log in again
+                await signOut();
               }
             } catch (_refreshError) {
               // Refresh failed, user needs to log in again

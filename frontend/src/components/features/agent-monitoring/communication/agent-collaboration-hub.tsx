@@ -502,8 +502,8 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
   };
 
   const activeAgents = optimisticAgents.filter((a) => a.status === "active").length;
-  const _averageWorkload =
-    optimisticAgents.reduce((sum, a) => sum + a.workload, 0) / optimisticAgents.length;
+  // const averageWorkload = // Future implementation
+  //   optimisticAgents.reduce((sum, a) => sum + a.workload, 0) / optimisticAgents.length;
   const pendingHandoffs = optimisticHandoffs.filter(
     (h) => h.status === "pending"
   ).length;

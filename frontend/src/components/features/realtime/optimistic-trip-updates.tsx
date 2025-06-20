@@ -86,7 +86,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   }, [trip]);
 
   const handleOptimisticUpdate = async (field: keyof TripUpdate, value: any) => {
-    const _updateId = `${field}-${Date.now()}`;
+    `${field}-${Date.now()}`; // Generate update ID for future tracking
 
     // Apply optimistic update to local state
     setOptimisticUpdates((prev) => ({

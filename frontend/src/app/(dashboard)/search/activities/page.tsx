@@ -23,9 +23,9 @@ export default function ActivitiesSearchPage() {
   // Initialize search with URL parameters
   useEffect(() => {
     const destination = searchParams.get("destination");
-    const _date = searchParams.get("date");
+    // const date = searchParams.get("date"); // Future use
     const category = searchParams.get("category");
-    const _maxPrice = searchParams.get("maxPrice");
+    // const maxPrice = searchParams.get("maxPrice"); // Future use
 
     if (destination) {
       const initialParams: ActivitySearchParams = {

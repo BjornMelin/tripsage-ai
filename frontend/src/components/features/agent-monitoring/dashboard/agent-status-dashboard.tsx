@@ -34,7 +34,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from "recharts";
+} from "@/components/charts/chart-wrapper";
 import { ConnectionStatus } from "../../shared/connection-status";
 
 interface AgentMetrics {
@@ -107,20 +107,20 @@ const predictiveIndicators: PredictiveIndicator[] = [
   },
 ];
 
-const _getStatusColor = (status: AgentMetrics["status"]) => {
-  switch (status) {
-    case "active":
-      return "bg-green-500";
-    case "idle":
-      return "bg-yellow-500";
-    case "error":
-      return "bg-red-500";
-    case "maintenance":
-      return "bg-blue-500";
-    default:
-      return "bg-gray-500";
-  }
-};
+// const getStatusColor = (status: AgentMetrics["status"]) => { // Future implementation
+//   switch (status) {
+//     case "active":
+//       return "bg-green-500";
+//     case "idle":
+//       return "bg-yellow-500";
+//     case "error":
+//       return "bg-red-500";
+//     case "maintenance":
+//       return "bg-blue-500";
+//     default:
+//       return "bg-gray-500";
+//   }
+// };
 
 const getStatusIcon = (status: AgentMetrics["status"]) => {
   switch (status) {

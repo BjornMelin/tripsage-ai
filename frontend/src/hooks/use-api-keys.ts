@@ -5,6 +5,7 @@ import {
   useApiMutation,
   useApiQuery,
 } from "@/hooks/use-api-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import type {
   AddKeyRequest,
@@ -17,12 +18,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 /**
- * Hook for fetching all user API keys
+ * Hook for fetching all user API keys with enhanced caching and error handling
  */
 export function useApiKeys() {
   const { setKeys, setSupportedServices } = useApiKeyStore();
 
-  const query = useApiQuery<AllKeysResponse>("/api/user/keys", {});
+  const query = useApiQuery<AllKeysResponse>("/api/user/keys", undefined, {
+    queryKey: queryKeys.auth.apiKeys(),
+    staleTime: 5 * 60 * 1000, // 5 minutes - API keys don't change often
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    retry: (failureCount, error) => {
+      // Don't retry auth errors
+      if ("status" in error && error.status === 401) return false;
+      return failureCount < 2;
+    },
+  });
 
   useEffect(() => {
     if (query.data) {
@@ -35,26 +45,28 @@ export function useApiKeys() {
 }
 
 /**
- * Hook for adding a new API key
+ * Hook for adding a new API key with optimistic updates
  */
 export function useAddApiKey() {
   const { updateKey } = useApiKeyStore();
-  const queryClient = useQueryClient();
 
-  const mutation = useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys");
-
-  useEffect(() => {
-    if (mutation.data) {
-      updateKey(mutation.data.service, {
-        is_valid: mutation.data.is_valid,
+  const mutation = useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys", {
+    invalidateQueries: [queryKeys.auth.apiKeys()],
+    onSuccess: (data) => {
+      updateKey(data.service, {
+        is_valid: data.is_valid,
         has_key: true,
-        service: mutation.data.service,
+        service: data.service,
         last_validated: new Date().toISOString(),
       });
-      // Invalidate the API keys query to refetch the updated list
-      queryClient.invalidateQueries({ queryKey: ["/api/user/keys"] });
-    }
-  }, [mutation.data, updateKey, queryClient]);
+    },
+    // Retry on server errors but not on validation errors
+    retry: (failureCount, error) => {
+      if ("status" in error && error.status === 422) return false; // Validation error
+      if ("status" in error && error.status === 401) return false; // Auth error
+      return failureCount < 1;
+    },
+  });
 
   return mutation;
 }
@@ -63,25 +75,43 @@ export function useAddApiKey() {
  * Hook for validating an API key without saving it
  */
 export function useValidateApiKey() {
-  return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/user/keys/validate");
+  return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/user/keys/validate", {
+    retry: (failureCount, error) => {
+      // Don't retry validation calls - they should be immediate
+      return false;
+    },
+  });
 }
 
 /**
- * Hook for deleting an API key
+ * Hook for deleting an API key with optimistic updates
  */
 export function useDeleteApiKey() {
   const { removeKey } = useApiKeyStore();
-  const queryClient = useQueryClient();
 
-  const mutation = useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys");
-
-  useEffect(() => {
-    if (mutation.data?.success) {
-      removeKey(mutation.data.service);
-      // Invalidate the API keys query to refetch the updated list
-      queryClient.invalidateQueries({ queryKey: ["/api/user/keys"] });
-    }
-  }, [mutation.data, removeKey, queryClient]);
+  const mutation = useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys", {
+    invalidateQueries: [queryKeys.auth.apiKeys()],
+    optimisticUpdate: {
+      queryKey: queryKeys.auth.apiKeys(),
+      updater: (oldData: AllKeysResponse | undefined, serviceToDelete: string) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          keys: oldData.keys.filter((key) => key.service !== serviceToDelete),
+        };
+      },
+    },
+    onSuccess: (data) => {
+      if (data?.success) {
+        removeKey(data.service);
+      }
+    },
+    retry: (failureCount, error) => {
+      if ("status" in error && error.status === 404) return false; // Not found
+      if ("status" in error && error.status === 401) return false; // Auth error
+      return failureCount < 1;
+    },
+  });
 
   return mutation;
 }

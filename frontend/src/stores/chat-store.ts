@@ -342,7 +342,7 @@ export const useChatStore = create<ChatState>()(
         }
 
         // Add user message
-        const _userMessageId = get().addMessage(sessionId, {
+        get().addMessage(sessionId, {
           role: "user",
           content,
           attachments: options.attachments?.map((file) => ({
