@@ -37,7 +37,7 @@ import {
 import { useOptimistic, useState, useTransition } from "react";
 
 // React 19 optimistic update types for hotel search
-interface ModernHotelSearchParams {
+export interface ModernHotelSearchParams {
   location: string;
   checkIn: string;
   checkOut: string;

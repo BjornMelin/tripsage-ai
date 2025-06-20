@@ -28,7 +28,7 @@ import {
 import { useOptimistic, useState, useTransition } from "react";
 
 // Modern flight result types with 2025 travel patterns
-interface ModernFlightResult {
+export interface ModernFlightResult {
   id: string;
   airline: string;
   flightNumber: string;

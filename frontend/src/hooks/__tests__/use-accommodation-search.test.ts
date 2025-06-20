@@ -154,8 +154,8 @@ describe("useAccommodationSearch", () => {
 
     const searchParams = {
       destination: "New York",
-      startDate: "2024-03-15",
-      endDate: "2024-03-18",
+      checkIn: "2024-03-15",
+      checkOut: "2024-03-18",
       adults: 2,
       children: 0,
       infants: 0,
@@ -172,7 +172,7 @@ describe("useAccommodationSearch", () => {
   });
 
   it("should handle loading state", async () => {
-    let resolvePromise: (value: any) => void;
+    let resolvePromise: (value: any) => void = () => {};
     const promise = new Promise((resolve) => {
       resolvePromise = resolve;
     });
@@ -197,8 +197,8 @@ describe("useAccommodationSearch", () => {
     // Start search
     result.current.search({
       destination: "New York",
-      startDate: "2024-03-15",
-      endDate: "2024-03-18",
+      checkIn: "2024-03-15",
+      checkOut: "2024-03-18",
       adults: 2,
       children: 0,
       infants: 0,

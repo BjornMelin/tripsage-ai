@@ -51,8 +51,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/hooks/use-toast";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -564,7 +564,7 @@ export default function ConfigurationManager() {
                   </div>
                   <Slider
                     value={[editedConfig.temperature || 0]}
-                    onValueChange={([value]) =>
+                    onValueChange={([value]: number[]) =>
                       handleConfigChange("temperature", value)
                     }
                     min={0}
@@ -606,7 +606,7 @@ export default function ConfigurationManager() {
                   </div>
                   <Slider
                     value={[editedConfig.top_p || 0]}
-                    onValueChange={([value]) => handleConfigChange("top_p", value)}
+                    onValueChange={([value]: number[]) => handleConfigChange("top_p", value)}
                     min={0}
                     max={1}
                     step={0.01}

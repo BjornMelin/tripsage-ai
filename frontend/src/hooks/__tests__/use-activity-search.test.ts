@@ -231,7 +231,7 @@ describe("useActivitySearch", () => {
   });
 
   it("should handle loading state", async () => {
-    let resolvePromise: (value: any) => void;
+    let resolvePromise: (value: any) => void = () => {};
     const promise = new Promise((resolve) => {
       resolvePromise = resolve;
     });
@@ -257,9 +257,7 @@ describe("useActivitySearch", () => {
     result.current.searchActivities({
       destination: "New York",
       date: "2024-07-01",
-      adults: 2,
-      children: 0,
-      infants: 0,
+      category: "sightseeing",
     });
 
     await waitFor(() => {

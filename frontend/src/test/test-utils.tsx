@@ -106,7 +106,7 @@ export interface ProvidersProps {
   children: ReactNode;
   initialUser?: User | null;
   theme?: {
-    attribute?: string;
+    attribute?: "class" | "data-theme" | string;
     defaultTheme?: string;
     enableSystem?: boolean;
     disableTransitionOnChange?: boolean;
@@ -124,7 +124,7 @@ export const AllTheProviders = ({
   children,
   initialUser = null,
   theme = {
-    attribute: "class",
+    attribute: "class" as const,
     defaultTheme: "system",
     enableSystem: true,
     disableTransitionOnChange: true,

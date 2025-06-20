@@ -31,7 +31,7 @@ import {
 import { useOptimistic, useState, useTransition } from "react";
 
 // React 19 optimistic update types
-interface ModernFlightSearchParams {
+export interface ModernFlightSearchParams {
   from: string;
   to: string;
   departDate: string;

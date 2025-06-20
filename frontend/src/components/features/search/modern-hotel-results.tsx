@@ -34,7 +34,7 @@ import {
 import { useOptimistic, useState, useTransition } from "react";
 
 // Modern hotel result types with 2025 hospitality patterns
-interface ModernHotelResult {
+export interface ModernHotelResult {
   id: string;
   name: string;
   brand?: string;

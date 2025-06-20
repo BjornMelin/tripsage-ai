@@ -297,7 +297,6 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("User Store Integration", () => {
     it("should include user ID when user store is available", () => {
-      // @ts-expect-error - Testing global window property
       window.__USER_STORE__ = {
         user: { id: "integration_test_user" },
       };
@@ -313,12 +312,10 @@ describe("Next.js Error Boundaries Integration", () => {
       );
 
       // Cleanup
-      // @ts-expect-error - Testing global window property
       window.__USER_STORE__ = undefined;
     });
 
     it("should handle missing user store gracefully", () => {
-      // @ts-expect-error - Testing global window property
       window.__USER_STORE__ = undefined;
 
       render(<DashboardError error={mockError} reset={mockReset} />);

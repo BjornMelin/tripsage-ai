@@ -468,16 +468,16 @@ export const mockStores = (stores: {
   trip?: Partial<MockTripStore>;
   currency?: Partial<MockCurrencyStore>;
 }) => {
-  const mocks: Record<string, unknown> = {};
+  const mocks: Record<string, any> = {};
 
   if (stores.searchParams) {
     mocks.searchParams = createMockSearchParamsStore();
-    Object.assign(mocks.searchParams, stores.searchParams);
+    Object.assign(mocks.searchParams as MockSearchParamsStore, stores.searchParams);
   }
 
   if (stores.searchResults) {
     mocks.searchResults = createMockSearchResultsStore();
-    Object.assign(mocks.searchResults, stores.searchResults);
+    Object.assign(mocks.searchResults as MockSearchResultsStore, stores.searchResults);
   }
 
   if (stores.search) {

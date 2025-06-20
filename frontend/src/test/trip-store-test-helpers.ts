@@ -54,7 +54,7 @@ export const createTripStoreMockClient = (): Partial<SupabaseClient> => {
       signOut: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ data: null, error: null }),
       updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
-    } as SupabaseClient["auth"],
+    } as unknown as SupabaseClient["auth"],
     from: vi.fn((table: string) => {
       const builder: any = {
         select: vi.fn(() => {

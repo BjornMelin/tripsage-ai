@@ -408,9 +408,9 @@ describe("Middleware", () => {
       expect(cookies).toBeDefined();
 
       // Test setAll functionality - should not throw
-      if (capturedCookieHandlers) {
+      if (capturedCookieHandlers && "setAll" in capturedCookieHandlers) {
         expect(() => {
-          capturedCookieHandlers.setAll([
+          (capturedCookieHandlers as any).setAll([
             { name: "new1", value: "val1", options: { httpOnly: true } },
           ]);
         }).not.toThrow();

@@ -1,6 +1,6 @@
 import type { Budget } from "@/types/budget";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BudgetTracker } from "../budget-tracker";
 
 // Mock the stores
@@ -18,6 +18,7 @@ vi.mock("@/stores/budget-store", () => ({
         endDate: "2024-06-25",
         tripId: "trip-1",
         categories: [],
+        isActive: true,
         createdAt: "2024-01-01",
         updatedAt: "2024-01-01",
       },
@@ -30,6 +31,7 @@ vi.mock("@/stores/budget-store", () => ({
         endDate: "2024-08-15",
         tripId: "trip-2",
         categories: [],
+        isActive: false,
         createdAt: "2024-01-01",
         updatedAt: "2024-01-01",
       },
@@ -43,6 +45,7 @@ vi.mock("@/stores/budget-store", () => ({
       endDate: "2024-06-25",
       tripId: "trip-1",
       categories: [],
+      isActive: true,
       createdAt: "2024-01-01",
       updatedAt: "2024-01-01",
     } as Budget,

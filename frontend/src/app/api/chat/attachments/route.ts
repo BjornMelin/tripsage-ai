@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       files: transformedFiles,
-      urls: transformedFiles.map((f) => f.url),
+      urls: transformedFiles.map((f: any) => f.url),
     });
   } catch (error) {
     console.error("File upload error:", error);
