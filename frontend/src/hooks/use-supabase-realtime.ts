@@ -15,7 +15,9 @@ export interface RealtimeConnectionStatus {
 
 export interface RealtimeHookResult {
   connectionStatus: string | RealtimeConnectionStatus;
+  isConnected: boolean;
   error: Error | null;
+  errors: Error[];
   disconnect?: () => void;
   reconnect?: () => void;
   newMessageCount?: number;
@@ -28,7 +30,9 @@ export interface RealtimeHookResult {
 export function useSupabaseRealtime(): RealtimeHookResult {
   return {
     connectionStatus: "connected",
+    isConnected: true,
     error: null,
+    errors: [],
     disconnect: () => {},
     reconnect: () => {},
   };
@@ -40,7 +44,9 @@ export function useSupabaseRealtime(): RealtimeHookResult {
 export function useTripRealtime(tripId: string | null): RealtimeHookResult {
   return {
     connectionStatus: { trips: "connected", destinations: "connected" },
+    isConnected: true,
     error: null,
+    errors: [],
   };
 }
 

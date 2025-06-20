@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "../use-authenticated-api";
 
 // Mock the dependencies
@@ -21,10 +21,17 @@ vi.mock("@/lib/api/client", () => ({
   }),
 }));
 
+const { useAuth } = vi.hoisted(() => ({ useAuth: vi.fn() }));
+const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
+const { fetchApi } = vi.hoisted(() => ({ fetchApi: vi.fn() }));
+
 describe("useAuthenticatedApi", () => {
   const mockSignOut = vi.fn();
   const mockGetSession = vi.fn();
   const mockRefreshSession = vi.fn();
+  const mockUseAuth = vi.mocked(useAuth);
+  const mockCreateBrowserClient = vi.mocked(createClient);
+  const mockFetchApi = vi.mocked(fetchApi);
 
   const mockAuthContext = {
     user: { id: "test-user-id", email: "test@example.com" },

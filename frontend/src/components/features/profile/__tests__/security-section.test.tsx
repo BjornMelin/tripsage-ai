@@ -10,8 +10,11 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the toast at module level
-vi.mock("@/components/ui/use-toast");
+vi.mock("@/components/ui/use-toast", () => ({
+  toast: vi.fn(),
+}));
 
+import { toast } from "@/components/ui/use-toast";
 import { SecuritySection } from "../security-section";
 
 // Mock the stores and hooks

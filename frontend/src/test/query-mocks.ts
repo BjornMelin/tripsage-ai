@@ -91,7 +91,11 @@ export function createControlledMutation<
     context: undefined as TContext,
     isLoadingError: false,
     isRefetchError: false,
-    promise: Promise.resolve(currentData as TData),
+    submittedAt: 0,
+    promise: Promise.resolve({
+      data: currentData,
+      error: currentError,
+    }),
   } as UseMutationResult<TData, TError, TVariables, TContext>;
 
   // Controller functions

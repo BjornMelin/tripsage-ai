@@ -103,13 +103,13 @@ export function SearchFilters({
                                   type="checkbox"
                                   checked={
                                     Array.isArray(activeFilters[filter.id]) &&
-                                    activeFilters[filter.id]?.includes(option.value)
+                                    (activeFilters[filter.id] as any[])?.includes(option.value)
                                   }
                                   onChange={(e) => {
                                     const currentValues = Array.isArray(
                                       activeFilters[filter.id]
                                     )
-                                      ? activeFilters[filter.id]
+                                      ? (activeFilters[filter.id] as any[])
                                       : [];
 
                                     if (e.target.checked) {
@@ -120,7 +120,7 @@ export function SearchFilters({
                                     } else {
                                       handleFilterChange(
                                         filter.id,
-                                        currentValues.filter(
+                                        (currentValues as any[]).filter(
                                           (v: string) => v !== option.value
                                         )
                                       );
@@ -172,12 +172,12 @@ export function SearchFilters({
                               <input
                                 type="number"
                                 placeholder="Min"
-                                value={activeFilters[filter.id]?.min || ""}
+                                value={(activeFilters[filter.id] as any)?.min || ""}
                                 onChange={(e) => {
                                   const min = e.target.value
                                     ? Number(e.target.value)
                                     : undefined;
-                                  const max = activeFilters[filter.id]?.max;
+                                  const max = (activeFilters[filter.id] as any)?.max;
                                   handleFilterChange(filter.id, { min, max });
                                 }}
                                 className="flex-1 h-8 rounded-md border px-3 py-1 text-sm"
@@ -185,9 +185,9 @@ export function SearchFilters({
                               <input
                                 type="number"
                                 placeholder="Max"
-                                value={activeFilters[filter.id]?.max || ""}
+                                value={(activeFilters[filter.id] as any)?.max || ""}
                                 onChange={(e) => {
-                                  const min = activeFilters[filter.id]?.min;
+                                  const min = (activeFilters[filter.id] as any)?.min;
                                   const max = e.target.value
                                     ? Number(e.target.value)
                                     : undefined;
@@ -201,7 +201,7 @@ export function SearchFilters({
 
                         {filter.type === "select" && filter.options && (
                           <select
-                            value={activeFilters[filter.id] || ""}
+                            value={(activeFilters[filter.id] as string) || ""}
                             onChange={(e) =>
                               handleFilterChange(filter.id, e.target.value)
                             }

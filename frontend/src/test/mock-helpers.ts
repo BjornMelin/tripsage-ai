@@ -154,7 +154,7 @@ export const createMockUseQueryResult = <T, E = Error>(
     fetchStatus: "idle",
     refetch: vi.fn().mockResolvedValue({ data, error }),
     isInitialLoading: isLoading,
-    promise: Promise.resolve({ data, error }),
+    promise: Promise.resolve(data as T),
   }) as UseQueryResult<T, E>;
 
 // Enhanced error mock

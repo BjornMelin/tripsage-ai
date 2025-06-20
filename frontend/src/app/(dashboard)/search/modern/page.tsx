@@ -4,6 +4,12 @@ import { FlightSearchForm } from "@/components/features/search/flight-search-for
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
 import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
+
+// Import the types from their source files
+import type { ModernFlightResult } from "@/components/features/search/modern-flight-results";
+import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
+import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
+import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,97 +31,7 @@ import {
 } from "lucide-react";
 import { useState, useTransition } from "react";
 
-// Mock data interfaces for demo purposes
-interface MockFlight {
-  id: string;
-  airline: string;
-  flightNumber: string;
-  aircraft: string;
-  origin: { code: string; city: string; terminal: string };
-  destination: { code: string; city: string; terminal: string };
-  departure: { time: string; date: string };
-  arrival: { time: string; date: string };
-  duration: number;
-  stops: { count: number; cities: string[] };
-  price: {
-    base: number;
-    total: number;
-    currency: string;
-    taxes: number;
-    fees: number;
-  };
-  class: string;
-  seatsAvailable: number;
-  amenities: string[];
-  baggage: {
-    carry: string;
-    checked: string;
-  };
-  cancellation: {
-    allowed: boolean;
-    fee: number;
-    deadline: string;
-  };
-  carbonFootprint: {
-    emissions: number;
-    offset: number;
-  };
-  priceInsights: {
-    prediction: string;
-    confidence: number;
-    reason: string;
-  };
-}
-
-interface MockHotel {
-  id: string;
-  name: string;
-  brand: string;
-  category: "hotel" | "resort" | "apartment" | "villa";
-  starRating: number;
-  userRating: number;
-  reviewCount: number;
-  location: {
-    address: string;
-    city: string;
-    district: string;
-    landmarks: string[];
-    coordinates: { lat: number; lng: number };
-  };
-  checkIn: string;
-  checkOut: string;
-  rooms: {
-    type: string;
-    beds: string;
-    size: string;
-    maxGuests: number;
-  };
-  price: {
-    perNight: number;
-    total: number;
-    currency: string;
-    taxes: number;
-    fees: number;
-  };
-  amenities: string[];
-  images: string[];
-  policies: {
-    checkIn: string;
-    checkOut: string;
-    cancellation: string;
-    pet: string;
-  };
-  sustainability: {
-    certified: boolean;
-    rating: string;
-    practices: string[];
-  };
-  priceInsights: {
-    comparison: string;
-    savings: number;
-    reason: string;
-  };
-}
+// Mock data uses the Modern types directly
 
 // Mock data for demo purposes
 const mockFlightResults = [
@@ -178,7 +94,7 @@ const mockFlightResults = [
       reason: "Stable pricing expected",
     },
   },
-] as MockFlight[];
+] as ModernFlightResult[];
 
 const mockHotelResults = [
   {
@@ -305,7 +221,7 @@ const mockHotelResults = [
       personalizedTags: ["budget", "city-center", "modern"],
     },
   },
-] as MockHotel[];
+] as ModernHotelResult[];
 
 export default function ModernSearchPage() {
   const [isPending, startTransition] = useTransition();
@@ -313,9 +229,9 @@ export default function ModernSearchPage() {
   const [showResults, setShowResults] = useState(false);
   const [searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
 
-  const handleFlightSearch = async (params: Record<string, unknown>) => {
+  const handleFlightSearch = async (params: ModernFlightSearchParams) => {
     startTransition(() => {
-      setSearchData(params);
+      setSearchData(params as unknown as Record<string, unknown>);
       setShowResults(true);
       // Simulate API call
       setTimeout(() => {
@@ -324,9 +240,9 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleHotelSearch = async (params: Record<string, unknown>) => {
+  const handleHotelSearch = async (params: ModernHotelSearchParams) => {
     startTransition(() => {
-      setSearchData(params);
+      setSearchData(params as unknown as Record<string, unknown>);
       setShowResults(true);
       // Simulate API call
       setTimeout(() => {
@@ -335,17 +251,17 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleFlightSelect = async (flight: MockFlight) => {
+  const handleFlightSelect = async (flight: ModernFlightResult) => {
     console.log("Selected flight:", flight);
     // Handle flight selection
   };
 
-  const handleHotelSelect = async (hotel: MockHotel) => {
+  const handleHotelSelect = async (hotel: ModernHotelResult) => {
     console.log("Selected hotel:", hotel);
     // Handle hotel selection
   };
 
-  const handleCompareFlights = (flights: MockFlight[]) => {
+  const handleCompareFlights = (flights: ModernFlightResult[]) => {
     console.log("Comparing flights:", flights);
     // Handle flight comparison
   };

@@ -1,6 +1,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
-import { type ApiError, createMockUseQueryResult } from "@/test/mock-helpers";
+import { ApiError } from "@/lib/api/client";
+import { createMockUseQueryResult } from "@/test/mock-helpers";
 import { createMockUser, render, screen, waitFor } from "@/test/test-utils";
 import type { AllKeysResponse } from "@/types/api-keys";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

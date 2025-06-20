@@ -286,7 +286,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           color: "text-blue-500",
           bgColor: "bg-blue-500/10",
           borderColor: "border-blue-500/20",
-          variant: "secondary" as const,
+          variant: "default" as const,
         };
       case "reconnecting":
         return {
@@ -296,7 +296,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           color: "text-orange-500",
           bgColor: "bg-orange-500/10",
           borderColor: "border-orange-500/20",
-          variant: "secondary" as const,
+          variant: "default" as const,
         };
       case "disconnected":
         return {
@@ -306,7 +306,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           color: "text-gray-500",
           bgColor: "bg-gray-500/10",
           borderColor: "border-gray-500/20",
-          variant: "outline" as const,
+          variant: "default" as const,
         };
       case "error":
         return {
@@ -326,7 +326,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
           color: "text-gray-500",
           bgColor: "bg-gray-500/10",
           borderColor: "border-gray-500/20",
-          variant: "outline" as const,
+          variant: "default" as const,
         };
     }
   };

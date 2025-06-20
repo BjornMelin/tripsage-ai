@@ -551,7 +551,7 @@ describe("Agent Workflow Integration Tests", () => {
             analytics={mockConnectionAnalytics}
             onReconnect={onReconnect}
             onOptimize={onOptimize}
-            compact
+            variant="compact"
           />
         </div>
       );
@@ -585,7 +585,7 @@ describe("Agent Workflow Integration Tests", () => {
             analytics={mockConnectionAnalytics}
             onReconnect={onReconnect}
             onOptimize={onOptimize}
-            compact
+            variant="compact"
           />
         </div>
       );

@@ -1,6 +1,6 @@
 import type { Trip } from "@/stores/trip-store";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TripCard } from "../trip-card";
 
 // Mock date-fns
