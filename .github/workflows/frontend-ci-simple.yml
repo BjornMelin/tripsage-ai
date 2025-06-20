@@ -66,7 +66,11 @@ jobs:
       - name: Lint with Biome
         run: |
           pnpm biome check --reporter=github .
-          pnpm biome format . --check
+          # Check if files need formatting by running format without --write and checking exit code
+          if ! pnpm biome format .; then
+            echo "❌ Files need formatting. Run 'pnpm biome format . --write' to fix."
+            exit 1
+          fi
 
       - name: TypeScript type check
         run: pnpm type-check
