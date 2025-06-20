@@ -2,13 +2,7 @@
 
 import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import type {
-  Agent,
-  AgentActivity,
-  AgentStatusType,
-  AgentTask,
-  ResourceUsage,
-} from "@/types/agent-status";
+import type { Agent, AgentTask } from "@/types/agent-status";
 import { useCallback, useEffect } from "react";
 
 /**
@@ -79,7 +73,7 @@ export function useAgentStatus() {
       addAgent({
         name: data.agent.name,
         type: data.agent.type,
-        status: "initializing",
+        description: data.agent.description,
         metadata: data.agent.metadata,
       });
     }
@@ -134,7 +128,7 @@ export function useAgentStatus() {
         if (result.success) {
           updateAgentStatus(agentId, "completed");
         }
-      } catch (error) {
+      } catch (_error) {
         // Error handling is done in useEffect above
       }
     },
@@ -183,7 +177,11 @@ export function useAgentTasks(agentId: string) {
   // Function to add a new task
   const addTask = useCallback(
     (description: string, status: AgentTask["status"] = "pending") => {
-      addAgentTask(agentId, { description, status });
+      addAgentTask(agentId, {
+        title: description,
+        description,
+        status,
+      });
     },
     [agentId, addAgentTask]
   );
@@ -240,7 +238,12 @@ export function useAgentActivities() {
   // Function to add a new activity
   const recordActivity = useCallback(
     (agentId: string, action: string, details?: Record<string, unknown>) => {
-      addAgentActivity({ agentId, action, details });
+      addAgentActivity({
+        agentId,
+        type: action,
+        message: `Agent activity: ${action}`,
+        metadata: details,
+      });
     },
     [addAgentActivity]
   );
@@ -272,16 +275,23 @@ export function useResourceUsage() {
 
   // Function to record resource usage
   const recordUsage = useCallback(
-    (agentId: string, cpu: number, memory: number, tokens: number) => {
-      updateResourceUsage({ agentId, cpu, memory, tokens });
+    (_agentId: string, cpu: number, memory: number, tokens: number) => {
+      updateResourceUsage({
+        cpuUsage: cpu,
+        memoryUsage: memory,
+        networkRequests: tokens,
+        activeAgents: 1,
+      });
     },
     [updateResourceUsage]
   );
 
-  // Function to get resource usage for a specific agent
+  // Function to get resource usage for a specific agent (placeholder since we don't have agentId in ResourceUsage)
   const getAgentResourceUsage = useCallback(
-    (agentId: string) => {
-      return resourceUsage.filter((usage) => usage.agentId === agentId);
+    (_agentId: string) => {
+      // Since ResourceUsage doesn't have agentId, return all usage for now
+      // This could be enhanced to track per-agent usage in the future
+      return resourceUsage;
     },
     [resourceUsage]
   );
@@ -290,9 +300,9 @@ export function useResourceUsage() {
   const totalUsage = resourceUsage.reduce(
     (total, usage) => {
       return {
-        cpu: total.cpu + usage.cpu,
-        memory: total.memory + usage.memory,
-        tokens: total.tokens + usage.tokens,
+        cpu: total.cpu + usage.cpuUsage,
+        memory: total.memory + usage.memoryUsage,
+        tokens: total.tokens + usage.networkRequests,
       };
     },
     { cpu: 0, memory: 0, tokens: 0 }

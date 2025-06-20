@@ -3,8 +3,9 @@
  * Tests trip data synchronization with real-time updates and connection monitoring.
  */
 
+import type { UseMutationResult, UseQueryResult } from "@tanstack/react-query";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +17,168 @@ const mockAuth = {
   isLoading: false,
 };
 
+// Helper functions to create properly typed UseQueryResult mocks for different states
+
+function createMockLoadingQueryResult<TData, TError = Error>(
+  overrides: Partial<UseQueryResult<TData, TError>> = {}
+): UseQueryResult<TData, TError> {
+  return {
+    data: undefined as TData,
+    error: null,
+    isError: false,
+    isPending: true,
+    isSuccess: false,
+    isLoading: true,
+    isLoadingError: false,
+    isRefetchError: false,
+    isFetching: true,
+    isFetched: false,
+    isFetchedAfterMount: false,
+    isRefetching: false,
+    isStale: false,
+    isPlaceholderData: false,
+    isPaused: false,
+    status: "pending",
+    fetchStatus: "fetching",
+    refetch: vi.fn(),
+    dataUpdatedAt: 0,
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    promise: Promise.resolve({} as TData),
+    ...overrides,
+  } as UseQueryResult<TData, TError>;
+}
+
+function createMockSuccessQueryResult<TData, TError = Error>(
+  data: TData,
+  overrides: Partial<UseQueryResult<TData, TError>> = {}
+): UseQueryResult<TData, TError> {
+  return {
+    data,
+    error: null,
+    isError: false,
+    isPending: false,
+    isSuccess: true,
+    isLoading: false,
+    isLoadingError: false,
+    isRefetchError: false,
+    isFetching: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isRefetching: false,
+    isStale: false,
+    isPlaceholderData: false,
+    isPaused: false,
+    status: "success",
+    fetchStatus: "idle",
+    refetch: vi.fn(),
+    dataUpdatedAt: Date.now(),
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    promise: Promise.resolve(data),
+    ...overrides,
+  } as UseQueryResult<TData, TError>;
+}
+
+function createMockErrorQueryResult<TData, TError = Error>(
+  error: TError,
+  overrides: Partial<UseQueryResult<TData, TError>> = {}
+): UseQueryResult<TData, TError> {
+  return {
+    data: undefined as TData,
+    error,
+    isError: true,
+    isPending: false,
+    isSuccess: false,
+    isLoading: false,
+    isLoadingError: true,
+    isRefetchError: false,
+    isFetching: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isRefetching: false,
+    isStale: false,
+    isPlaceholderData: false,
+    isPaused: false,
+    status: "error",
+    fetchStatus: "idle",
+    refetch: vi.fn(),
+    dataUpdatedAt: 0,
+    errorUpdatedAt: Date.now(),
+    failureCount: 1,
+    failureReason: error,
+    promise: Promise.resolve({} as TData),
+    ...overrides,
+  } as UseQueryResult<TData, TError>;
+}
+
+// Helper function to create complete UseMutationResult mocks
+function createMockMutationResult<
+  TData = never,
+  TError = Error,
+  TVariables = any,
+  TContext = unknown,
+>(
+  overrides: Partial<UseMutationResult<TData, TError, TVariables, TContext>> = {}
+): UseMutationResult<TData, TError, TVariables, TContext> {
+  const baseResult = {
+    data: undefined as TData | undefined,
+    error: null as TError | null,
+    variables: undefined,
+    context: undefined,
+    isError: false,
+    isIdle: true,
+    isPending: false,
+    isPaused: false,
+    isSuccess: false,
+    status: "idle" as const,
+    mutate: vi.fn(),
+    mutateAsync: vi.fn(),
+    reset: vi.fn(),
+    failureCount: 0,
+    failureReason: null,
+    submittedAt: 0,
+  };
+
+  const result = { ...baseResult, ...overrides };
+
+  // Fix discriminated union consistency
+  if (result.isPending === true) {
+    result.status = "pending";
+    result.isIdle = false;
+    result.isError = false;
+    result.isSuccess = false;
+  } else if (result.error) {
+    result.isError = true;
+    result.status = "error";
+    result.isIdle = false;
+    result.isPending = false;
+    result.isSuccess = false;
+  } else if (result.data !== undefined) {
+    result.isSuccess = true;
+    result.status = "success";
+    result.isIdle = false;
+    result.isPending = false;
+    result.isError = false;
+  }
+
+  return result as UseMutationResult<TData, TError, TVariables, TContext>;
+}
+
+// Trip collaborator interface for type safety
+interface TripCollaborator {
+  id: number;
+  trip_id: number;
+  user_id: string;
+  role: "owner" | "editor" | "viewer";
+  email?: string;
+  name?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 const mockTripsData = [
   { id: 1, name: "Trip 1", user_id: "test-user-123" },
   { id: 2, name: "Trip 2", user_id: "test-user-123" },
@@ -24,7 +187,9 @@ const mockTripsData = [
 const mockTripData = { id: 1, name: "Test Trip", user_id: "test-user-123" };
 
 const mockTripRealtime = {
+  connectionStatus: "connected" as const,
   isConnected: true,
+  error: null,
   errors: [],
   tripSubscription: { isConnected: true, error: null },
   collaboratorSubscription: { isConnected: true, error: null },
@@ -36,12 +201,7 @@ vi.mock("@/contexts/auth-context", () => ({
 }));
 
 vi.mock("../use-trips", () => ({
-  useTrips: vi.fn(() => ({
-    data: mockTripsData,
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-  })),
+  useTrips: vi.fn(() => createMockSuccessQueryResult(mockTripsData)),
 }));
 
 vi.mock("../use-trips-supabase", () => ({
@@ -51,20 +211,24 @@ vi.mock("../use-trips-supabase", () => ({
     error: null,
     refetch: vi.fn(),
   })),
-  useTripData: vi.fn(() => ({
-    data: mockTripData,
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-  })),
-  useTripCollaborators: vi.fn(() => ({
-    data: [],
-    isLoading: false,
-    error: null,
-    refetch: vi.fn(),
-  })),
-  useAddTripCollaborator: vi.fn(() => ({ mutate: vi.fn(), isLoading: false })),
-  useRemoveTripCollaborator: vi.fn(() => ({ mutate: vi.fn(), isLoading: false })),
+  useTripData: vi.fn(() => createMockSuccessQueryResult(mockTripData)),
+  useTripCollaborators: vi.fn(() =>
+    createMockSuccessQueryResult<TripCollaborator[]>([])
+  ),
+  useAddTripCollaborator: vi.fn(() =>
+    createMockMutationResult({
+      mutate: vi.fn(),
+      isIdle: true,
+      status: "idle",
+    })
+  ),
+  useRemoveTripCollaborator: vi.fn(() =>
+    createMockMutationResult({
+      mutate: vi.fn(),
+      isIdle: true,
+      status: "idle",
+    })
+  ),
 }));
 
 vi.mock("../use-supabase-realtime", () => ({
@@ -125,12 +289,7 @@ describe("useTripsWithRealtime", () => {
     });
 
     it("should reflect trip data loading state", () => {
-      vi.mocked(useTrips).mockReturnValueOnce({
-        data: mockTripsData,
-        isLoading: true,
-        error: null,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTrips).mockReturnValueOnce(createMockLoadingQueryResult());
 
       const { result } = renderHook(() => useTripsWithRealtime(), {
         wrapper: createWrapper(),
@@ -141,12 +300,7 @@ describe("useTripsWithRealtime", () => {
 
     it("should reflect trip data error state", () => {
       const error = new Error("Failed to fetch trips");
-      vi.mocked(useTrips).mockReturnValueOnce({
-        data: mockTripsData,
-        isLoading: false,
-        error,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTrips).mockReturnValueOnce(createMockErrorQueryResult(error));
 
       const { result } = renderHook(() => useTripsWithRealtime(), {
         wrapper: createWrapper(),
@@ -158,7 +312,9 @@ describe("useTripsWithRealtime", () => {
     it("should reflect real-time connection status", () => {
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "disconnected",
         isConnected: false,
+        error: new Error("Connection failed"),
         errors: [new Error("Connection failed")],
       });
 
@@ -175,12 +331,9 @@ describe("useTripsWithRealtime", () => {
   describe("Integration with Real-time Updates", () => {
     it("should call refetch function when requested", async () => {
       const refetchMock = vi.fn();
-      vi.mocked(useTrips).mockReturnValueOnce({
-        data: mockTripsData,
-        isLoading: false,
-        error: null,
-        refetch: refetchMock,
-      });
+      vi.mocked(useTrips).mockReturnValueOnce(
+        createMockSuccessQueryResult(mockTripsData, { refetch: refetchMock })
+      );
 
       const { result } = renderHook(() => useTripsWithRealtime(), {
         wrapper: createWrapper(),
@@ -231,7 +384,9 @@ describe("useTripsWithRealtime", () => {
 
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "error",
         isConnected: false,
+        error: errors[0],
         errors,
       });
 
@@ -297,12 +452,7 @@ describe("useTripWithRealtime", () => {
 
   describe("State Management", () => {
     it("should reflect trip data loading state", () => {
-      vi.mocked(useTripData).mockReturnValueOnce({
-        data: mockTripData,
-        isLoading: true,
-        error: null,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTripData).mockReturnValueOnce(createMockLoadingQueryResult());
 
       const { result } = renderHook(() => useTripWithRealtime(1), {
         wrapper: createWrapper(),
@@ -313,12 +463,7 @@ describe("useTripWithRealtime", () => {
 
     it("should reflect trip data error state", () => {
       const error = new Error("Failed to fetch trip");
-      vi.mocked(useTripData).mockReturnValueOnce({
-        data: mockTripData,
-        isLoading: false,
-        error,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTripData).mockReturnValueOnce(createMockErrorQueryResult(error));
 
       const { result } = renderHook(() => useTripWithRealtime(1), {
         wrapper: createWrapper(),
@@ -328,15 +473,11 @@ describe("useTripWithRealtime", () => {
     });
 
     it("should combine data and real-time states correctly", () => {
-      vi.mocked(useTripData).mockReturnValueOnce({
-        data: mockTripData,
-        isLoading: true,
-        error: null,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTripData).mockReturnValueOnce(createMockLoadingQueryResult());
 
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "disconnected",
         isConnected: false,
       });
 
@@ -373,7 +514,9 @@ describe("useTripsConnectionStatus", () => {
       const errors = [new Error("Connection failed")];
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "error",
         isConnected: false,
+        error: errors[0],
         errors,
       });
 
@@ -398,6 +541,8 @@ describe("useTripsConnectionStatus", () => {
 
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "error",
+        error: errors[2],
         errors,
       });
 
@@ -412,6 +557,8 @@ describe("useTripsConnectionStatus", () => {
     it("should handle empty errors array", () => {
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "connected",
+        error: null,
         errors: [],
       });
 
@@ -453,7 +600,9 @@ describe("useTripsConnectionStatus", () => {
       // Change the real-time status
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "error",
         isConnected: false,
+        error: new Error("New error"),
         errors: [new Error("New error")],
       });
 
@@ -518,8 +667,16 @@ describe("useTripCollaboration", () => {
 
   describe("Collaboration Management", () => {
     it("should provide add and remove collaborator mutations", () => {
-      const mockAddCollaborator = { mutate: vi.fn(), isLoading: false };
-      const mockRemoveCollaborator = { mutate: vi.fn(), isLoading: false };
+      const mockAddCollaborator = createMockMutationResult({
+        mutate: vi.fn(),
+        isIdle: true,
+        status: "idle",
+      });
+      const mockRemoveCollaborator = createMockMutationResult({
+        mutate: vi.fn(),
+        isIdle: true,
+        status: "idle",
+      });
 
       vi.mocked(useAddTripCollaborator).mockReturnValueOnce(mockAddCollaborator);
       vi.mocked(useRemoveTripCollaborator).mockReturnValueOnce(mockRemoveCollaborator);
@@ -533,17 +690,28 @@ describe("useTripCollaboration", () => {
     });
 
     it("should return collaborator data and loading states", () => {
-      const collaborators = [
-        { id: 1, trip_id: 123, user_id: "user-1", role: "editor" },
-        { id: 2, trip_id: 123, user_id: "user-2", role: "viewer" },
+      const collaborators: TripCollaborator[] = [
+        {
+          id: 1,
+          trip_id: 123,
+          user_id: "user-1",
+          role: "editor",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
+        {
+          id: 2,
+          trip_id: 123,
+          user_id: "user-2",
+          role: "viewer",
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-01T00:00:00Z",
+        },
       ];
 
-      vi.mocked(useTripCollaborators).mockReturnValueOnce({
-        data: collaborators,
-        isLoading: false,
-        error: null,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTripCollaborators).mockReturnValueOnce(
+        createMockSuccessQueryResult<TripCollaborator[]>(collaborators)
+      );
 
       const { result } = renderHook(() => useTripCollaboration(123), {
         wrapper: createWrapper(),
@@ -555,12 +723,9 @@ describe("useTripCollaboration", () => {
     });
 
     it("should handle collaborator loading state", () => {
-      vi.mocked(useTripCollaborators).mockReturnValueOnce({
-        data: [],
-        isLoading: true,
-        error: null,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTripCollaborators).mockReturnValueOnce(
+        createMockLoadingQueryResult<TripCollaborator[]>()
+      );
 
       const { result } = renderHook(() => useTripCollaboration(123), {
         wrapper: createWrapper(),
@@ -571,12 +736,9 @@ describe("useTripCollaboration", () => {
 
     it("should handle collaborator error state", () => {
       const error = new Error("Failed to fetch collaborators");
-      vi.mocked(useTripCollaborators).mockReturnValueOnce({
-        data: [],
-        isLoading: false,
-        error,
-        refetch: vi.fn(),
-      });
+      vi.mocked(useTripCollaborators).mockReturnValueOnce(
+        createMockErrorQueryResult<TripCollaborator[]>(error)
+      );
 
       const { result } = renderHook(() => useTripCollaboration(123), {
         wrapper: createWrapper(),
@@ -601,7 +763,9 @@ describe("useTripCollaboration", () => {
       const connectionErrors = [new Error("Real-time connection failed")];
       vi.mocked(useTripRealtime).mockReturnValueOnce({
         ...mockTripRealtime,
+        connectionStatus: "error",
         isConnected: false,
+        error: connectionErrors[0],
         errors: connectionErrors,
       });
 
@@ -616,7 +780,7 @@ describe("useTripCollaboration", () => {
 
   describe("Edge Cases", () => {
     it("should handle invalid trip ID strings", () => {
-      const { result } = renderHook(() => useTripCollaboration("invalid"), {
+      renderHook(() => useTripCollaboration("invalid"), {
         wrapper: createWrapper(),
       });
 
@@ -625,7 +789,7 @@ describe("useTripCollaboration", () => {
     });
 
     it("should handle zero trip ID", () => {
-      const { result } = renderHook(() => useTripCollaboration(0), {
+      renderHook(() => useTripCollaboration(0), {
         wrapper: createWrapper(),
       });
 
@@ -634,7 +798,7 @@ describe("useTripCollaboration", () => {
     });
 
     it("should handle negative trip ID", () => {
-      const { result } = renderHook(() => useTripCollaboration(-1), {
+      renderHook(() => useTripCollaboration(-1), {
         wrapper: createWrapper(),
       });
 
@@ -681,15 +845,11 @@ describe("Integration Tests", () => {
     });
 
     // Change both data and connection state
-    vi.mocked(useTrips).mockReturnValueOnce({
-      data: mockTripsData,
-      isLoading: true,
-      error: null,
-      refetch: vi.fn(),
-    });
+    vi.mocked(useTrips).mockReturnValueOnce(createMockLoadingQueryResult());
 
     vi.mocked(useTripRealtime).mockReturnValueOnce({
       ...mockTripRealtime,
+      connectionStatus: "disconnected",
       isConnected: false,
     });
 
@@ -706,7 +866,7 @@ describe("Integration Tests", () => {
       wrapper,
     });
 
-    const initialRefetch = result.current.refetch;
+    const _initialRefetch = result.current.refetch;
 
     rerender();
 

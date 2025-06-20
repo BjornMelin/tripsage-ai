@@ -17,8 +17,6 @@ import {
   Eye,
   Key,
   Lock,
-  Mail,
-  Settings,
   Shield,
   Smartphone,
   Trash2,

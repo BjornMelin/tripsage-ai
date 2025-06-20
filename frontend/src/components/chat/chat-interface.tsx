@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useChatStore } from "@/stores/chat-store";
 import { useEffect, useRef, useState } from "react";
 
 interface Message {

@@ -487,7 +487,7 @@ export class WebSocketClient {
   /**
    * Handle WebSocket open event
    */
-  private async handleOpen(event: Event): Promise<void> {
+  private async handleOpen(_event: Event): Promise<void> {
     this.log("Connection opened, authenticating...");
 
     // Initialize performance tracking

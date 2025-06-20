@@ -3,7 +3,7 @@ import { ApiError } from "@/lib/api/client";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import { createMockUseQueryResult } from "@/test/mock-helpers";
 import { mockUseMutation } from "@/test/query-mocks";
-import { renderWithProviders, screen, waitFor } from "@/test/test-utils";
+import { renderWithProviders, screen } from "@/test/test-utils";
 import type {
   AddKeyRequest,
   AddKeyResponse,
@@ -162,11 +162,13 @@ describe("API Key Management Components", () => {
 
     it("submits the form with valid data", async () => {
       const validateMock = vi.fn();
-      const validateMutation = mockUseMutation<ValidateKeyResponse, ApiError, AddKeyRequest>();
+      const validateMutation = mockUseMutation<
+        ValidateKeyResponse,
+        ApiError,
+        AddKeyRequest
+      >();
       validateMutation.mutation.mutate = validateMock;
-      vi.mocked(apiHooks.useValidateApiKey).mockReturnValue(
-        validateMutation.mutation
-      );
+      vi.mocked(apiHooks.useValidateApiKey).mockReturnValue(validateMutation.mutation);
 
       const user = userEvent.setup();
       renderWithProviders(<ApiKeyForm />);
@@ -230,9 +232,7 @@ describe("API Key Management Components", () => {
       const deleteMock = vi.fn();
       const deleteMutation = mockUseMutation<DeleteKeyResponse, ApiError, string>();
       deleteMutation.mutation.mutate = deleteMock;
-      vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue(
-        deleteMutation.mutation
-      );
+      vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue(deleteMutation.mutation);
 
       const user = userEvent.setup();
       renderWithProviders(<ApiKeyList />);
@@ -252,7 +252,12 @@ describe("API Key Management Components", () => {
   describe("ApiKeySettings Component", () => {
     beforeEach(() => {
       vi.mocked(apiHooks.useApiKeys).mockReturnValue(
-        createMockUseQueryResult<AllKeysResponse, ApiError>({ keys: {}, supported_services: [] }, null, false, false)
+        createMockUseQueryResult<AllKeysResponse, ApiError>(
+          { keys: {}, supported_services: [] },
+          null,
+          false,
+          false
+        )
       );
     });
 
@@ -265,7 +270,12 @@ describe("API Key Management Components", () => {
 
     it("shows loading state when loading", () => {
       vi.mocked(apiHooks.useApiKeys).mockReturnValue(
-        createMockUseQueryResult<AllKeysResponse, ApiError>(undefined, null, true, false)
+        createMockUseQueryResult<AllKeysResponse, ApiError>(
+          undefined,
+          null,
+          true,
+          false
+        )
       );
 
       renderWithProviders(<ApiKeySettings />);
@@ -276,7 +286,12 @@ describe("API Key Management Components", () => {
 
     it("shows error state when error occurs", () => {
       vi.mocked(apiHooks.useApiKeys).mockReturnValue(
-        createMockUseQueryResult<AllKeysResponse, ApiError>(undefined, new ApiError("Failed to load API keys", 500), false, true)
+        createMockUseQueryResult<AllKeysResponse, ApiError>(
+          undefined,
+          new ApiError("Failed to load API keys", 500),
+          false,
+          true
+        )
       );
 
       renderWithProviders(<ApiKeySettings />);

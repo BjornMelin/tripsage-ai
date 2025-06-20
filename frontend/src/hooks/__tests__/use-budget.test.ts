@@ -1,5 +1,4 @@
-import { useBudgetStore } from "@/stores/budget-store";
-import { act, renderHook } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAlerts, useBudget, useBudgetActions, useExpenses } from "../use-budget";
 import {
@@ -173,8 +172,8 @@ describe("Budget Hooks", () => {
 
       // Verify the data matches mock
       expect(result.current.activeBudget?.name).toBe("Summer Vacation");
-      expect(result.current.budgetSummary.totalBudget).toBe(5000);
-      expect(result.current.budgetSummary.totalSpent).toBe(500);
+      expect(result.current.budgetSummary?.totalBudget).toBe(5000);
+      expect(result.current.budgetSummary?.totalSpent).toBe(500);
     });
   });
 

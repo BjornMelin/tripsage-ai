@@ -75,7 +75,7 @@ export function PersonalInfoSection() {
         title: "Profile updated",
         description: "Your personal information has been successfully updated.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -120,7 +120,7 @@ export function PersonalInfoSection() {
       } else {
         throw new Error("Upload failed");
       }
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Upload failed",
         description: "Failed to upload avatar. Please try again.",

@@ -1,6 +1,5 @@
 import { errorService } from "@/lib/error-service";
 import { fireEvent, renderWithProviders, screen } from "@/test/test-utils";
-import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorBoundary, withErrorBoundary } from "../error-boundary";
 

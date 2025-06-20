@@ -1,6 +1,6 @@
-import type { FilterOption, SearchType, SortOption } from "@/types/search";
+import type { SearchType } from "@/types/search";
 import { z } from "zod";
-import { create } from "zustand";
+import { type StateCreator, create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for filters and sorting
@@ -562,28 +562,46 @@ const computeDerivedState = (state: Partial<SearchFiltersState>) => {
   };
 };
 
-// Custom middleware to compute derived state
-const withComputedState = (config: any) => (set: any, get: any, api: any) => {
-  const setState = (partial: any, replace?: boolean) => {
-    const newState = typeof partial === "function" ? partial(get()) : partial;
-    const currentState = get();
-    const mergedState = replace ? newState : { ...currentState, ...newState };
-    const derived = computeDerivedState(mergedState);
-    set({ ...newState, ...derived }, replace);
-  };
+// Custom middleware to compute derived state with proper TypeScript typing
+const withComputedState =
+  <T extends SearchFiltersState>(
+    config: StateCreator<T, [], [], T>
+  ): StateCreator<T, [], [], T> =>
+  (set, get, api) => {
+    const setState = (
+      partial: Partial<T> | ((state: T) => Partial<T>),
+      replace?: boolean | undefined
+    ) => {
+      const newState = typeof partial === "function" ? partial(get()) : partial;
+      const currentState = get();
+      const mergedState = replace ? newState : { ...currentState, ...newState };
+      const derived = computeDerivedState(mergedState);
+      if (replace) {
+        set({ ...newState, ...derived } as T, true);
+      } else {
+        set((state) => ({ ...state, ...newState, ...derived }));
+      }
+    };
 
-  // Override the setState method on the api to ensure computed state is always updated
-  const originalSetState = api.setState;
-  api.setState = (partial: any, replace?: boolean) => {
-    const newState = typeof partial === "function" ? partial(get()) : partial;
-    const currentState = get();
-    const mergedState = replace ? newState : { ...currentState, ...newState };
-    const derived = computeDerivedState(mergedState);
-    originalSetState({ ...newState, ...derived }, replace);
-  };
+    // Override the setState method on the api to ensure computed state is always updated
+    const originalSetState = api.setState;
+    api.setState = (
+      partial: Partial<T> | ((state: T) => Partial<T>),
+      replace?: boolean | undefined
+    ) => {
+      const newState = typeof partial === "function" ? partial(get()) : partial;
+      const currentState = get();
+      const mergedState = replace ? newState : { ...currentState, ...newState };
+      const derived = computeDerivedState(mergedState);
+      if (replace) {
+        originalSetState({ ...newState, ...derived } as T, true);
+      } else {
+        originalSetState((state) => ({ ...state, ...newState, ...derived }));
+      }
+    };
 
-  return config(setState, get, api);
-};
+    return config(setState, get, api);
+  };
 
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
@@ -625,9 +643,12 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         appliedFilterSummary: "",
 
         // Filter configuration actions
-        setAvailableFilters: (searchType, filters) => {
+        setAvailableFilters: (
+          searchType: SearchType,
+          filters: ValidatedFilterOption[]
+        ) => {
           // Validate filters
-          const validatedFilters = filters.filter((filter) => {
+          const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
             const result = FilterOptionSchema.safeParse(filter);
             if (!result.success) {
               console.error(`Invalid filter for ${searchType}:`, result.error);
@@ -644,7 +665,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }));
         },
 
-        addAvailableFilter: (searchType, filter) => {
+        addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => {
           const result = FilterOptionSchema.safeParse(filter);
           if (result.success) {
             set((state) => ({
@@ -661,10 +682,14 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        updateAvailableFilter: (searchType, filterId, updates) => {
+        updateAvailableFilter: (
+          searchType: SearchType,
+          filterId: string,
+          updates: Partial<ValidatedFilterOption>
+        ) => {
           set((state) => {
             const filters = state.availableFilters[searchType] || [];
-            const updatedFilters = filters.map((filter) => {
+            const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
               if (filter.id === filterId) {
                 const updatedFilter = { ...filter, ...updates };
                 const result = FilterOptionSchema.safeParse(updatedFilter);
@@ -682,7 +707,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           });
         },
 
-        removeAvailableFilter: (searchType, filterId) => {
+        removeAvailableFilter: (searchType: SearchType, filterId: string) => {
           set((state) => ({
             availableFilters: {
               ...state.availableFilters,
@@ -891,7 +916,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          const defaultFilters = getDefaultFilters(targetSearchType);
+          const _defaultFilters = getDefaultFilters(targetSearchType);
           const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );

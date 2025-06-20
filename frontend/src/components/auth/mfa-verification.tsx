@@ -68,7 +68,7 @@ export function MFAVerification({
         setError("Invalid verification code. Please try again.");
         setVerificationCode("");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to verify code. Please try again.");
       setVerificationCode("");
     } finally {
@@ -91,7 +91,7 @@ export function MFAVerification({
       await new Promise((resolve) => setTimeout(resolve, 500));
       // In real implementation, this would trigger a new SMS or push notification
       console.log("Resend request sent");
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to resend code. Please try again.");
     }
   };

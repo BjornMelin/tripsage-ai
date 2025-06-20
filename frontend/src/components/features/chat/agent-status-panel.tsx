@@ -3,7 +3,6 @@
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat-store";
-import type { AgentStatus } from "@/stores/chat-store";
 import {
   Activity,
   AlertTriangle,
@@ -15,7 +14,6 @@ import {
   Map as MapIcon,
   Plane,
 } from "lucide-react";
-import React from "react";
 
 interface AgentStatusPanelProps {
   sessionId?: string;

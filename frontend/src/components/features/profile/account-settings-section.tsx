@@ -34,7 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Mail, Trash2, X } from "lucide-react";
+import { Check, Mail, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -55,7 +55,7 @@ export function AccountSettingsSection() {
     },
   });
 
-  const onEmailUpdate = async (data: EmailUpdateFormData) => {
+  const onEmailUpdate = async (_data: EmailUpdateFormData) => {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -65,7 +65,7 @@ export function AccountSettingsSection() {
         title: "Email updated",
         description: "Please check your inbox to verify your new email address.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update email. Please try again.",
@@ -83,7 +83,7 @@ export function AccountSettingsSection() {
         title: "Verification email sent",
         description: "Please check your inbox and click the verification link.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to send verification email. Please try again.",
@@ -101,7 +101,7 @@ export function AccountSettingsSection() {
         title: "Account deletion initiated",
         description: "Your account deletion request has been processed.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete account. Please try again.",
@@ -120,7 +120,7 @@ export function AccountSettingsSection() {
         title: "Settings updated",
         description: `${setting} notifications ${enabled ? "enabled" : "disabled"}.`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update notification settings.",

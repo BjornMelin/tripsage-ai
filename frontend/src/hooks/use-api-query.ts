@@ -8,7 +8,17 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { z } from "zod";
 import { useAuthenticatedApi } from "./use-authenticated-api";
+
+// Zod schemas for validation
+const ApiQueryParamsSchema = z
+  .record(z.union([z.string(), z.number(), z.boolean()]))
+  .optional();
+
+const EndpointSchema = z.string().min(1, "Endpoint cannot be empty");
+
+const _HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
 type ApiQueryOptions<TData, TError> = Omit<
   UseQueryOptions<TData, TError, TData, (string | Record<string, unknown>)[]>,
@@ -26,11 +36,19 @@ export function useApiQuery<TData = any, TError = ApiError>(
   params?: Record<string, unknown>,
   options?: ApiQueryOptions<TData, TError>
 ) {
+  // Validate inputs with Zod
+  const validatedEndpoint = EndpointSchema.parse(endpoint);
+  const validatedParams = ApiQueryParamsSchema.parse(params);
+
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useQuery<TData, TError, TData, (string | Record<string, unknown>)[]>({
-    queryKey: [endpoint, ...(params ? [params] : [])],
-    queryFn: () => makeAuthenticatedRequest<TData>(endpoint, { params }),
+    queryKey: [
+      validatedEndpoint,
+      ...(validatedParams ? [validatedParams as Record<string, unknown>] : []),
+    ],
+    queryFn: () =>
+      makeAuthenticatedRequest<TData>(validatedEndpoint, { params: validatedParams }),
     ...options,
   });
 }
@@ -41,7 +59,7 @@ export function useApiMutation<
   TVariables = unknown,
   TError = ApiError,
 >(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
@@ -61,7 +79,7 @@ export function useApiPutMutation<TData = any, TVariables = any, TError = ApiErr
   endpoint: string,
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
@@ -81,7 +99,7 @@ export function useApiPatchMutation<TData = any, TVariables = any, TError = ApiE
   endpoint: string,
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
@@ -101,7 +119,7 @@ export function useApiDeleteMutation<TData = any, TVariables = any, TError = Api
   endpoint: string,
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({

@@ -137,7 +137,7 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
   const formatJSON = (obj: any) => {
     try {
       return typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
-    } catch (e) {
+    } catch (_e) {
       return String(obj);
     }
   };

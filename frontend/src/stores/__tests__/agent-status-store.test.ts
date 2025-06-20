@@ -1,21 +1,40 @@
 import type {
-  Agent,
   AgentActivity,
   AgentStatusType,
-  AgentTask,
   ResourceUsage,
 } from "@/types/agent-status";
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStatusStore } from "../agent-status-store";
 
 // Mock Date.now for consistent timestamps
 const mockDate = new Date("2024-01-01T00:00:00Z");
-vi.spyOn(global, "Date").mockImplementation(() => mockDate);
-Object.defineProperty(Date, "now", {
-  value: vi.fn().mockReturnValue(mockDate.getTime()),
-  writable: true,
-});
+const originalDate = Date;
+vi.stubGlobal(
+  "Date",
+  class extends originalDate {
+    constructor(...args: any[]) {
+      if (args.length === 0) {
+        super(mockDate.getTime());
+      } else {
+        // Handle the spread operator properly for Date constructor
+        if (args.length === 1 && typeof args[0] === 'number') {
+          super(args[0]);
+        } else {
+          super(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);
+        }
+      }
+    }
+
+    static now() {
+      return mockDate.getTime();
+    }
+
+    toISOString() {
+      return mockDate.toISOString();
+    }
+  }
+);
 
 describe("useAgentStatusStore", () => {
   beforeEach(() => {
@@ -36,8 +55,8 @@ describe("useAgentStatusStore", () => {
       expect(result.current.isMonitoring).toBe(false);
       expect(result.current.lastUpdated).toBe("2024-01-01T00:00:00.000Z");
       expect(result.current.error).toBe(null);
-      expect(result.current.currentSession).toBe(null);
-      expect(result.current.activeAgents).toEqual([]);
+      expect(result.current.getCurrentSession()).toBe(null);
+      expect(result.current.getActiveAgents()).toEqual([]);
     });
   });
 
@@ -52,7 +71,7 @@ describe("useAgentStatusStore", () => {
       expect(result.current.sessions).toHaveLength(1);
       expect(result.current.currentSessionId).toBeTruthy();
       expect(result.current.isMonitoring).toBe(true);
-      expect(result.current.currentSession).toEqual(
+      expect(result.current.getCurrentSession()).toEqual(
         expect.objectContaining({
           agents: [],
           activities: [],
@@ -121,6 +140,7 @@ describe("useAgentStatusStore", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useAgentStatusStore());
       act(() => {
+        result.current.resetAgentStatus();
         result.current.startSession();
       });
     });
@@ -150,7 +170,7 @@ describe("useAgentStatusStore", () => {
         })
       );
 
-      expect(result.current.currentSession?.agents).toHaveLength(1);
+      expect(result.current.getCurrentSession()?.agents).toHaveLength(1);
     });
 
     it("should not add agent when no current session", () => {
@@ -195,7 +215,7 @@ describe("useAgentStatusStore", () => {
 
       expect(result.current.agents[0].status).toBe("active");
       expect(result.current.agents[0].updatedAt).toBe("2024-01-01T00:00:00.000Z");
-      expect(result.current.currentSession?.agents[0].status).toBe("active");
+      expect(result.current.getCurrentSession()?.agents[0].status).toBe("active");
     });
 
     it("should update agent progress", () => {
@@ -218,7 +238,7 @@ describe("useAgentStatusStore", () => {
       });
 
       expect(result.current.agents[0].progress).toBe(50);
-      expect(result.current.currentSession?.agents[0].progress).toBe(50);
+      expect(result.current.getCurrentSession()?.agents[0].progress).toBe(50);
     });
 
     it("should clamp progress values", () => {
@@ -276,8 +296,8 @@ describe("useAgentStatusStore", () => {
         result.current.updateAgentStatus(agentIds[2], "error");
       });
 
-      expect(result.current.activeAgents).toHaveLength(1);
-      expect(result.current.activeAgents[0].status).toBe("active");
+      expect(result.current.getActiveAgents()).toHaveLength(1);
+      expect(result.current.getActiveAgents()[0].status).toBe("active");
     });
   });
 
@@ -287,6 +307,7 @@ describe("useAgentStatusStore", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useAgentStatusStore());
       act(() => {
+        result.current.resetAgentStatus();
         result.current.startSession();
         result.current.addAgent({
           name: "Test Agent",
@@ -494,6 +515,7 @@ describe("useAgentStatusStore", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useAgentStatusStore());
       act(() => {
+        result.current.resetAgentStatus();
         result.current.startSession();
       });
     });
@@ -512,8 +534,8 @@ describe("useAgentStatusStore", () => {
         result.current.addAgentActivity(activityData);
       });
 
-      expect(result.current.currentSession?.activities).toHaveLength(1);
-      expect(result.current.currentSession?.activities[0]).toEqual(
+      expect(result.current.getCurrentSession()?.activities).toHaveLength(1);
+      expect(result.current.getCurrentSession()?.activities[0]).toEqual(
         expect.objectContaining({
           ...activityData,
           timestamp: "2024-01-01T00:00:00.000Z",
@@ -546,6 +568,7 @@ describe("useAgentStatusStore", () => {
     beforeEach(() => {
       const { result } = renderHook(() => useAgentStatusStore());
       act(() => {
+        result.current.resetAgentStatus();
         result.current.startSession();
       });
     });
@@ -564,8 +587,8 @@ describe("useAgentStatusStore", () => {
         result.current.updateResourceUsage(usageData);
       });
 
-      expect(result.current.currentSession?.resourceUsage).toHaveLength(1);
-      expect(result.current.currentSession?.resourceUsage[0]).toEqual(
+      expect(result.current.getCurrentSession()?.resourceUsage).toHaveLength(1);
+      expect(result.current.getCurrentSession()?.resourceUsage[0]).toEqual(
         expect.objectContaining({
           ...usageData,
           timestamp: "2024-01-01T00:00:00.000Z",
@@ -660,7 +683,7 @@ describe("useAgentStatusStore", () => {
         result.current.startSession();
       });
 
-      const session = result.current.currentSession;
+      const session = result.current.getCurrentSession();
       expect(session).toBeTruthy();
       expect(session?.id).toBe(result.current.currentSessionId);
     });
@@ -698,7 +721,7 @@ describe("useAgentStatusStore", () => {
         });
       });
 
-      const activeAgents = result.current.activeAgents;
+      const activeAgents = result.current.getActiveAgents();
 
       // Should include: initializing, active, waiting, paused
       // Should exclude: idle, completed, error

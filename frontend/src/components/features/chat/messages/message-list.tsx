@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   HoverCard,
   HoverCardContent,
@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat-store";
 import type { Message, ToolCall, ToolResult } from "@/types/chat";
-import { AnimatePresence, motion, useSpring, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUp,
   Bot,
@@ -28,13 +28,11 @@ import {
   Camera,
   Compass,
   Copy,
-  Gift,
   Globe,
   Loader2,
   MapPin,
   MessageSquare,
   Plane,
-  RotateCcw,
   Sparkles,
   Star,
   Volume2,

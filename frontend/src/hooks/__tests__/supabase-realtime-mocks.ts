@@ -194,7 +194,7 @@ export class MockRealtimeConnection {
   /**
    * Simulates a connection error
    */
-  triggerConnectionError(error: Error) {
+  triggerConnectionError(_error: Error) {
     this.triggerSystemEvent(CONNECTION_STATUS.CHANNEL_ERROR);
     const subscribeCallback = this.channel.subscribe.mock.calls[0]?.[0];
     if (subscribeCallback) {

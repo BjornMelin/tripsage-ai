@@ -4,12 +4,7 @@ import {
   type WebSocketEvent,
   WebSocketEventType,
 } from "@/lib/websocket/websocket-client";
-import type {
-  ConversationMessage,
-  Memory,
-  MemoryContextResponse,
-  UserPreferences,
-} from "@/types/memory";
+import type { ConversationMessage, MemoryContextResponse } from "@/types/memory";
 import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -347,7 +342,7 @@ export const useChatStore = create<ChatState>()(
         }
 
         // Add user message
-        const userMessageId = get().addMessage(sessionId, {
+        const _userMessageId = get().addMessage(sessionId, {
           role: "user",
           content,
           attachments: options.attachments?.map((file) => ({

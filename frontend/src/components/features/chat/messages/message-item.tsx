@@ -15,12 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import {
-  type Message,
-  MessageRole,
-  type ToolCall,
-  type ToolResult,
-} from "@/types/chat";
+import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -31,13 +26,12 @@ import {
   Copy,
   Info,
   MoreHorizontal,
-  Server,
   Shield,
   Sparkles,
   User,
   Zap,
 } from "lucide-react";
-import React, { useCallback, useMemo, startTransition } from "react";
+import { startTransition, useCallback, useMemo } from "react";
 import { MessageAttachments } from "./message-attachments";
 import { MessageBubble } from "./message-bubble";
 import { MessageToolCalls } from "./message-tool-calls";

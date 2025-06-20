@@ -147,7 +147,7 @@ export function MessageList({
 
         {/* Message list */}
         <div className="space-y-1">
-          {groupedMessages.map((item, index) => {
+          {groupedMessages.map((item, _index) => {
             if (item.type === "date-separator") {
               return (
                 <div key={`date-${item.date}`} className="flex justify-center py-2">

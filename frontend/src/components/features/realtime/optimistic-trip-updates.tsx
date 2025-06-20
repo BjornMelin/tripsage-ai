@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useTripRealtime } from "@/hooks";
 // TODO: Implement useUpdateTrip hook or replace with proper mutation
@@ -25,7 +23,6 @@ import {
   DollarSign,
   Loader2,
   MapPin,
-  Save,
   Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -43,7 +40,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const queryClient = useQueryClient();
   // const updateTrip = useUpdateTrip(); // TODO: Implement this hook
   const updateTrip: { mutateAsync: (data: any) => Promise<void> } = {
-    mutateAsync: async (data: any) => {},
+    mutateAsync: async (_data: any) => {},
   };
   const { isConnected, errors } = useTripRealtime(tripId.toString());
 
@@ -89,7 +86,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   }, [trip]);
 
   const handleOptimisticUpdate = async (field: keyof TripUpdate, value: any) => {
-    const updateId = `${field}-${Date.now()}`;
+    const _updateId = `${field}-${Date.now()}`;
 
     // Apply optimistic update to local state
     setOptimisticUpdates((prev) => ({
@@ -136,7 +133,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
         title: "Updated",
         description: `Trip ${field} has been updated successfully.`,
       });
-    } catch (error) {
+    } catch (_error) {
       // Revert optimistic update on error
       const currentTrip = queryClient.getQueryData(["trip", tripId]) as
         | Trip

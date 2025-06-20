@@ -1,6 +1,4 @@
-import { useTrips } from "@/hooks/use-trips";
 import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
-import { useQueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -133,7 +131,7 @@ interface TripState {
 
 export const useTripStore = create<TripState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       trips: [],
       currentTrip: null,
       isLoading: false,

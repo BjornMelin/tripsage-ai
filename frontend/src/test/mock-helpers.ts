@@ -3,7 +3,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 /**
  * Comprehensive mock helpers for TypeScript compliance
  */
-import { type Mock, vi } from "vitest";
+import { vi } from "vitest";
 
 // Complete Supabase Query Builder Mock
 export const createCompleteQueryBuilder = (
@@ -57,6 +57,43 @@ const generateTripData = (data: any) => {
   };
 };
 
+// Complete SupabaseAuthClient Mock
+export const createMockSupabaseAuthClient = (): Partial<SupabaseClient["auth"]> => {
+  return {
+    getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+    onAuthStateChange: vi.fn().mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    }),
+    signUp: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signOut: vi.fn().mockResolvedValue({ error: null }),
+    resend: vi.fn().mockResolvedValue({ data: null, error: null }),
+    updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
+    getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+    verifyOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signInWithOAuth: vi
+      .fn()
+      .mockResolvedValue({ data: { url: "", provider: "github" }, error: null }),
+    signInWithOtp: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signInWithIdToken: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signInWithSSO: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signInAnonymously: vi.fn().mockResolvedValue({ data: null, error: null }),
+    signInWithWeb3: vi.fn().mockResolvedValue({ data: null, error: null }),
+    exchangeCodeForSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+    reauthenticate: vi.fn().mockResolvedValue({ data: null, error: null }),
+    linkIdentity: vi
+      .fn()
+      .mockResolvedValue({ data: { url: "", provider: "github" }, error: null }),
+    unlinkIdentity: vi.fn().mockResolvedValue({ data: null, error: null }),
+    getUserIdentities: vi
+      .fn()
+      .mockResolvedValue({ data: { identities: [] }, error: null }),
+    setSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+    refreshSession: vi.fn().mockResolvedValue({ data: null, error: null }),
+    initialize: vi.fn().mockResolvedValue({ error: null }),
+  } as Partial<SupabaseClient["auth"]>;
+};
+
 // Complete Supabase Client Mock
 export const createMockSupabaseClient = (): Partial<SupabaseClient> => {
   const mockData: Record<string, any[]> = {
@@ -64,17 +101,7 @@ export const createMockSupabaseClient = (): Partial<SupabaseClient> => {
   };
 
   return {
-    auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
-      onAuthStateChange: vi.fn().mockReturnValue({
-        data: { subscription: { unsubscribe: vi.fn() } },
-      }),
-      signUp: vi.fn().mockResolvedValue({ data: null, error: null }),
-      signInWithPassword: vi.fn().mockResolvedValue({ data: null, error: null }),
-      signOut: vi.fn().mockResolvedValue({ error: null }),
-      resetPasswordForEmail: vi.fn().mockResolvedValue({ data: null, error: null }),
-      updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
-    } as SupabaseClient["auth"],
+    auth: createMockSupabaseAuthClient() as any,
     from: vi.fn((table: string) => {
       const builder: any = {
         select: vi.fn().mockReturnThis(),
@@ -173,9 +200,11 @@ export const ApiError = MockApiError;
 
 // Complete auth state change mock
 export const createMockAuthStateChange = () =>
-  vi.fn().mockImplementation((callback: (event: string, session: unknown) => void) => ({
-    data: { subscription: { unsubscribe: vi.fn() } },
-  }));
+  vi
+    .fn()
+    .mockImplementation((_callback: (event: string, session: unknown) => void) => ({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    }));
 
 // Complete table builder mock that returns complete query builder
 export const createMockTableBuilder = (
@@ -193,7 +222,7 @@ export const createMockTableBuilderWithTable = (
 ) =>
   vi
     .fn()
-    .mockImplementation((table: string) =>
+    .mockImplementation((_table: string) =>
       createCompleteQueryBuilder(mockResponse.data, mockResponse.error)
     );
 
@@ -216,7 +245,7 @@ export const createTestQueryClient = () =>
 
 // Enhanced toast mock factory
 export const createMockToast = () => {
-  const mockToast = vi.fn((props: any) => ({
+  const mockToast = vi.fn((_props: any) => ({
     id: `toast-${Date.now()}`,
     dismiss: vi.fn(),
     update: vi.fn(),

@@ -17,13 +17,29 @@
       "recommended": true,
       "correctness": {
         "useHookAtTopLevel": "off",
-        "useExhaustiveDependencies": "off"
+        "useExhaustiveDependencies": "off",
+        "noUnusedImports": {
+          "level": "error",
+          "fix": "safe"
+        },
+        "noUnusedVariables": {
+          "level": "error",
+          "fix": "safe"
+        }
       },
       "style": {
         "useConst": "error",
         "useTemplate": "error",
         "noParameterAssign": "error",
-        "noNonNullAssertion": "off"
+        "noNonNullAssertion": "off",
+        "useImportType": {
+          "level": "error",
+          "fix": "safe"
+        },
+        "useExportType": {
+          "level": "error",
+          "fix": "safe"
+        }
       },
       "suspicious": {
         "noExplicitAny": "off",

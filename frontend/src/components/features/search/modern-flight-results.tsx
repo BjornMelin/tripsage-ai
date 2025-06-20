@@ -3,24 +3,18 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   ArrowUpDown,
-  Calendar,
-  Clock,
-  Coffee,
   Filter,
   Heart,
-  MapPin,
   Monitor,
   Plane,
   RefreshCw,
   Shield,
   Star,
   TrendingUp,
-  Users,
   Utensils,
   Wifi,
   Zap,
@@ -105,7 +99,7 @@ export function ModernFlightResults({
   const [selectedForComparison, setSelectedForComparison] = useState<Set<string>>(
     new Set()
   );
-  const [sortBy, setSortBy] = useState<
+  const [sortBy, _setSortBy] = useState<
     "price" | "duration" | "departure" | "emissions"
   >("price");
   const [viewMode, setViewMode] = useState<"comfortable" | "compact">("comfortable");
@@ -113,7 +107,7 @@ export function ModernFlightResults({
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
     "",
-    (state, flightId: string) => flightId
+    (_state, flightId: string) => flightId
   );
 
   const handleFlightSelect = (flight: ModernFlightResult) => {

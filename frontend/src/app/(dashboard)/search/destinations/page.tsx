@@ -20,7 +20,7 @@ import { useDestinationSearch } from "@/hooks/use-destination-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Destination, DestinationSearchParams } from "@/types/search";
 import { AlertCircle, MapPin, Search, Star } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function DestinationsSearchPage() {
   const { hasResults, isSearching: storeIsSearching } = useSearchStore();

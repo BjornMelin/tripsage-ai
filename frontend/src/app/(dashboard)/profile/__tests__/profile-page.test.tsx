@@ -226,7 +226,7 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     // Check that loading skeletons are properly displayed
-    const container = screen.getByText(/container/i).closest("div");
+    const _container = screen.getByText(/container/i).closest("div");
     const skeletons = screen.getAllByTestId("skeleton");
 
     expect(skeletons.length).toBeGreaterThan(3); // Multiple skeleton elements

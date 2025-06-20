@@ -49,7 +49,7 @@ export function DestinationCard({
   const formatBestTimeToVisit = (months: string[]) => {
     if (!months || months.length === 0) return "Year-round";
 
-    const monthNames = [
+    const _monthNames = [
       "Jan",
       "Feb",
       "Mar",

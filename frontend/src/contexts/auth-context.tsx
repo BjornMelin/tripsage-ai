@@ -89,7 +89,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         const user = convertSupabaseUser(session.user);
         setAuthState({

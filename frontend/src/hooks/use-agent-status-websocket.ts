@@ -115,6 +115,7 @@ export function useAgentStatusWebSocket() {
       wsClientRef.current.on(WebSocketEventType.AGENT_TASK_START, (event: any) => {
         const { agentId, task } = event.payload;
         addAgentTask(agentId, {
+          title: task.title || task.description || "Untitled Task",
           description: task.description,
           status: "in_progress",
         });
@@ -140,8 +141,9 @@ export function useAgentStatusWebSocket() {
         updateAgentStatus(agentId, "error");
         addAgentActivity({
           agentId,
-          action: "error",
-          details: { error },
+          type: "error",
+          message: `Agent error: ${error}`,
+          metadata: { error },
         });
       });
 
@@ -184,7 +186,7 @@ export function useAgentStatusWebSocket() {
       addAgent({
         type: agentType,
         name: agentName,
-        status: "idle",
+        description: `Agent: ${agentName}`,
         metadata: config,
       });
 
@@ -221,7 +223,12 @@ export function useAgentStatusWebSocket() {
       }
 
       // Update local store
-      updateResourceUsage({ agentId, cpu, memory, tokens });
+      updateResourceUsage({
+        cpuUsage: cpu,
+        memoryUsage: memory,
+        networkRequests: tokens,
+        activeAgents: 1,
+      });
 
       // Send resource usage update
       await wsClientRef.current.send("resource_usage", {

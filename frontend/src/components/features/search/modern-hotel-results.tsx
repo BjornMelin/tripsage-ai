@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
@@ -25,7 +24,6 @@ import {
   Sparkles,
   Star,
   TrendingUp,
-  Users,
   Utensils,
   Waves,
   Wifi,
@@ -120,12 +118,12 @@ export function ModernHotelResults({
   const [isPending, startTransition] = useTransition();
   const [viewMode, setViewMode] = useState<"list" | "grid" | "map">("list");
   const [savedHotels, setSavedHotels] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<"price" | "rating" | "distance" | "ai">("ai");
+  const [sortBy, _setSortBy] = useState<"price" | "rating" | "distance" | "ai">("ai");
 
   // Optimistic selection state
   const [optimisticSelecting, setOptimisticSelecting] = useOptimistic(
     "",
-    (state, hotelId: string) => hotelId
+    (_state, hotelId: string) => hotelId
   );
 
   const handleHotelSelect = (hotel: ModernHotelResult) => {

@@ -3,7 +3,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -16,7 +15,6 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import type { AccommodationSearchParams } from "@/types/search";
 import {
   Bed,
   Building2,
@@ -99,7 +97,7 @@ export function HotelSearchForm({
   // Optimistic search state
   const [optimisticSearching, setOptimisticSearching] = useOptimistic(
     false,
-    (state, isSearching: boolean) => isSearching
+    (_state, isSearching: boolean) => isSearching
   );
 
   // Mock data for demo - would come from backend

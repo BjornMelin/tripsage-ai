@@ -236,7 +236,7 @@ export default function TripDetailsPage() {
                 <div>
                   <h4 className="font-semibold mb-2">Estimated Costs</h4>
                   <div className="space-y-1 text-sm">
-                    {currentTrip.destinations.map((dest, index) => (
+                    {currentTrip.destinations.map((dest, _index) => (
                       <div key={dest.id} className="flex justify-between">
                         <span>{dest.name}</span>
                         <span>${dest.estimatedCost || 0}</span>

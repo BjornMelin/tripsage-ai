@@ -1,5 +1,3 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 

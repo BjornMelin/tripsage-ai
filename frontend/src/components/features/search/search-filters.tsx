@@ -103,7 +103,9 @@ export function SearchFilters({
                                   type="checkbox"
                                   checked={
                                     Array.isArray(activeFilters[filter.id]) &&
-                                    (activeFilters[filter.id] as any[])?.includes(option.value)
+                                    (activeFilters[filter.id] as any[])?.includes(
+                                      option.value
+                                    )
                                   }
                                   onChange={(e) => {
                                     const currentValues = Array.isArray(

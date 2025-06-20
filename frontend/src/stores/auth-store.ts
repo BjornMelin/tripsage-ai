@@ -368,7 +368,7 @@ export const useAuthStore = create<AuthState>()(
               registerError: null,
               passwordResetError: null,
             });
-          } catch (error) {
+          } catch (_error) {
             // Even if logout fails on server, clear local state
             set({
               isAuthenticated: false,
@@ -499,7 +499,7 @@ export const useAuthStore = create<AuthState>()(
             });
 
             return true;
-          } catch (error) {
+          } catch (_error) {
             set({ isRefreshingToken: false });
             await get().logout();
             return false;
@@ -517,7 +517,7 @@ export const useAuthStore = create<AuthState>()(
             // Mock API call to validate token
             await new Promise((resolve) => setTimeout(resolve, 200));
             return true;
-          } catch (error) {
+          } catch (_error) {
             return await get().refreshToken();
           }
         },
@@ -635,7 +635,7 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
-        verifyEmail: async (token) => {
+        verifyEmail: async (_token) => {
           set({ isLoading: true });
 
           try {
@@ -707,7 +707,7 @@ export const useAuthStore = create<AuthState>()(
             });
 
             return true;
-          } catch (error) {
+          } catch (_error) {
             return false;
           }
         },
@@ -719,18 +719,18 @@ export const useAuthStore = create<AuthState>()(
 
             // Return mock sessions
             return [];
-          } catch (error) {
+          } catch (_error) {
             return [];
           }
         },
 
-        revokeSession: async (sessionId) => {
+        revokeSession: async (_sessionId) => {
           try {
             // Mock API call
             await new Promise((resolve) => setTimeout(resolve, 500));
 
             return true;
-          } catch (error) {
+          } catch (_error) {
             return false;
           }
         },

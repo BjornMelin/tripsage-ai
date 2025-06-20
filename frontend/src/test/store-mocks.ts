@@ -69,7 +69,7 @@ export interface MockSearchResultsStore {
 
 export const createMockSearchResultsStore = (): MockSearchResultsStore => {
   const store = {
-    startSearch: vi.fn((searchType: string, params: Record<string, unknown>) => {
+    startSearch: vi.fn((_searchType: string, _params: Record<string, unknown>) => {
       const searchId = `search_${Date.now()}_test`;
       return searchId;
     }),

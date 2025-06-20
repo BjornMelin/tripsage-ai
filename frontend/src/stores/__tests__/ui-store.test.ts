@@ -1,15 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  type CommandPaletteState,
-  type LoadingState,
-  type ModalState,
-  type NavigationState,
-  type Notification,
-  type SidebarState,
-  type Theme,
-  useUIStore,
-} from "../ui-store";
+import { type Theme, useUIStore } from "../ui-store";
 
 // Mock window.matchMedia for theme detection
 Object.defineProperty(window, "matchMedia", {
@@ -853,14 +844,14 @@ describe("UI Store", () => {
 
       // Add notifications
       let infoId: string;
-      let warningId: string;
+      let _warningId: string;
       act(() => {
         infoId = result.current.addNotification({
           type: "info",
           title: "Data Loading",
           isRead: false,
         });
-        warningId = result.current.addNotification({
+        _warningId = result.current.addNotification({
           type: "warning",
           title: "Network Slow",
           isRead: false,

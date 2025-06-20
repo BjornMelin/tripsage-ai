@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type UpcomingFlight, useUpcomingFlights } from "@/hooks/use-trips";
-import { Calendar, Clock, Plane, Users } from "lucide-react";
+import { Clock, Plane } from "lucide-react";
 import Link from "next/link";
 
 interface UpcomingFlightsProps {

@@ -229,9 +229,15 @@ export const WebSocketConfigMessageSchema = z.object({
 export type WebSocketConfigMessage = z.infer<typeof WebSocketConfigMessageSchema>;
 
 // Configuration form schema for UI
-export const ConfigurationFormSchema = AgentConfigRequestSchema.extend({
+export const ConfigurationFormSchema = z.object({
   agent_type: AgentTypeEnum,
-}).refine((data) => {
+  temperature: z.number().optional(),
+  max_tokens: z.number().optional(),
+  top_p: z.number().optional(),
+  timeout_seconds: z.number().optional(),
+  model: z.string().optional(),
+  description: z.string().optional().nullable(),
+}).refine((data: any) => {
   // Agent-specific validation rules
   const recommendedTemperatures: Record<AgentType, number> = {
     budget_agent: 0.2,
@@ -239,8 +245,8 @@ export const ConfigurationFormSchema = AgentConfigRequestSchema.extend({
     itinerary_agent: 0.4,
   };
 
-  if (data.temperature !== undefined) {
-    const recommended = recommendedTemperatures[data.agent_type];
+  if (data.temperature !== undefined && data.agent_type) {
+    const recommended = recommendedTemperatures[data.agent_type as AgentType];
     const diff = Math.abs(data.temperature - recommended);
 
     // Warning for temperatures too far from recommended

@@ -65,7 +65,7 @@ class MockWebSocket {
             );
           });
         }
-      } catch (error) {
+      } catch (_error) {
         // Ignore parsing errors for this mock
       }
     }
@@ -182,7 +182,7 @@ describe("WebSocket Integration", () => {
                   );
                 });
               }
-            } catch (error) {
+            } catch (_error) {
               // Ignore parsing errors
             }
           }
@@ -203,7 +203,7 @@ describe("WebSocket Integration", () => {
 
       try {
         await authFailClient.connect();
-      } catch (error) {
+      } catch (_error) {
         // Expected to fail
       }
 

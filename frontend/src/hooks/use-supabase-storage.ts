@@ -42,74 +42,68 @@ export function useSupabaseStorage() {
   );
 
   // Fetch user's file attachments
-  const useFileAttachments = useCallback(
-    (filters?: {
-      tripId?: number;
-      chatMessageId?: number;
-      uploadStatus?: UploadStatus;
-      virusScanStatus?: VirusScanStatus;
-    }) => {
-      return useQuery({
-        queryKey: ["file-attachments", user?.id, filters],
-        queryFn: async () => {
-          if (!user?.id) throw new Error("User not authenticated");
+  const useFileAttachments = (filters?: {
+    tripId?: number;
+    chatMessageId?: number;
+    uploadStatus?: UploadStatus;
+    virusScanStatus?: VirusScanStatus;
+  }) => {
+    return useQuery({
+      queryKey: ["file-attachments", user?.id, filters],
+      queryFn: async () => {
+        if (!user?.id) throw new Error("User not authenticated");
 
-          let query = supabase
-            .from("file_attachments")
-            .select("*")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false });
+        let query = supabase
+          .from("file_attachments")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
-          if (filters?.tripId) {
-            query = query.eq("trip_id", filters.tripId);
-          }
-          if (filters?.chatMessageId) {
-            query = query.eq("chat_message_id", filters.chatMessageId);
-          }
-          if (filters?.uploadStatus) {
-            query = query.eq("upload_status", filters.uploadStatus);
-          }
-          if (filters?.virusScanStatus) {
-            query = query.eq("virus_scan_status", filters.virusScanStatus);
-          }
+        if (filters?.tripId) {
+          query = query.eq("trip_id", filters.tripId);
+        }
+        if (filters?.chatMessageId) {
+          query = query.eq("chat_message_id", filters.chatMessageId);
+        }
+        if (filters?.uploadStatus) {
+          query = query.eq("upload_status", filters.uploadStatus);
+        }
+        if (filters?.virusScanStatus) {
+          query = query.eq("virus_scan_status", filters.virusScanStatus);
+        }
 
-          const { data, error } = await query;
-          if (error) throw error;
-          return data as FileAttachment[];
-        },
-        enabled: !!user?.id,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-      });
-    },
-    [supabase, user?.id]
-  );
+        const { data, error } = await query;
+        if (error) throw error;
+        return data as FileAttachment[];
+      },
+      enabled: !!user?.id,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+  };
 
   // Get file attachment by ID
-  const useFileAttachment = useCallback(
-    (attachmentId: string | null) => {
-      return useQuery({
-        queryKey: ["file-attachment", attachmentId],
-        queryFn: async () => {
-          if (!attachmentId) throw new Error("Attachment ID is required");
+  const useFileAttachment = (attachmentId: string | null) => {
+    return useQuery({
+      queryKey: ["file-attachment", attachmentId],
+      queryFn: async () => {
+        if (!attachmentId) throw new Error("Attachment ID is required");
 
-          const { data, error } = await supabase
-            .from("file_attachments")
-            .select("*")
-            .eq("id", attachmentId)
-            .single();
+        const { data, error } = await supabase
+          .from("file_attachments")
+          .select("*")
+          .eq("id", attachmentId)
+          .single();
 
-          if (error) throw error;
-          return data as FileAttachment;
-        },
-        enabled: !!attachmentId,
-        staleTime: 1000 * 60 * 10, // 10 minutes
-      });
-    },
-    [supabase]
-  );
+        if (error) throw error;
+        return data as FileAttachment;
+      },
+      enabled: !!attachmentId,
+      staleTime: 1000 * 60 * 10, // 10 minutes
+    });
+  };
 
   // Get storage usage statistics
-  const useStorageStats = useCallback(() => {
+  const useStorageStats = () => {
     return useQuery({
       queryKey: ["storage-stats", user?.id],
       queryFn: async () => {
@@ -151,7 +145,7 @@ export function useSupabaseStorage() {
       enabled: !!user?.id,
       staleTime: 1000 * 60 * 15, // 15 minutes
     });
-  }, [supabase, user?.id]);
+  };
 
   // Upload file mutation
   const uploadFile = useMutation({

@@ -5,6 +5,8 @@
 
 import type { ActivitySearchParams } from "@/types/search";
 
+export type { ActivitySearchParams };
+
 export interface UseActivitySearchResult {
   searchActivities: (params: ActivitySearchParams) => Promise<void>;
   isSearching: boolean;

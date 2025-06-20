@@ -11,9 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useBudgetStore } from "@/stores/budget-store";
-import { type Trip, useTripStore } from "@/stores/trip-store";
+import type { Trip } from "@/stores/trip-store";
 import { differenceInDays, format } from "date-fns";
-import { Calendar, DollarSign, MapPin, Users } from "lucide-react";
+import { Calendar, DollarSign, MapPin } from "lucide-react";
 import Link from "next/link";
 
 interface TripCardProps {

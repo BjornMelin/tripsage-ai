@@ -523,7 +523,7 @@ export const useServiceKeysStore = create<ServiceKeysState>()(
         },
 
         // Validation actions
-        validateKey: async (keyId, options = {}) => {
+        validateKey: async (keyId, _options = {}) => {
           const key = get().keys[keyId];
           if (!key) {
             throw new Error("Key not found");
@@ -615,7 +615,7 @@ export const useServiceKeysStore = create<ServiceKeysState>()(
           return results;
         },
 
-        testKeyConnection: async (keyInput) => {
+        testKeyConnection: async (_keyInput) => {
           try {
             // Mock connection test - replace with actual API calls
             await new Promise((resolve) => setTimeout(resolve, 500));

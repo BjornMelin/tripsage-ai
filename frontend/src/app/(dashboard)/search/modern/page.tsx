@@ -5,18 +5,16 @@ import { HotelSearchForm } from "@/components/features/search/hotel-search-form"
 import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
 import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
 
+import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
+import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
 // Import the types from their source files
 import type { ModernFlightResult } from "@/components/features/search/modern-flight-results";
 import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
-import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
-import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import {
   Building2,
   Calendar,
@@ -227,7 +225,7 @@ export default function ModernSearchPage() {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
-  const [searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
+  const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
 
   const handleFlightSearch = async (params: ModernFlightSearchParams) => {
     startTransition(() => {

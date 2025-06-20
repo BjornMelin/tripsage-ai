@@ -22,7 +22,7 @@ vi.mock("@/contexts/auth-context", () => ({
 }));
 
 // Helper to create complete Supabase mock - use our complete mock helper
-const createCompleteSupabaseMock = (overrides = {}) => ({
+const _createCompleteSupabaseMock = (overrides = {}) => ({
   ...createCompleteQueryBuilder(),
   ...overrides,
 });
@@ -45,7 +45,7 @@ const mockChatRealtime = {
   isConnected: true,
   errors: [],
   newMessageCount: 0,
-  clearNewMessageCount: vi.fn(),
+  clearMessageCount: vi.fn(),
   messagesSubscription: { isConnected: true, error: null },
   toolCallsSubscription: { isConnected: true, error: null },
 };
@@ -414,7 +414,7 @@ describe("useSupabaseChat", () => {
             content: "Failed message",
             role: "user",
           });
-        } catch (error) {
+        } catch (_error) {
           // Expected to fail
         }
       });
@@ -679,7 +679,7 @@ describe("useSupabaseChat", () => {
           await result.current.createChatSession.mutateAsync({
             user_id: "test-user",
           });
-        } catch (error) {
+        } catch (_error) {
           // Expected to fail
         }
       });
@@ -734,7 +734,7 @@ describe("useChatWithRealtime", () => {
         isConnected: true,
         realtimeErrors: [],
         newMessageCount: 0,
-        clearNewMessageCount: expect.any(Function),
+        clearMessageCount: expect.any(Function),
       });
     });
 
@@ -776,7 +776,7 @@ describe("useChatWithRealtime", () => {
         require("../use-supabase-realtime").useChatRealtime
       ).mockReturnValueOnce({
         ...mockChatRealtime,
-        clearNewMessageCount: clearMock,
+        clearMessageCount: clearMock,
       });
 
       const { result } = renderHook(() => useChatWithRealtime("session-1"), {
@@ -784,7 +784,9 @@ describe("useChatWithRealtime", () => {
       });
 
       act(() => {
-        result.current.clearNewMessageCount();
+        if (result.current.clearMessageCount) {
+          result.current.clearMessageCount();
+        }
       });
 
       expect(clearMock).toHaveBeenCalled();
@@ -807,7 +809,7 @@ describe("useChatWithRealtime", () => {
         isConnected: expect.any(Boolean),
         realtimeErrors: expect.any(Array),
         newMessageCount: expect.any(Number),
-        clearNewMessageCount: expect.any(Function),
+        clearMessageCount: expect.any(Function),
       });
     });
   });

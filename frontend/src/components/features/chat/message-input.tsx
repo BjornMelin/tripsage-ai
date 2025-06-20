@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { uploadAttachments } from "@/lib/api/chat-api";
 import { Loader2, Mic, Paperclip, SendHorizontal, StopCircle } from "lucide-react";
 import type React from "react";
-import { FormEvent, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 interface MessageInputProps {
   disabled?: boolean;

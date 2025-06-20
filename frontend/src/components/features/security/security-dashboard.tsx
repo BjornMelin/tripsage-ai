@@ -4,7 +4,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import {
@@ -12,8 +11,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Eye,
-  Globe,
   Info,
   Key,
   Lock,

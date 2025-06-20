@@ -140,7 +140,10 @@ describe("Memory Hooks", () => {
         userId: "user-123",
         query: "travel preferences",
         limit: 10,
-        filters: { category: "accommodation" },
+        filters: {
+          type: ["accommodation"],
+          metadata: { category: "accommodation" },
+        },
       };
 
       result.current.mutate(searchParams);

@@ -1,4 +1,5 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { ApiError } from "@/lib/api/client";
+import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthenticatedApi } from "../use-authenticated-api";
 
@@ -223,7 +224,7 @@ describe("useAuthenticatedApi", () => {
 
     it("should retry request after token refresh on 401 error", async () => {
       mockFetchApi
-        .mockRejectedValueOnce(MockApiError("Unauthorized", 401))
+        .mockRejectedValueOnce(new ApiError("Unauthorized", 401))
         .mockResolvedValueOnce({ success: true });
 
       mockRefreshSession.mockResolvedValue({
@@ -246,7 +247,7 @@ describe("useAuthenticatedApi", () => {
     });
 
     it("should sign out on 401 error when refresh fails", async () => {
-      mockFetchApi.mockRejectedValue(MockApiError("Unauthorized", 401));
+      mockFetchApi.mockRejectedValue(new ApiError("Unauthorized", 401));
       mockRefreshSession.mockResolvedValue({
         data: { session: null },
         error: { message: "Refresh failed" },
@@ -296,7 +297,7 @@ describe("useAuthenticatedApi", () => {
       const { result } = renderHook(() => useAuthenticatedApi());
 
       // Start first request
-      const promise1 = result.current.makeAuthenticatedRequest("/api/test1");
+      const _promise1 = result.current.makeAuthenticatedRequest("/api/test1");
 
       // Start second request (should cancel first)
       const promise2 = result.current.makeAuthenticatedRequest("/api/test2");
@@ -461,7 +462,7 @@ describe("useAuthenticatedApi", () => {
     });
 
     it("should handle non-401 API errors", async () => {
-      mockFetchApi.mockRejectedValue(MockApiError("Server Error", 500));
+      mockFetchApi.mockRejectedValue(new ApiError("Server Error", 500));
 
       const { result } = renderHook(() => useAuthenticatedApi());
 
@@ -474,7 +475,7 @@ describe("useAuthenticatedApi", () => {
     });
 
     it("should handle refresh error during 401 retry", async () => {
-      mockFetchApi.mockRejectedValue(MockApiError("Unauthorized", 401));
+      mockFetchApi.mockRejectedValue(new ApiError("Unauthorized", 401));
       mockRefreshSession.mockRejectedValue(new Error("Refresh error"));
 
       const { result } = renderHook(() => useAuthenticatedApi());

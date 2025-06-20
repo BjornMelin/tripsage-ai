@@ -15,16 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { useBudgetStore } from "@/stores/budget-store";
-import { useDealsStore } from "@/stores/deals-store";
-import {
-  Brain,
-  Clock,
-  DollarSign,
-  MapPin,
-  Sparkles,
-  Star,
-  TrendingUp,
-} from "lucide-react";
+import { Brain, Clock, MapPin, Sparkles, Star, TrendingUp } from "lucide-react";
 import Link from "next/link";
 
 interface TripSuggestionsProps {

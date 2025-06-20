@@ -93,6 +93,9 @@ importers:
       '@supabase/auth-ui-shared':
         specifier: ^0.1.8
         version: 0.1.8(@supabase/supabase-js@2.50.0)
+      '@supabase/postgrest-js':
+        specifier: ^1.19.4
+        version: 1.19.4
       '@supabase/ssr':
         specifier: ^0.6.1
         version: 0.6.1(@supabase/supabase-js@2.50.0)

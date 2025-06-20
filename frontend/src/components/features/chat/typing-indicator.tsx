@@ -3,7 +3,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { User } from "lucide-react";
-import React from "react";
 
 interface TypingUser {
   userId: string;
