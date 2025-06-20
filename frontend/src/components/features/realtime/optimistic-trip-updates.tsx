@@ -371,7 +371,7 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
 /**
  * Collaboration indicator showing who else is currently editing
  */
-export function CollaborationIndicator({ tripId }: { tripId: number }) {
+export function CollaborationIndicator({ tripId: _tripId }: { tripId: number }) {
   const [activeCollaborators] = useState([
     { id: "user-456", name: "Alice Johnson", editing: "budget" },
     { id: "user-789", name: "Bob Smith", editing: null },

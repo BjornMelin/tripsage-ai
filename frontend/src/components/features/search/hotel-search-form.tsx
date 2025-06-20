@@ -75,7 +75,7 @@ const AMENITIES = [
 
 export function HotelSearchForm({
   onSearch,
-  suggestions = [],
+  suggestions: _suggestions = [],
   className,
   showRecommendations = true,
 }: HotelSearchFormProps) {

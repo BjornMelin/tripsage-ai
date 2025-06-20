@@ -21,7 +21,7 @@ vi.mock("@hello-pangea/dnd", () => ({
     };
     return children(provided);
   },
-  Draggable: ({ children, draggableId, index }: any) => {
+  Draggable: ({ children, draggableId, index: _index }: any) => {
     const provided = {
       innerRef: vi.fn(),
       draggableProps: { "data-draggable-id": draggableId },

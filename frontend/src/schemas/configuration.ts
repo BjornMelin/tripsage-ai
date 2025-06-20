@@ -229,36 +229,38 @@ export const WebSocketConfigMessageSchema = z.object({
 export type WebSocketConfigMessage = z.infer<typeof WebSocketConfigMessageSchema>;
 
 // Configuration form schema for UI
-export const ConfigurationFormSchema = z.object({
-  agent_type: AgentTypeEnum,
-  temperature: z.number().optional(),
-  max_tokens: z.number().optional(),
-  top_p: z.number().optional(),
-  timeout_seconds: z.number().optional(),
-  model: z.string().optional(),
-  description: z.string().optional().nullable(),
-}).refine((data: any) => {
-  // Agent-specific validation rules
-  const recommendedTemperatures: Record<AgentType, number> = {
-    budget_agent: 0.2,
-    destination_research_agent: 0.5,
-    itinerary_agent: 0.4,
-  };
+export const ConfigurationFormSchema = z
+  .object({
+    agent_type: AgentTypeEnum,
+    temperature: z.number().optional(),
+    max_tokens: z.number().optional(),
+    top_p: z.number().optional(),
+    timeout_seconds: z.number().optional(),
+    model: z.string().optional(),
+    description: z.string().optional().nullable(),
+  })
+  .refine((data: any) => {
+    // Agent-specific validation rules
+    const recommendedTemperatures: Record<AgentType, number> = {
+      budget_agent: 0.2,
+      destination_research_agent: 0.5,
+      itinerary_agent: 0.4,
+    };
 
-  if (data.temperature !== undefined && data.agent_type) {
-    const recommended = recommendedTemperatures[data.agent_type as AgentType];
-    const diff = Math.abs(data.temperature - recommended);
+    if (data.temperature !== undefined && data.agent_type) {
+      const recommended = recommendedTemperatures[data.agent_type as AgentType];
+      const diff = Math.abs(data.temperature - recommended);
 
-    // Warning for temperatures too far from recommended
-    if (diff > 0.3) {
-      return {
-        warning: `Temperature ${data.temperature} may not be optimal for ${data.agent_type}. Recommended: ${recommended}`,
-      };
+      // Warning for temperatures too far from recommended
+      if (diff > 0.3) {
+        return {
+          warning: `Temperature ${data.temperature} may not be optimal for ${data.agent_type}. Recommended: ${recommended}`,
+        };
+      }
     }
-  }
 
-  return true;
-});
+    return true;
+  });
 
 export type ConfigurationForm = z.infer<typeof ConfigurationFormSchema>;
 

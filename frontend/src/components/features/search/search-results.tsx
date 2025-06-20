@@ -26,7 +26,7 @@ export function SearchResults({
   type,
   results,
   loading = false,
-  onFilter,
+  onFilter: _onFilter,
   onSort,
   onSelectResult,
 }: SearchResultsProps) {
@@ -294,107 +294,7 @@ function FlightResultCard({
   );
 }
 
-function AccommodationResultCard({
-  accommodation,
-  view,
-}: { accommodation: Accommodation; view: "list" | "grid" | "map" }) {
-  return (
-    <Card
-      className={`overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer ${view === "list" ? "flex" : ""}`}
-    >
-      <div
-        className={`${view === "list" ? "w-1/3 bg-muted flex items-center justify-center" : "h-40 bg-muted flex items-center justify-center"}`}
-      >
-        <span className="text-muted-foreground">Image Placeholder</span>
-      </div>
-      <CardContent className={`p-4 ${view === "list" ? "flex-1" : ""}`}>
-        {view === "list" ? (
-          <div className="flex flex-col h-full">
-            <div className="flex justify-between mb-2">
-              <div>
-                <p className="font-medium">{accommodation.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {accommodation.location}
-                </p>
-                <div className="flex items-center mt-1">
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2">
-                    {accommodation.rating} ★
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {accommodation.type}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">${accommodation.pricePerNight}</p>
-                <p className="text-xs text-muted-foreground">per night</p>
-                <p className="text-sm font-medium mt-1">${accommodation.totalPrice}</p>
-                <p className="text-xs text-muted-foreground">total</p>
-              </div>
-            </div>
-            <div className="mt-2">
-              <div className="flex flex-wrap gap-1 mb-2">
-                {accommodation.amenities.slice(0, 3).map((amenity, index) => (
-                  <span
-                    key={`amenity-${amenity}-${index}`}
-                    className="text-xs bg-muted px-2 py-0.5 rounded-full"
-                  >
-                    {amenity}
-                  </span>
-                ))}
-                {accommodation.amenities.length > 3 && (
-                  <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                    +{accommodation.amenities.length - 3} more
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="mt-auto pt-2">
-              <Button>View Details</Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="mb-2">
-              <p className="font-medium">{accommodation.name}</p>
-              <p className="text-sm text-muted-foreground">{accommodation.location}</p>
-              <div className="flex items-center mt-1 mb-2">
-                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2">
-                  {accommodation.rating} ★
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {accommodation.type}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1 mb-2">
-                {accommodation.amenities.slice(0, 2).map((amenity, index) => (
-                  <span
-                    key={`amenity-${amenity}-${index}`}
-                    className="text-xs bg-muted px-2 py-0.5 rounded-full"
-                  >
-                    {amenity}
-                  </span>
-                ))}
-                {accommodation.amenities.length > 2 && (
-                  <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                    +{accommodation.amenities.length - 2} more
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-2">
-              <div>
-                <p className="font-medium">${accommodation.pricePerNight}</p>
-                <p className="text-xs text-muted-foreground">per night</p>
-              </div>
-              <Button size="sm">View</Button>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+// AccommodationResultCard removed - was unused
 
 function ActivityResultCard({
   activity,

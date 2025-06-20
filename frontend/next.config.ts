@@ -55,7 +55,7 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
 
   // Webpack configuration (if needed)
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer: _isServer }) => {
     // Custom webpack config if Turbopack doesn't cover all needs
     return config;
   },

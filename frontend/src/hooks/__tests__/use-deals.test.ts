@@ -169,7 +169,7 @@ describe("useDeals Hook", () => {
   });
 
   it("should initialize the store when mounted", () => {
-    const { result } = renderHook(() => useDeals());
+    const { result: _result } = renderHook(() => useDeals());
 
     // Check initialization was called
     expect(mockStore.isInitialized).toBe(true);

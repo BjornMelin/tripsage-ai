@@ -12,13 +12,7 @@ import type { Activity } from "@/types/search";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-// Type for URL search parameters
-interface SearchParamsState {
-  destination?: string;
-  date?: string;
-  category?: string;
-  maxPrice?: string;
-}
+// URL search parameters are handled inline
 
 export default function ActivitiesSearchPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);

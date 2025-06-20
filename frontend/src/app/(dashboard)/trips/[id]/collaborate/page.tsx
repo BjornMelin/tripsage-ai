@@ -62,9 +62,11 @@ export default function TripCollaborationPage() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const { trip, isConnected, connectionErrors } = useTripWithRealtime(
-    Number.parseInt(tripId, 10)
-  );
+  const {
+    trip,
+    isConnected,
+    connectionErrors: _connectionErrors,
+  } = useTripWithRealtime(Number.parseInt(tripId, 10));
 
   // Type assertion for trip data
   const typedTrip = trip as {

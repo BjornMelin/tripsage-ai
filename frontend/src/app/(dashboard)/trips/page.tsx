@@ -28,7 +28,12 @@ type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
 export default function TripsPage() {
   const { createTrip, deleteTrip } = useTripStore();
-  const { trips, isLoading, error, realtimeStatus } = useTripsWithRealtime();
+  const {
+    trips,
+    isLoading,
+    error,
+    realtimeStatus: _realtimeStatus,
+  } = useTripsWithRealtime();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");

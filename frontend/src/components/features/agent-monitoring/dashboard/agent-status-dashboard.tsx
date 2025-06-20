@@ -222,7 +222,7 @@ const PredictiveCard: React.FC<{ indicator: PredictiveIndicator }> = ({
 export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   agents: externalAgents,
   onAgentSelect,
-  refreshInterval = 5000,
+  refreshInterval: _refreshInterval = 5000,
 }) => {
   const [timeSeriesData] = useState(generateMockTimeSeriesData);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
@@ -235,16 +235,16 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
     connectionError,
     reconnectAttempts,
     connect,
-    disconnect,
-    startAgentMonitoring,
-    stopAgentMonitoring,
+    disconnect: _disconnect,
+    startAgentMonitoring: _startAgentMonitoring,
+    stopAgentMonitoring: _stopAgentMonitoring,
   } = useAgentStatusWebSocket();
 
   // Use agent status store
   const {
     agents: storeAgents,
-    activeAgents,
-    currentSession,
+    activeAgents: _activeAgents,
+    currentSession: _currentSession,
     isMonitoring,
     error,
     startMonitoring,

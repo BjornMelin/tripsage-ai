@@ -19,7 +19,7 @@ export function useAgentStatusWebSocket() {
   const { tokenInfo, user } = useAuthStore();
   const {
     startSession,
-    endSession,
+    endSession: _endSession,
     updateAgentStatus,
     updateAgentProgress,
     addAgent,

@@ -48,7 +48,7 @@ interface MessageItemProps {
 
 export function MessageItem({
   message,
-  activeToolCalls,
+  activeToolCalls: _activeToolCalls,
   toolResults,
   onRetryToolCall,
   onCancelToolCall,

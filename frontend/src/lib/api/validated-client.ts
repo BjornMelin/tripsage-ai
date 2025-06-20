@@ -43,21 +43,7 @@ interface RequestOptions extends RequestInit {
   validateResponse?: boolean;
 }
 
-// Generic API response type
-type ApiResponse<T = unknown> = {
-  success: boolean;
-  data?: T;
-  error?: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
-  metadata?: {
-    requestId?: string;
-    timestamp: string;
-    version?: string;
-  };
-};
+// Generic API response type removed - was unused
 
 // Validated API client class
 export class ValidatedApiClient {

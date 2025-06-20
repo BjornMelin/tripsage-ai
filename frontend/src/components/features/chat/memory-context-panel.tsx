@@ -22,7 +22,7 @@ import { useState } from "react";
 
 export default function MemoryContextPanel({
   userId,
-  sessionId,
+  sessionId: _sessionId,
   className,
   onMemorySelect,
 }: MemoryContextPanelProps) {
@@ -154,7 +154,7 @@ export default function MemoryContextPanel({
     const {
       travelPersonality,
       budgetPatterns,
-      destinationPreferences,
+      destinationPreferences: _destinationPreferences,
       recommendations,
     } = insights.insights;
 

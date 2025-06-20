@@ -10,7 +10,6 @@ import { useSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-type Trip = Database["public"]["Tables"]["trips"]["Row"];
 type TripInsert = Database["public"]["Tables"]["trips"]["Insert"];
 type TripUpdate = Database["public"]["Tables"]["trips"]["Update"];
 
@@ -273,8 +272,8 @@ export function useRemoveTripCollaborator() {
 
   return useMutation({
     mutationFn: async ({
-      tripId,
-      collaboratorId,
+      tripId: _tripId,
+      collaboratorId: _collaboratorId,
     }: { tripId: number; collaboratorId: number }) => {
       if (!user?.id) {
         throw new Error("User not authenticated");

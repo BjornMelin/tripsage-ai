@@ -207,12 +207,12 @@ export function TripSuggestions({
   });
 
   // Memory-based recommendations
-  const { data: memoryContext, isLoading: memoryLoading } = useMemoryContext(
+  const { data: memoryContext, isLoading: _memoryLoading } = useMemoryContext(
     userId || "",
     !!userId && showMemoryBased
   );
 
-  const { data: insights, isLoading: insightsLoading } = useMemoryInsights(
+  const { data: insights, isLoading: _insightsLoading } = useMemoryInsights(
     userId || "",
     !!userId && showMemoryBased
   );
@@ -221,8 +221,12 @@ export function TripSuggestions({
   const generateMemoryBasedSuggestions = (): TripSuggestion[] => {
     if (!memoryContext?.context || !insights?.insights) return [];
 
-    const { userPreferences, travelPatterns } = memoryContext.context;
-    const { recommendations, budgetPatterns, travelPersonality } = insights.insights;
+    const { userPreferences, travelPatterns: _travelPatterns } = memoryContext.context;
+    const {
+      recommendations,
+      budgetPatterns,
+      travelPersonality: _travelPersonality,
+    } = insights.insights;
 
     const memoryBasedSuggestions: TripSuggestion[] = [];
 

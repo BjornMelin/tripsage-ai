@@ -13,7 +13,7 @@ interface SearchFiltersProps {
 }
 
 export function SearchFilters({
-  type,
+  type: _type,
   filters,
   onApplyFilters,
   onResetFilters,

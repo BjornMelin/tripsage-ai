@@ -46,7 +46,7 @@ const preferencesSchema = z.object({
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export function PreferencesSection() {
-  const { profile } = useUserProfileStore();
+  const { profile: _profile } = useUserProfileStore();
   const { baseCurrency, setBaseCurrency } = useCurrencyStore();
   const { toast } = useToast();
 

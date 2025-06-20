@@ -19,7 +19,7 @@ import {
  * Provides both data and connection status monitoring
  */
 export function useTripsWithRealtime() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { data: trips, isLoading, error, refetch } = useTrips();
 
   // Set up real-time subscription for all user trips
@@ -40,7 +40,7 @@ export function useTripsWithRealtime() {
  * Hook for individual trip with real-time updates
  */
 export function useTripWithRealtime(tripId: number | null) {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { data: trip, isLoading, error, refetch } = useTripData(tripId);
   const realtimeStatus = useTripRealtime(tripId);
 
@@ -59,7 +59,7 @@ export function useTripWithRealtime(tripId: number | null) {
  * Connection status summary for trips real-time functionality
  */
 export function useTripsConnectionStatus() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const realtimeStatus = useTripRealtime(null);
 
   const connectionStatus = useMemo(() => {
@@ -78,7 +78,7 @@ export function useTripsConnectionStatus() {
  * Hook for trip collaboration management with real-time updates
  */
 export function useTripCollaboration(tripId: string | number) {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const numericTripId =
     typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
 

@@ -155,7 +155,7 @@ export function simulatePostgresChange<
 >(channel: MockRealtimeChannel, payload: RealtimePostgresChangesPayload<T>) {
   const postgresCallbacks = channel._callbacks.postgres_changes || [];
 
-  postgresCallbacks.forEach(({ event, schema, table, filter, callback }) => {
+  postgresCallbacks.forEach(({ event, schema, table, filter: _filter, callback }) => {
     const matchesEvent = event === "*" || event === payload.eventType;
     const matchesSchema = schema === payload.schema;
     const matchesTable = table === payload.table;

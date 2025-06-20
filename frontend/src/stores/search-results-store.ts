@@ -651,7 +651,11 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         },
 
         getPerformanceInsights: () => {
-          const { searchHistory, performanceHistory, errorHistory } = get();
+          const {
+            searchHistory,
+            performanceHistory: _performanceHistory,
+            errorHistory,
+          } = get();
           const totalSearches = searchHistory.length;
           const totalErrors = errorHistory.length;
 

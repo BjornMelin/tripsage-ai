@@ -174,7 +174,7 @@ export function ChatInterface({
   className,
   placeholder,
   disabled = false,
-  sessionId,
+  sessionId: _sessionId,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>(SAMPLE_MESSAGES);
   const [isLoading, setIsLoading] = useState(false);

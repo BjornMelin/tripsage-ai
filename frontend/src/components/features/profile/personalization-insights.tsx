@@ -88,8 +88,11 @@ export function PersonalizationInsights({
   const renderOverview = () => {
     if (!insights?.insights) return null;
 
-    const { travelPersonality, budgetPatterns, destinationPreferences } =
-      insights.insights;
+    const {
+      travelPersonality,
+      budgetPatterns: _budgetPatterns,
+      destinationPreferences,
+    } = insights.insights;
 
     return (
       <div className="space-y-6">
