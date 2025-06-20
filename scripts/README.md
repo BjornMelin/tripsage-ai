@@ -7,9 +7,11 @@ Automation scripts and utilities for TripSage development, deployment, and opera
 ## Directory Structure
 
 ### `/automation/` - Deployment Scripts
+
 - **`deploy_extensions.py`** - Deploy Supabase extensions and automation features
 
 ### `/database/` - Database Management
+
 - **`init_database.py`** - Initialize database schema and seed data
 - **`run_migrations.py`** - Apply pending SQL migrations (supports `--dry-run`)
 - **`deploy_storage_infrastructure.py`** - Deploy storage buckets and policies
@@ -17,19 +19,23 @@ Automation scripts and utilities for TripSage development, deployment, and opera
 - **`migrations/`** - SQL migration files with timestamp prefixes
 
 ### `/benchmarks/` - Performance Testing
+
 - **`benchmark.py`** - Unified performance testing suite
 - **`config.py`** - Benchmark configuration and settings
 - **`collectors.py`** - Metrics collection and reporting
 
 ### `/security/` - Security Validation
+
 - **`security_validation.py`** - Vulnerability testing and security audits
 - **`rls_vulnerability_tests.sql`** - RLS policy validation tests
 
 ### `/testing/` - Test Utilities
+
 - **`test_runner.py`** - Main test execution and environment validation
 - **`run_tests_with_coverage.py`** - Test execution with coverage reporting
 
 ### `/verification/` - Connection & Health Checks
+
 - **`verify_connection.py`** - Database connection validation
 - **`verify_dragonfly.py`** - DragonflyDB connection and performance testing
 - **`verify_extensions.py`** - Extension functionality verification
@@ -38,6 +44,7 @@ Automation scripts and utilities for TripSage development, deployment, and opera
 ## Common Workflows
 
 ### Environment Setup
+
 ```bash
 # 1. Initialize database
 python scripts/database/init_database.py
@@ -54,6 +61,7 @@ python scripts/verification/verify_dragonfly.py
 ```
 
 ### Development Workflow
+
 ```bash
 # Run tests with coverage
 python scripts/testing/run_tests_with_coverage.py
@@ -66,6 +74,7 @@ python scripts/benchmarks/benchmark.py --quick
 ```
 
 ### Performance Testing
+
 ```bash
 # Quick benchmark suite
 python scripts/benchmarks/benchmark.py --iterations=50 --concurrent=5
@@ -79,6 +88,7 @@ python scripts/benchmarks/benchmark.py --vector-only
 ```
 
 ### Database Operations
+
 ```bash
 # Dry-run migrations (safe preview)
 python scripts/database/run_migrations.py --dry-run
@@ -124,12 +134,14 @@ pip install asyncpg supabase click pydantic pytest
 ## Safety Guidelines
 
 ### Before Running Scripts
+
 1. **Backup data** before running migration or database scripts
 2. **Use dry-run flags** when available to preview changes
 3. **Test in development** environment first
 4. **Review script output** for warnings or errors
 
 ### Environment-Specific Considerations
+
 - **Development**: Safe to run all scripts
 - **Staging**: Use dry-run flags for database operations
 - **Production**: Coordinate with team, use maintenance windows
@@ -137,12 +149,14 @@ pip install asyncpg supabase click pydantic pytest
 ## Performance Expectations
 
 ### Benchmark Targets
+
 - **API Response Time**: <100ms (95th percentile)
 - **Database Operations**: <50ms (complex queries)
 - **Vector Search**: <10ms (with HNSW indexing)
 - **Cache Operations**: <5ms (DragonflyDB)
 
 ### Coverage Requirements
+
 - **Test Coverage**: ≥90% for critical paths
 - **Benchmark Coverage**: All major service operations
 - **Security Coverage**: All authentication and authorization flows
@@ -151,7 +165,8 @@ pip install asyncpg supabase click pydantic pytest
 
 ### Common Issues
 
-**Connection Failures**
+#### **Connection Failures**
+
 ```bash
 # Check database connectivity
 python scripts/verification/verify_connection.py
@@ -160,7 +175,8 @@ python scripts/verification/verify_connection.py
 python scripts/verification/verify_dragonfly.py
 ```
 
-**Migration Errors**
+#### **Migration Errors**
+
 ```bash
 # View pending migrations
 python scripts/database/run_migrations.py --status
@@ -169,7 +185,8 @@ python scripts/database/run_migrations.py --status
 python scripts/database/run_migrations.py --dry-run
 ```
 
-**Performance Issues**
+#### **Performance Issues**
+
 ```bash
 # Run diagnostic benchmarks
 python scripts/benchmarks/benchmark.py --diagnostics
