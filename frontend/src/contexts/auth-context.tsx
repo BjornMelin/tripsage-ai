@@ -179,7 +179,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     try {
       setAuthState({ isLoading: true, error: null });
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data: _data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -204,7 +204,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     try {
       setAuthState({ isLoading: true, error: null });
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data: _data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -234,7 +234,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     try {
       setAuthState({ isLoading: true, error: null });
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { data: _data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
@@ -365,7 +365,7 @@ export function withAuth<P extends object>(
   }
 ) {
   return function ProtectedComponent(props: P) {
-    const { user, isAuthenticated, isLoading } = useAuth();
+    const { user: _user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {

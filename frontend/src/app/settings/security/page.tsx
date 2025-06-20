@@ -34,7 +34,7 @@ interface SecuritySettings {
 }
 
 export default function SecuritySettingsPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [settings, setSettings] = useState<SecuritySettings>({
     twoFactorEnabled: false,
     emailNotifications: true,

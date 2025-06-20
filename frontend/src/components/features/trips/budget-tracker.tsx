@@ -36,7 +36,7 @@ export function BudgetTracker({
   const { budgets, activeBudget, budgetSummary, budgetsByTrip, setActiveBudget } =
     useBudgetStore();
 
-  const { baseCurrency } = useCurrencyStore();
+  const { baseCurrency: _baseCurrency } = useCurrencyStore();
 
   const targetBudget = useMemo(() => {
     if (budgetId) {

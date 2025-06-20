@@ -101,7 +101,7 @@ export function DestinationSearchForm({
   const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
 
   // Memory-based recommendations
-  const { data: memoryContext, isLoading: memoryLoading } = useMemoryContext(
+  const { data: memoryContext, isLoading: _memoryLoading } = useMemoryContext(
     userId || "",
     !!userId && showMemoryRecommendations
   );

@@ -18,7 +18,7 @@ vi.stubGlobal(
         super(mockDate.getTime());
       } else {
         // Handle the spread operator properly for Date constructor
-        if (args.length === 1 && typeof args[0] === 'number') {
+        if (args.length === 1 && typeof args[0] === "number") {
           super(args[0]);
         } else {
           super(args[0], args[1], args[2], args[3], args[4], args[5], args[6]);

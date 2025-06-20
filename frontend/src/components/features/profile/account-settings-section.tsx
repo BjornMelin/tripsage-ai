@@ -45,7 +45,7 @@ const emailUpdateSchema = z.object({
 type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
 
 export function AccountSettingsSection() {
-  const { profile, updatePersonalInfo } = useUserProfileStore();
+  const { profile, updatePersonalInfo: _updatePersonalInfo } = useUserProfileStore();
   const { toast } = useToast();
 
   const emailForm = useForm<EmailUpdateFormData>({

@@ -25,7 +25,7 @@ export function MessageInput({
   placeholder = "Type a message...",
   showAttachmentButton = true,
   showVoiceButton = true,
-  className,
+  className: _className,
   value = "",
   onChange,
   onSend,

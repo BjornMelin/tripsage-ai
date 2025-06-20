@@ -93,7 +93,7 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
 /**
  * Minimal error fallback for critical errors
  */
-export function MinimalErrorFallback({ error, reset }: ErrorFallbackProps) {
+export function MinimalErrorFallback({ error: _error, reset }: ErrorFallbackProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="text-center space-y-4">

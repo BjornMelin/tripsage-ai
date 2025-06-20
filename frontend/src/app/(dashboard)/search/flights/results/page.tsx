@@ -18,7 +18,12 @@ import { useSearchParams } from "next/navigation";
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();
   const searchId = searchParams.get("searchId");
-  const { results, status, currentContext, searchProgress } = useSearchResultsStore();
+  const {
+    results: _results,
+    status,
+    currentContext,
+    searchProgress,
+  } = useSearchResultsStore();
 
   // Mock flight results for demo
   const mockFlights = [

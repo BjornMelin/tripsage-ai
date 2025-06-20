@@ -506,7 +506,7 @@ describe("Agent Workflow Integration Tests", () => {
         selectedAgent = agentId;
       };
 
-      const { rerender } = renderWithProviders(
+      const { rerender: _rerender } = renderWithProviders(
         <div>
           <AgentStatusDashboard
             agents={mockAgentMetrics}

@@ -68,7 +68,7 @@ interface SecurityDevice {
 }
 
 export function SecuritySection() {
-  const { profile } = useUserProfileStore();
+  const { profile: _profile } = useUserProfileStore();
   const { toast } = useToast();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);

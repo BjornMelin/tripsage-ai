@@ -60,7 +60,7 @@ interface SecurityMetrics {
 }
 
 export function SecurityDashboard() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const apiKeysQuery = useApiKeys();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [sessions, setSessions] = useState<ActiveSession[]>([]);

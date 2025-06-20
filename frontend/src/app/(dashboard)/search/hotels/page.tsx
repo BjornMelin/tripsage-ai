@@ -18,7 +18,7 @@ import type { AccommodationSearchParams } from "@/types/search";
 import { useState } from "react";
 
 export default function HotelSearchPage() {
-  const { search, isSearching } = useAccommodationSearch();
+  const { search: _search, isSearching } = useAccommodationSearch();
   const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -167,7 +167,7 @@ export default function HotelSearchPage() {
 function PopularDestinationCard({
   destination,
   priceFrom,
-  image,
+  image: _image,
   rating,
 }: {
   destination: string;

@@ -18,7 +18,7 @@ interface TypingIndicatorProps {
 
 export function TypingIndicator({
   typingUsers,
-  sessionId,
+  sessionId: _sessionId,
   className,
 }: TypingIndicatorProps) {
   // Filter out old typing indicators (older than 5 seconds)

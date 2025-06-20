@@ -64,7 +64,7 @@ interface FlightSearchFormProps {
 
 export function FlightSearchForm({
   onSearch,
-  suggestions = [],
+  suggestions: _suggestions = [],
   className,
   showSmartBundles = true,
   initialParams,

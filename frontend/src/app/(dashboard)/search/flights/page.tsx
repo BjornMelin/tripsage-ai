@@ -15,15 +15,7 @@ import type { FlightSearchParams } from "@/types/search";
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 
-// Type for URL search parameters
-interface FlightSearchParamsState {
-  origin?: string;
-  destination?: string;
-  departDate?: string;
-  returnDate?: string;
-  passengers?: string;
-  class?: string;
-}
+// URL search parameters are handled inline
 
 export default function FlightSearchPage() {
   const { initializeSearch, executeSearch } = useSearchStore();
