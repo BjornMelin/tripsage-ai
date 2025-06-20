@@ -6,7 +6,7 @@ using modern pytest patterns, async testing, and property-based testing.
 
 Features tested:
 - Real-time metrics aggregation
-- Service analytics and health monitoring  
+- Service analytics and health monitoring
 - User activity tracking and analytics
 - Alert management system
 - Rate limiting status monitoring
@@ -24,29 +24,26 @@ Testing patterns used:
 """
 
 import asyncio
-import json
-import statistics
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import pytest_asyncio
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
-from tripsage_core.exceptions import CoreServiceError
-from tripsage_core.services.business.api_key_service import ServiceType, ServiceHealthStatus, ValidationStatus
+from tripsage_core.services.business.api_key_service import (
+    ServiceHealthStatus,
+    ServiceType,
+)
 from tripsage_core.services.business.dashboard_service import (
-    DashboardService,
     AlertData,
     AlertSeverity,
     AlertType,
-    DashboardData,
-    RealTimeMetrics,
-    ServiceAnalytics,
-    UserActivityData,
-    RateLimitStatus,
     ApiKeyValidator,
+    DashboardData,
+    DashboardService,
+    RealTimeMetrics,
 )
 
 
@@ -57,7 +54,7 @@ class TestDashboardServiceModern:
     async def mock_cache_service(self) -> AsyncMock:
         """Create mock cache service with realistic behavior."""
         cache = AsyncMock()
-        
+
         # Basic cache operations
         cache.get_json = AsyncMock(return_value=None)
         cache.set_json = AsyncMock(return_value=True)
@@ -66,12 +63,12 @@ class TestDashboardServiceModern:
         cache.delete = AsyncMock(return_value=True)
         cache.ping = AsyncMock(return_value=True)
         cache.is_connected = True
-        
+
         # Advanced cache operations for rate limiting
         cache.hincrby = AsyncMock(return_value=1)
         cache.expire = AsyncMock(return_value=True)
         cache.keys = AsyncMock(return_value=["rate_limit:key1", "rate_limit:key2"])
-        
+
         # Performance simulation
         async def realistic_get_json(key: str) -> Dict[str, Any] | None:
             await asyncio.sleep(0.001)  # 1ms realistic cache latency
@@ -80,12 +77,14 @@ class TestDashboardServiceModern:
                 return {
                     "count": 45,
                     "limit": 100,
-                    "reset_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+                    "reset_at": (
+                        datetime.now(timezone.utc) + timedelta(hours=1)
+                    ).isoformat(),
                 }
             elif "dashboard:metrics:" in key:
                 return None  # Force fresh computation
             return None
-        
+
         cache.get_json.side_effect = realistic_get_json
         return cache
 
@@ -93,17 +92,17 @@ class TestDashboardServiceModern:
     async def mock_database_service(self) -> AsyncMock:
         """Create mock database service with realistic behavior."""
         db = AsyncMock()
-        
+
         # Mock common database operations
         db.fetch_one = AsyncMock(return_value=None)
         db.fetch_all = AsyncMock(return_value=[])
         db.execute = AsyncMock(return_value=None)
         db.select = AsyncMock(return_value=[])
-        
+
         # Performance simulation
         async def realistic_select(table: str, **kwargs) -> List[Dict[str, Any]]:
             await asyncio.sleep(0.005)  # 5ms realistic database latency
-            
+
             if table == "api_key_usage_logs":
                 # Generate realistic usage logs
                 now = datetime.now(timezone.utc)
@@ -119,7 +118,7 @@ class TestDashboardServiceModern:
                     for i in range(100)  # 100 usage records
                 ]
             return []
-        
+
         db.select.side_effect = realistic_select
         return db
 
@@ -129,7 +128,8 @@ class TestDashboardServiceModern:
         settings = MagicMock()
         settings.environment = "test"
         settings.cache_ttl = 300
-        settings.secret_key = "test-secret-key-for-encryption-testing-32-chars"  # 32+ chars for encryption
+        # 32+ chars for encryption
+        settings.secret_key = "test-secret-key-for-encryption-testing-32-chars"
         return settings
 
     @pytest_asyncio.fixture
@@ -175,12 +175,14 @@ class TestDashboardServiceModern:
         self, dashboard_service, mock_database_service, sample_usage_logs
     ):
         """Test successful dashboard data retrieval."""
-        # Mock the _query_usage_logs method directly to ensure it returns our sample data
-        with patch.object(dashboard_service, '_query_usage_logs', return_value=sample_usage_logs):
+        # Mock the _query_usage_logs method directly to ensure sample data
+        with patch.object(
+            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+        ):
             # Mock health checks
             with patch.object(
-                dashboard_service.api_key_service, 
-                'check_all_services_health',
+                dashboard_service.api_key_service,
+                "check_all_services_health",
                 return_value={
                     ServiceType.OPENAI: MagicMock(
                         status=ServiceHealthStatus.HEALTHY,
@@ -192,12 +194,12 @@ class TestDashboardServiceModern:
                         latency_ms=300.0,
                         checked_at=datetime.now(timezone.utc),
                     ),
-                }
+                },
             ):
                 dashboard_data = await dashboard_service.get_dashboard_data(
                     time_range_hours=24, top_users_limit=10
                 )
-        
+
         # Verify dashboard data structure
         assert isinstance(dashboard_data, DashboardData)
         assert isinstance(dashboard_data.metrics, RealTimeMetrics)
@@ -206,8 +208,8 @@ class TestDashboardServiceModern:
         assert isinstance(dashboard_data.recent_alerts, list)
         assert isinstance(dashboard_data.usage_trend, list)
         assert isinstance(dashboard_data.cache_stats, dict)
-        
-        # Verify metrics calculation based on sample_usage_logs (200 records, 5% error rate)
+
+        # Verify metrics calculation based on sample_usage_logs (200, 5% error)
         assert dashboard_data.metrics.total_requests == 200
         assert dashboard_data.metrics.total_errors == 10  # 5% of 200
         assert dashboard_data.metrics.success_rate == 0.95
@@ -232,17 +234,17 @@ class TestDashboardServiceModern:
             "period_start": datetime.now(timezone.utc).isoformat(),
             "period_end": datetime.now(timezone.utc).isoformat(),
         }
-        
+
         mock_cache_service.get_json.return_value = cached_metrics
-        
+
         # Mock health checks
         with patch.object(
-            dashboard_service.api_key_service, 
-            'check_all_services_health',
-            return_value={}
+            dashboard_service.api_key_service,
+            "check_all_services_health",
+            return_value={},
         ):
             dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         # Verify cache was used
         assert dashboard_data.metrics.total_requests == 1000
         assert dashboard_data.metrics.success_rate == 0.95
@@ -253,9 +255,9 @@ class TestDashboardServiceModern:
         """Test dashboard data error handling with fallback."""
         # Mock database to raise exception
         mock_database_service.select.side_effect = Exception("Database error")
-        
+
         dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         # Verify fallback data is returned
         assert isinstance(dashboard_data, DashboardData)
         assert dashboard_data.metrics.total_requests > 0  # Default fallback values
@@ -274,9 +276,9 @@ class TestDashboardServiceModern:
             "reset_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
         }
         mock_cache_service.get_json.return_value = cache_data
-        
+
         status = await dashboard_service.get_rate_limit_status("test_key_123")
-        
+
         assert status["requests_in_window"] == 75
         assert status["limit"] == 100
         assert status["remaining"] == 25
@@ -286,9 +288,9 @@ class TestDashboardServiceModern:
     async def test_get_rate_limit_status_no_cache(self, dashboard_service):
         """Test rate limit status with no cache service."""
         dashboard_service.cache = None
-        
+
         status = await dashboard_service.get_rate_limit_status("test_key_123")
-        
+
         # Should return default status
         assert "requests_in_window" in status
         assert "limit" in status
@@ -306,9 +308,9 @@ class TestDashboardServiceModern:
             "reset_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
         }
         mock_cache_service.get_json.return_value = cache_data
-        
+
         status = await dashboard_service.get_rate_limit_status("throttled_key")
-        
+
         assert status["requests_in_window"] == 150
         assert status["remaining"] == 0  # max(0, 100 - 150)
         assert status["percentage_used"] == 150.0
@@ -327,7 +329,7 @@ class TestDashboardServiceModern:
             threshold_value=0.1,
             current_value=0.15,
         )
-        
+
         assert isinstance(alert, AlertData)
         assert alert.alert_type == AlertType.HIGH_ERROR_RATE
         assert alert.severity == AlertSeverity.HIGH
@@ -335,7 +337,7 @@ class TestDashboardServiceModern:
         assert alert.service == "openai"
         assert not alert.acknowledged
         assert not alert.resolved
-        
+
         # Verify alert is stored
         assert alert.alert_id in dashboard_service._active_alerts
 
@@ -348,10 +350,12 @@ class TestDashboardServiceModern:
             title="Rate Limit Alert",
             message="Rate limit exceeded",
         )
-        
+
         # Acknowledge the alert
-        success = await dashboard_service.acknowledge_alert(alert.alert_id, "admin_user")
-        
+        success = await dashboard_service.acknowledge_alert(
+            alert.alert_id, "admin_user"
+        )
+
         assert success is True
         stored_alert = dashboard_service._active_alerts[alert.alert_id]
         assert stored_alert.acknowledged is True
@@ -372,10 +376,10 @@ class TestDashboardServiceModern:
             title="System Overload",
             message="System under heavy load",
         )
-        
+
         # Resolve the alert
         success = await dashboard_service.resolve_alert(alert.alert_id)
-        
+
         assert success is True
         stored_alert = dashboard_service._active_alerts[alert.alert_id]
         assert stored_alert.resolved is True
@@ -393,33 +397,34 @@ class TestDashboardServiceModern:
             {
                 "timestamp": (now - timedelta(minutes=i)).isoformat(),
                 "user_id": f"user_{i % 50 + 1}",  # 50 different users
-                "key_id": f"key_{i % 10 + 1}",   # 10 different keys
+                "key_id": f"key_{i % 10 + 1}",  # 10 different keys
                 "service": ["openai", "weather", "googlemaps", "flights"][i % 4],
                 "success": i % 100 != 0,  # 1% error rate
                 "latency_ms": 50 + (i % 500),
             }
             for i in range(10000)  # 10k records
         ]
-        
+
         mock_database_service.select.return_value = large_usage_logs
-        
+
         # Mock health checks
         with patch.object(
-            dashboard_service.api_key_service, 
-            'check_all_services_health',
-            return_value={}
+            dashboard_service.api_key_service,
+            "check_all_services_health",
+            return_value={},
         ):
             import time
+
             start_time = time.time()
             dashboard_data = await dashboard_service.get_dashboard_data(
                 time_range_hours=24, top_users_limit=20
             )
             end_time = time.time()
-        
+
         # Verify performance (should complete in reasonable time)
         processing_time = end_time - start_time
         assert processing_time < 1.0  # Should complete within 1 second
-        
+
         # Verify data quality with large dataset
         assert dashboard_data.metrics.total_requests == 10000
         assert dashboard_data.metrics.total_errors == 100  # 1% of 10k
@@ -441,18 +446,18 @@ class TestDashboardServiceModern:
             dashboard_service.create_alert(
                 AlertType.API_KEY_EXPIRED,
                 AlertSeverity.MEDIUM,
-                "Test Alert 2", 
+                "Test Alert 2",
                 "Concurrent test alert 2",
             ),
         ]
-        
+
         # Execute concurrently
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Verify all operations completed
         assert len(results) == 5
         assert all(not isinstance(r, Exception) for r in results)
-        
+
         # Verify alerts were created
         assert len(dashboard_service._active_alerts) == 2
 
@@ -468,13 +473,13 @@ class TestDashboardServiceModern:
                 message=f"Test alert message {i}",
             )
             alert_ids.append(alert.alert_id)
-        
+
         assert len(dashboard_service._active_alerts) == 100
-        
+
         # Resolve all alerts
         for alert_id in alert_ids:
             await dashboard_service.resolve_alert(alert_id)
-        
+
         # Verify all alerts are marked as resolved
         for alert in dashboard_service._active_alerts.values():
             assert alert.resolved is True
@@ -491,22 +496,23 @@ class TestDashboardServiceModern:
         """Property-based test for dashboard data retrieval."""
         # Mock minimal dependencies
         with patch.object(
-            dashboard_service.api_key_service, 
-            'check_all_services_health',
-            return_value={}
+            dashboard_service.api_key_service,
+            "check_all_services_health",
+            return_value={},
         ):
             dashboard_data = await dashboard_service.get_dashboard_data(
-                time_range_hours=time_range_hours,
-                top_users_limit=top_users_limit
+                time_range_hours=time_range_hours, top_users_limit=top_users_limit
             )
-        
+
         # Verify properties that should always hold
         assert isinstance(dashboard_data, DashboardData)
         assert dashboard_data.metrics.success_rate >= 0.0
         assert dashboard_data.metrics.success_rate <= 1.0
         assert dashboard_data.metrics.total_requests >= 0
         assert dashboard_data.metrics.total_errors >= 0
-        assert dashboard_data.metrics.total_errors <= dashboard_data.metrics.total_requests
+        assert (
+            dashboard_data.metrics.total_errors <= dashboard_data.metrics.total_requests
+        )
         assert len(dashboard_data.top_users) <= top_users_limit
 
     @given(
@@ -525,7 +531,7 @@ class TestDashboardServiceModern:
             title=title,
             message=message,
         )
-        
+
         # Verify properties that should always hold
         assert alert.alert_type == alert_type
         assert alert.severity == severity
@@ -542,11 +548,13 @@ class TestDashboardServiceModern:
         self, dashboard_service, mock_database_service
     ):
         """Test behavior when database connection fails."""
-        mock_database_service.select.side_effect = ConnectionError("Database unreachable")
-        
+        mock_database_service.select.side_effect = ConnectionError(
+            "Database unreachable"
+        )
+
         # Should handle gracefully with fallback data
         dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         assert isinstance(dashboard_data, DashboardData)
         assert dashboard_data.metrics.total_requests > 0  # Fallback values
 
@@ -556,10 +564,10 @@ class TestDashboardServiceModern:
         """Test behavior when cache connection fails."""
         mock_cache_service.get_json.side_effect = ConnectionError("Cache unreachable")
         mock_cache_service.is_connected = False
-        
+
         # Should handle gracefully without cache
         status = await dashboard_service.get_rate_limit_status("test_key")
-        
+
         assert "requests_in_window" in status
         assert "limit" in status
 
@@ -568,14 +576,12 @@ class TestDashboardServiceModern:
         # Test with zero time range
         dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=0)
         assert isinstance(dashboard_data, DashboardData)
-        
+
         # Test with negative time range (should be handled gracefully)
         dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=-1)
         assert isinstance(dashboard_data, DashboardData)
 
-    async def test_malformed_usage_logs(
-        self, dashboard_service, mock_database_service
-    ):
+    async def test_malformed_usage_logs(self, dashboard_service, mock_database_service):
         """Test handling of malformed usage log data."""
         # Mock malformed data
         malformed_logs = [
@@ -590,17 +596,17 @@ class TestDashboardServiceModern:
                 "latency_ms": 100,
             },
         ]
-        
+
         mock_database_service.select.return_value = malformed_logs
-        
+
         # Should handle gracefully
         with patch.object(
-            dashboard_service.api_key_service, 
-            'check_all_services_health',
-            return_value={}
+            dashboard_service.api_key_service,
+            "check_all_services_health",
+            return_value={},
         ):
             dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         assert isinstance(dashboard_data, DashboardData)
         # Should process at least the valid records
         assert dashboard_data.metrics.total_requests >= 0
@@ -610,23 +616,25 @@ class TestDashboardServiceModern:
     async def test_full_dashboard_workflow(self, dashboard_service, sample_usage_logs):
         """Test complete dashboard workflow integration."""
         # 1. Get initial dashboard data
-        with patch.object(dashboard_service, '_query_usage_logs', return_value=sample_usage_logs):
+        with patch.object(
+            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+        ):
             with patch.object(
-                dashboard_service.api_key_service, 
-                'check_all_services_health',
+                dashboard_service.api_key_service,
+                "check_all_services_health",
                 return_value={
                     ServiceType.OPENAI: MagicMock(
                         status=ServiceHealthStatus.HEALTHY,
                         latency_ms=120.0,
                         checked_at=datetime.now(timezone.utc),
                     ),
-                }
+                },
             ):
                 dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         assert isinstance(dashboard_data, DashboardData)
         initial_requests = dashboard_data.metrics.total_requests
-        
+
         # 2. Create some alerts based on the data
         if dashboard_data.metrics.error_rate > 0.05:  # >5% error rate
             alert = await dashboard_service.create_alert(
@@ -636,29 +644,31 @@ class TestDashboardServiceModern:
                 message=f"Error rate is {dashboard_data.metrics.error_rate:.2%}",
             )
             assert alert.alert_id in dashboard_service._active_alerts
-        
+
         # 3. Check rate limits for active keys
         for user in dashboard_data.top_users[:3]:  # Check top 3 users
             key_id = f"key_for_{user.user_id}"
             rate_status = await dashboard_service.get_rate_limit_status(key_id)
             assert isinstance(rate_status, dict)
             assert "percentage_used" in rate_status
-        
+
         # 4. Get updated dashboard data
-        with patch.object(dashboard_service, '_query_usage_logs', return_value=sample_usage_logs):
+        with patch.object(
+            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+        ):
             with patch.object(
-                dashboard_service.api_key_service, 
-                'check_all_services_health',
+                dashboard_service.api_key_service,
+                "check_all_services_health",
                 return_value={
                     ServiceType.OPENAI: MagicMock(
                         status=ServiceHealthStatus.HEALTHY,
                         latency_ms=120.0,
                         checked_at=datetime.now(timezone.utc),
                     ),
-                }
+                },
             ):
                 updated_data = await dashboard_service.get_dashboard_data()
-        
+
         # Verify consistency
         assert updated_data.metrics.total_requests == initial_requests
         assert len(updated_data.recent_alerts) >= 0
@@ -667,8 +677,8 @@ class TestDashboardServiceModern:
         """Test overall health score calculation."""
         # Mock services with different health statuses
         with patch.object(
-            dashboard_service.api_key_service, 
-            'check_all_services_health',
+            dashboard_service.api_key_service,
+            "check_all_services_health",
             return_value={
                 ServiceType.OPENAI: MagicMock(
                     status=ServiceHealthStatus.HEALTHY,
@@ -685,14 +695,14 @@ class TestDashboardServiceModern:
                     latency_ms=1000.0,
                     checked_at=datetime.now(timezone.utc),
                 ),
-            }
+            },
         ):
             dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         # Verify health score calculation
         health_score = dashboard_data.overall_health_score
         assert 0.0 <= health_score <= 100.0
-        
+
         # Health score should reflect mixed service states
         # With 1 healthy, 1 degraded, 1 unhealthy, score should be moderate
         assert 30.0 <= health_score <= 80.0
@@ -702,11 +712,11 @@ class TestDashboardServiceModern:
     async def test_get_cache_statistics(self, dashboard_service, mock_cache_service):
         """Test cache statistics retrieval."""
         stats = await dashboard_service._get_cache_statistics()
-        
+
         assert isinstance(stats, dict)
         assert "connected" in stats
         assert stats["connected"] is True  # Mock is connected
-        
+
         # When cache is None
         dashboard_service.cache = None
         empty_stats = await dashboard_service._get_cache_statistics()
@@ -718,14 +728,14 @@ class TestDashboardServiceModern:
         """Test usage logs querying with time filtering."""
         start_time = datetime.now(timezone.utc) - timedelta(hours=1)
         end_time = datetime.now(timezone.utc)
-        
-        logs = await dashboard_service._query_usage_logs(start_time, end_time)
-        
+
+        await dashboard_service._query_usage_logs(start_time, end_time)
+
         # Verify database was called with correct parameters
         mock_database_service.select.assert_called_once()
         call_args = mock_database_service.select.call_args
         assert call_args[0][0] == "api_key_usage_logs"  # table name
-        
+
         # Verify time filters were applied
         filters = call_args[1]["filters"]
         assert "timestamp__gte" in filters
@@ -736,27 +746,27 @@ class TestDashboardServiceModern:
     async def test_legacy_compatibility(self, dashboard_service):
         """Test compatibility with legacy dashboard data format."""
         with patch.object(
-            dashboard_service.api_key_service, 
-            'check_all_services_health',
-            return_value={}
+            dashboard_service.api_key_service,
+            "check_all_services_health",
+            return_value={},
         ):
             dashboard_data = await dashboard_service.get_dashboard_data()
-        
+
         # Verify legacy fields are present
-        assert hasattr(dashboard_data, 'total_requests')
-        assert hasattr(dashboard_data, 'total_errors')
-        assert hasattr(dashboard_data, 'overall_success_rate')
-        assert hasattr(dashboard_data, 'active_keys')
-        assert hasattr(dashboard_data, 'top_users_legacy')
-        assert hasattr(dashboard_data, 'services_status')
-        assert hasattr(dashboard_data, 'usage_by_service')
+        assert hasattr(dashboard_data, "total_requests")
+        assert hasattr(dashboard_data, "total_errors")
+        assert hasattr(dashboard_data, "overall_success_rate")
+        assert hasattr(dashboard_data, "active_keys")
+        assert hasattr(dashboard_data, "top_users_legacy")
+        assert hasattr(dashboard_data, "services_status")
+        assert hasattr(dashboard_data, "usage_by_service")
 
     async def test_api_key_validator_compatibility(self):
         """Test ApiKeyValidator compatibility wrapper."""
         async with ApiKeyValidator() as validator:
-            assert hasattr(validator, 'api_key_service')
-            assert hasattr(validator, 'check_all_services_health')
-            
+            assert hasattr(validator, "api_key_service")
+            assert hasattr(validator, "check_all_services_health")
+
             # Test the method exists and is callable
             health_checks = await validator.check_all_services_health()
             assert isinstance(health_checks, dict)

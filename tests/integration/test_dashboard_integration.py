@@ -12,16 +12,62 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.services.business.dashboard_service import (
-    DashboardService,
-    AlertData,
-    AlertType,
-    AlertSeverity,
-    DashboardData,
-    RealTimeMetrics,
-    ServiceAnalytics,
-    UserActivityData,
-)
+
+
+# Legacy compatibility models for testing
+class AnomalyType:
+    SPIKE = "spike"
+    ERROR_RATE = "error_rate"
+
+
+class UsageAlert:
+    def __init__(
+        self,
+        alert_id,
+        key_id,
+        user_id,
+        service,
+        anomaly_type,
+        severity,
+        message,
+        details=None,
+    ):
+        self.alert_id = alert_id
+        self.key_id = key_id
+        self.user_id = user_id
+        self.service = service
+        self.anomaly_type = anomaly_type
+        self.severity = severity
+        self.message = message
+        self.details = details or {}
+
+
+class UsageDashboard:
+    def __init__(
+        self,
+        total_requests,
+        total_errors,
+        overall_success_rate,
+        active_keys,
+        services_status,
+        top_users,
+        recent_alerts,
+        usage_by_service,
+        usage_trend,
+    ):
+        self.total_requests = total_requests
+        self.total_errors = total_errors
+        self.overall_success_rate = overall_success_rate
+        self.active_keys = active_keys
+        self.services_status = services_status
+        self.top_users = top_users
+        self.recent_alerts = recent_alerts
+        self.usage_by_service = usage_by_service
+        self.usage_trend = usage_trend
+
+
+class ApiKeyMonitoringService:
+    pass
 
 
 class TestDashboardIntegration:
