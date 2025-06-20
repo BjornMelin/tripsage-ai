@@ -280,7 +280,7 @@ runs:
     # Upload SARIF results
     - name: Upload SARIF results
       if: inputs.upload-sarif == 'true' && github.event_name == 'push'
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f # v3.25.12
       continue-on-error: true
       with:
         sarif_file: security-reports/bandit-results.sarif
@@ -289,7 +289,7 @@ runs:
     # Upload artifacts
     - name: Upload security reports
       if: always()
-      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
       with:
         name: security-reports-${{ github.run_id }}
         path: security-reports/
