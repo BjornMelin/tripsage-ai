@@ -240,7 +240,7 @@ export function useTripCollaborators(tripId: number) {
  */
 export function useAddTripCollaborator() {
   const { user } = useAuth();
-  const _supabase = useSupabase();
+  useSupabase(); // Access Supabase client
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -267,7 +267,7 @@ export function useAddTripCollaborator() {
  */
 export function useRemoveTripCollaborator() {
   const { user } = useAuth();
-  const _supabase = useSupabase();
+  useSupabase(); // Access Supabase client
   const queryClient = useQueryClient();
 
   return useMutation({

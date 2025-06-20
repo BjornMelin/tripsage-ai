@@ -123,9 +123,9 @@ export function TripTimeline({
     return format(date, "MMM dd, yyyy");
   };
 
-  const _formatEventTime = (date: Date) => {
-    return format(date, "h:mm a");
-  };
+  // const formatEventTime = (date: Date) => { // Future implementation
+  //   return format(date, "h:mm a");
+  // };
 
   const getEventColor = (type: TimelineEvent["type"]) => {
     switch (type) {

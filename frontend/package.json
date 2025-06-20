@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "next lint",
     "lint:biome": "biome lint ./src",
@@ -71,12 +72,14 @@
     "recharts": "^2.15.3",
     "tailwind-merge": "^3.3.0",
     "vaul": "^1.1.2",
+    "web-vitals": "^5.0.3",
     "zod": "^3.25.28",
     "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^15.3.4",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",

@@ -144,9 +144,9 @@ interface SearchParamsState {
 }
 
 // Helper functions
-const _generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const _getCurrentTimestamp = () => new Date().toISOString();
+// const generateId = () =>
+//   Date.now().toString(36) + Math.random().toString(36).substring(2, 5); // Future use
+// const getCurrentTimestamp = () => new Date().toISOString(); // Future use
 
 // Default parameter generators
 const getDefaultFlightParams = (): Partial<ValidatedFlightParams> => ({

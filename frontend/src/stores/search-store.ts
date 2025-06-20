@@ -93,7 +93,7 @@ export const useSearchStore = create<SearchOrchestratorState>()(
       executeSearch: async (params) => {
         const paramsStore = useSearchParamsStore.getState();
         const resultsStore = useSearchResultsStore.getState();
-        const _filtersStore = useSearchFiltersStore.getState();
+        useSearchFiltersStore.getState(); // Access filters store
         const historyStore = useSearchHistoryStore.getState();
 
         const searchType = paramsStore.currentSearchType;

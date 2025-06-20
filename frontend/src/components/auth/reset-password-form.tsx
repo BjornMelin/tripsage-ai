@@ -58,6 +58,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
 
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isSuccess, router]);
 
   return (

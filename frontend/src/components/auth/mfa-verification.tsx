@@ -46,6 +46,7 @@ export function MFAVerification({
       const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [timeRemaining]);
 
   const handleVerifyCode = async () => {

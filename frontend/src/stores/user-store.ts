@@ -156,17 +156,17 @@ interface UserProfileState {
 }
 
 // Validation schema for the user profile store state
-const _userProfileStoreSchema = z.object({
-  profile: UserProfileSchema.nullable(),
-  isLoading: z.boolean(),
-  isUpdatingProfile: z.boolean(),
-  isUploadingAvatar: z.boolean(),
-  error: z.string().nullable(),
-  uploadError: z.string().nullable(),
-  displayName: z.string(),
-  hasCompleteProfile: z.boolean(),
-  upcomingDocumentExpirations: z.array(z.any()), // Could be more specific with TravelDocument schema
-});
+// const userProfileStoreSchema = z.object({ // Future validation
+//   profile: UserProfileSchema.nullable(),
+//   isLoading: z.boolean(),
+//   isUpdatingProfile: z.boolean(),
+//   isUploadingAvatar: z.boolean(),
+//   error: z.string().nullable(),
+//   uploadError: z.string().nullable(),
+//   displayName: z.string(),
+//   hasCompleteProfile: z.boolean(),
+//   upcomingDocumentExpirations: z.array(z.any()), // Could be more specific with TravelDocument schema
+// });
 
 // Helper functions
 const generateId = () =>

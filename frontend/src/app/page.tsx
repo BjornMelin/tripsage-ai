@@ -2,6 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
+
+// This page can be statically generated for better performance
+export const dynamic = "force-static";
+export const revalidate = 3600; // Revalidate every hour
 
 export default function Home() {
   return (
@@ -61,55 +66,66 @@ export default function Home() {
             </div>
           </div>
         </section>
-        <section className="bg-muted py-12 md:py-24 lg:py-32">
-          <div className="container mx-auto space-y-12 px-4 md:px-6">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  Why Choose TripSage AI?
-                </h2>
-                <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Our AI-powered platform makes travel planning simpler, smarter, and
-                  more personalized than ever before.
-                </p>
+        <Suspense
+          fallback={
+            <div className="bg-muted py-12 md:py-24 lg:py-32">
+              <div className="container mx-auto">
+                <div className="animate-pulse bg-gray-200 h-64 rounded"></div>
               </div>
             </div>
-            <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI-Powered Planning</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>
-                    Get intelligent recommendations based on your preferences, budget,
-                    and travel style.
+          }
+        >
+          <section className="bg-muted py-12 md:py-24 lg:py-32">
+            <div className="container mx-auto space-y-12 px-4 md:px-6">
+              <div className="flex flex-col items-center justify-center space-y-4 text-center">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
+                    Why Choose TripSage AI?
+                  </h2>
+                  <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                    Our AI-powered platform makes travel planning simpler, smarter, and
+                    more personalized than ever before.
                   </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Budget Optimization</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>
-                    Find the best deals and optimize your spending across flights,
-                    hotels, and activities.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>All-in-One Platform</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p>
-                    Plan, book, and manage your entire trip in one seamless experience.
-                  </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+              <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>AI-Powered Planning</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>
+                      Get intelligent recommendations based on your preferences, budget,
+                      and travel style.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Budget Optimization</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>
+                      Find the best deals and optimize your spending across flights,
+                      hotels, and activities.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All-in-One Platform</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p>
+                      Plan, book, and manage your entire trip in one seamless
+                      experience.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </Suspense>
       </main>
       <footer className="border-t py-6 md:py-0">
         <div className="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">

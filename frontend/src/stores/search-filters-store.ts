@@ -916,7 +916,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          const _defaultFilters = getDefaultFilters(targetSearchType);
+          getDefaultFilters(targetSearchType); // Get default filters
           const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );

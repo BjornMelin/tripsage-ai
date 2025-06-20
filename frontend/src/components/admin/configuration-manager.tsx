@@ -124,7 +124,7 @@ const MODEL_OPTIONS = [
 ];
 
 export default function ConfigurationManager() {
-  const _router = useRouter();
+  useRouter(); // For potential navigation
   const { toast } = useToast();
 
   // State management

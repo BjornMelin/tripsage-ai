@@ -17,15 +17,17 @@ const mockAuth = {
   isLoading: false,
 };
 
+const mockUseAuth = vi.fn(() => mockAuth);
+
 vi.mock("@/contexts/auth-context", () => ({
-  useAuth: vi.fn(() => mockAuth),
+  useAuth: mockUseAuth,
 }));
 
 // Helper to create complete Supabase mock - use our complete mock helper
-const _createCompleteSupabaseMock = (overrides = {}) => ({
-  ...createCompleteQueryBuilder(),
-  ...overrides,
-});
+// const createCompleteSupabaseMock = (overrides = {}) => ({
+//   ...createCompleteQueryBuilder(),
+//   ...overrides,
+// });
 
 // Mock Supabase client with comprehensive chat functionality
 const mockSupabaseClient = {
@@ -207,10 +209,19 @@ describe("useSupabaseChat", () => {
     });
 
     it("should not query when user is not authenticated", () => {
-      vi.mocked(require("@/contexts/auth-context").useAuth).mockReturnValueOnce({
+      (mockUseAuth as any).mockReturnValueOnce({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        error: null,
+        signIn: vi.fn(),
+        signInWithOAuth: vi.fn(),
+        signUp: vi.fn(),
+        signOut: vi.fn(),
+        refreshUser: vi.fn(),
+        clearError: vi.fn(),
+        resetPassword: vi.fn(),
+        updatePassword: vi.fn(),
       });
 
       const { result } = renderHook(() => useSupabaseChat(), {
@@ -911,10 +922,19 @@ describe("useChatStats", () => {
     });
 
     it("should not query when user is not authenticated", () => {
-      vi.mocked(require("@/contexts/auth-context").useAuth).mockReturnValueOnce({
+      (mockUseAuth as any).mockReturnValueOnce({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        error: null,
+        signIn: vi.fn(),
+        signInWithOAuth: vi.fn(),
+        signUp: vi.fn(),
+        signOut: vi.fn(),
+        refreshUser: vi.fn(),
+        clearError: vi.fn(),
+        resetPassword: vi.fn(),
+        updatePassword: vi.fn(),
       });
 
       const { result } = renderHook(() => useChatStats(), {

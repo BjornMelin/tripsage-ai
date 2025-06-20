@@ -6,7 +6,7 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/types/agent-status";
-import { z } from "zod";
+// import { z } from "zod"; // Future validation
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -58,16 +58,16 @@ const generateId = () =>
 const getCurrentTimestamp = () => new Date().toISOString();
 
 // Schema for the agent status store state
-const _agentStatusStoreSchema = z.object({
-  agents: z.array(z.any()), // Using z.any() for now, could be made more specific
-  sessions: z.array(z.any()),
-  currentSessionId: z.string().nullable(),
-  isMonitoring: z.boolean(),
-  lastUpdated: z.string().nullable(),
-  error: z.string().nullable(),
-  currentSession: z.any().nullable(),
-  activeAgents: z.array(z.any()),
-});
+// const agentStatusStoreSchema = z.object({ // Future validation
+//   agents: z.array(z.any()), // Using z.any() for now, could be made more specific
+//   sessions: z.array(z.any()),
+//   currentSessionId: z.string().nullable(),
+//   isMonitoring: z.boolean(),
+//   lastUpdated: z.string().nullable(),
+//   error: z.string().nullable(),
+//   currentSession: z.any().nullable(),
+//   activeAgents: z.array(z.any()),
+// });
 
 export const useAgentStatusStore = create<AgentStatusState>()(
   persist(

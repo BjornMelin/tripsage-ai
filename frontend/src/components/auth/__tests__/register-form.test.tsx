@@ -361,9 +361,7 @@ describe("RegisterForm", () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
-    const _form = screen
-      .getByRole("button", { name: "Create Account" })
-      .closest("form");
+    screen.getByRole("button", { name: "Create Account" }).closest("form");
     await user.click(screen.getByRole("button", { name: "Create Account" }));
 
     expect(mockSignUp).not.toHaveBeenCalled();

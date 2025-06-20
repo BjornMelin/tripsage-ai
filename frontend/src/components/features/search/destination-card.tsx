@@ -49,20 +49,20 @@ export function DestinationCard({
   const formatBestTimeToVisit = (months: string[]) => {
     if (!months || months.length === 0) return "Year-round";
 
-    const _monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
+    // const monthNames = [ // Future implementation
+    //   "Jan",
+    //   "Feb",
+    //   "Mar",
+    //   "Apr",
+    //   "May",
+    //   "Jun",
+    //   "Jul",
+    //   "Aug",
+    //   "Sep",
+    //   "Oct",
+    //   "Nov",
+    //   "Dec",
+    // ];
 
     return months.slice(0, 3).join(", ");
   };

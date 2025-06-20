@@ -8,10 +8,11 @@ import { Progress } from "@/components/ui/progress";
 import {
   useMemoryInsights,
   useMemoryStats,
-  useUpdatePreferences,
+  // useUpdatePreferences, // Future implementation
 } from "@/hooks/use-memory";
 import { cn } from "@/lib/utils";
-import type { PersonalizationInsightsProps, UserPreferences } from "@/types/memory";
+import type { PersonalizationInsightsProps } from "@/types/memory";
+// import type { UserPreferences } from "@/types/memory"; // Future implementation
 import {
   BarChart3,
   Brain,
@@ -33,9 +34,9 @@ export function PersonalizationInsights({
   userId,
   className,
   showRecommendations = true,
-  onPreferenceUpdate,
+  onPreferenceUpdate: _onPreferenceUpdate, // Future implementation
 }: PersonalizationInsightsProps) {
-  const [_isUpdating, setIsUpdating] = useState(false);
+  // const [isUpdating, setIsUpdating] = useState(false); // Future implementation
   const [selectedView, setSelectedView] = useState<
     "overview" | "budget" | "destinations" | "recommendations"
   >("overview");
@@ -49,7 +50,7 @@ export function PersonalizationInsights({
 
   const { data: stats, isLoading: statsLoading } = useMemoryStats(userId, !!userId);
 
-  const updatePreferences = useUpdatePreferences(userId);
+  // const updatePreferences = useUpdatePreferences(userId); // Future implementation
 
   const formatCurrency = (amount: number, currency = "USD") => {
     return new Intl.NumberFormat("en-US", {
@@ -69,21 +70,21 @@ export function PersonalizationInsights({
     }
   };
 
-  const _handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => {
-    setIsUpdating(true);
-    try {
-      await updatePreferences.mutateAsync({
-        preferences,
-        merge_strategy: "merge",
-      });
-      onPreferenceUpdate?.(preferences);
-      await refetchInsights();
-    } catch (error) {
-      console.error("Failed to update preferences:", error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  // const handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => { // Future implementation
+  //   setIsUpdating(true);
+  //   try {
+  //     await updatePreferences.mutateAsync({
+  //       preferences,
+  //       merge_strategy: "merge",
+  //     });
+  //     onPreferenceUpdate?.(preferences);
+  //     await refetchInsights();
+  //   } catch (error) {
+  //     console.error("Failed to update preferences:", error);
+  //   } finally {
+  //     setIsUpdating(false);
+  //   }
+  // };
 
   const renderOverview = () => {
     if (!insights?.insights) return null;

@@ -216,7 +216,7 @@ describe("RecentTrips", () => {
       refetch: vi.fn(),
     } as any);
 
-    const _user = userEvent.setup();
+    userEvent.setup(); // Set up user event utilities
     renderWithProviders(<RecentTrips />);
 
     const tripCard = screen.getByRole("link", { name: /Tokyo Adventure/i });

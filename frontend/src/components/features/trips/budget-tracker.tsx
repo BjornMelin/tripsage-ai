@@ -117,12 +117,12 @@ export function BudgetTracker({
     return "text-green-600";
   };
 
-  const _getProgressColor = (percentage: number) => {
-    if (percentage >= 100) return "bg-destructive";
-    if (percentage >= 80) return "bg-orange-500";
-    if (percentage >= 60) return "bg-yellow-500";
-    return "bg-primary";
-  };
+  // const getProgressColor = (percentage: number) => { // Future implementation
+  //   if (percentage >= 100) return "bg-destructive";
+  //   if (percentage >= 80) return "bg-orange-500";
+  //   if (percentage >= 60) return "bg-yellow-500";
+  //   return "bg-primary";
+  // };
 
   return (
     <Card className={className}>

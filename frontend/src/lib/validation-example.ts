@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { ValidatedApiClient } from "./api/validated-client";
+// import { ValidatedApiClient } from "./api/validated-client"; // Future implementation
 import { apiResponseSchema } from "./schemas/api";
 import { flightSearchFormSchema } from "./schemas/forms";
 import { ValidationContext, validateFormData, validateStrict } from "./validation";
@@ -180,9 +180,9 @@ export function demonstrateErrorHandling() {
 export async function demonstrateValidatedApiClient() {
   console.log("\n=== Validated API Client Example ===");
 
-  const _apiClient = new ValidatedApiClient({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || "",
-  });
+  // const apiClient = new ValidatedApiClient({ // Future implementation
+  //   baseUrl: process.env.NEXT_PUBLIC_API_URL || "",
+  // });
 
   try {
     // This would make a real API call with validation
