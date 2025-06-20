@@ -9,8 +9,8 @@ import type { Message } from "@/types/chat";
 import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
 import Link from "next/link";
 import React, { useCallback, useEffect, useOptimistic, startTransition } from "react";
-import { AgentStatusPanel } from "./agent-status-panel";
 import { ConnectionStatus } from "../shared/connection-status";
+import { AgentStatusPanel } from "./agent-status-panel";
 import { MessageInput } from "./message-input";
 import { MessageList } from "./messages/message-list";
 

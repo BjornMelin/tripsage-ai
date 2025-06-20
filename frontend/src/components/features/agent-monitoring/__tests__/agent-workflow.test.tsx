@@ -2,8 +2,8 @@ import { act, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import type { Agent } from "@/types/agent-status";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
 import { ConnectionStatus } from "../../shared/connection-status";
+import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
 import { AgentStatusDashboard } from "../dashboard/agent-status-dashboard";
 
 // Define test-specific types that match the expected component interfaces
