@@ -260,8 +260,8 @@ jobs:
       - name: Install uv
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            irm https://astral.sh/uv/install.ps1 | iex
-            echo "$env:USERPROFILE\.cargo\bin" >> $GITHUB_PATH
+            powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+            echo "$USERPROFILE/.cargo/bin" >> $GITHUB_PATH
           else
             curl -LsSf https://astral.sh/uv/install.sh | sh
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
