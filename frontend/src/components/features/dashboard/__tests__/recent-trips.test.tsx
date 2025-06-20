@@ -1,7 +1,7 @@
 import { useTrips } from "@/hooks/use-trips";
 import type { Trip } from "@/stores/trip-store";
 import { renderWithProviders } from "@/test/test-utils";
-import { screen, waitFor } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RecentTrips } from "../recent-trips";
@@ -216,7 +216,7 @@ describe("RecentTrips", () => {
       refetch: vi.fn(),
     } as any);
 
-    const user = userEvent.setup();
+    const _user = userEvent.setup();
     renderWithProviders(<RecentTrips />);
 
     const tripCard = screen.getByRole("link", { name: /Tokyo Adventure/i });

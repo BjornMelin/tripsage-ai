@@ -11,7 +11,6 @@ import type {
   AddExpenseRequest,
   Budget,
   BudgetAlert,
-  BudgetCategory,
   CreateBudgetAlertRequest,
   CreateBudgetRequest,
   Expense,

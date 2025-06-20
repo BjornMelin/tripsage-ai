@@ -88,11 +88,14 @@ describe("Middleware", () => {
 
     // Setup NextResponse mocks
     vi.mocked(NextResponse.next).mockReturnValue(mockResponseInstance);
-    vi.mocked(NextResponse.json).mockImplementation((body, init) => ({
-      ...mockResponseInstance,
-      status: init?.status || 200,
-      json: vi.fn().mockResolvedValue(body),
-    } as unknown as NextResponse));
+    vi.mocked(NextResponse.json).mockImplementation(
+      (body, init) =>
+        ({
+          ...mockResponseInstance,
+          status: init?.status || 200,
+          json: vi.fn().mockResolvedValue(body),
+        }) as unknown as NextResponse
+    );
 
     // Setup mock Supabase client
     mockSupabase = {
@@ -385,7 +388,7 @@ describe("Middleware", () => {
       let capturedCookieHandlers:
         | Parameters<typeof createServerClient>[2]["cookies"]
         | null = null;
-      vi.mocked(createServerClient).mockImplementation((url, key, options) => {
+      vi.mocked(createServerClient).mockImplementation((_url, _key, options) => {
         capturedCookieHandlers = options.cookies;
         return mockSupabase;
       });

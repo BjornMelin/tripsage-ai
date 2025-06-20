@@ -5,22 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   useMemoryInsights,
   useMemoryStats,
   useUpdatePreferences,
 } from "@/hooks/use-memory";
 import { cn } from "@/lib/utils";
-import type {
-  MemoryInsight,
-  PersonalizationInsightsProps,
-  UserPreferences,
-} from "@/types/memory";
+import type { PersonalizationInsightsProps, UserPreferences } from "@/types/memory";
 import {
   BarChart3,
   Brain,
-  Calendar,
   DollarSign,
   Info,
   Lightbulb,
@@ -33,7 +27,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 export function PersonalizationInsights({
   userId,
@@ -41,7 +35,7 @@ export function PersonalizationInsights({
   showRecommendations = true,
   onPreferenceUpdate,
 }: PersonalizationInsightsProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [_isUpdating, setIsUpdating] = useState(false);
   const [selectedView, setSelectedView] = useState<
     "overview" | "budget" | "destinations" | "recommendations"
   >("overview");
@@ -75,7 +69,7 @@ export function PersonalizationInsights({
     }
   };
 
-  const handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => {
+  const _handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => {
     setIsUpdating(true);
     try {
       await updatePreferences.mutateAsync({

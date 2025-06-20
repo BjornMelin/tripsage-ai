@@ -72,7 +72,7 @@ export default function TripCollaborationPage() {
     name?: string;
     visibility?: string;
   } | null;
-  const collaboration = useTripCollaboration(tripId);
+  const _collaboration = useTripCollaboration(tripId);
 
   const currentUserId = user?.id;
 
@@ -150,7 +150,7 @@ export default function TripCollaborationPage() {
       });
 
       setInviteEmail("");
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Invitation Failed",
         description: "Failed to send invitation. Please try again.",

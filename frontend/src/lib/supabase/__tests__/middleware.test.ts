@@ -112,7 +112,7 @@ describe("updateSession", () => {
     });
 
     let capturedCookieHandlers: any = null;
-    vi.mocked(createServerClient).mockImplementation((url, key, options) => {
+    vi.mocked(createServerClient).mockImplementation((_url, _key, options) => {
       capturedCookieHandlers = options.cookies;
       return mockSupabase;
     });

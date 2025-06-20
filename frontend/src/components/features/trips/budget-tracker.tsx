@@ -12,15 +12,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useBudgetStore } from "@/stores/budget-store";
 import { useCurrencyStore } from "@/stores/currency-store";
-import type { Budget, BudgetSummary } from "@/types/budget";
-import {
-  AlertTriangle,
-  DollarSign,
-  Plus,
-  Target,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import type { BudgetSummary } from "@/types/budget";
+import { AlertTriangle, DollarSign, Plus, Target, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
 interface BudgetTrackerProps {
@@ -124,7 +117,7 @@ export function BudgetTracker({
     return "text-green-600";
   };
 
-  const getProgressColor = (percentage: number) => {
+  const _getProgressColor = (percentage: number) => {
     if (percentage >= 100) return "bg-destructive";
     if (percentage >= 80) return "bg-orange-500";
     if (percentage >= 60) return "bg-yellow-500";

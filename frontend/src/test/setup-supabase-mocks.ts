@@ -48,7 +48,7 @@ vi.mock("@/contexts/auth-context", () => ({
 }));
 
 // Mock fetch globally with better error handling
-global.fetch = vi.fn().mockImplementation((url: string) => {
+global.fetch = vi.fn().mockImplementation((_url: string) => {
   // Default to successful response
   return Promise.resolve({
     ok: true,
@@ -191,7 +191,7 @@ vi.mock("@/stores/search-store", () => ({
       activity: false,
       destination: false,
     },
-    setSearchType: vi.fn().mockImplementation((type) => {
+    setSearchType: vi.fn().mockImplementation((_type) => {
       // Mock implementation that updates internal state
       return { setSearchType: vi.fn() };
     }),
@@ -290,32 +290,38 @@ vi.mock("@/stores/api-key-store", () => ({
   })),
 }));
 
-// Mock user store
-vi.mock("@/stores/user-store", () => ({
-  useUserProfileStore: vi.fn(() => ({
-    profile: {
-      id: "test-user-id",
-      email: "test@example.com",
-      name: "Test User",
-      twoFactorEnabled: false,
-      settings: {
-        notifications: true,
-        privacy: "public",
-      },
-    },
-    preferences: {
-      theme: "light",
-      language: "en",
-    },
-    insights: null,
-    isLoading: false,
-    error: null,
-    updateProfile: vi.fn(),
-    updatePreferences: vi.fn(),
-    refreshInsights: vi.fn(),
-    clearError: vi.fn(),
-  })),
-}));
+// Mock user store - DISABLED to allow proper testing
+// Individual tests should mock the store as needed
+// vi.mock("@/stores/user-store", () => ({
+//   useUserProfileStore: vi.fn(() => ({
+//     profile: null,
+//     isLoading: false,
+//     isUpdatingProfile: false,
+//     isUploadingAvatar: false,
+//     error: null,
+//     uploadError: null,
+//     displayName: "",
+//     hasCompleteProfile: false,
+//     upcomingDocumentExpirations: [],
+//     setProfile: vi.fn(),
+//     updatePersonalInfo: vi.fn(),
+//     updateTravelPreferences: vi.fn(),
+//     updatePrivacySettings: vi.fn(),
+//     uploadAvatar: vi.fn(),
+//     removeAvatar: vi.fn(),
+//     addFavoriteDestination: vi.fn(),
+//     removeFavoriteDestination: vi.fn(),
+//     updateFavoriteDestination: vi.fn(),
+//     incrementDestinationVisit: vi.fn(),
+//     addTravelDocument: vi.fn(),
+//     removeTravelDocument: vi.fn(),
+//     updateTravelDocument: vi.fn(),
+//     exportProfile: vi.fn(),
+//     importProfile: vi.fn(),
+//     clearError: vi.fn(),
+//     reset: vi.fn(),
+//   })),
+// }));
 
 // Export a function to get mock client for tests that need direct access
 export { getMockSupabaseClient };

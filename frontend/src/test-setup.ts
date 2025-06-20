@@ -1,9 +1,9 @@
 import { cleanup } from "@testing-library/react";
-import { afterEach, beforeAll, vi } from "vitest";
+import { afterEach, vi } from "vitest";
 import "@testing-library/jest-dom";
 
 // Mock useToast hook BEFORE anything else
-const mockToast = vi.fn((props: any) => ({
+const mockToast = vi.fn((_props: any) => ({
   id: `toast-${Date.now()}`,
   dismiss: vi.fn(),
   update: vi.fn(),
@@ -21,12 +21,12 @@ vi.mock("@/components/ui/use-toast", () => ({
 // Setup Supabase mocks before any tests run
 import "./test/setup-supabase-mocks";
 
-// Mock zustand middleware
+// Mock zustand middleware - preserve store functionality
 vi.mock("zustand/middleware", () => ({
-  persist: vi.fn((fn: unknown) => fn),
-  devtools: vi.fn((fn: unknown) => fn),
-  subscribeWithSelector: vi.fn((fn: unknown) => fn),
-  combine: vi.fn((fn: unknown) => fn),
+  persist: (fn: any, _config?: any) => fn,
+  devtools: (fn: any, _config?: any) => fn,
+  subscribeWithSelector: (fn: any) => fn,
+  combine: (fn: any) => fn,
 }));
 
 // Clean up after each test
@@ -83,7 +83,13 @@ global.console = {
 
 // Make test utils available globally
 import * as testUtils from "./test/test-utils";
-global.renderWithProviders = testUtils.renderWithProviders;
+
+// Type-safe global assignment
+declare global {
+  var renderWithProviders: typeof testUtils.renderWithProviders;
+}
+
+(globalThis as any).renderWithProviders = testUtils.renderWithProviders;
 
 // Mock environment variables for testing
 // Create a proxy for process.env to avoid descriptor errors

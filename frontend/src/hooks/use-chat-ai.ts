@@ -13,6 +13,24 @@ import type {
 import { type Message as AiMessage, useChat } from "ai/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
+
+// Zod schemas for validation
+const _SessionIdSchema = z.string().min(1, "Session ID cannot be empty").optional();
+
+const MessageContentSchema = z.string().min(1, "Message content cannot be empty");
+
+const AttachmentArraySchema = z
+  .array(
+    z.object({
+      id: z.string(),
+      url: z.string().url(),
+      name: z.string().optional(),
+      contentType: z.string().optional(),
+      size: z.number().positive().optional(),
+    })
+  )
+  .default([]);
 
 interface UseChatAiOptions {
   /**
@@ -324,17 +342,19 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       // Update message with tool call information
       if (activeToolCalls.size > 0) {
         const toolCallsArray = Array.from(activeToolCalls.values()).map((toolCall) => ({
-          ...toolCall,
-          state: toolCall.status, // Map status to state for compatibility
+          id: toolCall.id,
+          name: toolCall.name,
+          arguments: toolCall.arguments || {},
+          state: "call" as const,
         }));
         const toolResultsArray = Array.from(toolResults.values()).map((toolResult) => ({
-          ...toolResult,
+          callId: toolResult.callId,
           result: toolResult.result || null, // Ensure result is present
         }));
 
         updateMessage(sessionIdRef.current, message.id, {
-          toolCalls: toolCallsArray as ToolCall[],
-          toolResults: toolResultsArray as ToolResult[],
+          toolCalls: toolCallsArray,
+          toolResults: toolResultsArray,
         });
       }
 
@@ -353,36 +373,36 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
       // Parse error for specific handling
       let errorMessage = "An error occurred while processing your request";
-      let errorStatus = "error";
+      let _errorStatus = "error";
 
       if (error.message) {
         // Check for specific error patterns
         if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
           errorMessage = "Request timed out. Please try again.";
-          errorStatus = "timeout";
+          _errorStatus = "timeout";
         } else if (
           error.message.includes("Authentication required") ||
           error.message.includes("AUTH_REQUIRED")
         ) {
           errorMessage = "Authentication required. Please check your API keys.";
-          errorStatus = "auth_error";
+          _errorStatus = "auth_error";
         } else if (
           error.message.includes("Rate limited") ||
           error.message.includes("RATE_LIMITED")
         ) {
           errorMessage = "Too many requests. Please wait a moment and try again.";
-          errorStatus = "rate_limited";
+          _errorStatus = "rate_limited";
         } else if (
           error.message.includes("Service unavailable") ||
           error.message.includes("SERVICE_UNAVAILABLE")
         ) {
           errorMessage =
             "AI service is temporarily unavailable. Please try again later.";
-          errorStatus = "service_unavailable";
+          _errorStatus = "service_unavailable";
         } else if (error.message.includes("Model not available")) {
           errorMessage =
             "The selected AI model is not available. Please try a different model.";
-          errorStatus = "model_unavailable";
+          _errorStatus = "model_unavailable";
         } else {
           errorMessage = error.message;
         }
@@ -426,49 +446,64 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Handle sending a user message
   const sendMessage = useCallback(
     (content: string, attachments: Attachment[] = []) => {
-      // Check if initialized and authenticated
-      if (!isInitialized || !isAuthenticated) {
-        setAuthError("Please authenticate before sending messages");
-        return;
-      }
+      // Validate inputs with Zod
+      try {
+        const validatedContent = MessageContentSchema.parse(content);
+        const validatedAttachments = AttachmentArraySchema.parse(attachments);
 
-      // Check for valid API key
-      if (!isApiKeyValid) {
-        setAuthError("Valid API key required before sending messages");
-        return;
-      }
+        // Check if initialized and authenticated
+        if (!isInitialized || !isAuthenticated) {
+          setAuthError("Please authenticate before sending messages");
+          return;
+        }
 
-      // Set agent status to thinking
-      updateAgentStatus(sessionIdRef.current, {
-        isActive: true,
-        statusMessage: "Thinking...",
-      });
+        // Check for valid API key
+        if (!isApiKeyValid) {
+          setAuthError("Valid API key required before sending messages");
+          return;
+        }
 
-      // Create a unique ID for this message
-      const messageId = uuidv4();
+        // Set agent status to thinking
+        updateAgentStatus(sessionIdRef.current, {
+          isActive: true,
+          statusMessage: "Thinking...",
+        });
 
-      // Add the user message to our store
-      addMessage(sessionIdRef.current, {
-        role: "user",
-        content,
-        attachments,
-      });
+        // Create a unique ID for this message
+        const _messageId = uuidv4();
 
-      // Submit the message through AI SDK
-      // This will trigger the AI response
-      const submitEvent = {
-        preventDefault: () => {},
-        currentTarget: {
-          elements: {
-            // Create a mock form with the message as input
-            input: {
-              value: content,
+        // Add the user message to our store
+        addMessage(sessionIdRef.current, {
+          role: "user",
+          content: validatedContent,
+          attachments: validatedAttachments,
+        });
+
+        // Submit the message through AI SDK
+        // This will trigger the AI response
+        const submitEvent = {
+          preventDefault: () => {},
+          currentTarget: {
+            elements: {
+              // Create a mock form with the message as input
+              input: {
+                value: validatedContent,
+              },
             },
           },
-        },
-      } as unknown as React.FormEvent<HTMLFormElement>;
+        } as unknown as React.FormEvent<HTMLFormElement>;
 
-      handleSubmit(submitEvent);
+        handleSubmit(submitEvent);
+      } catch (error) {
+        // Handle Zod validation errors
+        if (error instanceof z.ZodError) {
+          const errorMessage = error.errors.map((e) => e.message).join(", ");
+          setAuthError(`Invalid input: ${errorMessage}`);
+        } else {
+          setAuthError("An error occurred while processing your message");
+        }
+        return;
+      }
     },
     [
       addMessage,

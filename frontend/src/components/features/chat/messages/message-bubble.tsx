@@ -21,7 +21,7 @@ import {
   Sparkles,
   Zap,
 } from "lucide-react";
-import React, { useCallback, useMemo, useRef, useEffect } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";

@@ -73,7 +73,7 @@ describe("Supabase Server Client", () => {
     vi.mocked(cookies).mockResolvedValue(mockCookieStore as any);
 
     let capturedCookieHandlers: any = null;
-    vi.mocked(createServerClient).mockImplementation((url, key, options) => {
+    vi.mocked(createServerClient).mockImplementation((_url, _key, options) => {
       capturedCookieHandlers = options.cookies;
       return { auth: {} } as any;
     });

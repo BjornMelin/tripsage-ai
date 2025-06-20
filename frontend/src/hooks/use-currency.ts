@@ -4,9 +4,7 @@ import { useApiQuery } from "@/hooks/use-api-query";
 import { useCurrencyStore } from "@/stores/currency-store";
 import type {
   ConversionResult,
-  Currency,
   CurrencyCode,
-  CurrencyPair,
   UpdateExchangeRatesResponse,
 } from "@/types/currency";
 import { useCallback, useEffect } from "react";

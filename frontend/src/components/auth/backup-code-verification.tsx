@@ -54,7 +54,7 @@ export function BackupCodeVerification({
         setError("Invalid backup code. Please check and try again.");
         setBackupCode("");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to verify backup code. Please try again.");
       setBackupCode("");
     } finally {

@@ -4,7 +4,7 @@
  * for accessibility compliance according to WCAG guidelines.
  */
 
-import { createMockUser, render } from "@/test/test-utils";
+import { render } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { describe, expect, it } from "vitest";

@@ -1,4 +1,4 @@
-import type { SavedSearch, SearchParams, SearchType } from "@/types/search";
+import type { SearchParams, SearchType } from "@/types/search";
 import { z } from "zod";
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";

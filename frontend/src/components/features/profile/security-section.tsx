@@ -111,7 +111,7 @@ export function SecuritySection() {
     },
   ];
 
-  const onPasswordChange = async (data: PasswordChangeFormData) => {
+  const onPasswordChange = async (_data: PasswordChangeFormData) => {
     try {
       // Simulate API call for password change
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -121,7 +121,7 @@ export function SecuritySection() {
         title: "Password updated",
         description: "Your password has been successfully changed.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description:
@@ -143,7 +143,7 @@ export function SecuritySection() {
           ? "Two-factor authentication has been enabled for your account."
           : "Two-factor authentication has been disabled.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update two-factor authentication settings.",
@@ -152,7 +152,7 @@ export function SecuritySection() {
     }
   };
 
-  const revokeDevice = async (deviceId: string) => {
+  const revokeDevice = async (_deviceId: string) => {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -161,7 +161,7 @@ export function SecuritySection() {
         title: "Device revoked",
         description: "The device has been successfully revoked from your account.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to revoke device access.",

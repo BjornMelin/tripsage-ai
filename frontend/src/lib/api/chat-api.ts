@@ -1,13 +1,8 @@
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import {
-  type ChatCompletionRequest,
-  type ChatCompletionResponse,
-  Message,
-} from "@/types/chat";
-import { z } from "zod";
+import type { ChatCompletionRequest, ChatCompletionResponse } from "@/types/chat";
 
 // The base URL for API requests
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const _API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 // Helper function to get auth headers
 const getAuthHeaders = async () => {
@@ -205,7 +200,7 @@ export async function uploadAttachments(files: File[]): Promise<{ urls: string[]
 
     const authHeaders = await getAuthHeaders();
     // Remove Content-Type for FormData
-    authHeaders["Content-Type"] = undefined;
+    delete authHeaders["Content-Type"];
 
     const response = await fetch("/api/chat/attachments", {
       method: "POST",

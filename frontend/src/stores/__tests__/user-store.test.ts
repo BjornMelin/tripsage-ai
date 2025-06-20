@@ -1,8 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { create } from "zustand";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-  type FavoriteDestination,
   type PersonalInfo,
   type PrivacySettings,
   type TravelDocument,
@@ -11,28 +9,59 @@ import {
   useUserProfileStore,
 } from "../user-store";
 
-// Mock setTimeout to make tests run faster
-vi.mock("global", () => ({
-  setTimeout: vi.fn((fn) => fn()),
-}));
-
-// Mock the store middleware to avoid persistence issues in tests
-vi.mock("zustand/middleware", () => ({
-  persist: (fn: any) => fn,
-  devtools: (fn: any) => fn,
-}));
-
 describe("User Profile Store", () => {
+  // Reset store state before each test to prevent state pollution
   beforeEach(() => {
     act(() => {
-      useUserProfileStore.setState({
-        profile: null,
-        isLoading: false,
-        isUpdatingProfile: false,
-        isUploadingAvatar: false,
-        error: null,
-        uploadError: null,
-      });
+      useUserProfileStore.getState().reset();
+    });
+  });
+  describe("Store Hook", () => {
+    it("returns a valid store state object", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+
+      // Check that the hook returns an object with expected properties
+      expect(result.current).toBeDefined();
+      expect(typeof result.current).toBe("object");
+    });
+
+    it("has all required state properties", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+      const state = result.current;
+
+      // Check for required state properties
+      expect(state).toHaveProperty("profile");
+      expect(state).toHaveProperty("isLoading");
+      expect(state).toHaveProperty("isUpdatingProfile");
+      expect(state).toHaveProperty("isUploadingAvatar");
+      expect(state).toHaveProperty("error");
+      expect(state).toHaveProperty("uploadError");
+    });
+
+    it("has all required computed properties", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+      const state = result.current;
+
+      expect(state).toHaveProperty("displayName");
+      expect(state).toHaveProperty("hasCompleteProfile");
+      expect(state).toHaveProperty("upcomingDocumentExpirations");
+    });
+
+    it("has all required action methods", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+      const state = result.current;
+
+      expect(state).toHaveProperty("setProfile");
+      expect(typeof state.setProfile).toBe("function");
+
+      expect(state).toHaveProperty("updatePersonalInfo");
+      expect(typeof state.updatePersonalInfo).toBe("function");
+
+      expect(state).toHaveProperty("updateTravelPreferences");
+      expect(typeof state.updateTravelPreferences).toBe("function");
+
+      expect(state).toHaveProperty("updatePrivacySettings");
+      expect(typeof state.updatePrivacySettings).toBe("function");
     });
   });
 
@@ -1114,7 +1143,7 @@ describe("User Profile Store", () => {
 
       // Export profile
       const exportedData = result.current.exportProfile();
-      const originalProfile = result.current.profile;
+      const _originalProfile = result.current.profile;
 
       // Reset profile
       act(() => {

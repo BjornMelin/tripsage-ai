@@ -9,7 +9,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
 
 type Trip = Database["public"]["Tables"]["trips"]["Row"];
 type TripInsert = Database["public"]["Tables"]["trips"]["Insert"];
@@ -242,11 +241,11 @@ export function useTripCollaborators(tripId: number) {
  */
 export function useAddTripCollaborator() {
   const { user } = useAuth();
-  const supabase = useSupabase();
+  const _supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (collaboratorData: TripCollaboratorInsert) => {
+    mutationFn: async (_collaboratorData: TripCollaboratorInsert) => {
       if (!user?.id) {
         throw new Error("User not authenticated");
       }
@@ -255,7 +254,7 @@ export function useAddTripCollaborator() {
       // For now, throw an error
       throw new Error("Trip collaboration feature not yet implemented");
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate collaborators list
       queryClient.invalidateQueries({
         queryKey: ["trip-collaborators", variables.trip_id, user?.id],
@@ -269,7 +268,7 @@ export function useAddTripCollaborator() {
  */
 export function useRemoveTripCollaborator() {
   const { user } = useAuth();
-  const supabase = useSupabase();
+  const _supabase = useSupabase();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -285,7 +284,7 @@ export function useRemoveTripCollaborator() {
       // For now, throw an error
       throw new Error("Trip collaboration feature not yet implemented");
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // Invalidate collaborators list
       queryClient.invalidateQueries({
         queryKey: ["trip-collaborators", variables.tripId, user?.id],

@@ -8,9 +8,6 @@ import {
   type User,
   type UserPreferences,
   type UserSecurity,
-  useAuth,
-  useAuthErrors,
-  useAuthLoading,
   useAuthStore,
   useIsAuthenticated,
   useIsTokenExpired,
@@ -22,6 +19,36 @@ import {
 vi.mock("global", () => ({
   setTimeout: vi.fn((fn) => fn()),
 }));
+
+// Helper function to create mock users
+const createMockUser = (overrides: Partial<User> = {}): User => ({
+  id: "user-1",
+  email: "test@example.com",
+  isEmailVerified: true,
+  createdAt: "2025-01-01T00:00:00Z",
+  updatedAt: "2025-01-01T00:00:00Z",
+  firstName: "John",
+  lastName: "Doe",
+  displayName: "Custom Display Name",
+  bio: "Test bio",
+  avatarUrl: "https://example.com/avatar.jpg",
+  preferences: {
+    theme: "light",
+    language: "en",
+    timezone: "UTC",
+    notifications: {
+      email: true,
+      tripReminders: true,
+      priceAlerts: false,
+      marketing: false,
+    },
+  },
+  security: {
+    twoFactorEnabled: false,
+    lastPasswordChange: "2025-01-01T00:00:00Z",
+  },
+  ...overrides,
+});
 
 describe("Auth Store", () => {
   beforeEach(() => {

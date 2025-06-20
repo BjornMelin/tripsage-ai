@@ -20,7 +20,7 @@ import {
   Shield,
   Smartphone,
 } from "lucide-react";
-import React, { useState } from "react";
+import { useState } from "react";
 
 interface MFASetupProps {
   onComplete: (backupCodes: string[]) => void;
@@ -71,7 +71,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
 
       setSetupData(mockSetupData);
       setStep("verify");
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to initialize MFA setup. Please try again.");
     } finally {
       setIsLoading(false);
@@ -98,7 +98,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
       } else {
         setError("Invalid verification code. Please try again.");
       }
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to verify code. Please try again.");
     } finally {
       setIsLoading(false);

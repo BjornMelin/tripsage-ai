@@ -11,7 +11,6 @@ import {
   type ExchangeRate,
   ExchangeRateSchema,
 } from "@/types/currency";
-import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -118,7 +117,7 @@ const validateCurrencyCode = (code: unknown): code is CurrencyCode => {
 };
 
 // Validate the currency object
-const validateCurrency = (currency: unknown): currency is Currency => {
+const _validateCurrency = (currency: unknown): currency is Currency => {
   return CurrencySchema.safeParse(currency).success;
 };
 

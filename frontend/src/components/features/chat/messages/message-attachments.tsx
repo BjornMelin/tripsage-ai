@@ -1,8 +1,7 @@
 "use client";
 
-import { FileArchiveIcon, FileIcon, FileTextIcon, ImageIcon } from "lucide-react";
+import { FileArchiveIcon, FileIcon, FileTextIcon } from "lucide-react";
 import Image from "next/image";
-import React from "react";
 
 interface MessageAttachmentsProps {
   attachments: string[];

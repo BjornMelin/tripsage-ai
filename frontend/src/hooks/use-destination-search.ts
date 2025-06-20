@@ -25,7 +25,7 @@ export function useDestinationSearch(): UseDestinationSearchResult {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<Error | null>(null);
 
-  const searchDestinations = async (params: DestinationSearchParams) => {
+  const searchDestinations = async (_params: DestinationSearchParams) => {
     setIsSearching(true);
     setSearchError(null);
     try {

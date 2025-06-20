@@ -12,7 +12,6 @@ import {
   useRemoveTripCollaborator,
   useTripCollaborators,
   useTripData,
-  useTrips as useTripsSupabase,
 } from "./use-trips-supabase";
 
 /**

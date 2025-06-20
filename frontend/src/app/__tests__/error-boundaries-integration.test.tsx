@@ -1,10 +1,5 @@
 import { render } from "@/test/test-utils";
 import { screen } from "@testing-library/react";
-/**
- * Integration tests for Next.js error boundaries
- * Tests the error.tsx and global-error.tsx files
- */
-import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock React hooks for testing environment

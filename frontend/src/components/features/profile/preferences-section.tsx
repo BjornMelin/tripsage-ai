@@ -11,7 +11,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,7 +29,7 @@ import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
 import type { CurrencyCode } from "@/types/currency";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, MapPin, Palette, Zap } from "lucide-react";
+import { Globe, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -78,7 +77,7 @@ export function PreferencesSection() {
         title: "Preferences updated",
         description: "Your preferences have been successfully saved.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update preferences. Please try again.",
@@ -96,7 +95,7 @@ export function PreferencesSection() {
         title: "Setting updated",
         description: `${setting} ${enabled ? "enabled" : "disabled"}.`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update setting.",

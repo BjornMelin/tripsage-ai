@@ -5,6 +5,9 @@
 export type AgentStatusType =
   | "idle"
   | "initializing"
+  | "active"
+  | "waiting"
+  | "paused"
   | "thinking"
   | "executing"
   | "error"
@@ -12,8 +15,10 @@ export type AgentStatusType =
 
 export interface AgentTask {
   id: string;
+  title: string;
   description: string;
   status: "pending" | "in_progress" | "completed" | "failed";
+  progress?: number;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
@@ -24,6 +29,7 @@ export interface Agent {
   id: string;
   name: string;
   type: string;
+  description?: string;
   status: AgentStatusType;
   currentTaskId?: string;
   progress: number; // 0-100
@@ -36,16 +42,17 @@ export interface Agent {
 export interface AgentActivity {
   id: string;
   agentId: string;
-  action: string;
-  details?: Record<string, unknown>;
+  type: string;
+  message: string;
+  metadata?: Record<string, unknown>;
   timestamp: string;
 }
 
 export interface ResourceUsage {
-  agentId: string;
-  cpu: number;
-  memory: number;
-  tokens: number;
+  cpuUsage: number;
+  memoryUsage: number;
+  networkRequests: number;
+  activeAgents: number;
   timestamp: string;
 }
 

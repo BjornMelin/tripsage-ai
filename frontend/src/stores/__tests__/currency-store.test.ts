@@ -1,4 +1,4 @@
-import type { Currency, ExchangeRate } from "@/types/currency";
+import type { Currency } from "@/types/currency";
 import { act } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";

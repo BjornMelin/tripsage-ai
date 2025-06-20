@@ -12,9 +12,8 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useSearchResultsStore } from "@/stores/search-store";
-import { ArrowRight, Clock, DollarSign, Filter, MapPin, Plane } from "lucide-react";
+import { ArrowRight, Filter, Plane } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import React from "react";
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();

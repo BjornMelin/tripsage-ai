@@ -12,7 +12,7 @@ if (typeof TransformStream === "undefined") {
     readable: ReadableStream;
     writable: WritableStream;
 
-    constructor(transformer?: Transformer<unknown, unknown>) {
+    constructor(_transformer?: Transformer<unknown, unknown>) {
       const { readable, writable } = new TransformStream();
       this.readable = readable;
       this.writable = writable;

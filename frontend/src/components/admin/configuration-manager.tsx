@@ -30,7 +30,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -39,9 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -51,7 +48,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/use-toast";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -62,15 +58,11 @@ import {
   CheckCircle,
   Clock,
   DollarSign,
-  Download,
-  Edit,
   Eye,
   History,
   RotateCcw,
   Save,
   Settings,
-  TrendingUp,
-  Upload,
 } from "lucide-react";
 
 // Types
@@ -132,7 +124,7 @@ const MODEL_OPTIONS = [
 ];
 
 export default function ConfigurationManager() {
-  const router = useRouter();
+  const _router = useRouter();
   const { toast } = useToast();
 
   // State management
@@ -606,7 +598,9 @@ export default function ConfigurationManager() {
                   </div>
                   <Slider
                     value={[editedConfig.top_p || 0]}
-                    onValueChange={([value]: number[]) => handleConfigChange("top_p", value)}
+                    onValueChange={([value]: number[]) =>
+                      handleConfigChange("top_p", value)
+                    }
                     min={0}
                     max={1}
                     step={0.01}

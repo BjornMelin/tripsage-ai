@@ -118,7 +118,7 @@ export function ConnectionStatusMonitor() {
         title: "Reconnected",
         description: "All real-time connections have been restored.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Reconnection Failed",
         description: "Failed to restore some connections. Please try again.",
@@ -274,8 +274,8 @@ export function ConnectionStatusMonitor() {
  * Compact connection status indicator for navigation/header
  */
 export function ConnectionStatusIndicator() {
-  const [isConnected, setIsConnected] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const [isConnected, _setIsConnected] = useState(true);
+  const [hasError, _setHasError] = useState(false);
 
   return (
     <div className="flex items-center space-x-2">

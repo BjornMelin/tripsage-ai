@@ -150,10 +150,9 @@ export function simulateSystemEvent(
 /**
  * Helper to simulate a Postgres change event
  */
-export function simulatePostgresChange<T = any>(
-  channel: MockRealtimeChannel,
-  payload: RealtimePostgresChangesPayload<T>
-) {
+export function simulatePostgresChange<
+  T extends { [key: string]: any } = { [key: string]: any },
+>(channel: MockRealtimeChannel, payload: RealtimePostgresChangesPayload<T>) {
   const postgresCallbacks = channel._callbacks.postgres_changes || [];
 
   postgresCallbacks.forEach(({ event, schema, table, filter, callback }) => {
@@ -174,7 +173,7 @@ export function simulatePostgresChange<T = any>(
  * Helper to find postgres change handlers
  */
 export function getPostgresHandler(channel: MockRealtimeChannel) {
-  return (payload: RealtimePostgresChangesPayload<any>) => {
+  return (payload: RealtimePostgresChangesPayload<{ [key: string]: any }>) => {
     simulatePostgresChange(channel, payload);
   };
 }

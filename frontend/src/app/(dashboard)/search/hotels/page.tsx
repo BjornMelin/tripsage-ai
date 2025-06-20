@@ -1,7 +1,6 @@
 "use client";
 
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
-import { SearchResults } from "@/components/features/search/search-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ export default function HotelSearchPage() {
   const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = async (params: AccommodationSearchParams) => {
+  const handleSearch = async (_params: AccommodationSearchParams) => {
     setHasSearched(true);
     // search(params); // Disabled for MVP testing
   };

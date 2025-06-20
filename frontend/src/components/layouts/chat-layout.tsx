@@ -2,10 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import { useChatStore } from "@/stores/chat-store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
 
 interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
   onNewChat?: () => void;

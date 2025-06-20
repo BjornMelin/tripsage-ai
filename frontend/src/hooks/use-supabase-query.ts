@@ -2,30 +2,40 @@
 
 import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
-import type {
-  Database,
-  Tables,
-  TablesInsert,
-  TablesUpdate,
-} from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 import {
   type UseInfiniteQueryOptions,
   type UseQueryOptions,
   useInfiniteQuery,
   useQuery,
 } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+
+// Zod schemas for validation
+const TableNameSchema = z.string().min(1, "Table name cannot be empty");
+
+const ColumnsSchema = z.string().min(1, "Columns cannot be empty").default("*");
+
+const _PageSizeSchema = z
+  .number()
+  .positive()
+  .max(100, "Page size cannot exceed 100")
+  .default(20);
+
+const IdSchema = z.union([z.string(), z.number()]).nullable();
+
+const _SearchQuerySchema = z
+  .string()
+  .min(2, "Search query must be at least 2 characters");
+
+const DebounceSchema = z.number().min(0).max(5000).default(300);
 
 type TableName = keyof Database["public"]["Tables"];
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 
-type SupabaseQueryBuilder<T extends TableName> = PostgrestFilterBuilder<
-  Database["public"],
-  Database["public"]["Tables"][T]["Row"],
-  Database["public"]["Tables"][T]["Row"][]
->;
+type SupabaseQueryBuilder<_T extends TableName> = any;
 
 type QueryHandler<T extends TableName> = (
   query: SupabaseQueryBuilder<T>
@@ -41,8 +51,14 @@ interface UseSupabaseQueryOptions<T extends TableName>
 
 interface UseSupabaseInfiniteQueryOptions<T extends TableName>
   extends Omit<
-    UseInfiniteQueryOptions<TableRow<T>[]>,
-    "queryKey" | "queryFn" | "getNextPageParam"
+    UseInfiniteQueryOptions<
+      { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null },
+      Error,
+      { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null },
+      { data: TableRow<T>[]; nextCursor?: number; totalCount?: number | null }[],
+      (string | number)[]
+    >,
+    "queryKey" | "queryFn" | "getNextPageParam" | "initialPageParam"
   > {
   table: T;
   columns?: string;
@@ -110,8 +126,6 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
     ...queryOptions
   } = options;
 
-  const { initialPageParam: _, ...restQueryOptions } = queryOptions;
-
   return useInfiniteQuery({
     queryKey: [
       `${table}-infinite`,
@@ -134,21 +148,21 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
       const { data, error, count } = await query;
       if (error) throw error;
 
+      const hasMore = (data?.length || 0) === pageSize;
+      const nextCursor = hasMore ? (pageParam as number) + pageSize : undefined;
+
       return {
         data: (data || []) as unknown as TableRow<T>[],
-        nextCursor:
-          (data?.length || 0) === pageSize
-            ? (pageParam as number) + pageSize
-            : undefined,
+        nextCursor,
         totalCount: count,
       };
     },
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: 0 as number,
+    getNextPageParam: (lastPage: any) => lastPage.nextCursor,
     enabled: enabled && !!user?.id,
     staleTime,
-    ...restQueryOptions,
-  });
+    ...queryOptions,
+  } as any);
 }
 
 /**
@@ -166,27 +180,31 @@ export function useSupabaseRecord<T extends TableName>(
   const supabase = useSupabase();
   const { user } = useAuth();
 
+  // Validate inputs with Zod
+  const validatedTable = TableNameSchema.parse(table);
+  const validatedId = IdSchema.parse(id);
+  const validatedColumns = ColumnsSchema.parse(options?.columns);
+
   const {
-    columns = "*",
     enabled = true,
     staleTime = 1000 * 60 * 10, // 10 minutes for single records
   } = options || {};
 
   return useQuery({
-    queryKey: [table, "single", id, columns],
+    queryKey: [validatedTable, "single", validatedId, validatedColumns],
     queryFn: async () => {
-      if (!id) throw new Error("ID is required");
+      if (!validatedId) throw new Error("ID is required");
 
       const { data, error } = await supabase
-        .from(table)
-        .select(columns)
-        .eq("id", id)
+        .from(validatedTable)
+        .select(validatedColumns)
+        .eq("id", validatedId)
         .single();
 
       if (error) throw error;
       return data as unknown as TableRow<T>;
     },
-    enabled: enabled && !!id && !!user?.id,
+    enabled: enabled && !!validatedId && !!user?.id,
     staleTime,
   });
 }
@@ -257,6 +275,10 @@ export function useSupabaseSearch<T extends TableName>(
   const supabase = useSupabase();
   const { user } = useAuth();
 
+  // Validate inputs with Zod
+  const validatedTable = TableNameSchema.parse(table);
+  const validatedSearchQuery = z.string().parse(searchQuery); // Allow empty for clearing search
+
   const {
     columns = "*",
     searchColumns = ["name", "title", "description"],
@@ -265,14 +287,17 @@ export function useSupabaseSearch<T extends TableName>(
     debounceMs = 300,
   } = options || {};
 
+  const validatedColumns = ColumnsSchema.parse(columns);
+  const validatedDebounceMs = DebounceSchema.parse(debounceMs);
+
   // Debounce search query
-  const debouncedQuery = useDebounce(searchQuery, debounceMs);
+  const debouncedQuery = useDebounce(validatedSearchQuery, validatedDebounceMs);
 
   return useQuery({
     queryKey: [
-      `${table}-search`,
+      `${validatedTable}-search`,
       debouncedQuery,
-      columns,
+      validatedColumns,
       searchColumns,
       filter?.toString(),
       user?.id,
@@ -282,7 +307,7 @@ export function useSupabaseSearch<T extends TableName>(
         return [];
       }
 
-      let query = supabase.from(table).select(columns);
+      let query = supabase.from(validatedTable).select(validatedColumns);
 
       // Apply search across multiple columns
       if (searchColumns.length > 0) {
@@ -322,20 +347,35 @@ export function useSupabaseRelated<T extends TableName>(
   const supabase = useSupabase();
   const { user } = useAuth();
 
+  // Validate inputs with Zod
+  const validatedTable = TableNameSchema.parse(table);
+  const validatedForeignKey = z
+    .string()
+    .min(1, "Foreign key cannot be empty")
+    .parse(foreignKey);
+  const validatedForeignValue = z
+    .union([z.string(), z.number()])
+    .nullable()
+    .parse(foreignValue);
+
   const { columns = "*", filter, enabled = true } = options || {};
+  const validatedColumns = ColumnsSchema.parse(columns);
 
   return useQuery({
     queryKey: [
-      `${table}-related`,
-      foreignKey,
-      foreignValue,
-      columns,
+      `${validatedTable}-related`,
+      validatedForeignKey,
+      validatedForeignValue,
+      validatedColumns,
       filter?.toString(),
     ],
     queryFn: async () => {
-      if (!foreignValue) return [];
+      if (!validatedForeignValue) return [];
 
-      let query = supabase.from(table).select(columns).eq(foreignKey, foreignValue);
+      let query = supabase
+        .from(validatedTable)
+        .select(validatedColumns)
+        .eq(validatedForeignKey, validatedForeignValue);
 
       if (filter) {
         query = filter(query);
@@ -346,7 +386,7 @@ export function useSupabaseRelated<T extends TableName>(
 
       return (data || []) as unknown as TableRow<T>[];
     },
-    enabled: enabled && !!foreignValue && !!user?.id,
+    enabled: enabled && !!validatedForeignValue && !!user?.id,
     staleTime: 1000 * 60 * 5,
   });
 }
@@ -377,11 +417,10 @@ export function useSupabaseQueryHelpers() {
   const { user } = useAuth();
 
   // User's trips with collaboration info
-  const useUserTrips = useCallback(
-    (filters?: { status?: string; trip_type?: string }) => {
-      return useSupabaseQuery({
-        table: "trips",
-        columns: `
+  const useUserTrips = (filters?: { status?: string; trip_type?: string }) => {
+    return useSupabaseQuery({
+      table: "trips",
+      columns: `
         *,
         trip_collaborators(
           id,
@@ -391,28 +430,26 @@ export function useSupabaseQueryHelpers() {
           added_at
         )
       `,
-        filter: (query) => {
-          let filtered = query
-            .or(`user_id.eq.${user?.id},trip_collaborators.user_id.eq.${user?.id}`)
-            .order("created_at", { ascending: false });
+      filter: (query) => {
+        let filtered = query
+          .or(`user_id.eq.${user?.id},trip_collaborators.user_id.eq.${user?.id}`)
+          .order("created_at", { ascending: false });
 
-          if (filters?.status) {
-            filtered = filtered.eq("status", filters.status);
-          }
-          if (filters?.trip_type) {
-            filtered = filtered.eq("trip_type", filters.trip_type);
-          }
+        if (filters?.status) {
+          filtered = filtered.eq("status", filters.status);
+        }
+        if (filters?.trip_type) {
+          filtered = filtered.eq("trip_type", filters.trip_type);
+        }
 
-          return filtered;
-        },
-        dependencies: [filters],
-      });
-    },
-    [user?.id]
-  );
+        return filtered;
+      },
+      dependencies: [filters],
+    });
+  };
 
   // Trip with full details
-  const useTripDetails = useCallback((tripId: number | null) => {
+  const useTripDetails = (tripId: number | null) => {
     return useSupabaseRecord("trips", tripId, {
       columns: `
         *,
@@ -429,32 +466,29 @@ export function useSupabaseQueryHelpers() {
         )
       `,
     });
-  }, []);
+  };
 
   // User's chat sessions
-  const useChatSessions = useCallback(
-    (tripId?: number | null) => {
-      return useSupabaseQuery({
-        table: "chat_sessions",
-        filter: (query) => {
-          let filtered = query
-            .eq("user_id", user?.id!)
-            .order("updated_at", { ascending: false });
+  const useChatSessions = (tripId?: number | null) => {
+    return useSupabaseQuery({
+      table: "chat_sessions",
+      filter: (query) => {
+        let filtered = query
+          .eq("user_id", user?.id!)
+          .order("updated_at", { ascending: false });
 
-          if (tripId) {
-            filtered = filtered.eq("trip_id", tripId);
-          }
+        if (tripId) {
+          filtered = filtered.eq("trip_id", tripId);
+        }
 
-          return filtered;
-        },
-        dependencies: [tripId],
-      });
-    },
-    [user?.id]
-  );
+        return filtered;
+      },
+      dependencies: [tripId],
+    });
+  };
 
   // Messages for a session with infinite scroll
-  const useChatMessages = useCallback((sessionId: string | null) => {
+  const useChatMessages = (sessionId: string | null) => {
     return useSupabaseInfiniteQuery({
       table: "chat_messages",
       columns: `
@@ -466,41 +500,37 @@ export function useSupabaseQueryHelpers() {
       enabled: !!sessionId,
       dependencies: [sessionId],
       pageSize: 50,
-      initialPageParam: 0,
     });
-  }, []);
+  };
 
   // User's files with filters
-  const useUserFiles = useCallback(
-    (filters?: {
-      tripId?: number;
-      chatMessageId?: number;
-      uploadStatus?: string;
-    }) => {
-      return useSupabaseQuery({
-        table: "file_attachments",
-        filter: (query) => {
-          let filtered = query
-            .eq("user_id", user?.id!)
-            .order("created_at", { ascending: false });
+  const useUserFiles = (filters?: {
+    tripId?: number;
+    chatMessageId?: number;
+    uploadStatus?: string;
+  }) => {
+    return useSupabaseQuery({
+      table: "file_attachments",
+      filter: (query) => {
+        let filtered = query
+          .eq("user_id", user?.id!)
+          .order("created_at", { ascending: false });
 
-          if (filters?.tripId) {
-            filtered = filtered.eq("trip_id", filters.tripId);
-          }
-          if (filters?.chatMessageId) {
-            filtered = filtered.eq("chat_message_id", filters.chatMessageId);
-          }
-          if (filters?.uploadStatus) {
-            filtered = filtered.eq("upload_status", filters.uploadStatus);
-          }
+        if (filters?.tripId) {
+          filtered = filtered.eq("trip_id", filters.tripId);
+        }
+        if (filters?.chatMessageId) {
+          filtered = filtered.eq("chat_message_id", filters.chatMessageId);
+        }
+        if (filters?.uploadStatus) {
+          filtered = filtered.eq("upload_status", filters.uploadStatus);
+        }
 
-          return filtered;
-        },
-        dependencies: [filters],
-      });
-    },
-    [user?.id]
-  );
+        return filtered;
+      },
+      dependencies: [filters],
+    });
+  };
 
   return {
     useUserTrips,

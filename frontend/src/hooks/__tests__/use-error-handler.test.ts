@@ -256,7 +256,7 @@ describe("useErrorHandler", () => {
       await act(async () => {
         try {
           await result.current.handleAsyncError(asyncOperation, fallback);
-        } catch (error) {
+        } catch (_error) {
           // Expected to throw
         }
       });

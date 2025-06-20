@@ -4,10 +4,9 @@
 
 import { useChatAi } from "@/hooks/use-chat-ai";
 import { useApiKeyStore } from "@/stores/api-key-store";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { create } from "zustand";
 import { ChatContainer } from "../chat-container";
 
 // Mock the API key store

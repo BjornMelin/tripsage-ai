@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Brain, Network, Settings, Zap } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Mock data for demonstration
 const mockAgentMetrics = [
@@ -95,7 +95,7 @@ const mockConnectionAnalytics: ConnectionAnalytics = {
 
 export default function AgentsPage() {
   const [selectedTab, setSelectedTab] = useState("overview");
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [_selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   // WebSocket connection for real-time updates (disabled in development)
   const {

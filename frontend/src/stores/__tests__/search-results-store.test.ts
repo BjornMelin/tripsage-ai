@@ -1,11 +1,9 @@
-import type { Accommodation, Flight, SearchResults, SearchType } from "@/types/search";
+import type { Accommodation, Flight, SearchResults } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   type ErrorDetails,
-  type SearchContext,
   type SearchMetrics,
-  type SearchStatus,
   useSearchResultsStore,
 } from "../search-results-store";
 
@@ -290,7 +288,22 @@ describe("Search Results Store", () => {
 
       act(() => {
         result.current.setSearchResults(searchId1!, {
-          flights: [{ id: "f1" }] as Partial<Flight>[],
+          flights: [
+            {
+              id: "f1",
+              airline: "Test Airline",
+              flightNumber: "TA123",
+              origin: "NYC",
+              destination: "LAX",
+              departureTime: "2023-01-01T10:00:00Z",
+              arrivalTime: "2023-01-01T14:00:00Z",
+              duration: 240,
+              stops: 0,
+              price: 299,
+              cabinClass: "economy",
+              seatsAvailable: 100,
+            },
+          ],
         });
       });
 
@@ -300,7 +313,21 @@ describe("Search Results Store", () => {
 
       act(() => {
         result.current.setSearchResults(searchId2!, {
-          accommodations: [{ id: "a1" }] as Partial<Accommodation>[],
+          accommodations: [
+            {
+              id: "a1",
+              name: "Test Hotel",
+              type: "hotel",
+              location: "Test City",
+              checkIn: "2023-01-01",
+              checkOut: "2023-01-03",
+              pricePerNight: 150,
+              totalPrice: 300,
+              rating: 4.5,
+              amenities: ["wifi", "parking"],
+              images: ["test.jpg"],
+            },
+          ],
         });
       });
 

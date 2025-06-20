@@ -1,12 +1,3 @@
-/**
- * Mock implementation of use-supabase-realtime
- * This file exists to satisfy test imports that expect this module
- * Real-time functionality is handled elsewhere in the codebase
- */
-
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
-
 export interface RealtimeConnectionStatus {
   trips?: "connected" | "disconnected" | "error";
   destinations?: "connected" | "disconnected" | "error";
@@ -41,7 +32,7 @@ export function useSupabaseRealtime(): RealtimeHookResult {
 /**
  * Mock hook for trip-specific realtime subscriptions
  */
-export function useTripRealtime(tripId: string | null): RealtimeHookResult {
+export function useTripRealtime(_tripId: string | number | null): RealtimeHookResult {
   return {
     connectionStatus: { trips: "connected", destinations: "connected" },
     isConnected: true,
@@ -53,10 +44,12 @@ export function useTripRealtime(tripId: string | null): RealtimeHookResult {
 /**
  * Mock hook for chat realtime subscriptions
  */
-export function useChatRealtime(sessionId: string | null): RealtimeHookResult {
+export function useChatRealtime(_sessionId: string | null): RealtimeHookResult {
   return {
     connectionStatus: "connected",
+    isConnected: true,
     error: null,
+    errors: [],
     newMessageCount: 0,
     clearMessageCount: () => {},
   };

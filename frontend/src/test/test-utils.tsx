@@ -1,11 +1,19 @@
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/contexts/auth-context";
 import type { User } from "@/contexts/auth-context";
+import {
+  type ValidatedThemeProviderProps,
+  validateThemeProviderProps,
+} from "@/schemas/theme-provider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { RenderOptions } from "@testing-library/react";
 import { render } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
+import type { ComponentProps } from "react";
 import { vi } from "vitest";
+
+// Type for next-themes provider props
+type NextThemesProviderProps = ComponentProps<typeof ThemeProvider>;
 
 // Mock the useSupabase hook for tests
 vi.mock("@/lib/supabase/client", () => ({
@@ -105,12 +113,7 @@ export const createTestQueryClient = () =>
 export interface ProvidersProps {
   children: ReactNode;
   initialUser?: User | null;
-  theme?: {
-    attribute?: "class" | "data-theme" | string;
-    defaultTheme?: string;
-    enableSystem?: boolean;
-    disableTransitionOnChange?: boolean;
-  };
+  theme?: ValidatedThemeProviderProps;
   queryClient?: QueryClient;
 }
 
@@ -133,9 +136,27 @@ export const AllTheProviders = ({
 }: ProvidersProps) => {
   const client = queryClient || createTestQueryClient();
 
+  // Validate theme props if provided
+  const validatedTheme = theme
+    ? (() => {
+        const result = validateThemeProviderProps(theme);
+        if (!result.success) {
+          console.warn("Invalid theme configuration in test:", result.error.issues);
+          // Use default theme configuration on validation failure
+          return {
+            attribute: "class" as const,
+            defaultTheme: "system",
+            enableSystem: true,
+            disableTransitionOnChange: true,
+          };
+        }
+        return result.data;
+      })()
+    : undefined;
+
   return (
     <QueryClientProvider client={client}>
-      <ThemeProvider {...theme}>
+      <ThemeProvider {...(validatedTheme as NextThemesProviderProps)}>
         <AuthProvider initialUser={initialUser}>{children}</AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

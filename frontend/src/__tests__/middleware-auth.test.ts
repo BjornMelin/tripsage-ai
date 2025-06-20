@@ -99,7 +99,7 @@ describe("Middleware - updateSession", () => {
     }
 
     let capturedCookieHandlers: CookieHandlers | null = null;
-    mockCreateServerClient.mockImplementation((url, key, options) => {
+    mockCreateServerClient.mockImplementation((_url, _key, options) => {
       capturedCookieHandlers = options.cookies as CookieHandlers;
       return mockSupabase as unknown as ReturnType<typeof createServerClient>;
     });
@@ -208,7 +208,7 @@ describe("Middleware - updateSession", () => {
     }
 
     let capturedCookieHandlers: CookieHandlers | null = null;
-    mockCreateServerClient.mockImplementation((url, key, options) => {
+    mockCreateServerClient.mockImplementation((_url, _key, options) => {
       capturedCookieHandlers = options.cookies as CookieHandlers;
       return mockSupabase as unknown as ReturnType<typeof createServerClient>;
     });

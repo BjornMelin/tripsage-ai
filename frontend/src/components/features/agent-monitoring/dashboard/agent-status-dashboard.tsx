@@ -5,12 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-  Tooltip as TooltipUI,
-} from "@/components/ui/tooltip";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { AnimatePresence, motion } from "framer-motion";
@@ -23,7 +17,6 @@ import {
   Cpu,
   Gauge,
   Heart,
-  Loader2,
   TrendingUp,
   Wifi,
   WifiOff,
@@ -114,7 +107,7 @@ const predictiveIndicators: PredictiveIndicator[] = [
   },
 ];
 
-const getStatusColor = (status: AgentMetrics["status"]) => {
+const _getStatusColor = (status: AgentMetrics["status"]) => {
   switch (status) {
     case "active":
       return "bg-green-500";
@@ -284,7 +277,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   // Using React 19's useOptimistic for immediate UI updates
   const [optimisticAgents, updateOptimisticAgents] = useOptimistic(
     agents.length > 0 ? agents : externalAgents || [],
-    (state, newAgents: AgentMetrics[]) => newAgents
+    (_state, newAgents: AgentMetrics[]) => newAgents
   );
 
   // Fix hydration mismatch by ensuring client-side rendering for time

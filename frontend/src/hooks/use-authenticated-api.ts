@@ -38,7 +38,7 @@ export function useAuthenticatedApi() {
     user = authContext.user;
     isAuthenticated = authContext.isAuthenticated;
     signOut = authContext.signOut;
-  } catch (error) {
+  } catch (_error) {
     // During SSG, auth context might not be available
     // Provide safe defaults
     user = null;
@@ -50,7 +50,7 @@ export function useAuthenticatedApi() {
   let supabase;
   try {
     supabase = createBrowserClient();
-  } catch (error) {
+  } catch (_error) {
     // During SSG, Supabase environment variables might not be available
     // Create a mock client that doesn't throw
     supabase = null;
@@ -142,7 +142,7 @@ export function useAuthenticatedApi() {
                   signal: abortControllerRef.current?.signal,
                 });
               }
-            } catch (refreshError) {
+            } catch (_refreshError) {
               // Refresh failed, user needs to log in again
               await signOut();
             }

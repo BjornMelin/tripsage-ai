@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
-import { ApiError } from "@/lib/api/client";
+import type { ApiError } from "@/lib/api/client";
 import { createMockUseQueryResult } from "@/test/mock-helpers";
 import { createMockUser, render, screen, waitFor } from "@/test/test-utils";
 import type { AllKeysResponse } from "@/types/api-keys";
@@ -197,7 +197,9 @@ describe("SecurityDashboard", () => {
 
     // Icons should be rendered (we can't easily test the specific icons,
     // but we can ensure the container elements are present)
-    const eventContainers = document.querySelectorAll('[data-testid="security-event"]');
+    const _eventContainers = document.querySelectorAll(
+      '[data-testid="security-event"]'
+    );
     // Note: This would need to be added to the component if we want to test it properly
   });
 
@@ -209,7 +211,7 @@ describe("SecurityDashboard", () => {
     });
 
     // Should format dates properly (exact format depends on locale)
-    const timeElements = document.querySelectorAll("time, .timestamp");
+    const _timeElements = document.querySelectorAll("time, .timestamp");
     // This is a simplified test - in reality we'd check for proper formatting
   });
 

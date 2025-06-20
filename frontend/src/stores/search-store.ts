@@ -57,7 +57,7 @@ interface SearchOrchestratorState {
 // Main search store that orchestrates the slice stores
 export const useSearchStore = create<SearchOrchestratorState>()(
   devtools(
-    (set, get) => ({
+    (_set, get) => ({
       // Computed properties
       get currentSearchType() {
         return useSearchParamsStore.getState().currentSearchType;
@@ -93,7 +93,7 @@ export const useSearchStore = create<SearchOrchestratorState>()(
       executeSearch: async (params) => {
         const paramsStore = useSearchParamsStore.getState();
         const resultsStore = useSearchResultsStore.getState();
-        const filtersStore = useSearchFiltersStore.getState();
+        const _filtersStore = useSearchFiltersStore.getState();
         const historyStore = useSearchHistoryStore.getState();
 
         const searchType = paramsStore.currentSearchType;
@@ -239,36 +239,42 @@ export const useSearchStore = create<SearchOrchestratorState>()(
                 {
                   id: "1",
                   name: "Paris",
+                  description: "The City of Light",
+                  formattedAddress: "Paris, France",
+                  types: ["city"],
+                  coordinates: { lat: 48.8566, lng: 2.3522 },
                   country: "France",
                   region: "Europe",
-                  types: ["city"],
-                  description: "The City of Light",
-                  coordinates: { lat: 48.8566, lng: 2.3522 },
-                  images: [],
+                  photos: [],
                   popularityScore: 9.5,
                   bestTimeToVisit: ["spring", "fall"],
-                  averageTemperature: { min: 5, max: 25 },
-                  currency: "EUR",
-                  language: "French",
-                  timeZone: "Europe/Paris",
                   attractions: [],
+                  rating: 4.5,
+                  climate: {
+                    season: "temperate",
+                    averageTemp: 15,
+                    rainfall: 50,
+                  },
                 },
                 {
                   id: "2",
                   name: "Tokyo",
+                  description: "A vibrant metropolis",
+                  formattedAddress: "Tokyo, Japan",
+                  types: ["city"],
+                  coordinates: { lat: 35.6762, lng: 139.6503 },
                   country: "Japan",
                   region: "Asia",
-                  types: ["city"],
-                  description: "A vibrant metropolis",
-                  coordinates: { lat: 35.6762, lng: 139.6503 },
-                  images: [],
+                  photos: [],
                   popularityScore: 9.3,
                   bestTimeToVisit: ["spring", "fall"],
-                  averageTemperature: { min: 10, max: 30 },
-                  currency: "JPY",
-                  language: "Japanese",
-                  timeZone: "Asia/Tokyo",
                   attractions: [],
+                  rating: 4.7,
+                  climate: {
+                    season: "humid_subtropical",
+                    averageTemp: 20,
+                    rainfall: 80,
+                  },
                 },
               ] as Destination[];
               break;

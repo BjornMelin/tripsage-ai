@@ -2,9 +2,11 @@
 
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
-import { SearchResults } from "@/components/features/search/search-results";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useActivitySearch, type ActivitySearchParams } from "@/hooks/use-activity-search";
+import {
+  type ActivitySearchParams,
+  useActivitySearch,
+} from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Activity } from "@/types/search";
 import { useSearchParams } from "next/navigation";
@@ -21,18 +23,15 @@ interface SearchParamsState {
 export default function ActivitiesSearchPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { searchActivities, isSearching, searchError } = useActivitySearch();
-  const {
-    hasResults,
-    isSearching: storeIsSearching,
-  } = useSearchStore();
+  const { hasResults, isSearching: storeIsSearching } = useSearchStore();
   const searchParams = useSearchParams();
 
   // Initialize search with URL parameters
   useEffect(() => {
     const destination = searchParams.get("destination");
-    const date = searchParams.get("date");
+    const _date = searchParams.get("date");
     const category = searchParams.get("category");
-    const maxPrice = searchParams.get("maxPrice");
+    const _maxPrice = searchParams.get("maxPrice");
 
     if (destination) {
       const initialParams: ActivitySearchParams = {

@@ -381,8 +381,22 @@ describe("API Key Store", () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        url: "/api/keys/validate",
+        redirected: false,
+        type: "default",
+        body: null,
+        bodyUsed: false,
+        clone: vi.fn(),
+        arrayBuffer: vi.fn(),
+        blob: vi.fn(),
+        formData: vi.fn(),
+        text: vi.fn(),
+        bytes: vi.fn(),
         json: async () => mockResponse,
-      });
+      } as Response);
 
       let isValid: boolean;
       await act(async () => {
@@ -417,8 +431,22 @@ describe("API Key Store", () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        url: "/api/keys/validate",
+        redirected: false,
+        type: "default",
+        body: null,
+        bodyUsed: false,
+        clone: vi.fn(),
+        arrayBuffer: vi.fn(),
+        blob: vi.fn(),
+        formData: vi.fn(),
+        text: vi.fn(),
+        bytes: vi.fn(),
         json: async () => mockResponse,
-      });
+      } as Response);
 
       let isValid: boolean;
       await act(async () => {
@@ -435,8 +463,22 @@ describe("API Key Store", () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        headers: new Headers(),
+        url: "/api/keys/validate",
+        redirected: false,
+        type: "default",
+        body: null,
+        bodyUsed: false,
+        clone: vi.fn(),
+        arrayBuffer: vi.fn(),
+        blob: vi.fn(),
+        formData: vi.fn(),
+        json: vi.fn(),
         text: async () => "API key validation failed",
-      });
+        bytes: vi.fn(),
+      } as Response);
 
       let isValid: boolean;
       await act(async () => {
@@ -498,8 +540,22 @@ describe("API Key Store", () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        url: "/api/keys/validate",
+        redirected: false,
+        type: "default",
+        body: null,
+        bodyUsed: false,
+        clone: vi.fn(),
+        arrayBuffer: vi.fn(),
+        blob: vi.fn(),
+        formData: vi.fn(),
+        text: vi.fn(),
+        bytes: vi.fn(),
         json: async () => ({ is_valid: true }),
-      });
+      } as Response);
 
       await act(async () => {
         await result.current.validateKey("openai", "sk-test123");
@@ -570,8 +626,22 @@ describe("API Key Store", () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
+        status: 200,
+        statusText: "OK",
+        headers: new Headers(),
+        url: "/api/keys",
+        redirected: false,
+        type: "default",
+        body: null,
+        bodyUsed: false,
+        clone: vi.fn(),
+        arrayBuffer: vi.fn(),
+        blob: vi.fn(),
+        formData: vi.fn(),
+        text: vi.fn(),
+        bytes: vi.fn(),
         json: async () => mockResponse,
-      });
+      } as Response);
 
       await act(async () => {
         await result.current.loadKeys();
@@ -592,7 +662,22 @@ describe("API Key Store", () => {
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
-      });
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: new Headers(),
+        url: "/api/keys",
+        redirected: false,
+        type: "default",
+        body: null,
+        bodyUsed: false,
+        clone: vi.fn(),
+        arrayBuffer: vi.fn(),
+        blob: vi.fn(),
+        formData: vi.fn(),
+        json: vi.fn(),
+        text: vi.fn(),
+        bytes: vi.fn(),
+      } as Response);
 
       await act(async () => {
         await result.current.loadKeys();
