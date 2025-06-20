@@ -17,20 +17,19 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.services.business.api_key_service import (
+    ServiceHealthStatus,
+    ServiceType,
+)
 from tripsage_core.services.business.dashboard_service import (
-    DashboardService,
     AlertData,
-    AlertType,
     AlertSeverity,
+    AlertType,
     DashboardData,
+    DashboardService,
     RealTimeMetrics,
     ServiceAnalytics,
     UserActivityData,
-)
-from tripsage_core.services.business.api_key_service import (
-    ServiceHealthCheck,
-    ServiceHealthStatus,
-    ServiceType,
 )
 
 
@@ -194,7 +193,7 @@ class TestDashboardRouter:
             "percentage_used": 45.0,
             "is_throttled": False,
         }
-        
+
         # Update to use new DashboardService alert format
         service._active_alerts = {
             "alert1": mock_alert,
@@ -207,9 +206,10 @@ class TestDashboardRouter:
     @pytest.fixture
     def mock_validator(self):
         """Create mock API key validator."""
-        from tripsage_core.services.business.dashboard_service import ApiKeyValidator
         from datetime import datetime, timezone
-        
+
+        from tripsage_core.services.business.dashboard_service import ApiKeyValidator
+
         validator = AsyncMock(spec=ApiKeyValidator)
         validator.__aenter__.return_value = validator
         validator.__aexit__.return_value = None
@@ -398,7 +398,9 @@ class TestDashboardRouter:
             alert = data[0]
             assert alert["alert_id"] == "alert1"
             assert alert["severity"] == "high"
-            assert alert["type"] == "high_error_rate"  # Updated to use AlertType enum value
+            assert (
+                alert["type"] == "high_error_rate"
+            )  # Updated to use AlertType enum value
             assert alert["acknowledged"] is False
 
     def test_get_alerts_with_filters(

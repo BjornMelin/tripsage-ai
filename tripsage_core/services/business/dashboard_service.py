@@ -917,7 +917,7 @@ class DashboardService:
         now = datetime.now(timezone.utc)
         # Use microseconds to ensure unique IDs for alerts created in rapid succession
         alert_id = f"alert_{int(now.timestamp() * 1000000)}"
-        
+
         alert = AlertData(
             alert_id=alert_id,
             alert_type=alert_type,

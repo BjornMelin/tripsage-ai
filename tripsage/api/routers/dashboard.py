@@ -705,10 +705,6 @@ async def get_trend_data(
             database_service=db_service,
         )
 
-        # Calculate time range
-        end_time = datetime.now(UTC)
-        start_time = end_time - timedelta(hours=time_range_hours)
-
         # Get usage trend data
         trend_data_raw = await dashboard_service._get_usage_trends(time_range_hours)
 
