@@ -8,7 +8,6 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List
 
 import asyncpg
 from rich.console import Console
@@ -67,7 +66,7 @@ class ExtensionDeployer:
             console.print(f"❌ Failed to execute {file_path}: {e}", style="red")
             return False
 
-    def _split_sql_statements(self, sql_content: str) -> List[str]:
+    def _split_sql_statements(self, sql_content: str) -> list[str]:
         """Split SQL content into individual statements."""
         # This is a simple implementation - for production use a proper SQL parser
         statements = []
@@ -169,7 +168,7 @@ class ExtensionDeployer:
             migration_file, "Automation Extensions Migration"
         )
 
-    async def verify_deployment(self) -> Dict[str, bool]:
+    async def verify_deployment(self) -> dict[str, bool]:
         """Verify the deployment was successful."""
         console.print("\n🔍 Verifying Deployment...", style="bold blue")
 

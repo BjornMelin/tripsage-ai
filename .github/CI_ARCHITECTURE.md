@@ -5,6 +5,7 @@
 This document describes the comprehensive CI/CD pipeline architecture for TripSage AI, designed with security, performance, and maintainability as core principles.
 
 ## Table of Contents
+
 - [Architecture Overview](#architecture-overview)
 - [Validation Report](#validation-report)
 - [Workflow Structure](#workflow-structure)
@@ -16,6 +17,7 @@ This document describes the comprehensive CI/CD pipeline architecture for TripSa
 ## Architecture Overview
 
 The CI/CD system is built around three main workflows:
+
 1. **Unified CI** (`ci.yml`) - Comprehensive testing and quality checks
 2. **Deploy** (`deploy.yml`) - Automated deployment pipeline
 3. **PR & Repository Utilities** (`utilities.yml`) - Automation helpers
@@ -32,7 +34,9 @@ The CI/CD system is built around three main workflows:
 ## Validation Report
 
 ### ✅ Syntax Validation
+
 All YAML files have been validated and are syntactically correct:
+
 - ✅ `.github/workflows/ci.yml` - Valid YAML
 - ✅ `.github/workflows/deploy.yml` - Valid YAML
 - ✅ `.github/workflows/utilities.yml` - Valid YAML
@@ -43,7 +47,9 @@ All YAML files have been validated and are syntactically correct:
 - ✅ `.github/ci-config.yml` - Valid YAML
 
 ### ✅ Action Pinning
+
 All GitHub Actions are properly pinned to commit SHAs:
+
 - `actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11` (v4.1.1)
 - `actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d` (v5.1.0)
 - `actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8` (v4.0.2)
@@ -59,7 +65,9 @@ All GitHub Actions are properly pinned to commit SHAs:
 - `actions/dependency-review-action@72eb03d02c7872a771aacd928f3123ac62ad6d3a` (v4.3.3)
 
 ### ✅ Path References
+
 All path references are correctly structured:
+
 - Backend paths: `tripsage/`, `tripsage_core/`, `scripts/`, `tests/`
 - Frontend paths: `frontend/` with proper working directory settings
 - Migration paths: `supabase/migrations/`, `scripts/database/`
@@ -68,6 +76,7 @@ All path references are correctly structured:
 ### ⚠️ Issues Found and Recommendations
 
 1. **Missing uv installation for Windows**: The ci.yml workflow uses incorrect syntax for Windows uv installation. Lines 262-264 should be:
+
    ```yaml
    if [[ "$RUNNER_OS" == "Windows" ]]; then
      powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
@@ -121,6 +130,7 @@ graph TD
 ## Security Implementation
 
 ### 1. Secrets Scanning
+
 ```yaml
 - name: Check for hardcoded secrets
   run: |
@@ -131,6 +141,7 @@ graph TD
 ```
 
 ### 2. RLS Policy Validation
+
 ```yaml
 - name: RLS Security Checks
   run: |
@@ -143,12 +154,14 @@ graph TD
 ```
 
 ### 3. Dependency Scanning
+
 - Bandit for Python static analysis
 - Safety for known vulnerabilities
 - Trivy for container scanning
 - npm/pnpm audit for frontend dependencies
 
 ### 4. SARIF Upload
+
 Security findings are uploaded to GitHub Security tab for centralized tracking.
 
 ## Performance Optimizations
@@ -156,27 +169,32 @@ Security findings are uploaded to GitHub Security tab for centralized tracking.
 ### 1. Intelligent Caching
 
 **Python/uv caching**:
+
 ```yaml
 key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
 ```
 
 **Node/pnpm caching**:
+
 ```yaml
 key: ${{ runner.os }}-pnpm-${{ inputs.node-version }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
 ```
 
 **Next.js build caching**:
+
 ```yaml
 path: ./frontend/.next/cache
 key: ${{ runner.os }}-nextjs-${{ matrix.build-mode }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
 ```
 
 ### 2. Parallel Execution
+
 - Backend and frontend jobs run in parallel
 - Matrix strategy for multi-version testing
 - Concurrent security scans
 
 ### 3. Retry Logic
+
 ```yaml
 for i in {1..${{ env.MAX_RETRIES }}}; do
   if pytest tests/unit/; then
@@ -193,10 +211,12 @@ done
 The following secrets must be configured in GitHub repository settings:
 
 ### Essential Secrets
+
 - `CODECOV_TOKEN` - For coverage reporting
 - `SLACK_WEBHOOK_URL` - For CI notifications (optional)
 
 ### Deployment Secrets (Environment-specific)
+
 - `SUPABASE_URL` - Supabase project URL
 - `SUPABASE_ANON_KEY` - Supabase anonymous key
 - `SUPABASE_SERVICE_KEY` - Supabase service role key
@@ -207,6 +227,7 @@ The following secrets must be configured in GitHub repository settings:
 - `DRAGONFLY_PASSWORD` - DragonflyDB password (if used)
 
 ### AWS Deployment (if using AWS)
+
 - `AWS_ACCOUNT_ID` - AWS account ID for OIDC
 - `AWS_REGION` - AWS region
 - `AWS_ROLE_NAME` - IAM role for deployment
@@ -229,6 +250,7 @@ The following secrets must be configured in GitHub repository settings:
 ### Coverage Thresholds
 
 Configured in environment variables:
+
 - Backend: `BACKEND_COVERAGE_THRESHOLD=85`
 - Frontend: `FRONTEND_COVERAGE_THRESHOLD=80`
 

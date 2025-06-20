@@ -38,6 +38,7 @@ python scripts/security_validation.py
 ### Script Execution Order
 
 For new environments:
+
 1. Environment verification
 2. Database initialization
 3. Migration execution
@@ -50,12 +51,14 @@ For new environments:
 ### Prerequisites
 
 1. **Clone Repository**:
+
    ```bash
    git clone <repository-url>
    cd tripsage
    ```
 
 2. **Python Environment**:
+
    ```bash
    # Create virtual environment
    python3.12 -m venv venv
@@ -71,6 +74,7 @@ For new environments:
    ```
 
 3. **Environment Variables**:
+
    ```bash
    # Copy template
    cp .env.example .env
@@ -80,6 +84,7 @@ For new environments:
    ```
 
 Required variables:
+
 ```env
 # Database
 DATABASE_URL=postgresql://user:pass@host:5432/dbname
@@ -179,12 +184,14 @@ python scripts/security/rls_vulnerability_tests.sql
 **Purpose**: Manage database schema, migrations, and infrastructure.
 
 **Key Scripts**:
+
 - `init_database.py`: Create fresh database
 - `run_migrations.py`: Apply schema changes
 - `deploy_storage_infrastructure.py`: Setup storage
 - `deploy_triggers.py`: Install triggers
 
 **Usage Pattern**:
+
 ```bash
 # Always check before running
 python script.py --dry-run
@@ -201,12 +208,14 @@ python scripts/verification/validate_schema_consistency.py
 **Purpose**: Validate system health and connectivity.
 
 **Key Scripts**:
+
 - `verify_connection.py`: Database connectivity
 - `verify_dragonfly.py`: Cache connectivity
 - `verify_extensions.py`: Extension status
 - `validate_schema_consistency.py`: Schema integrity
 
 **Usage Pattern**:
+
 ```bash
 # Quick health check
 for script in scripts/verification/verify_*.py; do
@@ -222,10 +231,12 @@ python scripts/verification/verify_connection.py --verbose --test-operations
 **Purpose**: Security validation and vulnerability testing.
 
 **Key Scripts**:
+
 - `rls_vulnerability_tests.sql`: RLS policy testing
 - `security_validation.py`: Comprehensive audit
 
 **Usage Pattern**:
+
 ```bash
 # Run SQL security tests
 psql $DATABASE_URL -f scripts/security/rls_vulnerability_tests.sql
@@ -239,11 +250,13 @@ python scripts/security_validation.py --compliance-report
 **Purpose**: Test execution and analysis.
 
 **Key Scripts**:
+
 - `run_tests_with_coverage.py`: Full test suite
 - `test_summary.py`: Test result analysis
 - `test_runner.py`: Quick smoke tests
 
 **Usage Pattern**:
+
 ```bash
 # Full test run
 python scripts/testing/run_tests_with_coverage.py
@@ -260,9 +273,11 @@ python scripts/testing/test_summary.py
 **Purpose**: Performance testing and optimization.
 
 **Key Scripts**:
+
 - `dragonfly_performance.py`: Cache benchmarks
 
 **Usage Pattern**:
+
 ```bash
 # Full benchmark
 python scripts/benchmarks/dragonfly_performance.py
@@ -279,6 +294,7 @@ python scripts/benchmarks/dragonfly_performance.py --compare baseline.json
 ### 1. Always Use Dry Run
 
 Most scripts support `--dry-run`:
+
 ```bash
 # See what would happen
 python scripts/database/run_migrations.py --dry-run
@@ -290,6 +306,7 @@ python scripts/database/run_migrations.py
 ### 2. Check Prerequisites
 
 Before running scripts:
+
 ```bash
 # Verify environment
 python scripts/testing/test_runner.py
@@ -342,6 +359,7 @@ git commit -m "chore: run migrations for feature X"
 **Problem**: `ModuleNotFoundError: No module named 'tripsage'`
 
 **Solution**:
+
 ```bash
 # Ensure running from project root
 cd /path/to/tripsage
@@ -359,6 +377,7 @@ cd scripts && python database/run_migrations.py  # ✗ Bad
 **Problem**: `could not connect to database`
 
 **Solution**:
+
 ```bash
 # Check environment variables
 echo $DATABASE_URL
@@ -378,6 +397,7 @@ python scripts/verification/verify_connection.py --verbose
 **Problem**: `permission denied for schema public`
 
 **Solution**:
+
 ```bash
 # Check user permissions
 psql $DATABASE_URL -c "\du"
@@ -392,6 +412,7 @@ python scripts/database/deploy_extensions.py
 **Problem**: `migration already applied`
 
 **Solution**:
+
 ```sql
 -- Check migration history
 SELECT * FROM migration_history ORDER BY executed_at DESC;
@@ -404,6 +425,7 @@ VALUES ('20250615_migration_name.sql', NOW());
 ### Debug Mode
 
 Enable detailed debugging:
+
 ```bash
 # Python scripts
 export LOG_LEVEL=DEBUG
@@ -422,18 +444,21 @@ DEBUG=* node scripts/verification/verify_connection.js
 ### Production Safety
 
 1. **Never Skip Dry Run**:
+
    ```bash
    # Always do this first
    python scripts/database/run_migrations.py --dry-run
    ```
 
 2. **Backup Before Changes**:
+
    ```bash
    # Backup database
    pg_dump $DATABASE_URL > backup_$(date +%Y%m%d_%H%M%S).sql
    ```
 
 3. **Use Transactions**:
+
    ```sql
    -- In SQL scripts
    BEGIN;
@@ -442,6 +467,7 @@ DEBUG=* node scripts/verification/verify_connection.js
    ```
 
 4. **Monitor After Deployment**:
+
    ```bash
    # Watch logs
    tail -f logs/application.log
@@ -453,6 +479,7 @@ DEBUG=* node scripts/verification/verify_connection.js
 ### Security Practices
 
 1. **No Credentials in Code**:
+
    ```python
    # ✗ Bad
    db_url = "postgresql://user:password@host/db"
@@ -462,6 +489,7 @@ DEBUG=* node scripts/verification/verify_connection.js
    ```
 
 2. **Validate Input**:
+
    ```python
    # Always validate script arguments
    if not args.table_name.isidentifier():
@@ -469,6 +497,7 @@ DEBUG=* node scripts/verification/verify_connection.js
    ```
 
 3. **Use Least Privilege**:
+
    ```bash
    # Development: limited permissions
    export DATABASE_URL=$DEV_DATABASE_URL
@@ -484,11 +513,13 @@ If something goes wrong:
 1. **Stop the Script**: `Ctrl+C`
 
 2. **Check Status**:
+
    ```bash
    python scripts/verification/validate_schema_consistency.py
    ```
 
 3. **Rollback if Needed**:
+
    ```bash
    # Database rollback
    psql $DATABASE_URL -f rollback_script.sql
