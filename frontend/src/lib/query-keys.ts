@@ -134,8 +134,10 @@ export function createQueryKey<T extends readonly unknown[]>(
   baseKey: string,
   params?: Record<string, unknown>
 ): T {
-  const key = params ? [baseKey, params] : [baseKey];
-  return key as T;
+  const key: (string | Record<string, unknown>)[] = params
+    ? [baseKey, params]
+    : [baseKey];
+  return key as unknown as T;
 }
 
 /**

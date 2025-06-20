@@ -217,7 +217,7 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="text-2xl font-bold text-green-600">
-                      {trips.length}
+                      {trips?.length || 0}
                     </div>
                     <div className="text-sm text-muted-foreground">Active Trips</div>
                   </CardContent>

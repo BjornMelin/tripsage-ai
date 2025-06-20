@@ -14,7 +14,6 @@ import type {
   DeleteKeyResponse,
   ValidateKeyResponse,
 } from "@/types/api-keys";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 /**
@@ -51,7 +50,7 @@ export function useAddApiKey() {
   const { updateKey } = useApiKeyStore();
 
   const mutation = useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys", {
-    invalidateQueries: [queryKeys.auth.apiKeys()],
+    invalidateQueries: [[...queryKeys.auth.apiKeys()]],
     onSuccess: (data) => {
       updateKey(data.service, {
         is_valid: data.is_valid,
@@ -76,7 +75,7 @@ export function useAddApiKey() {
  */
 export function useValidateApiKey() {
   return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/user/keys/validate", {
-    retry: (failureCount, error) => {
+    retry: (_failureCount, _error) => {
       // Don't retry validation calls - they should be immediate
       return false;
     },
@@ -90,14 +89,16 @@ export function useDeleteApiKey() {
   const { removeKey } = useApiKeyStore();
 
   const mutation = useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys", {
-    invalidateQueries: [queryKeys.auth.apiKeys()],
+    invalidateQueries: [[...queryKeys.auth.apiKeys()]],
     optimisticUpdate: {
-      queryKey: queryKeys.auth.apiKeys(),
-      updater: (oldData: AllKeysResponse | undefined, serviceToDelete: string) => {
-        if (!oldData) return oldData;
+      queryKey: [...queryKeys.auth.apiKeys()],
+      updater: (oldData: unknown, serviceToDelete: string) => {
+        const data = oldData as AllKeysResponse | undefined;
+        if (!data) return data;
+        const { [serviceToDelete]: deletedKey, ...remainingKeys } = data.keys;
         return {
-          ...oldData,
-          keys: oldData.keys.filter((key) => key.service !== serviceToDelete),
+          ...data,
+          keys: remainingKeys,
         };
       },
     },

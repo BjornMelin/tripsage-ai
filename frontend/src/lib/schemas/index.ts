@@ -3,15 +3,91 @@
  * All Zod schemas for comprehensive runtime type safety
  */
 
-// Re-export all schemas
+// Re-export all schemas with selective exports to avoid conflicts
 export * from "./api";
-export * from "./forms";
 export * from "./memory";
 export * from "./search";
 export * from "./stores";
-export * from "./budget";
 export * from "./agent-status";
 export * from "./env";
+
+// Selective exports from forms (prioritizing forms module)
+export {
+  // Form schemas (only export what actually exists)
+  loginFormSchema,
+  registerFormSchema,
+  resetPasswordFormSchema,
+  contactFormSchema,
+  personalInfoFormSchema,
+  preferencesFormSchema,
+  securitySettingsFormSchema,
+  flightSearchFormSchema,
+  accommodationSearchFormSchema,
+  activitySearchFormSchema,
+  createTripFormSchema,
+  updateTripFormSchema,
+  addTravelerFormSchema,
+  expenseFormSchema,
+  budgetCategoryFormSchema,
+  sendMessageFormSchema,
+  createConversationFormSchema,
+  apiKeyFormSchema,
+  // Form types
+  type LoginFormData,
+  type RegisterFormData,
+  type ResetPasswordFormData,
+  type ContactFormData,
+  type PersonalInfoFormData,
+  type PreferencesFormData,
+  type SecuritySettingsFormData,
+  type FlightSearchFormData,
+  type AccommodationSearchFormData,
+  type ActivitySearchFormData,
+  type CreateTripFormData,
+  type UpdateTripFormData,
+  type AddTravelerFormData,
+  type ExpenseFormData,
+  type BudgetCategoryFormData,
+  type SendMessageFormData,
+  type CreateConversationFormData,
+  type ApiKeyFormData,
+} from "./forms";
+
+// Selective exports from budget (excluding conflicting exports)
+export {
+  // Budget schemas (only export what actually exists)
+  expenseCategorySchema,
+  budgetCategorySchema,
+  shareDetailsSchema,
+  budgetSchema,
+  expenseSchema,
+  currencyRateSchema,
+  budgetSummarySchema,
+  budgetAlertSchema,
+  createBudgetRequestSchema,
+  updateBudgetRequestSchema,
+  addExpenseRequestSchema,
+  updateExpenseRequestSchema,
+  createBudgetAlertRequestSchema,
+  budgetStateSchema,
+  budgetFormSchema,
+  // Budget types (excluding ExpenseFormData - using the one from forms)
+  type ExpenseCategory,
+  type Budget,
+  type Expense,
+  type BudgetCategory,
+  type ShareDetails,
+  type CurrencyRate,
+  type BudgetSummary,
+  type BudgetAlert,
+  type CreateBudgetRequest,
+  type UpdateBudgetRequest,
+  type AddExpenseRequest,
+  type UpdateExpenseRequest,
+  type CreateBudgetAlertRequest,
+  type BudgetState,
+  type BudgetFormData,
+} from "./budget";
 
 // Selective exports to avoid conflicts
 export {
@@ -36,18 +112,18 @@ export {
   validateStrict,
 } from "../validation";
 
+import * as agentStatusSchemas from "./agent-status";
 // Schema categories for easy access
 import * as apiSchemas from "./api";
+import * as budgetSchemas from "./budget";
 import * as componentSchemas from "./components";
+import * as envSchemas from "./env";
 import * as errorBoundarySchemas from "./error-boundary";
 import * as formSchemas from "./forms";
 import * as loadingSchemas from "./loading";
 import * as memorySchemas from "./memory";
 import * as searchSchemas from "./search";
 import * as storeSchemas from "./stores";
-import * as budgetSchemas from "./budget";
-import * as agentStatusSchemas from "./agent-status";
-import * as envSchemas from "./env";
 
 // Central schema registry
 export const schemas = {

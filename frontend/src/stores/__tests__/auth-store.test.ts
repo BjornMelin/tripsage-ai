@@ -1,6 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import {
   type LoginCredentials,
   type PasswordReset,
@@ -103,7 +102,6 @@ describe("Auth Store", () => {
       expect(result.current.userDisplayName).toBe("");
     });
   });
-
 
   describe("Authentication Actions", () => {
     describe("Login", () => {
@@ -856,7 +854,8 @@ describe("Auth Store", () => {
       const getUserDisplayName = (user: any | null): string => {
         if (!user) return "";
         if (user.displayName) return user.displayName;
-        if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+        if (user.firstName && user.lastName)
+          return `${user.firstName} ${user.lastName}`;
         if (user.firstName) return user.firstName;
         return user.email.split("@")[0];
       };

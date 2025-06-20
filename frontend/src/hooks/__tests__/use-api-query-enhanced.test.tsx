@@ -3,20 +3,15 @@
  * Demonstrates proper testing patterns for the new API hooks
  */
 
-import { renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { z } from "zod";
-import { 
-  createControlledQuery, 
-  createMockQueryClient,
-  mockUseQuery,
-  simulateNetworkDelay,
-} from "@/test/query-mocks";
-import { useApiQuery, useApiMutation } from "../use-api-query";
+import { enhancedApiClient } from "@/lib/api/enhanced-client";
 import { ApiError } from "@/lib/api/error-types";
 import { queryKeys } from "@/lib/query-keys";
-import { enhancedApiClient } from "@/lib/api/enhanced-client";
+import { createControlledQuery } from "@/test/query-mocks";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { useApiMutation, useApiQuery } from "../use-api-query";
 
 // Mock the authenticated API hook
 const mockMakeAuthenticatedRequest = vi.fn();
@@ -59,9 +54,7 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
   describe("Query States with Zod Validation", () => {
@@ -75,15 +68,16 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 
       // Validate mock data with Zod before returning
       const validatedUser = TestUserSchema.parse(mockUser);
-      
-      mockMakeAuthenticatedRequest.mockImplementation(() => 
-        new Promise((resolve) => setTimeout(() => resolve(validatedUser), 100))
+
+      mockMakeAuthenticatedRequest.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(validatedUser), 100))
       );
 
       const { result } = renderHook(
-        () => useApiQuery<TestUser>("/api/user", undefined, {
-          queryKey: queryKeys.trips.all(),
-        }),
+        () =>
+          useApiQuery<TestUser>("/api/user", undefined, {
+            queryKey: queryKeys.trips.all(),
+          }),
         { wrapper }
       );
 
@@ -99,7 +93,7 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 
       expect(result.current.data).toEqual(validatedUser);
       expect(result.current.isPending).toBe(false);
-      
+
       // Validate the returned data matches our schema
       expect(() => TestUserSchema.parse(result.current.data)).not.toThrow();
     });
@@ -113,10 +107,9 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 
       mockMakeAuthenticatedRequest.mockRejectedValue(apiError);
 
-      const { result } = renderHook(
-        () => useApiQuery<TestUser>("/api/nonexistent"),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useApiQuery<TestUser>("/api/nonexistent"), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true);
@@ -138,10 +131,9 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 
       mockMakeAuthenticatedRequest.mockResolvedValue(invalidUserData);
 
-      const { result } = renderHook(
-        () => useApiQuery<TestUser>("/api/user/invalid"),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useApiQuery<TestUser>("/api/user/invalid"), {
+        wrapper,
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -153,11 +145,12 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 
     it("should use custom query key when provided", () => {
       const customKey = ["custom", "key"];
-      
+
       renderHook(
-        () => useApiQuery("/api/test", undefined, {
-          queryKey: customKey,
-        }),
+        () =>
+          useApiQuery("/api/test", undefined, {
+            queryKey: customKey,
+          }),
         { wrapper }
       );
 
@@ -177,9 +170,10 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
       });
 
       const { result } = renderHook(
-        () => useApiQuery("/api/test", undefined, {
-          retry: 3,
-        }),
+        () =>
+          useApiQuery("/api/test", undefined, {
+            retry: 3,
+          }),
         { wrapper }
       );
 
@@ -197,9 +191,10 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
       mockMakeAuthenticatedRequest.mockResolvedValue({ data: "cached" });
 
       const { result, rerender } = renderHook(
-        () => useApiQuery("/api/test", undefined, {
-          staleTime: 5000, // 5 seconds
-        }),
+        () =>
+          useApiQuery("/api/test", undefined, {
+            staleTime: 5000, // 5 seconds
+          }),
         { wrapper }
       );
 
@@ -212,7 +207,7 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 
       // Rerender within stale time - should not make new request
       rerender();
-      
+
       expect(mockMakeAuthenticatedRequest).not.toHaveBeenCalled();
       expect(result.current.data).toEqual({ data: "cached" });
     });
@@ -221,7 +216,7 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
       mockMakeAuthenticatedRequest.mockResolvedValue({ data: "initial" });
 
       const queryKey = queryKeys.trips.all();
-      
+
       const { result } = renderHook(
         () => useApiQuery("/api/trips", undefined, { queryKey }),
         { wrapper }
@@ -245,42 +240,42 @@ describe("useApiQuery Enhanced with Zod Validation", () => {
 });
 
 describe("Enhanced API Client Integration", () => {
-    it("should validate request and response data with enhanced client", async () => {
-      const validTrip = {
-        name: "Paris Vacation",
-        destination: "Paris, France",
-        startDate: "2025-06-01",
-        endDate: "2025-06-07",
-      };
+  it("should validate request and response data with enhanced client", async () => {
+    const validTrip = {
+      name: "Paris Vacation",
+      destination: "Paris, France",
+      startDate: "2025-06-01",
+      endDate: "2025-06-07",
+    };
 
-      const expectedResponse: TestTrip = {
-        id: "trip-1",
-        ...validTrip,
-      };
+    const expectedResponse: TestTrip = {
+      id: "trip-1",
+      ...validTrip,
+    };
 
-      // Test the enhanced API client's validation capabilities
-      const client = enhancedApiClient;
-      
-      // Mock the underlying fetch
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(expectedResponse),
-      });
+    // Test the enhanced API client's validation capabilities
+    const _client = enhancedApiClient;
 
-      // The enhanced client should validate both request and response
-      const TripCreateSchema = z.object({
-        name: z.string().min(1),
-        destination: z.string().min(1),
-        startDate: z.string(),
-        endDate: z.string(),
-      });
-
-      // This should pass validation
-      expect(() => TripCreateSchema.parse(validTrip)).not.toThrow();
-      expect(() => TestTripSchema.parse(expectedResponse)).not.toThrow();
+    // Mock the underlying fetch
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(expectedResponse),
     });
+
+    // The enhanced client should validate both request and response
+    const TripCreateSchema = z.object({
+      name: z.string().min(1),
+      destination: z.string().min(1),
+      startDate: z.string(),
+      endDate: z.string(),
+    });
+
+    // This should pass validation
+    expect(() => TripCreateSchema.parse(validTrip)).not.toThrow();
+    expect(() => TestTripSchema.parse(expectedResponse)).not.toThrow();
   });
+});
 
 describe("useApiMutation Enhanced with Zod", () => {
   let queryClient: QueryClient;
@@ -296,9 +291,7 @@ describe("useApiMutation Enhanced with Zod", () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
   describe("Optimistic Updates with Zod Validation", () => {
@@ -312,26 +305,29 @@ describe("useApiMutation Enhanced with Zod", () => {
         endDate: "2025-06-07",
       });
       const initialData = [initialTrip];
-      
+
       // Set initial query data
       queryClient.setQueryData(queryKey, initialData);
 
       const { result } = renderHook(
-        () => useApiMutation<TestTrip, Partial<TestTrip>>("/api/trips", {
-          optimisticUpdate: {
-            queryKey,
-            updater: (old: TestTrip[], variables: Partial<TestTrip>) => {
-              const newTrip: TestTrip = TestTripSchema.parse({
-                id: "temp-id",
-                name: variables.name || "New Trip",
-                destination: variables.destination || "Unknown",
-                startDate: variables.startDate || "2025-01-01",
-                endDate: variables.endDate || "2025-01-02",
-              });
-              return [...old, newTrip];
+        () =>
+          useApiMutation<TestTrip, Partial<TestTrip>>("/api/trips", {
+            optimisticUpdate: {
+              queryKey: [...queryKey],
+              updater: (old: unknown, variables: Partial<TestTrip>) => {
+                const trips = old as TestTrip[] | undefined;
+                if (!trips) return [];
+                const newTrip: TestTrip = TestTripSchema.parse({
+                  id: "temp-id",
+                  name: variables.name || "New Trip",
+                  destination: variables.destination || "Unknown",
+                  startDate: variables.startDate || "2025-01-01",
+                  endDate: variables.endDate || "2025-01-02",
+                });
+                return [...trips, newTrip];
+              },
             },
-          },
-        }),
+          }),
         { wrapper }
       );
 
@@ -345,7 +341,7 @@ describe("useApiMutation Enhanced with Zod", () => {
         startDate: "2025-07-01",
         endDate: "2025-07-07",
       };
-      
+
       result.current.mutate(newTripData);
 
       // Check optimistic update applied with valid data
@@ -371,13 +367,14 @@ describe("useApiMutation Enhanced with Zod", () => {
     it("should invalidate specified queries on success", async () => {
       const tripsKey = queryKeys.trips.all();
       const suggestionsKey = queryKeys.trips.suggestions();
-      
+
       const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
       const { result } = renderHook(
-        () => useApiMutation("/api/trips", {
-          invalidateQueries: [tripsKey, suggestionsKey],
-        }),
+        () =>
+          useApiMutation("/api/trips", {
+            invalidateQueries: [[...tripsKey], [...suggestionsKey]],
+          }),
         { wrapper }
       );
 
@@ -396,10 +393,7 @@ describe("useApiMutation Enhanced with Zod", () => {
 
   describe("Error Handling", () => {
     it("should handle different error types appropriately", async () => {
-      const { result } = renderHook(
-        () => useApiMutation("/api/trips"),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useApiMutation("/api/trips"), { wrapper });
 
       // Test client error (no retry)
       const clientError = new ApiError({
@@ -423,9 +417,10 @@ describe("useApiMutation Enhanced with Zod", () => {
       let callCount = 0;
 
       const { result } = renderHook(
-        () => useApiMutation("/api/trips", {
-          retry: 2,
-        }),
+        () =>
+          useApiMutation("/api/trips", {
+            retry: 2,
+          }),
         { wrapper }
       );
 
@@ -466,14 +461,12 @@ describe("Integration Tests", () => {
   });
 
   const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
   it("should handle query -> mutation -> refetch flow", async () => {
     const queryKey = queryKeys.trips.all();
-    
+
     // Initial data
     mockMakeAuthenticatedRequest.mockResolvedValue([{ id: 1, name: "Trip 1" }]);
 
@@ -483,9 +476,10 @@ describe("Integration Tests", () => {
     );
 
     const { result: mutationResult } = renderHook(
-      () => useApiMutation("/api/trips", {
-        invalidateQueries: [queryKey],
-      }),
+      () =>
+        useApiMutation("/api/trips", {
+          invalidateQueries: [[...queryKey]],
+        }),
       { wrapper }
     );
 
@@ -549,24 +543,24 @@ describe("Controlled Mock Examples with Zod", () => {
 
     // Trigger success with validated data
     controller.triggerSuccess(testUsers);
-    
+
     expect(query.isSuccess).toBe(true);
     expect(query.data).toEqual(testUsers);
-    
+
     // Validate each user in the response
-    query.data?.forEach(user => {
+    query.data?.forEach((user) => {
       expect(() => TestUserSchema.parse(user)).not.toThrow();
     });
 
     // Trigger error
     controller.triggerError(new Error("Test error"));
-    
+
     expect(query.isError).toBe(true);
     expect(query.error?.message).toBe("Test error");
 
     // Reset
     controller.reset();
-    
+
     expect(query.isPending).toBe(true);
     expect(query.data).toBeUndefined();
     expect(query.error).toBeNull();
@@ -591,7 +585,7 @@ describe("Controlled Mock Examples with Zod", () => {
 
     // Validate the transformation
     expect(() => TestUserSchema.parse(transformedUser)).not.toThrow();
-    
+
     const validatedUser = TestUserSchema.parse(transformedUser);
     expect(validatedUser.id).toBe("123");
     expect(validatedUser.email).toBe("john@example.com");

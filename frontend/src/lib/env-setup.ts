@@ -4,11 +4,11 @@
  */
 
 import {
-  validateServerEnv,
-  validateClientEnv,
   getEnvironmentInfo,
+  validateClientEnv,
+  validateServerEnv,
 } from "./schemas/env";
-import type { ServerEnv, ClientEnv, EnvironmentInfo } from "./schemas/env";
+import type { ClientEnv, EnvironmentInfo, ServerEnv } from "./schemas/env";
 
 // Global environment state
 let serverEnv: ServerEnv | null = null;
@@ -44,7 +44,18 @@ export async function initializeEnvironment(): Promise<{
     }
 
     // Validate client environment
-    clientEnv = validateClientEnv();
+    const validatedClientEnv = validateClientEnv() as ClientEnv;
+    if (
+      !validatedClientEnv ||
+      !validatedClientEnv.NEXT_PUBLIC_SUPABASE_URL ||
+      !validatedClientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      !validatedClientEnv.NEXT_PUBLIC_APP_NAME
+    ) {
+      throw new Error(
+        "Client environment validation failed - missing required environment variables"
+      );
+    }
+    clientEnv = validatedClientEnv;
     console.log("✅ Client environment validation passed");
 
     // Get environment info
@@ -175,6 +186,9 @@ export function getEnvVar<T = string>(
 export function isFeatureEnabled(feature: string): boolean {
   try {
     const envInfo = getEnvInfo();
+    if (!envInfo.features) {
+      return false;
+    }
     return envInfo.features[feature as keyof typeof envInfo.features] || false;
   } catch {
     // Fallback to direct environment variable check
@@ -190,6 +204,9 @@ export function isFeatureEnabled(feature: string): boolean {
 export function isServiceAvailable(service: string): boolean {
   try {
     const envInfo = getEnvInfo();
+    if (!envInfo.services) {
+      return false;
+    }
     return envInfo.services[service as keyof typeof envInfo.services] || false;
   } catch {
     return false;
@@ -221,8 +238,8 @@ export function getConfig(): {
     isDevelopment: envInfo.environment === "development",
     isProduction: envInfo.environment === "production",
     isTest: envInfo.environment === "test",
-    features: envInfo.features,
-    services: envInfo.services,
+    features: envInfo.features || {},
+    services: envInfo.services || {},
   };
 }
 
@@ -261,12 +278,12 @@ export function generateEnvironmentReport(): string {
 ## Validation Status: ${envInfo.isValid ? "✅ Valid" : "❌ Invalid"}
 
 ## Features
-${Object.entries(envInfo.features)
+${Object.entries(envInfo.features || {})
   .map(([feature, enabled]) => `- ${feature}: ${enabled ? "✅" : "❌"}`)
   .join("\n")}
 
 ## Services
-${Object.entries(envInfo.services)
+${Object.entries(envInfo.services || {})
   .map(([service, available]) => `- ${service}: ${available ? "✅" : "❌"}`)
   .join("\n")}
 

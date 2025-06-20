@@ -4,20 +4,21 @@
  */
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
+  type DefaultValues,
   type FieldPath,
   type FieldValues,
   type UseFormProps,
   type UseFormReturn,
   useForm,
 } from "react-hook-form";
-import { z } from "zod";
+import type { z } from "zod";
 import {
-  ValidationContext,
   TripSageValidationError,
-  validate,
+  ValidationContext,
   type ValidationResult,
+  validate,
 } from "../validation";
 
 // Enhanced form options
@@ -26,10 +27,16 @@ interface UseZodFormOptions<T extends FieldValues> extends UseFormProps<T> {
   validateMode?: "onSubmit" | "onBlur" | "onChange" | "onTouched" | "all";
   reValidateMode?: "onSubmit" | "onBlur" | "onChange";
   enableAsyncValidation?: boolean;
+  debounceValidation?: number;
   transformSubmitData?: (data: T) => T | Promise<T>;
   onValidationError?: (errors: ValidationResult<T>) => void;
   onSubmitSuccess?: (data: T) => void | Promise<void>;
   onSubmitError?: (error: Error) => void;
+
+  // Wizard options
+  enableWizard?: boolean;
+  wizardSteps?: string[];
+  stepValidationSchemas?: z.ZodType<any>[];
 }
 
 // Enhanced form return type
@@ -63,6 +70,22 @@ interface UseZodFormReturn<T extends FieldValues> extends UseFormReturn<T> {
     lastValidation: Date | null;
     validationErrors: string[];
   };
+
+  // Wizard state (for multi-step forms)
+  wizardState?: {
+    currentStep: number;
+    totalSteps: number;
+    isFirstStep: boolean;
+    isLastStep: boolean;
+  };
+
+  // Wizard actions
+  wizardActions?: {
+    goToNext: () => void;
+    goToPrevious: () => void;
+    goToStep: (step: number) => void;
+    validateAndGoToNext: () => Promise<boolean>;
+  };
 }
 
 // Custom hook for enhanced Zod form handling
@@ -94,6 +117,11 @@ export function useZodForm<T extends FieldValues>(
     validationErrors: [] as string[],
   });
 
+  // Wizard state management
+  const [currentStep, setCurrentStep] = useState(0);
+  const wizardSteps = options.wizardSteps || [];
+  const enableWizard = options.enableWizard || false;
+
   // Validate individual field
   const validateField = useCallback(
     async (
@@ -101,14 +129,36 @@ export function useZodForm<T extends FieldValues>(
       value: unknown
     ): Promise<ValidationResult<unknown>> => {
       try {
-        // Get the field schema from the main schema
-        const fieldSchema = schema.shape?.[fieldName as string];
-        if (!fieldSchema) {
+        // In Zod v4, we can't access .shape directly. Instead, validate the whole object
+        // and extract field-specific errors if validation fails
+        const testData = { [fieldName]: value } as Partial<T>;
+
+        // Create a partial schema for validation - handle both object and other schema types
+        let partialSchema: z.ZodType<any>;
+        if ("partial" in schema && typeof schema.partial === "function") {
+          partialSchema = (schema as any).partial();
+        } else {
+          // For non-object schemas, use the schema as-is for field validation
+          partialSchema = schema;
+        }
+
+        const result = validate(partialSchema, testData, ValidationContext.FORM);
+
+        if (result.success) {
           return { success: true, data: value };
         }
 
-        const result = validate(fieldSchema, value, ValidationContext.FORM);
-        return result;
+        // Find field-specific errors
+        const fieldErrors =
+          result.errors?.filter((err) => err.field === fieldName) || [];
+        if (fieldErrors.length === 0) {
+          return { success: true, data: value };
+        }
+
+        return {
+          success: false,
+          errors: fieldErrors,
+        };
       } catch (error) {
         return {
           success: false,
@@ -265,13 +315,61 @@ export function useZodForm<T extends FieldValues>(
   }, [form, schema]);
 
   const resetToDefaults = useCallback(() => {
-    form.reset(options.defaultValues);
+    // React Hook Form v7+ expects DefaultValues<T> or undefined
+    if (options.defaultValues) {
+      form.reset(options.defaultValues as DefaultValues<T>);
+    } else {
+      form.reset();
+    }
     setValidationState({
       isValidating: false,
       lastValidation: null,
       validationErrors: [],
     });
   }, [form, options.defaultValues]);
+
+  // Wizard actions
+  const wizardActions = useMemo(() => {
+    if (!enableWizard) return undefined;
+
+    return {
+      goToNext: () => {
+        if (currentStep < wizardSteps.length - 1) {
+          setCurrentStep(currentStep + 1);
+        }
+      },
+      goToPrevious: () => {
+        if (currentStep > 0) {
+          setCurrentStep(currentStep - 1);
+        }
+      },
+      goToStep: (step: number) => {
+        if (step >= 0 && step < wizardSteps.length) {
+          setCurrentStep(step);
+        }
+      },
+      validateAndGoToNext: async () => {
+        const isValid = await form.trigger();
+        if (isValid && currentStep < wizardSteps.length - 1) {
+          setCurrentStep(currentStep + 1);
+          return true;
+        }
+        return isValid;
+      },
+    };
+  }, [enableWizard, currentStep, wizardSteps.length, form]);
+
+  // Wizard state
+  const wizardState = useMemo(() => {
+    if (!enableWizard) return undefined;
+
+    return {
+      currentStep,
+      totalSteps: wizardSteps.length,
+      isFirstStep: currentStep === 0,
+      isLastStep: currentStep === wizardSteps.length - 1,
+    };
+  }, [enableWizard, currentStep, wizardSteps.length]);
 
   return {
     ...form,
@@ -285,6 +383,8 @@ export function useZodForm<T extends FieldValues>(
     getCleanData,
     resetToDefaults,
     validationState,
+    wizardState,
+    wizardActions,
   };
 }
 
@@ -332,7 +432,7 @@ export function useAsyncZodValidation<T extends FieldValues>(
             lastValidated: new Date(),
           });
         }
-      } catch (error) {
+      } catch (_error) {
         setValidationState({
           isValidating: false,
           errors: { _global: "Validation error occurred" },
@@ -469,9 +569,6 @@ function debounce<T extends (...args: any[]) => any>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
-
-// React imports (for useState)
-import { useState } from "react";
 
 // Export types for external use
 export type { UseZodFormOptions, UseZodFormReturn };

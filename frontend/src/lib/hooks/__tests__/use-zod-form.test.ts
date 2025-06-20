@@ -56,12 +56,13 @@ const ComplexFormSchema = z.object({
 });
 
 const AsyncValidationSchema = z.object({
-  username: z.string()
+  username: z
+    .string()
     .min(3, "Username must be at least 3 characters")
     .refine(
       async (username) => {
         // Simulate async validation (checking if username exists)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         return username !== "taken_username";
       },
       { message: "Username is already taken" }
@@ -146,7 +147,9 @@ describe("useZodForm Hook", () => {
       );
 
       expect(result.current.validationState.isValidating).toBe(true);
-      expect(result.current.validationState.validationErrors).toContain("Invalid email");
+      expect(result.current.validationState.validationErrors).toContain(
+        "Invalid email"
+      );
       expect(result.current.isFormComplete).toBe(false);
     });
 
@@ -154,7 +157,8 @@ describe("useZodForm Hook", () => {
       const onSubmit = vi.fn().mockResolvedValue(undefined);
       const transformSubmitData = vi.fn((data) => ({ ...data, transformed: true }));
 
-      mockHandleSubmit.mockImplementation((fn) => (e) => {
+      mockHandleSubmit.mockImplementation((fn) => (e: Event) => {
+        e.preventDefault?.();
         fn({ email: "test@example.com", password: "password123", name: "John" });
       });
 
@@ -166,7 +170,7 @@ describe("useZodForm Hook", () => {
       );
 
       const handleSubmit = result.current.handleSubmitSafe(onSubmit);
-      
+
       await act(async () => {
         await handleSubmit({} as any);
       });
@@ -310,10 +314,14 @@ describe("useZodForm Hook", () => {
       };
 
       // Valid data should pass
-      await expect(AsyncValidationSchema.parseAsync(validAsyncData)).resolves.toEqual(validAsyncData);
+      await expect(AsyncValidationSchema.parseAsync(validAsyncData)).resolves.toEqual(
+        validAsyncData
+      );
 
       // Invalid data should fail
-      await expect(AsyncValidationSchema.parseAsync(invalidAsyncData)).rejects.toThrow("Username is already taken");
+      await expect(AsyncValidationSchema.parseAsync(invalidAsyncData)).rejects.toThrow(
+        "Username is already taken"
+      );
     });
   });
 
@@ -372,7 +380,8 @@ describe("useZodForm Hook", () => {
       const onSubmit = vi.fn().mockRejectedValue(new Error("Submission failed"));
       const onSubmitError = vi.fn();
 
-      mockHandleSubmit.mockImplementation((fn) => (e) => {
+      mockHandleSubmit.mockImplementation((fn) => (e: Event) => {
+        e.preventDefault?.();
         fn({ email: "test@example.com", password: "password123", name: "John" });
       });
 
@@ -384,7 +393,7 @@ describe("useZodForm Hook", () => {
       );
 
       const handleSubmit = result.current.handleSubmitSafe(onSubmit);
-      
+
       await act(async () => {
         await handleSubmit({} as any);
       });
@@ -397,7 +406,8 @@ describe("useZodForm Hook", () => {
       const onValidationError = vi.fn();
 
       // Mock validation failure
-      mockHandleSubmit.mockImplementation((successFn, errorFn) => (e) => {
+      mockHandleSubmit.mockImplementation((_successFn, errorFn) => (e: Event) => {
+        e.preventDefault?.();
         errorFn({
           email: { message: "Invalid email" },
           password: { message: "Password too short" },
@@ -412,7 +422,7 @@ describe("useZodForm Hook", () => {
       );
 
       const handleSubmit = result.current.handleSubmitSafe(onSubmit);
-      
+
       await act(async () => {
         await handleSubmit({} as any);
       });
@@ -437,10 +447,10 @@ describe("useZodForm Hook", () => {
         })
       );
 
-      expect(result.current.wizardState.currentStep).toBe(0);
-      expect(result.current.wizardState.totalSteps).toBe(3);
-      expect(result.current.wizardState.isFirstStep).toBe(true);
-      expect(result.current.wizardState.isLastStep).toBe(false);
+      expect(result.current.wizardState?.currentStep).toBe(0);
+      expect(result.current.wizardState?.totalSteps).toBe(3);
+      expect(result.current.wizardState?.isFirstStep).toBe(true);
+      expect(result.current.wizardState?.isLastStep).toBe(false);
     });
 
     it("navigates between wizard steps", () => {
@@ -456,19 +466,19 @@ describe("useZodForm Hook", () => {
 
       // Go to next step
       act(() => {
-        result.current.wizardActions.goToNext();
+        result.current.wizardActions?.goToNext();
       });
 
-      expect(result.current.wizardState.currentStep).toBe(1);
-      expect(result.current.wizardState.isFirstStep).toBe(false);
-      expect(result.current.wizardState.isLastStep).toBe(false);
+      expect(result.current.wizardState?.currentStep).toBe(1);
+      expect(result.current.wizardState?.isFirstStep).toBe(false);
+      expect(result.current.wizardState?.isLastStep).toBe(false);
 
       // Go to previous step
       act(() => {
-        result.current.wizardActions.goToPrevious();
+        result.current.wizardActions?.goToPrevious();
       });
 
-      expect(result.current.wizardState.currentStep).toBe(0);
+      expect(result.current.wizardState?.currentStep).toBe(0);
     });
 
     it("validates current step before proceeding", async () => {
@@ -491,12 +501,12 @@ describe("useZodForm Hook", () => {
       mockTrigger.mockResolvedValue(false);
 
       await act(async () => {
-        const canProceed = await result.current.wizardActions.validateAndGoToNext();
+        const canProceed = await result.current.wizardActions?.validateAndGoToNext?.();
         expect(canProceed).toBe(false);
       });
 
       expect(mockTrigger).toHaveBeenCalled();
-      expect(result.current.wizardState.currentStep).toBe(0); // Should not advance
+      expect(result.current.wizardState?.currentStep).toBe(0); // Should not advance
     });
   });
 
@@ -518,18 +528,20 @@ describe("useZodForm Hook", () => {
       });
 
       // Should only call trigger once after debounce
-      await waitFor(() => {
-        expect(mockTrigger).toHaveBeenCalledTimes(1);
-      }, { timeout: 500 });
+      await waitFor(
+        () => {
+          expect(mockTrigger).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 500 }
+      );
     });
 
     it("memoizes validation results", () => {
       const memoizedSchema = SimpleFormSchema;
 
-      const { result, rerender } = renderHook(
-        ({ schema }) => useZodForm({ schema }),
-        { initialProps: { schema: memoizedSchema } }
-      );
+      const { result, rerender } = renderHook(({ schema }) => useZodForm({ schema }), {
+        initialProps: { schema: memoizedSchema },
+      });
 
       const firstRender = result.current;
 

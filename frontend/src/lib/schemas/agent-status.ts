@@ -132,7 +132,7 @@ export const agentConfigSchema = z.object({
 export const agentMetricsSchema = z.object({
   agentId: uuidSchema,
   tasksCompleted: z.number().int().nonnegative(),
-  tasksfailed: z.number().int().nonnegative(),
+  tasksFailed: z.number().int().nonnegative(),
   averageExecutionTime: z.number().nonnegative(),
   totalExecutionTime: z.number().nonnegative(),
   successRate: z.number().min(0).max(1),

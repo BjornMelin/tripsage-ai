@@ -1,5 +1,6 @@
 import * as apiHooks from "@/hooks/use-api-keys";
-import { ApiError } from "@/lib/api/client";
+import type { MutationContext } from "@/hooks/use-api-query";
+import { ApiError, type AppError } from "@/lib/api/error-types";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import { createMockUseQueryResult } from "@/test/mock-helpers";
 import { mockUseMutation } from "@/test/query-mocks";
@@ -142,13 +143,23 @@ describe("API Key Management Components", () => {
         setSelectedService: vi.fn(),
       });
 
-      // Mock API hooks with proper types
+      // Mock API hooks with proper types including MutationContext
       vi.mocked(apiHooks.useValidateApiKey).mockReturnValue(
-        mockUseMutation<ValidateKeyResponse, ApiError, AddKeyRequest>().mutation
+        mockUseMutation<
+          ValidateKeyResponse,
+          AppError,
+          AddKeyRequest,
+          MutationContext<AddKeyRequest>
+        >().mutation
       );
 
       vi.mocked(apiHooks.useAddApiKey).mockReturnValue(
-        mockUseMutation<AddKeyResponse, ApiError, AddKeyRequest>().mutation
+        mockUseMutation<
+          AddKeyResponse,
+          AppError,
+          AddKeyRequest,
+          MutationContext<AddKeyRequest>
+        >().mutation
       );
     });
 
@@ -164,8 +175,9 @@ describe("API Key Management Components", () => {
       const validateMock = vi.fn();
       const validateMutation = mockUseMutation<
         ValidateKeyResponse,
-        ApiError,
-        AddKeyRequest
+        AppError,
+        AddKeyRequest,
+        MutationContext<AddKeyRequest>
       >();
       validateMutation.mutation.mutate = validateMock;
       vi.mocked(apiHooks.useValidateApiKey).mockReturnValue(validateMutation.mutation);
@@ -211,11 +223,11 @@ describe("API Key Management Components", () => {
       });
 
       vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue(
-        mockUseMutation<DeleteKeyResponse, ApiError, string>().mutation
+        mockUseMutation<DeleteKeyResponse, AppError, string>().mutation
       );
 
       vi.mocked(apiHooks.useValidateApiKey).mockReturnValue(
-        mockUseMutation<ValidateKeyResponse, ApiError, AddKeyRequest>().mutation
+        mockUseMutation<ValidateKeyResponse, AppError, AddKeyRequest>().mutation
       );
     });
 
@@ -230,7 +242,7 @@ describe("API Key Management Components", () => {
 
     it("calls delete function when remove is confirmed", async () => {
       const deleteMock = vi.fn();
-      const deleteMutation = mockUseMutation<DeleteKeyResponse, ApiError, string>();
+      const deleteMutation = mockUseMutation<DeleteKeyResponse, AppError, string>();
       deleteMutation.mutation.mutate = deleteMock;
       vi.mocked(apiHooks.useDeleteApiKey).mockReturnValue(deleteMutation.mutation);
 
@@ -252,7 +264,7 @@ describe("API Key Management Components", () => {
   describe("ApiKeySettings Component", () => {
     beforeEach(() => {
       vi.mocked(apiHooks.useApiKeys).mockReturnValue(
-        createMockUseQueryResult<AllKeysResponse, ApiError>(
+        createMockUseQueryResult<AllKeysResponse, AppError>(
           { keys: {}, supported_services: [] },
           null,
           false,
@@ -270,7 +282,7 @@ describe("API Key Management Components", () => {
 
     it("shows loading state when loading", () => {
       vi.mocked(apiHooks.useApiKeys).mockReturnValue(
-        createMockUseQueryResult<AllKeysResponse, ApiError>(
+        createMockUseQueryResult<AllKeysResponse, AppError>(
           undefined,
           null,
           true,
@@ -286,9 +298,12 @@ describe("API Key Management Components", () => {
 
     it("shows error state when error occurs", () => {
       vi.mocked(apiHooks.useApiKeys).mockReturnValue(
-        createMockUseQueryResult<AllKeysResponse, ApiError>(
+        createMockUseQueryResult<AllKeysResponse, AppError>(
           undefined,
-          new ApiError("Failed to load API keys", 500),
+          new ApiError({
+            message: "Failed to load API keys",
+            status: 500,
+          }),
           false,
           true
         )

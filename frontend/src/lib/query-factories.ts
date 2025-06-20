@@ -3,13 +3,13 @@
  * Following React Query v5 best practices for query organization
  */
 
-import { type AppError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes, cacheTimes } from "@/lib/query-keys";
+import type { AppError } from "@/lib/api/error-types";
+import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 import type {
-  UseQueryOptions,
-  UseMutationOptions,
-  UseInfiniteQueryOptions,
   QueryClient,
+  UseInfiniteQueryOptions,
+  UseMutationOptions,
+  UseQueryOptions,
 } from "@tanstack/react-query";
 
 /**
@@ -249,7 +249,7 @@ export const mutationFactories = {
     create: (apiCall: (data: any) => Promise<any>): BaseMutationFactory<any, any> => ({
       mutationFn: apiCall,
       options: {
-        onSuccess: (data, variables, context) => {
+        onSuccess: (_data, _variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
           queryClient.invalidateQueries({ queryKey: queryKeys.trips.suggestions() });
@@ -263,7 +263,7 @@ export const mutationFactories = {
     ): BaseMutationFactory<any, { id: number; updates: any }> => ({
       mutationFn: apiCall,
       options: {
-        onSuccess: (data, variables, context) => {
+        onSuccess: (_data, variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
           queryClient.invalidateQueries({
@@ -279,7 +279,7 @@ export const mutationFactories = {
     ): BaseMutationFactory<void, number> => ({
       mutationFn: apiCall,
       options: {
-        onSuccess: (data, variables, context) => {
+        onSuccess: (_data, variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.trips.all() });
           queryClient.removeQueries({ queryKey: queryKeys.trips.detail(variables) });
@@ -298,7 +298,7 @@ export const mutationFactories = {
     ): BaseMutationFactory<any, any> => ({
       mutationFn: apiCall,
       options: {
-        onSuccess: (data, variables, context) => {
+        onSuccess: (_data, _variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.chat.sessions() });
         },
@@ -325,8 +325,14 @@ export const mutationFactories = {
 
           return { previousMessages };
         },
-        onError: (err, variables, context) => {
-          if (context?.previousMessages) {
+        onError: (_err, variables, context) => {
+          if (
+            context &&
+            typeof context === "object" &&
+            context !== null &&
+            "previousMessages" in context &&
+            context.previousMessages
+          ) {
             const queryClient = {} as QueryClient; // Would be injected
             queryClient.setQueryData(
               queryKeys.chat.messages(variables.sessionId),
@@ -334,7 +340,7 @@ export const mutationFactories = {
             );
           }
         },
-        onSettled: (data, error, variables) => {
+        onSettled: (_data, _error, variables) => {
           const queryClient = {} as QueryClient; // Would be injected
           queryClient.invalidateQueries({
             queryKey: queryKeys.chat.messages(variables.sessionId),
@@ -354,7 +360,7 @@ export const mutationFactories = {
     ): BaseMutationFactory<any, File> => ({
       mutationFn: apiCall,
       options: {
-        onSuccess: (data, variables, context) => {
+        onSuccess: (_data, _variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
           queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });
@@ -368,7 +374,7 @@ export const mutationFactories = {
     ): BaseMutationFactory<void, string> => ({
       mutationFn: apiCall,
       options: {
-        onSuccess: (data, variables, context) => {
+        onSuccess: (_data, variables, context) => {
           const queryClient = context as QueryClient;
           queryClient.invalidateQueries({ queryKey: queryKeys.files.all() });
           queryClient.invalidateQueries({ queryKey: queryKeys.files.stats("") });

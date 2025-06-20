@@ -2,9 +2,8 @@
 
 import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { type AppError, handleApiError } from "@/lib/api/error-types";
-import { queryKeys, staleTimes, cacheTimes } from "@/lib/query-keys";
+import { cacheTimes, queryKeys, staleTimes } from "@/lib/query-keys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 export interface TripSuggestion {
   id: string;
@@ -106,6 +105,32 @@ export function useCreateTrip() {
   });
 }
 
+// Helper function to convert unknown values to API params
+const convertToApiParams = (
+  filters?: Record<string, unknown>
+): Record<string, string | number | boolean> | undefined => {
+  if (!filters) return undefined;
+
+  const apiParams: Record<string, string | number | boolean> = {};
+
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== null && value !== undefined) {
+      if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+      ) {
+        apiParams[key] = value;
+      } else {
+        // Convert other types to string
+        apiParams[key] = String(value);
+      }
+    }
+  }
+
+  return Object.keys(apiParams).length > 0 ? apiParams : undefined;
+};
+
 /**
  * Hook to get user's trips with enhanced error handling
  */
@@ -117,7 +142,7 @@ export function useTrips(filters?: Record<string, unknown>) {
     queryFn: async () => {
       try {
         return await makeAuthenticatedRequest("/api/trips", {
-          params: filters,
+          params: convertToApiParams(filters),
         });
       } catch (error) {
         throw handleApiError(error);

@@ -1,11 +1,11 @@
 "use client";
 
-import { getErrorMessage, isApiError, isNetworkError } from "@/lib/api/error-types";
 import { Button } from "@/components/ui/button";
+import { getErrorMessage, isApiError, isNetworkError } from "@/lib/api/error-types";
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";
+import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
+import type { ReactNode } from "react";
 import { ErrorBoundary } from "react-error-boundary";
-import { AlertTriangle, RefreshCw, Wifi, WifiOff } from "lucide-react";
-import { ReactNode } from "react";
 
 interface QueryErrorFallbackProps {
   error: Error;

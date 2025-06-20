@@ -1,7 +1,6 @@
 "use client";
 
 import { type AppError, handleApiError } from "@/lib/api/error-types";
-import { queryKeys } from "@/lib/query-keys";
 import {
   type UseMutationOptions,
   type UseQueryOptions,
@@ -19,7 +18,7 @@ const ApiQueryParamsSchema = z
 
 const EndpointSchema = z.string().min(1, "Endpoint cannot be empty");
 
-const HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+const _HttpMethodSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
 // Enhanced type definitions with proper generics
 type ApiQueryOptions<TData, TError = AppError> = Omit<
@@ -40,7 +39,7 @@ type ApiMutationOptions<TData, TVariables, TError = AppError> = Omit<
   };
 };
 
-interface MutationContext<TVariables = unknown> {
+export interface MutationContext<TVariables = unknown> {
   previousData?: unknown;
   optimisticData?: unknown;
   variables?: TVariables;

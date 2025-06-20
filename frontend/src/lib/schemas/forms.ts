@@ -53,6 +53,8 @@ const currencySchema = z
   .length(3, "Currency code must be 3 characters")
   .regex(/^[A-Z]{3}$/, "Currency code must be uppercase letters");
 
+export const currencyCodeSchema = currencySchema;
+
 // Authentication forms
 export const loginFormSchema = z.object({
   email: emailSchema,

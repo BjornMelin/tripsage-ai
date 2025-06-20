@@ -40,6 +40,8 @@ export default function TripsPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const filteredAndSortedTrips = useMemo(() => {
+    if (!trips) return [];
+
     let filtered = trips;
 
     // Apply search filter
@@ -50,7 +52,7 @@ export default function TripsPage() {
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           trip.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          trip.destinations.some((dest) =>
+          (trip.destinations || []).some((dest) =>
             dest.name.toLowerCase().includes(searchQuery.toLowerCase())
           )
       );
@@ -97,7 +99,7 @@ export default function TripsPage() {
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
         case "destinations":
-          return b.destinations.length - a.destinations.length;
+          return (b.destinations || []).length - (a.destinations || []).length;
         default:
           return 0;
       }
@@ -120,6 +122,8 @@ export default function TripsPage() {
   };
 
   const getStatusCounts = () => {
+    if (!trips) return { draft: 0, upcoming: 0, active: 0, completed: 0 };
+
     const now = new Date();
     return trips.reduce(
       (counts: Record<string, number>, trip: Trip) => {
@@ -158,7 +162,7 @@ export default function TripsPage() {
   }, [error]);
 
   // Show loading state
-  if (isLoading && trips.length === 0) {
+  if (isLoading && (!trips || trips.length === 0)) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-8">
@@ -186,7 +190,7 @@ export default function TripsPage() {
     );
   }
 
-  if (trips.length === 0 && !isLoading) {
+  if ((!trips || trips.length === 0) && !isLoading) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-8">
@@ -223,7 +227,8 @@ export default function TripsPage() {
         <div>
           <h1 className="text-3xl font-bold">My Trips</h1>
           <p className="text-muted-foreground">
-            {trips.length} trip{trips.length !== 1 ? "s" : ""} in your collection
+            {trips?.length || 0} trip{(trips?.length || 0) !== 1 ? "s" : ""} in your
+            collection
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -376,7 +381,7 @@ export default function TripsPage() {
       {filteredAndSortedTrips.length > 0 && (
         <div className="text-center mt-8">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredAndSortedTrips.length} of {trips.length} trips
+            Showing {filteredAndSortedTrips.length} of {trips?.length || 0} trips
           </p>
         </div>
       )}

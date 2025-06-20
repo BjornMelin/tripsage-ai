@@ -34,7 +34,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from "@/components/charts/chart-wrapper";
+} from "recharts";
 import { ConnectionStatus } from "../../shared/connection-status";
 
 interface AgentMetrics {

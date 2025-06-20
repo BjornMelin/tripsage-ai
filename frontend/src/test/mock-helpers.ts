@@ -184,14 +184,62 @@ export const createMockUseQueryResult = <T, E = Error>(
     promise: Promise.resolve(data as T),
   }) as UseQueryResult<T, E>;
 
-// Enhanced error mock
+// Enhanced error mock - matches the real ApiError interface
 export class MockApiError extends Error {
+  public readonly status: number;
+  public readonly code?: string;
+  public readonly details?: Record<string, unknown>;
+  public readonly timestamp: string;
+  public readonly path?: string;
+
   constructor(
     message: string,
-    public status = 500
+    status = 500,
+    code?: string,
+    details?: Record<string, unknown>
   ) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    this.timestamp = new Date().toISOString();
+    Object.setPrototypeOf(this, MockApiError.prototype);
+  }
+
+  get isClientError(): boolean {
+    return this.status >= 400 && this.status < 500;
+  }
+
+  get isServerError(): boolean {
+    return this.status >= 500;
+  }
+
+  get shouldRetry(): boolean {
+    return this.isServerError || this.status === 408 || this.status === 429;
+  }
+
+  get userMessage(): string {
+    if (this.status === 401) return "Authentication required. Please log in.";
+    if (this.status === 403) return "You don't have permission to perform this action.";
+    if (this.status === 404) return "The requested resource was not found.";
+    if (this.status === 422) return "Invalid data provided. Please check your input.";
+    if (this.status === 429) return "Too many requests. Please try again later.";
+    if (this.isServerError) return "Server error. Please try again later.";
+    return this.message;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      status: this.status,
+      code: this.code,
+      details: this.details,
+      timestamp: this.timestamp,
+      path: this.path,
+      stack: this.stack,
+    };
   }
 }
 
