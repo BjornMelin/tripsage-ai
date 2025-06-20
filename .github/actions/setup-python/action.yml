@@ -1,0 +1,121 @@
+name: 'Setup Python Environment'
+description: 'Composite action for Python environment setup with uv package manager'
+author: 'TripSage Team'
+
+inputs:
+  python-version:
+    description: 'Python version to use'
+    required: false
+    default: '3.13'
+  cache-dependency-path:
+    description: 'Path to dependency files for caching'
+    required: false
+    default: 'pyproject.toml'
+  create-venv:
+    description: 'Whether to create a virtual environment'
+    required: false
+    default: 'true'
+  venv-path:
+    description: 'Path for the virtual environment'
+    required: false
+    default: '.venv'
+  install-dependencies:
+    description: 'Whether to install dependencies'
+    required: false
+    default: 'true'
+  uv-version:
+    description: 'Version of uv to install'
+    required: false
+    default: 'latest'
+
+outputs:
+  python-version:
+    description: 'The installed Python version'
+    value: ${{ steps.setup-python.outputs.python-version }}
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.cache-uv.outputs.cache-hit }}
+  venv-path:
+    description: 'Path to the created virtual environment'
+    value: ${{ inputs.venv-path }}
+
+runs:
+  using: "composite"
+  steps:
+    # Setup Python with specified version
+    - name: Set up Python
+      id: setup-python
+      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    # Install uv package manager
+    - name: Install uv
+      shell: bash
+      run: |
+        echo "::group::Installing uv package manager"
+        if [ "${{ inputs.uv-version }}" = "latest" ]; then
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+        else
+          curl -LsSf https://astral.sh/uv/${{ inputs.uv-version }}/install.sh | sh
+        fi
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+        echo "::endgroup::"
+
+    # Cache uv cache directory
+    - name: Get uv cache dir
+      id: uv-cache-dir
+      shell: bash
+      run: |
+        echo "dir=$(uv cache dir)" >> $GITHUB_OUTPUT
+
+    # Cache uv dependencies
+    - name: Cache uv dependencies
+      id: cache-uv
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      with:
+        path: |
+          ${{ steps.uv-cache-dir.outputs.dir }}
+          ${{ inputs.venv-path }}
+        key: ${{ runner.os }}-uv-${{ inputs.python-version }}-${{ hashFiles(inputs.cache-dependency-path) }}
+        restore-keys: |
+          ${{ runner.os }}-uv-${{ inputs.python-version }}-
+
+    # Create virtual environment if requested
+    - name: Create virtual environment
+      if: inputs.create-venv == 'true'
+      shell: bash
+      run: |
+        echo "::group::Creating virtual environment"
+        uv venv ${{ inputs.venv-path }} --python ${{ inputs.python-version }}
+        echo "::endgroup::"
+
+    # Install dependencies if requested
+    - name: Install dependencies
+      if: inputs.install-dependencies == 'true'
+      shell: bash
+      run: |
+        echo "::group::Installing dependencies"
+        if [ -f "pyproject.toml" ]; then
+          uv sync --frozen
+        elif [ -f "requirements.txt" ]; then
+          uv pip install -r requirements.txt
+        else
+          echo "No dependency file found (pyproject.toml or requirements.txt)"
+        fi
+        echo "::endgroup::"
+
+    # Verify installation
+    - name: Verify Python setup
+      shell: bash
+      run: |
+        echo "::group::Python environment info"
+        which python
+        python --version
+        if [ "${{ inputs.create-venv }}" = "true" ]; then
+          source ${{ inputs.venv-path }}/bin/activate 2>/dev/null || source ${{ inputs.venv-path }}/Scripts/activate 2>/dev/null || true
+          which python
+          python --version
+        fi
+        uv --version
+        echo "::endgroup::"
