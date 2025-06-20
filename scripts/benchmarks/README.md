@@ -15,7 +15,7 @@ This benchmark suite validates the following optimization claims:
 
 ## 📁 Consolidated Structure
 
-```text
+```
 scripts/benchmarks/
 ├── README.md                     # This comprehensive guide
 ├── run_benchmarks.py             # Main CLI for comprehensive validation
@@ -130,53 +130,45 @@ Detailed performance reporting:
 ## 🎯 Performance Claims Validation
 
 ### 1. General Query Performance (3x improvement)
-
 ```bash
 # Test query performance improvements
 python benchmark_runner.py comparison --verbose
 ```
 
 **Validation criteria:**
-
 - P95 latency reduction of 3x or better
 - Throughput improvement of 3x or better
 - Error rate remains low (<1%)
 
 ### 2. PGVector Performance (30x improvement)
-
 ```bash
 # Test vector search optimizations
 python pgvector_benchmark.py --verbose
 ```
 
 **Validation criteria:**
-
 - Vector search query time improvement of 30x
 - HNSW index performance vs linear scan
 - Memory-efficient halfvec compression
 
 ### 3. Memory Reduction (50% improvement)
-
 ```bash
 # Test memory optimization with profiling
 python run_benchmarks.py full-validation --verbose
 ```
 
 **Validation criteria:**
-
 - Peak memory usage reduction of 50%
 - Sustained memory efficiency over time
 - Reduced memory growth patterns
 
 ### 4. Cache Performance
-
 ```bash
 # Test cache optimization
 python dragonfly_performance.py --suites basic,json,connection
 ```
 
 **Validation criteria:**
-
 - Cache hit ratio >80%
 - Cache response time <5ms
 - Connection pool efficiency >90%
