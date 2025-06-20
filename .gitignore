@@ -164,9 +164,10 @@ worktrees/
 
 # Archived local files
 .archived/
-repomix-output.*
+
 # Archived documentation (moved out of main repo)
 ARCHIVED_DOCS/
+repomix-output.*
 
 # Temporary documentation files
 *_SUMMARY.md
