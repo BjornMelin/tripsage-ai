@@ -191,13 +191,9 @@ class AgentConfigRequest(BaseConfigModel):
             f"{self.temperature}_{self.max_tokens}_{self.top_p}"
             f"_{self.timeout_seconds}_{self.model}"
         )
-        try:
-            # Use usedforsecurity=False for Python 3.9+
-            md5_hash = hashlib.md5(config_str.encode(), usedforsecurity=False)
-            return md5_hash.hexdigest()[:8]
-        except TypeError:
-            # Fallback for Python < 3.9
-            return hashlib.md5(config_str.encode()).hexdigest()[:8]
+        # Using MD5 for non-security purpose (configuration change detection)
+        # Python 3.9+ usedforsecurity=False parameter indicates this is not for security
+        return hashlib.md5(config_str.encode(), usedforsecurity=False).hexdigest()[:8]
 
     def get_changed_fields(self, other: "AgentConfigRequest") -> List[str]:
         """Get list of fields that changed compared to another configuration."""
