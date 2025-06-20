@@ -13,7 +13,6 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 
 @dataclass
@@ -34,8 +33,8 @@ class TableDefinition:
     name: str
     file_path: str
     line_number: int
-    columns: Dict[str, str]  # column_name -> column_type
-    foreign_keys: List[Tuple[str, str]]  # (column, references)
+    columns: dict[str, str]  # column_name -> column_type
+    foreign_keys: list[tuple[str, str]]  # (column, references)
 
 
 class SchemaValidator:
@@ -43,8 +42,8 @@ class SchemaValidator:
 
     def __init__(self, schema_dir: str):
         self.schema_dir = Path(schema_dir)
-        self.issues: List[SchemaIssue] = []
-        self.tables: Dict[str, TableDefinition] = {}
+        self.issues: list[SchemaIssue] = []
+        self.tables: dict[str, TableDefinition] = {}
 
     def validate(self) -> bool:
         """Run all validation checks."""
