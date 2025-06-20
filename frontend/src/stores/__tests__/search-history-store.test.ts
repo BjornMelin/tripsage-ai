@@ -1,13 +1,7 @@
-import type { SearchType } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchHistoryStore } from "../search-history-store";
-import type {
-  QuickSearch,
-  SearchCollection,
-  SearchHistoryItem,
-  ValidatedSavedSearch,
-} from "../search-history-store";
+import type { SearchHistoryItem, ValidatedSavedSearch } from "../search-history-store";
 
 // Mock console.error to avoid noise in tests
 global.console.error = vi.fn();
@@ -177,7 +171,7 @@ describe("Search History Store", () => {
       expect(result.current.recentSearches[0].params).toEqual(searchParams);
     });
 
-    it("updates existing search timestamp for duplicate", () => {
+    it("updates existing search timestamp for duplicate", async () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       const searchParams = { origin: "NYC", destination: "LAX" };
@@ -187,6 +181,9 @@ describe("Search History Store", () => {
       });
 
       const firstTimestamp = result.current.recentSearches[0].timestamp;
+
+      // Wait a small amount to ensure different timestamp
+      await new Promise((resolve) => setTimeout(resolve, 1));
 
       // Add same search again
       act(() => {

@@ -1,31 +1,48 @@
 """
-Unified dependency injection for TripSage API.
+Modern dependency injection for TripSage API.
 
-This module provides clean, modern dependency injection using the Principal model
+This module provides clean, modern dependency injection using Annotated types
 for unified authentication across JWT (frontend) and API keys (agents).
 """
 
+from typing import Annotated
+
 from fastapi import Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.services import (
-    get_accommodation_service,
-    get_auth_service,
-    get_chat_service,
-    get_destination_service,
-    get_flight_service,
-    get_itinerary_service,
-    get_key_management_service,
-    get_memory_service,
-    get_trip_service,
-    get_user_service,
-)
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
-from tripsage_core.mcp_abstraction import MCPManager, mcp_manager
-from tripsage_core.services.infrastructure import get_cache_service
-from tripsage_core.services.infrastructure.database_service import get_database_service
+from tripsage_core.services.business.accommodation_service import (
+    AccommodationService,
+    get_accommodation_service,
+)
+from tripsage_core.services.business.api_key_service import ApiKeyService
+from tripsage_core.services.business.chat_service import ChatService, get_chat_service
+from tripsage_core.services.business.destination_service import (
+    DestinationService,
+    get_destination_service,
+)
+from tripsage_core.services.business.flight_service import (
+    FlightService,
+    get_flight_service,
+)
+from tripsage_core.services.business.itinerary_service import (
+    ItineraryService,
+    get_itinerary_service,
+)
+from tripsage_core.services.business.memory_service import (
+    MemoryService,
+    get_memory_service,
+)
+from tripsage_core.services.business.trip_service import TripService, get_trip_service
+from tripsage_core.services.business.user_service import UserService, get_user_service
+from tripsage_core.services.infrastructure import CacheService, get_cache_service
+from tripsage_core.services.infrastructure.database_service import (
+    DatabaseService,
+    get_database_service,
+)
+from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
+from tripsage_core.services.simple_mcp_service import mcp_manager
 from tripsage_core.utils.session_utils import SessionMemory
 
 
@@ -36,11 +53,13 @@ def get_settings_dependency() -> Settings:
 
 
 # Database dependency
-async def get_db() -> AsyncSession:
-    """Get database session as a dependency."""
-    db_service = await get_database_service()
-    async with db_service.get_session() as session:
-        yield session
+async def get_db():
+    """Get database service as a dependency.
+
+    Note: This returns DatabaseService, not AsyncSession.
+    The name is kept for compatibility but the return type has changed.
+    """
+    return await get_database_service()
 
 
 # Session memory dependency
@@ -111,7 +130,7 @@ def get_principal_id(principal: Principal) -> str:
 async def verify_service_access(
     principal: Principal,
     service: str = "openai",
-    key_service=Depends(get_key_management_service),
+    key_service: ApiKeyService = None,
 ) -> bool:
     """Verify that the principal has access to a specific service."""
     # Agents with API keys already have service access
@@ -120,9 +139,16 @@ async def verify_service_access(
 
     # For users, check they have the required service key
     if principal.type == "user":
+        if key_service is None:
+            # Initialize key service if not provided
+            db = await get_database_service()
+            cache = await get_cache_service()
+            settings = get_settings()
+            key_service = ApiKeyService(db=db, cache=cache, settings=settings)
+
         try:
-            keys = await key_service.list_api_keys(principal.id)
-            service_key = next((k for k in keys if k.service == service), None)
+            keys = await key_service.get_user_api_keys(principal.id)
+            service_key = next((k for k in keys if k.service.value == service), None)
             return service_key is not None
         except Exception:
             return False
@@ -142,26 +168,37 @@ def get_mcp_manager() -> MCPManager:
     return mcp_manager
 
 
-# Module-level dependency singletons
-get_current_principal_dep = Depends(get_current_principal)
-require_principal_dep = Depends(require_principal)
-require_user_principal_dep = Depends(require_user_principal)
-require_agent_principal_dep = Depends(require_agent_principal)
-get_db_dep = Depends(get_db)
-get_session_memory_dep = Depends(get_session_memory)
-get_settings_dep = Depends(get_settings_dependency)
-cache_service_dependency = Depends(get_cache_service_dep)
-mcp_manager_dependency = Depends(get_mcp_manager)
-verify_service_access_dep = Depends(verify_service_access)
+# API Key service dependency
+async def get_api_key_service() -> ApiKeyService:
+    """Get the API key service instance as a dependency."""
+    db = await get_database_service()
+    cache = await get_cache_service()
+    settings = get_settings()
+    return ApiKeyService(db=db, cache=cache, settings=settings)
 
-# Unified API service dependencies
-get_accommodation_service_dep = Depends(get_accommodation_service)
-get_auth_service_dep = Depends(get_auth_service)
-get_chat_service_dep = Depends(get_chat_service)
-get_destination_service_dep = Depends(get_destination_service)
-get_flight_service_dep = Depends(get_flight_service)
-get_itinerary_service_dep = Depends(get_itinerary_service)
-get_key_management_service_dep = Depends(get_key_management_service)
-get_memory_service_dep = Depends(get_memory_service)
-get_trip_service_dep = Depends(get_trip_service)
-get_user_service_dep = Depends(get_user_service)
+
+# Modern Annotated dependency types for 2025 best practices
+SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]
+DatabaseDep = Annotated[DatabaseService, Depends(get_db)]
+CacheDep = Annotated[CacheService, Depends(get_cache_service_dep)]
+SessionMemoryDep = Annotated[SessionMemory, Depends(get_session_memory)]
+MCPManagerDep = Annotated[MCPManager, Depends(get_mcp_manager)]
+
+# Principal-based authentication dependencies
+CurrentPrincipalDep = Annotated[Principal | None, Depends(get_current_principal)]
+RequiredPrincipalDep = Annotated[Principal, Depends(require_principal)]
+UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
+AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
+
+# Business service dependencies
+AccommodationServiceDep = Annotated[
+    AccommodationService, Depends(get_accommodation_service)
+]
+ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
+FlightServiceDep = Annotated[FlightService, Depends(get_flight_service)]
+ItineraryServiceDep = Annotated[ItineraryService, Depends(get_itinerary_service)]
+ApiKeyServiceDep = Annotated[ApiKeyService, Depends(get_api_key_service)]
+MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
+TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]

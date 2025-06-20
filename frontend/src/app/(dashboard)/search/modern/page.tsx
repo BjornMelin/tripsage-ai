@@ -4,13 +4,17 @@ import { FlightSearchForm } from "@/components/features/search/flight-search-for
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
 import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
+
+import type { ModernFlightSearchParams } from "@/components/features/search/flight-search-form";
+import type { ModernHotelSearchParams } from "@/components/features/search/hotel-search-form";
+// Import the types from their source files
+import type { ModernFlightResult } from "@/components/features/search/modern-flight-results";
+import type { ModernHotelResult } from "@/components/features/search/modern-hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import {
   Building2,
   Calendar,
@@ -24,6 +28,8 @@ import {
   Zap,
 } from "lucide-react";
 import { useState, useTransition } from "react";
+
+// Mock data uses the Modern types directly
 
 // Mock data for demo purposes
 const mockFlightResults = [
@@ -86,7 +92,7 @@ const mockFlightResults = [
       reason: "Stable pricing expected",
     },
   },
-] as any;
+] as ModernFlightResult[];
 
 const mockHotelResults = [
   {
@@ -213,17 +219,17 @@ const mockHotelResults = [
       personalizedTags: ["budget", "city-center", "modern"],
     },
   },
-] as any;
+] as ModernHotelResult[];
 
 export default function ModernSearchPage() {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
-  const [searchData, setSearchData] = useState<any>(null);
+  const [_searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
 
-  const handleFlightSearch = async (params: any) => {
+  const handleFlightSearch = async (params: ModernFlightSearchParams) => {
     startTransition(() => {
-      setSearchData(params);
+      setSearchData(params as unknown as Record<string, unknown>);
       setShowResults(true);
       // Simulate API call
       setTimeout(() => {
@@ -232,9 +238,9 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleHotelSearch = async (params: any) => {
+  const handleHotelSearch = async (params: ModernHotelSearchParams) => {
     startTransition(() => {
-      setSearchData(params);
+      setSearchData(params as unknown as Record<string, unknown>);
       setShowResults(true);
       // Simulate API call
       setTimeout(() => {
@@ -243,17 +249,17 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleFlightSelect = async (flight: any) => {
+  const handleFlightSelect = async (flight: ModernFlightResult) => {
     console.log("Selected flight:", flight);
     // Handle flight selection
   };
 
-  const handleHotelSelect = async (hotel: any) => {
+  const handleHotelSelect = async (hotel: ModernHotelResult) => {
     console.log("Selected hotel:", hotel);
     // Handle hotel selection
   };
 
-  const handleCompareFlights = (flights: any[]) => {
+  const handleCompareFlights = (flights: ModernFlightResult[]) => {
     console.log("Comparing flights:", flights);
     // Handle flight comparison
   };

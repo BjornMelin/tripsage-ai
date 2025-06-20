@@ -1,6 +1,6 @@
-import type { FilterOption, SearchType, SortOption } from "@/types/search";
+import type { SearchType } from "@/types/search";
 import { z } from "zod";
-import { create } from "zustand";
+import { type StateCreator, create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for filters and sorting
@@ -212,6 +212,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "price_range",
           label: "Price Range",
           type: "range",
+          required: false,
           category: "pricing",
           validation: { min: 0, max: 10000 },
         },
@@ -219,6 +220,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "stops",
           label: "Number of Stops",
           type: "select",
+          required: false,
           category: "routing",
           options: [
             { value: "0", label: "Direct flights only" },
@@ -230,6 +232,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "airlines",
           label: "Airlines",
           type: "multiselect",
+          required: false,
           category: "airline",
           options: [], // Would be populated dynamically
         },
@@ -237,6 +240,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "departure_time",
           label: "Departure Time",
           type: "select",
+          required: false,
           category: "timing",
           options: [
             { value: "early_morning", label: "Early Morning (6:00-9:00)" },
@@ -252,6 +256,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "price_range",
           label: "Price per Night",
           type: "range",
+          required: false,
           category: "pricing",
           validation: { min: 0, max: 2000 },
         },
@@ -259,6 +264,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "rating",
           label: "Minimum Rating",
           type: "select",
+          required: false,
           category: "quality",
           options: [
             { value: "3", label: "3+ stars" },
@@ -270,6 +276,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "property_type",
           label: "Property Type",
           type: "multiselect",
+          required: false,
           category: "type",
           options: [
             { value: "hotel", label: "Hotel" },
@@ -282,6 +289,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "amenities",
           label: "Amenities",
           type: "multiselect",
+          required: false,
           category: "features",
           options: [
             { value: "wifi", label: "Free WiFi" },
@@ -299,6 +307,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "price_range",
           label: "Price Range",
           type: "range",
+          required: false,
           category: "pricing",
           validation: { min: 0, max: 500 },
         },
@@ -306,6 +315,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "duration",
           label: "Duration",
           type: "range",
+          required: false,
           category: "timing",
           validation: { min: 1, max: 480 }, // minutes
         },
@@ -313,6 +323,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "difficulty",
           label: "Difficulty Level",
           type: "select",
+          required: false,
           category: "experience",
           options: [
             { value: "easy", label: "Easy" },
@@ -325,6 +336,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "category",
           label: "Activity Type",
           type: "multiselect",
+          required: false,
           category: "type",
           options: [
             { value: "outdoor", label: "Outdoor Adventures" },
@@ -341,6 +353,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "destination_type",
           label: "Destination Type",
           type: "multiselect",
+          required: false,
           category: "type",
           options: [
             { value: "city", label: "Cities" },
@@ -353,6 +366,7 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "population",
           label: "Population Size",
           type: "select",
+          required: false,
           category: "demographics",
           options: [
             { value: "small", label: "Small (< 100k)" },
@@ -380,12 +394,14 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
       label: "Price: Low to High",
       field: "price",
       direction: "asc" as SortDirection,
+      isDefault: false,
     },
     {
       id: "price_high",
       label: "Price: High to Low",
       field: "price",
       direction: "desc" as SortDirection,
+      isDefault: false,
     },
   ];
 
@@ -398,24 +414,28 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Duration",
           field: "totalDuration",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "departure",
           label: "Departure Time",
           field: "departureTime",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "arrival",
           label: "Arrival Time",
           field: "arrivalTime",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "stops",
           label: "Fewest Stops",
           field: "stops",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
       ];
     case "accommodation":
@@ -426,18 +446,21 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Highest Rated",
           field: "rating",
           direction: "desc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "distance",
           label: "Distance",
           field: "distance",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "reviews",
           label: "Most Reviews",
           field: "reviewCount",
           direction: "desc" as SortDirection,
+          isDefault: false,
         },
       ];
     case "activity":
@@ -448,18 +471,21 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Highest Rated",
           field: "rating",
           direction: "desc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "duration",
           label: "Duration",
           field: "duration",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "popularity",
           label: "Most Popular",
           field: "bookingCount",
           direction: "desc" as SortDirection,
+          isDefault: false,
         },
       ];
     case "destination":
@@ -476,18 +502,21 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Alphabetical",
           field: "name",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "population",
           label: "Population",
           field: "population",
           direction: "desc" as SortDirection,
+          isDefault: false,
         },
         {
           id: "distance",
           label: "Distance",
           field: "distance",
           direction: "asc" as SortDirection,
+          isDefault: false,
         },
       ];
     default:
@@ -495,10 +524,89 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
   }
 };
 
+// Helper to compute derived state
+const computeDerivedState = (state: Partial<SearchFiltersState>) => {
+  const hasActiveFilters = Object.keys(state.activeFilters || {}).length > 0;
+  const activeFilterCount = Object.keys(state.activeFilters || {}).length;
+  const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
+
+  const currentFilters = state.currentSearchType
+    ? state.availableFilters?.[state.currentSearchType] || []
+    : [];
+
+  const currentSortOptions = state.currentSearchType
+    ? state.availableSortOptions?.[state.currentSearchType] || []
+    : [];
+
+  const summaries: string[] = [];
+  Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
+    const filter = currentFilters.find((f) => f.id === filterId);
+    if (filter) {
+      const valueStr = Array.isArray(activeFilter.value)
+        ? activeFilter.value.join(", ")
+        : typeof activeFilter.value === "object" && activeFilter.value !== null
+          ? `${(activeFilter.value as any).min || ""} - ${(activeFilter.value as any).max || ""}`
+          : String(activeFilter.value);
+      summaries.push(`${filter.label}: ${valueStr}`);
+    }
+  });
+  const appliedFilterSummary = summaries.join("; ");
+
+  return {
+    hasActiveFilters,
+    activeFilterCount,
+    canClearFilters,
+    currentFilters,
+    currentSortOptions,
+    appliedFilterSummary,
+  };
+};
+
+// Custom middleware to compute derived state with proper TypeScript typing
+const withComputedState =
+  <T extends SearchFiltersState>(
+    config: StateCreator<T, [], [], T>
+  ): StateCreator<T, [], [], T> =>
+  (set, get, api) => {
+    const setState = (
+      partial: Partial<T> | ((state: T) => Partial<T>),
+      replace?: boolean | undefined
+    ) => {
+      const newState = typeof partial === "function" ? partial(get()) : partial;
+      const currentState = get();
+      const mergedState = replace ? newState : { ...currentState, ...newState };
+      const derived = computeDerivedState(mergedState);
+      if (replace) {
+        set({ ...newState, ...derived } as T, true);
+      } else {
+        set((state) => ({ ...state, ...newState, ...derived }));
+      }
+    };
+
+    // Override the setState method on the api to ensure computed state is always updated
+    const originalSetState = api.setState;
+    api.setState = (
+      partial: Partial<T> | ((state: T) => Partial<T>),
+      replace?: boolean | undefined
+    ) => {
+      const newState = typeof partial === "function" ? partial(get()) : partial;
+      const currentState = get();
+      const mergedState = replace ? newState : { ...currentState, ...newState };
+      const derived = computeDerivedState(mergedState);
+      if (replace) {
+        originalSetState({ ...newState, ...derived } as T, true);
+      } else {
+        originalSetState((state) => ({ ...state, ...newState, ...derived }));
+      }
+    };
+
+    return config(setState, get, api);
+  };
+
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
     persist(
-      (set, get) => ({
+      withComputedState((set, get) => ({
         // Initial state
         availableFilters: {
           flight: getDefaultFilters("flight"),
@@ -526,49 +634,21 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         isApplyingFilters: false,
         filterValidationErrors: {},
 
-        // Computed properties
-        get hasActiveFilters() {
-          return Object.keys(get().activeFilters).length > 0;
-        },
-
-        get activeFilterCount() {
-          return Object.keys(get().activeFilters).length;
-        },
-
-        get canClearFilters() {
-          return get().hasActiveFilters || get().activeSortOption !== null;
-        },
-
-        get currentFilters() {
-          const { currentSearchType, availableFilters } = get();
-          return currentSearchType ? availableFilters[currentSearchType] || [] : [];
-        },
-
-        get currentSortOptions() {
-          const { currentSearchType, availableSortOptions } = get();
-          return currentSearchType ? availableSortOptions[currentSearchType] || [] : [];
-        },
-
-        get appliedFilterSummary() {
-          const { activeFilters, currentFilters } = get();
-          const summaries: string[] = [];
-
-          Object.entries(activeFilters).forEach(([filterId, activeFilter]) => {
-            const filterConfig = currentFilters.find((f) => f.id === filterId);
-            if (filterConfig) {
-              const displayValue =
-                activeFilter.displayValue || String(activeFilter.value);
-              summaries.push(`${filterConfig.label}: ${displayValue}`);
-            }
-          });
-
-          return summaries.join(", ");
-        },
+        // Computed properties (initialized by middleware)
+        hasActiveFilters: false,
+        activeFilterCount: 0,
+        canClearFilters: false,
+        currentFilters: [],
+        currentSortOptions: [],
+        appliedFilterSummary: "",
 
         // Filter configuration actions
-        setAvailableFilters: (searchType, filters) => {
+        setAvailableFilters: (
+          searchType: SearchType,
+          filters: ValidatedFilterOption[]
+        ) => {
           // Validate filters
-          const validatedFilters = filters.filter((filter) => {
+          const validatedFilters = filters.filter((filter: ValidatedFilterOption) => {
             const result = FilterOptionSchema.safeParse(filter);
             if (!result.success) {
               console.error(`Invalid filter for ${searchType}:`, result.error);
@@ -585,7 +665,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }));
         },
 
-        addAvailableFilter: (searchType, filter) => {
+        addAvailableFilter: (searchType: SearchType, filter: ValidatedFilterOption) => {
           const result = FilterOptionSchema.safeParse(filter);
           if (result.success) {
             set((state) => ({
@@ -602,10 +682,14 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           }
         },
 
-        updateAvailableFilter: (searchType, filterId, updates) => {
+        updateAvailableFilter: (
+          searchType: SearchType,
+          filterId: string,
+          updates: Partial<ValidatedFilterOption>
+        ) => {
           set((state) => {
             const filters = state.availableFilters[searchType] || [];
-            const updatedFilters = filters.map((filter) => {
+            const updatedFilters = filters.map((filter: ValidatedFilterOption) => {
               if (filter.id === filterId) {
                 const updatedFilter = { ...filter, ...updates };
                 const result = FilterOptionSchema.safeParse(updatedFilter);
@@ -623,7 +707,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
           });
         },
 
-        removeAvailableFilter: (searchType, filterId) => {
+        removeAvailableFilter: (searchType: SearchType, filterId: string) => {
           set((state) => ({
             availableFilters: {
               ...state.availableFilters,
@@ -809,14 +893,30 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         applyFiltersFromObject: async (filterObject) => {
-          return await get().setMultipleFilters(filterObject);
+          // Convert Record<string, unknown> to Record<string, FilterValue>
+          const validatedFilters: Record<string, FilterValue> = {};
+          for (const [key, value] of Object.entries(filterObject)) {
+            // Only include values that match FilterValue type
+            if (
+              typeof value === "string" ||
+              typeof value === "number" ||
+              typeof value === "boolean" ||
+              Array.isArray(value) ||
+              (typeof value === "object" &&
+                value !== null &&
+                ("min" in value || "max" in value))
+            ) {
+              validatedFilters[key] = value as FilterValue;
+            }
+          }
+          return await get().setMultipleFilters(validatedFilters);
         },
 
         resetFiltersToDefault: (searchType) => {
           const targetSearchType = searchType || get().currentSearchType;
           if (!targetSearchType) return;
 
-          const defaultFilters = getDefaultFilters(targetSearchType);
+          getDefaultFilters(targetSearchType); // Get default filters
           const defaultSort = getDefaultSortOptions(targetSearchType).find(
             (s) => s.isDefault
           );
@@ -900,10 +1000,9 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
                 filterPresets: [...state.filterPresets, result.data],
               }));
               return presetId;
-            } else {
-              console.error("Invalid filter preset:", result.error);
-              return null;
             }
+            console.error("Invalid filter preset:", result.error);
+            return null;
           } catch (error) {
             console.error("Failed to save filter preset:", error);
             return null;
@@ -1045,6 +1144,29 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
                 }
                 if (max !== undefined && value > max) {
                   throw new Error(`Value must be at most ${max}`);
+                }
+              }
+
+              // Handle range type filters
+              if (
+                filterConfig.type === "range" &&
+                typeof value === "object" &&
+                value !== null
+              ) {
+                const rangeValue = value as { min?: number; max?: number };
+                if (
+                  rangeValue.min !== undefined &&
+                  min !== undefined &&
+                  rangeValue.min < min
+                ) {
+                  throw new Error(`Minimum value must be at least ${min}`);
+                }
+                if (
+                  rangeValue.max !== undefined &&
+                  max !== undefined &&
+                  rangeValue.max > max
+                ) {
+                  throw new Error(`Maximum value must be at most ${max}`);
                 }
               }
 
@@ -1193,7 +1315,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             filterValidationErrors: {},
           });
         },
-      }),
+      })),
       {
         name: "search-filters-storage",
         partialize: (state) => ({

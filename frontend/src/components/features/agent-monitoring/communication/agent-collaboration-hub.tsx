@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -18,21 +17,15 @@ import {
   Activity,
   AlertTriangle,
   ArrowRightLeft,
-  BarChart3,
   Brain,
   CheckCircle2,
   Clock,
-  Cpu,
-  Eye,
   GitBranch,
-  MessageSquare,
   Network,
-  Target,
   Timer,
   TrendingUp,
   Users,
   Workflow,
-  Zap,
 } from "lucide-react";
 import type React from "react";
 import { startTransition, useEffect, useOptimistic, useState } from "react";
@@ -438,12 +431,12 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
   // Using React 19's useOptimistic for immediate UI updates
   const [optimisticAgents, updateOptimisticAgents] = useOptimistic(
     initialAgents,
-    (state, newAgents: Agent[]) => newAgents
+    (_state, newAgents: Agent[]) => newAgents
   );
 
   const [optimisticHandoffs, updateOptimisticHandoffs] = useOptimistic(
     initialHandoffs,
-    (state, newHandoffs: AgentHandoff[]) => newHandoffs
+    (_state, newHandoffs: AgentHandoff[]) => newHandoffs
   );
 
   // Simulate real-time updates
@@ -509,8 +502,8 @@ export const AgentCollaborationHub: React.FC<AgentCollaborationHubProps> = ({
   };
 
   const activeAgents = optimisticAgents.filter((a) => a.status === "active").length;
-  const averageWorkload =
-    optimisticAgents.reduce((sum, a) => sum + a.workload, 0) / optimisticAgents.length;
+  // const averageWorkload = // Future implementation
+  //   optimisticAgents.reduce((sum, a) => sum + a.workload, 0) / optimisticAgents.length;
   const pendingHandoffs = optimisticHandoffs.filter(
     (h) => h.status === "pending"
   ).length;

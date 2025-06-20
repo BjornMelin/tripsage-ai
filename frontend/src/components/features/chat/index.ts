@@ -3,7 +3,7 @@ export { ChatContainer } from "../../chat/chat-container";
 export { MessageInput } from "../../chat/message-input";
 export { MessageList } from "../../chat/message-list";
 export { MessageItem } from "../../chat/message-item";
-export { ConnectionStatus } from "../../chat/connection-status";
+export { ConnectionStatus } from "../shared/connection-status";
 export { TypingIndicator } from "../../chat/typing-indicator";
 
 // Legacy components (to be migrated)

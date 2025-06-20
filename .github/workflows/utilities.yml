@@ -1,0 +1,737 @@
+name: PR & Repository Utilities
+on:
+  pull_request:
+    types: [opened, edited, synchronize, ready_for_review]
+  pull_request_target:
+    types: [opened]
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Manual action to perform'
+        required: true
+        type: choice
+        options:
+          - stale-check
+          - release-prep
+          - metrics-report
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  pr-validation:
+    name: Validate PR
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    outputs:
+      validation-passed: ${{ steps.validate.outputs.passed }}
+      needs-attention: ${{ steps.validate.outputs.needs-attention }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Validate PR Title & Commits
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { pull_request: pr } = context.payload;
+            let errors = [];
+            let warnings = [];
+            
+            // Validate PR title follows conventional commits
+            const titleRegex = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .{3,}/;
+            if (!titleRegex.test(pr.title)) {
+              errors.push('PR title must follow conventional commits format');
+            }
+            
+            // Check PR description
+            if (!pr.body || pr.body.trim().length < 50) {
+              warnings.push('PR description should be more detailed (min 50 chars)');
+            }
+            
+            // Check for required sections in description
+            const requiredSections = ['## What', '## Why', '## How'];
+            const missingSection = requiredSections.find(section => 
+              !pr.body || !pr.body.includes(section)
+            );
+            if (missingSection) {
+              warnings.push(`Consider adding section: ${missingSection}`);
+            }
+            
+            // Validate commits
+            const commits = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            const invalidCommits = commits.data.filter(commit => 
+              !titleRegex.test(commit.commit.message.split('\n')[0])
+            );
+            
+            if (invalidCommits.length > 0) {
+              warnings.push(`${invalidCommits.length} commit(s) don't follow conventional format`);
+            }
+            
+            // Set outputs
+            core.setOutput('passed', errors.length === 0);
+            core.setOutput('needs-attention', errors.length > 0 || warnings.length > 2);
+            core.setOutput('errors', JSON.stringify(errors));
+            core.setOutput('warnings', JSON.stringify(warnings));
+
+  auto-labeling:
+    name: Auto Label PR
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Label based on files changed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { pull_request: pr } = context.payload;
+            const labels = new Set();
+            
+            // Get changed files
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            // Label mappings
+            const labelRules = {
+              'frontend': f => f.filename.startsWith('frontend/'),
+              'backend': f => f.filename.startsWith('tripsage/') || f.filename.startsWith('scripts/'),
+              'database': f => f.filename.includes('migration') || f.filename.includes('supabase'),
+              'testing': f => f.filename.includes('test') || f.filename.includes('spec'),
+              'ci/cd': f => f.filename.startsWith('.github/'),
+              'documentation': f => f.filename.endsWith('.md') || f.filename.includes('docs/'),
+              'dependencies': f => f.filename.includes('requirements') || f.filename.includes('package.json'),
+              'security': f => f.filename.includes('auth') || f.filename.includes('security'),
+              'performance': f => f.patch?.includes('cache') || f.patch?.includes('optimize'),
+            };
+            
+            // Apply labels based on files
+            for (const file of files.data) {
+              for (const [label, rule] of Object.entries(labelRules)) {
+                if (rule(file)) labels.add(label);
+              }
+            }
+            
+            // Size labels
+            const additions = files.data.reduce((sum, f) => sum + f.additions, 0);
+            const deletions = files.data.reduce((sum, f) => sum + f.deletions, 0);
+            const totalChanges = additions + deletions;
+            
+            if (totalChanges < 10) labels.add('size/XS');
+            else if (totalChanges < 50) labels.add('size/S');
+            else if (totalChanges < 200) labels.add('size/M');
+            else if (totalChanges < 500) labels.add('size/L');
+            else labels.add('size/XL');
+            
+            // PR type from title
+            const typeMatch = pr.title.match(/^(\w+)(\(.+\))?:/);
+            if (typeMatch) {
+              const typeLabels = {
+                feat: 'enhancement',
+                fix: 'bug',
+                docs: 'documentation',
+                perf: 'performance',
+                refactor: 'refactor',
+                test: 'testing',
+                ci: 'ci/cd',
+              };
+              if (typeLabels[typeMatch[1]]) labels.add(typeLabels[typeMatch[1]]);
+            }
+            
+            // Apply labels
+            if (labels.size > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: Array.from(labels),
+              });
+            }
+
+  breaking-change-detection:
+    name: Detect Breaking Changes
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check for breaking changes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { pull_request: pr } = context.payload;
+            const breakingIndicators = [
+              'BREAKING CHANGE:',
+              'BREAKING:',
+              '!:',
+              'BC:',
+            ];
+            
+            let hasBreakingChange = false;
+            let breakingDetails = [];
+            
+            // Check PR title and body
+            const titleHasBreaking = pr.title.includes('!') || 
+              breakingIndicators.some(ind => pr.title.includes(ind));
+            const bodyHasBreaking = pr.body && 
+              breakingIndicators.some(ind => pr.body.toUpperCase().includes(ind));
+            
+            if (titleHasBreaking || bodyHasBreaking) {
+              hasBreakingChange = true;
+              breakingDetails.push('PR marked as breaking change');
+            }
+            
+            // Check commits
+            const commits = await github.rest.pulls.listCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            for (const commit of commits.data) {
+              const message = commit.commit.message;
+              if (breakingIndicators.some(ind => message.includes(ind))) {
+                hasBreakingChange = true;
+                breakingDetails.push(`Commit ${commit.sha.substring(0, 7)} contains breaking change`);
+              }
+            }
+            
+            // Check for API changes
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            const apiFiles = files.data.filter(f => 
+              f.filename.includes('api/') || 
+              f.filename.includes('routes/') ||
+              f.filename.includes('schema/') ||
+              f.filename.includes('models/')
+            );
+            
+            if (apiFiles.length > 0) {
+              // Check for removed or modified function signatures
+              for (const file of apiFiles) {
+                if (file.patch && file.deletions > 0) {
+                  // Simple heuristic: significant deletions in API files might be breaking
+                  if (file.patch.includes('- def ') || file.patch.includes('- async def ') ||
+                      file.patch.includes('- export ') || file.patch.includes('- interface ')) {
+                    breakingDetails.push(`Potential breaking change in ${file.filename}`);
+                    hasBreakingChange = true;
+                  }
+                }
+              }
+            }
+            
+            // Add label if breaking change detected
+            if (hasBreakingChange) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['breaking-change'],
+              });
+              
+              // Add comment only if not already commented
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+              });
+              
+              const botComment = comments.data.find(c => 
+                c.user.type === 'Bot' && c.body.includes('⚠️ Breaking Change Detected')
+              );
+              
+              if (!botComment) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `⚠️ **Breaking Change Detected**\n\n${breakingDetails.join('\n')}\n\nPlease ensure:\n- [ ] Update CHANGELOG.md\n- [ ] Document migration steps\n- [ ] Bump major version if needed`,
+                });
+              }
+            }
+
+  merge-conflict-check:
+    name: Check Merge Conflicts
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Check for conflicts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { pull_request: pr } = context.payload;
+            
+            // Check PR mergeable state
+            const prDetails = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            if (prDetails.data.mergeable_state === 'conflict') {
+              // Add label
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: ['has-conflicts'],
+              });
+              
+              // Check if we already commented
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+              });
+              
+              const conflictComment = comments.data.find(c => 
+                c.user.type === 'Bot' && c.body.includes('🔄 Merge Conflict Detected')
+              );
+              
+              if (!conflictComment) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: `🔄 **Merge Conflict Detected**\n\nThis PR has conflicts with the base branch. Please resolve them by:\n\n\`\`\`bash\ngit checkout ${pr.head.ref}\ngit pull origin ${pr.base.ref}\n# Resolve conflicts\ngit add .\ngit commit -m "chore: resolve merge conflicts"\ngit push\n\`\`\``,
+                });
+              }
+            } else {
+              // Remove conflict label if resolved
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  name: 'has-conflicts',
+                });
+              } catch (e) {
+                // Label might not exist, ignore
+              }
+            }
+
+  code-quality-summary:
+    name: Code Quality Summary
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    needs: [pr-validation]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Generate quality report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { pull_request: pr } = context.payload;
+            
+            // Get file changes
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            // Calculate metrics
+            const metrics = {
+              filesChanged: files.data.length,
+              additions: files.data.reduce((sum, f) => sum + f.additions, 0),
+              deletions: files.data.reduce((sum, f) => sum + f.deletions, 0),
+              testFiles: files.data.filter(f => f.filename.includes('test')).length,
+              docFiles: files.data.filter(f => f.filename.endsWith('.md')).length,
+            };
+            
+            // Language breakdown
+            const langStats = {};
+            for (const file of files.data) {
+              const ext = file.filename.split('.').pop();
+              langStats[ext] = (langStats[ext] || 0) + file.changes;
+            }
+            
+            // Quality checks
+            const qualityChecks = [];
+            
+            // Check for tests
+            const hasCodeChanges = files.data.some(f => 
+              (f.filename.endsWith('.py') || f.filename.endsWith('.ts') || f.filename.endsWith('.tsx')) &&
+              !f.filename.includes('test')
+            );
+            const hasTests = metrics.testFiles > 0;
+            
+            if (hasCodeChanges && !hasTests) {
+              qualityChecks.push('⚠️ Code changes without tests');
+            } else if (hasTests) {
+              qualityChecks.push('✅ Includes tests');
+            }
+            
+            // Check for documentation
+            if (metrics.additions > 100 && metrics.docFiles === 0) {
+              qualityChecks.push('📝 Consider adding documentation');
+            }
+            
+            // TODOs and FIXMEs
+            let todoCount = 0;
+            let fixmeCount = 0;
+            for (const file of files.data) {
+              if (file.patch) {
+                todoCount += (file.patch.match(/\+.*TODO/gi) || []).length;
+                fixmeCount += (file.patch.match(/\+.*FIXME/gi) || []).length;
+              }
+            }
+            
+            if (todoCount > 0) qualityChecks.push(`📌 ${todoCount} new TODO(s)`);
+            if (fixmeCount > 0) qualityChecks.push(`🔧 ${fixmeCount} new FIXME(s)`);
+            
+            // Create summary comment
+            const summary = `## 📊 Code Quality Summary
+            
+            **Changes:** ${metrics.additions} additions, ${metrics.deletions} deletions across ${metrics.filesChanged} files
+            
+            **Language Distribution:**
+            ${Object.entries(langStats)
+              .sort(([,a], [,b]) => b - a)
+              .slice(0, 5)
+              .map(([lang, changes]) => `- \`.${lang}\`: ${changes} changes`)
+              .join('\n')}
+            
+            **Quality Checks:**
+            ${qualityChecks.join('\n')}
+            
+            <details>
+            <summary>💡 Tips for this PR</summary>
+            
+            ${hasCodeChanges && !hasTests ? '- Consider adding tests for new functionality\n' : ''}
+            ${metrics.additions > 200 ? '- Large PR: Consider breaking into smaller chunks\n' : ''}
+            ${todoCount > 3 ? '- Multiple TODOs added: Consider creating follow-up issues\n' : ''}
+            </details>`;
+            
+            // Update or create comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+            });
+            
+            const summaryComment = comments.data.find(c => 
+              c.user.type === 'Bot' && c.body.includes('📊 Code Quality Summary')
+            );
+            
+            if (summaryComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: summaryComment.id,
+                body: summary,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body: summary,
+              });
+            }
+
+  assign-reviewers:
+    name: Auto Assign Reviewers
+    if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Assign reviewers based on files
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { pull_request: pr } = context.payload;
+            
+            // Skip if author is a bot or if reviewers already assigned
+            if (pr.user.type === 'Bot' || pr.requested_reviewers.length > 0) {
+              return;
+            }
+            
+            // Get changed files
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+            });
+            
+            // Code ownership mapping (configure as needed)
+            const codeOwners = {
+              'frontend/': ['frontend-team'],
+              'tripsage/api/': ['backend-team'],
+              'tripsage/agents/': ['ai-team'],
+              '.github/': ['devops-team'],
+            };
+            
+            const reviewers = new Set();
+            const teams = new Set();
+            
+            // Match files to owners
+            for (const file of files.data) {
+              for (const [path, owners] of Object.entries(codeOwners)) {
+                if (file.filename.startsWith(path)) {
+                  owners.forEach(owner => {
+                    if (owner.includes('-team')) {
+                      teams.add(owner);
+                    } else {
+                      reviewers.add(owner);
+                    }
+                  });
+                }
+              }
+            }
+            
+            // Assign reviewers
+            if (reviewers.size > 0 || teams.size > 0) {
+              try {
+                await github.rest.pulls.requestReviewers({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  reviewers: Array.from(reviewers).filter(r => r !== pr.user.login),
+                  team_reviewers: Array.from(teams),
+                });
+              } catch (e) {
+                console.log('Could not assign all reviewers:', e.message);
+              }
+            }
+
+  stale-management:
+    name: Manage Stale Items
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'stale-check')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale issues and PRs
+        uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Stale issue config
+          stale-issue-message: |
+            This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 7 days. Thank you for your contributions.
+          stale-issue-label: 'stale'
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          exempt-issue-labels: 'pinned,security,bug,enhancement'
+          
+          # Stale PR config
+          stale-pr-message: |
+            This pull request has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 14 days. If you're still working on this, please leave a comment or push new commits.
+          stale-pr-label: 'stale'
+          days-before-pr-stale: 14
+          days-before-pr-close: 14
+          exempt-pr-labels: 'work-in-progress,ready-for-review,approved'
+          
+          # Don't close issues with assignees
+          exempt-all-assignees: true
+          
+          # Operations per run
+          operations-per-run: 30
+
+  release-automation:
+    name: Release Helpers
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'release-prep'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Generate release notes draft
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get latest tag
+            const tags = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 1,
+            });
+            
+            const latestTag = tags.data[0]?.name || 'v0.0.0';
+            
+            // Get commits since last tag
+            const comparison = await github.rest.repos.compareCommits({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              base: latestTag,
+              head: 'main',
+            });
+            
+            // Categorize commits
+            const categories = {
+              '✨ Features': [],
+              '🐛 Bug Fixes': [],
+              '📚 Documentation': [],
+              '🔧 Maintenance': [],
+              '⚡ Performance': [],
+              '🔒 Security': [],
+              '⚠️ Breaking Changes': [],
+            };
+            
+            for (const commit of comparison.data.commits) {
+              const message = commit.commit.message;
+              const firstLine = message.split('\n')[0];
+              
+              if (firstLine.startsWith('feat')) categories['✨ Features'].push(firstLine);
+              else if (firstLine.startsWith('fix')) categories['🐛 Bug Fixes'].push(firstLine);
+              else if (firstLine.startsWith('docs')) categories['📚 Documentation'].push(firstLine);
+              else if (firstLine.startsWith('perf')) categories['⚡ Performance'].push(firstLine);
+              else if (firstLine.includes('security')) categories['🔒 Security'].push(firstLine);
+              else if (message.includes('BREAKING')) categories['⚠️ Breaking Changes'].push(firstLine);
+              else categories['🔧 Maintenance'].push(firstLine);
+            }
+            
+            // Generate release notes
+            let releaseNotes = `# Release Notes - ${new Date().toISOString().split('T')[0]}\n\n`;
+            
+            for (const [category, commits] of Object.entries(categories)) {
+              if (commits.length > 0) {
+                releaseNotes += `## ${category}\n\n`;
+                commits.forEach(commit => {
+                  releaseNotes += `- ${commit}\n`;
+                });
+                releaseNotes += '\n';
+              }
+            }
+            
+            // Contributors
+            const contributors = new Set(comparison.data.commits.map(c => c.author?.login).filter(Boolean));
+            if (contributors.size > 0) {
+              releaseNotes += `## 👥 Contributors\n\n`;
+              releaseNotes += `Thanks to: ${Array.from(contributors).map(c => `@${c}`).join(', ')}\n\n`;
+            }
+            
+            // Create draft release
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `v${new Date().toISOString().split('T')[0].replace(/-/g, '.')}`,
+              name: `Release ${new Date().toISOString().split('T')[0]}`,
+              body: releaseNotes,
+              draft: true,
+              prerelease: false,
+            });
+            
+            console.log('Draft release created!');
+
+  pr-metrics:
+    name: PR Metrics Report
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'metrics-report'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate metrics report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Time range: last 30 days
+            const since = new Date();
+            since.setDate(since.getDate() - 30);
+            
+            // Get all PRs
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              since: since.toISOString(),
+            });
+            
+            // Calculate metrics
+            const metrics = {
+              total: prs.length,
+              merged: prs.filter(pr => pr.merged_at).length,
+              closed: prs.filter(pr => pr.closed_at && !pr.merged_at).length,
+              open: prs.filter(pr => !pr.closed_at).length,
+              avgTimeToMerge: 0,
+              avgReviewTime: 0,
+              topContributors: {},
+              byLabel: {},
+            };
+            
+            let totalMergeTime = 0;
+            let mergedCount = 0;
+            
+            for (const pr of prs) {
+              // Contributor stats
+              metrics.topContributors[pr.user.login] = (metrics.topContributors[pr.user.login] || 0) + 1;
+              
+              // Label stats
+              for (const label of pr.labels) {
+                metrics.byLabel[label.name] = (metrics.byLabel[label.name] || 0) + 1;
+              }
+              
+              // Time to merge
+              if (pr.merged_at) {
+                const created = new Date(pr.created_at);
+                const merged = new Date(pr.merged_at);
+                totalMergeTime += merged - created;
+                mergedCount++;
+              }
+            }
+            
+            metrics.avgTimeToMerge = mergedCount > 0 
+              ? Math.round(totalMergeTime / mergedCount / (1000 * 60 * 60 * 24)) 
+              : 0;
+            
+            // Create issue with report
+            const report = `# 📊 PR Metrics Report - Last 30 Days
+            
+            ## Summary
+            - **Total PRs:** ${metrics.total}
+            - **Merged:** ${metrics.merged} (${Math.round(metrics.merged / metrics.total * 100)}%)
+            - **Closed without merge:** ${metrics.closed}
+            - **Currently open:** ${metrics.open}
+            - **Average time to merge:** ${metrics.avgTimeToMerge} days
+            
+            ## Top Contributors
+            ${Object.entries(metrics.topContributors)
+              .sort(([,a], [,b]) => b - a)
+              .slice(0, 10)
+              .map(([user, count]) => `- @${user}: ${count} PRs`)
+              .join('\n')}
+            
+            ## By Label
+            ${Object.entries(metrics.byLabel)
+              .sort(([,a], [,b]) => b - a)
+              .slice(0, 10)
+              .map(([label, count]) => `- \`${label}\`: ${count} PRs`)
+              .join('\n')}
+            
+            ---
+            *Generated on ${new Date().toISOString().split('T')[0]}*`;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `PR Metrics Report - ${new Date().toISOString().split('T')[0]}`,
+              body: report,
+              labels: ['metrics', 'report'],
+            });

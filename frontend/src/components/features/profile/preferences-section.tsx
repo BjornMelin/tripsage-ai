@@ -11,7 +11,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,8 +27,9 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
+import type { CurrencyCode } from "@/types/currency";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, MapPin, Palette, Zap } from "lucide-react";
+import { Globe, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -46,21 +46,20 @@ const preferencesSchema = z.object({
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export function PreferencesSection() {
-  const { user, updateUser } = useUserProfileStore();
-  const { currency, setCurrency } = useCurrencyStore();
+  const { profile: _profile } = useUserProfileStore();
+  const { baseCurrency, setBaseCurrency } = useCurrencyStore();
   const { toast } = useToast();
 
   const form = useForm<PreferencesFormData>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
-      language: user?.preferences?.language || "en",
-      currency: currency || "USD",
-      timezone:
-        user?.preferences?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-      theme: user?.preferences?.theme || "system",
-      units: user?.preferences?.units || "metric",
-      dateFormat: user?.preferences?.dateFormat || "MM/DD/YYYY",
-      timeFormat: user?.preferences?.timeFormat || "12h",
+      language: "en",
+      currency: baseCurrency || "USD",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      theme: "system",
+      units: "metric",
+      dateFormat: "MM/DD/YYYY",
+      timeFormat: "12h",
     },
   });
 
@@ -69,24 +68,16 @@ export function PreferencesSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Update user preferences
-      updateUser({
-        preferences: {
-          ...user?.preferences,
-          ...data,
-        },
-      });
-
       // Update currency store if changed
-      if (data.currency !== currency) {
-        setCurrency(data.currency);
+      if (data.currency !== baseCurrency) {
+        setBaseCurrency(data.currency as CurrencyCode);
       }
 
       toast({
         title: "Preferences updated",
         description: "Your preferences have been successfully saved.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update preferences. Please try again.",
@@ -100,18 +91,11 @@ export function PreferencesSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      updateUser({
-        preferences: {
-          ...user?.preferences,
-          [setting]: enabled,
-        },
-      });
-
       toast({
         title: "Setting updated",
         description: `${setting} ${enabled ? "enabled" : "disabled"}.`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update setting.",
@@ -374,7 +358,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              checked={user?.preferences?.autoSaveSearches ?? true}
+              defaultChecked={true}
               onCheckedChange={(enabled) =>
                 toggleAdvancedSetting("autoSaveSearches", enabled)
               }
@@ -389,7 +373,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              checked={user?.preferences?.smartSuggestions ?? true}
+              defaultChecked={true}
               onCheckedChange={(enabled) =>
                 toggleAdvancedSetting("smartSuggestions", enabled)
               }
@@ -404,7 +388,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              checked={user?.preferences?.locationServices ?? false}
+              defaultChecked={false}
               onCheckedChange={(enabled) =>
                 toggleAdvancedSetting("locationServices", enabled)
               }
@@ -419,7 +403,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              checked={user?.preferences?.analytics ?? true}
+              defaultChecked={true}
               onCheckedChange={(enabled) => toggleAdvancedSetting("analytics", enabled)}
             />
           </div>

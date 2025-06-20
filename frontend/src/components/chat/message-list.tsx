@@ -3,7 +3,7 @@
 import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
 import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useRef } from "react";
-import { ConnectionStatus } from "./connection-status";
+import { ConnectionStatus } from "../features/shared/connection-status";
 import { MessageItem } from "./message-item";
 import { TypingIndicator } from "./typing-indicator";
 
@@ -124,6 +124,8 @@ export function MessageList({
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
+                  role="img"
+                  aria-label="No messages"
                 >
                   <path
                     strokeLinecap="round"
@@ -145,7 +147,7 @@ export function MessageList({
 
         {/* Message list */}
         <div className="space-y-1">
-          {groupedMessages.map((item, index) => {
+          {groupedMessages.map((item, _index) => {
             if (item.type === "date-separator") {
               return (
                 <div key={`date-${item.date}`} className="flex justify-center py-2">
@@ -180,6 +182,7 @@ export function MessageList({
       {isUserScrolledRef.current && (
         <div className="absolute bottom-20 right-4">
           <button
+            type="button"
             onClick={() => scrollToBottom(true)}
             className="bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 transition-colors"
           >
@@ -188,6 +191,8 @@ export function MessageList({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              role="img"
+              aria-label="Scroll to bottom"
             >
               <path
                 strokeLinecap="round"
@@ -235,14 +240,14 @@ function formatDateSeparator(dateString: string): string {
 
   if (date.toDateString() === today.toDateString()) {
     return "Today";
-  } else if (date.toDateString() === yesterday.toDateString()) {
-    return "Yesterday";
-  } else {
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
   }
+  if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 }

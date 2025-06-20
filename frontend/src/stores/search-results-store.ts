@@ -1,6 +1,6 @@
 import type { SearchResults, SearchType } from "@/types/search";
 import { z } from "zod";
-import { create } from "zustand";
+import { type StateCreator, create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for search results
@@ -144,6 +144,31 @@ const generateSearchId = () =>
   `search_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 const getCurrentTimestamp = () => new Date().toISOString();
 
+// Helper to compute derived state
+const computeDerivedState = (state: Partial<SearchResultsState>) => {
+  const hasResults = Object.keys(state.results || {}).some((key) => {
+    const typeResults = state.results?.[key as keyof SearchResults];
+    return Array.isArray(typeResults) && typeResults.length > 0;
+  });
+
+  const isEmptyResults = state.status === "success" && !hasResults;
+  const canRetry = state.status === "error" && (!state.error || state.error.retryable);
+
+  let searchDuration: number | null = null;
+  if (state.currentContext?.completedAt) {
+    const startTime = new Date(state.currentContext.startedAt).getTime();
+    const endTime = new Date(state.currentContext.completedAt).getTime();
+    searchDuration = endTime - startTime;
+  }
+
+  return {
+    hasResults,
+    isEmptyResults,
+    canRetry,
+    searchDuration,
+  };
+};
+
 // Default states
 const defaultPagination = {
   currentPage: 1,
@@ -154,10 +179,34 @@ const defaultPagination = {
   hasPreviousPage: false,
 };
 
+// Custom middleware to compute derived state with proper TypeScript typing
+const withComputedState =
+  <T extends SearchResultsState>(
+    config: StateCreator<T, [], [], T>
+  ): StateCreator<T, [], [], T> =>
+  (set, get, api) => {
+    const setState = (
+      partial: Partial<T> | ((state: T) => Partial<T>),
+      replace?: boolean | undefined
+    ) => {
+      const newState = typeof partial === "function" ? partial(get()) : partial;
+      const currentState = get();
+      const mergedState = replace ? newState : { ...currentState, ...newState };
+      const derived = computeDerivedState(mergedState);
+      if (replace) {
+        set({ ...newState, ...derived } as T, true);
+      } else {
+        set((state) => ({ ...state, ...newState, ...derived }));
+      }
+    };
+
+    return config(setState, get, api);
+  };
+
 export const useSearchResultsStore = create<SearchResultsState>()(
   devtools(
     persist(
-      (set, get) => ({
+      withComputedState((set, get) => ({
         // Initial state
         status: "idle",
         currentSearchId: null,
@@ -187,35 +236,13 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         performanceHistory: [],
 
         // Computed properties
-        get hasResults() {
-          const { results } = get();
-          return Object.keys(results).some((key) => {
-            const typeResults = results[key as keyof SearchResults];
-            return Array.isArray(typeResults) && typeResults.length > 0;
-          });
-        },
-
-        get isEmptyResults() {
-          const { status, hasResults } = get();
-          return status === "success" && !hasResults;
-        },
-
-        get canRetry() {
-          const { error, status } = get();
-          return status === "error" && (!error || error.retryable);
-        },
-
-        get searchDuration() {
-          const { currentContext } = get();
-          if (!currentContext || !currentContext.completedAt) return null;
-
-          const startTime = new Date(currentContext.startedAt).getTime();
-          const endTime = new Date(currentContext.completedAt).getTime();
-          return endTime - startTime;
-        },
+        hasResults: false,
+        isEmptyResults: false,
+        canRetry: false,
+        searchDuration: null,
 
         // Search execution actions
-        startSearch: (searchType, params) => {
+        startSearch: (searchType: SearchType, params: Record<string, unknown>) => {
           const searchId = generateSearchId();
           const timestamp = getCurrentTimestamp();
 
@@ -240,7 +267,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           return searchId;
         },
 
-        updateSearchProgress: (searchId, progress) => {
+        updateSearchProgress: (searchId: string, progress: number) => {
           const { currentSearchId } = get();
           if (currentSearchId === searchId) {
             const validProgress = Math.max(0, Math.min(100, progress));
@@ -248,24 +275,37 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }
         },
 
-        setSearchResults: (searchId, results, metrics) => {
+        setSearchResults: (
+          searchId: string,
+          results: SearchResults,
+          metrics?: SearchMetrics
+        ) => {
           const { currentSearchId, searchHistory, currentContext } = get();
 
           if (currentSearchId === searchId && currentContext) {
             const completedAt = getCurrentTimestamp();
-            const duration =
+            const calculatedDuration =
               new Date(completedAt).getTime() -
               new Date(currentContext.startedAt).getTime();
 
-            const finalMetrics: SearchMetrics = {
-              ...metrics,
-              searchDuration: duration,
-              totalResults: Object.values(results).reduce((total, typeResults) => {
+            const calculatedTotal = Object.values(results).reduce(
+              (total: number, typeResults: unknown) => {
                 if (Array.isArray(typeResults)) {
                   return total + typeResults.length;
                 }
                 return total;
-              }, 0),
+              },
+              0
+            );
+
+            const finalMetrics: SearchMetrics = {
+              totalResults: metrics?.totalResults ?? calculatedTotal,
+              resultsPerPage: metrics?.resultsPerPage ?? 20,
+              currentPage: metrics?.currentPage ?? 1,
+              hasMoreResults: metrics?.hasMoreResults ?? false,
+              searchDuration: metrics?.searchDuration ?? calculatedDuration,
+              provider: metrics?.provider,
+              requestId: metrics?.requestId,
             };
 
             const updatedContext: SearchContext = {
@@ -306,13 +346,21 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }
         },
 
-        setSearchError: (searchId, error) => {
-          const { currentSearchId, errorHistory } = get();
+        setSearchError: (searchId: string, error: ErrorDetails) => {
+          const { currentSearchId, errorHistory, currentContext, searchHistory } =
+            get();
 
-          if (currentSearchId === searchId) {
+          if (currentSearchId === searchId && currentContext) {
             const errorWithTimestamp: ErrorDetails = {
               ...error,
               occurredAt: getCurrentTimestamp(),
+            };
+
+            // Mark search as completed (with error) in history
+            const completedAt = getCurrentTimestamp();
+            const updatedContext: SearchContext = {
+              ...currentContext,
+              completedAt,
             };
 
             set({
@@ -320,6 +368,8 @@ export const useSearchResultsStore = create<SearchResultsState>()(
               error: errorWithTimestamp,
               isSearching: false,
               searchProgress: 0,
+              currentContext: updatedContext,
+              searchHistory: [...searchHistory, updatedContext],
               errorHistory: [
                 ...errorHistory,
                 { ...errorWithTimestamp, searchId },
@@ -328,7 +378,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }
         },
 
-        cancelSearch: (searchId) => {
+        cancelSearch: (searchId?: string) => {
           const { currentSearchId } = get();
           const targetSearchId = searchId || currentSearchId;
 
@@ -341,7 +391,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }
         },
 
-        completeSearch: (searchId) => {
+        completeSearch: (searchId: string) => {
           const { currentSearchId, currentContext } = get();
 
           if (currentSearchId === searchId && currentContext) {
@@ -359,12 +409,24 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         },
 
         // Results management
-        clearResults: (searchType) => {
+        clearResults: (searchType?: SearchType) => {
           if (searchType) {
+            // Map singular search type to plural result key
+            const resultKey =
+              searchType === "accommodation"
+                ? "accommodations"
+                : searchType === "activity"
+                  ? "activities"
+                  : searchType === "destination"
+                    ? "destinations"
+                    : searchType === "flight"
+                      ? "flights"
+                      : searchType;
+
             set((state) => ({
               results: {
                 ...state.results,
-                [searchType]: [],
+                [resultKey]: [],
               },
             }));
           } else {
@@ -393,7 +455,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           });
         },
 
-        appendResults: (searchId, newResults) => {
+        appendResults: (searchId: string, newResults: SearchResults) => {
           const { resultsBySearch, currentSearchId, results } = get();
 
           if (currentSearchId === searchId) {
@@ -401,12 +463,14 @@ export const useSearchResultsStore = create<SearchResultsState>()(
 
             Object.entries(newResults).forEach(([type, typeResults]) => {
               if (Array.isArray(typeResults)) {
-                const existingResults =
-                  mergedResults[type as keyof SearchResults] || [];
-                mergedResults[type as keyof SearchResults] = [
-                  ...(Array.isArray(existingResults) ? existingResults : []),
-                  ...typeResults,
-                ] as any;
+                const resultKey = type as keyof SearchResults;
+                const existingResults = mergedResults[resultKey] || [];
+                if (Array.isArray(existingResults)) {
+                  (mergedResults[resultKey] as unknown[]) = [
+                    ...existingResults,
+                    ...typeResults,
+                  ];
+                }
               }
             });
 
@@ -421,7 +485,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         },
 
         // Pagination actions
-        setPage: (page) => {
+        setPage: (page: number) => {
           const { pagination } = get();
           const validPage = Math.max(1, Math.min(pagination.totalPages, page));
 
@@ -449,7 +513,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           }
         },
 
-        setResultsPerPage: (perPage) => {
+        setResultsPerPage: (perPage: number) => {
           const { pagination } = get();
           const validPerPage = Math.max(1, Math.min(100, perPage));
           const totalPages = Math.ceil(pagination.totalResults / validPerPage);
@@ -468,17 +532,17 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         },
 
         // Search history management
-        getSearchById: (searchId) => {
+        getSearchById: (searchId: string) => {
           const { searchHistory } = get();
           return searchHistory.find((search) => search.searchId === searchId) || null;
         },
 
-        getResultsById: (searchId) => {
+        getResultsById: (searchId: string) => {
           const { resultsBySearch } = get();
           return resultsBySearch[searchId] || null;
         },
 
-        getRecentSearches: (searchType, limit = 10) => {
+        getRecentSearches: (searchType?: SearchType, limit = 10) => {
           const { searchHistory } = get();
           let filtered = searchHistory;
 
@@ -505,7 +569,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           });
         },
 
-        removeSearchFromHistory: (searchId) => {
+        removeSearchFromHistory: (searchId: string) => {
           set((state) => ({
             searchHistory: state.searchHistory.filter(
               (search) => search.searchId !== searchId
@@ -545,7 +609,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
         },
 
         // Performance monitoring
-        getAverageSearchDuration: (searchType) => {
+        getAverageSearchDuration: (searchType?: SearchType) => {
           const { performanceHistory } = get();
           let relevantMetrics = performanceHistory;
 
@@ -565,8 +629,8 @@ export const useSearchResultsStore = create<SearchResultsState>()(
           return totalDuration / relevantMetrics.length;
         },
 
-        getSearchSuccessRate: (searchType) => {
-          const { searchHistory } = get();
+        getSearchSuccessRate: (searchType?: SearchType) => {
+          const { searchHistory, errorHistory } = get();
           let relevantSearches = searchHistory;
 
           if (searchType) {
@@ -577,14 +641,21 @@ export const useSearchResultsStore = create<SearchResultsState>()(
 
           if (relevantSearches.length === 0) return 0;
 
+          // Count searches that completed without error
+          const erroredSearchIds = new Set(errorHistory.map((e) => e.searchId));
           const successfulSearches = relevantSearches.filter(
-            (search) => search.completedAt
+            (search) => search.completedAt && !erroredSearchIds.has(search.searchId)
           ).length;
+
           return (successfulSearches / relevantSearches.length) * 100;
         },
 
         getPerformanceInsights: () => {
-          const { searchHistory, performanceHistory, errorHistory } = get();
+          const {
+            searchHistory,
+            performanceHistory: _performanceHistory,
+            errorHistory,
+          } = get();
           const totalSearches = searchHistory.length;
           const totalErrors = errorHistory.length;
 
@@ -630,7 +701,7 @@ export const useSearchResultsStore = create<SearchResultsState>()(
             metrics: null,
           });
         },
-      }),
+      })),
       {
         name: "search-results-storage",
         partialize: (state) => ({

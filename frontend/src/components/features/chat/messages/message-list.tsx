@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   HoverCard,
   HoverCardContent,
@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat-store";
 import type { Message, ToolCall, ToolResult } from "@/types/chat";
-import { AnimatePresence, motion, useSpring, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUp,
   Bot,
@@ -28,13 +28,11 @@ import {
   Camera,
   Compass,
   Copy,
-  Gift,
   Globe,
   Loader2,
   MapPin,
   MessageSquare,
   Plane,
-  RotateCcw,
   Sparkles,
   Star,
   Volume2,
@@ -95,7 +93,7 @@ export function MessageList({
 
       // Auto-scroll if at bottom or a new message arrives from the user
       const lastMessage = messages[messages.length - 1];
-      const isNewUserMessage = lastMessage && lastMessage.role === "USER";
+      const isNewUserMessage = lastMessage && lastMessage.role === "user";
 
       if (isAtBottom || isNewUserMessage || isStreaming) {
         bottomRef.current.scrollIntoView({
@@ -294,7 +292,7 @@ export function MessageList({
             },
           ].map(({ icon: Icon, title, desc, color, bgGradient }, index) => (
             <motion.div
-              key={title}
+              key={`feature-${title}`}
               initial={{ opacity: 0, y: 20, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 1 + index * 0.1, duration: 0.5 }}

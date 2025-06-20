@@ -5,26 +5,22 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import (
+    ApiKeyServiceDep,
+    get_principal_id,
+    require_principal,
+)
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.api_keys import (
+from tripsage.api.schemas.api_keys import (
     ApiKeyCreate,
+    ApiKeyResponse,
     ApiKeyRotateRequest,
     ApiKeyValidateRequest,
-)
-from tripsage.api.schemas.responses.api_keys import (
-    ApiKeyResponse,
     ApiKeyValidateResponse,
-)
-from tripsage.api.services.key_management import (
-    KeyManagementService as KeyService,
-)
-from tripsage.api.services.key_management import (
-    get_key_management_service as get_key_service,
 )
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
@@ -42,12 +38,12 @@ def get_monitoring_service() -> KeyMonitoringService:
 
 @router.get(
     "",
-    response_model=List[ApiKeyResponse],
+    response_model=list[ApiKeyResponse],
     summary="List API keys",
 )
 async def list_keys(
-    principal: Principal = require_principal_dep,
-    key_service: KeyService = Depends(get_key_service),
+    key_service: ApiKeyServiceDep,
+    principal: Principal = Depends(require_principal),
 ):
     """List all API keys for the current user.
 
@@ -59,7 +55,7 @@ async def list_keys(
         List of API keys
     """
     user_id = get_principal_id(principal)
-    return await key_service.list_keys(user_id)
+    return await key_service.list_user_keys(user_id)
 
 
 @router.post(
@@ -70,8 +66,8 @@ async def list_keys(
 )
 async def create_key(
     key_data: ApiKeyCreate,
-    principal: Principal = require_principal_dep,
-    key_service: KeyService = Depends(get_key_service),
+    key_service: ApiKeyServiceDep,
+    principal: Principal = Depends(require_principal),
 ):
     """Create a new API key.
 
@@ -104,7 +100,7 @@ async def create_key(
         logger.error(f"Error creating API key: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create API key: {str(e)}",
+            detail=f"Failed to create API key: {e!s}",
         ) from e
 
 
@@ -114,9 +110,9 @@ async def create_key(
     summary="Delete an API key",
 )
 async def delete_key(
+    key_service: ApiKeyServiceDep,
+    principal: Principal = Depends(require_principal),
     key_id: str = Path(..., description="The API key ID"),
-    principal: Principal = require_principal_dep,
-    key_service: KeyService = Depends(get_key_service),
 ):
     """Delete an API key.
 
@@ -155,8 +151,8 @@ async def delete_key(
 )
 async def validate_key(
     key_data: ApiKeyValidateRequest,
-    principal: Principal = require_principal_dep,
-    key_service: KeyService = Depends(get_key_service),
+    key_service: ApiKeyServiceDep,
+    principal: Principal = Depends(require_principal),
 ):
     """Validate an API key with the service.
 
@@ -179,9 +175,9 @@ async def validate_key(
 )
 async def rotate_key(
     key_data: ApiKeyRotateRequest,
+    key_service: ApiKeyServiceDep,
+    principal: Principal = Depends(require_principal),
     key_id: str = Path(..., description="The API key ID"),
-    principal: Principal = require_principal_dep,
-    key_service: KeyService = Depends(get_key_service),
 ):
     """Rotate an API key.
 
@@ -230,11 +226,11 @@ async def rotate_key(
 
 @router.get(
     "/metrics",
-    response_model=Dict[str, Any],
+    response_model=dict[str, Any],
     summary="Get API key metrics",
 )
 async def get_metrics(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
 ):
     """Get API key health metrics.
 
@@ -252,11 +248,11 @@ async def get_metrics(
 
 @router.get(
     "/audit",
-    response_model=List[Dict[str, Any]],
+    response_model=list[dict[str, Any]],
     summary="Get API key audit log",
 )
 async def get_audit_log(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     limit: int = Query(100, ge=1, le=1000),
     monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):

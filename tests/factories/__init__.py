@@ -203,8 +203,6 @@ class FlightFactory(BaseFactory):
             "booking_status": BookingStatus.VIEWED,
             "data_source": DataSource.DUFFEL,
             "segment_number": 1,
-            "flight_number": "JL061",
-            "duration_minutes": 720,  # 12 hours
         }
         return {**defaults, **kwargs}
 
@@ -218,7 +216,6 @@ class FlightFactory(BaseFactory):
             destination="LAX",
             departure_time=departure_time,
             arrival_time=departure_time + timedelta(hours=11),
-            flight_number="JL062",
             segment_number=2,
             **kwargs,
         )
@@ -234,8 +231,6 @@ class FlightFactory(BaseFactory):
             departure_time=departure_time,
             arrival_time=departure_time + timedelta(hours=1.5),
             price=200.00,
-            duration_minutes=90,
-            flight_number="AA1234",
             **kwargs,
         )
 
@@ -255,6 +250,18 @@ class ChatFactory(BaseFactory):
             "user_id": 1,
         }
         return {**defaults, **kwargs}
+
+    @classmethod
+    def create_websocket_message(cls, **kwargs):
+        """Create a WebSocket message object for event tests."""
+        from tripsage_core.models.schemas_common.chat import ChatMessage, MessageRole
+
+        defaults = {
+            "role": MessageRole.USER,
+            "content": "I'm looking for a great hotel in Tokyo",
+            "timestamp": cls.future_datetime(-1),
+        }
+        return ChatMessage(**{**defaults, **kwargs})
 
     @classmethod
     def create_assistant_message(cls, **kwargs) -> Dict[str, Any]:

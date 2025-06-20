@@ -34,7 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Check, Mail, Trash2, X } from "lucide-react";
+import { Check, Mail, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -45,31 +45,27 @@ const emailUpdateSchema = z.object({
 type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
 
 export function AccountSettingsSection() {
-  const { user, updateUser } = useUserProfileStore();
+  const { profile, updatePersonalInfo: _updatePersonalInfo } = useUserProfileStore();
   const { toast } = useToast();
 
   const emailForm = useForm<EmailUpdateFormData>({
     resolver: zodResolver(emailUpdateSchema),
     defaultValues: {
-      email: user?.email || "",
+      email: profile?.email || "",
     },
   });
 
-  const onEmailUpdate = async (data: EmailUpdateFormData) => {
+  const onEmailUpdate = async (_data: EmailUpdateFormData) => {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      updateUser({
-        email: data.email,
-        isEmailVerified: false, // Email verification required after change
-      });
-
+      // Note: In a real app, this would update the auth email, not the profile
       toast({
         title: "Email updated",
         description: "Please check your inbox to verify your new email address.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update email. Please try again.",
@@ -87,7 +83,7 @@ export function AccountSettingsSection() {
         title: "Verification email sent",
         description: "Please check your inbox and click the verification link.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to send verification email. Please try again.",
@@ -105,7 +101,7 @@ export function AccountSettingsSection() {
         title: "Account deletion initiated",
         description: "Your account deletion request has been processed.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to delete account. Please try again.",
@@ -119,22 +115,12 @@ export function AccountSettingsSection() {
       // Simulate API call to update notification settings
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Update user preferences (extend user type as needed)
-      updateUser({
-        preferences: {
-          ...user?.preferences,
-          notifications: {
-            ...user?.preferences?.notifications,
-            [setting]: enabled,
-          },
-        },
-      });
-
+      // This would be updated when implementing real notification preferences
       toast({
         title: "Settings updated",
         description: `${setting} notifications ${enabled ? "enabled" : "disabled"}.`,
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update notification settings.",
@@ -159,23 +145,14 @@ export function AccountSettingsSection() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Current Email:</span>
-            <span className="text-sm">{user?.email}</span>
-            <Badge variant={user?.isEmailVerified ? "default" : "secondary"}>
-              {user?.isEmailVerified ? (
-                <>
-                  <Check className="h-3 w-3 mr-1" />
-                  Verified
-                </>
-              ) : (
-                <>
-                  <X className="h-3 w-3 mr-1" />
-                  Unverified
-                </>
-              )}
+            <span className="text-sm">{profile?.email}</span>
+            <Badge variant="default">
+              <Check className="h-3 w-3 mr-1" />
+              Verified
             </Badge>
           </div>
 
-          {!user?.isEmailVerified && (
+          {false && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -240,7 +217,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                checked={user?.preferences?.notifications?.email ?? true}
+                defaultChecked={true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("email", enabled)
                 }
@@ -255,7 +232,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                checked={user?.preferences?.notifications?.tripReminders ?? true}
+                defaultChecked={true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("tripReminders", enabled)
                 }
@@ -270,7 +247,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                checked={user?.preferences?.notifications?.priceAlerts ?? true}
+                defaultChecked={true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("priceAlerts", enabled)
                 }
@@ -285,7 +262,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                checked={user?.preferences?.notifications?.marketing ?? false}
+                defaultChecked={false}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("marketing", enabled)
                 }

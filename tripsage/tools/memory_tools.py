@@ -510,3 +510,8 @@ async def memory_health_check(service_registry: ServiceRegistry) -> Dict[str, An
             "error": str(e),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+
+# Compatibility aliases for legacy test imports
+search_memory_tool = search_user_memories
+add_memory_tool = add_conversation_memory

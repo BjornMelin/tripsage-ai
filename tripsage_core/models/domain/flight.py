@@ -6,7 +6,6 @@ entities. These models represent the essential flight data structures
 independent of storage implementation or API specifics.
 """
 
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field
@@ -20,15 +19,7 @@ from tripsage_core.models.schemas_common.common_validators import (
     NonNegativeFloat,
     PositiveInt,
 )
-
-
-class CabinClass(str, Enum):
-    """Cabin class options for flights."""
-
-    ECONOMY = "economy"
-    PREMIUM_ECONOMY = "premium_economy"
-    BUSINESS = "business"
-    FIRST = "first"
+from tripsage_core.models.schemas_common.enums import CabinClass
 
 
 class Airport(TripSageDomainModel):

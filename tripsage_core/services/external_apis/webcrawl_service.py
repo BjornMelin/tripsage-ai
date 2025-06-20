@@ -13,7 +13,7 @@ from typing import Any, Dict, Optional
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
@@ -82,7 +82,7 @@ class WebCrawlService:
     the Crawl4AI SDK directly, with full TripSage Core integration.
     """
 
-    def __init__(self, settings: Optional[CoreAppSettings] = None):
+    def __init__(self, settings: Optional[Settings] = None):
         """
         Initialize the WebCrawl service.
 

@@ -16,7 +16,7 @@ from cryptography.fernet import Fernet
 from pydantic import BaseModel, Field
 
 from tripsage.monitoring.telemetry import get_telemetry
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.logging_utils import get_logger
 

@@ -12,14 +12,18 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useSearchResultsStore } from "@/stores/search-store";
-import { ArrowRight, Clock, DollarSign, Filter, MapPin, Plane } from "lucide-react";
+import { ArrowRight, Filter, Plane } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import React from "react";
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();
   const searchId = searchParams.get("searchId");
-  const { results, status, currentContext, searchProgress } = useSearchResultsStore();
+  const {
+    results: _results,
+    status,
+    currentContext,
+    searchProgress,
+  } = useSearchResultsStore();
 
   // Mock flight results for demo
   const mockFlights = [
@@ -190,9 +194,9 @@ export default function FlightResultsPage() {
                             {flight.duration}
                           </div>
                           <div className="flex items-center">
-                            <div className="w-16 h-px bg-border"></div>
+                            <div className="w-16 h-px bg-border" />
                             <ArrowRight className="h-3 w-3 mx-1 text-muted-foreground" />
-                            <div className="w-16 h-px bg-border"></div>
+                            <div className="w-16 h-px bg-border" />
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {flight.stops === 0

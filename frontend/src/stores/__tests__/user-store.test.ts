@@ -1,7 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
-  type FavoriteDestination,
   type PersonalInfo,
   type PrivacySettings,
   type TravelDocument,
@@ -10,22 +9,59 @@ import {
   useUserProfileStore,
 } from "../user-store";
 
-// Mock setTimeout to make tests run faster
-vi.mock("global", () => ({
-  setTimeout: vi.fn((fn) => fn()),
-}));
-
 describe("User Profile Store", () => {
+  // Reset store state before each test to prevent state pollution
   beforeEach(() => {
     act(() => {
-      useUserProfileStore.setState({
-        profile: null,
-        isLoading: false,
-        isUpdatingProfile: false,
-        isUploadingAvatar: false,
-        error: null,
-        uploadError: null,
-      });
+      useUserProfileStore.getState().reset();
+    });
+  });
+  describe("Store Hook", () => {
+    it("returns a valid store state object", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+
+      // Check that the hook returns an object with expected properties
+      expect(result.current).toBeDefined();
+      expect(typeof result.current).toBe("object");
+    });
+
+    it("has all required state properties", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+      const state = result.current;
+
+      // Check for required state properties
+      expect(state).toHaveProperty("profile");
+      expect(state).toHaveProperty("isLoading");
+      expect(state).toHaveProperty("isUpdatingProfile");
+      expect(state).toHaveProperty("isUploadingAvatar");
+      expect(state).toHaveProperty("error");
+      expect(state).toHaveProperty("uploadError");
+    });
+
+    it("has all required computed properties", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+      const state = result.current;
+
+      expect(state).toHaveProperty("displayName");
+      expect(state).toHaveProperty("hasCompleteProfile");
+      expect(state).toHaveProperty("upcomingDocumentExpirations");
+    });
+
+    it("has all required action methods", () => {
+      const { result } = renderHook(() => useUserProfileStore());
+      const state = result.current;
+
+      expect(state).toHaveProperty("setProfile");
+      expect(typeof state.setProfile).toBe("function");
+
+      expect(state).toHaveProperty("updatePersonalInfo");
+      expect(typeof state.updatePersonalInfo).toBe("function");
+
+      expect(state).toHaveProperty("updateTravelPreferences");
+      expect(typeof state.updateTravelPreferences).toBe("function");
+
+      expect(state).toHaveProperty("updatePrivacySettings");
+      expect(typeof state.updatePrivacySettings).toBe("function");
     });
   });
 
@@ -65,15 +101,24 @@ describe("User Profile Store", () => {
       travelPreferences: {
         preferredCabinClass: "business",
         preferredAirlines: ["Delta", "United"],
+        excludedAirlines: [],
         maxLayovers: 1,
         preferredAccommodationType: "hotel",
+        preferredHotelChains: [],
         requireWifi: true,
         requireBreakfast: true,
+        requireParking: false,
+        requireGym: false,
+        requirePool: false,
+        accessibilityRequirements: [],
+        dietaryRestrictions: [],
       },
       privacySettings: {
         profileVisibility: "friends",
         showTravelHistory: true,
         allowDataSharing: false,
+        enableAnalytics: true,
+        enableLocationTracking: false,
       },
       favoriteDestinations: [],
       travelDocuments: [],
@@ -99,9 +144,8 @@ describe("User Profile Store", () => {
 
     describe("Update Personal Info", () => {
       beforeEach(() => {
-        const { result } = renderHook(() => useUserProfileStore());
         act(() => {
-          result.current.setProfile(mockProfile);
+          useUserProfileStore.setState({ profile: mockProfile });
         });
       });
 
@@ -168,9 +212,8 @@ describe("User Profile Store", () => {
 
     describe("Update Travel Preferences", () => {
       beforeEach(() => {
-        const { result } = renderHook(() => useUserProfileStore());
         act(() => {
-          result.current.setProfile(mockProfile);
+          useUserProfileStore.setState({ profile: mockProfile });
         });
       });
 
@@ -239,9 +282,8 @@ describe("User Profile Store", () => {
 
     describe("Update Privacy Settings", () => {
       beforeEach(() => {
-        const { result } = renderHook(() => useUserProfileStore());
         act(() => {
-          result.current.setProfile(mockProfile);
+          useUserProfileStore.setState({ profile: mockProfile });
         });
       });
 
@@ -290,15 +332,16 @@ describe("User Profile Store", () => {
 
   describe("Avatar Management", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -310,7 +353,7 @@ describe("User Profile Store", () => {
         type: "image/jpeg",
       });
 
-      let uploadResult: string | null;
+      let uploadResult: string | null = null;
       await act(async () => {
         uploadResult = await result.current.uploadAvatar(mockFile);
       });
@@ -329,7 +372,7 @@ describe("User Profile Store", () => {
         type: "text/plain",
       });
 
-      let uploadResult: string | null;
+      let uploadResult: string | null = null;
       await act(async () => {
         uploadResult = await result.current.uploadAvatar(mockFile);
       });
@@ -346,7 +389,7 @@ describe("User Profile Store", () => {
         type: "image/jpeg",
       });
 
-      let uploadResult: string | null;
+      let uploadResult: string | null = null;
       await act(async () => {
         uploadResult = await result.current.uploadAvatar(mockFile);
       });
@@ -399,15 +442,16 @@ describe("User Profile Store", () => {
 
   describe("Favorite Destinations", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -518,15 +562,16 @@ describe("User Profile Store", () => {
 
   describe("Travel Documents", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -747,6 +792,7 @@ describe("User Profile Store", () => {
             excludedAirlines: [],
             maxLayovers: 2,
             preferredAccommodationType: "hotel",
+            preferredHotelChains: [],
             requireWifi: true,
             requireBreakfast: false,
             requireParking: false,
@@ -924,8 +970,8 @@ describe("User Profile Store", () => {
       const { result } = renderHook(() => useUserProfileStore());
 
       act(() => {
-        result.current.setProfile(mockProfile);
         useUserProfileStore.setState({
+          profile: mockProfile,
           isLoading: true,
           error: "Some error",
           uploadError: "Upload error",
@@ -947,15 +993,16 @@ describe("User Profile Store", () => {
 
   describe("Loading States", () => {
     beforeEach(() => {
-      const { result } = renderHook(() => useUserProfileStore());
       act(() => {
-        result.current.setProfile({
-          id: "user-1",
-          email: "test@example.com",
-          favoriteDestinations: [],
-          travelDocuments: [],
-          createdAt: "2025-01-01T00:00:00Z",
-          updatedAt: "2025-01-01T00:00:00Z",
+        useUserProfileStore.setState({
+          profile: {
+            id: "user-1",
+            email: "test@example.com",
+            favoriteDestinations: [],
+            travelDocuments: [],
+            createdAt: "2025-01-01T00:00:00Z",
+            updatedAt: "2025-01-01T00:00:00Z",
+          },
         });
       });
     });
@@ -1096,7 +1143,7 @@ describe("User Profile Store", () => {
 
       // Export profile
       const exportedData = result.current.exportProfile();
-      const originalProfile = result.current.profile;
+      result.current.profile; // Access original profile
 
       // Reset profile
       act(() => {
@@ -1133,6 +1180,7 @@ describe("User Profile Store", () => {
           excludedAirlines: [],
           maxLayovers: 1,
           preferredAccommodationType: "hotel",
+          preferredHotelChains: [],
           requireWifi: true,
           requireBreakfast: false,
           requireParking: false,

@@ -7,6 +7,7 @@ including chat streaming, agent status updates, and live user feedback.
 import asyncio
 import json
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import (
@@ -16,12 +17,12 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from pydantic import Field, ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
+from tripsage.api.core.config import get_settings
 from tripsage.api.core.dependencies import get_db
-from tripsage.api.schemas.requests.websocket import (
+from tripsage.api.schemas.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
 )
@@ -36,29 +37,39 @@ from tripsage_core.services.business.chat_service import (
     MessageRole,
 )
 from tripsage_core.services.infrastructure.websocket_manager import (
+    websocket_manager,
+)
+from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
     WebSocketEventType,
-    websocket_manager,
 )
 
 
 # Create event classes here temporarily until they are properly organized
 class ChatMessageEvent(WebSocketEvent):
+    type: str = Field(default=WebSocketEventType.CHAT_MESSAGE, description="Event type")
     message: WebSocketMessage
 
 
 class ChatMessageChunkEvent(WebSocketEvent):
+    type: str = Field(default=WebSocketEventType.CHAT_TYPING, description="Event type")
     content: str
     chunk_index: int = 0
     is_final: bool = False
 
 
 class ConnectionEvent(WebSocketEvent):
+    type: str = Field(
+        default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type"
+    )
     status: str = Field(..., description="Connection status")
     connection_id: str = Field(..., description="Connection ID")
 
 
 class ErrorEvent(WebSocketEvent):
+    type: str = Field(
+        default=WebSocketEventType.CONNECTION_ERROR, description="Event type"
+    )
     error_code: str
     error_message: str
 
@@ -66,6 +77,45 @@ class ErrorEvent(WebSocketEvent):
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def validate_websocket_origin(websocket: WebSocket) -> bool:
+    """Validate WebSocket Origin header to prevent CSWSH attacks.
+
+    Args:
+        websocket: The WebSocket connection to validate
+
+    Returns:
+        True if origin is valid, False otherwise
+    """
+    settings = get_settings()
+    origin = websocket.headers.get("origin")
+
+    if origin is None:
+        # Allow connections without Origin header for development/testing
+        # In production, you might want to be more strict
+        logger.warning("WebSocket connection attempted without Origin header")
+        if settings.is_production:
+            logger.error("Origin header missing in production - rejecting connection")
+            return False
+        return True
+
+    # Check if origin is in allowed CORS origins
+    if origin in settings.cors_origins:
+        logger.info(f"WebSocket connection from authorized origin: {origin}")
+        return True
+
+    # Additional check for wildcard origins if configured
+    for allowed_origin in settings.cors_origins:
+        if allowed_origin == "*":
+            logger.warning(
+                "Wildcard CORS origin detected - allowing all origins (insecure)"
+            )
+            return True
+
+    logger.error(f"WebSocket connection rejected from unauthorized origin: {origin}")
+    return False
+
 
 # Global chat agent instance
 _chat_agent = None
@@ -89,11 +139,11 @@ def get_chat_agent() -> ChatAgent:
     return _chat_agent
 
 
-async def get_core_chat_service(db: AsyncSession = Depends(get_db)) -> CoreChatService:
+async def get_core_chat_service(db=Depends(get_db)) -> CoreChatService:
     """Get CoreChatService instance with database dependency.
 
     Args:
-        db: Database session from dependency injection
+        db: Database service from dependency injection
 
     Returns:
         CoreChatService instance
@@ -105,7 +155,7 @@ async def get_core_chat_service(db: AsyncSession = Depends(get_db)) -> CoreChatS
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db=Depends(get_db),
     chat_service: CoreChatService = Depends(get_core_chat_service),
 ):
     """WebSocket endpoint for real-time chat communication.
@@ -113,12 +163,17 @@ async def chat_websocket(
     Args:
         websocket: WebSocket connection
         session_id: Chat session ID
-        db: Database session from dependency injection
+        db: Database service from dependency injection
         chat_service: CoreChatService instance from dependency injection
     """
     connection_id = None
 
     try:
+        # Validate Origin header before accepting connection (CSWSH protection)
+        if not await validate_websocket_origin(websocket):
+            await websocket.close(code=4003, reason="Unauthorized origin")
+            return
+
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"WebSocket connection accepted for chat session {session_id}")
@@ -208,6 +263,32 @@ async def chat_websocket(
                     if connection:
                         connection.update_heartbeat()
 
+                elif message_type == "ping":
+                    # Handle ping from client and send pong response
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.update_heartbeat()
+                        # Send pong response
+                        pong_event = WebSocketEvent(
+                            type=WebSocketEventType.CONNECTION_PONG,
+                            payload={
+                                "timestamp": datetime.utcnow().isoformat(),
+                                "pong": True,
+                            },
+                            user_id=user_id,
+                            session_id=session_id,
+                            connection_id=connection_id,
+                        )
+                        await websocket_manager.send_to_connection(
+                            connection_id, pong_event
+                        )
+
+                elif message_type == "pong":
+                    # Handle pong response from client (in response to our ping)
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.handle_pong()
+
                 elif message_type == "subscribe":
                     # Handle channel subscription
                     try:
@@ -295,6 +376,11 @@ async def agent_status_websocket(
     connection_id = None
 
     try:
+        # Validate Origin header before accepting connection (CSWSH protection)
+        if not await validate_websocket_origin(websocket):
+            await websocket.close(code=4003, reason="Unauthorized origin")
+            return
+
         # Accept WebSocket connection
         await websocket.accept()
         logger.info(f"Agent status WebSocket connection accepted for user {user_id}")
@@ -377,6 +463,31 @@ async def agent_status_websocket(
                     connection = websocket_manager.connections.get(connection_id)
                     if connection:
                         connection.update_heartbeat()
+
+                elif message_type == "ping":
+                    # Handle ping from client and send pong response
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.update_heartbeat()
+                        # Send pong response
+                        pong_event = WebSocketEvent(
+                            type=WebSocketEventType.CONNECTION_PONG,
+                            payload={
+                                "timestamp": datetime.utcnow().isoformat(),
+                                "pong": True,
+                            },
+                            user_id=user_id,
+                            connection_id=connection_id,
+                        )
+                        await websocket_manager.send_to_connection(
+                            connection_id, pong_event
+                        )
+
+                elif message_type == "pong":
+                    # Handle pong response from client (in response to our ping)
+                    connection = websocket_manager.connections.get(connection_id)
+                    if connection:
+                        connection.handle_pong()
 
                 elif message_type == "subscribe":
                     # Handle channel subscription

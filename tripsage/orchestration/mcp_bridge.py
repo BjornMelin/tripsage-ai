@@ -12,11 +12,10 @@ from typing import Any, Dict, List, Optional
 from langchain_core.tools import Tool, tool
 from pydantic import BaseModel, Field
 
-from tripsage_core.mcp_abstraction.exceptions import TripSageMCPError
-from tripsage_core.mcp_abstraction.manager import (
-    MCPManager,
+from tripsage_core.services.simple_mcp_service import (
+    SimpleMCPService as MCPManager,
 )
-from tripsage_core.mcp_abstraction.manager import (
+from tripsage_core.services.simple_mcp_service import (
     mcp_manager as global_mcp_manager,
 )
 
@@ -220,12 +219,9 @@ class LangGraphMCPBridge:
                 else:
                     return str(result)
 
-            except TripSageMCPError as e:
+            except Exception as e:
                 logger.error(f"Airbnb tool {metadata.name} failed: {e}")
                 return f"Tool execution failed: {str(e)}"
-            except Exception as e:
-                logger.error(f"Unexpected error in tool {metadata.name}: {e}")
-                return f"Unexpected error: {str(e)}"
 
         # Create LangGraph tool with proper metadata
         return Tool(

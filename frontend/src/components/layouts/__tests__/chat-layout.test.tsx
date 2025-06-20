@@ -1,7 +1,8 @@
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { useChatStore } from "@/stores/chat-store";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render } from "@/test/test-utils";
+import { screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
 // Mock the stores

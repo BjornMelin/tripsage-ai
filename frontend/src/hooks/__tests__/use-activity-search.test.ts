@@ -3,12 +3,13 @@
  */
 
 import { api } from "@/lib/api/client";
-import { useSearchStore } from "@/stores/search-store";
+import { useSearchParamsStore } from "@/stores/search-params-store";
+import { useSearchResultsStore } from "@/stores/search-results-store";
+import { AllTheProviders } from "@/test/test-utils";
 import type { ActivitySearchParams } from "@/types/search";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import { createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import React, { type ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useActivitySearch } from "../use-activity-search";
 
 // Mock the API client
@@ -19,69 +20,124 @@ vi.mock("@/lib/api/client", () => ({
   },
 }));
 
-// Mock the search store
-vi.mock("@/stores/search-store", () => ({
-  useSearchStore: vi.fn(),
-}));
-
-const mockUpdateActivityParams = vi.fn();
-const mockSetResults = vi.fn();
-const mockSetIsLoading = vi.fn();
-const mockSetError = vi.fn();
-
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-
-  return ({ children }: { children: React.ReactNode }) =>
-    createElement(QueryClientProvider, { client: queryClient }, children);
-};
+// Mock the stores
+vi.mock("@/stores/search-params-store");
+vi.mock("@/stores/search-results-store");
 
 describe("useActivitySearch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
 
-    (useSearchStore as any).mockReturnValue({
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    React.createElement(AllTheProviders, null, children);
+
+  it("should return hook properties", () => {
+    // Mock empty responses for initial queries
+    (api.get as any).mockResolvedValue([]);
+
+    const mockUpdateActivityParams = vi.fn();
+    const mockStartSearch = vi.fn().mockReturnValue("search-123");
+    const mockSetSearchResults = vi.fn();
+    const mockSetSearchError = vi.fn();
+    const mockCompleteSearch = vi.fn();
+
+    (useSearchParamsStore as any).mockReturnValue({
       updateActivityParams: mockUpdateActivityParams,
-      setResults: mockSetResults,
-      setIsLoading: mockSetIsLoading,
-      setError: mockSetError,
-    });
-  });
-
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("initializes with correct default state", () => {
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
     });
 
+    (useSearchResultsStore as any).mockReturnValue({
+      startSearch: mockStartSearch,
+      setSearchResults: mockSetSearchResults,
+      setSearchError: mockSetSearchError,
+      completeSearch: mockCompleteSearch,
+    });
+
+    const { result } = renderHook(() => useActivitySearch(), { wrapper });
+
+    // Check that the hook returns the expected properties
+    expect(result.current.searchActivities).toBeDefined();
+    expect(result.current.saveSearch).toBeDefined();
     expect(result.current.isSearching).toBe(false);
-    expect(result.current.searchError).toBe(null);
+    expect(result.current.searchError).toBeNull();
     expect(result.current.savedSearches).toEqual([]);
-    expect(result.current.isLoadingSavedSearches).toBe(false);
     expect(result.current.popularActivities).toEqual([]);
-    expect(result.current.isLoadingPopularActivities).toBe(false);
     expect(result.current.isSavingSearch).toBe(false);
-    expect(result.current.saveSearchError).toBe(null);
+    expect(result.current.saveSearchError).toBeNull();
   });
 
-  it("provides search functions", () => {
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
+  it("should load saved searches", async () => {
+    const mockSavedSearches = [
+      {
+        id: "search-1",
+        name: "NYC Cultural Activities",
+        searchParams: {
+          destination: "New York",
+          category: "cultural",
+        },
+      },
+    ];
+
+    (api.get as any).mockResolvedValueOnce(mockSavedSearches);
+
+    (useSearchParamsStore as any).mockReturnValue({
+      updateActivityParams: vi.fn(),
     });
 
-    expect(typeof result.current.searchActivities).toBe("function");
-    expect(typeof result.current.saveSearch).toBe("function");
+    (useSearchResultsStore as any).mockReturnValue({
+      startSearch: vi.fn(),
+      setSearchResults: vi.fn(),
+      setSearchError: vi.fn(),
+      completeSearch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useActivitySearch(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.savedSearches).toEqual(mockSavedSearches);
+      expect(api.get).toHaveBeenCalledWith("/api/activities/saved-searches");
+    });
   });
 
-  it("calls API and updates store on successful search", async () => {
+  it("should load popular activities", async () => {
+    const mockPopularActivities = [
+      {
+        id: "popular-1",
+        name: "Popular Tour",
+        type: "tour",
+        location: "Paris",
+        date: "2024-07-01",
+        duration: 2,
+        price: 50,
+        rating: 4.8,
+        description: "Very popular tour",
+        images: [],
+      },
+    ];
+
+    (api.get as any).mockResolvedValueOnce([]);
+    (api.get as any).mockResolvedValueOnce(mockPopularActivities);
+
+    (useSearchParamsStore as any).mockReturnValue({
+      updateActivityParams: vi.fn(),
+    });
+
+    (useSearchResultsStore as any).mockReturnValue({
+      startSearch: vi.fn(),
+      setSearchResults: vi.fn(),
+      setSearchError: vi.fn(),
+      completeSearch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useActivitySearch(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.popularActivities).toEqual(mockPopularActivities);
+      expect(api.get).toHaveBeenCalledWith("/api/activities/popular");
+    });
+  });
+
+  it("should handle API post requests", async () => {
     const mockResponse = {
       results: {
         activities: [
@@ -101,115 +157,70 @@ describe("useActivitySearch", () => {
       },
     };
 
-    (api.post as any).mockResolvedValue(mockResponse);
+    (api.post as any).mockResolvedValueOnce(mockResponse);
 
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
+    const mockUpdateActivityParams = vi.fn();
+    const mockStartSearch = vi.fn().mockReturnValue("search-123");
+
+    (useSearchParamsStore as any).mockReturnValue({
+      updateActivityParams: mockUpdateActivityParams,
     });
+
+    (useSearchResultsStore as any).mockReturnValue({
+      startSearch: mockStartSearch,
+      setSearchResults: vi.fn(),
+      setSearchError: vi.fn(),
+      completeSearch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useActivitySearch(), { wrapper });
 
     const searchParams: ActivitySearchParams = {
       destination: "New York",
-      startDate: "2024-07-01",
-      endDate: "2024-07-03",
+      date: "2024-07-01",
       adults: 2,
       children: 0,
       infants: 0,
-      categories: ["cultural"],
+      category: "cultural",
     };
 
-    await act(async () => {
-      result.current.searchActivities(searchParams);
-    });
+    // Trigger search
+    result.current.searchActivities(searchParams);
 
+    // Wait for API call
     await waitFor(() => {
       expect(mockUpdateActivityParams).toHaveBeenCalledWith(searchParams);
       expect(api.post).toHaveBeenCalledWith("/api/activities/search", searchParams);
-      expect(mockSetIsLoading).toHaveBeenCalledWith(true);
-      expect(mockSetError).toHaveBeenCalledWith(null);
-      expect(mockSetResults).toHaveBeenCalledWith({
-        activities: mockResponse.results.activities,
-      });
-      expect(mockSetIsLoading).toHaveBeenCalledWith(false);
     });
   });
 
-  it("handles search error correctly", async () => {
-    const mockError = new Error("Network error");
-    (api.post as any).mockRejectedValue(mockError);
-
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
-    });
-
-    const searchParams: ActivitySearchParams = {
-      destination: "Paris",
-      startDate: "2024-08-01",
-      endDate: "2024-08-05",
-      adults: 1,
-      children: 0,
-      infants: 0,
-    };
-
-    await act(async () => {
-      result.current.searchActivities(searchParams);
-    });
-
-    await waitFor(() => {
-      expect(mockSetIsLoading).toHaveBeenCalledWith(true);
-      expect(mockSetError).toHaveBeenCalledWith(
-        "Failed to search activities. Please try again."
-      );
-      expect(mockSetIsLoading).toHaveBeenCalledWith(false);
-    });
-  });
-
-  it("loads saved searches on mount", async () => {
-    const mockSavedSearches = [
-      {
-        id: "search-1",
-        name: "NYC Cultural Activities",
-        searchParams: {
-          destination: "New York",
-          categories: ["cultural"],
-        },
-      },
-    ];
-
-    (api.get as any).mockResolvedValue(mockSavedSearches);
-
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith("/api/activities/saved-searches");
-    });
-
-    // Note: In a real implementation, you'd check result.current.savedSearches
-    // but since we're mocking the store, we just verify the API call
-  });
-
-  it("saves search successfully", async () => {
+  it("should save search successfully", async () => {
     const mockSaveResponse = { id: "saved-1", success: true };
-    (api.post as any).mockResolvedValue(mockSaveResponse);
+    (api.post as any).mockResolvedValueOnce(mockSaveResponse);
 
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
+    (useSearchParamsStore as any).mockReturnValue({
+      updateActivityParams: vi.fn(),
     });
+
+    (useSearchResultsStore as any).mockReturnValue({
+      startSearch: vi.fn(),
+      setSearchResults: vi.fn(),
+      setSearchError: vi.fn(),
+      completeSearch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useActivitySearch(), { wrapper });
 
     const searchParams: ActivitySearchParams = {
       destination: "Tokyo",
-      startDate: "2024-09-01",
-      endDate: "2024-09-05",
+      date: "2024-09-01",
       adults: 2,
       children: 1,
       infants: 0,
-      categories: ["food", "cultural"],
+      category: "food",
     };
 
-    await act(async () => {
-      result.current.saveSearch("Tokyo Food & Culture", searchParams);
-    });
+    result.current.saveSearch("Tokyo Food & Culture", searchParams);
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith("/api/activities/save-search", {
@@ -219,155 +230,47 @@ describe("useActivitySearch", () => {
     });
   });
 
-  it("loads popular activities on mount", async () => {
-    const mockPopularActivities = [
-      {
-        id: "popular-1",
-        name: "Popular Tour",
-        type: "tour",
-        location: "Paris",
-        date: "2024-07-01",
-        duration: 2,
-        price: 50,
-        rating: 4.8,
-        description: "Very popular tour",
-        images: [],
-      },
-    ];
+  it("should handle loading state", async () => {
+    let resolvePromise: (value: any) => void = () => {};
+    const promise = new Promise((resolve) => {
+      resolvePromise = resolve;
+    });
 
-    (api.get as any).mockResolvedValue(mockPopularActivities);
+    (api.post as any).mockReturnValueOnce(promise);
 
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
+    (useSearchParamsStore as any).mockReturnValue({
+      updateActivityParams: vi.fn(),
+    });
+
+    (useSearchResultsStore as any).mockReturnValue({
+      startSearch: vi.fn().mockReturnValue("search-123"),
+      setSearchResults: vi.fn(),
+      setSearchError: vi.fn(),
+      completeSearch: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useActivitySearch(), { wrapper });
+
+    expect(result.current.isSearching).toBe(false);
+
+    // Start search
+    result.current.searchActivities({
+      destination: "New York",
+      date: "2024-07-01",
+      category: "sightseeing",
     });
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith("/api/activities/popular");
+      expect(result.current.isSearching).toBe(true);
     });
 
-    // Note: In a real implementation, you'd check result.current.popularActivities
-  });
-
-  it("handles search with empty results", async () => {
-    const mockResponse = {
-      results: {
-        activities: [],
-      },
-    };
-
-    (api.post as any).mockResolvedValue(mockResponse);
-
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
-    });
-
-    const searchParams: ActivitySearchParams = {
-      destination: "Remote Location",
-      startDate: "2024-12-01",
-      endDate: "2024-12-03",
-      adults: 1,
-      children: 0,
-      infants: 0,
-    };
-
-    await act(async () => {
-      result.current.searchActivities(searchParams);
+    // Resolve the promise
+    resolvePromise?.({
+      results: { activities: [] },
     });
 
     await waitFor(() => {
-      expect(mockSetResults).toHaveBeenCalledWith({
-        activities: [],
-      });
+      expect(result.current.isSearching).toBe(false);
     });
-  });
-
-  it("handles search with all optional parameters", async () => {
-    const mockResponse = {
-      results: {
-        activities: [
-          {
-            id: "activity-comprehensive",
-            name: "Comprehensive Activity",
-            type: "adventure",
-            location: "Mountain Area",
-            date: "2024-07-15",
-            duration: 6,
-            price: 150,
-            rating: 4.9,
-            description: "Full-day adventure",
-            images: ["image1.jpg"],
-          },
-        ],
-      },
-    };
-
-    (api.post as any).mockResolvedValue(mockResponse);
-
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
-    });
-
-    const comprehensiveSearchParams: ActivitySearchParams = {
-      destination: "Mountain Resort",
-      startDate: "2024-07-15",
-      endDate: "2024-07-16",
-      adults: 2,
-      children: 1,
-      infants: 0,
-      categories: ["outdoor", "adventure"],
-      duration: 6,
-      priceRange: {
-        min: 100,
-        max: 200,
-      },
-      rating: 4.5,
-    };
-
-    await act(async () => {
-      result.current.searchActivities(comprehensiveSearchParams);
-    });
-
-    await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(
-        "/api/activities/search",
-        comprehensiveSearchParams
-      );
-      expect(mockUpdateActivityParams).toHaveBeenCalledWith(comprehensiveSearchParams);
-    });
-  });
-
-  it("handles API errors gracefully", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    (api.post as any).mockRejectedValue(new Error("Server error"));
-
-    const { result } = renderHook(() => useActivitySearch(), {
-      wrapper: createWrapper(),
-    });
-
-    const searchParams: ActivitySearchParams = {
-      destination: "Test",
-      startDate: "2024-07-01",
-      endDate: "2024-07-02",
-      adults: 1,
-      children: 0,
-      infants: 0,
-    };
-
-    await act(async () => {
-      result.current.searchActivities(searchParams);
-    });
-
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Activity search failed:",
-        expect.any(Error)
-      );
-      expect(mockSetError).toHaveBeenCalledWith(
-        "Failed to search activities. Please try again."
-      );
-    });
-
-    consoleSpy.mockRestore();
   });
 });

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.mcp_abstraction.manager import MCPManager
+from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
 from tripsage_core.utils.session_utils import (
     initialize_session_memory,
     update_session_memory,

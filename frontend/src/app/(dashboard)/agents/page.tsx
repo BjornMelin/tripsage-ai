@@ -4,7 +4,7 @@ import {
   AgentCollaborationHub,
   AgentStatusDashboard,
   type ConnectionAnalytics,
-  EnhancedConnectionStatus,
+  ConnectionStatus,
   type NetworkMetrics,
   useWebSocketAgent,
 } from "@/components/features/agent-monitoring";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Brain, Network, Settings, Zap } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Mock data for demonstration
 const mockAgentMetrics = [
@@ -95,7 +95,7 @@ const mockConnectionAnalytics: ConnectionAnalytics = {
 
 export default function AgentsPage() {
   const [selectedTab, setSelectedTab] = useState("overview");
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [_selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
   // WebSocket connection for real-time updates (disabled in development)
   const {
@@ -155,13 +155,13 @@ export default function AgentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <EnhancedConnectionStatus
+          <ConnectionStatus
             status={connectionStatus}
             metrics={mockNetworkMetrics}
             analytics={mockConnectionAnalytics}
             onReconnect={connect}
             onOptimize={handleOptimizeConnection}
-            compact
+            variant="compact"
           />
           <Button
             variant="outline"
@@ -282,7 +282,7 @@ export default function AgentsPage() {
 
         <TabsContent value="network" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <EnhancedConnectionStatus
+            <ConnectionStatus
               status={connectionStatus}
               metrics={mockNetworkMetrics}
               analytics={mockConnectionAnalytics}

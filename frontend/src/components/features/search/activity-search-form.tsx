@@ -27,10 +27,10 @@ const activitySearchFormSchema = z.object({
   location: z.string().min(1, { message: "Location is required" }),
   startDate: z.string().min(1, { message: "Start date is required" }),
   endDate: z.string().min(1, { message: "End date is required" }),
-  adults: z.number().min(1).max(20).default(1),
-  children: z.number().min(0).max(10).default(0),
-  infants: z.number().min(0).max(5).default(0),
-  categories: z.array(z.string()).default([]),
+  adults: z.number().min(1).max(20),
+  children: z.number().min(0).max(10),
+  infants: z.number().min(0).max(5),
+  categories: z.array(z.string()),
   duration: z.number().min(1).max(48).optional(),
   priceMin: z.number().min(0).optional(),
   priceMax: z.number().min(0).optional(),
@@ -61,16 +61,20 @@ const ACTIVITY_CATEGORIES = [
 
 export function ActivitySearchForm({
   onSearch,
-  initialValues = {
-    adults: 1,
-    children: 0,
-    infants: 0,
-    categories: [],
-  },
+  initialValues,
 }: ActivitySearchFormProps) {
   const form = useForm<ActivitySearchFormValues>({
     resolver: zodResolver(activitySearchFormSchema),
-    defaultValues: initialValues,
+    defaultValues: {
+      location: "",
+      startDate: "",
+      endDate: "",
+      adults: 1,
+      children: 0,
+      infants: 0,
+      categories: [],
+      ...initialValues,
+    },
     mode: "onChange",
   });
 
@@ -78,21 +82,17 @@ export function ActivitySearchForm({
     // Convert form data to search params
     const searchParams: ActivitySearchParams = {
       destination: data.location,
-      startDate: data.startDate,
-      endDate: data.endDate,
+      date: data.startDate,
       adults: data.adults,
       children: data.children,
       infants: data.infants,
-      categories: data.categories,
-      duration: data.duration,
-      priceRange:
-        data.priceMin || data.priceMax
-          ? {
-              min: data.priceMin || 0,
-              max: data.priceMax || 10000,
-            }
-          : undefined,
-      rating: data.rating,
+      category: data.categories?.[0], // Use first category as main category
+      duration: data.duration
+        ? {
+            min: 0,
+            max: data.duration,
+          }
+        : undefined,
     };
 
     console.log("Activity search params:", searchParams);

@@ -1,6 +1,6 @@
 import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProfilePage from "../page";
 
 // Mock the stores and profile components
@@ -39,7 +39,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders loading state when user data is loading", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: null,
       isLoading: true,
     });
@@ -47,11 +47,11 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     // Check for skeleton loading elements
-    expect(screen.getAllByTestId("skeleton")).toHaveLength.greaterThan(0);
+    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
   });
 
   it("renders not found state when user is not logged in", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: null,
       isLoading: false,
     });
@@ -63,7 +63,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders profile page with tabs when user is logged in", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -83,7 +83,7 @@ describe("ProfilePage", () => {
   });
 
   it("displays personal info section by default", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -94,7 +94,7 @@ describe("ProfilePage", () => {
   });
 
   it("switches to account settings tab", async () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -110,7 +110,7 @@ describe("ProfilePage", () => {
   });
 
   it("switches to preferences tab", async () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -126,7 +126,7 @@ describe("ProfilePage", () => {
   });
 
   it("switches to security tab", async () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -142,7 +142,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders tab icons correctly", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -162,7 +162,7 @@ describe("ProfilePage", () => {
   });
 
   it("maintains tab state during navigation", async () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -187,7 +187,7 @@ describe("ProfilePage", () => {
   });
 
   it("renders proper heading structure", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -200,7 +200,7 @@ describe("ProfilePage", () => {
   });
 
   it("has accessible tab structure", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });
@@ -218,7 +218,7 @@ describe("ProfilePage", () => {
   });
 
   it("handles loading state gracefully with skeletons", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: null,
       isLoading: true,
     });
@@ -226,14 +226,14 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     // Check that loading skeletons are properly displayed
-    const container = screen.getByText(/container/i).closest("div");
+    screen.getByText(/container/i).closest("div");
     const skeletons = screen.getAllByTestId("skeleton");
 
     expect(skeletons.length).toBeGreaterThan(3); // Multiple skeleton elements
   });
 
   it("displays proper container and spacing", () => {
-    (useUserProfileStore as any).mockReturnValue({
+    vi.mocked(useUserProfileStore).mockReturnValue({
       user: mockUser,
       isLoading: false,
     });

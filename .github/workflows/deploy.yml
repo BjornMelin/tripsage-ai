@@ -1,96 +1,75 @@
-name: Deploy to Vercel
+name: Deploy
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'frontend/**'
-  workflow_run:
-    workflows: ["Frontend CI"]
-    types:
-      - completed
-    branches: [main]
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
-
-defaults:
-  run:
-    working-directory: ./frontend
+permissions:
+  contents: read
+  deployments: write
 
 jobs:
   deploy:
-    name: Deploy to Vercel
+    name: Deploy to ${{ inputs.environment }}
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.workflow_run.conclusion == 'success')
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Create deployment
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        id: deployment
         with:
-          version: 9
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: '${{ inputs.environment }}',
+              required_contexts: [],
+              auto_merge: false
+            });
+            
+            core.setOutput('deployment_id', deployment.data.id);
+            return deployment.data.id;
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Deploy Backend
+        run: |
+          echo "Deploying backend to ${{ inputs.environment }}..."
+          # Add your backend deployment commands here
+
+      - name: Deploy Frontend
+        run: |
+          echo "Deploying frontend to ${{ inputs.environment }}..."
+          # Add your frontend deployment commands here
+
+      - name: Update deployment status
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        if: always()
         with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: './frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build for production
-        run: pnpm build
-        env:
-          NODE_ENV: production
-
-      - name: Deploy to Vercel
-        uses: vercel/action@v1
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./frontend
-          vercel-args: '--prod'
-
-  deploy-preview:
-    name: Deploy Preview to Vercel
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: './frontend/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build for production
-        run: pnpm build
-        env:
-          NODE_ENV: production
-
-      - name: Deploy Preview to Vercel
-        uses: vercel/action@v1
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./frontend
+          script: |
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: ${{ steps.deployment.outputs.deployment_id }},
+              state: '${{ job.status }}',
+              environment_url: 'https://${{ inputs.environment }}.tripsage.ai',
+              description: 'Deployment ${{ job.status }}'
+            });

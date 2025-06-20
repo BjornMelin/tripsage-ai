@@ -1,4 +1,64 @@
+# Dependabot configuration
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
+
+# Enable grouped updates for better PR management and reduced noise
+groups:
+  # Frontend production dependencies
+  frontend-production:
+    dependency-type: "production"
+    applies-to: version-updates
+    update-types:
+      - "minor"
+      - "patch"
+  
+  # Frontend development dependencies
+  frontend-development:
+    dependency-type: "development"
+    applies-to: version-updates
+    exclude-patterns:
+      - "@playwright/*"
+      - "vitest*"
+      - "@biomejs/*"
+  
+  # Frontend framework core
+  frontend-framework:
+    patterns:
+      - "next*"
+      - "@next/*"
+      - "react*"
+      - "react-dom"
+      - "@types/react*"
+    applies-to: version-updates
+  
+  # Frontend testing tools
+  frontend-testing:
+    patterns:
+      - "@playwright/*"
+      - "vitest*"
+      - "@testing-library/*"
+      - "@vitest/*"
+    applies-to: version-updates
+  
+  # Frontend UI/styling
+  frontend-ui:
+    patterns:
+      - "@radix-ui/*"
+      - "lucide-react"
+      - "tailwindcss*"
+      - "@tailwindcss/*"
+      - "framer-motion"
+      - "class-variance-authority"
+      - "clsx"
+      - "tailwind-merge"
+    applies-to: version-updates
+  
+  # Frontend security updates
+  frontend-security:
+    applies-to: security-updates
+    patterns:
+      - "*"
+
 updates:
   # Frontend dependencies
   - package-ecosystem: "npm"
@@ -7,204 +67,34 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 15
+    open-pull-requests-limit: 10
     assignees:
       - "BjornMelin"
     reviewers:
       - "BjornMelin"
     commit-message:
-      prefix: "feat(deps)"
-      prefix-development: "chore(deps-dev)"
+      prefix: "deps"
+      prefix-development: "deps-dev"
       include: "scope"
-    versioning-strategy: increase
+    versioning-strategy: increase-if-necessary
     labels:
       - "dependencies"
       - "frontend"
-      - "security"
-    groups:
-      security:
-        patterns:
-          - "*"
-        update-types:
-          - "security-update"
-      next-js:
-        patterns:
-          - "next*"
-          - "@next/*"
-        update-types:
-          - "minor"
-          - "patch"
-      react:
-        patterns:
-          - "react*"
-          - "@types/react*"
-        update-types:
-          - "minor"
-          - "patch"
-      testing:
-        patterns:
-          - "vitest*"
-          - "@vitest/*"
-          - "playwright*"
-          - "@playwright/*"
-          - "@testing-library/*"
-          - "jest*"
-          - "@jest/*"
-        update-types:
-          - "minor"
-          - "patch"
-      ui:
-        patterns:
-          - "@radix-ui/*"
-          - "lucide-react"
-          - "tailwindcss*"
-          - "@tailwindcss/*"
-          - "framer-motion"
-          - "class-variance-authority"
-          - "clsx"
-          - "tailwind-merge"
-        update-types:
-          - "minor"
-          - "patch"
-      dev-tools:
-        patterns:
-          - "@biomejs/*"
-          - "eslint*"
-          - "typescript"
-          - "@types/*"
-          - "prettier*"
-          - "husky"
-          - "lint-staged"
-        update-types:
-          - "minor"
-          - "patch"
-
-  # Frontend security updates (daily)
-  - package-ecosystem: "npm"
-    directory: "/frontend"
-    schedule:
-      interval: "daily"
-      time: "06:00"
-    open-pull-requests-limit: 5
-    assignees:
-      - "BjornMelin"
-    reviewers:
-      - "BjornMelin"
-    commit-message:
-      prefix: "fix(security)"
-      include: "scope"
-    labels:
-      - "security"
-      - "frontend"
-      - "critical"
-    groups:
-      security-critical:
-        patterns:
-          - "*"
-        update-types:
-          - "security-update"
+    allow:
+      - dependency-type: "all"
+    ignore:
+      # Ignore major versions that might have breaking changes
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # Python backend dependencies
   - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 15
-    assignees:
-      - "BjornMelin"
-    reviewers:
-      - "BjornMelin"
-    commit-message:
-      prefix: "feat(deps)"
-      prefix-development: "chore(deps-dev)"
-      include: "scope"
-    versioning-strategy: increase
-    labels:
-      - "dependencies"
-      - "backend"
-      - "python"
-    groups:
-      security:
-        patterns:
-          - "*"
-        update-types:
-          - "security-update"
-      core-framework:
-        patterns:
-          - "fastapi"
-          - "uvicorn"
-          - "pydantic*"
-          - "sqlalchemy"
-          - "httpx"
-        update-types:
-          - "minor"
-          - "patch"
-      ai-ml:
-        patterns:
-          - "openai"
-          - "langchain*"
-          - "langgraph"
-          - "langsmith"
-          - "mem0ai"
-        update-types:
-          - "minor"
-          - "patch"
-      database:
-        patterns:
-          - "supabase"
-          - "redis"
-          - "greenlet"
-        update-types:
-          - "minor"
-          - "patch"
-      testing:
-        patterns:
-          - "pytest*"
-          - "hypothesis"
-          - "coverage"
-          - "fakeredis"
-          - "nest-asyncio"
-        update-types:
-          - "minor"
-          - "patch"
-      dev-tools:
-        patterns:
-          - "ruff"
-          - "mypy"
-          - "bandit"
-        update-types:
-          - "minor"
-          - "patch"
-
-  # Python security updates (daily)
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "daily"
-      time: "06:00"
-    open-pull-requests-limit: 5
-    assignees:
-      - "BjornMelin"
-    reviewers:
-      - "BjornMelin"
-    commit-message:
-      prefix: "fix(security)"
-      include: "scope"
-    labels:
-      - "security"
-      - "backend"
-      - "critical"
-    groups:
-      security-critical:
-        patterns:
-          - "*"
-        update-types:
-          - "security-update"
-
-  # GitHub Actions
-  - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -216,33 +106,123 @@ updates:
     reviewers:
       - "BjornMelin"
     commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    versioning-strategy: increase-if-necessary
+    labels:
+      - "dependencies"
+      - "backend"
+      - "python"
+    allow:
+      - dependency-type: "all"
+    groups:
+      # Backend production dependencies
+      backend-production:
+        dependency-type: "production"
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Backend development dependencies
+      backend-development:
+        dependency-type: "development"
+        applies-to: version-updates
+        exclude-patterns:
+          - "pytest*"
+          - "ruff*"
+          - "mypy*"
+      
+      # Backend framework core
+      backend-framework:
+        patterns:
+          - "fastapi"
+          - "uvicorn*"
+          - "pydantic*"
+          - "sqlalchemy*"
+          - "httpx"
+          - "anyio"
+        applies-to: version-updates
+      
+      # AI/ML dependencies
+      backend-ai:
+        patterns:
+          - "openai"
+          - "langchain*"
+          - "langgraph"
+          - "langsmith"
+          - "mem0ai"
+          - "tiktoken"
+        applies-to: version-updates
+      
+      # Database/cache dependencies
+      backend-database:
+        patterns:
+          - "supabase"
+          - "redis*"
+          - "greenlet"
+          - "pgvector"
+        applies-to: version-updates
+      
+      # Testing tools
+      backend-testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis"
+          - "coverage*"
+          - "fakeredis"
+          - "nest-asyncio"
+        applies-to: version-updates
+      
+      # Linting/typing tools
+      backend-linting:
+        patterns:
+          - "ruff*"
+          - "mypy*"
+          - "bandit*"
+          - "types-*"
+        applies-to: version-updates
+      
+      # Security updates
+      backend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
       prefix: "ci"
       include: "scope"
     labels:
       - "ci/cd"
       - "github-actions"
     groups:
+      # Group all GitHub Actions updates
+      actions-all:
+        patterns:
+          - "*"
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Security updates for actions
       actions-security:
+        applies-to: security-updates
         patterns:
           - "*"
-        update-types:
-          - "security-update"
-      actions-core:
-        patterns:
-          - "actions/*"
-          - "github/*"
-        update-types:
-          - "minor"
-          - "patch"
-      third-party-actions:
-        patterns:
-          - "*"
-        exclude-patterns:
-          - "actions/*"
-          - "github/*"
-        update-types:
-          - "minor"
-          - "patch"
 
   # Docker dependencies
   - package-ecosystem: "docker"
@@ -257,8 +237,23 @@ updates:
     reviewers:
       - "BjornMelin"
     commit-message:
-      prefix: "feat(docker)"
+      prefix: "docker"
       include: "scope"
     labels:
       - "docker"
       - "infrastructure"
+    groups:
+      # Group all Docker updates
+      docker-all:
+        patterns:
+          - "*"
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Security updates for Docker
+      docker-security:
+        applies-to: security-updates
+        patterns:
+          - "*"

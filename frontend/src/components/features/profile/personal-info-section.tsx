@@ -49,19 +49,19 @@ const personalInfoSchema = z.object({
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 
 export function PersonalInfoSection() {
-  const { user, updateUser } = useUserProfileStore();
+  const { profile, updatePersonalInfo, uploadAvatar } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<PersonalInfoFormData>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
-      firstName: user?.firstName || "",
-      lastName: user?.lastName || "",
-      displayName: user?.displayName || "",
-      bio: user?.bio || "",
-      location: user?.location || "",
-      website: user?.website || "",
+      firstName: profile?.personalInfo?.firstName || "",
+      lastName: profile?.personalInfo?.lastName || "",
+      displayName: profile?.personalInfo?.displayName || "",
+      bio: profile?.personalInfo?.bio || "",
+      location: profile?.personalInfo?.location || "",
+      website: profile?.personalInfo?.website || "",
     },
   });
 
@@ -70,12 +70,12 @@ export function PersonalInfoSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      updateUser(data);
+      await updatePersonalInfo(data);
       toast({
         title: "Profile updated",
         description: "Your personal information has been successfully updated.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -110,18 +110,17 @@ export function PersonalInfoSection() {
 
     setIsUploading(true);
     try {
-      // Simulate file upload
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const avatarUrl = await uploadAvatar(file);
 
-      // Create a local URL for the uploaded image
-      const avatarUrl = URL.createObjectURL(file);
-      updateUser({ avatarUrl });
-
-      toast({
-        title: "Avatar updated",
-        description: "Your profile picture has been successfully updated.",
-      });
-    } catch (error) {
+      if (avatarUrl) {
+        toast({
+          title: "Avatar updated",
+          description: "Your profile picture has been successfully updated.",
+        });
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (_error) {
       toast({
         title: "Upload failed",
         description: "Failed to upload avatar. Please try again.",
@@ -142,7 +141,7 @@ export function PersonalInfoSection() {
         ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
         : displayName.slice(0, 2).toUpperCase();
     }
-    return user?.email?.slice(0, 2).toUpperCase() || "U";
+    return profile?.email?.slice(0, 2).toUpperCase() || "U";
   };
 
   return (
@@ -158,9 +157,13 @@ export function PersonalInfoSection() {
         <div className="flex items-center gap-6">
           <div className="relative">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={user?.avatarUrl} alt="Profile picture" />
+              <AvatarImage src={profile?.avatarUrl} alt="Profile picture" />
               <AvatarFallback className="text-lg">
-                {getInitials(user?.firstName, user?.lastName, user?.displayName)}
+                {getInitials(
+                  profile?.personalInfo?.firstName,
+                  profile?.personalInfo?.lastName,
+                  profile?.personalInfo?.displayName
+                )}
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-2 -right-2">

@@ -1,4 +1,12 @@
-import type { SearchParams, SearchResults, SearchType } from "@/types/search";
+import type {
+  Accommodation,
+  Activity,
+  Destination,
+  Flight,
+  SearchParams,
+  SearchResults,
+  SearchType,
+} from "@/types/search";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
@@ -49,7 +57,7 @@ interface SearchOrchestratorState {
 // Main search store that orchestrates the slice stores
 export const useSearchStore = create<SearchOrchestratorState>()(
   devtools(
-    (set, get) => ({
+    (_set, get) => ({
       // Computed properties
       get currentSearchType() {
         return useSearchParamsStore.getState().currentSearchType;
@@ -85,7 +93,7 @@ export const useSearchStore = create<SearchOrchestratorState>()(
       executeSearch: async (params) => {
         const paramsStore = useSearchParamsStore.getState();
         const resultsStore = useSearchResultsStore.getState();
-        const filtersStore = useSearchFiltersStore.getState();
+        useSearchFiltersStore.getState(); // Access filters store
         const historyStore = useSearchHistoryStore.getState();
 
         const searchType = paramsStore.currentSearchType;
@@ -106,7 +114,10 @@ export const useSearchStore = create<SearchOrchestratorState>()(
         }
 
         // Start the search
-        const searchId = resultsStore.startSearch(searchType, searchParams);
+        const searchId = resultsStore.startSearch(
+          searchType,
+          searchParams as Record<string, unknown>
+        );
 
         try {
           // Add to recent searches
@@ -133,36 +144,148 @@ export const useSearchStore = create<SearchOrchestratorState>()(
               mockResults.flights = [
                 {
                   id: "1",
-                  price: 450,
                   airline: "Example Airlines",
-                  duration: "5h 30m",
+                  flightNumber: "EX123",
+                  price: 450,
+                  departureTime: "2025-07-15T08:00:00Z",
+                  arrivalTime: "2025-07-15T13:30:00Z",
+                  origin: "NYC",
+                  destination: "LAX",
+                  duration: 330,
+                  stops: 0,
+                  cabinClass: "economy",
+                  seatsAvailable: 10,
                 },
-                { id: "2", price: 520, airline: "Demo Air", duration: "6h 15m" },
-              ] as any;
+                {
+                  id: "2",
+                  airline: "Demo Air",
+                  flightNumber: "DA456",
+                  price: 520,
+                  departureTime: "2025-07-15T09:00:00Z",
+                  arrivalTime: "2025-07-15T15:15:00Z",
+                  origin: "NYC",
+                  destination: "LAX",
+                  duration: 375,
+                  stops: 1,
+                  cabinClass: "economy",
+                  seatsAvailable: 5,
+                },
+              ] as Flight[];
               break;
             case "accommodation":
               mockResults.accommodations = [
-                { id: "1", name: "Example Hotel", price: 120, rating: 4.5 },
-                { id: "2", name: "Demo Resort", price: 180, rating: 4.8 },
-              ] as any;
+                {
+                  id: "1",
+                  name: "Example Hotel",
+                  type: "hotel",
+                  location: "123 Main St, Los Angeles, USA",
+                  checkIn: "2025-07-15",
+                  checkOut: "2025-07-18",
+                  pricePerNight: 120,
+                  totalPrice: 360,
+                  rating: 4.5,
+                  amenities: ["wifi", "pool"],
+                  images: [],
+                  coordinates: { lat: 34.0522, lng: -118.2437 },
+                },
+                {
+                  id: "2",
+                  name: "Demo Resort",
+                  type: "resort",
+                  location: "456 Beach Blvd, Los Angeles, USA",
+                  checkIn: "2025-07-15",
+                  checkOut: "2025-07-18",
+                  pricePerNight: 180,
+                  totalPrice: 540,
+                  rating: 4.8,
+                  amenities: ["wifi", "pool", "spa"],
+                  images: [],
+                  coordinates: { lat: 34.0522, lng: -118.2437 },
+                },
+              ] as Accommodation[];
               break;
             case "activity":
               mockResults.activities = [
-                { id: "1", name: "City Tour", price: 45, duration: "3 hours" },
-                { id: "2", name: "Museum Visit", price: 25, duration: "2 hours" },
-              ] as any;
+                {
+                  id: "1",
+                  name: "City Tour",
+                  type: "tours",
+                  location: "Downtown, Los Angeles, USA",
+                  date: "2025-07-15",
+                  duration: 180,
+                  price: 45,
+                  rating: 4.2,
+                  description: "Explore the city",
+                  images: [],
+                  coordinates: { lat: 34.0522, lng: -118.2437 },
+                },
+                {
+                  id: "2",
+                  name: "Museum Visit",
+                  type: "cultural",
+                  location: "Museum District, Los Angeles, USA",
+                  date: "2025-07-15",
+                  duration: 120,
+                  price: 25,
+                  rating: 4.0,
+                  description: "Visit the local museum",
+                  images: [],
+                  coordinates: { lat: 34.0522, lng: -118.2437 },
+                },
+              ] as Activity[];
               break;
             case "destination":
               mockResults.destinations = [
-                { id: "1", name: "Paris", country: "France", type: "city" },
-                { id: "2", name: "Tokyo", country: "Japan", type: "city" },
-              ] as any;
+                {
+                  id: "1",
+                  name: "Paris",
+                  description: "The City of Light",
+                  formattedAddress: "Paris, France",
+                  types: ["city"],
+                  coordinates: { lat: 48.8566, lng: 2.3522 },
+                  country: "France",
+                  region: "Europe",
+                  photos: [],
+                  popularityScore: 9.5,
+                  bestTimeToVisit: ["spring", "fall"],
+                  attractions: [],
+                  rating: 4.5,
+                  climate: {
+                    season: "temperate",
+                    averageTemp: 15,
+                    rainfall: 50,
+                  },
+                },
+                {
+                  id: "2",
+                  name: "Tokyo",
+                  description: "A vibrant metropolis",
+                  formattedAddress: "Tokyo, Japan",
+                  types: ["city"],
+                  coordinates: { lat: 35.6762, lng: 139.6503 },
+                  country: "Japan",
+                  region: "Asia",
+                  photos: [],
+                  popularityScore: 9.3,
+                  bestTimeToVisit: ["spring", "fall"],
+                  attractions: [],
+                  rating: 4.7,
+                  climate: {
+                    season: "humid_subtropical",
+                    averageTemp: 20,
+                    rainfall: 80,
+                  },
+                },
+              ] as Destination[];
               break;
           }
 
           // Set the results
           resultsStore.setSearchResults(searchId, mockResults, {
             totalResults: Object.values(mockResults).flat().length,
+            resultsPerPage: 20,
+            currentPage: 1,
+            hasMoreResults: false,
             searchDuration: 1500,
             provider: "MockProvider",
             requestId: searchId,

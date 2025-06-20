@@ -3,7 +3,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { User } from "lucide-react";
-import React from "react";
 
 interface TypingUser {
   userId: string;
@@ -19,7 +18,7 @@ interface TypingIndicatorProps {
 
 export function TypingIndicator({
   typingUsers,
-  sessionId,
+  sessionId: _sessionId,
   className,
 }: TypingIndicatorProps) {
   // Filter out old typing indicators (older than 5 seconds)

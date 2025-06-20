@@ -2,22 +2,20 @@
 Flight agent node implementation for LangGraph orchestration.
 
 This module implements the flight search and booking agent as a LangGraph node,
-using the centralized tool registry and improved async patterns.
+using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.registry import (
-    get_tool_registry,
-)
-from tripsage_core.config.base_app_settings import settings
+from tripsage.orchestration.tools import get_tools_for_agent
+from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -43,39 +41,20 @@ class FlightAgentNode(BaseAgentNode):
         super().__init__("flight_agent", service_registry)
 
         # Initialize LLM for flight-specific tasks
+        settings = get_settings()
         self.llm = ChatOpenAI(
-            model=settings.agent.model_name,
-            temperature=settings.agent.temperature,
+            model=settings.openai_model,
+            temperature=settings.model_temperature,
             api_key=settings.openai_api_key.get_secret_value(),
         )
 
     def _initialize_tools(self) -> None:
-        """Initialize flight-specific tools from the centralized registry."""
-        self.tool_registry = get_tool_registry(self.service_registry)
+        """Initialize flight-specific tools using simple tool catalog."""
+        # Get tools for flight agent using simple catalog
+        self.available_tools = get_tools_for_agent("flight_agent")
 
-        # Get tools specifically for flight agent with flight capabilities
-        self.available_tools = self.tool_registry.get_tools_for_agent(
-            agent_type="flight_agent",
-            capabilities=[
-                "flight_search",
-                "geocoding",
-                "weather",
-                "web_search",
-                "memory",
-            ],
-        )
-
-        # Get LangChain-compatible tools for LLM binding
-        self.langchain_tools = self.tool_registry.get_langchain_tools_for_agent(
-            agent_type="flight_agent",
-            capabilities=[
-                "flight_search",
-                "geocoding",
-                "weather",
-                "web_search",
-                "memory",
-            ],
-        )
+        # Bind tools to LLM for direct use
+        self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(f"Initialized flight agent with {len(self.available_tools)} tools")
 
@@ -191,7 +170,7 @@ class FlightAgentNode(BaseAgentNode):
 
     async def _search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Perform flight search using MCP tools.
+        Perform flight search using simple tool direct access.
 
         Args:
             search_params: Flight search parameters
@@ -200,56 +179,22 @@ class FlightAgentNode(BaseAgentNode):
             Flight search results
         """
         try:
-            # Get the flight search tool from registry
-            search_tool = self.tool_registry.get_tool("flights_search_flights")
+            # Import and use the search_flights tool directly
+            from tripsage.orchestration.tools import search_flights
 
-            if search_tool:
-                # Execute flight search using the tool wrapper
-                result = await search_tool.execute(**search_params)
+            # Execute flight search using the simple tool
+            result_str = search_flights.invoke(search_params)
+            result = json.loads(result_str)
 
-                flights_count = (
-                    len(result.get("flights", [])) if isinstance(result, dict) else 0
-                )
-                logger.info(f"Flight search completed: {flights_count} flights found")
-                return result
-            else:
-                logger.error("Flight search tool not available in registry")
-                return {"error": "Flight search service unavailable"}
+            flights_count = (
+                len(result.get("flights", [])) if isinstance(result, dict) else 0
+            )
+            logger.info(f"Flight search completed: {flights_count} flights found")
+            return result
 
         except Exception as e:
             logger.error(f"Flight search failed: {str(e)}")
             return {"error": f"Flight search failed: {str(e)}"}
-
-    async def _batch_search_operations(
-        self, search_params_list: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """
-        Execute multiple flight searches concurrently for better performance.
-
-        Args:
-            search_params_list: List of flight search parameters
-
-        Returns:
-            List of search results
-        """
-        try:
-            # Prepare batch tool executions
-            tool_executions = [
-                {"tool_name": "flights_search_flights", "params": search_params}
-                for search_params in search_params_list
-            ]
-
-            # Execute searches concurrently using the tool registry's batch method
-            results = await self.tool_registry.batch_execute_tools(
-                tool_executions, max_concurrent=3
-            )
-
-            logger.info(f"Batch flight search completed: {len(results)} searches")
-            return results
-
-        except Exception as e:
-            logger.error(f"Batch flight search failed: {str(e)}")
-            return [{"error": f"Batch search failed: {str(e)}"}]
 
     async def _generate_flight_response(
         self,

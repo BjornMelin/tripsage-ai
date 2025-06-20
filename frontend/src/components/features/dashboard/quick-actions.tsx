@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  BookOpen,
   Calendar,
   Compass,
   MapPin,

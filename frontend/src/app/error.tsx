@@ -8,7 +8,7 @@ import { useEffect } from "react";
  * Root-level error boundary for the app directory
  * This catches errors in the root layout and pages
  */
-export default function Error({
+export default function RootErrorBoundary({
   error,
   reset,
 }: {
@@ -35,7 +35,13 @@ export default function Error({
 
 function getUserId(): string | undefined {
   try {
-    const userStore = (window as any).__USER_STORE__;
+    interface UserStore {
+      user?: {
+        id?: string;
+      };
+    }
+    const userStore = (window as unknown as { __USER_STORE__?: UserStore })
+      .__USER_STORE__;
     return userStore?.user?.id;
   } catch {
     return undefined;

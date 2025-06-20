@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from tripsage_core.config.base_app_settings import settings
+from tripsage_core.config import get_settings
 
 
 class CheckpointStorage(Enum):
@@ -140,19 +140,20 @@ class LangGraphConfig:
         Returns:
             LangGraphConfig instance derived from app settings
         """
+        settings = get_settings()
         return cls(
-            # Use existing agent settings
-            default_model=settings.agent.model_name,
-            temperature=settings.agent.temperature,
-            max_tokens=settings.agent.max_tokens,
+            # Use existing settings (flat structure)
+            default_model=settings.openai_model,
+            temperature=0.7,  # Default temperature
+            max_tokens=4096,  # Default max tokens
             # Use OpenAI API key from settings
             langsmith_api_key=settings.openai_api_key.get_secret_value(),
             # Database connection for checkpointing
             checkpoint_storage=CheckpointStorage.POSTGRES
-            if settings.database.supabase_url
+            if settings.database_url
             else CheckpointStorage.MEMORY,
-            checkpoint_connection_string=settings.database.supabase_url
-            if settings.database.supabase_url
+            checkpoint_connection_string=settings.database_url
+            if settings.database_url
             else None,
         )
 

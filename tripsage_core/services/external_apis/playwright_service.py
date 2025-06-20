@@ -18,7 +18,7 @@ from playwright.async_api import (
 )
 from pydantic import BaseModel, Field
 
-from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
@@ -80,7 +80,7 @@ class PlaywrightService:
     def __init__(
         self,
         config: Optional[PlaywrightConfig] = None,
-        settings: Optional[CoreAppSettings] = None,
+        settings: Optional[Settings] = None,
     ):
         """
         Initialize Playwright service.
@@ -661,7 +661,7 @@ async def close_playwright_service() -> None:
 # Convenience functions
 async def create_playwright_service(
     config: Optional[PlaywrightConfig] = None,
-    settings: Optional[CoreAppSettings] = None,
+    settings: Optional[Settings] = None,
 ) -> PlaywrightService:
     """Create and initialize a Playwright service."""
     service = PlaywrightService(config, settings)
@@ -672,7 +672,7 @@ async def create_playwright_service(
 async def scrape_with_playwright(
     url: str,
     config: Optional[PlaywrightConfig] = None,
-    settings: Optional[CoreAppSettings] = None,
+    settings: Optional[Settings] = None,
     **scrape_options,
 ) -> ScrapingResult:
     """Quick function to scrape a URL with Playwright."""

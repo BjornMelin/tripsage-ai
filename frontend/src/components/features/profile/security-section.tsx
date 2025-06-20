@@ -68,7 +68,7 @@ interface SecurityDevice {
 }
 
 export function SecuritySection() {
-  const { user, updateUser } = useUserProfileStore();
+  const { profile: _profile } = useUserProfileStore();
   const { toast } = useToast();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -111,7 +111,7 @@ export function SecuritySection() {
     },
   ];
 
-  const onPasswordChange = async (data: PasswordChangeFormData) => {
+  const onPasswordChange = async (_data: PasswordChangeFormData) => {
     try {
       // Simulate API call for password change
       await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -121,7 +121,7 @@ export function SecuritySection() {
         title: "Password updated",
         description: "Your password has been successfully changed.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description:
@@ -136,20 +136,14 @@ export function SecuritySection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      updateUser({
-        security: {
-          ...user?.security,
-          twoFactorEnabled: enabled,
-        },
-      });
-
+      // Note: This would be updated when implementing real 2FA settings
       toast({
         title: enabled ? "2FA enabled" : "2FA disabled",
         description: enabled
           ? "Two-factor authentication has been enabled for your account."
           : "Two-factor authentication has been disabled.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to update two-factor authentication settings.",
@@ -158,7 +152,7 @@ export function SecuritySection() {
     }
   };
 
-  const revokeDevice = async (deviceId: string) => {
+  const revokeDevice = async (_deviceId: string) => {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -167,7 +161,7 @@ export function SecuritySection() {
         title: "Device revoked",
         description: "The device has been successfully revoked from your account.",
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: "Error",
         description: "Failed to revoke device access.",
@@ -323,20 +317,13 @@ export function SecuritySection() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-medium">Two-Factor Authentication</h3>
-                  <Badge
-                    variant={user?.security?.twoFactorEnabled ? "default" : "secondary"}
-                  >
-                    {user?.security?.twoFactorEnabled ? "Enabled" : "Disabled"}
-                  </Badge>
+                  <Badge variant="secondary">Disabled</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Add an extra layer of security to your account with 2FA.
                 </p>
               </div>
-              <Switch
-                checked={user?.security?.twoFactorEnabled ?? false}
-                onCheckedChange={toggle2FA}
-              />
+              <Switch checked={false} onCheckedChange={toggle2FA} />
             </div>
           </div>
         </CardContent>

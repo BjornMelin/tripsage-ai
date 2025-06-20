@@ -4,18 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 import { cn } from "@/lib/utils";
-import type {
-  Memory,
-  MemoryContextPanelProps,
-  MemoryInsight,
-  UserPreferences,
-} from "@/types/memory";
+import type { Memory, MemoryContextPanelProps, UserPreferences } from "@/types/memory";
 import {
   Brain,
-  Calendar,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -25,11 +18,11 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function MemoryContextPanel({
   userId,
-  sessionId,
+  sessionId: _sessionId,
   className,
   onMemorySelect,
 }: MemoryContextPanelProps) {
@@ -161,7 +154,7 @@ export default function MemoryContextPanel({
     const {
       travelPersonality,
       budgetPatterns,
-      destinationPreferences,
+      destinationPreferences: _destinationPreferences,
       recommendations,
     } = insights.insights;
 
@@ -331,7 +324,7 @@ export default function MemoryContextPanel({
               variant={selectedTab === id ? "secondary" : "ghost"}
               size="sm"
               className="text-xs px-2 py-1 h-7"
-              onClick={() => setSelectedTab(id as any)}
+              onClick={() => setSelectedTab(id as "context" | "insights" | "recent")}
             >
               <Icon className="h-3 w-3 mr-1" />
               {label}

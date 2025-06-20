@@ -1,7 +1,6 @@
 "use client";
 
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
-import { SearchResults } from "@/components/features/search/search-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,11 +18,11 @@ import type { AccommodationSearchParams } from "@/types/search";
 import { useState } from "react";
 
 export default function HotelSearchPage() {
-  const { search, isSearching } = useAccommodationSearch();
+  const { search: _search, isSearching } = useAccommodationSearch();
   const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = async (params: any) => {
+  const handleSearch = async (_params: AccommodationSearchParams) => {
     setHasSearched(true);
     // search(params); // Disabled for MVP testing
   };
@@ -168,7 +167,7 @@ export default function HotelSearchPage() {
 function PopularDestinationCard({
   destination,
   priceFrom,
-  image,
+  image: _image,
   rating,
 }: {
   destination: string;
