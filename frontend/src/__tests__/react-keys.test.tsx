@@ -52,13 +52,13 @@ describe("React Key Props", () => {
         id: "price",
         label: "Price Range",
         type: "range",
-        min: 0,
-        max: 5000,
+        value: [0, 5000],
       },
       {
         id: "duration",
         label: "Trip Duration",
         type: "checkbox",
+        value: "duration",
         options: [
           { label: "1-3 days", value: "short", count: 15 },
           { label: "4-7 days", value: "medium", count: 23 },

@@ -8,8 +8,6 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
-    // Ensure mocks are hoisted
-    hoistMocks: true,
     exclude: ["**/node_modules/**", "**/e2e/**", "**/*.e2e.*", "**/*.spec.*"],
     // Enable browser mode for advanced testing
     browser: {

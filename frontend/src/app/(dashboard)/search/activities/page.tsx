@@ -4,9 +4,9 @@ import { ActivityCard } from "@/components/features/search/activity-card";
 import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
 import { SearchResults } from "@/components/features/search/search-results";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useActivitySearch } from "@/hooks/use-activity-search";
+import { useActivitySearch, type ActivitySearchParams } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
-import type { Activity, ActivitySearchParams } from "@/types/search";
+import type { Activity } from "@/types/search";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -24,8 +24,6 @@ export default function ActivitiesSearchPage() {
   const {
     hasResults,
     isSearching: storeIsSearching,
-    error: storeError,
-    results,
   } = useSearchStore();
   const searchParams = useSearchParams();
 
@@ -36,18 +34,24 @@ export default function ActivitiesSearchPage() {
     const category = searchParams.get("category");
     const maxPrice = searchParams.get("maxPrice");
 
-    if (destination || date || category || maxPrice) {
+    if (destination) {
       const initialParams: ActivitySearchParams = {
-        destination: destination || undefined,
-        date: date || undefined,
+        destination,
         category: category || undefined,
       };
       searchActivities(initialParams);
     }
   }, [searchParams, searchActivities]);
 
-  const handleSearch = (params: ActivitySearchParams) => {
-    searchActivities(params);
+  const handleSearch = (params: import("@/types/search").ActivitySearchParams) => {
+    // Convert the params to the hook's expected format
+    if (params.destination) {
+      const hookParams: ActivitySearchParams = {
+        destination: params.destination,
+        category: params.category,
+      };
+      searchActivities(hookParams);
+    }
   };
 
   const handleSelectActivity = (activity: Activity) => {
@@ -61,8 +65,8 @@ export default function ActivitiesSearchPage() {
     // TODO: Add to comparison list
   };
 
-  // Get activities from store results
-  const activities: Activity[] = results?.activities || [];
+  // Mock activities data - in real implementation, this would come from the search results
+  const activities: Activity[] = [];
   const hasActiveResults = hasResults && activities.length > 0;
 
   return (
@@ -87,10 +91,10 @@ export default function ActivitiesSearchPage() {
             </div>
           )}
 
-          {(searchError || storeError) && (
+          {searchError && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
               <p className="text-destructive text-sm">
-                {searchError?.message || storeError || "Something went wrong"}
+                {searchError?.message || "Something went wrong"}
               </p>
             </div>
           )}

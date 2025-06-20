@@ -59,15 +59,15 @@ function createRequest(
 
 describe("Middleware", () => {
   let mockSupabase: ReturnType<typeof createServerClient>;
-  let mockResponse: typeof NextResponse;
+  let mockResponseInstance: NextResponse;
 
   beforeEach(() => {
     vi.clearAllMocks();
     // Clear the rate limit store between tests
     vi.resetModules();
 
-    // Setup mock response with proper headers
-    mockResponse = {
+    // Create a mock NextResponse instance
+    mockResponseInstance = {
       status: 200,
       headers: {
         get: vi.fn().mockReturnValue(null),
@@ -84,15 +84,15 @@ describe("Middleware", () => {
       cookies: {
         set: vi.fn(),
       },
-    };
+    } as unknown as NextResponse;
 
     // Setup NextResponse mocks
-    vi.mocked(NextResponse.next).mockReturnValue(mockResponse);
+    vi.mocked(NextResponse.next).mockReturnValue(mockResponseInstance);
     vi.mocked(NextResponse.json).mockImplementation((body, init) => ({
-      ...mockResponse,
+      ...mockResponseInstance,
       status: init?.status || 200,
       json: vi.fn().mockResolvedValue(body),
-    }));
+    } as unknown as NextResponse));
 
     // Setup mock Supabase client
     mockSupabase = {
@@ -399,19 +399,22 @@ describe("Middleware", () => {
 
       // Assert
       expect(capturedCookieHandlers).toBeTruthy();
-      expect(typeof capturedCookieHandlers.getAll).toBe("function");
-      expect(typeof capturedCookieHandlers.setAll).toBe("function");
+      expect(capturedCookieHandlers).toBeDefined();
+      expect(typeof capturedCookieHandlers!.getAll).toBe("function");
+      expect(typeof capturedCookieHandlers!.setAll).toBe("function");
 
       // Test getAll functionality
-      const cookies = capturedCookieHandlers.getAll();
+      const cookies = capturedCookieHandlers!.getAll();
       expect(cookies).toBeDefined();
 
       // Test setAll functionality - should not throw
-      expect(() => {
-        capturedCookieHandlers.setAll([
-          { name: "new1", value: "val1", options: { httpOnly: true } },
-        ]);
-      }).not.toThrow();
+      if (capturedCookieHandlers) {
+        expect(() => {
+          capturedCookieHandlers.setAll([
+            { name: "new1", value: "val1", options: { httpOnly: true } },
+          ]);
+        }).not.toThrow();
+      }
     });
   });
 

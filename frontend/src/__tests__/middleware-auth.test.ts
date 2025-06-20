@@ -122,12 +122,13 @@ describe("Middleware - updateSession", () => {
     expect(supabaseResponse).toBeInstanceOf(NextResponse);
 
     // Test cookie handlers
-    const getAllResult = capturedCookieHandlers?.getAll();
+    expect(capturedCookieHandlers).toBeDefined();
+    const getAllResult = capturedCookieHandlers!.getAll();
     expect(getAllResult).toEqual(mockCookies);
 
     // Test setAll handler - just verify it can be called without errors
     expect(() => {
-      capturedCookieHandlers?.setAll([
+      capturedCookieHandlers!.setAll([
         { name: "test", value: "value", options: { httpOnly: true } },
       ]);
     }).not.toThrow();
@@ -218,7 +219,8 @@ describe("Middleware - updateSession", () => {
     expect(mockSupabase.auth.getUser).toHaveBeenCalled();
 
     // Test that cookie handlers work with multiple cookies
-    const getAllResult = capturedCookieHandlers?.getAll();
+    expect(capturedCookieHandlers).toBeDefined();
+    const getAllResult = capturedCookieHandlers!.getAll();
     expect(getAllResult).toEqual(mockCookies);
   });
 });
