@@ -114,7 +114,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJson(env.PYTHON_VERSIONS) }}
+        python-version: ['3.11', '3.12', '3.13']
         os: [ubuntu-latest, windows-latest]
         exclude:
           # Only test Python 3.11 and 3.13 on Ubuntu for speed
