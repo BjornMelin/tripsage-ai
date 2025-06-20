@@ -412,7 +412,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {config.icon}
-            <AlertDescription className="font-medium">{config.description}</AlertDescription>
+            <AlertDescription className="font-medium">
+              {config.description}
+            </AlertDescription>
           </div>
 
           {(status === "error" || status === "disconnected") && onReconnect && (

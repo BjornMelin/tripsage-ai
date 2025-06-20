@@ -2,10 +2,10 @@
 export { AgentStatusDashboard } from "./dashboard/agent-status-dashboard";
 
 // Communication Components
-export { 
+export {
   ConnectionStatus,
   EnhancedConnectionStatus,
-  CompactConnectionStatus
+  CompactConnectionStatus,
 } from "../shared/connection-status";
 export { AgentCollaborationHub } from "./communication/agent-collaboration-hub";
 
