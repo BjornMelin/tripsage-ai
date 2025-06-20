@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
 
 export default function DestinationsSearchPage() {
   const { hasResults, isSearching: storeIsSearching } = useSearchStore();
-  const { searchDestinationsMock, isSearching, searchError, resetSearch } =
+  const { searchDestinations, isSearching, searchError, resetSearch } =
     useDestinationSearch();
 
   const [selectedDestinations, setSelectedDestinations] = useState<Destination[]>([]);
@@ -32,7 +32,7 @@ export default function DestinationsSearchPage() {
 
   const handleSearch = async (params: DestinationSearchParams) => {
     try {
-      await searchDestinationsMock(params);
+      await searchDestinations(params);
     } catch (error) {
       console.error("Search failed:", error);
     }

@@ -227,7 +227,7 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="text-2xl font-bold text-blue-600">
-                      {realtimeStatus.isConnected ? "✓" : "✗"}
+                      {realtimeStatus.connectionStatus === "connected" ? "✓" : "✗"}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Real-time Status
@@ -237,7 +237,7 @@ export default function RealtimeDemoPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      {realtimeStatus.errors.length}
+                      {realtimeStatus.error ? "1" : "0"}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Connection Errors
