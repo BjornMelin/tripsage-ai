@@ -22,9 +22,6 @@ from tripsage_core.services.infrastructure.websocket_auth_service import (
     WebSocketAuthRequest,
     WebSocketAuthResponse,
 )
-from tripsage_core.services.infrastructure.websocket_manager import (
-    ConnectionStatus,
-)
 from tripsage_core.services.infrastructure.websocket_connection_service import (
     ConnectionState,
     WebSocketConnection,
