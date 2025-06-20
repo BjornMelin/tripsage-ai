@@ -1,30 +1,52 @@
 # Repository Setup Guide
 
-This document provides comprehensive instructions for setting up a new TripSage repository with all required secrets, configurations, and CI/CD workflows.
+This document provides comprehensive instructions for setting up a new TripSage
+repository with all required secrets, configurations, and CI/CD workflows.
 
 ## Required Repository Secrets
 
-The following secrets must be configured in your GitHub repository settings (`Settings > Secrets and variables > Actions`):
+The following secrets must be configured in your GitHub repository settings
+(`Settings > Secrets and variables > Actions`):
 
 ### Code Coverage & Quality
 
 | Secret Name | Purpose | Required For | How to Obtain |
 |-------------|---------|--------------|---------------|
-| `CODECOV_TOKEN` | Upload coverage reports to Codecov | Backend CI, Frontend CI, Coverage workflows | 1. Sign up at [codecov.io](https://codecov.io)<br/>2. Connect your GitHub repository<br/>3. Copy the repository token from Codecov dashboard |
+| `CODECOV_TOKEN` | Upload coverage | Backend, Frontend | See setup below |
 
 ### Deployment Secrets (Vercel)
 
 | Secret Name | Purpose | Required For | How to Obtain |
 |-------------|---------|--------------|---------------|
-| `VERCEL_TOKEN` | Deploy to Vercel | Deploy workflow | 1. Go to [Vercel Account Settings](https://vercel.com/account/tokens)<br/>2. Create a new token<br/>3. Copy the generated token |
-| `VERCEL_ORG_ID` | Vercel organization identifier | Deploy workflow | 1. Run `npx vercel link` in your project<br/>2. Check `.vercel/project.json` for `orgId`<br/>3. Or find in Vercel dashboard under team settings |
-| `VERCEL_PROJECT_ID` | Vercel project identifier | Deploy workflow | 1. Run `npx vercel link` in your project<br/>2. Check `.vercel/project.json` for `projectId`<br/>3. Or find in Vercel project settings |
+| `VERCEL_TOKEN` | Deploy to Vercel | Deploy workflow | See Vercel setup below |
+| `VERCEL_ORG_ID` | Vercel org ID | Deploy workflow | See Vercel setup below |
+| `VERCEL_PROJECT_ID` | Vercel project ID | Deploy | See Vercel setup below |
 
 ### Optional Secrets
 
 | Secret Name | Purpose | Required For | Notes |
 |-------------|---------|--------------|-------|
-| `GITHUB_TOKEN` | GitHub API access | Automatic (provided by GitHub) | No setup required - automatically available |
+| `GITHUB_TOKEN` | GitHub API access | Automatic | No setup required |
+
+### Detailed Setup Instructions
+
+**Codecov Setup:**
+
+1. Sign up at [codecov.io](https://codecov.io)
+2. Connect your GitHub repository
+3. Copy the repository token from Codecov dashboard
+
+**Vercel Token Setup:**
+
+1. Go to [Vercel Account Settings](https://vercel.com/account/tokens)
+2. Create a new token
+3. Copy the generated token
+
+**Vercel Project Setup:**
+
+1. Run `npx vercel link` in your project
+2. Check `.vercel/project.json` for `orgId` and `projectId`
+3. Or find in Vercel dashboard under project/team settings
 
 ## Repository Configuration
 
@@ -79,10 +101,10 @@ Our CI/CD workflows are configured to trigger on specific branch patterns:
 
 | Pattern | Purpose | Example | Triggers |
 |---------|---------|---------|----------|
-| `main` | Production branch | `main` | All workflows (deploy, security, coverage) |
+| `main` | Production branch | `main` | All workflows |
 | `develop` | Development integration | `develop` | All workflows except deploy |
-| `feat/*` | Feature branches | `feat/user-auth`, `feat/trip-planner` | CI, security, coverage on push |
-| `session/*` | Session-based development | `session/claude-ai-123` | CI, security, coverage on push |
+| `feat/*` | Feature branches | `feat/user-auth` | CI, security, coverage |
+| `session/*` | Session development | `session/claude-ai-123` | CI, security |
 
 ### Branch Naming Guidelines
 

@@ -9,7 +9,6 @@ by running various cache operations and measuring throughput.
 import asyncio
 import statistics
 import time
-from typing import Dict, List
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
@@ -21,7 +20,7 @@ class DragonflyBenchmark:
     def __init__(self):
         self.settings = get_settings()
         self.cache_service = CacheService(self.settings)
-        self.results: Dict[str, List[float]] = {}
+        self.results: dict[str, list[float]] = {}
 
     async def setup(self):
         """Connect to DragonflyDB."""

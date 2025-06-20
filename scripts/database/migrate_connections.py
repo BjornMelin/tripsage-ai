@@ -11,7 +11,6 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -45,7 +44,7 @@ class ConnectionMigrationTester:
         self.settings = get_settings()
         self.manager = SecureDatabaseConnectionManager()
         self.converter = DatabaseURLConverter()
-        self.results: Dict[str, Dict] = {}
+        self.results: dict[str, dict] = {}
         self.start_time = datetime.utcnow()
 
     async def test_supabase_api_connection(self) -> bool:

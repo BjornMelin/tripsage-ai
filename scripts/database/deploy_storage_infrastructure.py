@@ -10,7 +10,6 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Dict
 
 import asyncpg
 
@@ -26,7 +25,7 @@ class StorageDeployment:
         self.project_root = Path(__file__).parent.parent.parent
         self.storage_dir = self.project_root / "supabase" / "storage"
 
-    async def deploy_all(self) -> Dict[str, bool]:
+    async def deploy_all(self) -> dict[str, bool]:
         """Deploy complete storage infrastructure."""
         results = {}
 
@@ -289,7 +288,7 @@ class StorageDeployment:
             print(f"❌ Verification tests failed: {e}")
             return False
 
-    def print_deployment_summary(self, results: Dict[str, bool]) -> None:
+    def print_deployment_summary(self, results: dict[str, bool]) -> None:
         """Print deployment summary."""
         print("\n" + "=" * 60)
         print("📊 DEPLOYMENT SUMMARY")

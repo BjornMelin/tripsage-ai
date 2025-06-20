@@ -56,7 +56,7 @@ SET LOCAL auth.role = 'admin';
 SELECT COUNT(*) FROM trips;
 ```
 
-### security_validation.py (root level)
+### security_validation.py
 
 Comprehensive security audit script that validates multiple security aspects.
 
@@ -73,16 +73,16 @@ Comprehensive security audit script that validates multiple security aspects.
 
 ```bash
 # Run full security audit
-python scripts/security_validation.py
+python scripts/security/security_validation.py
 
 # Check specific components
-python scripts/security_validation.py --components database,api
+python scripts/security/security_validation.py --components database,api
 
 # Generate compliance report
-python scripts/security_validation.py --compliance-report
+python scripts/security/security_validation.py --compliance-report
 
 # Output in different formats
-python scripts/security_validation.py --output-format json
+python scripts/security/security_validation.py --output-format json
 ```
 
 ## Security Test Categories
@@ -169,15 +169,15 @@ psql $DATABASE_URL -f scripts/security/rls_vulnerability_tests.sql
 
 # 2. API Security
 echo "Validating API security..."
-python scripts/security_validation.py --components api
+python scripts/security/security_validation.py --components api
 
 # 3. Infrastructure Security
 echo "Checking infrastructure security..."
-python scripts/security_validation.py --components infrastructure
+python scripts/security/security_validation.py --components infrastructure
 
 # 4. Generate Report
 echo "Generating security report..."
-python scripts/security_validation.py --compliance-report \
+python scripts/security/security_validation.py --compliance-report \
   --output-file security_report_$(date +%Y%m%d).html
 ```
 
@@ -205,7 +205,7 @@ jobs:
       
       - name: Run Security Tests
         run: |
-          python scripts/security_validation.py
+          python scripts/security/security_validation.py
           
       - name: Check for Vulnerabilities
         run: |
