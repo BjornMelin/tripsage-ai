@@ -117,7 +117,7 @@ DRY_RUN             # true/false for preview mode
 
 Scripts may create/read files for communication:
 
-```
+```text
 /tmp/
 ├── migration_status.json    # Migration state
 ├── verification_report.json # Verification results
@@ -180,7 +180,7 @@ def run_setup():
 
 ### Log Format
 
-```
+```text
 [2025-06-17 10:30:00] [INFO] [script_name] Message
 [2025-06-17 10:30:01] [ERROR] [script_name] Error details
 ```
@@ -245,7 +245,8 @@ Scripts can be monitored through:
 4. **Alert Integration**: Notify on failures
 
 Example Prometheus metrics:
-```
+
+```text
 script_execution_duration_seconds{script="run_migrations.py"} 45.2
 script_execution_status{script="verify_connection.py"} 1
 script_last_run_timestamp{script="security_validation.py"} 1718701800

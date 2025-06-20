@@ -8,7 +8,6 @@ import asyncio
 import os
 import sys
 from datetime import datetime
-from typing import Dict, Optional
 
 import asyncpg
 from rich.console import Console
@@ -48,7 +47,7 @@ REALTIME_TABLES = [
 class ExtensionVerifier:
     def __init__(self, database_url: str):
         self.database_url = database_url
-        self.connection: Optional[asyncpg.Connection] = None
+        self.connection: asyncpg.Connection | None = None
 
     async def connect(self):
         """Connect to the database."""
@@ -64,7 +63,7 @@ class ExtensionVerifier:
         if self.connection:
             await self.connection.close()
 
-    async def verify_extensions(self) -> Dict[str, bool]:
+    async def verify_extensions(self) -> dict[str, bool]:
         """Verify all required extensions are installed."""
         console.print("\n🔍 Checking Extensions...", style="bold blue")
 
