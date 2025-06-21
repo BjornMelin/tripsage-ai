@@ -11,7 +11,9 @@
 
 ### **🔧 Deployment & Operations**  
 
-- [Deployment Guide](./deployment-guide.md) - Platform selection, CI/CD, and production deployment
+- [Deployment Guide](./deployment-guide.md) - Production deployment checklist and procedures
+- [Comprehensive Deployment Guide](./comprehensive-deployment-guide.md) - Complete deployment for all environments with CI/CD, monitoring, and cloud platforms
+- [Configuration Management](./configuration-management.md) - Modern Pydantic-based configuration system with security
 - [Supabase Configuration](./supabase-configuration.md) - Database setup and extensions
 
 ### **🔐 Security & Authentication**
