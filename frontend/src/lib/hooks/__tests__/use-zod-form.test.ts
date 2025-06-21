@@ -72,7 +72,7 @@ const AsyncValidationSchema = z.object({
 
 type SimpleFormData = z.infer<typeof SimpleFormSchema>;
 type ComplexFormData = z.infer<typeof ComplexFormSchema>;
-type AsyncFormData = z.infer<typeof AsyncValidationSchema>;
+// type AsyncFormData = z.infer<typeof AsyncValidationSchema>;
 
 describe("useZodForm Hook", () => {
   let mockFormInstance: any;

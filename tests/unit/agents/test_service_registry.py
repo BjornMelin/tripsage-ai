@@ -48,9 +48,7 @@ class TestServiceRegistry:
         """Test getting a required service that doesn't exist."""
         registry = ServiceRegistry()
 
-        with pytest.raises(
-            ValueError, match="Required service 'memory_service' is not initialized"
-        ):
+        with pytest.raises(ValueError, match="Required service 'memory_service' is not initialized"):
             registry.get_required_service("memory_service")
 
     def test_get_optional_service_success(self):
@@ -72,9 +70,7 @@ class TestServiceRegistry:
         """Test getting a service with invalid name."""
         registry = ServiceRegistry()
 
-        with pytest.raises(
-            ValueError, match="Required service 'invalid_service' is not initialized"
-        ):
+        with pytest.raises(ValueError, match="Required service 'invalid_service' is not initialized"):
             registry.get_required_service("invalid_service")
 
     def test_get_service_compatibility(self):
@@ -146,9 +142,7 @@ class TestServiceRegistryIntegration:
         assert registry.get_required_service("database_service") is mock_db
         assert registry.get_required_service("cache_service") is mock_cache
         assert registry.get_required_service("memory_service") is mock_memory
-        assert (
-            registry.get_required_service("accommodation_service") is mock_accommodation
-        )
+        assert registry.get_required_service("accommodation_service") is mock_accommodation
 
     def test_partial_service_registry(self):
         """Test registry with only some services configured."""

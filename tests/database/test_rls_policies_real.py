@@ -63,18 +63,14 @@ class RealRLSPolicyTester:
 
             try:
                 # Create user
-                response = self.admin_client.auth.sign_up(
-                    {"email": email, "password": password}
-                )
+                response = self.admin_client.auth.sign_up({"email": email, "password": password})
 
                 if response.user:
                     user_data = {
                         "id": response.user.id,
                         "email": email,
                         "password": password,
-                        "client": create_client(
-                            self.supabase_url, self.supabase_anon_key
-                        ),
+                        "client": create_client(self.supabase_url, self.supabase_anon_key),
                     }
 
                     # Sign in the user's client
@@ -205,13 +201,7 @@ class RealRLSPolicyTester:
         if trip_id:
             start_time = time.time()
             try:
-                other_trip_response = (
-                    user_b["client"]
-                    .table("trips")
-                    .select("*")
-                    .eq("id", trip_id)
-                    .execute()
-                )
+                other_trip_response = user_b["client"].table("trips").select("*").eq("id", trip_id).execute()
                 access_granted = len(other_trip_response.data) > 0
                 error = None
             except Exception as e:
@@ -256,13 +246,7 @@ class RealRLSPolicyTester:
         # Test 4: User B tries to read User A's memory (should fail)
         if memory_id:
             try:
-                other_memory_response = (
-                    user_b["client"]
-                    .table("memories")
-                    .select("*")
-                    .eq("id", memory_id)
-                    .execute()
-                )
+                other_memory_response = user_b["client"].table("memories").select("*").eq("id", memory_id).execute()
                 access_granted = len(other_memory_response.data) > 0
             except Exception:
                 access_granted = False
@@ -338,9 +322,7 @@ class RealRLSPolicyTester:
 
             collab_id = collab_response.data[0]["id"] if collab_response.data else None
             if collab_id:
-                self.cleanup_data.append(
-                    {"table": "trip_collaborators", "id": collab_id}
-                )
+                self.cleanup_data.append({"table": "trip_collaborators", "id": collab_id})
 
             collaboration_created = bool(collab_response.data)
         except Exception as e:
@@ -360,9 +342,7 @@ class RealRLSPolicyTester:
 
         # User B can view the shared trip
         try:
-            shared_trip_response = (
-                user_b["client"].table("trips").select("*").eq("id", trip_id).execute()
-            )
+            shared_trip_response = user_b["client"].table("trips").select("*").eq("id", trip_id).execute()
             can_view = len(shared_trip_response.data) > 0
         except Exception:
             can_view = False
@@ -381,11 +361,7 @@ class RealRLSPolicyTester:
         # User B tries to update the trip (should fail - viewers can't edit)
         try:
             update_response = (
-                user_b["client"]
-                .table("trips")
-                .update({"name": "Modified by Viewer"})
-                .eq("id", trip_id)
-                .execute()
+                user_b["client"].table("trips").update({"name": "Modified by Viewer"}).eq("id", trip_id).execute()
             )
 
             can_update = len(update_response.data) > 0
@@ -405,9 +381,7 @@ class RealRLSPolicyTester:
 
         # User C (non-collaborator) cannot access the trip
         try:
-            no_access_response = (
-                user_c["client"].table("trips").select("*").eq("id", trip_id).execute()
-            )
+            no_access_response = user_c["client"].table("trips").select("*").eq("id", trip_id).execute()
             unauthorized_access = len(no_access_response.data) > 0
         except Exception:
             unauthorized_access = False
@@ -487,13 +461,7 @@ class RealRLSPolicyTester:
         if flight_id:
             # User B cannot see the flight (not a collaborator)
             try:
-                no_access_response = (
-                    user_b["client"]
-                    .table("flights")
-                    .select("*")
-                    .eq("id", flight_id)
-                    .execute()
-                )
+                no_access_response = user_b["client"].table("flights").select("*").eq("id", flight_id).execute()
                 unauthorized_access = len(no_access_response.data) > 0
             except Exception:
                 unauthorized_access = False
@@ -539,9 +507,7 @@ class RealRLSPolicyTester:
 
             search_id = search_response.data[0]["id"] if search_response.data else None
             if search_id:
-                self.cleanup_data.append(
-                    {"table": "search_destinations", "id": search_id}
-                )
+                self.cleanup_data.append({"table": "search_destinations", "id": search_id})
                 query_hash = search_response.data[0]["query_hash"]
         except Exception as e:
             search_id = None
@@ -552,11 +518,7 @@ class RealRLSPolicyTester:
             # User B cannot see User A's search cache
             try:
                 other_cache_response = (
-                    user_b["client"]
-                    .table("search_destinations")
-                    .select("*")
-                    .eq("query_hash", query_hash)
-                    .execute()
+                    user_b["client"].table("search_destinations").select("*").eq("query_hash", query_hash).execute()
                 )
                 unauthorized_access = len(other_cache_response.data) > 0
             except Exception:
@@ -600,15 +562,9 @@ class RealRLSPolicyTester:
                 .execute()
             )
 
-            notification_id = (
-                notification_response.data[0]["id"]
-                if notification_response.data
-                else None
-            )
+            notification_id = notification_response.data[0]["id"] if notification_response.data else None
             if notification_id:
-                self.cleanup_data.append(
-                    {"table": "notifications", "id": notification_id}
-                )
+                self.cleanup_data.append({"table": "notifications", "id": notification_id})
         except Exception as e:
             notification_id = None
             print(f"Failed to create notification: {e}")
@@ -617,11 +573,7 @@ class RealRLSPolicyTester:
             # User A can see their notification
             try:
                 own_notif_response = (
-                    user_a["client"]
-                    .table("notifications")
-                    .select("*")
-                    .eq("id", notification_id)
-                    .execute()
+                    user_a["client"].table("notifications").select("*").eq("id", notification_id).execute()
                 )
                 can_view_own = len(own_notif_response.data) > 0
             except Exception:
@@ -641,11 +593,7 @@ class RealRLSPolicyTester:
             # User B cannot see User A's notification
             try:
                 other_notif_response = (
-                    user_b["client"]
-                    .table("notifications")
-                    .select("*")
-                    .eq("id", notification_id)
-                    .execute()
+                    user_b["client"].table("notifications").select("*").eq("id", notification_id).execute()
                 )
                 unauthorized_access = len(other_notif_response.data) > 0
             except Exception:
@@ -665,11 +613,7 @@ class RealRLSPolicyTester:
             # User A can update their notification
             try:
                 update_response = (
-                    user_a["client"]
-                    .table("notifications")
-                    .update({"read": True})
-                    .eq("id", notification_id)
-                    .execute()
+                    user_a["client"].table("notifications").update({"read": True}).eq("id", notification_id).execute()
                 )
 
                 can_update_own = len(update_response.data) > 0
@@ -690,11 +634,7 @@ class RealRLSPolicyTester:
             # User B cannot update User A's notification
             try:
                 unauthorized_update_response = (
-                    user_b["client"]
-                    .table("notifications")
-                    .update({"read": True})
-                    .eq("id", notification_id)
-                    .execute()
+                    user_b["client"].table("notifications").update({"read": True}).eq("id", notification_id).execute()
                 )
 
                 unauthorized_update = len(unauthorized_update_response.data) > 0
@@ -743,14 +683,8 @@ Database: {self.supabase_url}
 
         for category, results in categories.items():
             report += f"\n### {category.replace('_', ' ').title()}\n"
-            report += (
-                "| Table | Operation | User Role | Expected | Actual | Status | "
-                "Performance |\n"
-            )
-            report += (
-                "|-------|-----------|-----------|----------|--------|--------|"
-                "-------------|\n"
-            )
+            report += "| Table | Operation | User Role | Expected | Actual | Status | Performance |\n"
+            report += "|-------|-----------|-----------|----------|--------|--------|-------------|\n"
 
             for r in results:
                 status = "✅ PASS" if r.passed else "❌ FAIL"
@@ -776,23 +710,11 @@ Database: {self.supabase_url}
 
                     # Add recommendations
                     if r.table_name == "trips" and r.user_role == "other_user":
-                        report += (
-                            "- **Fix**: Review trips SELECT policy for user isolation\n"
-                        )
-                    elif (
-                        r.table_name == "trips"
-                        and r.user_role == "viewer"
-                        and r.operation == "UPDATE"
-                    ):
-                        report += (
-                            "- **Fix**: Review trips UPDATE policy to restrict "
-                            "viewer permissions\n"
-                        )
+                        report += "- **Fix**: Review trips SELECT policy for user isolation\n"
+                    elif r.table_name == "trips" and r.user_role == "viewer" and r.operation == "UPDATE":
+                        report += "- **Fix**: Review trips UPDATE policy to restrict viewer permissions\n"
                     elif "other_user" in r.user_role:
-                        report += (
-                            f"- **Fix**: Review {r.table_name} policies for user "
-                            f"isolation\n"
-                        )
+                        report += f"- **Fix**: Review {r.table_name} policies for user isolation\n"
 
         return report
 
@@ -824,10 +746,7 @@ async def test_real_rls_policies():
         # Assert all tests passed
         failed_tests = [r for r in tester.test_results if not r.passed]
         if failed_tests:
-            pytest.fail(
-                f"{len(failed_tests)} real RLS tests failed. Database has "
-                f"security vulnerabilities!"
-            )
+            pytest.fail(f"{len(failed_tests)} real RLS tests failed. Database has security vulnerabilities!")
 
     finally:
         # Cleanup

@@ -52,25 +52,13 @@ class AnalysisContext(BaseModel):
 class TravelInformation(BaseModel):
     """Extracted travel-related information."""
 
-    destinations: List[str] = Field(
-        default_factory=list, description="Mentioned destinations"
-    )
+    destinations: List[str] = Field(default_factory=list, description="Mentioned destinations")
     dates: List[str] = Field(default_factory=list, description="Travel dates")
-    accommodations: List[Dict[str, str]] = Field(
-        default_factory=list, description="Accommodation details"
-    )
-    flights: List[Dict[str, str]] = Field(
-        default_factory=list, description="Flight information"
-    )
-    activities: List[str] = Field(
-        default_factory=list, description="Planned activities"
-    )
-    budget_info: Optional[Dict[str, Any]] = Field(
-        None, description="Budget-related information"
-    )
-    contact_info: List[Dict[str, str]] = Field(
-        default_factory=list, description="Important contact information"
-    )
+    accommodations: List[Dict[str, str]] = Field(default_factory=list, description="Accommodation details")
+    flights: List[Dict[str, str]] = Field(default_factory=list, description="Flight information")
+    activities: List[str] = Field(default_factory=list, description="Planned activities")
+    budget_info: Optional[Dict[str, Any]] = Field(None, description="Budget-related information")
+    contact_info: List[Dict[str, str]] = Field(default_factory=list, description="Important contact information")
 
 
 class DocumentAnalyzer:
@@ -93,20 +81,12 @@ class DocumentAnalyzer:
 
         # Get AI configuration from settings
         self.ai_enabled = getattr(self.settings, "document_analyzer_ai_enabled", False)
-        self.max_text_length = getattr(
-            self.settings, "document_analyzer_max_text_length", 50000
-        )
-        self.max_concurrent_analyses = getattr(
-            self.settings, "document_analyzer_max_concurrent", 3
-        )
+        self.max_text_length = getattr(self.settings, "document_analyzer_max_text_length", 50000)
+        self.max_concurrent_analyses = getattr(self.settings, "document_analyzer_max_concurrent", 3)
 
         # OCR settings
-        self.ocr_enabled = getattr(
-            self.settings, "document_analyzer_ocr_enabled", False
-        )
-        self.pdf_extraction_enabled = getattr(
-            self.settings, "document_analyzer_pdf_enabled", False
-        )
+        self.ocr_enabled = getattr(self.settings, "document_analyzer_ocr_enabled", False)
+        self.pdf_extraction_enabled = getattr(self.settings, "document_analyzer_pdf_enabled", False)
 
         # Rate limiting
         self._analysis_semaphore = asyncio.Semaphore(self.max_concurrent_analyses)
@@ -206,21 +186,15 @@ class DocumentAnalyzer:
                     analysis_results = {"error": "No text content could be extracted"}
 
                 # Calculate processing time
-                processing_time = int(
-                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-                )
+                processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
 
                 # Extract travel-specific information
-                travel_info = self._extract_travel_information(
-                    analysis_results, extracted_text
-                )
+                travel_info = self._extract_travel_information(analysis_results, extracted_text)
 
                 return DocumentAnalysisResult(
                     file_id=context.file_id,
                     analysis_type=analysis_type,
-                    extracted_text=extracted_text[:5000]
-                    if extracted_text
-                    else None,  # Limit text for storage
+                    extracted_text=extracted_text[:5000] if extracted_text else None,  # Limit text for storage
                     key_information=analysis_results,
                     travel_relevance=travel_info.dict() if travel_info else None,
                     confidence_score=self._calculate_confidence_score(analysis_results),
@@ -228,9 +202,7 @@ class DocumentAnalyzer:
                 )
 
             except Exception as e:
-                processing_time = int(
-                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-                )
+                processing_time = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
 
                 raise DocumentAnalyzerError(
                     f"Document analysis failed for {context.file_id}: {str(e)}",
@@ -257,10 +229,7 @@ class DocumentAnalyzer:
                 if self.pdf_extraction_enabled:
                     return await self._extract_text_from_pdf(context.file_path)
                 else:
-                    return (
-                        f"PDF text extraction disabled in settings for "
-                        f"{context.file_path.name}"
-                    )
+                    return f"PDF text extraction disabled in settings for {context.file_path.name}"
             elif context.mime_type == "application/json":
                 return await self._extract_text_from_json(context.file_path)
             elif context.mime_type == "text/csv":
@@ -269,10 +238,7 @@ class DocumentAnalyzer:
                 if self.ocr_enabled:
                     return await self._extract_text_from_image(context.file_path)
                 else:
-                    return (
-                        f"OCR text extraction disabled in settings for "
-                        f"{context.file_path.name}"
-                    )
+                    return f"OCR text extraction disabled in settings for {context.file_path.name}"
             elif "officedocument" in context.mime_type:
                 # TODO: Implement Office document parsing when needed
                 return await self._extract_text_from_office_doc(context.file_path)
@@ -346,9 +312,7 @@ class DocumentAnalyzer:
         when needed. For now, return placeholder.
         """
         # Placeholder implementation
-        return (
-            f"Office document text extraction not yet implemented for {file_path.name}"
-        )
+        return f"Office document text extraction not yet implemented for {file_path.name}"
 
     async def _analyze_text_with_ai(
         self, text: str, analysis_type: str, user_context: Optional[str] = None
@@ -367,9 +331,7 @@ class DocumentAnalyzer:
         # TODO: Implement AI analysis using Core AI service when available
         # For now, return structured placeholder with enhanced analysis
 
-        template = self.analysis_templates.get(
-            analysis_type, self.analysis_templates["general"]
-        )
+        template = self.analysis_templates.get(analysis_type, self.analysis_templates["general"])
 
         # Enhanced analysis with better entity extraction
         entities = self._extract_basic_entities(text)
@@ -541,9 +503,7 @@ class DocumentAnalyzer:
 
         return found_keywords
 
-    def _extract_travel_information(
-        self, analysis_results: Dict[str, Any], text: str
-    ) -> Optional[TravelInformation]:
+    def _extract_travel_information(self, analysis_results: Dict[str, Any], text: str) -> Optional[TravelInformation]:
         """
         Extract structured travel information from analysis results.
 
@@ -601,23 +561,16 @@ class DocumentAnalyzer:
 
             # Add activities based on keywords and context
             activity_keywords = [
-                kw
-                for kw in keywords
-                if kw
-                in ["vacation", "holiday", "trip", "tour", "sightseeing", "activities"]
+                kw for kw in keywords if kw in ["vacation", "holiday", "trip", "tour", "sightseeing", "activities"]
             ]
             travel_info.activities = activity_keywords
 
             # Add accommodation information based on keywords
-            if any(
-                kw in keywords for kw in ["hotel", "accommodation", "room", "suite"]
-            ):
+            if any(kw in keywords for kw in ["hotel", "accommodation", "room", "suite"]):
                 if "confirmation_numbers" in entities:
                     accommodations = []
                     for conf_num in entities["confirmation_numbers"]:
-                        accommodations.append(
-                            {"confirmation_number": conf_num, "type": "accommodation"}
-                        )
+                        accommodations.append({"confirmation_number": conf_num, "type": "accommodation"})
                     travel_info.accommodations = accommodations
 
             return travel_info
@@ -691,9 +644,7 @@ class DocumentAnalyzer:
 
         try:
             # Process documents concurrently for better performance
-            tasks = [
-                self.analyze_document(context, analysis_type) for context in contexts
-            ]
+            tasks = [self.analyze_document(context, analysis_type) for context in contexts]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error results
@@ -716,9 +667,7 @@ class DocumentAnalyzer:
             return final_results
 
         except Exception as e:
-            raise DocumentAnalyzerError(
-                f"Batch document analysis failed: {str(e)}", original_error=e
-            ) from e
+            raise DocumentAnalyzerError(f"Batch document analysis failed: {str(e)}", original_error=e) from e
 
     async def analyze_travel_document(
         self, context: AnalysisContext, document_type: str = "general"

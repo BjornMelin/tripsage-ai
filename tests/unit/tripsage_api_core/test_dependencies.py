@@ -48,9 +48,7 @@ class TestDatabaseDependency:
     @pytest.mark.asyncio
     async def test_get_db_returns_database_service(self):
         """Test that database dependency returns a DatabaseService."""
-        with patch(
-            "tripsage.api.core.dependencies.get_database_service"
-        ) as mock_get_service:
+        with patch("tripsage.api.core.dependencies.get_database_service") as mock_get_service:
             # Mock the database service
             mock_service = AsyncMock()
             mock_get_service.return_value = mock_service
@@ -259,9 +257,7 @@ class TestServiceAccess:
         mock_db = MagicMock(spec=AsyncSession)
         mock_key_service = AsyncMock()
 
-        result = await verify_service_access(
-            principal, "openai", mock_db, mock_key_service
-        )
+        result = await verify_service_access(principal, "openai", mock_db, mock_key_service)
         assert result is True
 
     @pytest.mark.asyncio
@@ -282,9 +278,7 @@ class TestServiceAccess:
         mock_key.service = "openai"
         mock_key_service.get_user_keys.return_value = [mock_key]
 
-        result = await verify_service_access(
-            principal, "openai", mock_db, mock_key_service
-        )
+        result = await verify_service_access(principal, "openai", mock_db, mock_key_service)
         assert result is True
 
     @pytest.mark.asyncio
@@ -305,9 +299,7 @@ class TestServiceAccess:
         mock_key.service = "google_maps"
         mock_key_service.get_user_keys.return_value = [mock_key]
 
-        result = await verify_service_access(
-            principal, "openai", mock_db, mock_key_service
-        )
+        result = await verify_service_access(principal, "openai", mock_db, mock_key_service)
         assert result is False
 
     @pytest.mark.asyncio
@@ -324,9 +316,7 @@ class TestServiceAccess:
         mock_key_service = AsyncMock()
         mock_key_service.get_user_keys.side_effect = Exception("Service error")
 
-        result = await verify_service_access(
-            principal, "openai", mock_db, mock_key_service
-        )
+        result = await verify_service_access(principal, "openai", mock_db, mock_key_service)
         assert result is False
 
 
@@ -336,9 +326,7 @@ class TestUtilityDependencies:
     @pytest.mark.asyncio
     async def test_get_cache_service_dep(self):
         """Test cache service dependency."""
-        with patch(
-            "tripsage.api.core.dependencies.get_cache_service"
-        ) as mock_get_cache:
+        with patch("tripsage.api.core.dependencies.get_cache_service") as mock_get_cache:
             mock_cache = MagicMock()
             mock_get_cache.return_value = mock_cache
 

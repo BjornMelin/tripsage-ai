@@ -45,8 +45,7 @@ class TestDatabaseMetrics:
         # Check that metrics were recorded
         connection_metrics = self._get_metric_samples(self.metrics.connection_attempts)
         assert any(
-            sample.labels.get("service") == "supabase"
-            and sample.labels.get("status") == "success"
+            sample.labels.get("service") == "supabase" and sample.labels.get("status") == "success"
             for sample in connection_metrics
         )
 
@@ -57,8 +56,7 @@ class TestDatabaseMetrics:
         # Check that failure was recorded
         connection_metrics = self._get_metric_samples(self.metrics.connection_attempts)
         assert any(
-            sample.labels.get("service") == "supabase"
-            and sample.labels.get("status") == "error"
+            sample.labels.get("service") == "supabase" and sample.labels.get("status") == "error"
             for sample in connection_metrics
         )
 
@@ -67,9 +65,7 @@ class TestDatabaseMetrics:
         self.metrics.set_active_connections("supabase", 5)
 
         active_metrics = self._get_metric_samples(self.metrics.active_connections)
-        supabase_sample = next(
-            (s for s in active_metrics if s.labels.get("service") == "supabase"), None
-        )
+        supabase_sample = next((s for s in active_metrics if s.labels.get("service") == "supabase"), None)
         assert supabase_sample is not None
         assert supabase_sample.value == 5
 
@@ -98,9 +94,7 @@ class TestDatabaseMetrics:
 
     def test_record_query_error(self):
         """Test recording query error."""
-        self.metrics.record_query(
-            "supabase", "INSERT", "users", 0.05, False, "ValueError"
-        )
+        self.metrics.record_query("supabase", "INSERT", "users", 0.05, False, "ValueError")
 
         # Check error was recorded
         error_metrics = self._get_metric_samples(self.metrics.query_errors)
@@ -147,9 +141,7 @@ class TestDatabaseMetrics:
         self.metrics.record_health_check("supabase", True)
 
         health_metrics = self._get_metric_samples(self.metrics.health_status)
-        supabase_sample = next(
-            (s for s in health_metrics if s.labels.get("service") == "supabase"), None
-        )
+        supabase_sample = next((s for s in health_metrics if s.labels.get("service") == "supabase"), None)
         assert supabase_sample is not None
         assert supabase_sample.value == 1.0
 
@@ -157,9 +149,7 @@ class TestDatabaseMetrics:
         self.metrics.record_health_check("supabase", False)
 
         health_metrics = self._get_metric_samples(self.metrics.health_status)
-        supabase_sample = next(
-            (s for s in health_metrics if s.labels.get("service") == "supabase"), None
-        )
+        supabase_sample = next((s for s in health_metrics if s.labels.get("service") == "supabase"), None)
         assert supabase_sample is not None
         assert supabase_sample.value == 0.0
 
@@ -169,9 +159,7 @@ class TestDatabaseMetrics:
 
         # Check pool size
         size_metrics = self._get_metric_samples(self.metrics.pool_size)
-        supabase_size = next(
-            (s for s in size_metrics if s.labels.get("service") == "supabase"), None
-        )
+        supabase_size = next((s for s in size_metrics if s.labels.get("service") == "supabase"), None)
         assert supabase_size is not None
         assert supabase_size.value == 20
 
@@ -204,12 +192,8 @@ class TestDatabaseMetrics:
             time.sleep(0.01)  # Simulate transaction time
 
         # Check that transaction duration was recorded
-        transaction_metrics = self._get_metric_samples(
-            self.metrics.transaction_duration
-        )
-        assert any(
-            sample.labels.get("service") == "supabase" for sample in transaction_metrics
-        )
+        transaction_metrics = self._get_metric_samples(self.metrics.transaction_duration)
+        assert any(sample.labels.get("service") == "supabase" for sample in transaction_metrics)
 
     def test_get_metrics_summary(self):
         """Test getting metrics summary."""
@@ -322,9 +306,7 @@ class TestMetricsIntegration:
         self.metrics.record_connection_attempt("supabase", False, 2.0)
 
         # Simulate query error
-        self.metrics.record_query(
-            "supabase", "UPDATE", "users", 0.1, False, "TimeoutError"
-        )
+        self.metrics.record_query("supabase", "UPDATE", "users", 0.1, False, "TimeoutError")
 
         # Check unhealthy status
         self.metrics.record_health_check("supabase", False)
@@ -335,9 +317,7 @@ class TestMetricsIntegration:
 
         # Check that health status is 0 (unhealthy)
         health_status = summary["health_status"]
-        supabase_health = next(
-            (v for k, v in health_status.items() if "supabase" in k), None
-        )
+        supabase_health = next((v for k, v in health_status.items() if "supabase" in k), None)
         assert supabase_health == 0.0
 
     def test_concurrent_metrics_collection(self):

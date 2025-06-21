@@ -61,9 +61,7 @@ class TestConnectionCredentials:
 
     def test_default_values(self):
         """Test default values for optional fields."""
-        credentials = ConnectionCredentials(
-            scheme="postgres", username="user", password="pass", hostname="host"
-        )
+        credentials = ConnectionCredentials(scheme="postgres", username="user", password="pass", hostname="host")
 
         assert credentials.port == 5432
         assert credentials.database == "postgres"
@@ -190,9 +188,7 @@ class TestDatabaseURLParser:
     def test_parse_supabase_url_formats(self):
         """Test parsing various Supabase URL formats."""
         # Direct connection
-        url1 = (
-            "postgresql://postgres.abcdef:password@db.abcdef.supabase.co:5432/postgres"
-        )
+        url1 = "postgresql://postgres.abcdef:password@db.abcdef.supabase.co:5432/postgres"
         credentials1 = self.parser.parse_url(url1)
         assert credentials1.hostname == "db.abcdef.supabase.co"
         assert credentials1.username == "postgres.abcdef"
@@ -254,9 +250,7 @@ class TestDatabaseURLParser:
 
     def test_security_validation_whitespace(self):
         """Test security validation with whitespace (CVE-2023-24329)."""
-        with pytest.raises(
-            DatabaseURLParsingError, match="leading/trailing whitespace"
-        ):
+        with pytest.raises(DatabaseURLParsingError, match="leading/trailing whitespace"):
             self.parser.parse_url("  postgresql://user:pass@localhost/db  ")
 
     def test_security_validation_control_characters(self):
@@ -395,9 +389,7 @@ class TestExponentialBackoffRetry:
 
     def test_calculate_delay_with_jitter(self):
         """Test delay calculation with jitter."""
-        retry_with_jitter = ExponentialBackoffRetry(
-            max_retries=3, base_delay=0.1, jitter=True
-        )
+        retry_with_jitter = ExponentialBackoffRetry(max_retries=3, base_delay=0.1, jitter=True)
 
         # With jitter, delay should be slightly higher
         delay = retry_with_jitter.calculate_delay(1)
@@ -499,9 +491,7 @@ class TestDatabaseConnectionValidator:
             # Simulate connection failure
             mock_connect.side_effect = Exception("Connection refused")
 
-            with pytest.raises(
-                DatabaseValidationError, match="Connection validation failed"
-            ):
+            with pytest.raises(DatabaseValidationError, match="Connection validation failed"):
                 await self.validator.validate_connection(self.valid_credentials)
 
     @pytest.mark.asyncio

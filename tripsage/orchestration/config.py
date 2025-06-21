@@ -87,9 +87,7 @@ class LangGraphConfig:
             router_model=os.getenv("LANGGRAPH_ROUTER_MODEL", "gpt-4o-mini"),
             router_temperature=float(os.getenv("LANGGRAPH_ROUTER_TEMPERATURE", "0.1")),
             # Checkpointing
-            checkpoint_storage=CheckpointStorage(
-                os.getenv("LANGGRAPH_CHECKPOINT_STORAGE", "memory")
-            ),
+            checkpoint_storage=CheckpointStorage(os.getenv("LANGGRAPH_CHECKPOINT_STORAGE", "memory")),
             checkpoint_connection_string=os.getenv("LANGGRAPH_CHECKPOINT_CONNECTION"),
             # Error handling
             max_retries=int(os.getenv("LANGGRAPH_MAX_RETRIES", "3")),
@@ -97,39 +95,22 @@ class LangGraphConfig:
             escalation_threshold=int(os.getenv("LANGGRAPH_ESCALATION_THRESHOLD", "5")),
             timeout_seconds=int(os.getenv("LANGGRAPH_TIMEOUT_SECONDS", "30")),
             # Monitoring
-            enable_langsmith=os.getenv("LANGGRAPH_ENABLE_LANGSMITH", "true").lower()
-            == "true",
+            enable_langsmith=os.getenv("LANGGRAPH_ENABLE_LANGSMITH", "true").lower() == "true",
             langsmith_project=os.getenv("LANGSMITH_PROJECT", "tripsage-langgraph"),
             langsmith_api_key=os.getenv("LANGSMITH_API_KEY"),
             # Performance
-            parallel_execution=os.getenv("LANGGRAPH_PARALLEL_EXECUTION", "true").lower()
-            == "true",
+            parallel_execution=os.getenv("LANGGRAPH_PARALLEL_EXECUTION", "true").lower() == "true",
             max_concurrent_tools=int(os.getenv("LANGGRAPH_MAX_CONCURRENT_TOOLS", "5")),
             tool_timeout_seconds=int(os.getenv("LANGGRAPH_TOOL_TIMEOUT_SECONDS", "10")),
             # Memory
-            session_timeout_hours=int(
-                os.getenv("LANGGRAPH_SESSION_TIMEOUT_HOURS", "24")
-            ),
+            session_timeout_hours=int(os.getenv("LANGGRAPH_SESSION_TIMEOUT_HOURS", "24")),
             max_message_history=int(os.getenv("LANGGRAPH_MAX_MESSAGE_HISTORY", "100")),
-            enable_conversation_memory=os.getenv(
-                "LANGGRAPH_ENABLE_CONVERSATION_MEMORY", "true"
-            ).lower()
-            == "true",
+            enable_conversation_memory=os.getenv("LANGGRAPH_ENABLE_CONVERSATION_MEMORY", "true").lower() == "true",
             # Feature flags
-            enable_human_in_loop=os.getenv("LANGGRAPH_ENABLE_HITL", "false").lower()
-            == "true",
-            enable_advanced_routing=os.getenv(
-                "LANGGRAPH_ENABLE_ADVANCED_ROUTING", "true"
-            ).lower()
-            == "true",
-            enable_memory_updates=os.getenv(
-                "LANGGRAPH_ENABLE_MEMORY_UPDATES", "true"
-            ).lower()
-            == "true",
-            enable_error_recovery=os.getenv(
-                "LANGGRAPH_ENABLE_ERROR_RECOVERY", "true"
-            ).lower()
-            == "true",
+            enable_human_in_loop=os.getenv("LANGGRAPH_ENABLE_HITL", "false").lower() == "true",
+            enable_advanced_routing=os.getenv("LANGGRAPH_ENABLE_ADVANCED_ROUTING", "true").lower() == "true",
+            enable_memory_updates=os.getenv("LANGGRAPH_ENABLE_MEMORY_UPDATES", "true").lower() == "true",
+            enable_error_recovery=os.getenv("LANGGRAPH_ENABLE_ERROR_RECOVERY", "true").lower() == "true",
         )
 
     @classmethod
@@ -149,12 +130,8 @@ class LangGraphConfig:
             # Use OpenAI API key from settings
             langsmith_api_key=settings.openai_api_key.get_secret_value(),
             # Database connection for checkpointing
-            checkpoint_storage=CheckpointStorage.POSTGRES
-            if settings.database_url
-            else CheckpointStorage.MEMORY,
-            checkpoint_connection_string=settings.database_url
-            if settings.database_url
-            else None,
+            checkpoint_storage=CheckpointStorage.POSTGRES if settings.database_url else CheckpointStorage.MEMORY,
+            checkpoint_connection_string=settings.database_url if settings.database_url else None,
         )
 
     def to_dict(self) -> Dict[str, Any]:

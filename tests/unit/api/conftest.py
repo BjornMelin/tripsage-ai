@@ -134,40 +134,26 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         patch("supabase.create_client", return_value=Mock()),
         # Mock legacy MCP references (removed during modernization)
         # Mock rate limiting middleware to disable it
-        patch(
-            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
-        ) as mock_rate_limit,
+        patch("tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch") as mock_rate_limit,
         # Mock the authentication dependency to return a valid principal
         patch(
             "tripsage.api.core.dependencies.get_current_principal",
             return_value=mock_principal,
         ),
         # Mock all service dependencies to prevent real service calls
-        patch(
-            "tripsage_core.services.business.accommodation_service.get_accommodation_service"
-        ) as mock_acc_service,
+        patch("tripsage_core.services.business.accommodation_service.get_accommodation_service") as mock_acc_service,
         patch("tripsage_core.services.business.trip_service.get_trip_service"),
-        patch(
-            "tripsage_core.services.business.flight_service.get_flight_service"
-        ) as mock_flight_service_getter,
+        patch("tripsage_core.services.business.flight_service.get_flight_service") as mock_flight_service_getter,
         patch(
             "tripsage_core.services.business.destination_service.get_destination_service"
         ) as mock_destination_service_getter,
         patch("tripsage_core.services.business.chat_service.get_chat_service"),
         patch("tripsage_core.services.business.memory_service.get_memory_service"),
-        patch(
-            "tripsage_core.services.business.key_management_service.get_key_management_service"
-        ),
-        patch(
-            "tripsage_core.services.business.user_service.get_user_service"
-        ) as mock_user_service_getter,
-        patch(
-            "tripsage_core.services.business.itinerary_service.get_itinerary_service"
-        ),
+        patch("tripsage_core.services.business.key_management_service.get_key_management_service"),
+        patch("tripsage_core.services.business.user_service.get_user_service") as mock_user_service_getter,
+        patch("tripsage_core.services.business.itinerary_service.get_itinerary_service"),
         # Mock file processing service
-        patch(
-            "tripsage_core.services.business.file_processing_service.FileProcessingService"
-        ) as mock_file_service,
+        patch("tripsage_core.services.business.file_processing_service.FileProcessingService") as mock_file_service,
     ):
         # Configure mock settings
         from tests.test_config import create_test_settings
@@ -214,9 +200,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 search_request=api_request,
             )
 
-        mock_accommodation_service.search_accommodations = AsyncMock(
-            side_effect=mock_search_accommodations
-        )
+        mock_accommodation_service.search_accommodations = AsyncMock(side_effect=mock_search_accommodations)
 
         mock_accommodation_service.get_accommodation_details = AsyncMock(
             return_value={
@@ -274,9 +258,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             query="Tokyo",
         )
 
-        mock_destination_service.search_destinations = AsyncMock(
-            return_value=mock_search_response
-        )
+        mock_destination_service.search_destinations = AsyncMock(return_value=mock_search_response)
 
         # Simple mock destination for details
         mock_destination = Destination(
@@ -295,9 +277,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
             return_value=DestinationDetailsResponse(destination=mock_destination)
         )
 
-        mock_destination_service.get_destination_recommendations = AsyncMock(
-            return_value=[]
-        )
+        mock_destination_service.get_destination_recommendations = AsyncMock(return_value=[])
 
         # Configure user service mock
         mock_user_service = AsyncMock()
@@ -340,9 +320,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 preferences=preferences,
             )
 
-        mock_user_service.update_user_preferences = AsyncMock(
-            side_effect=mock_update_user_preferences
-        )
+        mock_user_service.update_user_preferences = AsyncMock(side_effect=mock_update_user_preferences)
 
         # Configure flight service mock
         mock_flight_service = AsyncMock()
@@ -404,9 +382,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 seats_available=42,
             )
 
-        mock_flight_service.get_flight_offer = AsyncMock(
-            side_effect=mock_get_flight_offer
-        )
+        mock_flight_service.get_flight_offer = AsyncMock(side_effect=mock_get_flight_offer)
 
         # Configure save flight mock
         from tripsage_core.models.schemas_common.flight_schemas import (
@@ -455,13 +431,9 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         )
 
         mock_file_instance.upload_file = AsyncMock(return_value=mock_upload_result)
-        mock_file_instance.upload_files_batch = AsyncMock(
-            return_value=[mock_upload_result]
-        )
+        mock_file_instance.upload_files_batch = AsyncMock(return_value=[mock_upload_result])
         mock_file_instance.get_file = AsyncMock(return_value=mock_upload_result)
-        mock_file_instance.get_file_content = AsyncMock(
-            return_value=b"test file content"
-        )
+        mock_file_instance.get_file_content = AsyncMock(return_value=b"test file content")
         mock_file_instance.delete_file = AsyncMock(return_value=True)
         mock_file_instance.search_files = AsyncMock(return_value=[])
 
@@ -491,17 +463,11 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         patch("supabase.create_client", return_value=Mock()),
         # Mock legacy MCP references (removed during modernization)
         # Mock rate limiting middleware to disable it
-        patch(
-            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
-        ) as mock_rate_limit,
+        patch("tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch") as mock_rate_limit,
         # Mock the authentication dependency to return None (unauthenticated)
-        patch(
-            "tripsage.api.core.dependencies.get_current_principal", return_value=None
-        ),
+        patch("tripsage.api.core.dependencies.get_current_principal", return_value=None),
         # Mock file processing service
-        patch(
-            "tripsage_core.services.business.file_processing_service.FileProcessingService"
-        ) as mock_file_service,
+        patch("tripsage_core.services.business.file_processing_service.FileProcessingService") as mock_file_service,
     ):
         # Configure mock settings
         from tests.test_config import create_test_settings

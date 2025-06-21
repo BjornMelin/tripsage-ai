@@ -113,9 +113,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
             self._services_initialized = True
 
-    async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
         """Process the request and handle authentication with enhanced security.
 
         Args:
@@ -201,9 +199,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     f"JWT authentication failed: {e}",
                     extra={
                         "ip_address": self._get_client_ip(request),
-                        "user_agent": request.headers.get("User-Agent", "Unknown")[
-                            :200
-                        ],
+                        "user_agent": request.headers.get("User-Agent", "Unknown")[:200],
                         "path": request.url.path,
                     },
                 )
@@ -455,19 +451,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 # Validate the key with the appropriate service
                 from tripsage_core.services.business.api_key_service import ServiceType
 
-                service_type = (
-                    ServiceType(service)
-                    if service in [e.value for e in ServiceType]
-                    else ServiceType.OPENAI
-                )
-                validation_result = await self.key_service.validate_api_key(
-                    service=service_type, key_value=full_key
-                )
+                service_type = ServiceType(service) if service in [e.value for e in ServiceType] else ServiceType.OPENAI
+                validation_result = await self.key_service.validate_api_key(service=service_type, key_value=full_key)
 
                 if not validation_result.is_valid:
-                    raise KeyValidationError(
-                        validation_result.message or "Invalid API key"
-                    )
+                    raise KeyValidationError(validation_result.message or "Invalid API key")
 
                 # Retrieve key metadata if available
                 key_metadata = validation_result.details
@@ -511,9 +499,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             logger.error(f"API key authentication error: {e}")
             raise AuthenticationError("Invalid API key") from e
 
-    def _create_auth_error_response(
-        self, error: Union[AuthenticationError, KeyValidationError]
-    ) -> Response:
+    def _create_auth_error_response(self, error: Union[AuthenticationError, KeyValidationError]) -> Response:
         """Create an authentication error response.
 
         Args:
@@ -610,9 +596,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             return False
 
         # Each part should be base64url encoded (basic check)
-        base64url_chars = (
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-        )
+        base64url_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
         for part in parts:
             if not part or not all(c in base64url_chars for c in part):
                 return False

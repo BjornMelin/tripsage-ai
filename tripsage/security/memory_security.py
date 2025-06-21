@@ -28,25 +28,17 @@ telemetry = get_telemetry()
 class SecurityConfig(BaseModel):
     """Security configuration for memory service."""
 
-    encryption_enabled: bool = Field(
-        default=True, description="Enable encryption at rest"
-    )
+    encryption_enabled: bool = Field(default=True, description="Enable encryption at rest")
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
     audit_enabled: bool = Field(default=True, description="Enable audit logging")
 
     # Rate limiting settings
-    rate_limit_window: int = Field(
-        default=3600, description="Rate limit window in seconds"
-    )
-    rate_limit_max_requests: int = Field(
-        default=100, description="Max requests per window"
-    )
+    rate_limit_window: int = Field(default=3600, description="Rate limit window in seconds")
+    rate_limit_max_requests: int = Field(default=100, description="Max requests per window")
     rate_limit_burst: int = Field(default=10, description="Burst allowance")
 
     # Encryption settings
-    encryption_key: Optional[str] = Field(
-        default=None, description="Base64 encoded encryption key"
-    )
+    encryption_key: Optional[str] = Field(default=None, description="Base64 encoded encryption key")
 
     # Access control settings
     allowed_operations: Set[str] = Field(
@@ -184,9 +176,7 @@ class RateLimiter:
 
         # Add tokens based on time (token/second rate)
         rate = self.config.rate_limit_max_requests / self.config.rate_limit_window
-        bucket["tokens"] = min(
-            self.config.rate_limit_burst, bucket["tokens"] + (time_passed * rate)
-        )
+        bucket["tokens"] = min(self.config.rate_limit_burst, bucket["tokens"] + (time_passed * rate))
 
         # Check if we have tokens
         if bucket["tokens"] >= 1:
@@ -298,10 +288,7 @@ class AuditLogger:
                 count += 1
 
         if count > 20:  # More than 20 operations in a minute
-            logger.warning(
-                f"Suspicious activity detected for user {user_id}: "
-                f"{count} operations in 60s"
-            )
+            logger.warning(f"Suspicious activity detected for user {user_id}: {count} operations in 60s")
             telemetry.record_memory_operation(
                 operation="suspicious_activity",
                 duration_ms=0,
@@ -493,9 +480,7 @@ def secure_memory_operation(operation: str):
             security = MemorySecurity()
 
             # Execute with security
-            return await security.secure_operation(
-                operation, user_id, func, *args, **kwargs
-            )
+            return await security.secure_operation(operation, user_id, func, *args, **kwargs)
 
         return wrapper
 

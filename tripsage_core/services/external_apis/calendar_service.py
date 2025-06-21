@@ -52,10 +52,7 @@ def async_retry(
                         await asyncio.sleep(wait_time)
                     else:
                         raise CoreAPIError(
-                            message=(
-                                f"Google Calendar API failed after {max_attempts} "
-                                f"attempts: {e}"
-                            ),
+                            message=(f"Google Calendar API failed after {max_attempts} attempts: {e}"),
                             code="CALENDAR_API_ERROR",
                             service="GoogleCalendarService",
                             details={"attempts": max_attempts, "error": str(e)},
@@ -169,9 +166,7 @@ class GoogleCalendarService:
             try:
                 creds = Credentials.from_authorized_user_file(self.token_file, SCOPES)
             except Exception as e:
-                raise GoogleCalendarServiceError(
-                    f"Error loading credentials: {e}", original_error=e
-                ) from e
+                raise GoogleCalendarServiceError(f"Error loading credentials: {e}", original_error=e) from e
 
         # If there are no (valid) credentials available, let the user log in
         if not creds or not creds.valid:
@@ -179,19 +174,13 @@ class GoogleCalendarService:
                 try:
                     creds.refresh(Request())
                 except Exception as e:
-                    raise GoogleCalendarServiceError(
-                        f"Error refreshing credentials: {e}", original_error=e
-                    ) from e
+                    raise GoogleCalendarServiceError(f"Error refreshing credentials: {e}", original_error=e) from e
 
             if not creds:
                 if not os.path.exists(self.credentials_file):
-                    raise GoogleCalendarServiceError(
-                        f"Credentials file not found: {self.credentials_file}"
-                    )
+                    raise GoogleCalendarServiceError(f"Credentials file not found: {self.credentials_file}")
 
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.credentials_file, SCOPES
-                )
+                flow = InstalledAppFlow.from_client_secrets_file(self.credentials_file, SCOPES)
                 creds = flow.run_local_server(port=0)
 
             # Save the credentials for next run
@@ -235,9 +224,7 @@ class GoogleCalendarService:
             pass  # Cache errors are non-fatal
 
     @async_retry()
-    async def list_calendars(
-        self, show_hidden: bool = False, show_deleted: bool = False
-    ) -> Dict[str, Any]:
+    async def list_calendars(self, show_hidden: bool = False, show_deleted: bool = False) -> Dict[str, Any]:
         """
         List all calendars accessible by the user.
 
@@ -281,9 +268,7 @@ class GoogleCalendarService:
                     break
 
             except HttpError as e:
-                raise GoogleCalendarServiceError(
-                    f"Error listing calendars: {e}", original_error=e
-                ) from e
+                raise GoogleCalendarServiceError(f"Error listing calendars: {e}", original_error=e) from e
 
         response = {"items": calendar_list}
         await self._set_cache(cache_key, response, self.cache_ttl["calendar_list"])
@@ -330,9 +315,7 @@ class GoogleCalendarService:
             return result
 
         except HttpError as e:
-            raise GoogleCalendarServiceError(
-                f"Error creating event: {e}", original_error=e
-            ) from e
+            raise GoogleCalendarServiceError(f"Error creating event: {e}", original_error=e) from e
 
     @async_retry()
     async def update_event(
@@ -374,9 +357,7 @@ class GoogleCalendarService:
             return result
 
         except HttpError as e:
-            raise GoogleCalendarServiceError(
-                f"Error updating event: {e}", original_error=e
-            ) from e
+            raise GoogleCalendarServiceError(f"Error updating event: {e}", original_error=e) from e
 
     @async_retry()
     async def delete_event(
@@ -419,9 +400,7 @@ class GoogleCalendarService:
         except HttpError as e:
             if e.resp.status == 404:
                 return False
-            raise GoogleCalendarServiceError(
-                f"Error deleting event: {e}", original_error=e
-            ) from e
+            raise GoogleCalendarServiceError(f"Error deleting event: {e}", original_error=e) from e
 
     @async_retry()
     async def get_event(
@@ -460,9 +439,7 @@ class GoogleCalendarService:
             return result
 
         except HttpError as e:
-            raise GoogleCalendarServiceError(
-                f"Error getting event: {e}", original_error=e
-            ) from e
+            raise GoogleCalendarServiceError(f"Error getting event: {e}", original_error=e) from e
 
     @async_retry()
     async def list_events(
@@ -543,9 +520,7 @@ class GoogleCalendarService:
             return response
 
         except HttpError as e:
-            raise GoogleCalendarServiceError(
-                f"Error listing events: {e}", original_error=e
-            ) from e
+            raise GoogleCalendarServiceError(f"Error listing events: {e}", original_error=e) from e
 
     @async_retry()
     async def get_free_busy(
@@ -592,9 +567,7 @@ class GoogleCalendarService:
             return result
 
         except HttpError as e:
-            raise GoogleCalendarServiceError(
-                f"Error querying free/busy: {e}", original_error=e
-            ) from e
+            raise GoogleCalendarServiceError(f"Error querying free/busy: {e}", original_error=e) from e
 
     # Travel-specific methods
 
@@ -642,9 +615,7 @@ class GoogleCalendarService:
             "location": location,
             "start": {"dateTime": start.isoformat(), "timeZone": "UTC"},
             "end": {"dateTime": end.isoformat(), "timeZone": "UTC"},
-            "extendedProperties": {
-                "private": {"tripsage_metadata": json.dumps(travel_metadata)}
-            },
+            "extendedProperties": {"private": {"tripsage_metadata": json.dumps(travel_metadata)}},
         }
 
         if attendees:
@@ -679,10 +650,7 @@ class GoogleCalendarService:
                 start=datetime.fromisoformat(flight["departure"]),
                 end=datetime.fromisoformat(flight["arrival"]),
                 location=f"{flight['from_airport']} to {flight['to_airport']}",
-                description=(
-                    f"Flight {flight['flight_number']}\n"
-                    f"Booking: {flight.get('booking_reference', 'N/A')}"
-                ),
+                description=(f"Flight {flight['flight_number']}\nBooking: {flight.get('booking_reference', 'N/A')}"),
                 travel_type="flight",
                 booking_reference=flight.get("booking_reference"),
             )

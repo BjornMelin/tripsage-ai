@@ -321,10 +321,7 @@ class TestSerializationEdgeCases:
 
             # Should contain string values
             if "status" in context:
-                assert (
-                    TripStatus.PLANNING.value in json_str
-                    or TripStatus.BOOKED.value in json_str
-                )
+                assert TripStatus.PLANNING.value in json_str or TripStatus.BOOKED.value in json_str
             if "currency" in context:
                 assert "USD" in json_str or "EUR" in json_str
 
@@ -394,14 +391,10 @@ class TestSerializationEdgeCases:
         formatted_string=st.one_of(st.none(), st.text(max_size=50)),
     )
     @settings(max_examples=50, deadline=None)
-    def test_price_serialization_property_based(
-        self, amount: Decimal, formatted_string: str
-    ):
+    def test_price_serialization_property_based(self, amount: Decimal, formatted_string: str):
         """Test Price serialization with property-based testing."""
         try:
-            price = Price(
-                amount=amount, currency=CurrencyCode.USD, formatted=formatted_string
-            )
+            price = Price(amount=amount, currency=CurrencyCode.USD, formatted=formatted_string)
 
             # Test serialization round-trip
             json_data = price.model_dump_json()

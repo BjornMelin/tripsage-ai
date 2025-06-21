@@ -166,17 +166,13 @@ class TestDashboardIntegration:
             },
             usage_trend=[
                 {
-                    "timestamp": (
-                        datetime.now(timezone.utc) - timedelta(hours=2)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
                     "requests": 180,
                     "errors": 8,
                     "success_rate": 0.955,
                 },
                 {
-                    "timestamp": (
-                        datetime.now(timezone.utc) - timedelta(hours=1)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
                     "requests": 220,
                     "errors": 12,
                     "success_rate": 0.945,
@@ -200,9 +196,7 @@ class TestDashboardIntegration:
     ):
         """Test comprehensive dashboard overview functionality."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.return_value = (
-            comprehensive_dashboard_data
-        )
+        mock_monitoring_service.get_dashboard_data.return_value = comprehensive_dashboard_data
 
         with (
             patch(
@@ -240,9 +234,7 @@ class TestDashboardIntegration:
             assert "environment" in data
             assert "uptime_seconds" in data
 
-    def test_services_status_comprehensive(
-        self, client, authenticated_user, mock_cache_service
-    ):
+    def test_services_status_comprehensive(self, client, authenticated_user, mock_cache_service):
         """Test comprehensive services status functionality."""
         # Mock external service health checks
         from tripsage_core.services.business.api_key_validator import (
@@ -335,12 +327,8 @@ class TestDashboardIntegration:
     ):
         """Test usage metrics with various filters."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.return_value = (
-            comprehensive_dashboard_data
-        )
-        mock_monitoring_service._generate_usage_trend.return_value = (
-            comprehensive_dashboard_data.usage_trend
-        )
+        mock_monitoring_service.get_dashboard_data.return_value = comprehensive_dashboard_data
+        mock_monitoring_service._generate_usage_trend.return_value = comprehensive_dashboard_data.usage_trend
 
         with (
             patch(
@@ -390,9 +378,7 @@ class TestDashboardIntegration:
     ):
         """Test rate limits monitoring functionality."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.return_value = (
-            comprehensive_dashboard_data
-        )
+        mock_monitoring_service.get_dashboard_data.return_value = comprehensive_dashboard_data
 
         # Mock rate limit data for multiple keys
         rate_limit_responses = {
@@ -415,9 +401,7 @@ class TestDashboardIntegration:
         async def mock_rate_limit_status(key_id, window_minutes=60):
             return rate_limit_responses.get(key_id, {"error": "Not found"})
 
-        mock_monitoring_service.get_rate_limit_status.side_effect = (
-            mock_rate_limit_status
-        )
+        mock_monitoring_service.get_rate_limit_status.side_effect = mock_rate_limit_status
         mock_monitoring_service.recent_usage = {"key_001": [], "key_002": []}
 
         with (
@@ -467,9 +451,7 @@ class TestDashboardIntegration:
     ):
         """Test complete alerts management workflow."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.return_value = (
-            comprehensive_dashboard_data
-        )
+        mock_monitoring_service.get_dashboard_data.return_value = comprehensive_dashboard_data
 
         # Set up active alerts
         mock_monitoring_service.active_alerts = {
@@ -536,9 +518,7 @@ class TestDashboardIntegration:
     ):
         """Test user activity analysis functionality."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.return_value = (
-            comprehensive_dashboard_data
-        )
+        mock_monitoring_service.get_dashboard_data.return_value = comprehensive_dashboard_data
 
         with (
             patch(
@@ -558,9 +538,7 @@ class TestDashboardIntegration:
                 return_value=mock_db_service,
             ),
         ):
-            response = client.get(
-                "/api/dashboard/users/activity?time_range_hours=24&limit=5"
-            )
+            response = client.get("/api/dashboard/users/activity?time_range_hours=24&limit=5")
 
             assert response.status_code == 200
             data = response.json()
@@ -595,9 +573,7 @@ class TestDashboardIntegration:
     ):
         """Test trend analysis for multiple metrics."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service._generate_usage_trend.return_value = (
-            comprehensive_dashboard_data.usage_trend
-        )
+        mock_monitoring_service._generate_usage_trend.return_value = comprehensive_dashboard_data.usage_trend
 
         with (
             patch(
@@ -621,9 +597,7 @@ class TestDashboardIntegration:
             metrics = ["request_count", "error_rate", "latency", "active_users"]
 
             for metric in metrics:
-                response = client.get(
-                    f"/api/dashboard/trends/{metric}?time_range_hours=24"
-                )
+                response = client.get(f"/api/dashboard/trends/{metric}?time_range_hours=24")
                 assert response.status_code == 200
 
                 data = response.json()
@@ -653,12 +627,8 @@ class TestDashboardIntegration:
     ):
         """Test comprehensive analytics summary."""
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.return_value = (
-            comprehensive_dashboard_data
-        )
-        mock_monitoring_service._generate_usage_trend.return_value = (
-            comprehensive_dashboard_data.usage_trend
-        )
+        mock_monitoring_service.get_dashboard_data.return_value = comprehensive_dashboard_data
+        mock_monitoring_service._generate_usage_trend.return_value = comprehensive_dashboard_data.usage_trend
 
         with (
             patch(
@@ -678,9 +648,7 @@ class TestDashboardIntegration:
                 return_value=mock_db_service,
             ),
         ):
-            response = client.get(
-                "/api/dashboard/analytics/summary?time_range_hours=72"
-            )
+            response = client.get("/api/dashboard/analytics/summary?time_range_hours=72")
 
             assert response.status_code == 200
             data = response.json()
@@ -723,15 +691,11 @@ class TestDashboardIntegration:
             assert alerts["high_alerts"] == 1
             assert alerts["unacknowledged_alerts"] == 2
 
-    def test_dashboard_error_handling(
-        self, client, authenticated_user, mock_cache_service, mock_db_service
-    ):
+    def test_dashboard_error_handling(self, client, authenticated_user, mock_cache_service, mock_db_service):
         """Test dashboard error handling scenarios."""
         # Test with service that throws exceptions
         mock_monitoring_service = AsyncMock(spec=ApiKeyMonitoringService)
-        mock_monitoring_service.get_dashboard_data.side_effect = Exception(
-            "Service unavailable"
-        )
+        mock_monitoring_service.get_dashboard_data.side_effect = Exception("Service unavailable")
 
         with (
             patch(

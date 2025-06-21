@@ -35,9 +35,7 @@ class TestPriceValidation:
         assert price.amount == Decimal("0")
 
     @given(
-        amount=st.decimals(
-            min_value=Decimal("0"), max_value=Decimal("999999.99"), places=2
-        ),
+        amount=st.decimals(min_value=Decimal("0"), max_value=Decimal("999999.99"), places=2),
         currency=st.sampled_from(list(CurrencyCode)),
     )
     def test_price_property_validation(self, amount: Decimal, currency: CurrencyCode):
@@ -49,9 +47,7 @@ class TestPriceValidation:
 
     def test_negative_price_rejected(self):
         """Test negative prices are rejected."""
-        with pytest.raises(
-            ValidationError, match="Input should be greater than or equal to 0"
-        ):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             Price(amount=Decimal("-10"), currency=CurrencyCode.USD)
 
     def test_price_conversion(self):
@@ -98,9 +94,7 @@ class TestPriceRangeValidation:
         min_price = Price(amount=Decimal("50"), currency=CurrencyCode.USD)
         max_price = Price(amount=Decimal("150"), currency=CurrencyCode.EUR)
 
-        with pytest.raises(
-            ValidationError, match="Min and max prices must use the same currency"
-        ):
+        with pytest.raises(ValidationError, match="Min and max prices must use the same currency"):
             PriceRange(min_price=min_price, max_price=max_price)
 
     def test_price_in_range(self):
@@ -146,27 +140,19 @@ class TestBudgetValidation:
     def test_budget_currency_validation(self):
         """Test budget validation ensures consistent currencies."""
         total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
-        spent = Price(
-            amount=Decimal("300"), currency=CurrencyCode.EUR
-        )  # Different currency
+        spent = Price(amount=Decimal("300"), currency=CurrencyCode.EUR)  # Different currency
 
-        with pytest.raises(
-            ValidationError, match="All budget amounts must use the same currency"
-        ):
+        with pytest.raises(ValidationError, match="All budget amounts must use the same currency"):
             Budget(total_budget=total, spent=spent)
 
     def test_budget_category_currency_validation(self):
         """Test budget category validation ensures consistent currencies."""
         total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
         categories = {
-            "flights": Price(
-                amount=Decimal("500"), currency=CurrencyCode.EUR
-            ),  # Different currency
+            "flights": Price(amount=Decimal("500"), currency=CurrencyCode.EUR),  # Different currency
         }
 
-        with pytest.raises(
-            ValidationError, match="Category 'flights' uses different currency"
-        ):
+        with pytest.raises(ValidationError, match="Category 'flights' uses different currency"):
             Budget(total_budget=total, categories=categories)
 
     def test_budget_with_categories(self):
@@ -213,13 +199,9 @@ class TestPriceBreakdownValidation:
         taxes = Price(amount=Decimal("8.50"), currency=CurrencyCode.USD)
         fees = Price(amount=Decimal("5.00"), currency=CurrencyCode.USD)
         discounts = Price(amount=Decimal("10.00"), currency=CurrencyCode.USD)
-        total = Price(
-            amount=Decimal("103.50"), currency=CurrencyCode.USD
-        )  # 100 + 8.50 + 5.00 - 10.00
+        total = Price(amount=Decimal("103.50"), currency=CurrencyCode.USD)  # 100 + 8.50 + 5.00 - 10.00
 
-        breakdown = PriceBreakdown(
-            base_price=base, taxes=taxes, fees=fees, discounts=discounts, total=total
-        )
+        breakdown = PriceBreakdown(base_price=base, taxes=taxes, fees=fees, discounts=discounts, total=total)
 
         assert breakdown.base_price.amount == Decimal("100")
         assert breakdown.fees.amount == Decimal("5.00")
@@ -233,9 +215,7 @@ class TestPriceBreakdownValidation:
         # Wrong total that doesn't match calculation
         wrong_total = Price(amount=Decimal("200"), currency=CurrencyCode.USD)
 
-        with pytest.raises(
-            ValidationError, match="Total price does not match breakdown components"
-        ):
+        with pytest.raises(ValidationError, match="Total price does not match breakdown components"):
             PriceBreakdown(base_price=base, taxes=taxes, total=wrong_total)
 
 
@@ -266,9 +246,7 @@ class TestDealValidation:
         original = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
         final = Price(amount=Decimal("120"), currency=CurrencyCode.USD)
 
-        with pytest.raises(
-            ValidationError, match="Final price cannot be greater than original price"
-        ):
+        with pytest.raises(ValidationError, match="Final price cannot be greater than original price"):
             Deal(
                 title="Bad Deal",
                 description="This doesn't make sense",
@@ -398,9 +376,7 @@ class TestTaxInfoValidation:
 
     def test_negative_tax_rate_rejected(self):
         """Test negative tax rate is rejected."""
-        with pytest.raises(
-            ValidationError, match="Input should be greater than or equal to 0"
-        ):
+        with pytest.raises(ValidationError, match="Input should be greater than or equal to 0"):
             TaxInfo(
                 tax_type="VAT",
                 rate=Decimal("-0.05"),
@@ -409,9 +385,7 @@ class TestTaxInfoValidation:
 
     def test_tax_rate_over_100_percent_rejected(self):
         """Test tax rate over 100% (1.0) is rejected."""
-        with pytest.raises(
-            ValidationError, match="Input should be less than or equal to 1"
-        ):
+        with pytest.raises(ValidationError, match="Input should be less than or equal to 1"):
             TaxInfo(
                 tax_type="VAT",
                 rate=Decimal("1.5"),  # 150%

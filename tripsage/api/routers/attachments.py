@@ -98,17 +98,12 @@ async def upload_file(
         content = await file.read()
 
         # Create upload request
-        upload_request = FileUploadRequest(
-            filename=file.filename, content=content, auto_analyze=True
-        )
+        upload_request = FileUploadRequest(filename=file.filename, content=content, auto_analyze=True)
 
         # Process file
         result = await service.upload_file(user_id, upload_request)
 
-        logger.info(
-            f"File uploaded successfully: {file.filename} "
-            f"({result.file_size} bytes) for user {user_id}"
-        )
+        logger.info(f"File uploaded successfully: {file.filename} ({result.file_size} bytes) for user {user_id}")
 
         return FileUploadResponse(
             file_id=result.id,
@@ -140,9 +135,7 @@ async def upload_files_batch(
     for better error handling and progress tracking.
     """
     if len(files) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided"
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided")
 
     # Calculate total size for session limit validation
     # Note: UploadFile doesn't expose size directly, we'll validate during processing
@@ -155,8 +148,7 @@ async def upload_files_batch(
     if total_size > MAX_SESSION_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Total file size ({total_size} bytes) exceeds session limit "
-            f"({MAX_SESSION_SIZE} bytes)",
+            detail=f"Total file size ({total_size} bytes) exceeds session limit ({MAX_SESSION_SIZE} bytes)",
         )
 
     processed_files = []
@@ -176,9 +168,7 @@ async def upload_files_batch(
             content = await file.read()
 
             # Create upload request
-            upload_request = FileUploadRequest(
-                filename=file.filename, content=content, auto_analyze=True
-            )
+            upload_request = FileUploadRequest(filename=file.filename, content=content, auto_analyze=True)
 
             # Process file
             result = await service.upload_file(user_id, upload_request)
@@ -209,10 +199,7 @@ async def upload_files_batch(
         # Some files failed - log warnings but return successful ones
         logger.warning(f"Some files failed processing: {'; '.join(errors)}")
 
-    logger.info(
-        f"Batch upload completed: {len(processed_files)}/{len(files)} files "
-        f"processed for user {user_id}"
-    )
+    logger.info(f"Batch upload completed: {len(processed_files)}/{len(files)} files processed for user {user_id}")
 
     return BatchUploadResponse(
         files=processed_files,
@@ -349,9 +336,7 @@ async def download_file(
         _file_stream = io.BytesIO(file_content)
 
         headers = {
-            "Content-Disposition": (
-                f'attachment; filename="{file_info.original_filename}"'
-            ),
+            "Content-Disposition": (f'attachment; filename="{file_info.original_filename}"'),
             "Content-Type": file_info.mime_type,
         }
 

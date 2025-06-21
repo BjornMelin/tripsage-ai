@@ -25,9 +25,7 @@ class SearchParameters(TripSageModel):
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     timestamp: datetime = Field(..., description="When the search was performed")
-    parameter_json: Dict[str, Any] = Field(
-        ..., description="The search parameters in JSON format"
-    )
+    parameter_json: Dict[str, Any] = Field(..., description="The search parameters in JSON format")
 
     @property
     def is_flight_search(self) -> bool:
@@ -80,46 +78,28 @@ class SearchParameters(TripSageModel):
             cabin_class = self.parameter_json.get("cabin_class", "Economy").title()
             adults = self.parameter_json.get("adults", 1)
             children = self.parameter_json.get("children", 0)
-            return (
-                f"Flight from {origin} to {destination} "
-                f"({cabin_class}, {adults} adults, {children} children)"
-            )
+            return f"Flight from {origin} to {destination} ({cabin_class}, {adults} adults, {children} children)"
 
         elif self.is_accommodation_search:
             location = self.parameter_json.get("location", "Unknown")
             check_in = self.parameter_json.get("check_in", "Any")
             check_out = self.parameter_json.get("check_out", "Any")
             adults = self.parameter_json.get("adults", 2)
-            accommodation_type = self.parameter_json.get(
-                "accommodation_type", "Hotel"
-            ).title()
-            return (
-                f"{accommodation_type} in {location} "
-                f"({check_in} to {check_out}, {adults} adults)"
-            )
+            accommodation_type = self.parameter_json.get("accommodation_type", "Hotel").title()
+            return f"{accommodation_type} in {location} ({check_in} to {check_out}, {adults} adults)"
 
         elif self.is_activity_search:
             location = self.parameter_json.get("location", "Unknown")
-            activity_type = self.parameter_json.get(
-                "activity_type", "Sightseeing"
-            ).title()
+            activity_type = self.parameter_json.get("activity_type", "Sightseeing").title()
             date = self.parameter_json.get("date", "Any")
             return f"{activity_type} activity in {location} ({date})"
 
         elif self.is_transportation_search:
             # Transportation uses origin/destination OR pickup/dropoff
-            pickup = self.parameter_json.get("pickup") or self.parameter_json.get(
-                "origin", "Unknown"
-            )
-            dropoff = self.parameter_json.get("dropoff") or self.parameter_json.get(
-                "destination", "Unknown"
-            )
-            transportation_type = self.parameter_json.get(
-                "transportation_type", "Train"
-            ).title()
-            pickup_date = self.parameter_json.get(
-                "pickup_date"
-            ) or self.parameter_json.get("date", "Any")
+            pickup = self.parameter_json.get("pickup") or self.parameter_json.get("origin", "Unknown")
+            dropoff = self.parameter_json.get("dropoff") or self.parameter_json.get("destination", "Unknown")
+            transportation_type = self.parameter_json.get("transportation_type", "Train").title()
+            pickup_date = self.parameter_json.get("pickup_date") or self.parameter_json.get("date", "Any")
             return f"{transportation_type} from {pickup} to {dropoff} ({pickup_date})"
 
         else:

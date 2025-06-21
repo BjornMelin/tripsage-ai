@@ -28,17 +28,11 @@ class Entity(TripSageDomainModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
     # Additional domain-specific fields for enhanced functionality
-    aliases: Optional[List[str]] = Field(
-        [], description="Alternative names for the entity"
-    )
-    confidence_score: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Confidence score for entity accuracy"
-    )
+    aliases: Optional[List[str]] = Field([], description="Alternative names for the entity")
+    confidence_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Confidence score for entity accuracy")
     source: Optional[str] = Field(None, description="Source of the entity information")
     tags: Optional[List[str]] = Field([], description="Tags for categorization")
-    metadata: Optional[Dict[str, Any]] = Field(
-        {}, description="Additional metadata about the entity"
-    )
+    metadata: Optional[Dict[str, Any]] = Field({}, description="Additional metadata about the entity")
 
 
 class Relation(TripSageDomainModel):
@@ -57,18 +51,10 @@ class Relation(TripSageDomainModel):
     confidence_score: Optional[float] = Field(
         None, ge=0.0, le=1.0, description="Confidence score for relation accuracy"
     )
-    weight: Optional[float] = Field(
-        None, description="Relation weight for graph algorithms"
-    )
-    properties: Optional[Dict[str, Any]] = Field(
-        {}, description="Additional properties of the relation"
-    )
-    source: Optional[str] = Field(
-        None, description="Source of the relation information"
-    )
-    bidirectional: bool = Field(
-        False, description="Whether the relation is bidirectional"
-    )
+    weight: Optional[float] = Field(None, description="Relation weight for graph algorithms")
+    properties: Optional[Dict[str, Any]] = Field({}, description="Additional properties of the relation")
+    source: Optional[str] = Field(None, description="Source of the relation information")
+    bidirectional: bool = Field(False, description="Whether the relation is bidirectional")
 
 
 class TravelMemory(TripSageDomainModel):
@@ -84,25 +70,15 @@ class TravelMemory(TripSageDomainModel):
     content: str = Field(..., description="Memory content")
 
     # Travel-specific fields
-    travel_context: Optional[Dict[str, Any]] = Field(
-        {}, description="Travel-related context (dates, locations, etc.)"
-    )
+    travel_context: Optional[Dict[str, Any]] = Field({}, description="Travel-related context (dates, locations, etc.)")
     destinations: Optional[List[str]] = Field([], description="Associated destinations")
-    travel_dates: Optional[Dict[str, str]] = Field(
-        {}, description="Associated travel dates"
-    )
-    preferences: Optional[Dict[str, Any]] = Field(
-        {}, description="User preferences extracted from memory"
-    )
+    travel_dates: Optional[Dict[str, str]] = Field({}, description="Associated travel dates")
+    preferences: Optional[Dict[str, Any]] = Field({}, description="User preferences extracted from memory")
 
     # Standard memory fields
-    importance_score: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Importance score for memory ranking"
-    )
+    importance_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Importance score for memory ranking")
     tags: Optional[List[str]] = Field([], description="Memory tags")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
-    )
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
 
@@ -118,22 +94,12 @@ class SessionMemory(TripSageDomainModel):
     session_id: str = Field(..., description="Session ID")
     memory_type: str = Field(..., description="Memory type")
     content: Dict[str, Any] = Field(..., description="Memory content")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
-    )
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
     expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
 
     # Enhanced session memory fields
-    conversation_context: Optional[Dict[str, Any]] = Field(
-        {}, description="Conversation context and history"
-    )
-    agent_state: Optional[Dict[str, Any]] = Field(
-        {}, description="Agent state information"
-    )
-    user_preferences: Optional[Dict[str, Any]] = Field(
-        {}, description="Session-specific user preferences"
-    )
+    conversation_context: Optional[Dict[str, Any]] = Field({}, description="Conversation context and history")
+    agent_state: Optional[Dict[str, Any]] = Field({}, description="Agent state information")
+    user_preferences: Optional[Dict[str, Any]] = Field({}, description="Session-specific user preferences")
     interaction_count: int = Field(0, description="Number of interactions in session")
-    last_activity: Optional[datetime] = Field(
-        None, description="Last activity timestamp"
-    )
+    last_activity: Optional[datetime] = Field(None, description="Last activity timestamp")

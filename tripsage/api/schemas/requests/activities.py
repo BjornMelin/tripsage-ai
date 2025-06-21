@@ -26,9 +26,7 @@ class ActivitySearchRequest(BaseModel):
         description="Destination to search activities",
     )
     start_date: date = Field(..., description="Activity date or start date")
-    end_date: Optional[date] = Field(
-        None, description="End date for date range searches"
-    )
+    end_date: Optional[date] = Field(None, description="End date for date range searches")
     adults: int = Field(1, ge=1, le=20, description="Number of adults")
     children: int = Field(0, ge=0, le=20, description="Number of children")
     infants: int = Field(0, ge=0, le=10, description="Number of infants")
@@ -36,9 +34,7 @@ class ActivitySearchRequest(BaseModel):
     # Filters
     categories: Optional[List[str]] = Field(
         None,
-        description=(
-            "Activity categories (tour, museum, adventure, entertainment, etc.)"
-        ),
+        description=("Activity categories (tour, museum, adventure, entertainment, etc.)"),
     )
     duration: Optional[int] = Field(
         None,
@@ -55,15 +51,9 @@ class ActivitySearchRequest(BaseModel):
     )
 
     # Additional preferences
-    wheelchair_accessible: Optional[bool] = Field(
-        None, description="Filter for wheelchair accessible activities"
-    )
-    instant_confirmation: Optional[bool] = Field(
-        None, description="Filter for instant confirmation activities"
-    )
-    free_cancellation: Optional[bool] = Field(
-        None, description="Filter for free cancellation activities"
-    )
+    wheelchair_accessible: Optional[bool] = Field(None, description="Filter for wheelchair accessible activities")
+    instant_confirmation: Optional[bool] = Field(None, description="Filter for instant confirmation activities")
+    free_cancellation: Optional[bool] = Field(None, description="Filter for free cancellation activities")
 
 
 class SaveActivityRequest(BaseModel):
@@ -71,6 +61,4 @@ class SaveActivityRequest(BaseModel):
 
     activity_id: str = Field(..., description="Activity ID to save")
     trip_id: Optional[str] = Field(None, description="Trip ID to add activity to")
-    notes: Optional[str] = Field(
-        None, max_length=1000, description="Personal notes about the activity"
-    )
+    notes: Optional[str] = Field(None, max_length=1000, description="Personal notes about the activity")

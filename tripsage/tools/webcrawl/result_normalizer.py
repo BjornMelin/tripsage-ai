@@ -21,9 +21,7 @@ class ResultNormalizer:
     Normalizes results from different web crawling sources into UnifiedCrawlResult.
     """
 
-    async def normalize_firecrawl_output(
-        self, raw_output: Dict[str, Any], original_url: str
-    ) -> UnifiedCrawlResult:
+    async def normalize_firecrawl_output(self, raw_output: Dict[str, Any], original_url: str) -> UnifiedCrawlResult:
         """Normalize Firecrawl MCP output to UnifiedCrawlResult.
 
         Args:
@@ -81,9 +79,7 @@ class ResultNormalizer:
             status="success",
         )
 
-    async def normalize_crawl4ai_output(
-        self, raw_output: Dict[str, Any], original_url: str
-    ) -> UnifiedCrawlResult:
+    async def normalize_crawl4ai_output(self, raw_output: Dict[str, Any], original_url: str) -> UnifiedCrawlResult:
         """Normalize Crawl4AI MCP output to UnifiedCrawlResult.
 
         Args:
@@ -195,8 +191,7 @@ class ResultNormalizer:
             return UnifiedCrawlResult(
                 url=original_url,
                 status="error",
-                error_message=raw_output.get("error")
-                or raw_output.get("error_message"),
+                error_message=raw_output.get("error") or raw_output.get("error_message"),
                 metadata={
                     "source_crawler": "playwright_mcp",
                     "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
@@ -242,9 +237,7 @@ class ResultNormalizer:
         logger.debug(f"Normalized Playwright MCP output for {original_url}")
         return result
 
-    async def normalize_direct_crawl4ai_output(
-        self, crawl_result: WebCrawlResult, url: str
-    ) -> UnifiedCrawlResult:
+    async def normalize_direct_crawl4ai_output(self, crawl_result: WebCrawlResult, url: str) -> UnifiedCrawlResult:
         """
         Normalize direct Crawl4AI SDK output to UnifiedCrawlResult format.
 
@@ -260,8 +253,7 @@ class ResultNormalizer:
                 return UnifiedCrawlResult(
                     url=url,
                     status="error",
-                    error_message=crawl_result.error_message
-                    or "Direct Crawl4AI failed",
+                    error_message=crawl_result.error_message or "Direct Crawl4AI failed",
                     metadata={
                         "source_crawler": "crawl4ai_direct",
                         **crawl_result.metadata,
@@ -276,9 +268,7 @@ class ResultNormalizer:
             # Build metadata
             metadata = {
                 "source_crawler": "crawl4ai_direct",
-                "word_count": len(main_content_text.split())
-                if main_content_text
-                else 0,
+                "word_count": len(main_content_text.split()) if main_content_text else 0,
                 "html_length": len(crawl_result.html) if crawl_result.html else 0,
                 "status_code": crawl_result.status_code or 200,
                 "has_screenshot": bool(crawl_result.screenshot),
@@ -305,9 +295,7 @@ class ResultNormalizer:
             return result
 
         except Exception as e:
-            logger.error(
-                f"Error normalizing direct Crawl4AI output for {url}: {str(e)}"
-            )
+            logger.error(f"Error normalizing direct Crawl4AI output for {url}: {str(e)}")
             return UnifiedCrawlResult(
                 url=url,
                 status="error",

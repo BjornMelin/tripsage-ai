@@ -30,24 +30,12 @@ class AccommodationSearchRequest(MCPRequestBase):
     children: int = Field(0, ge=0, le=10, description="Number of children")
     rooms: int = Field(1, ge=1, le=8, description="Number of rooms")
     property_type: Optional[PropertyType] = Field(None, description="Type of property")
-    min_price: Optional[float] = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: Optional[float] = Field(
-        None, ge=0, description="Maximum price per night"
-    )
-    amenities: Optional[List[str]] = Field(
-        None, description="Required amenities (e.g., wifi, pool)"
-    )
-    min_rating: Optional[float] = Field(
-        None, ge=0, le=5, description="Minimum guest rating (0-5)"
-    )
-    latitude: Optional[float] = Field(
-        None, ge=-90, le=90, description="Latitude coordinate"
-    )
-    longitude: Optional[float] = Field(
-        None, ge=-180, le=180, description="Longitude coordinate"
-    )
+    min_price: Optional[float] = Field(None, ge=0, description="Minimum price per night")
+    max_price: Optional[float] = Field(None, ge=0, description="Maximum price per night")
+    amenities: Optional[List[str]] = Field(None, description="Required amenities (e.g., wifi, pool)")
+    min_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum guest rating (0-5)")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude coordinate")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude coordinate")
 
     @field_validator("check_in", "check_out")
     @classmethod
@@ -86,9 +74,7 @@ class AccommodationSearchRequest(MCPRequestBase):
 class AccommodationSearchResponse(MCPResponseBase):
     """Response for accommodation search."""
 
-    listings: List[AccommodationListing] = Field(
-        [], description="List of accommodation listings"
-    )
+    listings: List[AccommodationListing] = Field([], description="List of accommodation listings")
     listing_count: int = Field(0, description="Number of listings found")
     currency: str = Field("USD", description="Currency code")
     search_id: Optional[str] = Field(None, description="Search ID for tracking")
@@ -104,21 +90,15 @@ class AccommodationDetailsRequest(MCPRequestBase):
     check_out: Optional[str] = Field(None, description="Check-out date (YYYY-MM-DD)")
     adults: Optional[int] = Field(None, description="Number of adults")
     children: Optional[int] = Field(None, description="Number of children")
-    source: Optional[str] = Field(
-        None, description="Source of the listing (e.g., 'airbnb', 'booking')"
-    )
+    source: Optional[str] = Field(None, description="Source of the listing (e.g., 'airbnb', 'booking')")
 
 
 class AccommodationDetailsResponse(MCPResponseBase):
     """Response for accommodation details."""
 
     listing: AccommodationListing = Field(..., description="Accommodation listing")
-    availability: bool = Field(
-        ..., description="Whether the accommodation is available for the dates"
-    )
-    total_price: Optional[float] = Field(
-        None, description="Total price for the stay (if dates provided)"
-    )
+    availability: bool = Field(..., description="Whether the accommodation is available for the dates")
+    total_price: Optional[float] = Field(None, description="Total price for the stay (if dates provided)")
 
 
 class AccommodationBookingRequest(MCPRequestBase):
@@ -150,9 +130,7 @@ class AccommodationBookingResponse(MCPResponseBase):
     status: str = Field(..., description="Booking status")
     payment_status: str = Field(..., description="Payment status")
     cancellation_policy: Optional[str] = Field(None, description="Cancellation policy")
-    host_instructions: Optional[str] = Field(
-        None, description="Instructions from the host"
-    )
+    host_instructions: Optional[str] = Field(None, description="Instructions from the host")
 
 
 # Note: Core accommodation domain models (AccommodationListing,

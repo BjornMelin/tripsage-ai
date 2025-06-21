@@ -344,24 +344,16 @@ AirportCode = Annotated[str, AfterValidator(validate_airport_code)]
 Rating = Annotated[Optional[float], AfterValidator(validate_rating_range)]
 EmailLowercase = Annotated[Optional[str], AfterValidator(validate_email_lowercase)]
 PositiveInt = Annotated[Optional[int], AfterValidator(validate_positive_integer)]
-NonNegativeFloat = Annotated[
-    Optional[float], AfterValidator(validate_non_negative_number)
-]
+NonNegativeFloat = Annotated[Optional[float], AfterValidator(validate_non_negative_number)]
 CurrencyCode = Annotated[str, AfterValidator(validate_currency_code)]
 PasswordStrength = Annotated[str, AfterValidator(validate_password_strength)]
 Latitude = Annotated[Optional[float], AfterValidator(validate_latitude)]
 Longitude = Annotated[Optional[float], AfterValidator(validate_longitude)]
 
 # Common string length validators
-ShortString = Annotated[
-    Optional[str], AfterValidator(validate_string_length_range(1, 50))
-]
-MediumString = Annotated[
-    Optional[str], AfterValidator(validate_string_length_range(1, 255))
-]
-LongString = Annotated[
-    Optional[str], AfterValidator(validate_string_length_range(1, 1000))
-]
+ShortString = Annotated[Optional[str], AfterValidator(validate_string_length_range(1, 50))]
+MediumString = Annotated[Optional[str], AfterValidator(validate_string_length_range(1, 255))]
+LongString = Annotated[Optional[str], AfterValidator(validate_string_length_range(1, 1000))]
 
 # Truncating string validators for user input
 TruncatedShortString = Annotated[str, BeforeValidator(truncate_string(50))]
@@ -412,9 +404,7 @@ class CommonValidators:
         return password, password_confirm
 
     @staticmethod
-    def passwords_different(
-        current_password: str, new_password: str
-    ) -> tuple[str, str]:
+    def passwords_different(current_password: str, new_password: str) -> tuple[str, str]:
         """
         Validate that new password is different from current password.
 

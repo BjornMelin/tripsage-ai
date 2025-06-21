@@ -49,9 +49,7 @@ class TelemetryService:
         return Resource.create(
             {
                 ResourceAttributes.SERVICE_NAME: "tripsage-ai",
-                ResourceAttributes.SERVICE_VERSION: os.getenv(
-                    "SERVICE_VERSION", "1.0.0"
-                ),
+                ResourceAttributes.SERVICE_VERSION: os.getenv("SERVICE_VERSION", "1.0.0"),
                 ResourceAttributes.DEPLOYMENT_ENVIRONMENT: settings.environment,
                 ResourceAttributes.SERVICE_NAMESPACE: "tripsage",
                 ResourceAttributes.SERVICE_INSTANCE_ID: os.getenv("HOSTNAME", "local"),

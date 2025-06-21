@@ -36,9 +36,7 @@ class DateRange(TripSageModel):
 
     def overlaps(self, other: "DateRange") -> bool:
         """Check if this range overlaps with another range."""
-        return not (
-            self.end_date < other.start_date or other.end_date < self.start_date
-        )
+        return not (self.end_date < other.start_date or other.end_date < self.start_date)
 
 
 class TimeRange(TripSageModel):
@@ -130,10 +128,7 @@ class DateTimeRange(TripSageModel):
 
     def overlaps(self, other: "DateTimeRange") -> bool:
         """Check if this range overlaps with another range."""
-        return not (
-            self.end_datetime <= other.start_datetime
-            or other.end_datetime <= self.start_datetime
-        )
+        return not (self.end_datetime <= other.start_datetime or other.end_datetime <= self.start_datetime)
 
 
 class RecurrenceRule(TripSageModel):
@@ -143,9 +138,7 @@ class RecurrenceRule(TripSageModel):
     interval: int = Field(1, ge=1, description="Interval between occurrences")
     count: Optional[int] = Field(None, ge=1, description="Number of occurrences")
     until: Optional[date] = Field(None, description="End date for recurrence")
-    by_day: Optional[list[str]] = Field(
-        None, description="Days of week (MO, TU, WE, etc.)"
-    )
+    by_day: Optional[list[str]] = Field(None, description="Days of week (MO, TU, WE, etc.)")
     by_month_day: Optional[list[int]] = Field(None, description="Days of month (1-31)")
     by_month: Optional[list[int]] = Field(None, description="Months (1-12)")
 
@@ -155,9 +148,7 @@ class RecurrenceRule(TripSageModel):
         # Validate frequency
         valid_frequencies = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
         if self.frequency.upper() not in valid_frequencies:
-            raise ValueError(
-                f"Frequency must be one of: {', '.join(valid_frequencies)}"
-            )
+            raise ValueError(f"Frequency must be one of: {', '.join(valid_frequencies)}")
         self.frequency = self.frequency.upper()
 
         # Validate by_day
@@ -222,16 +213,10 @@ class Availability(TripSageModel):
     """Availability information for a resource."""
 
     available: bool = Field(description="Whether the resource is available")
-    from_datetime: Optional[datetime] = Field(
-        None, description="Available from this datetime"
-    )
-    to_datetime: Optional[datetime] = Field(
-        None, description="Available until this datetime"
-    )
+    from_datetime: Optional[datetime] = Field(None, description="Available from this datetime")
+    to_datetime: Optional[datetime] = Field(None, description="Available until this datetime")
     capacity: Optional[int] = Field(None, ge=0, description="Available capacity")
-    restrictions: Optional[list[str]] = Field(
-        None, description="Availability restrictions"
-    )
+    restrictions: Optional[list[str]] = Field(None, description="Availability restrictions")
 
     @model_validator(mode="after")
     def validate_availability_range(self) -> "Availability":

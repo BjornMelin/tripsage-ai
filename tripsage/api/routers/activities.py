@@ -39,9 +39,7 @@ async def search_activities(request: ActivitySearchRequest):
         activity_service = await get_activity_service()
         result = await activity_service.search_activities(request)
 
-        logger.info(
-            f"Found {len(result.activities)} activities for {request.destination}"
-        )
+        logger.info(f"Found {len(result.activities)} activities for {request.destination}")
         return result
 
     except ActivityServiceError as e:
@@ -143,7 +141,5 @@ async def delete_saved_activity(activity_id: str):
     # For now, return 501 to maintain API contract
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=(
-            "Delete saved activity endpoint requires user authentication implementation"
-        ),
+        detail=("Delete saved activity endpoint requires user authentication implementation"),
     )

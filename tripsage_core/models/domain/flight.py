@@ -69,34 +69,18 @@ class FlightOffer(TripSageDomainModel):
     cabin_class: Optional[CabinClass] = Field(None, description="Cabin class")
 
     # Additional domain-specific fields for enhanced functionality
-    segments: Optional[List[FlightSegment]] = Field(
-        None, description="Parsed flight segments"
-    )
-    origin_airport: Optional[Airport] = Field(
-        None, description="Origin airport details"
-    )
-    destination_airport: Optional[Airport] = Field(
-        None, description="Destination airport details"
-    )
-    departure_datetime: Optional[str] = Field(
-        None, description="Combined departure date and time (ISO format)"
-    )
-    arrival_datetime: Optional[str] = Field(
-        None, description="Combined arrival date and time (ISO format)"
-    )
-    total_duration_minutes: PositiveInt = Field(
-        None, description="Total travel duration in minutes"
-    )
+    segments: Optional[List[FlightSegment]] = Field(None, description="Parsed flight segments")
+    origin_airport: Optional[Airport] = Field(None, description="Origin airport details")
+    destination_airport: Optional[Airport] = Field(None, description="Destination airport details")
+    departure_datetime: Optional[str] = Field(None, description="Combined departure date and time (ISO format)")
+    arrival_datetime: Optional[str] = Field(None, description="Combined arrival date and time (ISO format)")
+    total_duration_minutes: PositiveInt = Field(None, description="Total travel duration in minutes")
     stops_count: PositiveInt = Field(None, description="Number of stops")
     airlines: Optional[List[str]] = Field(None, description="Airlines involved")
     booking_class: Optional[str] = Field(None, description="Booking class code")
     fare_basis: Optional[str] = Field(None, description="Fare basis code")
 
     # Source and tracking information
-    source: Optional[str] = Field(
-        None, description="Source of the offer (e.g., 'duffel', 'amadeus')"
-    )
+    source: Optional[str] = Field(None, description="Source of the offer (e.g., 'duffel', 'amadeus')")
     search_id: Optional[str] = Field(None, description="Associated search ID")
-    expires_at: Optional[str] = Field(
-        None, description="Offer expiration timestamp (ISO format)"
-    )
+    expires_at: Optional[str] = Field(None, description="Offer expiration timestamp (ISO format)")

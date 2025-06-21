@@ -100,9 +100,7 @@ class ChangePasswordRequest(BaseModel):
             CommonValidators.passwords_match(info.data["new_password"], v)
         if "current_password" in info.data and "new_password" in info.data:
             # Check that new password is different from current
-            CommonValidators.passwords_different(
-                info.data["current_password"], info.data["new_password"]
-            )
+            CommonValidators.passwords_different(info.data["current_password"], info.data["new_password"])
         return v
 
 
@@ -174,9 +172,7 @@ class UserResponse(BaseModel):
     created_at: datetime = Field(description="Account creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
     is_active: bool = Field(default=True, description="Whether user account is active")
-    is_verified: bool = Field(
-        default=False, description="Whether user account is verified"
-    )
+    is_verified: bool = Field(default=False, description="Whether user account is verified")
     preferences: Optional[Dict] = Field(default=None, description="User preferences")
 
 
@@ -208,6 +204,4 @@ class PasswordResetResponse(BaseModel):
 
     message: str = Field(description="Reset status message")
     email: EmailStr = Field(description="Email where reset link was sent")
-    reset_token_expires_at: Optional[datetime] = Field(
-        default=None, description="When reset token expires"
-    )
+    reset_token_expires_at: Optional[datetime] = Field(default=None, description="When reset token expires")

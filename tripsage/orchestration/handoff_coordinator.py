@@ -47,13 +47,9 @@ class HandoffRule(BaseModel):
     from_agent: str = Field(description="Source agent name")
     to_agent: str = Field(description="Target agent name")
     trigger: HandoffTrigger = Field(description="Handoff trigger type")
-    conditions: Dict[str, Any] = Field(
-        default_factory=dict, description="Handoff conditions"
-    )
+    conditions: Dict[str, Any] = Field(default_factory=dict, description="Handoff conditions")
     priority: int = Field(default=1, description="Rule priority (higher wins)")
-    context_keys: List[str] = Field(
-        default_factory=list, description="State keys to preserve in handoff"
-    )
+    context_keys: List[str] = Field(default_factory=list, description="State keys to preserve in handoff")
 
 
 class HandoffContext(BaseModel):
@@ -63,15 +59,9 @@ class HandoffContext(BaseModel):
     to_agent: str = Field(description="Target agent")
     trigger: HandoffTrigger = Field(description="Handoff trigger")
     reason: str = Field(description="Reason for handoff")
-    timestamp: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
-    preserved_context: Dict[str, Any] = Field(
-        default_factory=dict, description="Context to preserve"
-    )
-    handoff_metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    preserved_context: Dict[str, Any] = Field(default_factory=dict, description="Context to preserve")
+    handoff_metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class AgentHandoffCoordinator:
@@ -266,21 +256,14 @@ class AgentHandoffCoordinator:
         Returns:
             Tuple of (next_agent_name, handoff_context) or None if no handoff needed
         """
-        logger.debug(
-            f"Determining next agent from {current_agent} with trigger {trigger}"
-        )
+        logger.debug(f"Determining next agent from {current_agent} with trigger {trigger}")
 
         # Analyze state and find matching rules
         for rule in self.handoff_rules:
             if self._matches_rule(rule, current_agent, state, trigger):
-                handoff_context = self._create_handoff_context(
-                    rule, current_agent, state, trigger
-                )
+                handoff_context = self._create_handoff_context(rule, current_agent, state, trigger)
 
-                logger.info(
-                    f"Handoff determined: {current_agent} -> {rule.to_agent} "
-                    f"({trigger})"
-                )
+                logger.info(f"Handoff determined: {current_agent} -> {rule.to_agent} ({trigger})")
                 return rule.to_agent, handoff_context
 
         logger.debug(f"No handoff needed for {current_agent}")
@@ -316,9 +299,7 @@ class AgentHandoffCoordinator:
         # Check conditions
         return self._evaluate_conditions(rule.conditions, state)
 
-    def _evaluate_conditions(
-        self, conditions: Dict[str, Any], state: TravelPlanningState
-    ) -> bool:
+    def _evaluate_conditions(self, conditions: Dict[str, Any], state: TravelPlanningState) -> bool:
         """
         Evaluate handoff conditions against current state.
 
@@ -443,19 +424,14 @@ class AgentHandoffCoordinator:
 
         return handoff_context
 
-    def _generate_handoff_reason(
-        self, rule: HandoffRule, trigger: HandoffTrigger, state: TravelPlanningState
-    ) -> str:
+    def _generate_handoff_reason(self, rule: HandoffRule, trigger: HandoffTrigger, state: TravelPlanningState) -> str:
         """Generate human-readable handoff reason."""
         if trigger == HandoffTrigger.USER_REQUEST:
             return f"User request requires {rule.to_agent} capabilities"
         elif trigger == HandoffTrigger.TASK_COMPLETION:
             return f"Task completed, transitioning to {rule.to_agent} for next phase"
         elif trigger == HandoffTrigger.MISSING_CAPABILITY:
-            return (
-                f"Current agent lacks required capability, "
-                f"transferring to {rule.to_agent}"
-            )
+            return f"Current agent lacks required capability, transferring to {rule.to_agent}"
         elif trigger == HandoffTrigger.ERROR_RECOVERY:
             return f"Error recovery required, transferring to {rule.to_agent}"
         elif trigger == HandoffTrigger.TIMEOUT:
@@ -463,9 +439,7 @@ class AgentHandoffCoordinator:
         else:
             return f"Handoff to {rule.to_agent} triggered by {trigger}"
 
-    async def execute_handoff(
-        self, handoff_context: HandoffContext, state: TravelPlanningState
-    ) -> TravelPlanningState:
+    async def execute_handoff(self, handoff_context: HandoffContext, state: TravelPlanningState) -> TravelPlanningState:
         """
         Execute agent handoff and update state.
 
@@ -476,10 +450,7 @@ class AgentHandoffCoordinator:
         Returns:
             Updated state with handoff information
         """
-        logger.info(
-            f"Executing handoff: {handoff_context.from_agent} -> "
-            f"{handoff_context.to_agent}"
-        )
+        logger.info(f"Executing handoff: {handoff_context.from_agent} -> {handoff_context.to_agent}")
 
         # Update state with handoff information
         agent_history = state.get("agent_history", [])
@@ -511,20 +482,14 @@ class AgentHandoffCoordinator:
         """Get capabilities for a specific agent."""
         return self.agent_capabilities.get(agent_name, set())
 
-    def can_handle_capability(
-        self, agent_name: str, capability: AgentCapability
-    ) -> bool:
+    def can_handle_capability(self, agent_name: str, capability: AgentCapability) -> bool:
         """Check if an agent can handle a specific capability."""
         agent_caps = self.get_agent_capabilities(agent_name)
         return capability in agent_caps
 
     def find_agents_with_capability(self, capability: AgentCapability) -> List[str]:
         """Find all agents that can handle a specific capability."""
-        return [
-            agent
-            for agent, caps in self.agent_capabilities.items()
-            if capability in caps
-        ]
+        return [agent for agent, caps in self.agent_capabilities.items() if capability in caps]
 
     def get_handoff_history(self, limit: int = 10) -> List[HandoffContext]:
         """Get recent handoff history."""

@@ -51,11 +51,10 @@ Object.defineProperty(window, "navigator", {
   writable: true,
 });
 
-// Mock window.matchMedia for theme detection
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-    matches: false,
+// Mock window.matchMedia for theme detection - ensure global consistency
+const createMatchMediaMock = (defaultMatches = false) => 
+  vi.fn().mockImplementation((query: string) => ({
+    matches: query === "(prefers-color-scheme: dark)" ? defaultMatches : false,
     media: query,
     onchange: null,
     addListener: vi.fn(),
@@ -63,7 +62,14 @@ Object.defineProperty(window, "matchMedia", {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  })),
+  }));
+
+// Ensure matchMedia is available immediately
+(globalThis as any).window = globalThis.window ?? {};
+Object.defineProperty(globalThis.window, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: createMatchMediaMock(false),
 });
 
 // Mock storage

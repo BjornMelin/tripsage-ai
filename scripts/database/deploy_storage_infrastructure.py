@@ -70,10 +70,7 @@ class StorageDeployment:
         """Run the storage infrastructure migration."""
         try:
             migration_file = (
-                self.project_root
-                / "supabase"
-                / "migrations"
-                / "20250111_01_add_storage_infrastructure.sql"
+                self.project_root / "supabase" / "migrations" / "20250111_01_add_storage_infrastructure.sql"
             )
 
             if not migration_file.exists():
@@ -159,23 +156,14 @@ class StorageDeployment:
         try:
             # In a real deployment, this would use Supabase CLI
             # For now, we'll just verify the function file exists
-            function_file = (
-                self.project_root
-                / "supabase"
-                / "functions"
-                / "file-processor"
-                / "index.ts"
-            )
+            function_file = self.project_root / "supabase" / "functions" / "file-processor" / "index.ts"
 
             if not function_file.exists():
                 print("❌ Edge Function file not found")
                 return False
 
             print("✅ Edge Function file ready for deployment")
-            print(
-                "📝 Note: Deploy manually using: "
-                "supabase functions deploy file-processor"
-            )
+            print("📝 Note: Deploy manually using: supabase functions deploy file-processor")
             return True
 
         except Exception as e:
@@ -301,10 +289,7 @@ class StorageDeployment:
             status = "✅" if success else "❌"
             print(f"{status} {step.replace('_', ' ').title()}")
 
-        print(
-            f"\n📈 Success Rate: {successful_steps}/{total_steps} "
-            f"({(successful_steps / total_steps) * 100:.1f}%)"
-        )
+        print(f"\n📈 Success Rate: {successful_steps}/{total_steps} ({(successful_steps / total_steps) * 100:.1f}%)")
 
         if successful_steps == total_steps:
             print("\n🎉 Storage infrastructure deployment completed successfully!")
@@ -315,10 +300,7 @@ class StorageDeployment:
             print("4. Test file upload/download flows")
             print("5. Monitor storage usage and performance")
         else:
-            print(
-                "\n⚠️  Some deployment steps failed. "
-                "Please review and fix issues before proceeding."
-            )
+            print("\n⚠️  Some deployment steps failed. Please review and fix issues before proceeding.")
 
 
 async def main():

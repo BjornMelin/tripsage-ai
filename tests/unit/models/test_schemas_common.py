@@ -116,9 +116,7 @@ class TestBaseModels:
     def test_error_response(self):
         """Test ErrorResponse model."""
         details = {"field": "email", "issue": "invalid format"}
-        response = ErrorResponse(
-            message="Validation failed", error_code="VALIDATION_ERROR", details=details
-        )
+        response = ErrorResponse(message="Validation failed", error_code="VALIDATION_ERROR", details=details)
 
         assert response.success is False
         assert response.message == "Validation failed"
@@ -146,15 +144,11 @@ class TestBaseModels:
     def test_validation_error_response(self):
         """Test ValidationErrorResponse model."""
         validation_errors = [
-            ValidationErrorDetail(
-                field="email", message="Invalid email format", value="invalid-email"
-            ),
+            ValidationErrorDetail(field="email", message="Invalid email format", value="invalid-email"),
             ValidationErrorDetail(field="age", message="Must be positive", value=-5),
         ]
 
-        response = ValidationErrorResponse(
-            message="Validation failed", validation_errors=validation_errors
-        )
+        response = ValidationErrorResponse(message="Validation failed", validation_errors=validation_errors)
 
         assert response.success is False
         assert response.error_code == "VALIDATION_ERROR"
@@ -167,9 +161,7 @@ class TestFinancialModels:
 
     def test_currency_creation(self):
         """Test Currency model creation."""
-        currency = Currency(
-            code=CurrencyCode.USD, symbol="$", name="US Dollar", decimal_places=2
-        )
+        currency = Currency(code=CurrencyCode.USD, symbol="$", name="US Dollar", decimal_places=2)
 
         assert currency.code == CurrencyCode.USD
         assert currency.symbol == "$"
@@ -233,9 +225,7 @@ class TestFinancialModels:
         with pytest.raises(ValidationError) as excinfo:
             PriceRange(min_price=min_price, max_price=max_price)
 
-        assert "Max price must be greater than or equal to min price" in str(
-            excinfo.value
-        )
+        assert "Max price must be greater than or equal to min price" in str(excinfo.value)
 
     def test_budget_creation(self):
         """Test Budget model creation."""
@@ -373,9 +363,7 @@ class TestGeographicModels:
         with pytest.raises(ValidationError) as excinfo:
             Airport(code="INVALID", name="Test", city="Test", country="Test")
 
-        assert "Airport code must be exactly 3 characters (IATA code)" in str(
-            excinfo.value
-        )
+        assert "Airport code must be exactly 3 characters (IATA code)" in str(excinfo.value)
 
     def test_route_creation(self):
         """Test Route model creation."""
@@ -531,9 +519,7 @@ def sample_address():
 class TestIntegration:
     """Test integration between different schema models."""
 
-    def test_place_with_coordinates_and_address(
-        self, sample_coordinates, sample_address
-    ):
+    def test_place_with_coordinates_and_address(self, sample_coordinates, sample_address):
         """Test Place model with both coordinates and address."""
         place = Place(
             name="Test Location",
@@ -586,9 +572,7 @@ class TestIntegration:
             has_prev=False,
         )
 
-        response = PaginatedResponse[Place](
-            success=True, data=places, pagination=pagination
-        )
+        response = PaginatedResponse[Place](success=True, data=places, pagination=pagination)
 
         assert response.success is True
         assert len(response.data) == 2

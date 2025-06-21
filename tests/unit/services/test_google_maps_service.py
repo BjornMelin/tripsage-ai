@@ -50,9 +50,7 @@ class TestGoogleMapsService:
 
     def test_client_initialization(self, google_maps_service, mock_settings):
         """Test that client is properly initialized with settings."""
-        with patch(
-            "tripsage_core.services.external_apis.google_maps_service.googlemaps.Client"
-        ) as mock_client_class:
+        with patch("tripsage_core.services.external_apis.google_maps_service.googlemaps.Client") as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
 
@@ -79,9 +77,7 @@ class TestGoogleMapsService:
             return_value=mock_settings,
         ):
             service = GoogleMapsService()
-            with pytest.raises(
-                CoreServiceError, match="Google Maps API key not configured"
-            ):
+            with pytest.raises(CoreServiceError, match="Google Maps API key not configured"):
                 _ = service.client
 
     @pytest.mark.asyncio
@@ -98,15 +94,11 @@ class TestGoogleMapsService:
         google_maps_service._client = mock_client
 
         # Execute
-        result = await google_maps_service.geocode(
-            "1600 Amphitheatre Parkway, Mountain View, CA"
-        )
+        result = await google_maps_service.geocode("1600 Amphitheatre Parkway, Mountain View, CA")
 
         # Verify
         assert result == expected_result
-        mock_client.geocode.assert_called_once_with(
-            "1600 Amphitheatre Parkway, Mountain View, CA"
-        )
+        mock_client.geocode.assert_called_once_with("1600 Amphitheatre Parkway, Mountain View, CA")
 
     @pytest.mark.asyncio
     async def test_geocode_api_error(self, google_maps_service, mock_client):
@@ -155,9 +147,7 @@ class TestGoogleMapsService:
         """Test successful place search."""
         # Setup
         expected_result = {
-            "results": [
-                {"name": "Test Restaurant", "place_id": "test_place_id", "rating": 4.5}
-            ],
+            "results": [{"name": "Test Restaurant", "place_id": "test_place_id", "rating": 4.5}],
             "status": "OK",
         }
         mock_client.places.return_value = expected_result
@@ -234,9 +224,7 @@ class TestGoogleMapsService:
         google_maps_service._client = mock_client
 
         # Execute
-        result = await google_maps_service.get_directions(
-            "San Francisco, CA", "Oakland, CA", mode="driving"
-        )
+        result = await google_maps_service.get_directions("San Francisco, CA", "Oakland, CA", mode="driving")
 
         # Verify
         assert result == expected_result
@@ -320,9 +308,7 @@ class TestGoogleMapsService:
 
         # Verify
         assert result == expected_result
-        mock_client.timezone.assert_called_once_with(
-            location=location, timestamp=1331161200
-        )
+        mock_client.timezone.assert_called_once_with(location=location, timestamp=1331161200)
 
     @pytest.mark.asyncio
     async def test_get_timezone_no_timestamp(self, google_maps_service, mock_client):
@@ -370,9 +356,7 @@ class TestGoogleMapsService:
         assert service1 is service2
 
     @pytest.mark.asyncio
-    async def test_with_error_handling_decorator(
-        self, google_maps_service, mock_client
-    ):
+    async def test_with_error_handling_decorator(self, google_maps_service, mock_client):
         """Test that the error handling decorator works correctly."""
         # Setup
         mock_client.geocode.side_effect = Exception("Unexpected error")
@@ -405,12 +389,8 @@ class TestAsyncToThreadIntegration:
         """Test that asyncio.to_thread is used correctly."""
         # This is a basic integration test to ensure async wrapper works
         with (
-            patch(
-                "tripsage_core.services.external_apis.google_maps_service.get_settings"
-            ) as mock_get_settings,
-            patch(
-                "tripsage_core.services.external_apis.google_maps_service.googlemaps.Client"
-            ) as mock_client_class,
+            patch("tripsage_core.services.external_apis.google_maps_service.get_settings") as mock_get_settings,
+            patch("tripsage_core.services.external_apis.google_maps_service.googlemaps.Client") as mock_client_class,
             patch("asyncio.to_thread") as mock_to_thread,
         ):
             # Setup mocks

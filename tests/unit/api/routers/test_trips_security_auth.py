@@ -142,20 +142,14 @@ class TestTripsSecurityAuthentication:
             description="This should fail",
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 10),
-            destinations=[
-                TripDestination(
-                    name="Unauthorized Location", country="None", city="None"
-                )
-            ],
+            destinations=[TripDestination(name="Unauthorized Location", country="None", city="None")],
         )
 
         # Test would typically fail at middleware level, but testing router behavior
         with pytest.raises(AttributeError):  # Principal is None
             await create_trip(trip_request, None, secure_trip_service)
 
-    async def test_invalid_principal_trip_access(
-        self, invalid_principal, secure_trip_service
-    ):
+    async def test_invalid_principal_trip_access(self, invalid_principal, secure_trip_service):
         """Test trip access with invalid principal."""
         from tripsage.api.routers.trips import get_trip
 
@@ -170,16 +164,12 @@ class TestTripsSecurityAuthentication:
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "Trip not found"
 
-    async def test_expired_authentication_handling(
-        self, expired_principal, secure_trip_service, sample_trip_data
-    ):
+    async def test_expired_authentication_handling(self, expired_principal, secure_trip_service, sample_trip_data):
         """Test handling of expired authentication."""
         from tripsage.api.routers.trips import create_trip
 
         # Mock authentication expired scenario
-        secure_trip_service.create_trip.side_effect = PermissionError(
-            "Authentication expired"
-        )
+        secure_trip_service.create_trip.side_effect = PermissionError("Authentication expired")
 
         with pytest.raises(HTTPException) as exc_info:
             await create_trip(sample_trip_data, expired_principal, secure_trip_service)
@@ -188,9 +178,7 @@ class TestTripsSecurityAuthentication:
 
     # ===== AUTHORIZATION TESTS =====
 
-    async def test_access_others_private_trip(
-        self, malicious_principal, secure_trip_service
-    ):
+    async def test_access_others_private_trip(self, malicious_principal, secure_trip_service):
         """Test unauthorized access to other user's private trip."""
         from tripsage.api.routers.trips import get_trip
 
@@ -205,9 +193,7 @@ class TestTripsSecurityAuthentication:
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "Trip not found"
 
-    async def test_unauthorized_trip_modification(
-        self, malicious_principal, secure_trip_service
-    ):
+    async def test_unauthorized_trip_modification(self, malicious_principal, secure_trip_service):
         """Test unauthorized trip modification attempt."""
         from tripsage.api.routers.trips import update_trip
 
@@ -218,38 +204,28 @@ class TestTripsSecurityAuthentication:
         )
 
         # Service should reject unauthorized modification
-        secure_trip_service.update_trip.side_effect = PermissionError(
-            "No permission to edit this trip"
-        )
+        secure_trip_service.update_trip.side_effect = PermissionError("No permission to edit this trip")
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_trip(
-                trip_id, malicious_update, malicious_principal, secure_trip_service
-            )
+            await update_trip(trip_id, malicious_update, malicious_principal, secure_trip_service)
 
         assert exc_info.value.status_code == 500
 
-    async def test_unauthorized_trip_deletion(
-        self, malicious_principal, secure_trip_service
-    ):
+    async def test_unauthorized_trip_deletion(self, malicious_principal, secure_trip_service):
         """Test unauthorized trip deletion attempt."""
         from tripsage.api.routers.trips import delete_trip
 
         trip_id = uuid4()
 
         # Service should reject unauthorized deletion
-        secure_trip_service.delete_trip.side_effect = PermissionError(
-            "Only trip owner can delete the trip"
-        )
+        secure_trip_service.delete_trip.side_effect = PermissionError("Only trip owner can delete the trip")
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_trip(trip_id, malicious_principal, secure_trip_service)
 
         assert exc_info.value.status_code == 500
 
-    async def test_permission_escalation_attempt(
-        self, malicious_principal, secure_trip_service, sample_trip_response
-    ):
+    async def test_permission_escalation_attempt(self, malicious_principal, secure_trip_service, sample_trip_response):
         """Test attempt to escalate permissions through trip sharing."""
         from tripsage.api.routers.trips import get_trip
 
@@ -264,15 +240,11 @@ class TestTripsSecurityAuthentication:
         assert exc_info.value.status_code == 404
 
         # Verify service was called with correct user ID (no escalation)
-        secure_trip_service.get_trip.assert_called_once_with(
-            trip_id=str(trip_id), user_id="malicious_user_001"
-        )
+        secure_trip_service.get_trip.assert_called_once_with(trip_id=str(trip_id), user_id="malicious_user_001")
 
     # ===== DATA VALIDATION SECURITY TESTS =====
 
-    async def test_sql_injection_prevention_in_search(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_sql_injection_prevention_in_search(self, valid_principal, secure_trip_service):
         """Test SQL injection prevention in search functionality."""
         from tripsage.api.routers.trips import search_trips
 
@@ -301,9 +273,7 @@ class TestTripsSecurityAuthentication:
             user_id="valid_user_001", query=malicious_query, limit=10
         )
 
-    async def test_xss_prevention_in_trip_data(
-        self, valid_principal, secure_trip_service, sample_trip_response
-    ):
+    async def test_xss_prevention_in_trip_data(self, valid_principal, secure_trip_service, sample_trip_response):
         """Test XSS prevention in trip data."""
         from tripsage.api.routers.trips import create_trip
 
@@ -327,18 +297,14 @@ class TestTripsSecurityAuthentication:
         sample_trip_response.description = malicious_trip_data.description
         secure_trip_service.create_trip.return_value = sample_trip_response
 
-        result = await create_trip(
-            malicious_trip_data, valid_principal, secure_trip_service
-        )
+        result = await create_trip(malicious_trip_data, valid_principal, secure_trip_service)
 
         # Data should be preserved as-is
         # (sanitization should happen at presentation layer)
         assert "<script>" in result.title
         assert "<img" in result.description
 
-    async def test_path_traversal_prevention(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_path_traversal_prevention(self, valid_principal, secure_trip_service):
         """Test path traversal prevention in export functionality."""
         from tripsage.api.routers.trips import export_trip
 
@@ -381,14 +347,10 @@ class TestTripsSecurityAuthentication:
                 description=oversized_description,
                 start_date=date(2024, 6, 1),
                 end_date=date(2024, 6, 10),
-                destinations=[
-                    TripDestination(name="Location", country="Country", city="City")
-                ],
+                destinations=[TripDestination(name="Location", country="Country", city="City")],
             )
 
-    async def test_invalid_date_range_security(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_invalid_date_range_security(self, valid_principal, secure_trip_service):
         """Test security implications of invalid date ranges."""
 
         # Attempt to create trip with end date before start date
@@ -398,14 +360,10 @@ class TestTripsSecurityAuthentication:
                 description="Testing invalid dates",
                 start_date=date(2024, 6, 10),
                 end_date=date(2024, 6, 1),  # Before start date
-                destinations=[
-                    TripDestination(name="Location", country="Country", city="City")
-                ],
+                destinations=[TripDestination(name="Location", country="Country", city="City")],
             )
 
-    async def test_negative_pagination_parameters(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_negative_pagination_parameters(self, valid_principal, secure_trip_service):
         """Test security with negative pagination parameters."""
         from tripsage.api.routers.trips import list_trips
 
@@ -425,9 +383,7 @@ class TestTripsSecurityAuthentication:
 
     # ===== SESSION AND TOKEN SECURITY TESTS =====
 
-    async def test_concurrent_session_handling(
-        self, valid_principal, secure_trip_service, sample_trip_response
-    ):
+    async def test_concurrent_session_handling(self, valid_principal, secure_trip_service, sample_trip_response):
         """Test handling of concurrent sessions for same user."""
         from tripsage.api.routers.trips import get_trip, update_trip
 
@@ -441,16 +397,12 @@ class TestTripsSecurityAuthentication:
 
         # Second session (same user) updates trip
         update_request = UpdateTripRequest(title="Updated by Second Session")
-        trip_2 = await update_trip(
-            trip_id, update_request, valid_principal, secure_trip_service
-        )
+        trip_2 = await update_trip(trip_id, update_request, valid_principal, secure_trip_service)
 
         # Both sessions should work (same user)
         assert trip_2.title == "Security Test Trip"  # Mock returns same title
 
-    async def test_token_reuse_prevention(
-        self, valid_principal, malicious_principal, secure_trip_service
-    ):
+    async def test_token_reuse_prevention(self, valid_principal, malicious_principal, secure_trip_service):
         """Test prevention of token reuse across different users."""
         from tripsage.api.routers.trips import get_trip
 
@@ -493,11 +445,7 @@ class TestTripsSecurityAuthentication:
                 description=f"Trip created in rapid succession {i}",
                 start_date=date(2024, 6, 1),
                 end_date=date(2024, 6, 10),
-                destinations=[
-                    TripDestination(
-                        name=f"Location {i}", country="Country", city="City"
-                    )
-                ],
+                destinations=[TripDestination(name=f"Location {i}", country="Country", city="City")],
             )
 
             result = await create_trip(trip_data, valid_principal, secure_trip_service)
@@ -529,9 +477,7 @@ class TestTripsSecurityAuthentication:
 
     # ===== DATA LEAKAGE PREVENTION TESTS =====
 
-    async def test_sensitive_data_exposure_prevention(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_sensitive_data_exposure_prevention(self, valid_principal, secure_trip_service):
         """Test prevention of sensitive data exposure in responses."""
         from tripsage.api.routers.trips import get_trip
 
@@ -542,9 +488,7 @@ class TestTripsSecurityAuthentication:
         sensitive_trip.id = str(trip_id)
         sensitive_trip.user_id = "valid_user_001"
         sensitive_trip.title = "Trip with Sensitive Data"
-        sensitive_trip.description = (
-            "Contains SSN: 123-45-6789 and Credit Card: 4111-1111-1111-1111"
-        )
+        sensitive_trip.description = "Contains SSN: 123-45-6789 and Credit Card: 4111-1111-1111-1111"
         sensitive_trip.destinations = []
         sensitive_trip.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
         sensitive_trip.end_date = datetime(2024, 6, 10, tzinfo=timezone.utc)
@@ -562,9 +506,7 @@ class TestTripsSecurityAuthentication:
         assert "SSN" in result.description
         # Service layer should handle sensitive data filtering
 
-    async def test_error_message_information_disclosure(
-        self, malicious_principal, secure_trip_service
-    ):
+    async def test_error_message_information_disclosure(self, malicious_principal, secure_trip_service):
         """Test prevention of information disclosure through error messages."""
         from tripsage.api.routers.trips import get_trip
 
@@ -600,9 +542,7 @@ class TestTripsSecurityAuthentication:
 
     # ===== BUSINESS LOGIC SECURITY TESTS =====
 
-    async def test_trip_visibility_enforcement(
-        self, valid_principal, malicious_principal, secure_trip_service
-    ):
+    async def test_trip_visibility_enforcement(self, valid_principal, malicious_principal, secure_trip_service):
         """Test enforcement of trip visibility settings."""
         from tripsage.api.routers.trips import get_trip
 
@@ -625,9 +565,7 @@ class TestTripsSecurityAuthentication:
             await get_trip(trip_id, malicious_principal, secure_trip_service)
         assert exc_info.value.status_code == 404
 
-    async def test_data_integrity_validation(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_data_integrity_validation(self, valid_principal, secure_trip_service):
         """Test data integrity validation in trip operations."""
         from tripsage.api.routers.trips import update_trip
 
@@ -641,15 +579,11 @@ class TestTripsSecurityAuthentication:
 
         # Should fail validation
         with pytest.raises(ValueError, match="End date must be after start date"):
-            await update_trip(
-                trip_id, inconsistent_update, valid_principal, secure_trip_service
-            )
+            await update_trip(trip_id, inconsistent_update, valid_principal, secure_trip_service)
 
     # ===== AUDIT AND LOGGING SECURITY TESTS =====
 
-    async def test_security_event_logging(
-        self, malicious_principal, secure_trip_service
-    ):
+    async def test_security_event_logging(self, malicious_principal, secure_trip_service):
         """Test that security events are properly logged."""
         from tripsage.api.routers.trips import get_trip
 
@@ -667,9 +601,7 @@ class TestTripsSecurityAuthentication:
             log_call = mock_logger.info.call_args[0][0]
             assert "Getting trip" in log_call
 
-    async def test_no_sensitive_data_in_logs(
-        self, valid_principal, secure_trip_service, sample_trip_data
-    ):
+    async def test_no_sensitive_data_in_logs(self, valid_principal, secure_trip_service, sample_trip_data):
         """Test that sensitive data is not logged."""
         from tripsage.api.routers.trips import create_trip
 
@@ -679,9 +611,7 @@ class TestTripsSecurityAuthentication:
             description="Contains credit card: 4111-1111-1111-1111",
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 10),
-            destinations=[
-                TripDestination(name="Location", country="Country", city="City")
-            ],
+            destinations=[TripDestination(name="Location", country="Country", city="City")],
         )
 
         sample_response = MagicMock()
@@ -727,9 +657,7 @@ class TestTripsSecurityAuthentication:
 
         # Step 1: Valid user creates trip
         secure_trip_service.create_trip.return_value = sample_trip_response
-        created_trip = await create_trip(
-            sample_trip_data, valid_principal, secure_trip_service
-        )
+        created_trip = await create_trip(sample_trip_data, valid_principal, secure_trip_service)
         trip_id = UUID(created_trip.id)
 
         # Step 2: Valid user can access their trip
@@ -747,9 +675,7 @@ class TestTripsSecurityAuthentication:
         malicious_update = UpdateTripRequest(title="Hacked Trip")
         secure_trip_service.update_trip.side_effect = PermissionError("Access denied")
         with pytest.raises(HTTPException):
-            await update_trip(
-                trip_id, malicious_update, malicious_principal, secure_trip_service
-            )
+            await update_trip(trip_id, malicious_update, malicious_principal, secure_trip_service)
 
         # Step 5: Malicious user cannot delete the trip
         secure_trip_service.delete_trip.side_effect = PermissionError("Access denied")
@@ -765,17 +691,13 @@ class TestTripsSecurityAuthentication:
         assert final_access.id == trip_id
 
         valid_update = UpdateTripRequest(title="Updated by Owner")
-        updated_trip = await update_trip(
-            trip_id, valid_update, valid_principal, secure_trip_service
-        )
+        updated_trip = await update_trip(trip_id, valid_update, valid_principal, secure_trip_service)
         assert updated_trip.id == trip_id
 
         # Final deletion should succeed
         await delete_trip(trip_id, valid_principal, secure_trip_service)
 
-    async def test_edge_case_security_scenarios(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_edge_case_security_scenarios(self, valid_principal, secure_trip_service):
         """Test edge case security scenarios."""
         from tripsage.api.routers.trips import get_trip, search_trips
 

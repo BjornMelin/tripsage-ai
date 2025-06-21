@@ -168,12 +168,8 @@ class TripResponse(BaseModel):
     end_date: date = Field(description="Trip end date")
     duration_days: int = Field(description="Trip duration in days")
     destinations: List[TripDestination] = Field(description="Trip destinations")
-    preferences: Optional[TripPreferences] = Field(
-        default=None, description="Trip preferences"
-    )
-    itinerary_id: Optional[UUID] = Field(
-        default=None, description="Associated itinerary ID"
-    )
+    preferences: Optional[TripPreferences] = Field(default=None, description="Trip preferences")
+    itinerary_id: Optional[UUID] = Field(default=None, description="Associated itinerary ID")
     status: str = Field(description="Trip status")
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
@@ -213,9 +209,7 @@ class TripSummaryResponse(BaseModel):
                 "duration_days": 14,
                 "destinations": ["Paris", "Rome", "Barcelona"],
                 "accommodation_summary": "4-star hotels in city centers",
-                "transportation_summary": (
-                    "Economy flights with 1 connection, local transit"
-                ),
+                "transportation_summary": ("Economy flights with 1 connection, local transit"),
                 "budget_summary": {
                     "total": 5000,
                     "currency": "USD",
@@ -239,15 +233,9 @@ class TripSummaryResponse(BaseModel):
     date_range: str = Field(description="Trip date range")
     duration_days: int = Field(description="Trip duration in days")
     destinations: List[str] = Field(description="Trip destination names")
-    accommodation_summary: Optional[str] = Field(
-        default=None, description="Accommodation summary"
-    )
-    transportation_summary: Optional[str] = Field(
-        default=None, description="Transportation summary"
-    )
-    budget_summary: Optional[Dict[str, Any]] = Field(
-        default=None, description="Budget summary"
-    )
+    accommodation_summary: Optional[str] = Field(default=None, description="Accommodation summary")
+    transportation_summary: Optional[str] = Field(default=None, description="Transportation summary")
+    budget_summary: Optional[Dict[str, Any]] = Field(default=None, description="Budget summary")
     has_itinerary: bool = Field(description="Whether trip has an itinerary")
     completion_percentage: int = Field(
         description="Trip planning completion percentage",
@@ -265,10 +253,7 @@ class TripSuggestionResponse(BaseModel):
                 "id": "suggestion-1",
                 "title": "Tokyo Cherry Blossom Adventure",
                 "destination": "Tokyo, Japan",
-                "description": (
-                    "Experience the magic of cherry blossom season in Japan's "
-                    "vibrant capital city."
-                ),
+                "description": ("Experience the magic of cherry blossom season in Japan's vibrant capital city."),
                 "image_url": "https://example.com/tokyo-cherry-blossom.jpg",
                 "estimated_price": 2800,
                 "currency": "USD",
@@ -308,28 +293,14 @@ class TripSuggestionResponse(BaseModel):
     currency: str = Field(description="Price currency")
     duration: int = Field(description="Trip duration in days")
     rating: float = Field(description="Average rating", ge=0, le=5)
-    category: str = Field(
-        description=(
-            "Trip category (adventure, relaxation, culture, nature, city, beach)"
-        )
-    )
+    category: str = Field(description=("Trip category (adventure, relaxation, culture, nature, city, beach)"))
     best_time_to_visit: str = Field(description="Recommended time period")
     highlights: List[str] = Field(description="Key highlights", max_length=10)
-    difficulty: Optional[str] = Field(
-        default=None, description="Trip difficulty (easy, moderate, challenging)"
-    )
-    trending: bool = Field(
-        default=False, description="Whether this is a trending destination"
-    )
-    seasonal: bool = Field(
-        default=False, description="Whether this is seasonal/time-sensitive"
-    )
-    relevance_score: Optional[float] = Field(
-        default=None, description="Personalization relevance score", ge=0, le=1
-    )
-    metadata: Optional[Dict[str, Any]] = Field(
-        default=None, description="Additional metadata"
-    )
+    difficulty: Optional[str] = Field(default=None, description="Trip difficulty (easy, moderate, challenging)")
+    trending: bool = Field(default=False, description="Whether this is a trending destination")
+    seasonal: bool = Field(default=False, description="Whether this is seasonal/time-sensitive")
+    relevance_score: Optional[float] = Field(default=None, description="Personalization relevance score", ge=0, le=1)
+    metadata: Optional[Dict[str, Any]] = Field(default=None, description="Additional metadata")
 
 
 # ===== Trip Collaboration Schemas =====
@@ -364,9 +335,7 @@ class TripCollaboratorResponse(BaseModel):
     permission_level: str = Field(description="Permission level (view, edit, admin)")
     added_by: UUID = Field(description="User ID who added this collaborator")
     added_at: datetime = Field(description="Timestamp when access was granted")
-    is_active: bool = Field(
-        default=True, description="Whether the collaborator is active"
-    )
+    is_active: bool = Field(default=True, description="Whether the collaborator is active")
 
 
 class TripCollaboratorUpdateRequest(BaseModel):
@@ -381,8 +350,6 @@ class TripCollaboratorUpdateRequest(BaseModel):
 class TripCollaboratorsListResponse(BaseModel):
     """Response model for listing trip collaborators."""
 
-    collaborators: List[TripCollaboratorResponse] = Field(
-        description="List of trip collaborators"
-    )
+    collaborators: List[TripCollaboratorResponse] = Field(description="List of trip collaborators")
     total: int = Field(description="Total number of collaborators")
     owner_id: UUID = Field(description="Trip owner user ID")

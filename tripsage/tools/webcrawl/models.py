@@ -12,31 +12,19 @@ class UnifiedCrawlResult(BaseModel):
     """
 
     url: str = Field(..., description="The URL that was crawled")
-    title: Optional[str] = Field(
-        None, description="Page title extracted from the content"
-    )
-    main_content_markdown: Optional[str] = Field(
-        None, description="Main content in markdown format"
-    )
-    main_content_text: Optional[str] = Field(
-        None, description="Main content as plain text"
-    )
-    html_content: Optional[str] = Field(
-        None, description="Raw HTML content if available"
-    )
+    title: Optional[str] = Field(None, description="Page title extracted from the content")
+    main_content_markdown: Optional[str] = Field(None, description="Main content in markdown format")
+    main_content_text: Optional[str] = Field(None, description="Main content as plain text")
+    html_content: Optional[str] = Field(None, description="Raw HTML content if available")
     structured_data: Optional[Dict[str, Any]] = Field(
         None,
-        description=(
-            "Structured data extracted from the page (e.g., JSON-LD, OpenGraph)"
-        ),
+        description=("Structured data extracted from the page (e.g., JSON-LD, OpenGraph)"),
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional metadata about the crawl operation",
     )
-    error_message: Optional[str] = Field(
-        None, description="Error message if crawl failed"
-    )
+    error_message: Optional[str] = Field(None, description="Error message if crawl failed")
     status: str = Field("success", description="Status of the crawl operation")
 
     model_config = {
@@ -44,9 +32,7 @@ class UnifiedCrawlResult(BaseModel):
             "example": {
                 "url": "https://example.com/page",
                 "title": "Example Page",
-                "main_content_markdown": (
-                    "# Example Page\n\nThis is the main content..."
-                ),
+                "main_content_markdown": ("# Example Page\n\nThis is the main content..."),
                 "structured_data": {"type": "Article", "author": "John Doe"},
                 "metadata": {
                     "crawl_timestamp": "2024-03-20T10:00:00Z",
@@ -78,9 +64,4 @@ class UnifiedCrawlResult(BaseModel):
 
     def has_content(self) -> bool:
         """Check if the result contains any meaningful content."""
-        return bool(
-            self.main_content_markdown
-            or self.main_content_text
-            or self.html_content
-            or self.structured_data
-        )
+        return bool(self.main_content_markdown or self.main_content_text or self.html_content or self.structured_data)

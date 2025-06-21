@@ -284,14 +284,10 @@ class TestLoggingUtils:
     def test_configure_logging_file_handling(self, temp_log_dir):
         """Test file handler creation when not in testing mode."""
         with patch.dict(os.environ, {}, clear=True):  # Clear TESTING env
-            with patch(
-                "tripsage_core.utils.logging_utils.get_settings"
-            ) as mock_settings:
+            with patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings:
                 mock_settings.return_value.is_testing.return_value = False
 
-                adapter = configure_logging(
-                    "test.file.handler", log_to_file=True, log_dir=str(temp_log_dir)
-                )
+                adapter = configure_logging("test.file.handler", log_to_file=True, log_dir=str(temp_log_dir))
 
                 # Should have both console and file handlers
                 assert len(adapter.logger.handlers) == 2
@@ -327,15 +323,11 @@ class TestLoggingUtils:
     def test_logger_name_normalization(self, temp_log_dir):
         """Test that logger names are normalized for file paths."""
         with patch.dict(os.environ, {}, clear=True):
-            with patch(
-                "tripsage_core.utils.logging_utils.get_settings"
-            ) as mock_settings:
+            with patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings:
                 mock_settings.return_value.is_testing.return_value = False
 
                 # Use a name with dots that should be converted to underscores
-                adapter = configure_logging(
-                    "test.module.submodule", log_to_file=True, log_dir=str(temp_log_dir)
-                )
+                adapter = configure_logging("test.module.submodule", log_to_file=True, log_dir=str(temp_log_dir))
 
                 # Log a message to trigger file creation
                 adapter.info("Test message")

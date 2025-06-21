@@ -104,9 +104,7 @@ class BenchmarkRunner:
                 "timestamp": time.time(),
             }
 
-            report_path = await self.reporter.generate_report(
-                report_data, "database_only"
-            )
+            report_path = await self.reporter.generate_report(report_data, "database_only")
             report_data["report_path"] = str(report_path)
 
             logger.info(f"Database-only test completed. Report: {report_path}")
@@ -139,9 +137,7 @@ class BenchmarkRunner:
                 "timestamp": time.time(),
             }
 
-            report_path = await self.reporter.generate_report(
-                report_data, "vector_only"
-            )
+            report_path = await self.reporter.generate_report(report_data, "vector_only")
             report_data["report_path"] = str(report_path)
 
             logger.info(f"Vector-only test completed. Report: {report_path}")
@@ -165,20 +161,14 @@ class BenchmarkRunner:
                 concurrent_users=15,
             )
 
-            vector_results = await self._run_vector_scenarios(
-                duration_seconds=600, iterations=500, concurrent_users=10
-            )
+            vector_results = await self._run_vector_scenarios(duration_seconds=600, iterations=500, concurrent_users=10)
 
-            mixed_results = await self._run_mixed_scenarios(
-                duration_seconds=600, iterations=750, concurrent_users=12
-            )
+            mixed_results = await self._run_mixed_scenarios(duration_seconds=600, iterations=750, concurrent_users=12)
 
             await self.metrics.stop_monitoring()
 
             # Validate optimization claims
-            validation_results = self._validate_optimization_claims(
-                database_results, vector_results, mixed_results
-            )
+            validation_results = self._validate_optimization_claims(database_results, vector_results, mixed_results)
 
             report_data = {
                 "test_type": "full_suite",
@@ -235,12 +225,8 @@ class BenchmarkRunner:
 
         results["scenarios_completed"] = 1
         results["total_operations"] = operation_count
-        results["avg_response_time"] = (
-            total_time / operation_count if operation_count > 0 else 0
-        )
-        results["operations_per_second"] = operation_count / (
-            total_time if total_time > 0 else 1
-        )
+        results["avg_response_time"] = total_time / operation_count if operation_count > 0 else 0
+        results["operations_per_second"] = operation_count / (total_time if total_time > 0 else 1)
 
         return results
 
@@ -248,43 +234,28 @@ class BenchmarkRunner:
         self, duration_seconds: int, iterations: int, concurrent_users: int
     ) -> dict[str, Any]:
         """Run database-focused scenarios."""
-        logger.info(
-            f"Running database scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
-        )
+        logger.info(f"Running database scenarios: {iterations} iterations, {concurrent_users} users")
 
         # For real implementation, this would test actual database operations
-        return await self._run_core_scenarios(
-            duration_seconds, iterations, concurrent_users
-        )
+        return await self._run_core_scenarios(duration_seconds, iterations, concurrent_users)
 
     async def _run_vector_scenarios(
         self, duration_seconds: int, iterations: int, concurrent_users: int
     ) -> dict[str, Any]:
         """Run vector search scenarios."""
-        logger.info(
-            f"Running vector scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
-        )
+        logger.info(f"Running vector scenarios: {iterations} iterations, {concurrent_users} users")
 
         # For real implementation, this would test pgvector operations
-        return await self._run_core_scenarios(
-            duration_seconds, iterations, concurrent_users
-        )
+        return await self._run_core_scenarios(duration_seconds, iterations, concurrent_users)
 
     async def _run_mixed_scenarios(
         self, duration_seconds: int, iterations: int, concurrent_users: int
     ) -> dict[str, Any]:
         """Run mixed workload scenarios."""
-        logger.info(
-            f"Running mixed scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
-        )
+        logger.info(f"Running mixed scenarios: {iterations} iterations, {concurrent_users} users")
 
         # For real implementation, this would test combined workloads
-        return await self._run_core_scenarios(
-            duration_seconds, iterations, concurrent_users
-        )
+        return await self._run_core_scenarios(duration_seconds, iterations, concurrent_users)
 
     def _validate_optimization_claims(
         self, database_results: dict, vector_results: dict, mixed_results: dict
@@ -341,9 +312,7 @@ class BenchmarkRunner:
         if connection_efficient:
             validation["claims_validated"] += 1
 
-        validation["overall_success"] = (
-            validation["claims_validated"] >= 3
-        )  # 75% threshold
+        validation["overall_success"] = validation["claims_validated"] >= 3  # 75% threshold
 
         return validation
 
@@ -382,9 +351,7 @@ def quick(output_dir: str, iterations: int, concurrent: int):
             results = await runner.run_quick_test()
             click.echo("✅ Quick benchmark completed!")
             click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
-            click.echo(
-                f"⚡ Operations/sec: {results['results']['operations_per_second']:.1f}"
-            )
+            click.echo(f"⚡ Operations/sec: {results['results']['operations_per_second']:.1f}")
             return 0
         except Exception as e:
             click.echo(f"❌ Quick benchmark failed: {e}")

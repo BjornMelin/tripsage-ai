@@ -82,9 +82,7 @@ class BaseService:
         # Initialize dependencies
         self.db = self._initialize_database_service(database_service)
         self.cache = self._initialize_cache_service(cache_service)
-        self.external_service = self._initialize_external_service(
-            external_service_module, external_service_class
-        )
+        self.external_service = self._initialize_external_service(external_service_module, external_service_class)
 
         # Log successful initialization
         self.logger.info(
@@ -182,9 +180,7 @@ class BaseService:
             )
             return None
 
-    def _initialize_external_service(
-        self, module_name: Optional[str], class_name: Optional[str]
-    ) -> Optional[Any]:
+    def _initialize_external_service(self, module_name: Optional[str], class_name: Optional[str]) -> Optional[Any]:
         """
         Initialize external service with dynamic import pattern.
 
@@ -311,9 +307,7 @@ class BaseService:
                     await self.external_service.health_check()
                 health_status["dependencies"]["external_service"] = "healthy"
             except Exception as e:
-                health_status["dependencies"]["external_service"] = (
-                    f"unhealthy: {str(e)}"
-                )
+                health_status["dependencies"]["external_service"] = f"unhealthy: {str(e)}"
                 health_status["status"] = "degraded"
         else:
             health_status["dependencies"]["external_service"] = "unavailable"
@@ -336,9 +330,7 @@ class BaseService:
                 "cache_service": self.cache is not None,
                 "external_service": self.external_service is not None,
             },
-            "external_service_type": (
-                type(self.external_service).__name__ if self.external_service else None
-            ),
+            "external_service_type": (type(self.external_service).__name__ if self.external_service else None),
         }
 
     def __repr__(self) -> str:
@@ -355,9 +347,7 @@ class BaseCRUDService(BaseService):
     """
 
     @with_error_handling(operation_name="create_entity")
-    async def create_entity(
-        self, entity_data: Dict[str, Any], entity_type: str
-    ) -> Dict[str, Any]:
+    async def create_entity(self, entity_data: Dict[str, Any], entity_type: str) -> Dict[str, Any]:
         """
         Create a new entity with standardized error handling.
 
@@ -382,9 +372,7 @@ class BaseCRUDService(BaseService):
         return await self.db.create_entity(entity_data, entity_type)
 
     @with_error_handling(operation_name="get_entity")
-    async def get_entity(
-        self, entity_id: str, entity_type: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_entity(self, entity_id: str, entity_type: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve an entity by ID with standardized error handling.
 
@@ -405,9 +393,7 @@ class BaseCRUDService(BaseService):
         return await self.db.get_entity(entity_id, entity_type)
 
     @with_error_handling(operation_name="update_entity")
-    async def update_entity(
-        self, entity_id: str, entity_data: Dict[str, Any], entity_type: str
-    ) -> Dict[str, Any]:
+    async def update_entity(self, entity_id: str, entity_data: Dict[str, Any], entity_type: str) -> Dict[str, Any]:
         """
         Update an existing entity with standardized error handling.
 

@@ -29,27 +29,13 @@ class AccommodationSearchRequest(BaseModel):
     adults: int = Field(1, ge=1, le=16, description="Number of adults")
     children: int = Field(0, ge=0, le=10, description="Number of children")
     rooms: int = Field(1, ge=1, le=8, description="Number of rooms")
-    property_type: Optional[AccommodationType] = Field(
-        None, description="Type of property"
-    )
-    min_price: Optional[float] = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: Optional[float] = Field(
-        None, ge=0, description="Maximum price per night"
-    )
-    amenities: Optional[List[str]] = Field(
-        None, description="Required amenities (e.g., wifi, pool)"
-    )
-    min_rating: Optional[float] = Field(
-        None, ge=0, le=5, description="Minimum guest rating (0-5)"
-    )
-    latitude: Optional[float] = Field(
-        None, ge=-90, le=90, description="Latitude coordinate"
-    )
-    longitude: Optional[float] = Field(
-        None, ge=-180, le=180, description="Longitude coordinate"
-    )
+    property_type: Optional[AccommodationType] = Field(None, description="Type of property")
+    min_price: Optional[float] = Field(None, ge=0, description="Minimum price per night")
+    max_price: Optional[float] = Field(None, ge=0, description="Maximum price per night")
+    amenities: Optional[List[str]] = Field(None, description="Required amenities (e.g., wifi, pool)")
+    min_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum guest rating (0-5)")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude coordinate")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude coordinate")
     trip_id: Optional[UUID] = Field(None, description="Associated trip ID")
 
     @field_validator("check_out")
@@ -64,11 +50,7 @@ class AccommodationSearchRequest(BaseModel):
     @classmethod
     def validate_price_range(cls, v: Optional[float], info) -> Optional[float]:
         """Validate that max price is greater than min price if both are provided."""
-        if (
-            v is not None
-            and "min_price" in info.data
-            and info.data["min_price"] is not None
-        ):
+        if v is not None and "min_price" in info.data and info.data["min_price"] is not None:
             if v < info.data["min_price"]:
                 raise ValueError("Maximum price must be greater than minimum price")
         return v
@@ -91,11 +73,7 @@ class AccommodationDetailsRequest(BaseModel):
     @classmethod
     def validate_dates(cls, v: Optional[date], info) -> Optional[date]:
         """Validate that check-out date is after check-in date if both are provided."""
-        if (
-            v is not None
-            and "check_in" in info.data
-            and info.data["check_in"] is not None
-        ):
+        if v is not None and "check_in" in info.data and info.data["check_in"] is not None:
             if v <= info.data["check_in"]:
                 raise ValueError("Check-out date must be after check-in date")
         return v
@@ -175,9 +153,7 @@ class AccommodationListing(BaseModel):
 class AccommodationSearchResponse(BaseModel):
     """Response model for accommodation search results."""
 
-    listings: List[AccommodationListing] = Field(
-        default=[], description="List of accommodation listings"
-    )
+    listings: List[AccommodationListing] = Field(default=[], description="List of accommodation listings")
     count: int = Field(description="Number of listings found")
     currency: str = Field(default="USD", description="Currency code")
     search_id: str = Field(description="Search ID for tracking")
@@ -185,21 +161,15 @@ class AccommodationSearchResponse(BaseModel):
     min_price: Optional[float] = Field(default=None, description="Minimum price found")
     max_price: Optional[float] = Field(default=None, description="Maximum price found")
     avg_price: Optional[float] = Field(default=None, description="Average price found")
-    search_request: AccommodationSearchRequest = Field(
-        description="Original search request"
-    )
+    search_request: AccommodationSearchRequest = Field(description="Original search request")
 
 
 class AccommodationDetailsResponse(BaseModel):
     """Response model for accommodation details."""
 
     listing: AccommodationListing = Field(description="Accommodation listing")
-    availability: bool = Field(
-        description="Whether the accommodation is available for the dates"
-    )
-    total_price: Optional[float] = Field(
-        default=None, description="Total price for the stay (if dates provided)"
-    )
+    availability: bool = Field(description="Whether the accommodation is available for the dates")
+    total_price: Optional[float] = Field(default=None, description="Total price for the stay (if dates provided)")
 
 
 class SavedAccommodationResponse(BaseModel):
@@ -212,9 +182,5 @@ class SavedAccommodationResponse(BaseModel):
     check_in: date = Field(description="Check-in date")
     check_out: date = Field(description="Check-out date")
     saved_at: date = Field(description="Date when the accommodation was saved")
-    notes: Optional[str] = Field(
-        default=None, description="Notes about this accommodation"
-    )
-    status: BookingStatus = Field(
-        default=BookingStatus.SAVED, description="Booking status"
-    )
+    notes: Optional[str] = Field(default=None, description="Notes about this accommodation")
+    status: BookingStatus = Field(default=BookingStatus.SAVED, description="Booking status")

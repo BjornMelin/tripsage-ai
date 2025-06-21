@@ -63,9 +63,7 @@ class SearchNodesRequest(MCPRequestBase):
     """Request to search for nodes in the knowledge graph."""
 
     query: str = Field(..., description="Search query")
-    entity_types: Optional[List[str]] = Field(
-        None, description="Entity types to filter by"
-    )
+    entity_types: Optional[List[str]] = Field(None, description="Entity types to filter by")
     limit: int = Field(10, description="Maximum number of results to return")
 
 
@@ -92,12 +90,8 @@ class OpenNodesResponse(MCPResponseBase):
 class ReadGraphRequest(MCPRequestBase):
     """Request to read the entire knowledge graph."""
 
-    limit: Optional[int] = Field(
-        None, description="Maximum number of results to return"
-    )
-    include_observations: bool = Field(
-        True, description="Whether to include observations"
-    )
+    limit: Optional[int] = Field(None, description="Maximum number of results to return")
+    include_observations: bool = Field(True, description="Whether to include observations")
 
 
 class ReadGraphResponse(MCPResponseBase):
@@ -119,9 +113,7 @@ class StoreSessionMemoryRequest(MCPRequestBase):
     session_id: str = Field(..., description="Session ID")
     memory_type: str = Field(..., description="Memory type")
     content: Dict[str, Any] = Field(..., description="Memory content")
-    ttl_seconds: Optional[int] = Field(
-        None, description="Time-to-live in seconds (optional)"
-    )
+    ttl_seconds: Optional[int] = Field(None, description="Time-to-live in seconds (optional)")
 
 
 class StoreSessionMemoryResponse(MCPResponseBase):

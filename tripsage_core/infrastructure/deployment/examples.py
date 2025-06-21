@@ -97,10 +97,7 @@ async def demonstrate_blue_green_deployment():
         # Show health check details
         if result.metrics.health_checks:
             latest_check = result.metrics.health_checks[-1]
-            print(
-                f"  Latest health check: {latest_check.healthy} "
-                f"({latest_check.response_time:.3f}s)"
-            )
+            print(f"  Latest health check: {latest_check.healthy} ({latest_check.response_time:.3f}s)")
 
     return result
 
@@ -150,10 +147,7 @@ async def demonstrate_canary_deployment():
         # Show progression through canary steps
         print("  Canary progression:")
         for i, check in enumerate(result.metrics.health_checks):
-            print(
-                f"    Step {i + 1}: {'✅' if check.healthy else '❌'} "
-                f"({check.response_time:.3f}s)"
-            )
+            print(f"    Step {i + 1}: {'✅' if check.healthy else '❌'} ({check.response_time:.3f}s)")
 
     return result
 
@@ -239,9 +233,7 @@ async def demonstrate_rollback_scenario():
     if result.rollback_metrics:
         print(f"  Rollback phase: {result.rollback_metrics.phase}")
         print(f"  Rollback duration: {result.rollback_metrics.get_duration():.2f}s")
-        print(
-            f"  Rollback success: {result.rollback_metrics.phase.value == 'completed'}"
-        )
+        print(f"  Rollback success: {result.rollback_metrics.phase.value == 'completed'}")
 
     # Demonstrate manual rollback
     if not result.auto_rollback_triggered:

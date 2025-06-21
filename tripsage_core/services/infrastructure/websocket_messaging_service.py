@@ -11,7 +11,7 @@ This service consolidates all WebSocket message sending logic including:
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, Set
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -27,16 +27,16 @@ class WebSocketEvent(BaseModel):
 
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    user_id: Optional[UUID] = None
-    session_id: Optional[UUID] = None
-    connection_id: Optional[str] = None
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=datetime.now)
+    user_id: UUID | None = None
+    session_id: UUID | None = None
+    connection_id: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
     priority: int = Field(default=1, description="1=high, 2=medium, 3=low")
     retry_count: int = Field(default=0)
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert event to serializable dictionary for WebSocket transmission.
 
         Centralized JSON serialization logic to address code review comment.
@@ -103,10 +103,10 @@ class WebSocketMessagingService:
         self.auth_service = auth_service
 
         # Connection tracking
-        self.connections: Dict[str, WebSocketConnection] = {}
-        self.user_connections: Dict[UUID, Set[str]] = {}
-        self.session_connections: Dict[UUID, Set[str]] = {}
-        self.channel_connections: Dict[str, Set[str]] = {}
+        self.connections: dict[str, WebSocketConnection] = {}
+        self.user_connections: dict[UUID, set[str]] = {}
+        self.session_connections: dict[UUID, set[str]] = {}
+        self.channel_connections: dict[str, set[str]] = {}
 
         # Performance metrics
         self.performance_metrics = {
@@ -187,9 +187,13 @@ class WebSocketMessagingService:
         return True
 
     async def send_to_connection(
-        self, connection_id: str, event: WebSocketEvent, rate_limiter=None
+        self,
+        connection_id: str,
+        event: WebSocketEvent,
+        rate_limiter=None,
+        message_limits=None,
     ) -> bool:
-        """Send event to specific connection with rate limiting.
+        """Send event to specific connection with rate limiting and size validation.
 
         Consolidated send logic to address code review comment about duplicate
         send_to_* logic.
@@ -200,9 +204,7 @@ class WebSocketMessagingService:
 
         # Check message rate limit if rate limiter is provided
         if rate_limiter and connection.user_id:
-            rate_check = await rate_limiter.check_message_rate(
-                connection.user_id, connection_id
-            )
+            rate_check = await rate_limiter.check_message_rate(connection.user_id, connection_id)
             if not rate_check["allowed"]:
                 self.performance_metrics["rate_limit_hits"] += 1
 
@@ -210,27 +212,31 @@ class WebSocketMessagingService:
                 warning_event = {
                     "id": f"rate_limit_{connection_id}",
                     "type": WebSocketEventType.RATE_LIMIT_EXCEEDED,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                     "payload": {
                         "reason": rate_check["reason"],
                         "retry_after": 60,  # Default window
                     },
                 }
-                # Send warning without rate limiting
+                # Send warning without rate limiting and size validation to avoid recursion
                 await connection.send(warning_event)
                 return False
 
         # Convert event to dict for sending using centralized serialization
         event_dict = event.to_dict()
 
-        success = await connection.send(event_dict)
+        success = await connection.send(event_dict, message_limits)
         if success:
             self.performance_metrics["total_messages_sent"] += 1
 
         return success
 
     async def send_to_user(
-        self, user_id: UUID, event: WebSocketEvent, rate_limiter=None
+        self,
+        user_id: UUID,
+        event: WebSocketEvent,
+        rate_limiter=None,
+        message_limits=None,
     ) -> int:
         """Send event to all connections for a user.
 
@@ -240,13 +246,17 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in connection_ids.copy():
-            if await self.send_to_connection(connection_id, event, rate_limiter):
+            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
                 sent_count += 1
 
         return sent_count
 
     async def send_to_session(
-        self, session_id: UUID, event: WebSocketEvent, rate_limiter=None
+        self,
+        session_id: UUID,
+        event: WebSocketEvent,
+        rate_limiter=None,
+        message_limits=None,
     ) -> int:
         """Send event to all connections for a session.
 
@@ -256,13 +266,17 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in connection_ids.copy():
-            if await self.send_to_connection(connection_id, event, rate_limiter):
+            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
                 sent_count += 1
 
         return sent_count
 
     async def send_to_channel(
-        self, channel: str, event: WebSocketEvent, rate_limiter=None
+        self,
+        channel: str,
+        event: WebSocketEvent,
+        rate_limiter=None,
+        message_limits=None,
     ) -> int:
         """Send event to all connections subscribed to a channel.
 
@@ -272,12 +286,12 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in connection_ids.copy():
-            if await self.send_to_connection(connection_id, event, rate_limiter):
+            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
                 sent_count += 1
 
         return sent_count
 
-    async def broadcast_to_all(self, event: WebSocketEvent, rate_limiter=None) -> int:
+    async def broadcast_to_all(self, event: WebSocketEvent, rate_limiter=None, message_limits=None) -> int:
         """Broadcast event to all connections.
 
         Consolidated logic for broadcasting.
@@ -285,7 +299,7 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in list(self.connections.keys()):
-            if await self.send_to_connection(connection_id, event, rate_limiter):
+            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
                 sent_count += 1
 
         return sent_count
@@ -293,30 +307,30 @@ class WebSocketMessagingService:
     async def send_by_target(
         self,
         target_type: str,
-        target_id: Optional[str],
+        target_id: str | None,
         event: WebSocketEvent,
         rate_limiter=None,
+        message_limits=None,
     ) -> int:
         """Send message by target type and ID.
 
         Unified sending method that routes to appropriate send_to_* method.
         """
         if target_type == "connection" and target_id:
-            success = await self.send_to_connection(target_id, event, rate_limiter)
+            success = await self.send_to_connection(target_id, event, rate_limiter, message_limits)
             return 1 if success else 0
-        elif target_type == "user" and target_id:
-            return await self.send_to_user(UUID(target_id), event, rate_limiter)
-        elif target_type == "session" and target_id:
-            return await self.send_to_session(UUID(target_id), event, rate_limiter)
-        elif target_type == "channel" and target_id:
-            return await self.send_to_channel(target_id, event, rate_limiter)
-        elif target_type == "broadcast":
-            return await self.broadcast_to_all(event, rate_limiter)
-        else:
-            logger.warning(f"Unknown target type: {target_type}")
-            return 0
+        if target_type == "user" and target_id:
+            return await self.send_to_user(UUID(target_id), event, rate_limiter, message_limits)
+        if target_type == "session" and target_id:
+            return await self.send_to_session(UUID(target_id), event, rate_limiter, message_limits)
+        if target_type == "channel" and target_id:
+            return await self.send_to_channel(target_id, event, rate_limiter, message_limits)
+        if target_type == "broadcast":
+            return await self.broadcast_to_all(event, rate_limiter, message_limits)
+        logger.warning(f"Unknown target type: {target_type}")
+        return 0
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """Get messaging statistics."""
         total_queued = sum(
             len(conn.message_queue) + sum(len(q) for q in conn.priority_queue.values())

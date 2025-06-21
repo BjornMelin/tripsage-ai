@@ -101,9 +101,7 @@ class TestTripsRouterComprehensive:
             description="5-day trip exploring Tokyo",
             start_date=date(2024, 5, 1),
             end_date=date(2024, 5, 5),
-            destinations=[
-                TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
-            ],
+            destinations=[TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")],
         )
 
     @pytest.fixture
@@ -132,9 +130,7 @@ class TestTripsRouterComprehensive:
         trip_mock.description = "5-day trip exploring Tokyo"
         trip_mock.start_date = datetime(2024, 5, 1, tzinfo=timezone.utc)
         trip_mock.end_date = datetime(2024, 5, 5, tzinfo=timezone.utc)
-        trip_mock.destination = (
-            "Tokyo, Japan"  # Core expects singular destination string
-        )
+        trip_mock.destination = "Tokyo, Japan"  # Core expects singular destination string
         trip_mock.destinations = [destination]  # Use proper TripLocation object
         trip_mock.budget = EnhancedBudget(
             total=5000.0,
@@ -194,9 +190,7 @@ class TestTripsRouterComprehensive:
         """Test successful trip creation."""
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
 
-        result = await create_trip(
-            sample_trip_request, mock_principal, mock_trip_service
-        )
+        result = await create_trip(sample_trip_request, mock_principal, mock_trip_service)
 
         # Verify service was called correctly
         mock_trip_service.create_trip.assert_called_once()
@@ -210,9 +204,7 @@ class TestTripsRouterComprehensive:
         assert len(result.destinations) == 1
         assert result.destinations[0].name == "Tokyo, Japan"
 
-    async def test_create_trip_with_preferences(
-        self, mock_principal, mock_trip_service, sample_shared_trip_response
-    ):
+    async def test_create_trip_with_preferences(self, mock_principal, mock_trip_service, sample_shared_trip_response):
         """Test trip creation with preferences."""
         from decimal import Decimal
 
@@ -222,9 +214,7 @@ class TestTripsRouterComprehensive:
 
         # Create Budget and TripPreferences as Pydantic models
         # They should serialize to dicts properly
-        budget = Budget(
-            total_budget=Price(amount=Decimal("5000"), currency=CurrencyCode.USD)
-        )
+        budget = Budget(total_budget=Price(amount=Decimal("5000"), currency=CurrencyCode.USD))
         preferences = TripPreferences(budget=budget)
 
         trip_request = CreateTripRequest(
@@ -232,9 +222,7 @@ class TestTripsRouterComprehensive:
             description="5-day trip exploring Tokyo",
             start_date=date(2024, 5, 1),
             end_date=date(2024, 5, 5),
-            destinations=[
-                TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
-            ],
+            destinations=[TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")],
             preferences=preferences,
         )
 
@@ -247,9 +235,7 @@ class TestTripsRouterComprehensive:
         assert call_args.kwargs["trip_data"].preferences is not None
         assert result.title == "Tokyo Adventure"
 
-    async def test_create_trip_validation_error(
-        self, mock_principal, mock_trip_service
-    ):
+    async def test_create_trip_validation_error(self, mock_principal, mock_trip_service):
         """Test trip creation with invalid dates."""
         from pydantic import ValidationError
 
@@ -259,14 +245,10 @@ class TestTripsRouterComprehensive:
                 description="Invalid date range",
                 start_date=date(2024, 5, 5),  # End before start
                 end_date=date(2024, 5, 1),
-                destinations=[
-                    TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
-                ],
+                destinations=[TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")],
             )
 
-    async def test_create_trip_service_error(
-        self, mock_principal, mock_trip_service, sample_trip_request
-    ):
+    async def test_create_trip_service_error(self, mock_principal, mock_trip_service, sample_trip_request):
         """Test trip creation error handling."""
         mock_trip_service.create_trip.side_effect = Exception("Database error")
 
@@ -287,15 +269,11 @@ class TestTripsRouterComprehensive:
 
         result = await get_trip(trip_id, mock_secondary_principal, mock_trip_service)
 
-        mock_trip_service.get_trip.assert_called_once_with(
-            trip_id=str(trip_id), user_id="user456"
-        )
+        mock_trip_service.get_trip.assert_called_once_with(trip_id=str(trip_id), user_id="user456")
         assert result.title == "Tokyo Adventure"
         assert result.user_id == "user123"  # Original owner
 
-    async def test_get_trip_access_denied(
-        self, mock_secondary_principal, mock_trip_service
-    ):
+    async def test_get_trip_access_denied(self, mock_secondary_principal, mock_trip_service):
         """Test trip access denied for non-collaborator."""
         trip_id = uuid4()
         mock_trip_service.get_trip.return_value = None  # No access
@@ -306,9 +284,7 @@ class TestTripsRouterComprehensive:
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "Trip not found"
 
-    async def test_update_trip_as_owner(
-        self, mock_principal, mock_trip_service, sample_shared_trip_response
-    ):
+    async def test_update_trip_as_owner(self, mock_principal, mock_trip_service, sample_shared_trip_response):
         """Test trip update by owner."""
         trip_id = uuid4()
         update_request = UpdateTripRequest(
@@ -317,9 +293,7 @@ class TestTripsRouterComprehensive:
         )
         mock_trip_service.update_trip.return_value = sample_shared_trip_response
 
-        result = await update_trip(
-            trip_id, update_request, mock_principal, mock_trip_service
-        )
+        result = await update_trip(trip_id, update_request, mock_principal, mock_trip_service)
 
         mock_trip_service.update_trip.assert_called_once()
         assert result.title == "Tokyo Adventure"
@@ -332,9 +306,7 @@ class TestTripsRouterComprehensive:
         update_request = UpdateTripRequest(title="Updated by Collaborator")
         mock_trip_service.update_trip.return_value = sample_shared_trip_response
 
-        result = await update_trip(
-            trip_id, update_request, mock_secondary_principal, mock_trip_service
-        )
+        result = await update_trip(trip_id, update_request, mock_secondary_principal, mock_trip_service)
 
         mock_trip_service.update_trip.assert_called_once_with(
             user_id="user456",
@@ -343,31 +315,21 @@ class TestTripsRouterComprehensive:
         )
         assert result.title == "Tokyo Adventure"
 
-    async def test_update_trip_permission_denied(
-        self, mock_secondary_principal, mock_trip_service
-    ):
+    async def test_update_trip_permission_denied(self, mock_secondary_principal, mock_trip_service):
         """Test trip update permission denied."""
         trip_id = uuid4()
         update_request = UpdateTripRequest(title="Unauthorized Update")
-        mock_trip_service.update_trip.side_effect = PermissionError(
-            "No permission to edit this trip"
-        )
+        mock_trip_service.update_trip.side_effect = PermissionError("No permission to edit this trip")
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_trip(
-                trip_id, update_request, mock_secondary_principal, mock_trip_service
-            )
+            await update_trip(trip_id, update_request, mock_secondary_principal, mock_trip_service)
 
         assert exc_info.value.status_code == 500
 
-    async def test_delete_trip_as_non_owner(
-        self, mock_secondary_principal, mock_trip_service
-    ):
+    async def test_delete_trip_as_non_owner(self, mock_secondary_principal, mock_trip_service):
         """Test trip deletion by non-owner (should fail)."""
         trip_id = uuid4()
-        mock_trip_service.delete_trip.side_effect = PermissionError(
-            "Only trip owner can delete the trip"
-        )
+        mock_trip_service.delete_trip.side_effect = PermissionError("Only trip owner can delete the trip")
 
         with pytest.raises(HTTPException) as exc_info:
             await delete_trip(trip_id, mock_secondary_principal, mock_trip_service)
@@ -389,9 +351,7 @@ class TestTripsRouterComprehensive:
             trip_service=mock_trip_service,
         )
 
-        mock_trip_service.get_user_trips.assert_called_once_with(
-            user_id="user456", limit=10, offset=0
-        )
+        mock_trip_service.get_user_trips.assert_called_once_with(user_id="user456", limit=10, offset=0)
         assert result["total"] == 1
         assert len(result["items"]) == 1
         assert result["items"][0]["title"] == "Tokyo Adventure"
@@ -411,9 +371,7 @@ class TestTripsRouterComprehensive:
             trip_service=mock_trip_service,
         )
 
-        mock_trip_service.search_trips.assert_called_once_with(
-            user_id="user456", query="Tokyo", limit=10
-        )
+        mock_trip_service.search_trips.assert_called_once_with(user_id="user456", query="Tokyo", limit=10)
         assert result["total"] == 1
         assert len(result["items"]) == 1
 
@@ -427,23 +385,17 @@ class TestTripsRouterComprehensive:
         # Mock the duplication result
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
 
-        result = await duplicate_trip(
-            trip_id, mock_secondary_principal, mock_trip_service
-        )
+        result = await duplicate_trip(trip_id, mock_secondary_principal, mock_trip_service)
 
         # Verify get_trip was called for access check
-        mock_trip_service.get_trip.assert_called_once_with(
-            trip_id=str(trip_id), user_id="user456"
-        )
+        mock_trip_service.get_trip.assert_called_once_with(trip_id=str(trip_id), user_id="user456")
         # Verify create_trip was called for duplication
         mock_trip_service.create_trip.assert_called_once()
         assert result.title == "Tokyo Adventure"
 
     # ===== PERMISSION-BASED ACCESS CONTROL TESTS =====
 
-    async def test_trip_visibility_private(
-        self, mock_secondary_principal, mock_trip_service
-    ):
+    async def test_trip_visibility_private(self, mock_secondary_principal, mock_trip_service):
         """Test that private trips are not accessible to non-collaborators."""
         trip_id = uuid4()
         mock_trip_service.get_trip.return_value = None
@@ -472,9 +424,7 @@ class TestTripsRouterComprehensive:
         trip_id = uuid4()
         mock_trip_service.get_trip.return_value = sample_shared_trip_response
 
-        result = await get_trip_summary(
-            trip_id, mock_secondary_principal, mock_trip_service
-        )
+        result = await get_trip_summary(trip_id, mock_secondary_principal, mock_trip_service)
 
         assert result.id == UUID(sample_shared_trip_response.id)
         assert result.title == "Tokyo Adventure"
@@ -486,9 +436,7 @@ class TestTripsRouterComprehensive:
         trip_id = uuid4()
         mock_trip_service.get_trip.return_value = sample_shared_trip_response
 
-        result = await get_trip_itinerary(
-            trip_id, mock_secondary_principal, mock_trip_service
-        )
+        result = await get_trip_itinerary(trip_id, mock_secondary_principal, mock_trip_service)
 
         assert result["trip_id"] == str(trip_id)
         assert "items" in result
@@ -519,9 +467,7 @@ class TestTripsRouterComprehensive:
         mock_trip_service.update_trip.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_trip(
-                trip_id, update_request, mock_principal, mock_trip_service
-            )
+            await update_trip(trip_id, update_request, mock_principal, mock_trip_service)
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "Trip not found"
@@ -560,9 +506,7 @@ class TestTripsRouterComprehensive:
 
     # ===== INTEGRATION WITH NEW DATABASE METHODS =====
 
-    async def test_trip_with_related_counts(
-        self, mock_principal, mock_trip_service, sample_shared_trip_response
-    ):
+    async def test_trip_with_related_counts(self, mock_principal, mock_trip_service, sample_shared_trip_response):
         """Test trip response includes related counts."""
         trip_id = uuid4()
         # Enhance mock to include counts
@@ -599,9 +543,7 @@ class TestTripsRouterComprehensive:
 
     # ===== AUTHENTICATION AND AUTHORIZATION EDGE CASES =====
 
-    async def test_update_preferences_unauthorized(
-        self, mock_secondary_principal, mock_trip_service
-    ):
+    async def test_update_preferences_unauthorized(self, mock_secondary_principal, mock_trip_service):
         """Test updating trip preferences without permission."""
         from decimal import Decimal
 
@@ -609,25 +551,17 @@ class TestTripsRouterComprehensive:
         from tripsage_core.models.schemas_common.financial import Budget, Price
 
         trip_id = uuid4()
-        budget = Budget(
-            total_budget=Price(amount=Decimal("6000"), currency=CurrencyCode.USD)
-        )
+        budget = Budget(total_budget=Price(amount=Decimal("6000"), currency=CurrencyCode.USD))
         preferences = TripPreferencesRequest(budget=budget)
 
-        mock_trip_service.update_trip.side_effect = PermissionError(
-            "No permission to edit this trip"
-        )
+        mock_trip_service.update_trip.side_effect = PermissionError("No permission to edit this trip")
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_trip_preferences(
-                trip_id, preferences, mock_secondary_principal, mock_trip_service
-            )
+            await update_trip_preferences(trip_id, preferences, mock_secondary_principal, mock_trip_service)
 
         assert exc_info.value.status_code == 500
 
-    async def test_duplicate_trip_access_denied(
-        self, mock_secondary_principal, mock_trip_service
-    ):
+    async def test_duplicate_trip_access_denied(self, mock_secondary_principal, mock_trip_service):
         """Test duplicating inaccessible trip."""
         trip_id = uuid4()
         mock_trip_service.get_trip.return_value = None
@@ -649,32 +583,24 @@ class TestTripsRouterComprehensive:
             description="End-to-end test trip",
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 10),
-            destinations=[
-                TripDestination(name="Kyoto, Japan", country="Japan", city="Kyoto")
-            ],
+            destinations=[TripDestination(name="Kyoto, Japan", country="Japan", city="Kyoto")],
         )
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
 
-        created_trip = await create_trip(
-            trip_request, mock_principal, mock_trip_service
-        )
+        created_trip = await create_trip(trip_request, mock_principal, mock_trip_service)
         assert created_trip.title == "Tokyo Adventure"
 
         # Step 2: Update trip
         update_request = UpdateTripRequest(description="Updated description")
         mock_trip_service.update_trip.return_value = sample_shared_trip_response
 
-        updated_trip = await update_trip(
-            created_trip.id, update_request, mock_principal, mock_trip_service
-        )
+        updated_trip = await update_trip(created_trip.id, update_request, mock_principal, mock_trip_service)
         assert updated_trip.title == "Tokyo Adventure"
 
         # Step 3: Get trip summary
         mock_trip_service.get_trip.return_value = sample_shared_trip_response
 
-        trip_summary = await get_trip_summary(
-            created_trip.id, mock_principal, mock_trip_service
-        )
+        trip_summary = await get_trip_summary(created_trip.id, mock_principal, mock_trip_service)
         assert trip_summary.title == "Tokyo Adventure"
 
     async def test_collaboration_workflow(
@@ -693,23 +619,17 @@ class TestTripsRouterComprehensive:
         assert owner_view.user_id == "user123"
 
         # Step 2: Collaborator accesses trip
-        collaborator_view = await get_trip(
-            trip_id, mock_secondary_principal, mock_trip_service
-        )
+        collaborator_view = await get_trip(trip_id, mock_secondary_principal, mock_trip_service)
         assert collaborator_view.user_id == "user123"  # Still owned by original user
 
         # Step 3: Collaborator duplicates trip
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
-        duplicated_trip = await duplicate_trip(
-            trip_id, mock_secondary_principal, mock_trip_service
-        )
+        duplicated_trip = await duplicate_trip(trip_id, mock_secondary_principal, mock_trip_service)
         assert duplicated_trip.title == "Tokyo Adventure"
 
     # ===== REAL-WORLD SCENARIO TESTS =====
 
-    async def test_trip_sharing_scenario(
-        self, mock_principal, mock_trip_service, sample_collaborators
-    ):
+    async def test_trip_sharing_scenario(self, mock_principal, mock_trip_service, sample_collaborators):
         """Test real-world trip sharing scenario."""
         trip_id = uuid4()
 
@@ -727,18 +647,14 @@ class TestTripsRouterComprehensive:
         )
 
         # This would be the expected collaboration flow
-        collaborators = await mock_trip_service.share_trip(
-            str(trip_id), "user123", share_request
-        )
+        collaborators = await mock_trip_service.share_trip(str(trip_id), "user123", share_request)
 
         assert len(collaborators) == 2
         # Since TripCollaboratorDB doesn't have email, check user_id instead
         assert str(collaborators[0].user_id) == "123e4567-e89b-12d3-a456-426614174456"
         assert collaborators[1].permission_level == "edit"
 
-    async def test_permission_change_scenario(
-        self, mock_principal, mock_trip_service, sample_shared_trip_response
-    ):
+    async def test_permission_change_scenario(self, mock_principal, mock_trip_service, sample_shared_trip_response):
         """Test permission changes in collaboration."""
         trip_id = uuid4()
 
@@ -757,18 +673,12 @@ class TestTripsRouterComprehensive:
 
         # But they cannot edit it
         update_request = UpdateTripRequest(title="Unauthorized Edit")
-        mock_trip_service.update_trip.side_effect = PermissionError(
-            "No permission to edit this trip"
-        )
+        mock_trip_service.update_trip.side_effect = PermissionError("No permission to edit this trip")
 
         with pytest.raises(HTTPException):
-            await update_trip(
-                trip_id, update_request, mock_secondary_principal, mock_trip_service
-            )
+            await update_trip(trip_id, update_request, mock_secondary_principal, mock_trip_service)
 
-    async def test_trip_suggestions_personalization(
-        self, mock_principal, mock_trip_service
-    ):
+    async def test_trip_suggestions_personalization(self, mock_principal, mock_trip_service):
         """Test trip suggestions with personalization."""
         result = await get_trip_suggestions(
             limit=3,
@@ -787,9 +697,7 @@ class TestTripsRouterComprehensive:
 
     # ===== SERVICE LAYER INTEGRATION TESTS =====
 
-    async def test_service_layer_error_propagation(
-        self, mock_principal, mock_trip_service
-    ):
+    async def test_service_layer_error_propagation(self, mock_principal, mock_trip_service):
         """Test that service layer errors are properly propagated."""
         trip_id = uuid4()
 
@@ -811,9 +719,7 @@ class TestTripsRouterComprehensive:
             # In a production system, you might want different status codes
             assert exc_info.value.status_code == expected_status
 
-    async def test_trip_status_transitions(
-        self, mock_principal, mock_trip_service, sample_shared_trip_response
-    ):
+    async def test_trip_status_transitions(self, mock_principal, mock_trip_service, sample_shared_trip_response):
         """Test trip status transitions through updates."""
         trip_id = uuid4()
 
@@ -828,25 +734,19 @@ class TestTripsRouterComprehensive:
             # Note: Current schema doesn't include status updates
             # This would need to be added for full status management
 
-            result = await update_trip(
-                trip_id, update_request, mock_principal, mock_trip_service
-            )
+            result = await update_trip(trip_id, update_request, mock_principal, mock_trip_service)
             assert result.status == status
 
     # ===== PERFORMANCE AND EDGE CASE TESTS =====
 
-    async def test_large_trip_list_pagination(
-        self, mock_principal, mock_trip_service, sample_shared_trip_response
-    ):
+    async def test_large_trip_list_pagination(self, mock_principal, mock_trip_service, sample_shared_trip_response):
         """Test pagination with large trip lists."""
         # Mock large number of trips
         trips = [sample_shared_trip_response] * 100
         mock_trip_service.get_user_trips.return_value = trips
 
         # Test different pagination scenarios
-        result = await list_trips(
-            skip=0, limit=50, principal=mock_principal, trip_service=mock_trip_service
-        )
+        result = await list_trips(skip=0, limit=50, principal=mock_principal, trip_service=mock_trip_service)
 
         assert result["total"] == 100
         assert len(result["items"]) == 100  # Note: Current implementation returns all

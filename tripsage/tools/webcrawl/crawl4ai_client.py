@@ -94,16 +94,12 @@ class Crawl4AIClient:
                 headers["Authorization"] = f"Bearer {self.api_key}"
 
             async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    endpoint, json=payload, headers=headers, timeout=self.timeout
-                )
+                response = await client.post(endpoint, json=payload, headers=headers, timeout=self.timeout)
                 response.raise_for_status()
                 result = response.json()
 
                 if not result.get("success", False):
-                    error_msg = result.get(
-                        "error", "Unknown error in Crawl4AI scraping"
-                    )
+                    error_msg = result.get("error", "Unknown error in Crawl4AI scraping")
                     logger.error(f"Crawl4AI scraping error: {error_msg}")
                     return {"success": False, "error": error_msg}
 
@@ -116,9 +112,7 @@ class Crawl4AIClient:
             logger.error(error_msg)
             return {"success": False, "error": error_msg}
         except httpx.HTTPStatusError as e:
-            error_msg = (
-                f"Crawl4AI HTTP error {e.response.status_code}: {e.response.text}"
-            )
+            error_msg = f"Crawl4AI HTTP error {e.response.status_code}: {e.response.text}"
             logger.error(error_msg)
             return {"success": False, "error": error_msg}
         except Exception as e:
@@ -148,9 +142,7 @@ class Crawl4AIClient:
             ],
         }
 
-    async def crawl_blog(
-        self, url: str, extract_type: str, max_pages: int = 1
-    ) -> Dict[str, Any]:
+    async def crawl_blog(self, url: str, extract_type: str, max_pages: int = 1) -> Dict[str, Any]:
         """Crawl a travel blog using Crawl4AI.
 
         Args:
@@ -203,16 +195,12 @@ class Crawl4AIClient:
                 headers["Authorization"] = f"Bearer {self.api_key}"
 
             async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    endpoint, json=payload, headers=headers, timeout=self.timeout
-                )
+                response = await client.post(endpoint, json=payload, headers=headers, timeout=self.timeout)
                 response.raise_for_status()
                 result = response.json()
 
                 if not result.get("success", False):
-                    error_msg = result.get(
-                        "error", "Unknown error in Crawl4AI blog crawl"
-                    )
+                    error_msg = result.get("error", "Unknown error in Crawl4AI blog crawl")
                     logger.error(f"Crawl4AI blog crawl error: {error_msg}")
                     return {"success": False, "error": error_msg}
 
@@ -243,9 +231,7 @@ class Crawl4AIClient:
             }
 
         # Extract from the first result (since we only send one URL)
-        crawl_data = (
-            result["data"][0] if isinstance(result["data"], list) else result["data"]
-        )
+        crawl_data = result["data"][0] if isinstance(result["data"], list) else result["data"]
 
         formatted_result = {
             "success": True,
@@ -266,9 +252,7 @@ class Crawl4AIClient:
 
         return formatted_result
 
-    def _format_blog_result(
-        self, result: Dict[str, Any], url: str, extract_type: str
-    ) -> Dict[str, Any]:
+    def _format_blog_result(self, result: Dict[str, Any], url: str, extract_type: str) -> Dict[str, Any]:
         """Format the blog crawl result based on the extract type.
 
         Args:
@@ -345,9 +329,7 @@ class Crawl4AIClient:
             insights = self._parse_travel_insights(memory_result, content, url)
 
             insight_count = len(insights.get("insights", []))
-            logger.info(
-                f"Extracted travel insights from {url}", insights_count=insight_count
-            )
+            logger.info(f"Extracted travel insights from {url}", insights_count=insight_count)
 
             return {
                 "success": True,
@@ -361,9 +343,7 @@ class Crawl4AIClient:
             logger.error(f"Failed to extract travel insights: {e}")
             return {"success": False, "url": url, "error": str(e), "insights": {}}
 
-    def _parse_travel_insights(
-        self, memory_result: Dict[str, Any], content: str, url: str
-    ) -> Dict[str, Any]:
+    def _parse_travel_insights(self, memory_result: Dict[str, Any], content: str, url: str) -> Dict[str, Any]:
         """Parse and categorize travel insights from memory extraction result.
 
         Args:

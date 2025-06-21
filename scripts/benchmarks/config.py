@@ -54,29 +54,17 @@ class BenchmarkConfig(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     # Test execution
-    benchmark_iterations: int = Field(
-        default=500, description="Number of benchmark iterations"
-    )
-    concurrent_connections: int = Field(
-        default=10, description="Concurrent connections"
-    )
-    test_duration_seconds: int = Field(
-        default=300, description="Max test duration in seconds"
-    )
+    benchmark_iterations: int = Field(default=500, description="Number of benchmark iterations")
+    concurrent_connections: int = Field(default=10, description="Concurrent connections")
+    test_duration_seconds: int = Field(default=300, description="Max test duration in seconds")
 
     # Data parameters
     test_data_size: int = Field(default=10000, description="Number of test records")
-    vector_dimensions: int = Field(
-        default=384, description="Vector embedding dimensions"
-    )
+    vector_dimensions: int = Field(default=384, description="Vector embedding dimensions")
 
     # Monitoring
-    enable_memory_profiling: bool = Field(
-        default=True, description="Enable memory profiling"
-    )
-    metrics_collection_interval: float = Field(
-        default=1.0, description="Metrics interval in seconds"
-    )
+    enable_memory_profiling: bool = Field(default=True, description="Enable memory profiling")
+    metrics_collection_interval: float = Field(default=1.0, description="Metrics interval in seconds")
 
     # Testing scope
     workload_types: list[WorkloadType] = Field(

@@ -74,26 +74,14 @@ class TimeService:
         self._connected = False
 
         # Get time service configuration from settings
-        self.default_timezone = getattr(
-            self.settings, "time_service_default_timezone", "UTC"
-        )
-        self.default_date_format = getattr(
-            self.settings, "time_service_date_format", "%Y-%m-%d"
-        )
-        self.default_time_format = getattr(
-            self.settings, "time_service_time_format", "%H:%M:%S"
-        )
-        self.default_datetime_format = getattr(
-            self.settings, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S"
-        )
+        self.default_timezone = getattr(self.settings, "time_service_default_timezone", "UTC")
+        self.default_date_format = getattr(self.settings, "time_service_date_format", "%Y-%m-%d")
+        self.default_time_format = getattr(self.settings, "time_service_time_format", "%H:%M:%S")
+        self.default_datetime_format = getattr(self.settings, "time_service_datetime_format", "%Y-%m-%d %H:%M:%S")
 
         # Business hours defaults from settings
-        self.default_business_start = getattr(
-            self.settings, "time_service_business_start", "09:00"
-        )
-        self.default_business_end = getattr(
-            self.settings, "time_service_business_end", "17:00"
-        )
+        self.default_business_start = getattr(self.settings, "time_service_business_start", "09:00")
+        self.default_business_end = getattr(self.settings, "time_service_business_end", "17:00")
         self.weekdays_only = getattr(self.settings, "time_service_weekdays_only", True)
 
         # Major timezone mappings (can be extended via settings)
@@ -214,9 +202,7 @@ class TimeService:
             abbreviation = current_time.strftime("%Z")
 
             # Check if DST is active
-            dst_active = bool(
-                current_time.dst() and current_time.dst().total_seconds() > 0
-            )
+            dst_active = bool(current_time.dst() and current_time.dst().total_seconds() > 0)
 
             return TimeZoneInfo(
                 name=timezone_name,
@@ -259,9 +245,7 @@ class TimeService:
             if isinstance(time_to_convert, str):
                 # Try to parse ISO format
                 try:
-                    parsed_time = datetime.fromisoformat(
-                        time_to_convert.replace("Z", "+00:00")
-                    )
+                    parsed_time = datetime.fromisoformat(time_to_convert.replace("Z", "+00:00"))
                 except ValueError:
                     # Try other common formats
                     for fmt in [
@@ -278,9 +262,7 @@ class TimeService:
                         except ValueError:
                             continue
                     else:
-                        raise ValueError(
-                            f"Unable to parse time format: {time_to_convert}"
-                        )
+                        raise ValueError(f"Unable to parse time format: {time_to_convert}")
             else:
                 parsed_time = time_to_convert
 
@@ -328,14 +310,11 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error converting time from {source_timezone} to "
-                f"{target_timezone}: {str(e)}",
+                f"Error converting time from {source_timezone} to {target_timezone}: {str(e)}",
                 original_error=e,
             ) from e
 
-    async def get_world_clock(
-        self, cities: Optional[List[str]] = None
-    ) -> List[WorldClock]:
+    async def get_world_clock(self, cities: Optional[List[str]] = None) -> List[WorldClock]:
         """
         Get world clock for major cities.
 
@@ -412,9 +391,7 @@ class TimeService:
 
                     # Format offset
                     offset = current_time.strftime("%z")
-                    formatted_offset = (
-                        f"{offset[:3]}:{offset[3:]}" if offset else "+00:00"
-                    )
+                    formatted_offset = f"{offset[:3]}:{offset[3:]}" if offset else "+00:00"
 
                     world_clock.append(
                         WorldClock(
@@ -434,9 +411,7 @@ class TimeService:
             return world_clock
 
         except Exception as e:
-            raise TimeServiceError(
-                f"Error getting world clock: {str(e)}", original_error=e
-            ) from e
+            raise TimeServiceError(f"Error getting world clock: {str(e)}", original_error=e) from e
 
     async def get_time_until(
         self, target_time: Union[datetime, str], timezone_name: Optional[str] = None
@@ -460,13 +435,9 @@ class TimeService:
             # Parse target time
             if isinstance(target_time, str):
                 try:
-                    parsed_time = datetime.fromisoformat(
-                        target_time.replace("Z", "+00:00")
-                    )
+                    parsed_time = datetime.fromisoformat(target_time.replace("Z", "+00:00"))
                 except ValueError:
-                    parsed_time = datetime.strptime(
-                        target_time, self.default_datetime_format
-                    )
+                    parsed_time = datetime.strptime(target_time, self.default_datetime_format)
             else:
                 parsed_time = target_time
 
@@ -662,9 +633,7 @@ class TimeService:
             return target_dt.strftime(format_string)
 
         except Exception as e:
-            raise TimeServiceError(
-                f"Error formatting datetime: {str(e)}", original_error=e
-            ) from e
+            raise TimeServiceError(f"Error formatting datetime: {str(e)}", original_error=e) from e
 
     async def health_check(self) -> bool:
         """
@@ -680,11 +649,7 @@ class TimeService:
             current_time = await self.get_current_time()
             timezone_info = await self.get_timezone_info("UTC")
 
-            return (
-                current_time is not None
-                and timezone_info is not None
-                and timezone_info.name == "UTC"
-            )
+            return current_time is not None and timezone_info is not None and timezone_info.name == "UTC"
         except Exception:
             return False
 

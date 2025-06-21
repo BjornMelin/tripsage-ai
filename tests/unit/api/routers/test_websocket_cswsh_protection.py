@@ -41,9 +41,7 @@ class TestWebSocketCSWSHProtection:
         return settings
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_valid_origin(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_valid_origin(self, mock_get_settings, mock_websocket, mock_settings):
         """Test that valid origins are accepted."""
         # Arrange
         mock_get_settings.return_value = mock_settings
@@ -56,9 +54,7 @@ class TestWebSocketCSWSHProtection:
         assert result is True
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_invalid_origin(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_invalid_origin(self, mock_get_settings, mock_websocket, mock_settings):
         """Test that invalid origins are rejected."""
         # Arrange
         mock_get_settings.return_value = mock_settings
@@ -101,9 +97,7 @@ class TestWebSocketCSWSHProtection:
         assert result is False
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_wildcard_origin(
-        self, mock_get_settings, mock_websocket
-    ):
+    async def test_validate_websocket_origin_wildcard_origin(self, mock_get_settings, mock_websocket):
         """Test wildcard origins allow all connections (insecure but configurable)."""
         # Arrange
         settings = Mock()
@@ -119,9 +113,7 @@ class TestWebSocketCSWSHProtection:
         assert result is True
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_case_sensitivity(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_case_sensitivity(self, mock_get_settings, mock_websocket, mock_settings):
         """Test that origin validation is case sensitive."""
         # Arrange
         mock_get_settings.return_value = mock_settings
@@ -134,9 +126,7 @@ class TestWebSocketCSWSHProtection:
         assert result is False
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_subdomain_attack(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_subdomain_attack(self, mock_get_settings, mock_websocket, mock_settings):
         """Test that subdomain attacks are prevented."""
         # Arrange
         mock_get_settings.return_value = mock_settings
@@ -149,9 +139,7 @@ class TestWebSocketCSWSHProtection:
         assert result is False
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_port_mismatch(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_port_mismatch(self, mock_get_settings, mock_websocket, mock_settings):
         """Test that port mismatches are rejected."""
         # Arrange
         mock_get_settings.return_value = mock_settings
@@ -164,15 +152,11 @@ class TestWebSocketCSWSHProtection:
         assert result is False
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_protocol_mismatch(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_protocol_mismatch(self, mock_get_settings, mock_websocket, mock_settings):
         """Test that protocol mismatches are rejected."""
         # Arrange
         mock_get_settings.return_value = mock_settings
-        mock_websocket.headers = {
-            "origin": "https://localhost:3000"
-        }  # HTTPS instead of HTTP
+        mock_websocket.headers = {"origin": "https://localhost:3000"}  # HTTPS instead of HTTP
 
         # Act
         result = await validate_websocket_origin(mock_websocket)
@@ -187,9 +171,7 @@ class TestWebSocketCSWSHProtection:
         """Test validation with multiple allowed origins."""
         # Arrange
         mock_get_settings.return_value = mock_settings
-        mock_websocket.headers = {
-            "origin": "https://tripsage.com"
-        }  # Second allowed origin
+        mock_websocket.headers = {"origin": "https://tripsage.com"}  # Second allowed origin
 
         # Act
         result = await validate_websocket_origin(mock_websocket)
@@ -198,9 +180,7 @@ class TestWebSocketCSWSHProtection:
         assert result is True
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_null_origin(
-        self, mock_get_settings, mock_websocket, mock_settings
-    ):
+    async def test_validate_websocket_origin_null_origin(self, mock_get_settings, mock_websocket, mock_settings):
         """Test handling of null origin (browser privacy mode)."""
         # Arrange
         mock_get_settings.return_value = mock_settings
@@ -213,9 +193,7 @@ class TestWebSocketCSWSHProtection:
         assert result is False
 
     @patch("tripsage.api.routers.websocket.get_settings")
-    async def test_validate_websocket_origin_empty_cors_origins(
-        self, mock_get_settings, mock_websocket
-    ):
+    async def test_validate_websocket_origin_empty_cors_origins(self, mock_get_settings, mock_websocket):
         """Test validation when no CORS origins are configured."""
         # Arrange
         settings = Mock()
@@ -279,9 +257,7 @@ class TestWebSocketEndpointCSWSHIntegration:
 
         # Assert
         mock_validate_origin.assert_called_once_with(mock_websocket)
-        mock_websocket.close.assert_called_once_with(
-            code=4003, reason="Unauthorized origin"
-        )
+        mock_websocket.close.assert_called_once_with(code=4003, reason="Unauthorized origin")
         mock_websocket.accept.assert_not_called()
 
     @patch("tripsage.api.routers.websocket.validate_websocket_origin")
@@ -301,15 +277,11 @@ class TestWebSocketEndpointCSWSHIntegration:
 
         # Assert
         mock_validate_origin.assert_called_once_with(mock_websocket)
-        mock_websocket.close.assert_called_once_with(
-            code=4003, reason="Unauthorized origin"
-        )
+        mock_websocket.close.assert_called_once_with(code=4003, reason="Unauthorized origin")
         mock_websocket.accept.assert_not_called()
 
     @patch("tripsage.api.routers.websocket.validate_websocket_origin")
-    async def test_websocket_origin_validation_called_before_accept(
-        self, mock_validate_origin, mock_websocket
-    ):
+    async def test_websocket_origin_validation_called_before_accept(self, mock_validate_origin, mock_websocket):
         """Test that Origin validation is called before WebSocket.accept()."""
         # Arrange
         from tripsage.api.routers.websocket import chat_websocket
