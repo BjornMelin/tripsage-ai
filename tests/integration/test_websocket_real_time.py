@@ -635,7 +635,7 @@ async def test_websocket_integration_end_to_end():
         assert "subscribed_channels" in stats
 
         # Test performance metrics
-        metrics = websocket_manager.get_performance_metrics()
+        metrics = websocket_manager.performance_metrics
         assert "total_messages_sent" in metrics
         assert "total_bytes_sent" in metrics
         assert "active_connections" in metrics
