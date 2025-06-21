@@ -133,6 +133,17 @@ class Settings(BaseSettings):
         default=True, description="Enable automatic database recovery"
     )
 
+    # WebSocket Configuration
+    enable_websockets: bool = Field(
+        default=True, description="Enable WebSocket functionality"
+    )
+    websocket_timeout: int = Field(
+        default=300, description="WebSocket connection timeout in seconds"
+    )
+    max_websocket_connections: int = Field(
+        default=1000, description="Maximum concurrent WebSocket connections"
+    )
+
     # Monitoring Configuration
     db_health_check_interval: float = Field(
         default=30.0, description="Database health check interval in seconds"
@@ -178,6 +189,36 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running in test environment."""
         return self.environment == "test"
+
+    @property
+    def ENABLE_WEBSOCKETS(self) -> bool:
+        """Uppercase alias for enable_websockets (for test compatibility)."""
+        return self.enable_websockets
+
+    @ENABLE_WEBSOCKETS.setter
+    def ENABLE_WEBSOCKETS(self, value: bool):
+        """Setter for uppercase alias."""
+        self.enable_websockets = value
+
+    @property
+    def WEBSOCKET_TIMEOUT(self) -> int:
+        """Uppercase alias for websocket_timeout (for test compatibility)."""
+        return self.websocket_timeout
+
+    @WEBSOCKET_TIMEOUT.setter
+    def WEBSOCKET_TIMEOUT(self, value: int):
+        """Setter for uppercase alias."""
+        self.websocket_timeout = value
+
+    @property
+    def MAX_WEBSOCKET_CONNECTIONS(self) -> int:
+        """Uppercase alias for max_websocket_connections (for test compatibility)."""
+        return self.max_websocket_connections
+
+    @MAX_WEBSOCKET_CONNECTIONS.setter
+    def MAX_WEBSOCKET_CONNECTIONS(self, value: int):
+        """Setter for uppercase alias."""
+        self.max_websocket_connections = value
 
     @property
     def effective_postgres_url(self) -> str:
