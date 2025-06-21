@@ -132,14 +132,14 @@ class TestHeartbeatMechanisms:
         mock_connection.is_stale.return_value = True
         mock_connection.connection_id = "stale-conn"
 
-        manager.connections["stale-conn"] = mock_connection
+        manager.connection_service.connections["stale-conn"] = mock_connection
         manager._running = True
 
         # Run cleanup
         await manager._cleanup_stale_connections()
 
         # Should attempt to disconnect stale connection
-        assert "stale-conn" not in manager.connections
+        assert "stale-conn" not in manager.connection_service.connections
 
 
 class TestRateLimitingEdgeCases:
@@ -617,10 +617,10 @@ class TestPerformanceOptimization:
 
         # Add connections
         for i in range(5):
-            manager.connections[f"conn-{i}"] = MagicMock()
+            manager.connection_service.connections[f"conn-{i}"] = MagicMock()
 
         # Update metrics
-        manager.performance_metrics["active_connections"] = len(manager.connections)
+        manager.performance_metrics["active_connections"] = len(manager.connection_service.connections)
         if manager.performance_metrics["active_connections"] > initial_peak:
             manager.performance_metrics["peak_connections"] = (
                 manager.performance_metrics["active_connections"]
