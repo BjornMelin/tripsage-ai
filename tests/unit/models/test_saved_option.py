@@ -68,9 +68,7 @@ class TestSavedOptionModel:
         expected_activity,
     ):
         """Test option type property methods."""
-        saved_option = SavedOption(
-            **{**base_saved_option_data, "option_type": option_type}
-        )
+        saved_option = SavedOption(**{**base_saved_option_data, "option_type": option_type})
 
         assert saved_option.is_flight == expected_flight
         assert saved_option.is_accommodation == expected_accommodation
@@ -86,13 +84,9 @@ class TestSavedOptionModel:
             (OptionType.ACTIVITY, "Activity"),
         ],
     )
-    def test_saved_option_type_display_name(
-        self, base_saved_option_data, option_type, expected_display_name
-    ):
+    def test_saved_option_type_display_name(self, base_saved_option_data, option_type, expected_display_name):
         """Test type_display_name property."""
-        saved_option = SavedOption(
-            **{**base_saved_option_data, "option_type": option_type}
-        )
+        saved_option = SavedOption(**{**base_saved_option_data, "option_type": option_type})
         assert saved_option.type_display_name == expected_display_name
 
     def test_saved_option_formatted_timestamp(self, base_saved_option_data):
@@ -112,9 +106,7 @@ class TestSavedOptionModel:
             ("   ", False),  # Only whitespace should be False
         ],
     )
-    def test_saved_option_has_notes_property(
-        self, base_saved_option_data, notes, expected_has_notes
-    ):
+    def test_saved_option_has_notes_property(self, base_saved_option_data, notes, expected_has_notes):
         """Test has_notes property with various note values."""
         saved_option = SavedOption(**{**base_saved_option_data, "notes": notes})
         assert saved_option.has_notes == expected_has_notes
@@ -159,9 +151,7 @@ class TestSavedOptionModel:
         "invalid_option_id",
         [0, -1, -10],
     )
-    def test_saved_option_validation_option_id(
-        self, base_saved_option_data, invalid_option_id
-    ):
+    def test_saved_option_validation_option_id(self, base_saved_option_data, invalid_option_id):
         """Test validation for invalid option_id values."""
         with pytest.raises(ValidationError, match="Option ID must be positive"):
             SavedOption(**{**base_saved_option_data, "option_id": invalid_option_id})

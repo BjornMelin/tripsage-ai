@@ -242,10 +242,8 @@ def create_mock_api_settings(**overrides) -> Any:
         defaults["enable_byok"] and service in defaults["byok_services"]
     )
 
-    mock_settings.get_rate_limit_for_endpoint.side_effect = (
-        lambda endpoint_type="general": (
-            0 if not defaults["rate_limit_enabled"] else defaults["rate_limit_requests"]
-        )
+    mock_settings.get_rate_limit_for_endpoint.side_effect = lambda endpoint_type="general": (
+        0 if not defaults["rate_limit_enabled"] else defaults["rate_limit_requests"]
     )
 
     return mock_settings

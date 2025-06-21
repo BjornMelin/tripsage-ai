@@ -51,9 +51,7 @@ class TestMemoryWorkflowIntegration:
             for memory in self.stored_memories:
                 if memory["user_id"] == user_id:
                     # Simple content matching
-                    content = " ".join(
-                        [msg.get("content", "") for msg in memory["messages"]]
-                    )
+                    content = " ".join([msg.get("content", "") for msg in memory["messages"]])
                     if query.lower() in content.lower():
                         results.append(
                             {
@@ -61,14 +59,7 @@ class TestMemoryWorkflowIntegration:
                                 "content": content[:200],  # Truncate for summary
                                 "metadata": memory["metadata"],
                                 "score": 0.8
-                                + len(
-                                    [
-                                        word
-                                        for word in query.lower().split()
-                                        if word in content.lower()
-                                    ]
-                                )
-                                * 0.1,
+                                + len([word for word in query.lower().split() if word in content.lower()]) * 0.1,
                                 "created_at": memory["created_at"],
                             }
                         )
@@ -87,9 +78,7 @@ class TestMemoryWorkflowIntegration:
             destinations = []
             # budgets = []
             for memory in user_memories:
-                content = " ".join(
-                    [msg.get("content", "") for msg in memory["messages"]]
-                )
+                content = " ".join([msg.get("content", "") for msg in memory["messages"]])
                 # Simple pattern extraction
                 if "paris" in content.lower():
                     destinations.append("Paris")
@@ -103,9 +92,7 @@ class TestMemoryWorkflowIntegration:
                 "memories": [
                     {
                         "id": m["id"],
-                        "content": " ".join(
-                            [msg.get("content", "") for msg in m["messages"]]
-                        )[:100],
+                        "content": " ".join([msg.get("content", "") for msg in m["messages"]])[:100],
                         "metadata": m["metadata"],
                         "score": 0.9,
                         "created_at": m["created_at"],
@@ -148,10 +135,7 @@ class TestMemoryWorkflowIntegration:
             messages_1 = [
                 ConversationMessage(
                     role="user",
-                    content=(
-                        "I'm planning a luxury honeymoon trip to Paris in June. "
-                        "Our budget is $10,000."
-                    ),
+                    content=("I'm planning a luxury honeymoon trip to Paris in June. Our budget is $10,000."),
                     timestamp=datetime.now(timezone.utc),
                 ),
                 ConversationMessage(
@@ -179,8 +163,7 @@ class TestMemoryWorkflowIntegration:
                 ConversationMessage(
                     role="user",
                     content=(
-                        "I prefer hotels near the Champs-Élysées with spa services and "
-                        "Michelin-starred restaurants."
+                        "I prefer hotels near the Champs-Élysées with spa services and Michelin-starred restaurants."
                     ),
                     timestamp=datetime.now(timezone.utc),
                 ),
@@ -205,9 +188,7 @@ class TestMemoryWorkflowIntegration:
             assert result_2["status"] == "success"
 
             # Step 3: Search for Paris-related memories
-            search_query = MemorySearchQuery(
-                user_id=user_id, query="Paris luxury hotels", limit=10
-            )
+            search_query = MemorySearchQuery(user_id=user_id, query="Paris luxury hotels", limit=10)
 
             search_results = await search_user_memories(search_query)
 
@@ -253,10 +234,7 @@ class TestMemoryWorkflowIntegration:
             messages_session_2 = [
                 ConversationMessage(
                     role="user",
-                    content=(
-                        "For my Tokyo trip, I prefer traditional ryokans over "
-                        "modern hotels."
-                    ),
+                    content=("For my Tokyo trip, I prefer traditional ryokans over modern hotels."),
                     timestamp=datetime.now(timezone.utc),
                 )
             ]
@@ -272,9 +250,7 @@ class TestMemoryWorkflowIntegration:
             messages_session_3 = [
                 ConversationMessage(
                     role="user",
-                    content=(
-                        "My budget for the Tokyo trip is around $8,000 for two weeks."
-                    ),
+                    content=("My budget for the Tokyo trip is around $8,000 for two weeks."),
                     timestamp=datetime.now(timezone.utc),
                 )
             ]
@@ -293,9 +269,7 @@ class TestMemoryWorkflowIntegration:
             assert "Tokyo" in context["travel_patterns"]["favorite_destinations"]
 
             # Search should find memories across all sessions
-            search_results = await search_user_memories(
-                MemorySearchQuery(user_id=user_id, query="Tokyo trip")
-            )
+            search_results = await search_user_memories(MemorySearchQuery(user_id=user_id, query="Tokyo trip"))
 
             assert len(search_results) >= 3
 
@@ -310,10 +284,7 @@ class TestMemoryWorkflowIntegration:
                 messages=[
                     ConversationMessage(
                         role="user",
-                        content=(
-                            "I'm a budget traveler looking for hostels "
-                            "and cheap flights."
-                        ),
+                        content=("I'm a budget traveler looking for hostels and cheap flights."),
                         timestamp=datetime.now(timezone.utc) - timedelta(days=30),
                     )
                 ],
@@ -326,10 +297,7 @@ class TestMemoryWorkflowIntegration:
                 messages=[
                     ConversationMessage(
                         role="user",
-                        content=(
-                            "I've gotten a promotion! Now I can afford "
-                            "mid-range hotels with good reviews."
-                        ),
+                        content=("I've gotten a promotion! Now I can afford mid-range hotels with good reviews."),
                         timestamp=datetime.now(timezone.utc) - timedelta(days=15),
                     )
                 ],
@@ -342,10 +310,7 @@ class TestMemoryWorkflowIntegration:
                 messages=[
                     ConversationMessage(
                         role="user",
-                        content=(
-                            "For my anniversary trip, I want the best luxury "
-                            "hotels and first-class flights."
-                        ),
+                        content=("For my anniversary trip, I want the best luxury hotels and first-class flights."),
                         timestamp=datetime.now(timezone.utc),
                     )
                 ],
@@ -363,13 +328,9 @@ class TestMemoryWorkflowIntegration:
             assert len(context["memories"]) == 3
 
             # Search for different preference periods
-            luxury_search = await search_user_memories(
-                MemorySearchQuery(user_id=user_id, query="luxury")
-            )
+            luxury_search = await search_user_memories(MemorySearchQuery(user_id=user_id, query="luxury"))
 
-            budget_search = await search_user_memories(
-                MemorySearchQuery(user_id=user_id, query="budget")
-            )
+            budget_search = await search_user_memories(MemorySearchQuery(user_id=user_id, query="budget"))
 
             assert len(luxury_search) >= 1
             assert len(budget_search) >= 1
@@ -386,9 +347,7 @@ class TestMemoryWorkflowIntegration:
                     "messages": [
                         ConversationMessage(
                             role="user",
-                            content=(
-                                "I love cultural experiences and museums when I travel."
-                            ),
+                            content=("I love cultural experiences and museums when I travel."),
                             timestamp=datetime.now(timezone.utc),
                         )
                     ],
@@ -398,10 +357,7 @@ class TestMemoryWorkflowIntegration:
                     "messages": [
                         ConversationMessage(
                             role="user",
-                            content=(
-                                "I'm vegetarian and need restaurants with good "
-                                "plant-based options."
-                            ),
+                            content=("I'm vegetarian and need restaurants with good plant-based options."),
                             timestamp=datetime.now(timezone.utc),
                         )
                     ],
@@ -411,10 +367,7 @@ class TestMemoryWorkflowIntegration:
                     "messages": [
                         ConversationMessage(
                             role="user",
-                            content=(
-                                "I prefer staying in boutique hotels with unique "
-                                "character over chain hotels."
-                            ),
+                            content=("I prefer staying in boutique hotels with unique character over chain hotels."),
                             timestamp=datetime.now(timezone.utc),
                         )
                     ],
@@ -435,9 +388,7 @@ class TestMemoryWorkflowIntegration:
                 messages=[
                     ConversationMessage(
                         role="user",
-                        content=(
-                            "I'm planning a trip to Barcelona. What do you recommend?"
-                        ),
+                        content=("I'm planning a trip to Barcelona. What do you recommend?"),
                         timestamp=datetime.now(timezone.utc),
                     )
                 ],
@@ -478,10 +429,7 @@ class TestMemoryWorkflowIntegration:
                 messages=[
                     ConversationMessage(
                         role="user",
-                        content=(
-                            "My trip to Italy last year was amazing. "
-                            "The food in Tuscany was incredible."
-                        ),
+                        content=("My trip to Italy last year was amazing. The food in Tuscany was incredible."),
                         timestamp=datetime.now(timezone.utc) - timedelta(days=365),
                     )
                 ],
@@ -498,17 +446,13 @@ class TestMemoryWorkflowIntegration:
                 messages=[
                     ConversationMessage(
                         role="user",
-                        content=(
-                            "I want to plan another European food tour, similar to my "
-                            "Italy trip."
-                        ),
+                        content=("I want to plan another European food tour, similar to my Italy trip."),
                         timestamp=datetime.now(timezone.utc),
                     ),
                     ConversationMessage(
                         role="assistant",
                         content=(
-                            "Based on your amazing Tuscany experience, "
-                            "I recommend exploring France's culinary regions."
+                            "Based on your amazing Tuscany experience, I recommend exploring France's culinary regions."
                         ),
                         timestamp=datetime.now(timezone.utc),
                     ),
@@ -518,13 +462,9 @@ class TestMemoryWorkflowIntegration:
             )
 
             # Search for context about past experiences
-            past_experiences = await search_user_memories(
-                MemorySearchQuery(user_id=user_id, query="Italy food trip")
-            )
+            past_experiences = await search_user_memories(MemorySearchQuery(user_id=user_id, query="Italy food trip"))
 
-            food_preferences = await search_user_memories(
-                MemorySearchQuery(user_id=user_id, query="food culinary")
-            )
+            food_preferences = await search_user_memories(MemorySearchQuery(user_id=user_id, query="food culinary"))
 
             # Get full context
             context = await get_user_context(user_id)
@@ -672,15 +612,11 @@ class TestMemoryWorkflowIntegration:
 
             # Verify user 1 cannot access user 2's data
             user_1_context = await get_user_context(user_1)
-            user_1_search = await search_user_memories(
-                MemorySearchQuery(user_id=user_1, query="Jupiter")
-            )
+            user_1_search = await search_user_memories(MemorySearchQuery(user_id=user_1, query="Jupiter"))
 
             # Verify user 2 cannot access user 1's data
             user_2_context = await get_user_context(user_2)
-            user_2_search = await search_user_memories(
-                MemorySearchQuery(user_id=user_2, query="Mars")
-            )
+            user_2_search = await search_user_memories(MemorySearchQuery(user_id=user_2, query="Mars"))
 
             # Check isolation
             user_1_content = str(user_1_context["memories"])

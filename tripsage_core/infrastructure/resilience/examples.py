@@ -38,9 +38,7 @@ class MockService:
         # Randomly fail based on failure rate
         if random.random() < self.failure_rate:
             self.failure_count += 1
-            raise ConnectionError(
-                f"Service {self.name} failed for operation {operation_id}"
-            )
+            raise ConnectionError(f"Service {self.name} failed for operation {operation_id}")
 
         self.success_count += 1
         return {
@@ -58,9 +56,7 @@ class MockService:
             "total_calls": self.call_count,
             "successes": self.success_count,
             "failures": self.failure_count,
-            "success_rate": self.success_count / self.call_count
-            if self.call_count > 0
-            else 0,
+            "success_rate": self.success_count / self.call_count if self.call_count > 0 else 0,
         }
 
 
@@ -121,9 +117,7 @@ async def demonstrate_enterprise_mode():
     apply_preset("portfolio_demo")
 
     # Create mock service
-    service = MockService(
-        "enterprise_service", failure_rate=0.8
-    )  # Very high failure rate
+    service = MockService("enterprise_service", failure_rate=0.8)  # Very high failure rate
 
     # Create circuit breaker
     breaker = circuit_breaker(
@@ -182,9 +176,7 @@ async def demonstrate_recovery():
     os.environ["ENTERPRISE_CIRCUIT_BREAKER_MODE"] = "enterprise"
 
     # Create service that will recover
-    service = MockService(
-        "recovery_service", failure_rate=1.0
-    )  # Start with 100% failure
+    service = MockService("recovery_service", failure_rate=1.0)  # Start with 100% failure
 
     breaker = circuit_breaker(
         name="recovery_demo",

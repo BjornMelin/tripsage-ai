@@ -104,9 +104,7 @@ class CollaborationPerformanceTestSuite:
         )
 
         duration = time.time() - start_time
-        performance_tracker.track_collaboration_query(
-            "accessible_trips", duration, len(users)
-        )
+        performance_tracker.track_collaboration_query("accessible_trips", duration, len(users))
 
         # Performance assertion
         assert_performance_threshold(
@@ -115,9 +113,7 @@ class CollaborationPerformanceTestSuite:
             "Collaborative trips query",
         )
 
-    async def test_permission_check_performance(
-        self, mock_supabase_client, large_dataset, performance_tracker
-    ):
+    async def test_permission_check_performance(self, mock_supabase_client, large_dataset, performance_tracker):
         """Test performance of permission checking operations."""
         client = mock_supabase_client
         users = large_dataset["users"]
@@ -146,14 +142,10 @@ class CollaborationPerformanceTestSuite:
         # Analyze performance statistics
         avg_duration = statistics.mean(permission_checks)
         max_duration = max(permission_checks)
-        p95_duration = statistics.quantiles(permission_checks, n=20)[
-            18
-        ]  # 95th percentile
+        p95_duration = statistics.quantiles(permission_checks, n=20)[18]  # 95th percentile
 
         # Performance assertions
-        assert avg_duration < 0.1, (
-            f"Average permission check too slow: {avg_duration:.3f}s"
-        )
+        assert avg_duration < 0.1, f"Average permission check too slow: {avg_duration:.3f}s"
         assert max_duration < 0.5, f"Max permission check too slow: {max_duration:.3f}s"
         assert p95_duration < 0.2, f"95th percentile too slow: {p95_duration:.3f}s"
 
@@ -171,8 +163,7 @@ class CollaborationPerformanceTestSuite:
 
             for i in range(memories_per_user):
                 await client.execute_sql(
-                    "INSERT INTO memories (id, user_id, content, embedding) "
-                    "VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO memories (id, user_id, content, embedding) VALUES ($1, $2, $3, $4)",
                     (
                         uuid4(),
                         user.id,
@@ -207,9 +198,7 @@ class CollaborationPerformanceTestSuite:
         )
 
         duration = time.time() - start_time
-        performance_tracker.track_memory_operation(
-            "vector_search", duration, len(memories or [])
-        )
+        performance_tracker.track_memory_operation("vector_search", duration, len(memories or []))
 
         # Performance assertion for memory search
         assert_performance_threshold(
@@ -218,9 +207,7 @@ class CollaborationPerformanceTestSuite:
             "Memory vector search with RLS",
         )
 
-    async def test_concurrent_collaboration_access(
-        self, mock_supabase_client, large_dataset, performance_tracker
-    ):
+    async def test_concurrent_collaboration_access(self, mock_supabase_client, large_dataset, performance_tracker):
         """Test performance under concurrent collaboration access."""
         client = mock_supabase_client
         users = large_dataset["users"]
@@ -267,24 +254,14 @@ class CollaborationPerformanceTestSuite:
         avg_duration = statistics.mean(durations) if durations else 0
         _max_duration = max(durations) if durations else 0
 
-        performance_tracker.track_collaboration_query(
-            "concurrent_access", total_duration, len(users)
-        )
+        performance_tracker.track_collaboration_query("concurrent_access", total_duration, len(users))
 
         # Performance assertions
-        assert len(successful_results) == len(operations), (
-            "Some concurrent operations failed"
-        )
-        assert avg_duration < 1.0, (
-            f"Average concurrent operation too slow: {avg_duration:.3f}s"
-        )
-        assert total_duration < 10.0, (
-            f"Total concurrent test too slow: {total_duration:.3f}s"
-        )
+        assert len(successful_results) == len(operations), "Some concurrent operations failed"
+        assert avg_duration < 1.0, f"Average concurrent operation too slow: {avg_duration:.3f}s"
+        assert total_duration < 10.0, f"Total concurrent test too slow: {total_duration:.3f}s"
 
-    async def test_bulk_permission_update_performance(
-        self, mock_supabase_client, large_dataset, performance_tracker
-    ):
+    async def test_bulk_permission_update_performance(self, mock_supabase_client, large_dataset, performance_tracker):
         """Test performance of bulk permission updates."""
         client = mock_supabase_client
         _users = large_dataset["users"]
@@ -320,9 +297,7 @@ class CollaborationPerformanceTestSuite:
             "Bulk permission update",
         )
 
-    async def test_index_efficiency_analysis(
-        self, mock_supabase_client, large_dataset, performance_tracker
-    ):
+    async def test_index_efficiency_analysis(self, mock_supabase_client, large_dataset, performance_tracker):
         """Test that indexes are effectively used for collaboration queries."""
         client = mock_supabase_client
         users = large_dataset["users"]
@@ -372,13 +347,9 @@ class CollaborationPerformanceTestSuite:
             performance_tracker.track_query(f"index_test_{test['name']}", duration)
 
             # Assert index efficiency
-            assert_performance_threshold(
-                duration, test["expected_duration"], f"Index test: {test['name']}"
-            )
+            assert_performance_threshold(duration, test["expected_duration"], f"Index test: {test['name']}")
 
-    async def test_collaboration_statistics_performance(
-        self, mock_supabase_client, large_dataset, performance_tracker
-    ):
+    async def test_collaboration_statistics_performance(self, mock_supabase_client, large_dataset, performance_tracker):
         """Test performance of collaboration statistics queries."""
         client = mock_supabase_client
         trips = large_dataset["trips"]
@@ -388,9 +359,7 @@ class CollaborationPerformanceTestSuite:
         start_time = time.time()
 
         # Simulate collaboration statistics function
-        _stats = await client.execute_sql(
-            "SELECT * FROM get_collaboration_statistics()"
-        )
+        _stats = await client.execute_sql("SELECT * FROM get_collaboration_statistics()")
 
         duration = time.time() - start_time
         performance_tracker.track_query("collaboration_statistics", duration)
@@ -398,9 +367,7 @@ class CollaborationPerformanceTestSuite:
         # Performance assertion for statistics query
         assert_performance_threshold(duration, 1.0, "Collaboration statistics query")
 
-    async def test_memory_cleanup_performance(
-        self, mock_supabase_client, large_dataset, performance_tracker
-    ):
+    async def test_memory_cleanup_performance(self, mock_supabase_client, large_dataset, performance_tracker):
         """Test performance of memory cleanup operations."""
         client = mock_supabase_client
         users = large_dataset["users"]
@@ -437,9 +404,7 @@ class CollaborationPerformanceTestSuite:
 
     # Helper methods
 
-    async def _populate_database(
-        self, client: MockSupabaseClient, trips: List[TestTrip]
-    ):
+    async def _populate_database(self, client: MockSupabaseClient, trips: List[TestTrip]):
         """Helper to populate database with trip data."""
         for trip in trips:
             client.set_current_user(trip.owner.id)
@@ -460,9 +425,7 @@ class CollaborationPerformanceTestSuite:
                     ),
                 )
 
-    async def _check_permission(
-        self, client: MockSupabaseClient, user_id, trip_id, required_permission
-    ):
+    async def _check_permission(self, client: MockSupabaseClient, user_id, trip_id, required_permission):
         """Helper to check user permission for a trip."""
         return await client.execute_sql(
             "SELECT check_trip_permission($1, $2, $3) as has_permission",
@@ -481,17 +444,13 @@ class PerformanceRegressionTests:
         subquery_count = policies_sql.count("SELECT") - policies_sql.count("CREATE")
 
         # Performance concern if too many subqueries
-        assert subquery_count < 50, (
-            f"Too many subqueries in RLS policies: {subquery_count}"
-        )
+        assert subquery_count < 50, f"Too many subqueries in RLS policies: {subquery_count}"
 
         # Check for performance anti-patterns
         performance_warnings = []
 
         if "NOT IN (SELECT" in policies_sql:
-            performance_warnings.append(
-                "NOT IN subqueries can be slow - consider EXISTS"
-            )
+            performance_warnings.append("NOT IN subqueries can be slow - consider EXISTS")
 
         if policies_sql.count("UNION") > 10:
             performance_warnings.append("Many UNION operations may impact performance")
@@ -514,18 +473,14 @@ class PerformanceRegressionTests:
 
         # Find patterns like "WHERE column_name = "
         where_patterns = re.findall(r"WHERE\s+(\w+\.\w+|\w+)\s*[=<>]", policies_sql)
-        join_patterns = re.findall(
-            r"JOIN\s+\w+\s+\w+\s+ON\s+(\w+\.\w+|\w+)\s*=", policies_sql
-        )
+        join_patterns = re.findall(r"JOIN\s+\w+\s+\w+\s+ON\s+(\w+\.\w+|\w+)\s*=", policies_sql)
 
         critical_columns = set(where_patterns + join_patterns)
 
         # Check if critical columns have indexes
         missing_indexes = []
         for column in critical_columns:
-            if column not in indexes_sql and not any(
-                col in column for col in ["auth.uid()", "id"]
-            ):
+            if column not in indexes_sql and not any(col in column for col in ["auth.uid()", "id"]):
                 missing_indexes.append(column)
 
         # This is informational - indexes might exist with different names
@@ -554,8 +509,7 @@ class PerformanceRegressionTests:
         failure_rate = len(violations) / max(summary.get("total_queries", 1), 1)
 
         assert failure_rate <= baselines["acceptable_failure_rate"], (
-            f"Performance failure rate {failure_rate:.2%} exceeds baseline"
-            f"{baselines['acceptable_failure_rate']:.2%}"
+            f"Performance failure rate {failure_rate:.2%} exceeds baseline{baselines['acceptable_failure_rate']:.2%}"
         )
 
         # Log performance summary for monitoring

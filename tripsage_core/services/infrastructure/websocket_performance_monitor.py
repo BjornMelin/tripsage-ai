@@ -182,9 +182,7 @@ class WebSocketPerformanceMonitor:
 
             # Track circuit breaker events
             if connection.circuit_breaker.state.value == "open":
-                self.circuit_breaker_events[connection.connection_id].append(
-                    time.time()
-                )
+                self.circuit_breaker_events[connection.connection_id].append(time.time())
 
             # Track backpressure events
             if health.backpressure_active:
@@ -194,14 +192,9 @@ class WebSocketPerformanceMonitor:
             self._check_performance_alerts(connection, health)
 
         except Exception as e:
-            logger.error(
-                f"Failed to collect metrics for connection "
-                f"{connection.connection_id}: {e}"
-            )
+            logger.error(f"Failed to collect metrics for connection {connection.connection_id}: {e}")
 
-    def _check_performance_alerts(
-        self, connection: WebSocketConnection, health
-    ) -> None:
+    def _check_performance_alerts(self, connection: WebSocketConnection, health) -> None:
         """Check performance thresholds and generate alerts."""
         current_time = time.time()
 
@@ -282,11 +275,7 @@ class WebSocketPerformanceMonitor:
         if health.backpressure_active:
             events = self.backpressure_events[connection.connection_id]
             # Check if we have events older than the warning threshold
-            old_events = [
-                t
-                for t in events
-                if current_time - t > self.thresholds.backpressure_duration_warning
-            ]
+            old_events = [t for t in events if current_time - t > self.thresholds.backpressure_duration_warning]
             if len(old_events) > 0:
                 oldest_event = min(old_events)
                 duration = current_time - oldest_event
@@ -314,9 +303,7 @@ class WebSocketPerformanceMonitor:
         # Check if alert already exists and is recent
         if alert_key in self.active_alerts:
             existing_alert = self.active_alerts[alert_key]
-            time_since_alert = (
-                datetime.now() - existing_alert.timestamp
-            ).total_seconds()
+            time_since_alert = (datetime.now() - existing_alert.timestamp).total_seconds()
 
             # Only create new alert if enough time has passed (avoid spam)
             if time_since_alert < 60:  # 1 minute cooldown
@@ -335,9 +322,7 @@ class WebSocketPerformanceMonitor:
         self.active_alerts[alert_key] = alert
         self.alert_history.append(alert)
 
-        logger.warning(
-            f"Performance alert: {alert.message} (connection: {connection_id})"
-        )
+        logger.warning(f"Performance alert: {alert.message} (connection: {connection_id})")
 
     async def _monitor_loop(self) -> None:
         """Main monitoring loop."""
@@ -448,18 +433,14 @@ class WebSocketPerformanceMonitor:
         # Clean up old circuit breaker events
         for connection_id in list(self.circuit_breaker_events.keys()):
             events = self.circuit_breaker_events[connection_id]
-            self.circuit_breaker_events[connection_id] = [
-                t for t in events if current_time - t < retention_seconds
-            ]
+            self.circuit_breaker_events[connection_id] = [t for t in events if current_time - t < retention_seconds]
             if not self.circuit_breaker_events[connection_id]:
                 del self.circuit_breaker_events[connection_id]
 
         # Clean up old backpressure events
         for connection_id in list(self.backpressure_events.keys()):
             events = self.backpressure_events[connection_id]
-            self.backpressure_events[connection_id] = [
-                t for t in events if current_time - t < retention_seconds
-            ]
+            self.backpressure_events[connection_id] = [t for t in events if current_time - t < retention_seconds]
             if not self.backpressure_events[connection_id]:
                 del self.backpressure_events[connection_id]
 
@@ -511,11 +492,7 @@ class WebSocketPerformanceMonitor:
 
         return {
             "health_score": health_score,
-            "status": "healthy"
-            if health_score >= 80
-            else "degraded"
-            if health_score >= 60
-            else "unhealthy",
+            "status": "healthy" if health_score >= 80 else "degraded" if health_score >= 60 else "unhealthy",
             "connection_count": latest.connection_count,
             "avg_latency_ms": latest.avg_latency_ms,
             "p95_latency_ms": latest.p95_latency_ms,
@@ -541,13 +518,11 @@ class WebSocketPerformanceMonitor:
         recent_snapshots = [
             s
             for s in self.snapshots
-            if s.connection_id == connection_id
-            and time.time() - s.timestamp < 300  # Last 5 minutes
+            if s.connection_id == connection_id and time.time() - s.timestamp < 300  # Last 5 minutes
         ]
 
         if recent_snapshots:
             latencies = [s.latency_ms for s in recent_snapshots]
-            queue_sizes = [s.queue_size for s in recent_snapshots]
 
             latencies.sort()
             n = len(latencies)
@@ -558,22 +533,10 @@ class WebSocketPerformanceMonitor:
 
         # Get circuit breaker event count (last hour)
         current_time = time.time()
-        cb_events = len(
-            [
-                t
-                for t in self.circuit_breaker_events.get(connection_id, [])
-                if current_time - t < 3600
-            ]
-        )
+        cb_events = len([t for t in self.circuit_breaker_events.get(connection_id, []) if current_time - t < 3600])
 
         # Get backpressure event count (last hour)
-        bp_events = len(
-            [
-                t
-                for t in self.backpressure_events.get(connection_id, [])
-                if current_time - t < 3600
-            ]
-        )
+        bp_events = len([t for t in self.backpressure_events.get(connection_id, []) if current_time - t < 3600])
 
         return {
             "connection_id": connection_id,

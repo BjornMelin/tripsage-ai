@@ -163,31 +163,21 @@ class CachedWebSearchTool(WebSearchTool):
 
             # Try to get from cache with distributed lock to prevent thundering herd
             # when multiple instances request the same uncached query
-            async with cache_lock(
-                f"websearch:{hash(query)}", timeout=5, namespace=self.namespace
-            ):
+            async with cache_lock(f"websearch:{hash(query)}", timeout=5, namespace=self.namespace):
                 # Try to get from cache
                 cached_result = await get_cache(cache_key, namespace=self.namespace)
                 if cached_result is not None:
-                    logger.info(
-                        f"Cache hit for web search query: {query} "
-                        f"(key: {cache_key.split(':')[-1][:8]}...)"
-                    )
+                    logger.info(f"Cache hit for web search query: {query} (key: {cache_key.split(':')[-1][:8]}...)")
                     return cached_result
 
-                logger.info(
-                    f"Cache miss for web search query: {query} "
-                    f"(key: {cache_key.split(':')[-1][:8]}...)"
-                )
+                logger.info(f"Cache miss for web search query: {query} (key: {cache_key.split(':')[-1][:8]}...)")
 
                 # Execute the actual search
                 result = await super()._run(query, **kwargs)
 
                 # Determine content type
                 content_type = self._determine_content_type(query, result)
-                logger.debug(
-                    f"Determined content type {content_type} for query: {query}"
-                )
+                logger.debug(f"Determined content type {content_type} for query: {query}")
 
                 # Store in cache
                 await set_cache(
@@ -199,9 +189,7 @@ class CachedWebSearchTool(WebSearchTool):
 
                 # Log execution time
                 execution_time = time.time() - start_time
-                logger.debug(
-                    f"Web search for '{query}' completed in {execution_time:.2f}s"
-                )
+                logger.debug(f"Web search for '{query}' completed in {execution_time:.2f}s")
 
                 # Prefetch related queries if available
                 await self._prefetch_related_queries(query, result)
@@ -218,9 +206,7 @@ class CachedWebSearchTool(WebSearchTool):
                 "search_results": [],
             }
 
-    def _determine_content_type(
-        self, query: str, result: Optional[Dict[str, Any]] = None
-    ) -> ContentType:
+    def _determine_content_type(self, query: str, result: Optional[Dict[str, Any]] = None) -> ContentType:
         """Determine content type from query and results.
 
         Args:
@@ -256,11 +242,7 @@ class CachedWebSearchTool(WebSearchTool):
             result: The search result
         """
         try:
-            if (
-                not result
-                or not isinstance(result, dict)
-                or "search_results" not in result
-            ):
+            if not result or not isinstance(result, dict) or "search_results" not in result:
                 return
 
             # Extract suggested related questions if available
@@ -273,17 +255,13 @@ class CachedWebSearchTool(WebSearchTool):
                     import re
 
                     questions = re.findall(r"([^.!?]*\\?)", item["snippet"])
-                    related_queries.extend(
-                        q.strip() for q in questions if len(q.strip()) > 10
-                    )
+                    related_queries.extend(q.strip() for q in questions if len(q.strip()) > 10)
 
             # Limit to top 3 most relevant related queries
             related_queries = related_queries[:3]
 
             if related_queries:
-                logger.debug(
-                    f"Prefetching {len(related_queries)} related queries for '{query}'"
-                )
+                logger.debug(f"Prefetching {len(related_queries)} related queries for '{query}'")
                 # Generate cache keys for all related queries
                 prefetch_pattern = f"{self.namespace}:websearch:*"
                 await prefetch_cache_keys(prefetch_pattern, namespace=self.namespace)
@@ -317,9 +295,7 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         # Generate hash for the query
         import hashlib
 
-        query_hash = hashlib.md5(
-            query.lower().strip().encode(), usedforsecurity=False
-        ).hexdigest()
+        query_hash = hashlib.md5(query.lower().strip().encode(), usedforsecurity=False).hexdigest()
 
         # Invalidate all entries containing this hash
         pattern = f"*{query_hash}*"
@@ -332,9 +308,7 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         return 0
 
 
-async def batch_web_search(
-    queries: List[str], skip_cache: bool = False
-) -> List[Dict[str, Any]]:
+async def batch_web_search(queries: List[str], skip_cache: bool = False) -> List[Dict[str, Any]]:
     """Perform multiple web searches in a batch.
 
     This function optimizes multiple searches by using batch cache operations
@@ -356,9 +330,7 @@ async def batch_web_search(
 
         if not skip_cache:
             # Try to get results from cache in a batch
-            cached_results = await batch_cache_get(
-                cache_keys, namespace=WEB_CACHE_NAMESPACE
-            )
+            cached_results = await batch_cache_get(cache_keys, namespace=WEB_CACHE_NAMESPACE)
         else:
             # Skip cache for all queries
             cached_results = [None] * len(queries)
@@ -390,9 +362,7 @@ async def batch_web_search(
     except Exception as e:
         logger.error(f"Error in batch_web_search: {str(e)}")
         log_exception(e)
-        return [
-            {"status": "error", "error": {"message": str(e)}, "search_results": []}
-        ] * len(queries)
+        return [{"status": "error", "error": {"message": str(e)}, "search_results": []}] * len(queries)
 
 
 def web_cached(content_type: ContentType, ttl: Optional[int] = None):

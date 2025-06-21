@@ -54,6 +54,7 @@ async def authenticated_websocket_connection(websocket_settings):
         "tripsage_core.services.infrastructure.websocket_auth_service.WebSocketAuthService.verify_jwt_token"
     ) as mock_verify:
         from uuid import UUID
+
         mock_verify.return_value = UUID("12345678-1234-5678-9012-123456789012")
 
         # Create WebSocket connection
@@ -157,9 +158,7 @@ class TestWebSocketMessagePerformance:
 
     @pytest.mark.performance
     @pytest.mark.websocket
-    async def test_message_send_latency(
-        self, benchmark, authenticated_websocket_connection
-    ):
+    async def test_message_send_latency(self, benchmark, authenticated_websocket_connection):
         """Benchmark WebSocket message send latency."""
 
         async def send_message():
@@ -181,9 +180,7 @@ class TestWebSocketMessagePerformance:
 
     @pytest.mark.performance
     @pytest.mark.websocket
-    async def test_message_receive_latency(
-        self, benchmark, authenticated_websocket_connection
-    ):
+    async def test_message_receive_latency(self, benchmark, authenticated_websocket_connection):
         """Benchmark WebSocket message receive and processing latency."""
 
         async def receive_and_process_message():
@@ -204,9 +201,7 @@ class TestWebSocketMessagePerformance:
             except json.JSONDecodeError:
                 return 0
 
-        result = await benchmark.pedantic(
-            receive_and_process_message, rounds=50, iterations=1
-        )
+        result = await benchmark.pedantic(receive_and_process_message, rounds=50, iterations=1)
         assert result > 0, "Message processing failed"
 
     @pytest.mark.performance
@@ -246,7 +241,7 @@ class TestWebSocketMessagePerformance:
 
             for i in range(batch_size):
                 # Simulate message processing
-                message = {
+                {
                     "id": i,
                     "type": "batch_test",
                     "data": f"Message {i}",
@@ -259,9 +254,7 @@ class TestWebSocketMessagePerformance:
 
             return messages_processed
 
-        result = await benchmark.pedantic(
-            process_message_batch, kwargs={"batch_size": 50}, rounds=20, iterations=1
-        )
+        result = await benchmark.pedantic(process_message_batch, kwargs={"batch_size": 50}, rounds=20, iterations=1)
 
         assert result == 50, "Not all messages were processed"
 
@@ -336,9 +329,7 @@ class TestWebSocketErrorRecoveryPerformance:
 
             return True
 
-        result = await benchmark.pedantic(
-            simulate_connection_recovery, rounds=30, iterations=1
-        )
+        result = await benchmark.pedantic(simulate_connection_recovery, rounds=30, iterations=1)
         assert result is True
 
     @pytest.mark.performance
@@ -428,7 +419,7 @@ class TestWebSocketScalabilityPerformance:
                 "timestamp": time.time(),
             }
 
-            serialized_message = json.dumps(message)
+            json.dumps(message)
             sent_count = 0
 
             # Simulate sending to multiple connections
@@ -481,9 +472,7 @@ class TestWebSocketIntegrationPerformance:
 
             return True
 
-        result = await benchmark.pedantic(
-            complete_websocket_workflow, rounds=20, iterations=1
-        )
+        result = await benchmark.pedantic(complete_websocket_workflow, rounds=20, iterations=1)
         assert result is True
 
     async def test_websocket_with_database_integration_performance(self, benchmark):
@@ -504,9 +493,7 @@ class TestWebSocketIntegrationPerformance:
 
             return True
 
-        result = await benchmark.pedantic(
-            websocket_with_database, rounds=15, iterations=1
-        )
+        result = await benchmark.pedantic(websocket_with_database, rounds=15, iterations=1)
         assert result is True
 
 

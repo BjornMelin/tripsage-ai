@@ -22,7 +22,9 @@ class TestCheckpointManagerMigration:
     def mock_converter(self):
         """Mock URL converter."""
         converter = MagicMock()
-        converter.supabase_to_postgres.return_value = "postgresql://postgres:test-key@test-project.supabase.co:5432/postgres?sslmode=require"
+        converter.supabase_to_postgres.return_value = (
+            "postgresql://postgres:test-key@test-project.supabase.co:5432/postgres?sslmode=require"
+        )
         return converter
 
     @pytest.fixture
@@ -49,9 +51,7 @@ class TestCheckpointManagerMigration:
         assert callable(get_async_checkpointer)
         assert callable(get_sync_checkpointer)
 
-    def test_checkpoint_manager_build_connection_string(
-        self, mock_settings, mock_converter, mock_manager
-    ):
+    def test_checkpoint_manager_build_connection_string(self, mock_settings, mock_converter, mock_manager):
         """Test building connection string with secure converter."""
         with patch(
             "tripsage.orchestration.checkpoint_manager.get_settings",
@@ -69,9 +69,7 @@ class TestCheckpointManagerMigration:
                         "tripsage.orchestration.checkpoint_manager.asyncio.get_running_loop",
                         side_effect=RuntimeError,
                     ):
-                        with patch(
-                            "tripsage.orchestration.checkpoint_manager.asyncio.run"
-                        ) as mock_run:
+                        with patch("tripsage.orchestration.checkpoint_manager.asyncio.run") as mock_run:
                             from tripsage.orchestration.checkpoint_manager import (
                                 SupabaseCheckpointManager,
                             )
@@ -134,9 +132,7 @@ class TestCheckpointManagerMigration:
                         assert "postgresql://" in conn_string
                         assert "sslmode=require" in conn_string
 
-    def test_checkpoint_manager_connection_string_caching(
-        self, mock_settings, mock_converter
-    ):
+    def test_checkpoint_manager_connection_string_caching(self, mock_settings, mock_converter):
         """Test connection string is cached after first build."""
         with patch(
             "tripsage.orchestration.checkpoint_manager.get_settings",
@@ -146,9 +142,7 @@ class TestCheckpointManagerMigration:
                 "tripsage.orchestration.checkpoint_manager.DatabaseURLConverter",
                 return_value=mock_converter,
             ):
-                with patch(
-                    "tripsage.orchestration.checkpoint_manager.SecureDatabaseConnectionManager"
-                ):
+                with patch("tripsage.orchestration.checkpoint_manager.SecureDatabaseConnectionManager"):
                     with patch("tripsage.orchestration.checkpoint_manager.asyncio.run"):
                         from tripsage.orchestration.checkpoint_manager import (
                             SupabaseCheckpointManager,
@@ -179,9 +173,7 @@ class TestCheckpointManagerMigration:
                 return_value=mock_converter,
             ):
                 # Make conversion fail
-                mock_converter.supabase_to_postgres.side_effect = Exception(
-                    "Conversion failed"
-                )
+                mock_converter.supabase_to_postgres.side_effect = Exception("Conversion failed")
 
                 from tripsage.orchestration.checkpoint_manager import (
                     SupabaseCheckpointManager,
@@ -192,15 +184,11 @@ class TestCheckpointManagerMigration:
                 with pytest.raises(DatabaseURLParsingError) as exc_info:
                     manager._build_connection_string()
 
-                assert "Could not create secure checkpoint connection" in str(
-                    exc_info.value
-                )
+                assert "Could not create secure checkpoint connection" in str(exc_info.value)
                 assert "Conversion failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_checkpoint_manager_async_checkpointer(
-        self, mock_settings, mock_converter
-    ):
+    async def test_checkpoint_manager_async_checkpointer(self, mock_settings, mock_converter):
         """Test async checkpointer initialization."""
         with patch(
             "tripsage.orchestration.checkpoint_manager.get_settings",
@@ -210,9 +198,7 @@ class TestCheckpointManagerMigration:
                 "tripsage.orchestration.checkpoint_manager.DatabaseURLConverter",
                 return_value=mock_converter,
             ):
-                with patch(
-                    "tripsage.orchestration.checkpoint_manager.SecureDatabaseConnectionManager"
-                ):
+                with patch("tripsage.orchestration.checkpoint_manager.SecureDatabaseConnectionManager"):
                     with patch("tripsage.orchestration.checkpoint_manager.asyncio.run"):
                         from tripsage.orchestration.checkpoint_manager import (
                             POSTGRES_AVAILABLE,
@@ -220,20 +206,14 @@ class TestCheckpointManagerMigration:
                         )
 
                         if not POSTGRES_AVAILABLE:
-                            pytest.skip(
-                                "PostgreSQL checkpoint dependencies not available"
-                            )
+                            pytest.skip("PostgreSQL checkpoint dependencies not available")
 
                         # Mock pool creation
-                        with patch(
-                            "tripsage.orchestration.checkpoint_manager.AsyncConnectionPool"
-                        ) as mock_pool:
+                        with patch("tripsage.orchestration.checkpoint_manager.AsyncConnectionPool") as mock_pool:
                             manager = SupabaseCheckpointManager()
 
                             # Mock the checkpointer
-                            with patch(
-                                "tripsage.orchestration.checkpoint_manager.AsyncPostgresSaver"
-                            ) as mock_saver:
+                            with patch("tripsage.orchestration.checkpoint_manager.AsyncPostgresSaver") as mock_saver:
                                 mock_checkpointer = MagicMock()
                                 mock_checkpointer.setup = AsyncMock()
                                 mock_saver.return_value = mock_checkpointer
@@ -292,9 +272,7 @@ class TestCheckpointManagerMigration:
                 "tripsage.orchestration.checkpoint_manager.DatabaseURLConverter",
                 return_value=mock_converter,
             ):
-                with patch(
-                    "tripsage.orchestration.checkpoint_manager.SecureDatabaseConnectionManager"
-                ):
+                with patch("tripsage.orchestration.checkpoint_manager.SecureDatabaseConnectionManager"):
                     with patch("tripsage.orchestration.checkpoint_manager.asyncio.run"):
                         from tripsage.orchestration.checkpoint_manager import (
                             SupabaseCheckpointManager,

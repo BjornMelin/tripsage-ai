@@ -65,9 +65,7 @@ class MockDatabaseService:
             if params and len(params) > 1:
                 user_id = params[1]
                 if not self._user_exists(user_id):
-                    raise Exception(
-                        'Foreign key constraint "memories_user_id_fkey" violated'
-                    )
+                    raise Exception('Foreign key constraint "memories_user_id_fkey" violated')
 
         # Simulate RLS filtering
         if "SELECT" in query.upper() and self.current_user_id:
@@ -78,11 +76,7 @@ class MockDatabaseService:
     async def fetch_one(self, query: str, *params) -> Optional[Dict[str, Any]]:
         """Mock single row fetch with RLS simulation."""
         if "auth.uid()" in query:
-            return {
-                "current_user": (
-                    str(self.current_user_id) if self.current_user_id else None
-                )
-            }
+            return {"current_user": (str(self.current_user_id) if self.current_user_id else None)}
 
         if "information_schema.table_constraints" in query:
             return self._get_constraint_info(params[0] if params else None)
@@ -239,14 +233,8 @@ class TestSupabaseCollaborationSchema:
                 "functions": (base_path / "schemas" / "03_functions.sql").read_text(),
             },
             "migrations": {
-                "constraints": (
-                    base_path / "migrations" / "20250610_01_fix_user_id_constraints.sql"
-                ).read_text(),
-                "production": (
-                    base_path
-                    / "migrations"
-                    / "20250609_02_consolidated_production_schema.sql"
-                ).read_text(),
+                "constraints": (base_path / "migrations" / "20250610_01_fix_user_id_constraints.sql").read_text(),
+                "production": (base_path / "migrations" / "20250609_02_consolidated_production_schema.sql").read_text(),
             },
         }
 
@@ -254,9 +242,7 @@ class TestSupabaseCollaborationSchema:
 class TestRLSPolicyValidation:
     """Test RLS policies for collaborative access patterns."""
 
-    async def test_collaborative_trip_access_policies(
-        self, mock_db_service, test_users
-    ):
+    async def test_collaborative_trip_access_policies(self, mock_db_service, test_users):
         """Test RLS policies allow proper collaborative access to trips."""
         owner = test_users["owner"]
         editor = test_users["editor"]
@@ -396,9 +382,7 @@ class TestRLSPolicyValidation:
             ]
         )
 
-        memories = await mock_db_service.fetch_all(
-            "SELECT * FROM memories WHERE user_id = auth.uid()"
-        )
+        memories = await mock_db_service.fetch_all("SELECT * FROM memories WHERE user_id = auth.uid()")
 
         assert len(memories) == 1
         assert memories[0]["user_id"] == str(user1.id)
@@ -407,9 +391,7 @@ class TestRLSPolicyValidation:
         mock_db_service.set_current_user(user2.id)
         mock_db_service.fetch_all = AsyncMock(return_value=[])
 
-        user2_memories = await mock_db_service.fetch_all(
-            "SELECT * FROM memories WHERE user_id = auth.uid()"
-        )
+        user2_memories = await mock_db_service.fetch_all("SELECT * FROM memories WHERE user_id = auth.uid()")
 
         assert len(user2_memories) == 0
 
@@ -423,9 +405,7 @@ class TestForeignKeyConstraints:
 
         # Mock foreign key violation
         mock_db_service.execute_query = AsyncMock(
-            side_effect=Exception(
-                'Foreign key constraint "memories_user_id_fkey" violated'
-            )
+            side_effect=Exception('Foreign key constraint "memories_user_id_fkey" violated')
         )
 
         with pytest.raises(Exception, match="memories_user_id_fkey"):
@@ -445,20 +425,14 @@ class TestForeignKeyConstraints:
         mock_db_service.fetch_one = AsyncMock(return_value={"count": 0})
 
         # Delete user (should cascade to memories)
-        await mock_db_service.execute_query(
-            "DELETE FROM auth.users WHERE id = $1", user.id
-        )
+        await mock_db_service.execute_query("DELETE FROM auth.users WHERE id = $1", user.id)
 
         # Verify memories were cascaded
-        result = await mock_db_service.fetch_one(
-            "SELECT COUNT(*) as count FROM memories WHERE user_id = $1", user.id
-        )
+        result = await mock_db_service.fetch_one("SELECT COUNT(*) as count FROM memories WHERE user_id = $1", user.id)
 
         assert result["count"] == 0
 
-    async def test_trip_collaborator_referential_integrity(
-        self, mock_db_service, test_users
-    ):
+    async def test_trip_collaborator_referential_integrity(self, mock_db_service, test_users):
         """Test referential integrity for trip collaborators."""
         owner = test_users["owner"]
         collaborator = test_users["editor"]
@@ -481,9 +455,7 @@ class TestForeignKeyConstraints:
 
         # Invalid trip_id should fail
         mock_db_service.execute_query = AsyncMock(
-            side_effect=Exception(
-                'Foreign key constraint "trip_collaborators_trip_id_fkey" violated'
-            )
+            side_effect=Exception('Foreign key constraint "trip_collaborators_trip_id_fkey" violated')
         )
 
         with pytest.raises(Exception, match="trip_collaborators_trip_id_fkey"):
@@ -572,9 +544,7 @@ class TestDatabaseFunctions:
         assert "bulk_update_collaborator_permissions" in functions_sql
         assert "get_trip_activity_summary" in functions_sql
 
-    async def test_get_user_accessible_trips_function(
-        self, mock_db_service, test_users
-    ):
+    async def test_get_user_accessible_trips_function(self, mock_db_service, test_users):
         """Test get_user_accessible_trips function behavior."""
         user = test_users["editor"]
 
@@ -595,9 +565,7 @@ class TestDatabaseFunctions:
             ]
         )
 
-        trips = await mock_db_service.fetch_all(
-            "SELECT * FROM get_user_accessible_trips($1, true)", user.id
-        )
+        trips = await mock_db_service.fetch_all("SELECT * FROM get_user_accessible_trips($1, true)", user.id)
 
         assert len(trips) == 2
         assert any(t["user_role"] == "owner" for t in trips)
@@ -631,9 +599,7 @@ class TestDatabaseFunctions:
 
         assert result["has_permission"] is False
 
-    async def test_memory_search_function_with_collaboration(
-        self, mock_db_service, test_users
-    ):
+    async def test_memory_search_function_with_collaboration(self, mock_db_service, test_users):
         """Test memory search function respects user boundaries."""
         user = test_users["owner"]
         query_embedding = [0.1] * 1536  # Mock embedding vector
@@ -695,15 +661,11 @@ class TestMigrationCompatibility:
         """Test migration preserves existing data."""
         # Mock data before migration
         mock_db_service.fetch_all = AsyncMock(
-            return_value=[
-                {"id": 1, "user_id": "old-text-format", "content": "Existing memory"}
-            ]
+            return_value=[{"id": 1, "user_id": "old-text-format", "content": "Existing memory"}]
         )
 
         # Simulate migration data conversion
-        existing_data = await mock_db_service.fetch_all(
-            "SELECT * FROM memories WHERE user_id !~ '^[0-9a-f-]+$'"
-        )
+        existing_data = await mock_db_service.fetch_all("SELECT * FROM memories WHERE user_id !~ '^[0-9a-f-]+$'")
 
         assert len(existing_data) == 1
 
@@ -718,9 +680,7 @@ class TestMigrationCompatibility:
             ]
         )
 
-        migrated_data = await mock_db_service.fetch_all(
-            "SELECT * FROM memories WHERE id = 1"
-        )
+        migrated_data = await mock_db_service.fetch_all("SELECT * FROM memories WHERE id = 1")
 
         assert len(migrated_data) == 1
         assert migrated_data[0]["content"] == "Existing memory"  # Content preserved
@@ -753,9 +713,7 @@ class TestCollaborationWorkflows:
 
         # Step 2: Verify collaborator can access trip
         mock_db_service.set_current_user(collaborator.id)
-        mock_db_service.fetch_one = AsyncMock(
-            return_value={"id": 1, "name": "Shared Trip"}
-        )
+        mock_db_service.fetch_one = AsyncMock(return_value={"id": 1, "name": "Shared Trip"})
 
         trip = await mock_db_service.fetch_one(
             """
@@ -795,9 +753,7 @@ class TestCollaborationWorkflows:
         )
 
         # Verify updated permissions
-        mock_db_service.fetch_one = AsyncMock(
-            return_value={"permission_level": "admin"}
-        )
+        mock_db_service.fetch_one = AsyncMock(return_value={"permission_level": "admin"})
 
         permission = await mock_db_service.fetch_one(
             """
@@ -852,9 +808,7 @@ class TestCollaborationWorkflows:
 class TestMultiUserScenarios:
     """Test complex multi-user scenarios."""
 
-    async def test_multiple_permission_levels_scenario(
-        self, mock_db_service, test_users
-    ):
+    async def test_multiple_permission_levels_scenario(self, mock_db_service, test_users):
         """Test scenario with multiple users having different permission levels."""
         admin = test_users["admin"]
         editor = test_users["editor"]
@@ -912,9 +866,7 @@ class TestMultiUserScenarios:
         for user in users:
             mock_db_service.set_current_user(user.id)
             mock_db_service.fetch_all = AsyncMock(
-                return_value=[
-                    {"id": 1, "user_id": str(user.id), "access_time": datetime.utcnow()}
-                ]
+                return_value=[{"id": 1, "user_id": str(user.id), "access_time": datetime.utcnow()}]
             )
 
             user_trips = await mock_db_service.fetch_all(
@@ -965,9 +917,7 @@ class TestMultiUserScenarios:
 
         assert len(hierarchy) == 2
         admin_perm = next(h for h in hierarchy if h["user_id"] == str(admin_collab.id))
-        editor_perm = next(
-            h for h in hierarchy if h["user_id"] == str(editor_collab.id)
-        )
+        editor_perm = next(h for h in hierarchy if h["user_id"] == str(editor_collab.id))
 
         assert admin_perm["can_add_collaborators"] is True
         assert editor_perm["can_add_collaborators"] is False
@@ -1004,9 +954,7 @@ class TestSecurityIsolation:
         mock_db_service.set_current_user(viewer.id)
 
         # Mock failed privilege escalation
-        mock_db_service.execute_query = AsyncMock(
-            side_effect=Exception("RLS policy prevents privilege escalation")
-        )
+        mock_db_service.execute_query = AsyncMock(side_effect=Exception("RLS policy prevents privilege escalation"))
 
         # Attempt to escalate privileges
         with pytest.raises(Exception, match="RLS policy prevents"):
@@ -1026,23 +974,17 @@ class TestSecurityIsolation:
         # User1 context
         mock_db_service.set_current_user(user1.id)
         mock_db_service.fetch_all = AsyncMock(
-            return_value=[
-                {"id": 1, "content": "User1 memory", "user_id": str(user1.id)}
-            ]
+            return_value=[{"id": 1, "content": "User1 memory", "user_id": str(user1.id)}]
         )
 
-        user1_memories = await mock_db_service.fetch_all(
-            "SELECT * FROM memories WHERE user_id = auth.uid()"
-        )
+        user1_memories = await mock_db_service.fetch_all("SELECT * FROM memories WHERE user_id = auth.uid()")
 
         # User2 context
         mock_db_service.set_current_user(user2.id)
         mock_db_service.fetch_all = AsyncMock(return_value=[])
 
         # User2 should not see User1's memories
-        user2_memories = await mock_db_service.fetch_all(
-            "SELECT * FROM memories WHERE user_id = auth.uid()"
-        )
+        user2_memories = await mock_db_service.fetch_all("SELECT * FROM memories WHERE user_id = auth.uid()")
 
         assert len(user1_memories) == 1
         assert len(user2_memories) == 0
@@ -1052,9 +994,7 @@ class TestSecurityIsolation:
 class TestPerformanceOptimization:
     """Test performance optimization for collaboration queries."""
 
-    async def test_collaboration_query_performance_benchmarks(
-        self, mock_db_service, test_users
-    ):
+    async def test_collaboration_query_performance_benchmarks(self, mock_db_service, test_users):
         """Test performance benchmarks for collaboration queries."""
         user = test_users["editor"]
         mock_db_service.set_current_user(user.id)
@@ -1063,9 +1003,7 @@ class TestPerformanceOptimization:
         start_time = datetime.utcnow()
 
         mock_db_service.fetch_all = AsyncMock(
-            return_value=[
-                {"trip_id": i, "permission_level": "edit"} for i in range(100)
-            ]
+            return_value=[{"trip_id": i, "permission_level": "edit"} for i in range(100)]
         )
 
         # Simulate large collaboration query
@@ -1086,9 +1024,7 @@ class TestPerformanceOptimization:
         assert len(collaborations) == 100
         assert execution_time < 0.5  # Should be very fast with proper indexing
 
-    async def test_memory_search_performance_with_filtering(
-        self, mock_db_service, test_users
-    ):
+    async def test_memory_search_performance_with_filtering(self, mock_db_service, test_users):
         """Test memory search performance with user filtering."""
         user = test_users["owner"]
         mock_db_service.set_current_user(user.id)
@@ -1202,9 +1138,7 @@ class TestDatabaseFixtures:
 
         # Add collaborators
         await mock_db_service.execute_query(
-            "INSERT INTO trip_collaborators "
-            "(trip_id, user_id, permission_level, added_by) "
-            "VALUES ($1, $2, $3, $4)",
+            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
             1,
             editor.id,
             "edit",
@@ -1212,9 +1146,7 @@ class TestDatabaseFixtures:
         )
 
         await mock_db_service.execute_query(
-            "INSERT INTO trip_collaborators "
-            "(trip_id, user_id, permission_level, added_by) "
-            "VALUES ($1, $2, $3, $4)",
+            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
             1,
             viewer.id,
             "view",
@@ -1232,9 +1164,7 @@ class TestDatabaseFixtures:
 
         # Cleanup handled by clean_database fixture
 
-    async def test_collaboration_data_setup(
-        self, sample_collaboration_data, mock_db_service
-    ):
+    async def test_collaboration_data_setup(self, sample_collaboration_data, mock_db_service):
         """Test sample collaboration data setup."""
         data = sample_collaboration_data
 
@@ -1247,9 +1177,7 @@ class TestDatabaseFixtures:
             }
         )
 
-        trip = await mock_db_service.fetch_one(
-            "SELECT * FROM trips WHERE id = $1", data["trip_id"]
-        )
+        trip = await mock_db_service.fetch_one("SELECT * FROM trips WHERE id = $1", data["trip_id"])
 
         assert trip["name"] == "Sample Collaborative Trip"
         assert trip["user_id"] == str(data["owner"].id)
@@ -1269,8 +1197,7 @@ class TestDatabaseFixtures:
         )
 
         collaborators = await mock_db_service.fetch_all(
-            "SELECT user_id, permission_level FROM trip_collaborators "
-            "WHERE trip_id = $1",
+            "SELECT user_id, permission_level FROM trip_collaborators WHERE trip_id = $1",
             data["trip_id"],
         )
 

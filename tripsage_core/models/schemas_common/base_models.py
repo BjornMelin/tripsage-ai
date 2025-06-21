@@ -21,9 +21,7 @@ class BaseResponse(TripSageModel):
 
     success: bool = Field(description="Whether the request was successful")
     message: Optional[str] = Field(None, description="Human-readable message")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Response timestamp"
-    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
 
 
 class SuccessResponse(BaseResponse):
@@ -38,9 +36,7 @@ class ErrorResponse(BaseResponse):
 
     success: bool = Field(False, description="Always false for error responses")
     error_code: Optional[str] = Field(None, description="Machine-readable error code")
-    details: Optional[Dict[str, Any]] = Field(
-        None, description="Additional error details"
-    )
+    details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
 
 
 class PaginationMeta(TripSageModel):
@@ -67,9 +63,7 @@ class HealthCheckResponse(TripSageModel):
     status: str = Field(description="Service status")
     version: Optional[str] = Field(None, description="Service version")
     uptime: Optional[float] = Field(None, description="Uptime in seconds")
-    checks: Optional[Dict[str, Any]] = Field(
-        None, description="Individual health checks"
-    )
+    checks: Optional[Dict[str, Any]] = Field(None, description="Individual health checks")
 
 
 class ValidationErrorDetail(TripSageModel):
@@ -84,9 +78,7 @@ class ValidationErrorResponse(ErrorResponse):
     """Validation error response with field details."""
 
     error_code: str = Field("VALIDATION_ERROR", description="Always VALIDATION_ERROR")
-    validation_errors: List[ValidationErrorDetail] = Field(
-        description="Field validation errors"
-    )
+    validation_errors: List[ValidationErrorDetail] = Field(description="Field validation errors")
 
 
 class SearchFilters(TripSageModel):
@@ -124,9 +116,7 @@ class LocationFilter(TripSageModel):
 
     latitude: Optional[float] = Field(None, ge=-90, le=90, description="Latitude")
     longitude: Optional[float] = Field(None, ge=-180, le=180, description="Longitude")
-    radius: Optional[float] = Field(
-        None, gt=0, description="Search radius in kilometers"
-    )
+    radius: Optional[float] = Field(None, gt=0, description="Search radius in kilometers")
     city: Optional[str] = Field(None, description="City name")
     country: Optional[str] = Field(None, description="Country name")
 
@@ -144,9 +134,7 @@ class BulkOperationResponse(BaseResponse):
     total_processed: int = Field(ge=0, description="Total items processed")
     successful: int = Field(ge=0, description="Successfully processed items")
     failed: int = Field(ge=0, description="Failed items")
-    errors: Optional[List[Dict[str, Any]]] = Field(
-        None, description="List of errors for failed items"
-    )
+    errors: Optional[List[Dict[str, Any]]] = Field(None, description="List of errors for failed items")
 
 
 class FileUploadResponse(BaseResponse):
@@ -164,10 +152,6 @@ class TaskResponse(BaseResponse):
 
     task_id: str = Field(description="Unique task identifier")
     status: str = Field(description="Task status")
-    progress: Optional[float] = Field(
-        None, ge=0, le=100, description="Task progress percentage"
-    )
-    result: Optional[Dict[str, Any]] = Field(
-        None, description="Task result if completed"
-    )
+    progress: Optional[float] = Field(None, ge=0, le=100, description="Task progress percentage")
+    result: Optional[Dict[str, Any]] = Field(None, description="Task result if completed")
     error: Optional[str] = Field(None, description="Error message if failed")

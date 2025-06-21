@@ -71,9 +71,7 @@ class DestinationImage(TripSageModel):
 
     url: str = Field(..., description="Image URL")
     caption: Optional[str] = Field(None, description="Image caption")
-    is_primary: bool = Field(
-        default=False, description="Whether this is the primary image"
-    )
+    is_primary: bool = Field(default=False, description="Whether this is the primary image")
     attribution: Optional[str] = Field(None, description="Image attribution/source")
     width: Optional[int] = Field(None, description="Image width in pixels")
     height: Optional[int] = Field(None, description="Image height in pixels")
@@ -91,47 +89,27 @@ class PointOfInterest(TripSageModel):
     longitude: Optional[float] = Field(None, description="Longitude coordinate")
     rating: Optional[float] = Field(None, ge=0, le=5, description="POI rating")
     review_count: Optional[int] = Field(None, ge=0, description="Number of reviews")
-    price_level: Optional[int] = Field(
-        None, ge=1, le=4, description="Price level (1-4)"
-    )
-    opening_hours: Optional[Dict[str, str]] = Field(
-        None, description="Opening hours by day"
-    )
-    images: List[DestinationImage] = Field(
-        default_factory=list, description="POI images"
-    )
+    price_level: Optional[int] = Field(None, ge=1, le=4, description="Price level (1-4)")
+    opening_hours: Optional[Dict[str, str]] = Field(None, description="Opening hours by day")
+    images: List[DestinationImage] = Field(default_factory=list, description="POI images")
     website: Optional[str] = Field(None, description="POI website URL")
     phone: Optional[str] = Field(None, description="POI phone number")
-    popular_times: Optional[Dict[str, List[int]]] = Field(
-        None, description="Popular visiting times"
-    )
+    popular_times: Optional[Dict[str, List[int]]] = Field(None, description="Popular visiting times")
 
 
 class DestinationWeather(TripSageModel):
     """Destination weather information."""
 
     season: str = Field(..., description="Current season")
-    temperature_high_c: float = Field(
-        ..., description="Average high temperature in Celsius"
-    )
-    temperature_low_c: float = Field(
-        ..., description="Average low temperature in Celsius"
-    )
-    temperature_high_f: Optional[float] = Field(
-        None, description="Average high temperature in Fahrenheit"
-    )
-    temperature_low_f: Optional[float] = Field(
-        None, description="Average low temperature in Fahrenheit"
-    )
+    temperature_high_c: float = Field(..., description="Average high temperature in Celsius")
+    temperature_low_c: float = Field(..., description="Average low temperature in Celsius")
+    temperature_high_f: Optional[float] = Field(None, description="Average high temperature in Fahrenheit")
+    temperature_low_f: Optional[float] = Field(None, description="Average low temperature in Fahrenheit")
     precipitation_mm: float = Field(..., description="Average precipitation in mm")
-    humidity_percent: float = Field(
-        ..., ge=0, le=100, description="Average humidity percentage"
-    )
+    humidity_percent: float = Field(..., ge=0, le=100, description="Average humidity percentage")
     conditions: str = Field(..., description="Typical weather conditions")
     climate_type: ClimateType = Field(..., description="Climate classification")
-    best_months: List[str] = Field(
-        default_factory=list, description="Best months to visit"
-    )
+    best_months: List[str] = Field(default_factory=list, description="Best months to visit")
     avoid_months: List[str] = Field(default_factory=list, description="Months to avoid")
 
 
@@ -141,45 +119,25 @@ class TravelAdvisory(TripSageModel):
     safety_level: SafetyLevel = Field(..., description="Overall safety level")
     advisory_text: Optional[str] = Field(None, description="Advisory text")
     last_updated: datetime = Field(..., description="Last updated timestamp")
-    restrictions: List[str] = Field(
-        default_factory=list, description="Current travel restrictions"
-    )
-    health_requirements: List[str] = Field(
-        default_factory=list, description="Health requirements"
-    )
-    embassy_info: Optional[Dict[str, str]] = Field(
-        None, description="Embassy contact information"
-    )
+    restrictions: List[str] = Field(default_factory=list, description="Current travel restrictions")
+    health_requirements: List[str] = Field(default_factory=list, description="Health requirements")
+    embassy_info: Optional[Dict[str, str]] = Field(None, description="Embassy contact information")
 
 
 class DestinationSearchRequest(TripSageModel):
     """Request model for destination search."""
 
     query: str = Field(..., min_length=1, max_length=200, description="Search query")
-    categories: Optional[List[DestinationCategory]] = Field(
-        None, description="Preferred categories"
-    )
-    min_safety_rating: Optional[float] = Field(
-        None, ge=0, le=5, description="Minimum safety rating"
-    )
-    max_safety_rating: Optional[float] = Field(
-        None, ge=0, le=5, description="Maximum safety rating"
-    )
-    travel_month: Optional[str] = Field(
-        None, description="Month of travel for weather filtering"
-    )
-    budget_range: Optional[Dict[str, float]] = Field(
-        None, description="Budget range in USD"
-    )
+    categories: Optional[List[DestinationCategory]] = Field(None, description="Preferred categories")
+    min_safety_rating: Optional[float] = Field(None, ge=0, le=5, description="Minimum safety rating")
+    max_safety_rating: Optional[float] = Field(None, ge=0, le=5, description="Maximum safety rating")
+    travel_month: Optional[str] = Field(None, description="Month of travel for weather filtering")
+    budget_range: Optional[Dict[str, float]] = Field(None, description="Budget range in USD")
     continent: Optional[str] = Field(None, description="Preferred continent")
     country: Optional[str] = Field(None, description="Preferred country")
-    climate_preference: Optional[ClimateType] = Field(
-        None, description="Preferred climate type"
-    )
+    climate_preference: Optional[ClimateType] = Field(None, description="Preferred climate type")
     limit: int = Field(default=10, ge=1, le=50, description="Maximum number of results")
-    include_weather: bool = Field(
-        default=True, description="Include weather information"
-    )
+    include_weather: bool = Field(default=True, description="Include weather information")
     include_pois: bool = Field(default=True, description="Include points of interest")
     include_advisory: bool = Field(default=True, description="Include travel advisory")
 
@@ -195,9 +153,7 @@ class Destination(TripSageModel):
     description: Optional[str] = Field(None, description="Brief description")
     long_description: Optional[str] = Field(None, description="Detailed description")
 
-    categories: List[DestinationCategory] = Field(
-        default_factory=list, description="Destination categories"
-    )
+    categories: List[DestinationCategory] = Field(default_factory=list, description="Destination categories")
 
     # Geographic information
     latitude: Optional[float] = Field(None, description="Latitude coordinate")
@@ -209,52 +165,34 @@ class Destination(TripSageModel):
     languages: List[str] = Field(default_factory=list, description="Primary languages")
 
     # Media
-    images: List[DestinationImage] = Field(
-        default_factory=list, description="Destination images"
-    )
+    images: List[DestinationImage] = Field(default_factory=list, description="Destination images")
 
     # Ratings and reviews
     rating: Optional[float] = Field(None, ge=0, le=5, description="Overall rating")
     review_count: Optional[int] = Field(None, ge=0, description="Number of reviews")
-    safety_rating: Optional[float] = Field(
-        None, ge=0, le=5, description="Safety rating"
-    )
+    safety_rating: Optional[float] = Field(None, ge=0, le=5, description="Safety rating")
 
     # Travel information
     visa_requirements: Optional[str] = Field(None, description="Visa requirements")
-    local_transportation: Optional[str] = Field(
-        None, description="Local transportation options"
-    )
-    popular_activities: List[str] = Field(
-        default_factory=list, description="Popular activities"
-    )
+    local_transportation: Optional[str] = Field(None, description="Local transportation options")
+    popular_activities: List[str] = Field(default_factory=list, description="Popular activities")
 
     # Points of interest
-    points_of_interest: List[PointOfInterest] = Field(
-        default_factory=list, description="POIs"
-    )
+    points_of_interest: List[PointOfInterest] = Field(default_factory=list, description="POIs")
 
     # Weather and climate
-    weather: Optional[DestinationWeather] = Field(
-        None, description="Weather information"
-    )
-    best_time_to_visit: List[str] = Field(
-        default_factory=list, description="Best months to visit"
-    )
+    weather: Optional[DestinationWeather] = Field(None, description="Weather information")
+    best_time_to_visit: List[str] = Field(default_factory=list, description="Best months to visit")
 
     # Travel advisory
-    travel_advisory: Optional[TravelAdvisory] = Field(
-        None, description="Travel advisory"
-    )
+    travel_advisory: Optional[TravelAdvisory] = Field(None, description="Travel advisory")
 
     # Metadata
     source: Optional[str] = Field(None, description="Data source")
     last_updated: Optional[datetime] = Field(None, description="Last updated timestamp")
 
     # Search context
-    relevance_score: Optional[float] = Field(
-        None, ge=0, le=1, description="Search relevance score"
-    )
+    relevance_score: Optional[float] = Field(None, ge=0, le=1, description="Search relevance score")
 
 
 class DestinationSearchResponse(TripSageModel):
@@ -262,16 +200,12 @@ class DestinationSearchResponse(TripSageModel):
 
     search_id: str = Field(..., description="Search ID")
     destinations: List[Destination] = Field(..., description="Search results")
-    search_parameters: DestinationSearchRequest = Field(
-        ..., description="Original search parameters"
-    )
+    search_parameters: DestinationSearchRequest = Field(..., description="Original search parameters")
 
     total_results: int = Field(..., description="Total number of results")
     results_returned: int = Field(..., description="Number of results returned")
 
-    search_duration_ms: Optional[int] = Field(
-        None, description="Search duration in milliseconds"
-    )
+    search_duration_ms: Optional[int] = Field(None, description="Search duration in milliseconds")
     cached: bool = Field(default=False, description="Whether results were cached")
 
 
@@ -281,13 +215,9 @@ class SavedDestinationRequest(TripSageModel):
     destination_id: str = Field(..., description="Destination ID to save")
     trip_id: Optional[str] = Field(None, description="Associated trip ID")
     notes: Optional[str] = Field(None, description="User notes about the destination")
-    priority: int = Field(
-        default=3, ge=1, le=5, description="Priority (1=highest, 5=lowest)"
-    )
+    priority: int = Field(default=3, ge=1, le=5, description="Priority (1=highest, 5=lowest)")
     planned_visit_date: Optional[date] = Field(None, description="Planned visit date")
-    duration_days: Optional[int] = Field(
-        None, ge=1, description="Planned duration in days"
-    )
+    duration_days: Optional[int] = Field(None, ge=1, description="Planned duration in days")
 
 
 class SavedDestination(TripSageModel):
@@ -309,20 +239,12 @@ class DestinationRecommendationRequest(TripSageModel):
 
     user_interests: List[str] = Field(..., description="User interests")
     travel_style: Optional[str] = Field(None, description="Travel style preference")
-    budget_range: Optional[Dict[str, float]] = Field(
-        None, description="Budget range in USD"
-    )
-    travel_dates: Optional[List[date]] = Field(
-        None, description="Potential travel dates"
-    )
+    budget_range: Optional[Dict[str, float]] = Field(None, description="Budget range in USD")
+    travel_dates: Optional[List[date]] = Field(None, description="Potential travel dates")
     trip_duration_days: Optional[int] = Field(None, ge=1, description="Trip duration")
     group_size: Optional[int] = Field(None, ge=1, description="Travel group size")
-    accessibility_needs: Optional[List[str]] = Field(
-        None, description="Accessibility requirements"
-    )
-    previous_destinations: Optional[List[str]] = Field(
-        None, description="Previously visited destinations"
-    )
+    accessibility_needs: Optional[List[str]] = Field(None, description="Accessibility requirements")
+    previous_destinations: Optional[List[str]] = Field(None, description="Previously visited destinations")
     limit: int = Field(default=5, ge=1, le=20, description="Maximum recommendations")
 
 
@@ -330,16 +252,10 @@ class DestinationRecommendation(TripSageModel):
     """Destination recommendation with reasoning."""
 
     destination: Destination = Field(..., description="Recommended destination")
-    match_score: float = Field(
-        ..., ge=0, le=1, description="Recommendation match score"
-    )
+    match_score: float = Field(..., ge=0, le=1, description="Recommendation match score")
     reasons: List[str] = Field(..., description="Reasons for recommendation")
-    best_for: List[str] = Field(
-        default_factory=list, description="What this destination is best for"
-    )
-    estimated_cost: Optional[Dict[str, float]] = Field(
-        None, description="Estimated costs"
-    )
+    best_for: List[str] = Field(default_factory=list, description="What this destination is best for")
+    estimated_cost: Optional[Dict[str, float]] = Field(None, description="Estimated costs")
 
 
 class DestinationService:
@@ -408,9 +324,7 @@ class DestinationService:
         self._search_cache: Dict[str, tuple] = {}
         self._destination_cache: Dict[str, tuple] = {}
 
-    async def search_destinations(
-        self, search_request: DestinationSearchRequest
-    ) -> DestinationSearchResponse:
+    async def search_destinations(self, search_request: DestinationSearchRequest) -> DestinationSearchResponse:
         """
         Search for destinations based on criteria.
 
@@ -453,9 +367,7 @@ class DestinationService:
             # Try external service first
             if self.external_service:
                 try:
-                    external_destinations = await self._search_external_destinations(
-                        search_request
-                    )
+                    external_destinations = await self._search_external_destinations(search_request)
                     destinations.extend(external_destinations)
                 except Exception as e:
                     logger.error(
@@ -476,21 +388,15 @@ class DestinationService:
                 destinations = await self._enrich_with_advisory(destinations)
 
             # Score and rank destinations
-            scored_destinations = await self._score_destinations(
-                destinations, search_request
-            )
+            scored_destinations = await self._score_destinations(destinations, search_request)
 
             # Cache results
             self._cache_search_results(cache_key, {"destinations": scored_destinations})
 
             # Store search in database
-            await self._store_search_history(
-                search_id, search_request, scored_destinations
-            )
+            await self._store_search_history(search_id, search_request, scored_destinations)
 
-            search_duration = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
-            )
+            search_duration = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
 
             logger.info(
                 "Destination search completed",
@@ -552,15 +458,9 @@ class DestinationService:
                 elif self.external_service:
                     # Try external service
                     try:
-                        external_dest = (
-                            await self.external_service.get_destination_details(
-                                destination_id
-                            )
-                        )
+                        external_dest = await self.external_service.get_destination_details(destination_id)
                         if external_dest:
-                            destination = await self._convert_external_destination(
-                                external_dest
-                            )
+                            destination = await self._convert_external_destination(external_dest)
                             await self._store_destination(destination)
                         else:
                             return None
@@ -595,9 +495,7 @@ class DestinationService:
             )
             return None
 
-    async def save_destination(
-        self, user_id: str, save_request: SavedDestinationRequest
-    ) -> SavedDestination:
+    async def save_destination(self, user_id: str, save_request: SavedDestinationRequest) -> SavedDestination:
         """
         Save a destination for a user.
 
@@ -614,9 +512,7 @@ class DestinationService:
         """
         try:
             # Get destination details
-            destination = await self.get_destination_details(
-                save_request.destination_id
-            )
+            destination = await self.get_destination_details(save_request.destination_id)
             if not destination:
                 raise NotFoundError("Destination not found")
 
@@ -736,9 +632,7 @@ class DestinationService:
             )
             return []
 
-    async def _search_external_destinations(
-        self, search_request: DestinationSearchRequest
-    ) -> List[Destination]:
+    async def _search_external_destinations(self, search_request: DestinationSearchRequest) -> List[Destination]:
         """Search destinations using external API."""
         if not self.external_service:
             return []
@@ -746,15 +640,11 @@ class DestinationService:
         try:
             external_request = {
                 "query": search_request.query,
-                "categories": [cat.value for cat in search_request.categories]
-                if search_request.categories
-                else None,
+                "categories": [cat.value for cat in search_request.categories] if search_request.categories else None,
                 "limit": search_request.limit,
             }
 
-            external_destinations = await self.external_service.search_destinations(
-                external_request
-            )
+            external_destinations = await self.external_service.search_destinations(external_request)
 
             converted_destinations = []
             for external_dest in external_destinations:
@@ -783,9 +673,7 @@ class DestinationService:
             last_updated=datetime.now(timezone.utc),
         )
 
-    async def _generate_mock_destinations(
-        self, search_request: DestinationSearchRequest
-    ) -> List[Destination]:
+    async def _generate_mock_destinations(self, search_request: DestinationSearchRequest) -> List[Destination]:
         """Generate mock destinations for testing."""
         destinations = []
 
@@ -839,10 +727,7 @@ class DestinationService:
                 longitude=data["longitude"],
                 images=[
                     DestinationImage(
-                        url=(
-                            f"https://example.com/"
-                            f"{data['name'].lower().replace(' ', '_')}.jpg"
-                        ),
+                        url=(f"https://example.com/{data['name'].lower().replace(' ', '_')}.jpg"),
                         is_primary=True,
                     )
                 ],
@@ -853,9 +738,7 @@ class DestinationService:
 
         return destinations
 
-    async def _enrich_with_weather(
-        self, destinations: List[Destination]
-    ) -> List[Destination]:
+    async def _enrich_with_weather(self, destinations: List[Destination]) -> List[Destination]:
         """Enrich destinations with weather information."""
         if not self.weather_service:
             return destinations
@@ -875,9 +758,7 @@ class DestinationService:
                             precipitation_mm=weather_data.get("precipitation", 0),
                             humidity_percent=weather_data.get("humidity", 0),
                             conditions=weather_data.get("conditions", "Unknown"),
-                            climate_type=ClimateType(
-                                weather_data.get("climate_type", "temperate")
-                            ),
+                            climate_type=ClimateType(weather_data.get("climate_type", "temperate")),
                             best_months=weather_data.get("best_months", []),
                         )
                 except Exception as e:
@@ -888,18 +769,14 @@ class DestinationService:
 
         return destinations
 
-    async def _enrich_with_advisory(
-        self, destinations: List[Destination]
-    ) -> List[Destination]:
+    async def _enrich_with_advisory(self, destinations: List[Destination]) -> List[Destination]:
         """Enrich destinations with travel advisory information."""
         for destination in destinations:
             try:
                 # Mock travel advisory data
                 advisory = TravelAdvisory(
                     safety_level=SafetyLevel.SAFE,
-                    advisory_text=(
-                        f"Standard travel precautions for {destination.country}"
-                    ),
+                    advisory_text=(f"Standard travel precautions for {destination.country}"),
                     last_updated=datetime.now(timezone.utc),
                     restrictions=[],
                     health_requirements=["Valid passport required"],
@@ -929,17 +806,12 @@ class DestinationService:
                 score += 0.4
             elif query_lower in destination.country.lower():
                 score += 0.3
-            elif (
-                destination.description
-                and query_lower in destination.description.lower()
-            ):
+            elif destination.description and query_lower in destination.description.lower():
                 score += 0.2
 
             # Category match score
             if search_request.categories:
-                category_matches = len(
-                    set(search_request.categories) & set(destination.categories)
-                )
+                category_matches = len(set(search_request.categories) & set(destination.categories))
                 if category_matches > 0:
                     score += 0.3 * (category_matches / len(search_request.categories))
 
@@ -960,15 +832,11 @@ class DestinationService:
         # Sort by relevance score (highest first)
         return sorted(destinations, key=lambda x: x.relevance_score or 0, reverse=True)
 
-    async def _enrich_destination_with_weather(
-        self, destination: Destination
-    ) -> Destination:
+    async def _enrich_destination_with_weather(self, destination: Destination) -> Destination:
         """Enrich a single destination with weather data."""
         if destination.latitude and destination.longitude and self.weather_service:
             try:
-                weather_data = await self.weather_service.get_climate_info(
-                    destination.latitude, destination.longitude
-                )
+                weather_data = await self.weather_service.get_climate_info(destination.latitude, destination.longitude)
 
                 if weather_data:
                     destination.weather = DestinationWeather(
@@ -978,9 +846,7 @@ class DestinationService:
                         precipitation_mm=weather_data.get("precipitation", 0),
                         humidity_percent=weather_data.get("humidity", 0),
                         conditions=weather_data.get("conditions", "Unknown"),
-                        climate_type=ClimateType(
-                            weather_data.get("climate_type", "temperate")
-                        ),
+                        climate_type=ClimateType(weather_data.get("climate_type", "temperate")),
                     )
             except Exception as e:
                 logger.warning(
@@ -990,9 +856,7 @@ class DestinationService:
 
         return destination
 
-    async def _enrich_destination_with_pois(
-        self, destination: Destination
-    ) -> Destination:
+    async def _enrich_destination_with_pois(self, destination: Destination) -> Destination:
         """Enrich a destination with points of interest."""
         # Mock POI data
         mock_pois = [
@@ -1015,9 +879,7 @@ class DestinationService:
         destination.points_of_interest = mock_pois
         return destination
 
-    async def _enrich_destination_with_advisory(
-        self, destination: Destination
-    ) -> Destination:
+    async def _enrich_destination_with_advisory(self, destination: Destination) -> Destination:
         """Enrich a destination with travel advisory information."""
         advisory = TravelAdvisory(
             safety_level=SafetyLevel.SAFE,
@@ -1108,9 +970,7 @@ class DestinationService:
 
         return recommendations
 
-    def _generate_search_cache_key(
-        self, search_request: DestinationSearchRequest
-    ) -> str:
+    def _generate_search_cache_key(self, search_request: DestinationSearchRequest) -> str:
         """Generate cache key for search request."""
         import hashlib
 
@@ -1168,9 +1028,7 @@ class DestinationService:
             search_data = {
                 "id": search_id,
                 "query": search_request.query,
-                "categories": [cat.value for cat in search_request.categories]
-                if search_request.categories
-                else [],
+                "categories": [cat.value for cat in search_request.categories] if search_request.categories else [],
                 "destinations_count": len(destinations),
                 "search_timestamp": datetime.now(timezone.utc).isoformat(),
             }
@@ -1197,9 +1055,7 @@ class DestinationService:
                 extra={"destination_id": destination.id, "error": str(e)},
             )
 
-    async def _store_saved_destination(
-        self, saved_destination: SavedDestination
-    ) -> None:
+    async def _store_saved_destination(self, saved_destination: SavedDestination) -> None:
         """Store saved destination in database."""
         try:
             saved_data = saved_destination.model_dump()

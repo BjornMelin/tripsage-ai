@@ -122,9 +122,7 @@ class TestApiKeyServiceCoverageFocused:
         """Test encryption when data cipher creation fails - targets lines 652-667."""
         with patch("cryptography.fernet.Fernet") as mock_fernet_class:
             # Mock generate_key to succeed, but constructor to fail
-            mock_fernet_class.generate_key.return_value = (
-                b"fake_key_value_32_bytes_length!"
-            )
+            mock_fernet_class.generate_key.return_value = b"fake_key_value_32_bytes_length!"
             mock_fernet_class.side_effect = Exception("Invalid key format")
 
             with pytest.raises(ServiceError, match="Encryption failed"):
@@ -135,9 +133,7 @@ class TestApiKeyServiceCoverageFocused:
         """Test encryption when data encryption itself fails - targets lines 655-667."""
         with patch("cryptography.fernet.Fernet") as mock_fernet_class:
             # Mock generate_key to succeed
-            mock_fernet_class.generate_key.return_value = (
-                b"fake_key_value_32_bytes_length!"
-            )
+            mock_fernet_class.generate_key.return_value = b"fake_key_value_32_bytes_length!"
 
             # Mock cipher instance with failing encrypt method
             mock_cipher = Mock()
@@ -257,9 +253,7 @@ class TestApiKeyServiceCoverageFocused:
         """Test decryption with multiple separators - targets lines 684-687."""
         # Create data with multiple separators (should only split on first)
         multiple_separator_data = b"part1::part2::part3::part4"
-        multiple_separator_key = base64.urlsafe_b64encode(
-            multiple_separator_data
-        ).decode()
+        multiple_separator_key = base64.urlsafe_b64encode(multiple_separator_data).decode()
 
         # This should actually work since split(b"::", 1) only splits on first
         # occurrence
@@ -274,9 +268,7 @@ class TestApiKeyServiceCoverageFocused:
     # PHASE 1: Database Transaction Rollbacks (Lines 343-356, 592-604)
 
     @pytest.mark.asyncio
-    async def test_create_api_key_transaction_rollback(
-        self, api_service, mock_dependencies
-    ):
+    async def test_create_api_key_transaction_rollback(self, api_service, mock_dependencies):
         """Test transaction rollback on database failure - targets lines 343-356."""
         user_id = str(uuid.uuid4())
         request = ApiKeyCreateRequest(
@@ -304,9 +296,7 @@ class TestApiKeyServiceCoverageFocused:
                 await api_service.create_api_key(user_id, request)
 
     @pytest.mark.asyncio
-    async def test_create_api_key_transaction_execute_failure(
-        self, api_service, mock_dependencies
-    ):
+    async def test_create_api_key_transaction_execute_failure(self, api_service, mock_dependencies):
         """Test transaction failure during execute phase - targets lines 347-360."""
         user_id = str(uuid.uuid4())
         request = ApiKeyCreateRequest(
@@ -337,9 +327,7 @@ class TestApiKeyServiceCoverageFocused:
             assert mock_dependencies["db"].transaction.called
 
     @pytest.mark.asyncio
-    async def test_create_api_key_partial_transaction_failure(
-        self, api_service, mock_dependencies
-    ):
+    async def test_create_api_key_partial_transaction_failure(self, api_service, mock_dependencies):
         """Test partial transaction failure with cleanup - targets lines 348-359."""
         user_id = str(uuid.uuid4())
         request = ApiKeyCreateRequest(
@@ -371,9 +359,7 @@ class TestApiKeyServiceCoverageFocused:
                 await api_service.create_api_key(user_id, request)
 
     @pytest.mark.asyncio
-    async def test_delete_api_key_transaction_rollback(
-        self, api_service, mock_dependencies
-    ):
+    async def test_delete_api_key_transaction_rollback(self, api_service, mock_dependencies):
         """Test transaction rollback on deletion failure - targets lines 592-604."""
         key_id = str(uuid.uuid4())
         user_id = str(uuid.uuid4())
@@ -396,9 +382,7 @@ class TestApiKeyServiceCoverageFocused:
             await api_service.delete_api_key(key_id, user_id)
 
     @pytest.mark.asyncio
-    async def test_delete_api_key_transaction_context_failure(
-        self, api_service, mock_dependencies
-    ):
+    async def test_delete_api_key_transaction_context_failure(self, api_service, mock_dependencies):
         """Test transaction context manager failure during delete."""
         key_id = str(uuid.uuid4())
         user_id = str(uuid.uuid4())
@@ -425,9 +409,7 @@ class TestApiKeyServiceCoverageFocused:
         assert mock_dependencies["db"].transaction.called
 
     @pytest.mark.asyncio
-    async def test_delete_api_key_empty_transaction_result(
-        self, api_service, mock_dependencies
-    ):
+    async def test_delete_api_key_empty_transaction_result(self, api_service, mock_dependencies):
         """Test delete with empty transaction result - targets lines 623-624."""
         key_id = str(uuid.uuid4())
         user_id = str(uuid.uuid4())
@@ -460,9 +442,7 @@ class TestApiKeyServiceCoverageFocused:
         assert result is False  # Should return False when deletion fails
 
     @pytest.mark.asyncio
-    async def test_transaction_network_failure_simulation(
-        self, api_service, mock_dependencies
-    ):
+    async def test_transaction_network_failure_simulation(self, api_service, mock_dependencies):
         """Test transaction failure due to network issues - comprehensive coverage."""
         user_id = str(uuid.uuid4())
         request = ApiKeyCreateRequest(
@@ -503,9 +483,7 @@ class TestApiKeyServiceCoverageFocused:
         # Simulate timeout during transaction execution
         mock_transaction = AsyncMock()
         mock_transaction.__aenter__.return_value = mock_transaction
-        mock_transaction.execute.side_effect = asyncio.TimeoutError(
-            "Transaction timeout"
-        )
+        mock_transaction.execute.side_effect = asyncio.TimeoutError("Transaction timeout")
         mock_dependencies["db"].transaction.return_value = mock_transaction
 
         with patch.object(api_service, "validate_api_key") as mock_validate:
@@ -529,9 +507,7 @@ class TestApiKeyServiceCoverageFocused:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = asyncio.TimeoutError("Request timeout")
 
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -545,9 +521,7 @@ class TestApiKeyServiceCoverageFocused:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = asyncio.TimeoutError("Request timeout")
 
-            result = await api_service.validate_api_key(
-                ServiceType.WEATHER, "weather_api_key_test_12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.WEATHER, "weather_api_key_test_12345", user_id)
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -561,9 +535,7 @@ class TestApiKeyServiceCoverageFocused:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = asyncio.TimeoutError("Request timeout")
 
-            result = await api_service.validate_api_key(
-                ServiceType.GOOGLEMAPS, "AIza_test_key_value_12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.GOOGLEMAPS, "AIza_test_key_value_12345", user_id)
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -590,9 +562,7 @@ class TestApiKeyServiceCoverageFocused:
                 capability_response,
             ]
 
-            result = await api_service.validate_api_key(
-                ServiceType.GOOGLEMAPS, "AIza_test_key_value_12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.GOOGLEMAPS, "AIza_test_key_value_12345", user_id)
 
             # Should still validate successfully even if capability detection fails
             assert result.is_valid is True
@@ -608,9 +578,7 @@ class TestApiKeyServiceCoverageFocused:
             mock_response.status_code = 429  # Rate limited
             mock_get.return_value = mock_response
 
-            result = await api_service.validate_api_key(
-                ServiceType.WEATHER, "weather_api_key_test_12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.WEATHER, "weather_api_key_test_12345", user_id)
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.RATE_LIMITED
@@ -618,9 +586,7 @@ class TestApiKeyServiceCoverageFocused:
     # PHASE 3: Cache Infrastructure Tests (Lines 1128-1159)
 
     @pytest.mark.asyncio
-    async def test_cache_service_unavailable_scenarios(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_service_unavailable_scenarios(self, api_service, mock_dependencies):
         """Test validation caching when cache service fails - targets lines
         1128-1159."""
         user_id = str(uuid.uuid4())
@@ -636,9 +602,7 @@ class TestApiKeyServiceCoverageFocused:
             mock_get.return_value = mock_response
 
             # Should still work despite cache failures
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -672,9 +636,7 @@ class TestApiKeyServiceCoverageFocused:
                 Mock(status_code=200, json=lambda: {"data": [{"id": "model-1"}]}),
             ]
 
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             # Should succeed after retry
             assert result.is_valid is True
@@ -711,9 +673,7 @@ class TestApiKeyServiceCoverageFocused:
             ]
 
             # Run concurrent operations
-            tasks = [
-                api_service.create_api_key(user_id, request) for request in requests
-            ]
+            tasks = [api_service.create_api_key(user_id, request) for request in requests]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -734,9 +694,7 @@ class TestApiKeyServiceCoverageFocused:
         ]
 
         for edge_input in edge_cases:
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, edge_input, user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, edge_input, user_id)
 
             # Should handle gracefully without crashing
             assert isinstance(result, ValidationResult)
@@ -836,9 +794,7 @@ class TestServiceValidationFailures:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.TimeoutException("Request timeout")
 
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             # Should return service error with timeout message
             assert result.is_valid is False
@@ -881,9 +837,7 @@ class TestServiceValidationFailures:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.TimeoutException("Weather API timeout")
 
-            result = await api_service.validate_api_key(
-                ServiceType.WEATHER, "test-weather-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.WEATHER, "test-weather-key-12345", user_id)
 
             # Should return service error with timeout message
             assert result.is_valid is False
@@ -900,9 +854,7 @@ class TestServiceValidationFailures:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.ConnectError("Network unreachable")
 
-            result = await api_service.validate_api_key(
-                ServiceType.WEATHER, "test-weather-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.WEATHER, "test-weather-key-12345", user_id)
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -916,9 +868,7 @@ class TestServiceValidationFailures:
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.return_value = Mock(status_code=500, json=lambda: {})
 
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key", user_id)
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -934,9 +884,7 @@ class TestServiceValidationFailures:
             mock_response.json.side_effect = ValueError("Invalid JSON")
             mock_get.return_value = mock_response
 
-            result = await api_service.validate_api_key(
-                ServiceType.WEATHER, "test-key", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.WEATHER, "test-key", user_id)
 
             # Weather API with short key returns format error, not service error
             assert result.is_valid is False
@@ -956,13 +904,9 @@ class TestServiceValidationFailures:
 
         for service_type, key_value in test_cases:
             with patch.object(api_service.client, "get") as mock_get:
-                mock_get.side_effect = httpx.TimeoutException(
-                    f"{service_type.value} timeout"
-                )
+                mock_get.side_effect = httpx.TimeoutException(f"{service_type.value} timeout")
 
-                result = await api_service.validate_api_key(
-                    service_type, key_value, user_id
-                )
+                result = await api_service.validate_api_key(service_type, key_value, user_id)
 
                 assert result.is_valid is False
                 assert result.status == ValidationStatus.SERVICE_ERROR
@@ -982,14 +926,10 @@ class TestServiceValidationFailures:
 
                 if service == ServiceType.OPENAI:
                     result = await api_service._check_openai_health()
-                    expected_status = (
-                        ServiceHealthStatus.UNKNOWN
-                    )  # OpenAI returns UNKNOWN on timeout
+                    expected_status = ServiceHealthStatus.UNKNOWN  # OpenAI returns UNKNOWN on timeout
                 elif service == ServiceType.GOOGLEMAPS:
                     result = await api_service._check_googlemaps_health()
-                    expected_status = (
-                        ServiceHealthStatus.UNHEALTHY
-                    )  # Google Maps returns UNHEALTHY on timeout
+                    expected_status = ServiceHealthStatus.UNHEALTHY  # Google Maps returns UNHEALTHY on timeout
 
                 assert result.service == service
                 assert result.status == expected_status
@@ -1005,10 +945,7 @@ class TestServiceValidationFailures:
             mock_get.side_effect = httpx.TimeoutException("Concurrent timeout")
 
             # Start multiple concurrent validations
-            tasks = [
-                api_service.validate_api_key(ServiceType.OPENAI, f"sk-key-{i}", user_id)
-                for i in range(3)
-            ]
+            tasks = [api_service.validate_api_key(ServiceType.OPENAI, f"sk-key-{i}", user_id) for i in range(3)]
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 

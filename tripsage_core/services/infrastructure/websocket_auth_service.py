@@ -122,9 +122,7 @@ class WebSocketAuthService:
 
         return base_channels + premium_channels
 
-    def validate_channel_access(
-        self, user_id: UUID, requested_channels: list[str]
-    ) -> tuple[list[str], list[str]]:
+    def validate_channel_access(self, user_id: UUID, requested_channels: list[str]) -> tuple[list[str], list[str]]:
         """Validate user access to requested channels.
 
         Args:
@@ -306,9 +304,7 @@ class WebSocketAuthService:
         # For testing, return a default value
         return 1
 
-    async def _verify_session_access(
-        self, user_id: UUID | str, session_id: UUID
-    ) -> bool:
+    async def _verify_session_access(self, user_id: UUID | str, session_id: UUID) -> bool:
         """Verify that a user has access to a specific session.
 
         Args:
@@ -335,9 +331,7 @@ class WebSocketAuthService:
         else:
             raise CoreAuthorizationError("Session access denied")
 
-    async def verify_session_access(
-        self, user_id: UUID | str, session_id: UUID
-    ) -> bool:
+    async def verify_session_access(self, user_id: UUID | str, session_id: UUID) -> bool:
         """Public method to verify session access.
 
         Args:

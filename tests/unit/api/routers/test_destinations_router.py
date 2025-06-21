@@ -14,9 +14,7 @@ class TestDestinationsRouter:
 
     # === SUCCESS TESTS ===
 
-    def test_search_destinations_success(
-        self, api_test_client, valid_destination_search
-    ):
+    def test_search_destinations_success(self, api_test_client, valid_destination_search):
         """Test successful destination search."""
         # Debug: print what we're sending
         print(f"Request data: {valid_destination_search}")
@@ -52,9 +50,7 @@ class TestDestinationsRouter:
         # Assert - should return validation error for empty query
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_get_destination_details_success(
-        self, api_test_client, valid_destination_details
-    ):
+    def test_get_destination_details_success(self, api_test_client, valid_destination_details):
         """Test successful destination details retrieval."""
         # Act
         response = api_test_client.get(
@@ -76,9 +72,7 @@ class TestDestinationsRouter:
 
     # === ERROR HANDLING TESTS ===
 
-    def test_search_destinations_service_error(
-        self, api_test_client, valid_destination_search
-    ):
+    def test_search_destinations_service_error(self, api_test_client, valid_destination_search):
         """Test destination search with service error."""
         # Act
         response = api_test_client.post(
@@ -127,9 +121,7 @@ class TestDestinationsRouter:
 
     # === AUTHENTICATION TESTS ===
 
-    def test_search_destinations_unauthorized(
-        self, unauthenticated_test_client, valid_destination_search
-    ):
+    def test_search_destinations_unauthorized(self, unauthenticated_test_client, valid_destination_search):
         """Test destination search without authentication."""
         # Act
         response = unauthenticated_test_client.post(
@@ -140,9 +132,7 @@ class TestDestinationsRouter:
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_destination_details_unauthorized(
-        self, unauthenticated_test_client, valid_destination_details
-    ):
+    def test_get_destination_details_unauthorized(self, unauthenticated_test_client, valid_destination_details):
         """Test destination details without authentication."""
         # Act
         response = unauthenticated_test_client.get(
@@ -152,9 +142,7 @@ class TestDestinationsRouter:
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_destination_recommendations_unauthorized(
-        self, unauthenticated_test_client
-    ):
+    def test_get_destination_recommendations_unauthorized(self, unauthenticated_test_client):
         """Test destination recommendations without authentication."""
         # Act
         response = unauthenticated_test_client.get(

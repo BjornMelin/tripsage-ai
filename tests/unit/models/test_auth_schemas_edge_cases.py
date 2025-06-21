@@ -425,9 +425,7 @@ class TestAuthSchemaEdgeCases:
         # Verify expected results
         for i, (password, should_be_valid) in enumerate(passwords):
             actual_valid = results[i][1]
-            assert actual_valid == should_be_valid, (
-                f"Password {password} validation mismatch"
-            )
+            assert actual_valid == should_be_valid, f"Password {password} validation mismatch"
 
     def test_token_response_edge_cases(self):
         """Test token response with edge case scenarios."""

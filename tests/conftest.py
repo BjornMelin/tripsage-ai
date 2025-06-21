@@ -251,9 +251,7 @@ async def mock_supabase_client():
     bucket_mock.download = AsyncMock()
     bucket_mock.remove = AsyncMock()
     bucket_mock.list = AsyncMock(return_value=[])
-    bucket_mock.get_public_url = Mock(
-        return_value="https://test.supabase.com/storage/v1/object/public/test/file.jpg"
-    )
+    bucket_mock.get_public_url = Mock(return_value="https://test.supabase.com/storage/v1/object/public/test/file.jpg")
 
     storage_mock.from_ = Mock(return_value=bucket_mock)
     client.storage = storage_mock
@@ -272,9 +270,7 @@ def mock_openai_client():
 
     # Create a mock response
     response_mock = Mock()
-    response_mock.choices = [
-        Mock(message=Mock(content="Test AI response"), finish_reason="stop")
-    ]
+    response_mock.choices = [Mock(message=Mock(content="Test AI response"), finish_reason="stop")]
     response_mock.usage = Mock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
 
     completions_mock.create = AsyncMock(return_value=response_mock)
@@ -331,9 +327,7 @@ def pytest_collection_modifyitems(config, items):
 
 def pytest_addoption(parser):
     """Add custom command line options."""
-    parser.addoption(
-        "--run-slow", action="store_true", default=False, help="run slow tests"
-    )
+    parser.addoption("--run-slow", action="store_true", default=False, help="run slow tests")
     parser.addoption(
         "--run-external",
         action="store_true",
@@ -346,9 +340,7 @@ def pytest_addoption(parser):
 class ValidationHelper:
     """Helper class for validation testing."""
 
-    def assert_validation_error(
-        self, model_class, data, error_count=None, error_field=None
-    ):
+    def assert_validation_error(self, model_class, data, error_count=None, error_field=None):
         """Assert that model validation raises ValidationError."""
         from pydantic import ValidationError
 

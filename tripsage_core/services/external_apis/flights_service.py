@@ -210,9 +210,7 @@ class DuffelFlightsService(BaseService):
         # Make request
         request_data = {"data": offer_request.model_dump(exclude_none=True)}
 
-        response = await self._make_request(
-            "POST", "/offer_requests", data=request_data
-        )
+        response = await self._make_request("POST", "/offer_requests", data=request_data)
 
         # Parse offers
         offers = []
@@ -264,9 +262,7 @@ class DuffelFlightsService(BaseService):
             if not p_data.get("phone_number"):
                 p_data["phone_number"] = "+1234567890"  # Default if not provided
             if not p_data.get("email"):
-                p_data["email"] = (
-                    f"{p_data['given_name'].lower()}.{p_data['family_name'].lower()}@example.com"
-                )
+                p_data["email"] = f"{p_data['given_name'].lower()}.{p_data['family_name'].lower()}@example.com"
             passenger_data.append(p_data)
 
         # Create order request
@@ -344,9 +340,7 @@ class DuffelFlightsService(BaseService):
             }
         }
 
-        response = await self._make_request(
-            "POST", "/order_cancellations", data=request_data
-        )
+        response = await self._make_request("POST", "/order_cancellations", data=request_data)
         return OrderCancellation(**response["data"])
 
     async def get_seat_maps(self, offer_id: str) -> List[SeatMap]:
@@ -518,9 +512,7 @@ class DuffelFlightsService(BaseService):
                 continue
 
             # Check preferred airlines (if specified, at least one must match)
-            if preferred_airlines and not offer_airlines.intersection(
-                preferred_airlines
-            ):
+            if preferred_airlines and not offer_airlines.intersection(preferred_airlines):
                 continue
 
             filtered_offers.append(offer)

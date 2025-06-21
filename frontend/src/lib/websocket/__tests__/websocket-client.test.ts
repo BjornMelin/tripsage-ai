@@ -19,7 +19,12 @@ class MockWebSocket {
   onclose: ((event: CloseEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   readyState = 0; // CONNECTING
-  close = vi.fn();
+  close = vi.fn((code?: number, reason?: string) => {
+    this.readyState = MockWebSocket.CLOSED;
+    if (this.onclose) {
+      this.onclose(new CloseEvent("close", { code: code || 1000, reason: reason || "" }));
+    }
+  });
   send = vi.fn();
 
   static CONNECTING = 0;
@@ -61,16 +66,30 @@ class MockWebSocket {
 }
 
 // Global WebSocket mock
-let mockWebSocketInstance: MockWebSocket;
+let mockWebSocketInstance: MockWebSocket | undefined;
 const MockWebSocketConstructor = vi.fn().mockImplementation((url: string) => {
   mockWebSocketInstance = new MockWebSocket(url);
   return mockWebSocketInstance;
 });
 
+// Copy constants from MockWebSocket to the constructor
+MockWebSocketConstructor.CONNECTING = 0;
+MockWebSocketConstructor.OPEN = 1;
+MockWebSocketConstructor.CLOSING = 2;
+MockWebSocketConstructor.CLOSED = 3;
+
 Object.defineProperty(global, "WebSocket", {
   value: MockWebSocketConstructor,
   writable: true,
 });
+
+// Helper to get mock instance safely
+const getMockWebSocket = (): MockWebSocket => {
+  if (!mockWebSocketInstance) {
+    throw new Error("MockWebSocket instance not available. Make sure WebSocketClient.connect() is called first.");
+  }
+  return mockWebSocketInstance;
+};
 
 describe("WebSocketClient", () => {
   let client: WebSocketClient;
@@ -90,7 +109,10 @@ describe("WebSocketClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    // Reset the mock instance
+    mockWebSocketInstance = undefined;
     client = new WebSocketClient(config);
+    // Don't connect automatically - let tests control this
   });
 
   afterEach(() => {
@@ -126,11 +148,11 @@ describe("WebSocketClient", () => {
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTING);
 
       // Simulate connection opened
-      mockWebSocketInstance.simulateOpen();
+      getMockWebSocket().simulateOpen();
       await vi.advanceTimersByTimeAsync(10);
 
       // Simulate authentication success
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateMessage(
         JSON.stringify({
           success: true,
           connection_id: "test-conn-123",
@@ -154,7 +176,7 @@ describe("WebSocketClient", () => {
       await vi.advanceTimersByTimeAsync(10);
 
       // Simulate immediate error
-      mockWebSocketInstance.simulateError();
+      getMockWebSocket().simulateError();
       await vi.advanceTimersByTimeAsync(10);
 
       // Check that client handles the error (might start reconnecting)
@@ -169,8 +191,8 @@ describe("WebSocketClient", () => {
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
 
-      mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateOpen();
+      getMockWebSocket().simulateMessage(
         JSON.stringify({
           success: true,
           connection_id: "test-conn",
@@ -181,7 +203,7 @@ describe("WebSocketClient", () => {
 
       // Then disconnect
       client.disconnect();
-      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(
+      expect(getMockWebSocket().close).toHaveBeenCalledWith(
         1000,
         "Client disconnect"
       );
@@ -198,8 +220,8 @@ describe("WebSocketClient", () => {
       // Should only create one WebSocket
       expect(MockWebSocketConstructor).toHaveBeenCalledTimes(1);
 
-      mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateOpen();
+      getMockWebSocket().simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
       );
 
@@ -214,8 +236,8 @@ describe("WebSocketClient", () => {
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
 
-      mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateOpen();
+      getMockWebSocket().simulateMessage(
         JSON.stringify({
           success: true,
           connection_id: "test-conn",
@@ -225,16 +247,16 @@ describe("WebSocketClient", () => {
       await connectPromise;
 
       // Clear send calls from authentication
-      mockWebSocketInstance.send.mockClear();
+      getMockWebSocket().send.mockClear();
     });
 
     it("should send messages when connected", async () => {
       await client.send("test_event", { data: "test" });
 
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"type":"test_event"')
       );
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"data":"test"')
       );
     });
@@ -258,14 +280,14 @@ describe("WebSocketClient", () => {
         payload: { content: "Hello" },
       };
 
-      mockWebSocketInstance.simulateMessage(JSON.stringify(testEvent));
+      getMockWebSocket().simulateMessage(JSON.stringify(testEvent));
 
       expect(messageHandler).toHaveBeenCalledWith(testEvent);
     });
 
     it("should handle malformed messages gracefully", () => {
       // Send invalid JSON
-      mockWebSocketInstance.simulateMessage("invalid json");
+      getMockWebSocket().simulateMessage("invalid json");
 
       // Client should remain connected and functional
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
@@ -278,10 +300,10 @@ describe("WebSocketClient", () => {
       newClient.connect(); // Don't await, let it fail
       await vi.advanceTimersByTimeAsync(10);
 
-      mockWebSocketInstance.simulateOpen();
+      getMockWebSocket().simulateOpen();
 
       // Send auth failure
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateMessage(
         JSON.stringify({
           success: false,
           error: "Invalid token",
@@ -380,26 +402,26 @@ describe("WebSocketClient", () => {
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
 
-      mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateOpen();
+      getMockWebSocket().simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
       );
       await vi.advanceTimersByTimeAsync(10);
       await connectPromise;
 
-      mockWebSocketInstance.send.mockClear();
+      getMockWebSocket().send.mockClear();
     });
 
     it("should send chat messages", async () => {
       await client.sendChatMessage("Hello", ["attachment1"]);
 
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"type":"chat_message"')
       );
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"content":"Hello"')
       );
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"attachments":["attachment1"]')
       );
     });
@@ -407,13 +429,13 @@ describe("WebSocketClient", () => {
     it("should subscribe to channels", async () => {
       await client.subscribeToChannels(["channel1"], ["channel2"]);
 
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"type":"subscribe"')
       );
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"channels":["channel1"]')
       );
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"unsubscribe_channels":["channel2"]')
       );
     });
@@ -421,7 +443,7 @@ describe("WebSocketClient", () => {
     it("should send heartbeat messages", async () => {
       await client.sendHeartbeat();
 
-      expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
+      expect(getMockWebSocket().send).toHaveBeenCalledWith(
         expect.stringContaining('"type":"heartbeat"')
       );
     });
@@ -433,15 +455,15 @@ describe("WebSocketClient", () => {
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
 
-      mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateOpen();
+      getMockWebSocket().simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
       );
       await vi.advanceTimersByTimeAsync(10);
       await connectPromise;
 
       // Simulate unexpected disconnect (code != 1000)
-      mockWebSocketInstance.simulateClose(1006, "Connection lost");
+      getMockWebSocket().simulateClose(1006, "Connection lost");
 
       // Should start reconnection (might be RECONNECTING immediately)
       const state = client.getState();
@@ -467,8 +489,8 @@ describe("WebSocketClient", () => {
       const connectPromise = shortReconnectClient.connect();
       await vi.advanceTimersByTimeAsync(10);
 
-      mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(
+      getMockWebSocket().simulateOpen();
+      getMockWebSocket().simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
       );
       await vi.advanceTimersByTimeAsync(10);
@@ -478,14 +500,14 @@ describe("WebSocketClient", () => {
       MockWebSocketConstructor.mockClear();
 
       // Simulate disconnect and failed reconnection
-      mockWebSocketInstance.simulateClose(1006, "Connection lost");
+      getMockWebSocket().simulateClose(1006, "Connection lost");
 
       // First reconnection attempt
       await vi.advanceTimersByTimeAsync(20);
       expect(MockWebSocketConstructor).toHaveBeenCalledTimes(1);
 
       // Simulate failure
-      mockWebSocketInstance.simulateError();
+      getMockWebSocket().simulateError();
 
       // Should not attempt again (max attempts = 1)
       await vi.advanceTimersByTimeAsync(100);

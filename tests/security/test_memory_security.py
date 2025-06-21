@@ -55,9 +55,7 @@ class TestMemorySecurityIsolation:
 
             return {"status": "success", "memory_id": memory_entry["id"]}
 
-        async def secure_search_memories(
-            user_id, query, limit=20, category_filter=None
-        ):
+        async def secure_search_memories(user_id, query, limit=20, category_filter=None):
             self.access_log.append(
                 {
                     "operation": "search",
@@ -72,9 +70,7 @@ class TestMemorySecurityIsolation:
             results = []
 
             for memory in user_memories:
-                content = " ".join(
-                    [msg.get("content", "") for msg in memory["messages"]]
-                )
+                content = " ".join([msg.get("content", "") for msg in memory["messages"]])
                 if query.lower() in content.lower():
                     results.append(
                         {
@@ -102,9 +98,7 @@ class TestMemorySecurityIsolation:
                 "memories": [
                     {
                         "id": m["id"],
-                        "content": " ".join(
-                            [msg.get("content", "") for msg in m["messages"]]
-                        )[:100],
+                        "content": " ".join([msg.get("content", "") for msg in m["messages"]])[:100],
                         "user_id": user_id,
                         "metadata": m["metadata"],
                     }
@@ -128,10 +122,7 @@ class TestMemorySecurityIsolation:
             user_a_messages = [
                 ConversationMessage(
                     role="user",
-                    content=(
-                        "My secret travel plans to a classified location. "
-                        "SSN: 123-45-6789"
-                    ),
+                    content=("My secret travel plans to a classified location. SSN: 123-45-6789"),
                     timestamp=datetime.now(timezone.utc),
                 )
             ]
@@ -146,10 +137,7 @@ class TestMemorySecurityIsolation:
             user_b_messages = [
                 ConversationMessage(
                     role="user",
-                    content=(
-                        "My private business trip details. "
-                        "Credit card: 4111-1111-1111-1111"
-                    ),
+                    content=("My private business trip details. Credit card: 4111-1111-1111-1111"),
                     timestamp=datetime.now(timezone.utc),
                 )
             ]
@@ -162,9 +150,7 @@ class TestMemorySecurityIsolation:
 
             # User A tries to search for User B's data
             user_a_search_for_b = await search_user_memories(
-                MemorySearchQuery(
-                    user_id="user-a-secret", query="business trip credit card"
-                )
+                MemorySearchQuery(user_id="user-a-secret", query="business trip credit card")
             )
 
             # User B tries to search for User A's data
@@ -229,9 +215,7 @@ class TestMemorySecurityIsolation:
 
                 # Verify data can be retrieved by owner
                 search_results = await search_user_memories(
-                    MemorySearchQuery(
-                        user_id=f"sensitive-user-{_i}", query="travel context"
-                    )
+                    MemorySearchQuery(user_id=f"sensitive-user-{_i}", query="travel context")
                 )
 
                 assert len(search_results) > 0
@@ -265,20 +249,14 @@ class TestMemorySecurityIsolation:
 
             for injection_query in injection_attempts:
                 # Attacker user tries to inject
-                results = await search_user_memories(
-                    MemorySearchQuery(user_id="attacker-user", query=injection_query)
-                )
+                results = await search_user_memories(MemorySearchQuery(user_id="attacker-user", query=injection_query))
 
                 # Should not return any results (no data for attacker user)
-                assert len(results) == 0, (
-                    f"Injection attempt succeeded: {injection_query}"
-                )
+                assert len(results) == 0, f"Injection attempt succeeded: {injection_query}"
 
                 # Verify no data leakage in results
                 for result in results:
-                    assert result.get("user_id") != "target-user-alpha", (
-                        "Data leaked to wrong user"
-                    )
+                    assert result.get("user_id") != "target-user-alpha", "Data leaked to wrong user"
 
     @pytest.mark.asyncio
     async def test_access_logging_and_auditing(self, secure_memory_service):
@@ -298,9 +276,7 @@ class TestMemorySecurityIsolation:
                 user_id=user_id,
             )
 
-            await search_user_memories(
-                MemorySearchQuery(user_id=user_id, query="audit test")
-            )
+            await search_user_memories(MemorySearchQuery(user_id=user_id, query="audit test"))
 
             await get_user_context(user_id)
 
@@ -416,9 +392,7 @@ class TestMemorySecurityIsolation:
 
                 # Count recent requests (last minute)
                 recent_requests = [
-                    ts
-                    for uid, op, ts in request_timestamps
-                    if uid == user_id and (now - ts).total_seconds() < 60
+                    ts for uid, op, ts in request_timestamps if uid == user_id and (now - ts).total_seconds() < 60
                 ]
 
                 # Simulate rate limit (e.g., 100 requests per minute)
@@ -434,14 +408,10 @@ class TestMemorySecurityIsolation:
                 await rate_limited_operation(user_id, "search")
 
                 # Perform actual operation
-                await search_user_memories(
-                    MemorySearchQuery(user_id=user_id, query=f"test {_i}")
-                )
+                await search_user_memories(MemorySearchQuery(user_id=user_id, query=f"test {_i}"))
 
             # Verify operations completed successfully
-            assert (
-                len([ts for uid, op, ts in request_timestamps if uid == user_id]) == 50
-            )
+            assert len([ts for uid, op, ts in request_timestamps if uid == user_id]) == 50
 
             # Test rate limit trigger
             with pytest.raises(Exception, match="Rate limit exceeded"):
@@ -654,11 +624,7 @@ class TestMemoryGDPRCompliance:
             assert post_deletion_data["data_count"] == 0
 
             # Verify deletion was logged
-            deletion_requests = [
-                req
-                for req in gdpr_memory_service.gdpr_requests
-                if req["type"] == "data_deletion"
-            ]
+            deletion_requests = [req for req in gdpr_memory_service.gdpr_requests if req["type"] == "data_deletion"]
             assert len(deletion_requests) > 0
             assert deletion_requests[-1]["user_id"] == user_id
             assert deletion_requests[-1]["deleted_records"] == 3

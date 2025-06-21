@@ -137,26 +137,18 @@ class ServiceRegistry:
         # Initialize business services with dependencies
         settings = get_settings()
         user_service = UserService(db_service)
-        api_key_service = ApiKeyService(
-            db=db_service, cache=cache_service, settings=settings
-        )
+        api_key_service = ApiKeyService(db=db_service, cache=cache_service, settings=settings)
         memory_service = MemoryService(db_service)
         chat_service = ChatService(db_service, memory_service)
         file_processing_service = FileProcessingService(document_analyzer)
 
-        accommodation_service = AccommodationService(
-            db_service, cache_service, google_maps_service
-        )
+        accommodation_service = AccommodationService(db_service, cache_service, google_maps_service)
 
-        destination_service = DestinationService(
-            db_service, cache_service, google_maps_service, weather_service
-        )
+        destination_service = DestinationService(db_service, cache_service, google_maps_service, weather_service)
 
         flight_service = FlightService(db_service, cache_service)
 
-        itinerary_service = ItineraryService(
-            db_service, google_maps_service, weather_service
-        )
+        itinerary_service = ItineraryService(db_service, google_maps_service, weather_service)
 
         trip_service = TripService(db_service, memory_service, itinerary_service)
 

@@ -88,9 +88,7 @@ class TestMemorySnapshot:
 
     def test_memory_snapshot_creation(self):
         """Test memory snapshot creation."""
-        snapshot = MemorySnapshot(
-            timestamp=time.time(), process_mb=100.5, system_percent=75.2
-        )
+        snapshot = MemorySnapshot(timestamp=time.time(), process_mb=100.5, system_percent=75.2)
 
         assert isinstance(snapshot.timestamp, float)
         assert snapshot.process_mb == 100.5
@@ -238,9 +236,7 @@ class TestReportGenerator:
             "execution_time_seconds": 120.5,
         }
 
-        csv_path = await self.generator._generate_csv_summary(
-            test_data, "test", 1234567890
-        )
+        csv_path = await self.generator._generate_csv_summary(test_data, "test", 1234567890)
 
         assert csv_path.exists()
 
@@ -274,9 +270,7 @@ class TestReportGenerator:
             },
         }
 
-        html_path = await self.generator._generate_html_summary(
-            test_data, "test", 1234567890
-        )
+        html_path = await self.generator._generate_html_summary(test_data, "test", 1234567890)
 
         assert html_path.exists()
 
@@ -307,9 +301,7 @@ class TestBenchmarkRunner:
     @pytest.mark.asyncio
     async def test_run_core_scenarios(self):
         """Test core scenario execution."""
-        results = await self.runner._run_core_scenarios(
-            duration_seconds=120, iterations=10, concurrent_users=2
-        )
+        results = await self.runner._run_core_scenarios(duration_seconds=120, iterations=10, concurrent_users=2)
 
         assert results["duration_seconds"] == 120
         assert results["iterations"] == 10
@@ -362,9 +354,7 @@ class TestBenchmarkRunner:
         vector_results = {"operations_per_second": 75.0}
         mixed_results = {"operations_per_second": 100.0}
 
-        validation = self.runner._validate_optimization_claims(
-            database_results, vector_results, mixed_results
-        )
+        validation = self.runner._validate_optimization_claims(database_results, vector_results, mixed_results)
 
         assert "timestamp" in validation
         assert "claims_validated" in validation

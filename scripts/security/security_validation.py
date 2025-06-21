@@ -15,9 +15,7 @@ from typing import Any
 SECURITY_CHECKS = {"critical": [], "high": [], "medium": [], "low": [], "info": []}
 
 
-def log_finding(
-    severity: str, category: str, message: str, details: dict[str, Any] = None
-):
+def log_finding(severity: str, category: str, message: str, details: dict[str, Any] = None):
     """Log a security finding."""
     finding = {"category": category, "message": message, "details": details or {}}
     SECURITY_CHECKS[severity].append(finding)
@@ -93,9 +91,7 @@ def check_hardcoded_secrets():
                     f"Potential hardcoded secret found: {line[:100]}...",
                 )
         else:
-            log_finding(
-                "info", "Hardcoded Secrets", "No obvious hardcoded secrets found"
-            )
+            log_finding("info", "Hardcoded Secrets", "No obvious hardcoded secrets found")
 
     except Exception as e:
         log_finding("medium", "Hardcoded Secrets", f"Could not scan for secrets: {e}")
@@ -150,9 +146,7 @@ def check_sql_injection_protection():
             continue
 
     if not found_issues:
-        log_finding(
-            "info", "SQL Injection", "No obvious SQL injection vulnerabilities found"
-        )
+        log_finding("info", "SQL Injection", "No obvious SQL injection vulnerabilities found")
 
 
 def check_xss_protection():
@@ -216,9 +210,7 @@ def check_authentication_security():
             auth_content = f.read()
 
         if "_validate_request_headers" in auth_content:
-            log_finding(
-                "info", "Authentication", "Request header validation implemented"
-            )
+            log_finding("info", "Authentication", "Request header validation implemented")
             checks_passed += 1
         else:
             log_finding("medium", "Authentication", "Missing request header validation")
@@ -230,14 +222,10 @@ def check_authentication_security():
             log_finding("medium", "Authentication", "Missing token format validation")
 
         if "_add_security_headers" in auth_content:
-            log_finding(
-                "info", "Authentication", "Security headers implementation found"
-            )
+            log_finding("info", "Authentication", "Security headers implementation found")
             checks_passed += 1
         else:
-            log_finding(
-                "medium", "Authentication", "Missing security headers implementation"
-            )
+            log_finding("medium", "Authentication", "Missing security headers implementation")
 
     except FileNotFoundError:
         log_finding(
@@ -246,9 +234,7 @@ def check_authentication_security():
             f"Authentication middleware not found: {auth_middleware_path}",
         )
     except Exception as e:
-        log_finding(
-            "medium", "Authentication", f"Error checking authentication middleware: {e}"
-        )
+        log_finding("medium", "Authentication", f"Error checking authentication middleware: {e}")
 
     try:
         # Check session security service
@@ -256,9 +242,7 @@ def check_authentication_security():
             session_content = f.read()
 
         if "_validate_and_score_ip" in session_content:
-            log_finding(
-                "info", "Authentication", "IP validation and scoring implemented"
-            )
+            log_finding("info", "Authentication", "IP validation and scoring implemented")
             checks_passed += 1
         else:
             log_finding("high", "Authentication", "Missing IP validation and scoring")
@@ -296,17 +280,13 @@ def check_input_validation():
 
             if "field_validator" in content or "validator" in content:
                 validation_found = True
-                log_finding(
-                    "info", "Input Validation", f"Validation found in {file_path}"
-                )
+                log_finding("info", "Input Validation", f"Validation found in {file_path}")
 
         except Exception:
             continue
 
     if not validation_found:
-        log_finding(
-            "medium", "Input Validation", "Limited Pydantic validation found in models"
-        )
+        log_finding("medium", "Input Validation", "Limited Pydantic validation found in models")
 
     # Check for specific security validations
     session_service_path = "tripsage_core/services/business/session_security_service.py"
@@ -319,14 +299,10 @@ def check_input_validation():
         if "validate_user_agent" in content:
             log_finding("info", "Input Validation", "User agent validation implemented")
         if "validate_session_token" in content:
-            log_finding(
-                "info", "Input Validation", "Session token validation implemented"
-            )
+            log_finding("info", "Input Validation", "Session token validation implemented")
 
     except Exception as e:
-        log_finding(
-            "medium", "Input Validation", f"Could not check session validation: {e}"
-        )
+        log_finding("medium", "Input Validation", f"Could not check session validation: {e}")
 
 
 def check_cors_configuration():
@@ -353,13 +329,9 @@ def check_cors_configuration():
 
                 # Check for wildcard origins (security risk)
                 if '"*"' in content and "allow_origins" in content:
-                    log_finding(
-                        "high", "CORS", f"Wildcard CORS origins found in {file_path}"
-                    )
+                    log_finding("high", "CORS", f"Wildcard CORS origins found in {file_path}")
                 else:
-                    log_finding(
-                        "info", "CORS", f"CORS configuration found in {file_path}"
-                    )
+                    log_finding("info", "CORS", f"CORS configuration found in {file_path}")
 
         except Exception:
             continue
@@ -423,16 +395,12 @@ def check_dependency_security():
         result = subprocess.run(["uv", "pip", "list"], capture_output=True, text=True)
 
         if result.returncode == 0:
-            log_finding(
-                "info", "Dependencies", "Python dependencies listed successfully"
-            )
+            log_finding("info", "Dependencies", "Python dependencies listed successfully")
         else:
             log_finding("medium", "Dependencies", "Could not list Python dependencies")
 
     except Exception as e:
-        log_finding(
-            "medium", "Dependencies", f"Error checking Python dependencies: {e}"
-        )
+        log_finding("medium", "Dependencies", f"Error checking Python dependencies: {e}")
 
     # Check for package.json (frontend dependencies)
     try:
@@ -442,9 +410,7 @@ def check_dependency_security():
             log_finding("medium", "Dependencies", "Frontend package.json not found")
 
     except Exception as e:
-        log_finding(
-            "medium", "Dependencies", f"Error checking frontend dependencies: {e}"
-        )
+        log_finding("medium", "Dependencies", f"Error checking frontend dependencies: {e}")
 
 
 def generate_security_report():

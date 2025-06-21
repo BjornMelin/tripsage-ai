@@ -50,9 +50,7 @@ class SimpleTripSageOrchestrator:
             system_prompt=self._get_system_prompt(),
         )
 
-        logger.info(
-            f"Initialized SimpleTripSageOrchestrator with {len(self.tools)} tools"
-        )
+        logger.info(f"Initialized SimpleTripSageOrchestrator with {len(self.tools)} tools")
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the travel planning agent."""
@@ -124,9 +122,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 config = {"configurable": {"thread_id": "default"}}
 
             # Invoke the agent
-            result = await self.agent.ainvoke(
-                {"messages": langchain_messages}, config=config
-            )
+            result = await self.agent.ainvoke({"messages": langchain_messages}, config=config)
 
             # Convert back to dictionary format
             response_messages = []
@@ -167,9 +163,7 @@ Start by greeting the user and asking how you can help with their travel plannin
         else:
             return "unknown"
 
-    async def stream_conversation(
-        self, messages: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None
-    ):
+    async def stream_conversation(self, messages: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None):
         """
         Stream a conversation response from the agent.
 
@@ -197,9 +191,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 config = {"configurable": {"thread_id": "default"}}
 
             # Stream the agent response
-            async for chunk in self.agent.astream(
-                {"messages": langchain_messages}, config=config
-            ):
+            async for chunk in self.agent.astream({"messages": langchain_messages}, config=config):
                 yield chunk
 
         except Exception as e:
@@ -222,9 +214,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 "status": "healthy",
                 "agent_responsive": True,
                 "tools_count": len(self.tools),
-                "timestamp": test_result["messages"][-1].additional_kwargs.get(
-                    "timestamp"
-                ),
+                "timestamp": test_result["messages"][-1].additional_kwargs.get("timestamp"),
             }
         except Exception as e:
             logger.error(f"Health check failed: {e}")

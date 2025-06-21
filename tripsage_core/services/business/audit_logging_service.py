@@ -206,9 +206,7 @@ class AuditEvent(TripSageModel):
     compliance_tags: List[str] = Field(default_factory=list)
 
     # Data Classification
-    data_classification: Optional[str] = (
-        None  # public, internal, confidential, restricted
-    )
+    data_classification: Optional[str] = None  # public, internal, confidential, restricted
     retention_period_days: int = 2555  # 7 years default
 
     @validator("risk_score")
@@ -332,9 +330,7 @@ class SecurityAuditLogger:
         # Configure file handler
         from logging.handlers import RotatingFileHandler
 
-        log_file = log_dir / self.config.log_filename_pattern.format(
-            date=datetime.now().strftime("%Y-%m-%d")
-        )
+        log_file = log_dir / self.config.log_filename_pattern.format(date=datetime.now().strftime("%Y-%m-%d"))
 
         self.file_handler = RotatingFileHandler(
             log_file,
@@ -421,13 +417,8 @@ class SecurityAuditLogger:
 
         try:
             # Add integrity hash if enabled
-            if (
-                self.config.integrity_checks_enabled
-                and self.config.integrity_secret_key
-            ):
-                event.metadata["integrity_hash"] = event.compute_integrity_hash(
-                    self.config.integrity_secret_key
-                )
+            if self.config.integrity_checks_enabled and self.config.integrity_secret_key:
+                event.metadata["integrity_hash"] = event.compute_integrity_hash(self.config.integrity_secret_key)
 
             # Update statistics
             self.stats["total_events_logged"] += 1
@@ -472,9 +463,7 @@ class SecurityAuditLogger:
             severity=severity,
             outcome=outcome,
             message=message or f"Authentication {event_type.value}: {outcome.value}",
-            actor=AuditActor(
-                actor_type="user", actor_id=user_id, authentication_method="jwt"
-            ),
+            actor=AuditActor(actor_type="user", actor_id=user_id, authentication_method="jwt"),
             source=AuditSource(ip_address=ip_address, user_agent=user_agent),
             metadata=metadata or {},
         )
@@ -499,9 +488,7 @@ class SecurityAuditLogger:
             severity=severity,
             outcome=outcome,
             message=message or f"API key {event_type.value}: {outcome.value}",
-            actor=AuditActor(
-                actor_type="api_key", actor_id=key_id, authentication_method="api_key"
-            ),
+            actor=AuditActor(actor_type="api_key", actor_id=key_id, authentication_method="api_key"),
             target=AuditTarget(
                 resource_type="api_key",
                 resource_id=key_id,
@@ -603,9 +590,7 @@ class SecurityAuditLogger:
         # Read relevant log files
         current_date = start_time.date()
         while current_date <= end_time.date():
-            log_file = log_dir / self.config.log_filename_pattern.format(
-                date=current_date.strftime("%Y-%m-%d")
-            )
+            log_file = log_dir / self.config.log_filename_pattern.format(date=current_date.strftime("%Y-%m-%d"))
 
             if log_file.exists():
                 try:
@@ -619,10 +604,7 @@ class SecurityAuditLogger:
                                 event = AuditEvent(**event_data)
 
                                 # Apply filters
-                                if (
-                                    event.timestamp < start_time
-                                    or event.timestamp > end_time
-                                ):
+                                if event.timestamp < start_time or event.timestamp > end_time:
                                     continue
 
                                 if event_types and event.event_type not in event_types:
@@ -699,10 +681,7 @@ class SecurityAuditLogger:
             self.audit_logger.info(log_line)
 
             # Forward to external systems if configured
-            if (
-                self.config.external_forwarding_enabled
-                and self.config.external_endpoints
-            ):
+            if self.config.external_forwarding_enabled and self.config.external_endpoints:
                 await self._forward_to_external(event)
 
         except Exception as e:
@@ -753,9 +732,7 @@ class SecurityAuditLogger:
         if not log_dir.exists():
             return
 
-        cutoff_date = datetime.now() - timedelta(
-            days=self.config.default_retention_days
-        )
+        cutoff_date = datetime.now() - timedelta(days=self.config.default_retention_days)
 
         for log_file in log_dir.glob("audit-*.log*"):
             try:
@@ -772,9 +749,7 @@ class SecurityAuditLogger:
             except Exception as e:
                 logger.warning(f"Failed to process log file {log_file}: {e}")
 
-    def _determine_auth_severity(
-        self, event_type: AuditEventType, outcome: AuditOutcome
-    ) -> AuditSeverity:
+    def _determine_auth_severity(self, event_type: AuditEventType, outcome: AuditOutcome) -> AuditSeverity:
         """Determine severity for authentication events."""
         if outcome == AuditOutcome.FAILURE:
             if event_type in [
@@ -792,9 +767,7 @@ class SecurityAuditLogger:
 
         return AuditSeverity.LOW
 
-    def _determine_api_key_severity(
-        self, event_type: AuditEventType, outcome: AuditOutcome
-    ) -> AuditSeverity:
+    def _determine_api_key_severity(self, event_type: AuditEventType, outcome: AuditOutcome) -> AuditSeverity:
         """Determine severity for API key events."""
         if outcome == AuditOutcome.FAILURE:
             return AuditSeverity.MEDIUM
@@ -820,10 +793,7 @@ class SecurityAuditLogger:
 
         self._circuit_breaker_failures += 1
 
-        if (
-            self._circuit_breaker_failures
-            >= self.config.circuit_breaker_failure_threshold
-        ):
+        if self._circuit_breaker_failures >= self.config.circuit_breaker_failure_threshold:
             self._circuit_breaker_open = True
             self._circuit_breaker_next_attempt = (
                 datetime.now().timestamp() + self.config.circuit_breaker_timeout_seconds
@@ -831,10 +801,7 @@ class SecurityAuditLogger:
             logger.warning("Audit logging circuit breaker opened")
 
         # Reset circuit breaker if timeout has passed
-        if (
-            self._circuit_breaker_open
-            and datetime.now().timestamp() >= self._circuit_breaker_next_attempt
-        ):
+        if self._circuit_breaker_open and datetime.now().timestamp() >= self._circuit_breaker_next_attempt:
             self._circuit_breaker_open = False
             self._circuit_breaker_failures = 0
             logger.info("Audit logging circuit breaker reset")
@@ -893,9 +860,7 @@ async def audit_api_key(
 ) -> bool:
     """Log API key audit event."""
     audit_logger = await get_audit_logger()
-    return await audit_logger.log_api_key_event(
-        event_type, outcome, key_id, service, ip_address, message, metadata
-    )
+    return await audit_logger.log_api_key_event(event_type, outcome, key_id, service, ip_address, message, metadata)
 
 
 async def audit_security_event(

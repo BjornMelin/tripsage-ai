@@ -105,9 +105,7 @@ def with_error_handling(
                         try:
                             extra_context = log_extra_func(*args, **kwargs)
                         except Exception as context_error:
-                            logger.warning(
-                                f"Failed to generate logging context: {context_error}"
-                            )
+                            logger.warning(f"Failed to generate logging context: {context_error}")
 
                     # Log operation start
                     logger.info(
@@ -229,9 +227,7 @@ def with_error_handling(
                         try:
                             extra_context = log_extra_func(*args, **kwargs)
                         except Exception as context_error:
-                            logger.warning(
-                                f"Failed to generate logging context: {context_error}"
-                            )
+                            logger.warning(f"Failed to generate logging context: {context_error}")
 
                     # Log operation start
                     logger.info(
@@ -371,8 +367,7 @@ def ensure_memory_client_initialized(func: F) -> F:
     """
     if not inspect.iscoroutinefunction(func):
         raise TypeError(
-            f"ensure_memory_client_initialized can only be used with async "
-            f"functions. {func.__name__} is not async."
+            f"ensure_memory_client_initialized can only be used with async functions. {func.__name__} is not async."
         )
 
     @functools.wraps(func)
@@ -435,16 +430,11 @@ def retry_on_failure(
                     except exceptions as e:
                         last_exception = e
                         if attempt < max_attempts - 1:
-                            logger.warning(
-                                f"{func.__name__} failed (attempt {attempt + 1}/"
-                                f"{max_attempts}): {e}"
-                            )
+                            logger.warning(f"{func.__name__} failed (attempt {attempt + 1}/{max_attempts}): {e}")
                             await asyncio.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.error(
-                                f"{func.__name__} failed after {max_attempts} attempts"
-                            )
+                            logger.error(f"{func.__name__} failed after {max_attempts} attempts")
                             raise
 
                 if last_exception:
@@ -464,18 +454,13 @@ def retry_on_failure(
                     except exceptions as e:
                         last_exception = e
                         if attempt < max_attempts - 1:
-                            logger.warning(
-                                f"{func.__name__} failed (attempt {attempt + 1}/"
-                                f"{max_attempts}): {e}"
-                            )
+                            logger.warning(f"{func.__name__} failed (attempt {attempt + 1}/{max_attempts}): {e}")
                             import time
 
                             time.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.error(
-                                f"{func.__name__} failed after {max_attempts} attempts"
-                            )
+                            logger.error(f"{func.__name__} failed after {max_attempts} attempts")
                             raise
 
                 if last_exception:

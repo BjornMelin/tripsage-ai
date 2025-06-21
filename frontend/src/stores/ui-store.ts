@@ -194,10 +194,15 @@ export const useUIStore = create<UIState>()(
         get isDarkMode() {
           const { theme } = get();
           if (theme === "system") {
-            return (
-              typeof window !== "undefined" &&
-              window.matchMedia("(prefers-color-scheme: dark)").matches
-            );
+            if (typeof window === "undefined") return false;
+            
+            try {
+              const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+              return mediaQuery?.matches ?? false;
+            } catch (error) {
+              // Fallback for test environments
+              return false;
+            }
           }
           return theme === "dark";
         },

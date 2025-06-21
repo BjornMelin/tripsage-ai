@@ -83,15 +83,11 @@ TravelStyle = Annotated[
 ]
 
 # Content types
-SummaryText = Annotated[
-    str, Field(min_length=10, max_length=2000, description="Session summary text")
-]
+SummaryText = Annotated[str, Field(min_length=10, max_length=2000, description="Session summary text")]
 
 InsightText = Annotated[
     str,
-    Field(
-        min_length=1, max_length=200, description="Individual insight or decision text"
-    ),
+    Field(min_length=1, max_length=200, description="Individual insight or decision text"),
 ]
 
 ContentText = Annotated[str, Field(min_length=1, description="Message content text")]
@@ -141,9 +137,7 @@ class ConversationMessage(BaseModel):
         description="Message role - must be user, assistant, or system"
     )
     content: ContentText = Field(description="Message content")
-    timestamp: Optional[datetime] = Field(
-        default=None, description="Message timestamp, auto-generated if not provided"
-    )
+    timestamp: Optional[datetime] = Field(default=None, description="Message timestamp, auto-generated if not provided")
 
 
 class UserPreferences(BaseModel):
@@ -157,9 +151,7 @@ class UserPreferences(BaseModel):
     - Rich field examples for documentation
     """
 
-    model_config = ConfigDict(
-        str_strip_whitespace=True, validate_assignment=True, extra="forbid"
-    )
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
     user_id: UserId
 
@@ -176,17 +168,11 @@ class UserPreferences(BaseModel):
         examples=["hotel", "hostel", "airbnb", "resort", "apartment"],
     )
 
-    travel_style: Optional[TravelStyle] = Field(
-        default=None, description="Travel style preference"
-    )
+    travel_style: Optional[TravelStyle] = Field(default=None, description="Travel style preference")
 
-    destinations: Optional[List[DestinationName]] = Field(
-        default=None, description="Preferred travel destinations"
-    )
+    destinations: Optional[List[DestinationName]] = Field(default=None, description="Preferred travel destinations")
 
-    activities: Optional[List[ActivityName]] = Field(
-        default=None, description="Preferred activities and interests"
-    )
+    activities: Optional[List[ActivityName]] = Field(default=None, description="Preferred activities and interests")
 
     dietary_restrictions: Optional[List[Annotated[str, Field(min_length=1)]]] = Field(
         default=None,
@@ -216,19 +202,14 @@ class MemorySearchQuery(BaseModel):
     - Result limit validation
     """
 
-    model_config = ConfigDict(
-        str_strip_whitespace=True, validate_assignment=True, extra="forbid"
-    )
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
     query: SearchQuery
     user_id: UserId
     limit: ResultLimit = Field(default=5)
     category_filter: Optional[MemoryCategory] = Field(
         default=None,
-        description=(
-            "Filter memories by category "
-            "(e.g., 'travel', 'preferences', 'destinations')"
-        ),
+        description=("Filter memories by category (e.g., 'travel', 'preferences', 'destinations')"),
     )
 
 
@@ -242,9 +223,7 @@ class TravelMemoryQuery(BaseModel):
     - Same validation as MemorySearchQuery
     """
 
-    model_config = ConfigDict(
-        str_strip_whitespace=True, validate_assignment=True, extra="forbid"
-    )
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
     query: SearchQuery
     user_id: UserId
@@ -267,9 +246,7 @@ class SessionSummary(BaseModel):
     - Content length validation
     """
 
-    model_config = ConfigDict(
-        str_strip_whitespace=True, validate_assignment=True, extra="forbid"
-    )
+    model_config = ConfigDict(str_strip_whitespace=True, validate_assignment=True, extra="forbid")
 
     user_id: UserId
     session_id: SessionId

@@ -123,9 +123,7 @@ class TestSettings:
 
             # Should be able to get secret values
             assert settings.openai_api_key.get_secret_value() == "secret-openai-key"
-            assert (
-                settings.database_public_key.get_secret_value() == "secret-public-key"
-            )
+            assert settings.database_public_key.get_secret_value() == "secret-public-key"
 
             # Repr should not expose secrets
             settings_repr = repr(settings)
@@ -192,9 +190,7 @@ class TestConfigurationLoading:
 
                 assert settings.environment == "test"
                 assert settings.database_url == "https://env-file.supabase.co"
-                assert (
-                    settings.openai_api_key.get_secret_value() == "env-file-openai-key"
-                )
+                assert settings.openai_api_key.get_secret_value() == "env-file-openai-key"
 
         # Clean up
         os.unlink(f.name)
@@ -333,23 +329,17 @@ class TestPostgresURLConfiguration:
             _env_file=None,
         )
 
-        # Should return the postgres_url with asyncpg driver
-        assert (
-            settings.effective_postgres_url
-            == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
-        )
+        # Should return the postgres_url as-is
+        assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/mydb"
 
     def test_effective_postgres_url_converts_postgres_scheme(self):
-        """Test effective_postgres_url converts postgres:// to postgresql+asyncpg://."""
+        """Test effective_postgres_url converts postgres:// to postgresql://."""
         settings = Settings(
             postgres_url="postgres://user:pass@localhost:5432/mydb",
             _env_file=None,
         )
 
-        assert (
-            settings.effective_postgres_url
-            == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
-        )
+        assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/mydb"
 
     def test_effective_postgres_url_with_supabase_url(self):
         """Test effective_postgres_url converts Supabase URL to PostgreSQL URL."""
@@ -362,7 +352,7 @@ class TestPostgresURLConfiguration:
 
         url = settings.effective_postgres_url
         # Should convert to PostgreSQL URL format
-        assert "postgresql+asyncpg://" in url
+        assert "postgresql://" in url
         assert "xyzcompanyabc" in url
         assert "pooler.supabase.com" in url
 
@@ -375,11 +365,8 @@ class TestPostgresURLConfiguration:
             _env_file=None,
         )
 
-        # Should add asyncpg driver to the existing URL
-        assert (
-            settings.effective_postgres_url
-            == "postgresql+asyncpg://user:pass@custom-host:5432/db"
-        )
+        # Should return the existing URL as-is
+        assert settings.effective_postgres_url == "postgresql://user:pass@custom-host:5432/db"
 
     def test_effective_postgres_url_preserves_asyncpg_driver(self):
         """Test effective_postgres_url preserves existing asyncpg driver."""
@@ -389,10 +376,7 @@ class TestPostgresURLConfiguration:
         )
 
         # Should not double-add the driver
-        assert (
-            settings.effective_postgres_url
-            == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
-        )
+        assert settings.effective_postgres_url == "postgresql+asyncpg://user:pass@localhost:5432/mydb"
 
     def test_postgres_url_validation_alias(self):
         """Test postgres_url uses POSTGRES_URL as validation alias."""

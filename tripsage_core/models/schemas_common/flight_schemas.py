@@ -79,51 +79,35 @@ class FlightSearchRequest(BaseModel):
     origin: AirportCode = Field(..., description="Origin airport IATA code")
     destination: AirportCode = Field(..., description="Destination airport IATA code")
     departure_date: Union[date, datetime] = Field(..., description="Departure date")
-    return_date: Optional[Union[date, datetime]] = Field(
-        None, description="Return date for round trips"
-    )
+    return_date: Optional[Union[date, datetime]] = Field(None, description="Return date for round trips")
 
     # Passenger information - support both simple counts and detailed passengers
     adults: int = Field(1, ge=1, le=9, description="Number of adult passengers")
     children: int = Field(0, ge=0, le=9, description="Number of child passengers")
     infants: int = Field(0, ge=0, le=4, description="Number of infant passengers")
-    passengers: Optional[List[FlightPassenger]] = Field(
-        None, description="Detailed passenger information (optional)"
-    )
+    passengers: Optional[List[FlightPassenger]] = Field(None, description="Detailed passenger information (optional)")
 
     cabin_class: CabinClass = Field(CabinClass.ECONOMY, description="Cabin class")
-    max_stops: Optional[int] = Field(
-        None, ge=0, le=5, description="Maximum number of stops"
-    )
+    max_stops: Optional[int] = Field(None, ge=0, le=5, description="Maximum number of stops")
     max_price: Optional[float] = Field(None, gt=0, description="Maximum price in USD")
     currency: str = Field(default="USD", description="Price currency")
 
     # Advanced options
-    flexible_dates: bool = Field(
-        default=False, description="Allow flexible date search"
-    )
-    preferred_airlines: Optional[List[str]] = Field(
-        None, description="Preferred airline codes"
-    )
-    excluded_airlines: Optional[List[str]] = Field(
-        None, description="Excluded airline codes"
-    )
+    flexible_dates: bool = Field(default=False, description="Allow flexible date search")
+    preferred_airlines: Optional[List[str]] = Field(None, description="Preferred airline codes")
+    excluded_airlines: Optional[List[str]] = Field(None, description="Excluded airline codes")
 
     # API-specific fields
     trip_id: Optional[UUID] = Field(None, description="Associated trip ID")
 
     @field_validator("return_date")
     @classmethod
-    def validate_return_date(
-        cls, v: Optional[Union[date, datetime]], info
-    ) -> Optional[Union[date, datetime]]:
+    def validate_return_date(cls, v: Optional[Union[date, datetime]], info) -> Optional[Union[date, datetime]]:
         """Validate that return date is after departure date if provided."""
         if v and info.data.get("departure_date"):
             departure = info.data["departure_date"]
             # Convert to date for comparison if needed
-            dep_date = (
-                departure.date() if isinstance(departure, datetime) else departure
-            )
+            dep_date = departure.date() if isinstance(departure, datetime) else departure
             ret_date = v.date() if isinstance(v, datetime) else v
 
             if ret_date <= dep_date:
@@ -135,25 +119,13 @@ class FlightSearchRequest(BaseModel):
         """Validate that passenger counts are consistent with detailed passengers."""
         if self.passengers:
             # Count passengers by type
-            adult_count = sum(
-                1 for p in self.passengers if p.type == PassengerType.ADULT
-            )
-            child_count = sum(
-                1 for p in self.passengers if p.type == PassengerType.CHILD
-            )
-            infant_count = sum(
-                1 for p in self.passengers if p.type == PassengerType.INFANT
-            )
+            adult_count = sum(1 for p in self.passengers if p.type == PassengerType.ADULT)
+            child_count = sum(1 for p in self.passengers if p.type == PassengerType.CHILD)
+            infant_count = sum(1 for p in self.passengers if p.type == PassengerType.INFANT)
 
             # Verify counts match
-            if (
-                adult_count != self.adults
-                or child_count != self.children
-                or infant_count != self.infants
-            ):
-                raise ValueError(
-                    "Passenger counts must match detailed passenger information"
-                )
+            if adult_count != self.adults or child_count != self.children or infant_count != self.infants:
+                raise ValueError("Passenger counts must match detailed passenger information")
 
         return self
 
@@ -187,13 +159,9 @@ class MultiCityFlightSearchRequest(BaseModel):
     children: int = Field(0, ge=0, le=9, description="Number of child passengers")
     infants: int = Field(0, ge=0, le=4, description="Number of infant passengers")
     cabin_class: CabinClass = Field(CabinClass.ECONOMY, description="Cabin class")
-    max_stops: Optional[int] = Field(
-        None, ge=0, le=3, description="Maximum number of stops"
-    )
+    max_stops: Optional[int] = Field(None, ge=0, le=3, description="Maximum number of stops")
     max_price: Optional[float] = Field(None, gt=0, description="Maximum price in USD")
-    preferred_airlines: Optional[List[str]] = Field(
-        default=None, description="List of preferred airline codes"
-    )
+    preferred_airlines: Optional[List[str]] = Field(default=None, description="List of preferred airline codes")
     trip_id: Optional[UUID] = Field(default=None, description="Associated trip ID")
 
     @model_validator(mode="after")
@@ -208,18 +176,11 @@ class MultiCityFlightSearchRequest(BaseModel):
             next_date = self.segments[i + 1].departure_date
 
             # Convert to date for comparison if needed
-            current = (
-                current_date.date()
-                if isinstance(current_date, datetime)
-                else current_date
-            )
+            current = current_date.date() if isinstance(current_date, datetime) else current_date
             next_d = next_date.date() if isinstance(next_date, datetime) else next_date
 
             if next_d < current:
-                raise ValueError(
-                    f"Segment {i + 2} departure date must be on or after segment "
-                    f"{i + 1} departure date"
-                )
+                raise ValueError(f"Segment {i + 2} departure date must be on or after segment {i + 1} departure date")
 
         return self
 
@@ -232,9 +193,7 @@ class AirportSearchRequest(BaseModel):
         min_length=1,
         max_length=100,
     )
-    limit: int = Field(
-        10, ge=1, le=50, description="Maximum number of results to return"
-    )
+    limit: int = Field(10, ge=1, le=50, description="Maximum number of results to return")
 
 
 class SavedFlightRequest(BaseModel):
@@ -242,9 +201,7 @@ class SavedFlightRequest(BaseModel):
 
     offer_id: str = Field(description="Flight offer ID")
     trip_id: UUID = Field(description="Trip ID to save the flight for")
-    notes: Optional[str] = Field(
-        default=None, description="Notes about this flight offer"
-    )
+    notes: Optional[str] = Field(default=None, description="Notes about this flight offer")
 
 
 # FlightOffer moved to domain layer - import from tripsage_core.models.domain.flight
@@ -280,9 +237,7 @@ class SavedFlightResponse(BaseModel):
     trip_id: UUID = Field(description="Trip ID")
     offer: Any = Field(description="Flight offer details")  # FlightOffer from domain
     saved_at: datetime = Field(description="Timestamp when flight was saved")
-    notes: Optional[str] = Field(
-        default=None, description="Notes about this flight offer"
-    )
+    notes: Optional[str] = Field(default=None, description="Notes about this flight offer")
 
 
 class UpcomingFlightResponse(BaseModel):
@@ -304,15 +259,9 @@ class UpcomingFlightResponse(BaseModel):
     currency: str = Field(description="Currency code", default="USD")
     cabin_class: str = Field(description="Cabin class")
     seats_available: Optional[int] = Field(default=None, description="Available seats")
-    status: str = Field(
-        description="Flight status", default="upcoming"
-    )  # upcoming, boarding, delayed, cancelled
+    status: str = Field(description="Flight status", default="upcoming")  # upcoming, boarding, delayed, cancelled
     terminal: Optional[str] = Field(default=None, description="Terminal")
     gate: Optional[str] = Field(default=None, description="Gate")
     # Enhanced trip context fields
-    is_shared_trip: Optional[bool] = Field(
-        default=False, description="Whether the trip is shared"
-    )
-    collaborator_count: Optional[int] = Field(
-        default=0, description="Number of trip collaborators"
-    )
+    is_shared_trip: Optional[bool] = Field(default=False, description="Whether the trip is shared")
+    collaborator_count: Optional[int] = Field(default=0, description="Number of trip collaborators")

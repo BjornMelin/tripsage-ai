@@ -36,12 +36,8 @@ class SessionSummary(BaseModel):
     user_id: str = Field(..., description="User ID")
     session_id: str = Field(..., description="Session ID")
     summary: str = Field(..., description="Session summary text")
-    key_insights: Optional[List[str]] = Field(
-        None, description="Key insights from the session"
-    )
-    decisions_made: Optional[List[str]] = Field(
-        None, description="Decisions made during the session"
-    )
+    key_insights: Optional[List[str]] = Field(None, description="Key insights from the session")
+    decisions_made: Optional[List[str]] = Field(None, description="Decisions made during the session")
 
 
 class UserPreferences(BaseModel):
@@ -87,9 +83,7 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
             memory_service = MemoryService()
 
             # Get comprehensive user context from memory
-            memories = await memory_service.get_memories(
-                user_id=user_id, memory_type="user_preferences"
-            )
+            memories = await memory_service.get_memories(user_id=user_id, memory_type="user_preferences")
 
             # Extract preferences from memories
             preferences = {}
@@ -98,9 +92,7 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
                     preferences.update(memory.content)
 
             # Get past trips
-            trip_memories = await memory_service.get_memories(
-                user_id=user_id, memory_type="trip_history"
-            )
+            trip_memories = await memory_service.get_memories(user_id=user_id, memory_type="trip_history")
             recent_trips = []
             for memory in trip_memories[:5]:  # Limit to 5 most recent
                 if hasattr(memory, "content"):
@@ -116,10 +108,7 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
                 }
             )
 
-            logger.info(
-                f"Loaded {len(preferences)} preferences and "
-                f"{len(recent_trips)} trips for user {user_id}"
-            )
+            logger.info(f"Loaded {len(preferences)} preferences and {len(recent_trips)} trips for user {user_id}")
 
         except Exception as e:
             logger.error(f"Error loading user context for {user_id}: {str(e)}")
@@ -128,9 +117,7 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
     return session_data
 
 
-async def update_session_memory(
-    user_id: str, updates: Dict[str, Any]
-) -> Dict[str, Any]:
+async def update_session_memory(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
     """Update session memory with new knowledge.
 
     This function updates the memory system with new information
@@ -164,21 +151,15 @@ async def update_session_memory(
 
         # Process user preferences
         if "preferences" in updates and updates["preferences"]:
-            await _update_user_preferences_memory(
-                user_id, updates["preferences"], result, memory_service
-            )
+            await _update_user_preferences_memory(user_id, updates["preferences"], result, memory_service)
 
         # Process learned facts
         if "learned_facts" in updates and updates["learned_facts"]:
-            await _process_learned_facts(
-                user_id, updates["learned_facts"], result, memory_service
-            )
+            await _process_learned_facts(user_id, updates["learned_facts"], result, memory_service)
 
         # Process general conversation context
         if "conversation_context" in updates and updates["conversation_context"]:
-            await _process_conversation_context(
-                user_id, updates["conversation_context"], result, memory_service
-            )
+            await _process_conversation_context(user_id, updates["conversation_context"], result, memory_service)
 
     except Exception as e:
         logger.error(f"Error updating session memory: {str(e)}")
@@ -241,9 +222,7 @@ async def store_session_summary(
         )
 
         if memory_id:
-            logger.info(
-                f"Successfully stored session summary with memory ID: {memory_id}"
-            )
+            logger.info(f"Successfully stored session summary with memory ID: {memory_id}")
             return {
                 "status": "success",
                 "memory_id": memory_id,
@@ -349,11 +328,7 @@ async def _process_conversation_context(
             "dates_mentioned",
         ]
 
-        context_data = {
-            key: value
-            for key, value in context.items()
-            if key in relevant_keys and value
-        }
+        context_data = {key: value for key, value in context.items() if key in relevant_keys and value}
 
         if context_data:
             memory_id = await memory_service.add_memory(

@@ -431,9 +431,7 @@ class TestEnsureMemoryClientInitialized:
         async def memory_function_with_args(user_id, content, metadata=None):
             return {"user_id": user_id, "content": content, "metadata": metadata}
 
-        result = await memory_function_with_args(
-            "user123", "test content", metadata={"type": "test"}
-        )
+        result = await memory_function_with_args("user123", "test content", metadata={"type": "test"})
         assert result["user_id"] == "user123"
         assert result["content"] == "test content"
         assert result["metadata"]["type"] == "test"
@@ -441,9 +439,7 @@ class TestEnsureMemoryClientInitialized:
     async def test_memory_service_integration(self):
         """Test that the decorator works with memory service integration."""
         # Mock the memory service to avoid actual initialization
-        with patch(
-            "tripsage_core.services.business.memory_service.MemoryService"
-        ) as mock_service:
+        with patch("tripsage_core.services.business.memory_service.MemoryService") as mock_service:
             mock_instance = AsyncMock()
             mock_service.return_value = mock_instance
             mock_instance.add_memory.return_value = "memory_id_123"

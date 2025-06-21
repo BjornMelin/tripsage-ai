@@ -54,9 +54,7 @@ class TestAccommodationModel:
             AccommodationType.BED_AND_BREAKFAST,
         ],
     )
-    def test_accommodation_types_valid(
-        self, sample_accommodation_dict, accommodation_type
-    ):
+    def test_accommodation_types_valid(self, sample_accommodation_dict, accommodation_type):
         """Test all valid accommodation types."""
         sample_accommodation_dict["accommodation_type"] = accommodation_type
         accommodation = Accommodation(**sample_accommodation_dict)
@@ -87,9 +85,7 @@ class TestAccommodationModel:
             }
         )
 
-        validation_helper.assert_validation_error(
-            Accommodation, sample_accommodation_dict, error_field=error_field
-        )
+        validation_helper.assert_validation_error(Accommodation, sample_accommodation_dict, error_field=error_field)
 
     @pytest.mark.parametrize(
         "rating,should_pass",
@@ -104,9 +100,7 @@ class TestAccommodationModel:
             (None, True),  # Rating is optional
         ],
     )
-    def test_accommodation_rating_validation(
-        self, sample_accommodation_dict, rating, should_pass, validation_helper
-    ):
+    def test_accommodation_rating_validation(self, sample_accommodation_dict, rating, should_pass, validation_helper):
         """Test rating validation with boundary values."""
         sample_accommodation_dict["rating"] = rating
 
@@ -197,17 +191,13 @@ class TestAccommodationModel:
         assert accommodation.amenities_list == []
 
     @pytest.mark.parametrize("cancellation_policy", list(CancellationPolicy))
-    def test_accommodation_cancellation_policies(
-        self, sample_accommodation_dict, cancellation_policy
-    ):
+    def test_accommodation_cancellation_policies(self, sample_accommodation_dict, cancellation_policy):
         """Test all cancellation policy options."""
         sample_accommodation_dict["cancellation_policy"] = cancellation_policy
         accommodation = Accommodation(**sample_accommodation_dict)
         assert accommodation.cancellation_policy == cancellation_policy
 
-    def test_accommodation_serialization_round_trip(
-        self, sample_accommodation_dict, serialization_helper
-    ):
+    def test_accommodation_serialization_round_trip(self, sample_accommodation_dict, serialization_helper):
         """Test JSON serialization and deserialization."""
         accommodation = Accommodation(**sample_accommodation_dict)
 
@@ -302,9 +292,7 @@ class TestAccommodationModel:
     ):
         """Test individual field validation rules."""
         sample_accommodation_dict[field_name] = invalid_value
-        validation_helper.assert_validation_error(
-            Accommodation, sample_accommodation_dict, error_field=field_name
-        )
+        validation_helper.assert_validation_error(Accommodation, sample_accommodation_dict, error_field=field_name)
 
     def test_accommodation_optional_fields(self, sample_accommodation_dict):
         """Test that optional fields can be None or omitted."""
@@ -352,7 +340,5 @@ class TestAccommodationModel:
 
         # Test that we can't cancel a non-booked accommodation
         accommodation2 = Accommodation(**sample_accommodation_dict)
-        with pytest.raises(
-            ValueError, match="Only booked accommodations can be cancelled"
-        ):
+        with pytest.raises(ValueError, match="Only booked accommodations can be cancelled"):
             accommodation2.cancel()

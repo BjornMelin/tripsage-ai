@@ -157,9 +157,7 @@ class TestTripCollaboratorDB:
             (PermissionLevel.ADMIN, PermissionLevel.ADMIN, True),
         ],
     )
-    def test_has_permission_hierarchy(
-        self, base_collaborator_data, current_level, required_level, expected
-    ):
+    def test_has_permission_hierarchy(self, base_collaborator_data, current_level, required_level, expected):
         """Test has_permission method respects hierarchy."""
         data = base_collaborator_data.copy()
         data["permission_level"] = current_level
@@ -379,9 +377,7 @@ class TestTripCollaboratorCreate:
         "permission_level",
         [PermissionLevel.VIEW, PermissionLevel.EDIT, PermissionLevel.ADMIN],
     )
-    def test_create_collaborator_all_permission_levels(
-        self, base_create_data, permission_level
-    ):
+    def test_create_collaborator_all_permission_levels(self, base_create_data, permission_level):
         """Test creating collaborators with all permission levels."""
         data = base_create_data.copy()
         data["permission_level"] = permission_level
@@ -536,9 +532,7 @@ class TestTripCollaboratorEdgeCases:
         assert collaborator.trip_id == large_trip_id
 
         # Test trip_id of 1 (minimum valid)
-        create_request = TripCollaboratorCreate(
-            trip_id=1, user_id=user_id, added_by=uuid4()
-        )
+        create_request = TripCollaboratorCreate(trip_id=1, user_id=user_id, added_by=uuid4())
         assert create_request.trip_id == 1
 
     def test_collaborator_timezone_handling(self):
@@ -592,9 +586,7 @@ class TestTripCollaboratorPropertyBased:
         added_by=st.uuids(),
         permission_level=st.sampled_from(list(PermissionLevel)),
     )
-    def test_collaborator_create_property_based(
-        self, trip_id, user_id, added_by, permission_level
-    ):
+    def test_collaborator_create_property_based(self, trip_id, user_id, added_by, permission_level):
         """Property-based test for TripCollaboratorCreate validation."""
         create_request = TripCollaboratorCreate(
             trip_id=trip_id,
@@ -650,9 +642,7 @@ class TestTripCollaboratorPropertyBased:
             assert collaborator.has_permission(PermissionLevel.EDIT) is True
             assert collaborator.has_permission(PermissionLevel.ADMIN) is True
 
-    @given(
-        permission_level=st.one_of(st.sampled_from(list(PermissionLevel)), st.none())
-    )
+    @given(permission_level=st.one_of(st.sampled_from(list(PermissionLevel)), st.none()))
     def test_collaborator_update_property_based(self, permission_level):
         """Property-based test for TripCollaboratorUpdate validation."""
         update_request = TripCollaboratorUpdate(permission_level=permission_level)

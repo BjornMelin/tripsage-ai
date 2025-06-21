@@ -175,9 +175,7 @@ class EnhancedDatabaseBenchmark:
         }
 
     @asynccontextmanager
-    async def measure_performance(
-        self, operation_name: str
-    ) -> AsyncGenerator[BenchmarkMetrics, None]:
+    async def measure_performance(self, operation_name: str) -> AsyncGenerator[BenchmarkMetrics, None]:
         """Context manager for measuring performance with detailed metrics."""
 
         # Get initial system metrics
@@ -266,16 +264,12 @@ class EnhancedDatabaseBenchmark:
             for i in range(self.iterations):
                 async with self.measure_performance("simple_select") as metrics:
                     result = await service.execute_sql("SELECT 1 as test_value")
-                    metrics.metadata.update(
-                        {"iteration": i, "result_count": len(result) if result else 0}
-                    )
+                    metrics.metadata.update({"iteration": i, "result_count": len(result) if result else 0})
 
             # Parameterized query
             for i in range(self.iterations):
                 async with self.measure_performance("parameterized_query") as metrics:
-                    result = await service.execute_sql(
-                        "SELECT $1::text as param_value", (f"param_{i}",)
-                    )
+                    result = await service.execute_sql("SELECT $1::text as param_value", (f"param_{i}",))
                     metrics.metadata.update(
                         {
                             "iteration": i,
@@ -321,9 +315,7 @@ class EnhancedDatabaseBenchmark:
                     async with service.transaction():
                         await service.execute_sql("SELECT 1")
                         await service.execute_sql("SELECT 2")
-                    metrics.metadata.update(
-                        {"iteration": i, "transaction_type": "simple"}
-                    )
+                    metrics.metadata.update({"iteration": i, "transaction_type": "simple"})
 
             # Transaction with rollback
             for i in range(min(10, self.iterations)):
@@ -350,9 +342,7 @@ class EnhancedDatabaseBenchmark:
     async def benchmark_concurrent_performance(self):
         """Benchmark concurrent operations with load testing."""
 
-        logger.info(
-            f"Benchmarking concurrent performance with {self.concurrent_users} users..."
-        )
+        logger.info(f"Benchmarking concurrent performance with {self.concurrent_users} users...")
 
         async def concurrent_user_simulation(user_id: int):
             """Simulate a single user's database operations."""
@@ -361,9 +351,7 @@ class EnhancedDatabaseBenchmark:
 
             try:
                 for operation_id in range(10):
-                    async with self.measure_performance(
-                        "concurrent_operations"
-                    ) as metrics:
+                    async with self.measure_performance("concurrent_operations") as metrics:
                         await service.execute_sql(
                             "SELECT $1::int as user_id, $2::int as operation_id",
                             (user_id, operation_id),
@@ -379,10 +367,7 @@ class EnhancedDatabaseBenchmark:
                 await service.close()
 
         # Run concurrent users
-        tasks = [
-            concurrent_user_simulation(user_id)
-            for user_id in range(self.concurrent_users)
-        ]
+        tasks = [concurrent_user_simulation(user_id) for user_id in range(self.concurrent_users)]
         await asyncio.gather(*tasks)
 
     async def benchmark_memory_usage(self):
@@ -396,9 +381,7 @@ class EnhancedDatabaseBenchmark:
         try:
             # Memory usage with large result sets
             for i in range(min(10, self.iterations)):
-                async with self.measure_performance(
-                    "memory_usage_large_results"
-                ) as metrics:
+                async with self.measure_performance("memory_usage_large_results") as metrics:
                     result = await service.execute_sql("""
                         SELECT table_name, column_name, data_type, is_nullable
                         FROM information_schema.columns
@@ -431,15 +414,11 @@ class EnhancedDatabaseBenchmark:
         try:
             # Check if pgvector is available
             try:
-                await service.execute_sql(
-                    "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
-                )
+                await service.execute_sql("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
                 vector_available = True
             except Exception:
                 vector_available = False
-                logger.warning(
-                    "pgvector extension not available, using mock operations"
-                )
+                logger.warning("pgvector extension not available, using mock operations")
 
             for i in range(min(10, self.iterations)):
                 async with self.measure_performance("vector_search") as metrics:
@@ -489,9 +468,7 @@ class EnhancedDatabaseBenchmark:
                 continue
 
             durations = [m.duration_ms for m in successful_metrics]
-            memory_usages = [
-                m.memory_peak_mb for m in successful_metrics if m.memory_peak_mb
-            ]
+            memory_usages = [m.memory_peak_mb for m in successful_metrics if m.memory_peak_mb]
 
             # Calculate percentiles
             durations_sorted = sorted(durations)
@@ -504,9 +481,7 @@ class EnhancedDatabaseBenchmark:
             # Calculate confidence interval (95%)
             mean_duration = statistics.mean(durations)
             std_dev = statistics.stdev(durations) if len(durations) > 1 else 0
-            margin_error = (
-                1.96 * (std_dev / (len(durations) ** 0.5)) if len(durations) > 1 else 0
-            )
+            margin_error = 1.96 * (std_dev / (len(durations) ** 0.5)) if len(durations) > 1 else 0
             confidence_interval = (
                 mean_duration - margin_error,
                 mean_duration + margin_error,
@@ -514,9 +489,7 @@ class EnhancedDatabaseBenchmark:
 
             # Calculate operations per second
             total_time_seconds = sum(durations) / 1000
-            ops_per_second = (
-                len(durations) / total_time_seconds if total_time_seconds > 0 else 0
-            )
+            ops_per_second = len(durations) / total_time_seconds if total_time_seconds > 0 else 0
 
             # Create statistics object
             stats = BenchmarkStatistics(
@@ -534,9 +507,7 @@ class EnhancedDatabaseBenchmark:
                 p95_duration=p95,
                 p99_duration=p99,
                 confidence_interval_95=confidence_interval,
-                mean_memory_usage=statistics.mean(memory_usages)
-                if memory_usages
-                else None,
+                mean_memory_usage=statistics.mean(memory_usages) if memory_usages else None,
                 peak_memory_usage=max(memory_usages) if memory_usages else None,
                 operations_per_second=ops_per_second,
             )
@@ -572,12 +543,8 @@ class EnhancedDatabaseBenchmark:
             severity = "low"
 
             if baseline_p95:
-                regression_percentage = (
-                    (stats.p95_duration - baseline_p95) / baseline_p95
-                ) * 100
-                is_regression = (
-                    is_regression or regression_percentage > 20
-                )  # 20% regression threshold
+                regression_percentage = ((stats.p95_duration - baseline_p95) / baseline_p95) * 100
+                is_regression = is_regression or regression_percentage > 20  # 20% regression threshold
 
                 if regression_percentage > 100:
                     severity = "critical"
@@ -631,16 +598,11 @@ class EnhancedDatabaseBenchmark:
                 "python_version": sys.version,
                 "system_info": {
                     "cpu_count": psutil.cpu_count(),
-                    "memory_total_gb": psutil.virtual_memory().total
-                    / 1024
-                    / 1024
-                    / 1024,
+                    "memory_total_gb": psutil.virtual_memory().total / 1024 / 1024 / 1024,
                     "platform": sys.platform,
                 },
             },
-            "statistics": {
-                name: asdict(stats) for name, stats in self.statistics.items()
-            },
+            "statistics": {name: asdict(stats) for name, stats in self.statistics.items()},
             "regressions": [asdict(reg) for reg in self.regressions],
             "raw_metrics": [asdict(metric) for metric in self.metrics],
             "performance_thresholds": self.performance_thresholds,
@@ -701,9 +663,21 @@ class EnhancedDatabaseBenchmark:
             <title>Database Benchmark Report - {timestamp}</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .header {{ color: #333; border-bottom: 2px solid #ddd; padding-bottom: 10px; }}
-                .stats-table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                .stats-table th, .stats-table td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                .header {{ 
+                    color: #333; 
+                    border-bottom: 2px solid #ddd; 
+                    padding-bottom: 10px; 
+                }}
+                .stats-table {{ 
+                    border-collapse: collapse; 
+                    width: 100%; 
+                    margin: 20px 0; 
+                }}
+                .stats-table th, .stats-table td {{ 
+                    border: 1px solid #ddd; 
+                    padding: 8px; 
+                    text-align: left; 
+                }}
                 .stats-table th {{ background-color: #f2f2f2; }}
                 .regression {{ background-color: #ffebee; }}
                 .success {{ color: green; }}
@@ -778,16 +752,14 @@ class EnhancedDatabaseBenchmark:
                         <td>{reg.operation_name}</td>
                         <td>{reg.current_p95:.2f}</td>
                         <td>{reg.baseline_p95:.2f if reg.baseline_p95 else 'N/A'}</td>
-                        <td>{f"{reg.regression_percentage:.1f}%" if reg.regression_percentage else "N/A"}</td>
+                        <td>{(f"{reg.regression_percentage:.1f}%" if reg.regression_percentage else "N/A")}</td>
                         <td>{reg.severity.upper()}</td>
                     </tr>
                 """
 
             html_content += "</table>"
         else:
-            html_content += (
-                '<p class="success">No performance regressions detected! 🎉</p>'
-            )
+            html_content += '<p class="success">No performance regressions detected! 🎉</p>'
 
         html_content += """
         </body>
@@ -819,9 +791,11 @@ class EnhancedDatabaseBenchmark:
         # Performance statistics table
         print("\nPERFORMANCE STATISTICS:")
         print("-" * 100)
-        print(
-            f"{'Operation':<25} {'Mean(ms)':<10} {'P95(ms)':<10} {'P99(ms)':<10} {'Success%':<10} {'Ops/Sec':<10} {'Status':<10}"
+        header = (
+            f"{'Operation':<25} {'Mean(ms)':<10} {'P95(ms)':<10} "
+            f"{'P99(ms)':<10} {'Success%':<10} {'Ops/Sec':<10} {'Status':<10}"
         )
+        print(header)
         print("-" * 100)
 
         for name, stats in self.statistics.items():
@@ -852,9 +826,7 @@ class EnhancedDatabaseBenchmark:
         baseline_file = self.output_dir / f"baseline_{timestamp}.json"
         baseline_data = {
             "timestamp": timestamp,
-            "statistics": {
-                name: asdict(stats) for name, stats in self.statistics.items()
-            },
+            "statistics": {name: asdict(stats) for name, stats in self.statistics.items()},
             "performance_thresholds": self.performance_thresholds,
         }
 
@@ -903,9 +875,7 @@ Examples:
         default="benchmark_results",
         help="Output directory for results (default: benchmark_results)",
     )
-    parser.add_argument(
-        "--baseline", type=str, help="Baseline file for regression detection"
-    )
+    parser.add_argument("--baseline", type=str, help="Baseline file for regression detection")
     parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -931,18 +901,12 @@ Examples:
 
         # Exit with error code if regressions detected
         if benchmark.regressions:
-            critical_regressions = [
-                r for r in benchmark.regressions if r.severity == "critical"
-            ]
+            critical_regressions = [r for r in benchmark.regressions if r.severity == "critical"]
             if critical_regressions:
-                logger.error(
-                    f"Critical performance regressions detected: {len(critical_regressions)}"
-                )
+                logger.error(f"Critical performance regressions detected: {len(critical_regressions)}")
                 sys.exit(2)
             else:
-                logger.warning(
-                    f"Performance regressions detected: {len(benchmark.regressions)}"
-                )
+                logger.warning(f"Performance regressions detected: {len(benchmark.regressions)}")
                 sys.exit(1)
 
         logger.info("All benchmarks completed successfully with no regressions")

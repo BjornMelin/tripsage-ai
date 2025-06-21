@@ -283,9 +283,7 @@ class TestTripCollaborationEndpoints:
 
         mock_trip_service.share_trip.return_value = sample_collaborators
 
-        result = await self.share_trip_endpoint(
-            trip_id, share_request, mock_principal, mock_trip_service
-        )
+        result = await self.share_trip_endpoint(trip_id, share_request, mock_principal, mock_trip_service)
 
         mock_trip_service.share_trip.assert_called_once_with(
             trip_id=str(trip_id),
@@ -312,9 +310,7 @@ class TestTripCollaborationEndpoints:
         mock_trip_service.share_trip.side_effect = NotFoundError("Trip not found")
 
         with pytest.raises(HTTPException) as exc_info:
-            await self.share_trip_endpoint(
-                trip_id, share_request, mock_principal, mock_trip_service
-            )
+            await self.share_trip_endpoint(trip_id, share_request, mock_principal, mock_trip_service)
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "Trip not found"
@@ -331,14 +327,10 @@ class TestTripCollaborationEndpoints:
             permission_level="view",
         )
 
-        mock_trip_service.share_trip.side_effect = PermissionError(
-            "Only trip owner can share the trip"
-        )
+        mock_trip_service.share_trip.side_effect = PermissionError("Only trip owner can share the trip")
 
         with pytest.raises(HTTPException) as exc_info:
-            await self.share_trip_endpoint(
-                trip_id, share_request, mock_collaborator_principal, mock_trip_service
-            )
+            await self.share_trip_endpoint(trip_id, share_request, mock_collaborator_principal, mock_trip_service)
 
         assert exc_info.value.status_code == 403
         assert exc_info.value.detail == "Only trip owner can share the trip"
@@ -353,9 +345,7 @@ class TestTripCollaborationEndpoints:
         trip_id = uuid4()
         mock_trip_service.get_trip_collaborators.return_value = sample_collaborators
 
-        result = await self.get_trip_collaborators_endpoint(
-            trip_id, mock_principal, mock_trip_service
-        )
+        result = await self.get_trip_collaborators_endpoint(trip_id, mock_principal, mock_trip_service)
 
         mock_trip_service.get_trip_collaborators.assert_called_once_with(
             trip_id=str(trip_id),
@@ -375,9 +365,7 @@ class TestTripCollaborationEndpoints:
         trip_id = uuid4()
         mock_trip_service.get_trip_collaborators.return_value = []
 
-        result = await self.get_trip_collaborators_endpoint(
-            trip_id, mock_principal, mock_trip_service
-        )
+        result = await self.get_trip_collaborators_endpoint(trip_id, mock_principal, mock_trip_service)
 
         assert result["total"] == 0
         assert len(result["collaborators"]) == 0
@@ -495,19 +483,13 @@ class TestTripCollaborationEndpoints:
         )
         mock_trip_service.share_trip.return_value = [sample_collaborators[0]]
 
-        share_result = await self.share_trip_endpoint(
-            trip_id, share_request, mock_principal, mock_trip_service
-        )
+        share_result = await self.share_trip_endpoint(trip_id, share_request, mock_principal, mock_trip_service)
         assert len(share_result["collaborators"]) == 1
 
         # Step 2: Get collaborators
-        mock_trip_service.get_trip_collaborators.return_value = [
-            sample_collaborators[0]
-        ]
+        mock_trip_service.get_trip_collaborators.return_value = [sample_collaborators[0]]
 
-        collab_result = await self.get_trip_collaborators_endpoint(
-            trip_id, mock_principal, mock_trip_service
-        )
+        collab_result = await self.get_trip_collaborators_endpoint(trip_id, mock_principal, mock_trip_service)
         assert collab_result["total"] == 1
 
         # Step 3: Update permissions
@@ -542,9 +524,7 @@ class TestTripCollaborationEndpoints:
         mock_trip_service.share_trip.side_effect = PermissionError("Not owner")
 
         with pytest.raises(HTTPException) as exc_info:
-            await self.share_trip_endpoint(
-                trip_id, share_request, mock_collaborator_principal, mock_trip_service
-            )
+            await self.share_trip_endpoint(trip_id, share_request, mock_collaborator_principal, mock_trip_service)
         assert exc_info.value.status_code == 403
 
         # Only owner can remove collaborators
@@ -573,17 +553,13 @@ class TestTripCollaborationEndpoints:
         )
         mock_trip_service.share_trip.return_value = []
 
-        result = await self.share_trip_endpoint(
-            trip_id, empty_share_request, mock_principal, mock_trip_service
-        )
+        result = await self.share_trip_endpoint(trip_id, empty_share_request, mock_principal, mock_trip_service)
         assert result["message"] == "Trip shared with 0 users"
 
         # Get collaborators for trip with no collaborators
         mock_trip_service.get_trip_collaborators.return_value = []
 
-        result = await self.get_trip_collaborators_endpoint(
-            trip_id, mock_principal, mock_trip_service
-        )
+        result = await self.get_trip_collaborators_endpoint(trip_id, mock_principal, mock_trip_service)
         assert result["total"] == 0
 
         # Try to remove non-existent collaborator
@@ -617,9 +593,7 @@ class TestTripCollaborationEndpoints:
 
         mock_trip_service.get_trip_collaborators.return_value = large_collaborator_list
 
-        result = await self.get_trip_collaborators_endpoint(
-            trip_id, mock_principal, mock_trip_service
-        )
+        result = await self.get_trip_collaborators_endpoint(trip_id, mock_principal, mock_trip_service)
 
         assert result["total"] == 100
         assert len(result["collaborators"]) == 100
@@ -651,9 +625,7 @@ class TestTripCollaborationEndpoints:
         ]
         mock_trip_service.share_trip.return_value = mock_collaborators
 
-        result = await self.share_trip_endpoint(
-            trip_id, bulk_share_request, mock_principal, mock_trip_service
-        )
+        result = await self.share_trip_endpoint(trip_id, bulk_share_request, mock_principal, mock_trip_service)
 
         assert result["message"] == "Trip shared with 50 users"
         assert len(result["collaborators"]) == 50
@@ -684,9 +656,7 @@ class TestTripCollaborationEndpoints:
             )
 
             with pytest.raises(HTTPException) as exc_info:
-                await self.share_trip_endpoint(
-                    trip_id, share_request, mock_principal, mock_trip_service
-                )
+                await self.share_trip_endpoint(trip_id, share_request, mock_principal, mock_trip_service)
 
             assert exc_info.value.status_code == 500
             assert exc_info.value.detail == "Failed to share trip"
@@ -734,9 +704,7 @@ class TestTripCollaborationEndpoints:
             permission_level="view",
         )
 
-        share_result = await self.share_trip_endpoint(
-            trip_id, share_request, mock_principal, mock_trip_service
-        )
+        share_result = await self.share_trip_endpoint(trip_id, share_request, mock_principal, mock_trip_service)
 
         # Verify response structure
         assert "message" in share_result
@@ -752,9 +720,7 @@ class TestTripCollaborationEndpoints:
         # Test collaborators list response format
         mock_trip_service.get_trip_collaborators.return_value = sample_collaborators
 
-        collab_result = await self.get_trip_collaborators_endpoint(
-            trip_id, mock_principal, mock_trip_service
-        )
+        collab_result = await self.get_trip_collaborators_endpoint(trip_id, mock_principal, mock_trip_service)
 
         # Verify response structure
         assert "trip_id" in collab_result

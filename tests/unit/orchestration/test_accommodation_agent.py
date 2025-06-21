@@ -53,14 +53,10 @@ class TestAccommodationAgentNode:
         memory_service = AsyncMock()
 
         registry.get_required_service = MagicMock(
-            side_effect=lambda name: {
-                "accommodation_service": accommodation_service
-            }.get(name)
+            side_effect=lambda name: {"accommodation_service": accommodation_service}.get(name)
         )
 
-        registry.get_optional_service = MagicMock(
-            side_effect=lambda name: {"memory_service": memory_service}.get(name)
-        )
+        registry.get_optional_service = MagicMock(side_effect=lambda name: {"memory_service": memory_service}.get(name))
 
         return registry
 
@@ -84,9 +80,7 @@ class TestAccommodationAgentNode:
     @pytest.fixture
     def sample_state(self):
         """Create a sample state with accommodation request."""
-        state = create_initial_state(
-            "user-123", "I need a hotel in Tokyo for next week, preferably near Shibuya"
-        )
+        state = create_initial_state("user-123", "I need a hotel in Tokyo for next week, preferably near Shibuya")
         state["travel_dates"] = {
             "departure_date": "2024-06-15",
             "return_date": "2024-06-22",
@@ -104,9 +98,7 @@ class TestAccommodationAgentNode:
             assert hasattr(node, "llm")
 
     @pytest.mark.asyncio
-    async def test_successful_accommodation_search(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_successful_accommodation_search(self, accommodation_node, sample_state, mock_llm):
         """Test successful accommodation search flow."""
         # Mock LLM parameter extraction
         mock_llm.ainvoke.return_value = MagicMock(
@@ -126,9 +118,7 @@ class TestAccommodationAgentNode:
 
         # Verify search was performed
         accommodation_node.accommodation_service.search_accommodations.assert_called_once()
-        call_args = (
-            accommodation_node.accommodation_service.search_accommodations.call_args[1]
-        )
+        call_args = accommodation_node.accommodation_service.search_accommodations.call_args[1]
         assert call_args["location"] == "Tokyo, Shibuya"
         assert call_args["check_in_date"] == "2024-06-15"
 
@@ -150,9 +140,7 @@ class TestAccommodationAgentNode:
         assert "Park Hyatt Tokyo" in response["content"]
 
     @pytest.mark.asyncio
-    async def test_parameter_extraction_with_context(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_parameter_extraction_with_context(self, accommodation_node, sample_state, mock_llm):
         """Test parameter extraction using conversation context."""
         # Add context to state
         sample_state["user_preferences"] = {
@@ -188,9 +176,7 @@ class TestAccommodationAgentNode:
     async def test_no_search_parameters_extracted(self, accommodation_node, mock_llm):
         """Test handling when no search parameters are extracted."""
         # Create state with vague message
-        state = create_initial_state(
-            "user-123", "What kind of hotels do you recommend?"
-        )
+        state = create_initial_state("user-123", "What kind of hotels do you recommend?")
 
         # Mock LLM returning null (no parameters)
         mock_llm.ainvoke.side_effect = [
@@ -220,9 +206,7 @@ class TestAccommodationAgentNode:
         assert "dates" in response["content"]
 
     @pytest.mark.asyncio
-    async def test_search_error_handling(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_search_error_handling(self, accommodation_node, sample_state, mock_llm):
         """Test error handling during accommodation search."""
         # Mock successful parameter extraction
         mock_llm.ainvoke.return_value = MagicMock(
@@ -250,9 +234,7 @@ class TestAccommodationAgentNode:
         assert "API rate limit exceeded" in response["content"]
 
     @pytest.mark.asyncio
-    async def test_empty_search_results(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_empty_search_results(self, accommodation_node, sample_state, mock_llm):
         """Test handling of empty search results."""
         # Mock parameter extraction
         mock_llm.ainvoke.return_value = MagicMock(
@@ -282,9 +264,7 @@ class TestAccommodationAgentNode:
         assert "try different dates" in response["content"]
 
     @pytest.mark.asyncio
-    async def test_llm_parameter_extraction_error(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_llm_parameter_extraction_error(self, accommodation_node, sample_state, mock_llm):
         """Test handling of LLM errors during parameter extraction."""
         # Mock LLM error
         mock_llm.ainvoke.side_effect = Exception("LLM service unavailable")
@@ -298,9 +278,7 @@ class TestAccommodationAgentNode:
         assert response["role"] == "assistant"
 
     @pytest.mark.asyncio
-    async def test_invalid_json_from_llm(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_invalid_json_from_llm(self, accommodation_node, sample_state, mock_llm):
         """Test handling of invalid JSON from LLM."""
         # Mock invalid JSON response
         mock_llm.ainvoke.return_value = MagicMock(content="This is not valid JSON")
@@ -312,9 +290,7 @@ class TestAccommodationAgentNode:
         accommodation_node.accommodation_service.search_accommodations.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_response_formatting_with_many_results(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_response_formatting_with_many_results(self, accommodation_node, sample_state, mock_llm):
         """Test response formatting when many results are returned."""
         # Mock parameter extraction
         mock_llm.ainvoke.return_value = MagicMock(
@@ -360,9 +336,7 @@ class TestAccommodationAgentNode:
         assert "7 more options available" in response["content"]
 
     @pytest.mark.asyncio
-    async def test_state_agent_history_update(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_state_agent_history_update(self, accommodation_node, sample_state, mock_llm):
         """Test that agent history is properly updated."""
         # Mock parameter extraction
         mock_llm.ainvoke.return_value = MagicMock(
@@ -383,9 +357,7 @@ class TestAccommodationAgentNode:
         assert "accommodation_agent" in result["agent_history"]
 
     @pytest.mark.asyncio
-    async def test_response_message_metadata(
-        self, accommodation_node, sample_state, mock_llm
-    ):
+    async def test_response_message_metadata(self, accommodation_node, sample_state, mock_llm):
         """Test that response messages include proper metadata."""
         # Mock parameter extraction
         mock_llm.ainvoke.return_value = MagicMock(

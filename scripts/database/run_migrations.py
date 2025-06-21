@@ -32,9 +32,7 @@ async def main():
         action="store_true",
         help="Don't actually apply migrations, just show what would be done",
     )
-    parser.add_argument(
-        "--up-to", help="Apply migrations up to and including this filename"
-    )
+    parser.add_argument("--up-to", help="Apply migrations up to and including this filename")
     parser.add_argument(
         "--project-id",
         help="Supabase project ID (will use environment variable if not provided)",
@@ -43,9 +41,7 @@ async def main():
     args = parser.parse_args()
 
     logger.info("Running SQL migrations...")
-    succeeded, failed = await run_migrations(
-        project_id=args.project_id, up_to=args.up_to, dry_run=args.dry_run
-    )
+    succeeded, failed = await run_migrations(project_id=args.project_id, up_to=args.up_to, dry_run=args.dry_run)
     logger.info(f"SQL migrations completed: {succeeded} succeeded, {failed} failed")
 
     if failed > 0:

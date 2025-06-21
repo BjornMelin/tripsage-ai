@@ -54,9 +54,7 @@ class LocationService:
             raise LocationServiceError(f"Geocoding failed: {e}") from e
 
     @with_error_handling()
-    async def reverse_geocode(
-        self, lat: float, lng: float, **kwargs
-    ) -> List[Dict[str, Any]]:
+    async def reverse_geocode(self, lat: float, lng: float, **kwargs) -> List[Dict[str, Any]]:
         """Convert coordinates to address.
 
         Args:
@@ -74,9 +72,7 @@ class LocationService:
             logger.debug(f"Reverse geocoding coordinates: ({lat}, {lng})")
             return await self.google_maps_service.reverse_geocode(lat, lng, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.error(
-                f"Reverse geocoding failed for coordinates ({lat}, {lng}): {e}"
-            )
+            logger.error(f"Reverse geocoding failed for coordinates ({lat}, {lng}): {e}")
             raise LocationServiceError(f"Reverse geocoding failed: {e}") from e
 
     @with_error_handling()
@@ -103,17 +99,13 @@ class LocationService:
         """
         try:
             logger.debug(f"Searching places: {query}")
-            return await self.google_maps_service.search_places(
-                query, location, radius, **kwargs
-            )
+            return await self.google_maps_service.search_places(query, location, radius, **kwargs)
         except GoogleMapsServiceError as e:
             logger.error(f"Place search failed for query '{query}': {e}")
             raise LocationServiceError(f"Place search failed: {e}") from e
 
     @with_error_handling()
-    async def get_place_details(
-        self, place_id: str, fields: Optional[List[str]] = None, **kwargs
-    ) -> Dict[str, Any]:
+    async def get_place_details(self, place_id: str, fields: Optional[List[str]] = None, **kwargs) -> Dict[str, Any]:
         """Get detailed information about a specific place.
 
         Args:
@@ -129,9 +121,7 @@ class LocationService:
         """
         try:
             logger.debug(f"Getting place details: {place_id}")
-            return await self.google_maps_service.get_place_details(
-                place_id, fields, **kwargs
-            )
+            return await self.google_maps_service.get_place_details(place_id, fields, **kwargs)
         except GoogleMapsServiceError as e:
             logger.error(f"Place details request failed for place_id '{place_id}': {e}")
             raise LocationServiceError(f"Place details request failed: {e}") from e
@@ -156,13 +146,9 @@ class LocationService:
         """
         try:
             logger.debug(f"Getting directions: {origin} to {destination}")
-            return await self.google_maps_service.get_directions(
-                origin, destination, mode, **kwargs
-            )
+            return await self.google_maps_service.get_directions(origin, destination, mode, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.error(
-                f"Directions request failed from '{origin}' to '{destination}': {e}"
-            )
+            logger.error(f"Directions request failed from '{origin}' to '{destination}': {e}")
             raise LocationServiceError(f"Directions request failed: {e}") from e
 
     @with_error_handling()
@@ -189,17 +175,13 @@ class LocationService:
         """
         try:
             logger.debug("Calculating distance matrix")
-            return await self.google_maps_service.distance_matrix(
-                origins, destinations, mode, **kwargs
-            )
+            return await self.google_maps_service.distance_matrix(origins, destinations, mode, **kwargs)
         except GoogleMapsServiceError as e:
             logger.error(f"Distance matrix request failed: {e}")
             raise LocationServiceError(f"Distance matrix request failed: {e}") from e
 
     @with_error_handling()
-    async def get_elevation(
-        self, locations: List[tuple], **kwargs
-    ) -> List[Dict[str, Any]]:
+    async def get_elevation(self, locations: List[tuple], **kwargs) -> List[Dict[str, Any]]:
         """Get elevation data for locations.
 
         Args:
@@ -220,9 +202,7 @@ class LocationService:
             raise LocationServiceError(f"Elevation request failed: {e}") from e
 
     @with_error_handling()
-    async def get_timezone(
-        self, location: tuple, timestamp: Optional[int] = None, **kwargs
-    ) -> Dict[str, Any]:
+    async def get_timezone(self, location: tuple, timestamp: Optional[int] = None, **kwargs) -> Dict[str, Any]:
         """Get timezone information for a location.
 
         Args:
@@ -238,9 +218,7 @@ class LocationService:
         """
         try:
             logger.debug(f"Getting timezone data for location: {location}")
-            return await self.google_maps_service.get_timezone(
-                location, timestamp, **kwargs
-            )
+            return await self.google_maps_service.get_timezone(location, timestamp, **kwargs)
         except GoogleMapsServiceError as e:
             logger.error(f"Timezone request failed for location {location}: {e}")
             raise LocationServiceError(f"Timezone request failed: {e}") from e
