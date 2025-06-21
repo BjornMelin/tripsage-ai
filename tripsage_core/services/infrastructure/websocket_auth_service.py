@@ -9,7 +9,6 @@ This service handles WebSocket connection authentication including:
 """
 
 import logging
-from typing import List, Optional
 from uuid import UUID
 
 import jwt
@@ -25,8 +24,8 @@ class WebSocketAuthRequest(BaseModel):
     """WebSocket authentication request."""
 
     token: str
-    session_id: Optional[UUID] = None
-    channels: List[str] = Field(default_factory=list)
+    session_id: UUID | None = None
+    channels: list[str] = Field(default_factory=list)
 
 
 class WebSocketAuthResponse(BaseModel):
@@ -34,10 +33,10 @@ class WebSocketAuthResponse(BaseModel):
 
     success: bool
     connection_id: str
-    user_id: Optional[UUID] = None
-    session_id: Optional[UUID] = None
-    available_channels: List[str] = Field(default_factory=list)
-    error: Optional[str] = None
+    user_id: UUID | None = None
+    session_id: UUID | None = None
+    available_channels: list[str] = Field(default_factory=list)
+    error: str | None = None
 
 
 class WebSocketAuthService:
@@ -53,95 +52,148 @@ class WebSocketAuthService:
             token: JWT token to verify
 
         Returns:
-            User ID from token
+            User ID from the token
 
         Raises:
             CoreAuthenticationError: If token is invalid
         """
         try:
+            # Decode JWT token
             payload = jwt.decode(
                 token,
-                self.settings.database_jwt_secret.get_secret_value(),
+                self.settings.jwt_secret_key.get_secret_value(),
                 algorithms=["HS256"],
             )
 
-            if "sub" not in payload or "user_id" not in payload:
+            # Extract user ID
+            user_id = payload.get("sub")
+            if not user_id:
                 raise CoreAuthenticationError(
-                    message="Invalid token payload",
-                    details={"reason": "Missing required fields"},
+                    message="Token missing user ID",
+                    code="INVALID_TOKEN",
+                    user_id=None,
                 )
 
-            return UUID(payload["user_id"])
+            return UUID(user_id)
+
+        except jwt.ExpiredSignatureError:
+            raise CoreAuthenticationError(
+                message="Token has expired",
+                code="TOKEN_EXPIRED",
+                user_id=None,
+            )
         except jwt.InvalidTokenError as e:
             raise CoreAuthenticationError(
-                message="Invalid token",
-                details={"reason": str(e)},
-            ) from e
+                message=f"Invalid token: {str(e)}",
+                code="INVALID_TOKEN",
+                user_id=None,
+            )
+        except ValueError as e:
+            raise CoreAuthenticationError(
+                message=f"Invalid user ID format: {str(e)}",
+                code="INVALID_USER_ID",
+                user_id=None,
+            )
 
-    def get_available_channels(self, user_id: UUID) -> List[str]:
-        """Get available channels for a user.
+    def get_available_channels(self, user_id: UUID) -> list[str]:
+        """Get list of channels user can access.
 
         Args:
             user_id: User ID
 
         Returns:
-            List of available channels
+            List of available channel names
         """
-        if not user_id:
-            return []
-
-        # Base channels available to all authenticated users
-        channels = [
-            "general",
-            "notifications",
+        # Basic channel access - can be expanded with role-based access
+        base_channels = [
             f"user:{user_id}",
-            f"agent_status:{user_id}",
+            "notifications",
+            "system_messages",
         ]
 
-        return channels
+        # Add premium channels if user has premium access
+        # This would integrate with user service in production
+        premium_channels = [
+            "premium_notifications",
+            "advanced_features",
+        ]
+
+        return base_channels + premium_channels
 
     def validate_channel_access(
-        self, user_id: UUID, channels: List[str]
-    ) -> tuple[List[str], List[str]]:
+        self, user_id: UUID, requested_channels: list[str]
+    ) -> tuple[list[str], list[str]]:
         """Validate user access to requested channels.
 
         Args:
             user_id: User ID
-            channels: Requested channels
+            requested_channels: List of channels user wants to access
 
         Returns:
             Tuple of (allowed_channels, denied_channels)
         """
-        available_channels = self.get_available_channels(user_id)
-        allowed = []
-        denied = []
+        available_channels = set(self.get_available_channels(user_id))
+        requested_set = set(requested_channels)
 
-        for channel in channels:
-            if channel in available_channels:
-                allowed.append(channel)
-            else:
-                denied.append(channel)
+        allowed = list(requested_set & available_channels)
+        denied = list(requested_set - available_channels)
 
         return allowed, denied
 
-    def parse_channel_target(self, channel: str) -> tuple[str, Optional[str]]:
+    def parse_channel_target(self, channel: str) -> tuple[str, str | None]:
         """Parse channel string to extract target type and ID.
 
-        Centralized channel parsing logic to address code review comment.
-
         Args:
-            channel: Channel string (e.g., "user:123", "session:456", "agent_status"...)
+            channel: Channel string (e.g., "user:123", "session:abc")
 
         Returns:
             Tuple of (target_type, target_id)
         """
-        if ":" not in channel:
+        if ":" in channel:
+            target_type, target_id = channel.split(":", 1)
+            return target_type, target_id
+        else:
             return "channel", channel
 
-        parts = channel.split(":", 1)
-        if len(parts) == 2:
-            target_type, target_id = parts
-            if target_type in ["user", "session", "agent_status"]:
-                return target_type, target_id
+    def is_authorized_for_channel(self, user_id: UUID, channel: str) -> bool:
+        """Check if user is authorized for specific channel.
 
-        return "channel", channel
+        Args:
+            user_id: User ID
+            channel: Channel name
+
+        Returns:
+            True if authorized
+        """
+        available_channels = self.get_available_channels(user_id)
+        return channel in available_channels
+
+    def get_user_channels(self, user_id: UUID) -> list[str]:
+        """Get all channels for a specific user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of user-specific channel names
+        """
+        return [
+            f"user:{user_id}",
+            f"user:{user_id}:notifications",
+            f"user:{user_id}:status",
+        ]
+
+    def get_session_channels(self, session_id: UUID) -> list[str]:
+        """Get all channels for a specific session.
+
+        Args:
+            session_id: Session ID
+
+        Returns:
+            List of session-specific channel names
+        """
+        return [
+            f"session:{session_id}",
+            f"session:{session_id}:chat",
+            f"session:{session_id}:agent_status",
+        ]

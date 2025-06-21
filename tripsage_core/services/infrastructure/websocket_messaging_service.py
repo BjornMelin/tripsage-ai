@@ -11,7 +11,7 @@ This service consolidates all WebSocket message sending logic including:
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, Set
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -28,15 +28,15 @@ class WebSocketEvent(BaseModel):
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    user_id: Optional[UUID] = None
-    session_id: Optional[UUID] = None
-    connection_id: Optional[str] = None
-    payload: Dict[str, Any] = Field(default_factory=dict)
+    user_id: UUID | None = None
+    session_id: UUID | None = None
+    connection_id: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
     priority: int = Field(default=1, description="1=high, 2=medium, 3=low")
     retry_count: int = Field(default=0)
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert event to serializable dictionary for WebSocket transmission.
 
         Centralized JSON serialization logic to address code review comment.

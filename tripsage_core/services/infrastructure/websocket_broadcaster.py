@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 from uuid import UUID
 
 import redis.asyncio as redis
@@ -25,11 +25,11 @@ class BroadcastMessage(BaseModel):
     """Message for broadcasting across WebSocket connections."""
 
     id: str
-    event: Dict[str, Any]  # Simplified from WebSocketEvent for serialization
+    event: dict[str, Any]  # Simplified from WebSocketEvent for serialization
     target_type: str  # "connection", "user", "session", "channel", "broadcast"
-    target_id: Optional[str] = None
+    target_id: str | None = None
     created_at: datetime
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
     priority: int = Field(default=1)  # 1=high, 2=medium, 3=low
 
 
@@ -45,7 +45,7 @@ class WebSocketBroadcaster:
     - Performance monitoring
     """
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         """Initialize the WebSocket broadcaster.
 
         Args:
@@ -53,13 +53,13 @@ class WebSocketBroadcaster:
         """
         self.settings = get_settings()
         self.redis_url = redis_url or self.settings.redis_url
-        self.redis_client: Optional[redis.Redis] = None
-        self.pubsub: Optional[redis.client.PubSub] = None
+        self.redis_client: redis.Redis | None = None
+        self.pubsub: redis.client.PubSub | None = None
         self._running = False
-        self._subscribers: Dict[str, Set[str]] = {}  # channel -> connection_ids
+        self._subscribers: dict[str, set[str]] = {}  # channel -> connection_ids
 
         # Message deduplication - track recent message IDs to prevent duplicates
-        self._recent_message_ids: Set[str] = set()
+        self._recent_message_ids: set[str] = set()
         self._max_recent_messages = 10000  # Keep track of last 10k message IDs
         self._message_id_cleanup_counter = 0
 
@@ -70,8 +70,8 @@ class WebSocketBroadcaster:
         self.CONNECTION_INFO_KEY = "tripsage:websocket:connections"
 
         # Message processing
-        self._broadcast_task: Optional[asyncio.Task] = None
-        self._subscription_task: Optional[asyncio.Task] = None
+        self._broadcast_task: asyncio.Task | None = None
+        self._subscription_task: asyncio.Task | None = None
 
     async def start(self) -> None:
         """Start the broadcaster service."""
@@ -111,7 +111,6 @@ class WebSocketBroadcaster:
                 message=f"Failed to start WebSocket broadcaster: {str(e)}",
                 code="BROADCASTER_START_FAILED",
                 service="WebSocketBroadcaster",
-                details={"error": str(e)},
             ) from e
 
     async def stop(self) -> None:
@@ -121,8 +120,17 @@ class WebSocketBroadcaster:
         # Cancel background tasks
         if self._broadcast_task:
             self._broadcast_task.cancel()
+            try:
+                await self._broadcast_task
+            except asyncio.CancelledError:
+                pass
+
         if self._subscription_task:
             self._subscription_task.cancel()
+            try:
+                await self._subscription_task
+            except asyncio.CancelledError:
+                pass
 
         # Close Redis connections
         if self.pubsub:
@@ -132,214 +140,32 @@ class WebSocketBroadcaster:
 
         logger.info("WebSocket broadcaster stopped")
 
-    def _is_duplicate_message(self, message_id: str) -> bool:
-        """Check if message is a duplicate and update tracking.
-
-        Args:
-            message_id: Unique message identifier
-
-        Returns:
-            True if message is a duplicate, False otherwise
-        """
-        if message_id in self._recent_message_ids:
-            logger.debug(f"Duplicate message detected: {message_id}")
-            return True
-
-        # Add to tracking set
-        self._recent_message_ids.add(message_id)
-
-        # Cleanup old message IDs periodically to prevent memory growth
-        self._message_id_cleanup_counter += 1
-        if self._message_id_cleanup_counter >= 1000:  # Every 1000 messages
-            if len(self._recent_message_ids) > self._max_recent_messages:
-                # Remove oldest half of message IDs (simple cleanup strategy)
-                messages_to_remove = len(self._recent_message_ids) - (
-                    self._max_recent_messages // 2
-                )
-                message_list = list(self._recent_message_ids)
-                for msg_id in message_list[:messages_to_remove]:
-                    self._recent_message_ids.discard(msg_id)
-                logger.debug(
-                    f"Cleaned up {messages_to_remove} old message IDs from "
-                    f"deduplication cache"
-                )
-            self._message_id_cleanup_counter = 0
-
-        return False
-
-    async def broadcast_to_connection(
-        self, connection_id: str, event: Dict[str, Any], priority: int = 1
-    ) -> bool:
-        """Broadcast event to specific connection.
-
-        Args:
-            connection_id: Target connection ID
-            event: Event to broadcast
-            priority: Message priority (1=high, 2=medium, 3=low)
-
-        Returns:
-            True if broadcast was queued successfully
-        """
-        message_id = f"conn_{connection_id}_{event.get('id', '')}"
-
-        # Check for duplicates
-        if self._is_duplicate_message(message_id):
-            logger.debug(f"Skipping duplicate broadcast to connection {connection_id}")
-            return True  # Return True since message was "handled" (by being skipped)
-
-        message = BroadcastMessage(
-            id=message_id,
-            event=event,
-            target_type="connection",
-            target_id=connection_id,
-            created_at=datetime.utcnow(),
-            priority=priority,
-        )
-
-        return await self._queue_broadcast_message(message)
-
-    async def broadcast_to_user(
-        self, user_id: UUID, event: Dict[str, Any], priority: int = 1
-    ) -> bool:
-        """Broadcast event to all connections for a user.
-
-        Args:
-            user_id: Target user ID
-            event: Event to broadcast
-            priority: Message priority
-
-        Returns:
-            True if broadcast was queued successfully
-        """
-        message_id = f"user_{user_id}_{event.get('id', '')}"
-
-        # Check for duplicates
-        if self._is_duplicate_message(message_id):
-            logger.debug(f"Skipping duplicate broadcast to user {user_id}")
-            return True
-
-        message = BroadcastMessage(
-            id=message_id,
-            event=event,
-            target_type="user",
-            target_id=str(user_id),
-            created_at=datetime.utcnow(),
-            priority=priority,
-        )
-
-        return await self._queue_broadcast_message(message)
-
-    async def broadcast_to_session(
-        self, session_id: UUID, event: Dict[str, Any], priority: int = 1
-    ) -> bool:
-        """Broadcast event to all connections for a session.
-
-        Args:
-            session_id: Target session ID
-            event: Event to broadcast
-            priority: Message priority
-
-        Returns:
-            True if broadcast was queued successfully
-        """
-        message_id = f"session_{session_id}_{event.get('id', '')}"
-
-        # Check for duplicates
-        if self._is_duplicate_message(message_id):
-            logger.debug(f"Skipping duplicate broadcast to session {session_id}")
-            return True
-
-        message = BroadcastMessage(
-            id=message_id,
-            event=event,
-            target_type="session",
-            target_id=str(session_id),
-            created_at=datetime.utcnow(),
-            priority=priority,
-        )
-
-        return await self._queue_broadcast_message(message)
-
-    async def broadcast_to_channel(
-        self, channel: str, event: Dict[str, Any], priority: int = 1
-    ) -> bool:
-        """Broadcast event to all connections subscribed to a channel.
-
-        Args:
-            channel: Target channel
-            event: Event to broadcast
-            priority: Message priority
-
-        Returns:
-            True if broadcast was queued successfully
-        """
-        message_id = f"channel_{channel}_{event.get('id', '')}"
-
-        # Check for duplicates
-        if self._is_duplicate_message(message_id):
-            logger.debug(f"Skipping duplicate broadcast to channel {channel}")
-            return True
-
-        message = BroadcastMessage(
-            id=message_id,
-            event=event,
-            target_type="channel",
-            target_id=channel,
-            created_at=datetime.utcnow(),
-            priority=priority,
-        )
-
-        return await self._queue_broadcast_message(message)
-
-    async def broadcast_to_all(self, event: Dict[str, Any], priority: int = 2) -> bool:
-        """Broadcast event to all connections.
-
-        Args:
-            event: Event to broadcast
-            priority: Message priority
-
-        Returns:
-            True if broadcast was queued successfully
-        """
-        message_id = f"broadcast_{event.get('id', '')}"
-
-        # Check for duplicates
-        if self._is_duplicate_message(message_id):
-            logger.debug("Skipping duplicate broadcast to all")
-            return True
-
-        message = BroadcastMessage(
-            id=message_id,
-            event=event,
-            target_type="broadcast",
-            created_at=datetime.utcnow(),
-            priority=priority,
-        )
-
-        return await self._queue_broadcast_message(message)
-
     async def register_connection(
         self,
         connection_id: str,
         user_id: UUID,
-        session_id: Optional[UUID] = None,
-        channels: Optional[List[str]] = None,
+        session_id: UUID | None = None,
+        channels: list[str] | None = None,
     ) -> None:
-        """Register a connection for broadcasting.
+        """Register a WebSocket connection for broadcasting.
 
         Args:
-            connection_id: Connection ID
+            connection_id: Unique connection ID
             user_id: User ID
             session_id: Optional session ID
-            channels: Optional list of channels to subscribe to
+            channels: List of channels to subscribe to
         """
         if not self.redis_client:
+            # Store locally if Redis not available
+            for channel in channels or []:
+                if channel not in self._subscribers:
+                    self._subscribers[channel] = set()
+                self._subscribers[channel].add(connection_id)
             return
 
         try:
-            # Store connection info
-            connection_info = {
-                "connection_id": connection_id,
+            # Store connection info in Redis
+            connection_data = {
                 "user_id": str(user_id),
                 "session_id": str(session_id) if session_id else None,
                 "channels": channels or [],
@@ -348,249 +174,243 @@ class WebSocketBroadcaster:
 
             await self.redis_client.hset(
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}",
-                mapping=connection_info,
+                mapping=connection_data,
             )
 
-            # Add to user connections
+            # Add to user and session mappings
             await self.redis_client.sadd(
-                f"{self.USER_CHANNELS_KEY}:{user_id}",
-                connection_id,
+                f"{self.USER_CHANNELS_KEY}:{user_id}", connection_id
             )
 
-            # Add to session connections if session_id provided
             if session_id:
                 await self.redis_client.sadd(
-                    f"{self.SESSION_CHANNELS_KEY}:{session_id}",
-                    connection_id,
+                    f"{self.SESSION_CHANNELS_KEY}:{session_id}", connection_id
                 )
 
             # Subscribe to channels
-            if channels:
-                for channel in channels:
-                    await self._subscribe_connection_to_channel(connection_id, channel)
+            for channel in channels or []:
+                await self.redis_client.sadd(f"channel:{channel}", connection_id)
 
-            logger.debug(
-                f"Registered WebSocket connection {connection_id} for user {user_id}"
+            logger.info(
+                f"Registered connection {connection_id} for user {user_id} "
+                f"with channels: {channels}"
             )
 
         except Exception as e:
             logger.error(f"Failed to register connection {connection_id}: {e}")
 
     async def unregister_connection(self, connection_id: str) -> None:
-        """Unregister a connection from broadcasting.
+        """Unregister a WebSocket connection.
 
         Args:
             connection_id: Connection ID to unregister
         """
         if not self.redis_client:
+            # Remove from local storage
+            for channel_connections in self._subscribers.values():
+                channel_connections.discard(connection_id)
             return
 
         try:
             # Get connection info
-            connection_info = await self.redis_client.hgetall(
+            connection_data = await self.redis_client.hgetall(
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}"
             )
 
-            if not connection_info:
-                return
+            if connection_data:
+                user_id = connection_data.get("user_id")
+                session_id = connection_data.get("session_id")
+                channels = json.loads(connection_data.get("channels", "[]"))
 
-            user_id = connection_info.get("user_id")
-            session_id = connection_info.get("session_id")
-            channels = (
-                connection_info.get("channels", "").split(",")
-                if connection_info.get("channels")
-                else []
-            )
-
-            # Remove from user connections
-            if user_id:
-                await self.redis_client.srem(
-                    f"{self.USER_CHANNELS_KEY}:{user_id}",
-                    connection_id,
-                )
-
-            # Remove from session connections
-            if session_id:
-                await self.redis_client.srem(
-                    f"{self.SESSION_CHANNELS_KEY}:{session_id}",
-                    connection_id,
-                )
-
-            # Unsubscribe from channels
-            for channel in channels:
-                if channel:
-                    await self._unsubscribe_connection_from_channel(
-                        connection_id, channel
+                # Remove from user mapping
+                if user_id:
+                    await self.redis_client.srem(
+                        f"{self.USER_CHANNELS_KEY}:{user_id}", connection_id
                     )
 
-            # Remove connection info
-            await self.redis_client.delete(
-                f"{self.CONNECTION_INFO_KEY}:{connection_id}"
-            )
+                # Remove from session mapping
+                if session_id:
+                    await self.redis_client.srem(
+                        f"{self.SESSION_CHANNELS_KEY}:{session_id}", connection_id
+                    )
 
-            logger.debug(f"Unregistered WebSocket connection {connection_id}")
+                # Remove from channel subscriptions
+                for channel in channels:
+                    await self.redis_client.srem(f"channel:{channel}", connection_id)
+
+            # Remove connection info
+            await self.redis_client.delete(f"{self.CONNECTION_INFO_KEY}:{connection_id}")
+
+            logger.info(f"Unregistered connection {connection_id}")
 
         except Exception as e:
             logger.error(f"Failed to unregister connection {connection_id}: {e}")
 
-    async def subscribe_connection_to_channel(
-        self, connection_id: str, channel: str
+    async def broadcast_to_channel(
+        self, channel: str, event: dict[str, Any], priority: int = 2
     ) -> None:
-        """Subscribe a connection to a channel.
+        """Broadcast message to all connections subscribed to a channel.
 
         Args:
-            connection_id: Connection ID
             channel: Channel name
+            event: Event data to broadcast
+            priority: Message priority (1=high, 2=medium, 3=low)
         """
-        await self._subscribe_connection_to_channel(connection_id, channel)
+        message = BroadcastMessage(
+            id=event.get("id", ""),
+            event=event,
+            target_type="channel",
+            target_id=channel,
+            created_at=datetime.utcnow(),
+            priority=priority,
+        )
 
-    async def unsubscribe_connection_from_channel(
-        self, connection_id: str, channel: str
+        await self._queue_broadcast_message(message)
+
+    async def broadcast_to_user(
+        self, user_id: UUID, event: dict[str, Any], priority: int = 2
     ) -> None:
-        """Unsubscribe a connection from a channel.
+        """Broadcast message to all connections for a user.
 
         Args:
-            connection_id: Connection ID
-            channel: Channel name
+            user_id: User ID
+            event: Event data to broadcast
+            priority: Message priority (1=high, 2=medium, 3=low)
         """
-        await self._unsubscribe_connection_from_channel(connection_id, channel)
+        message = BroadcastMessage(
+            id=event.get("id", ""),
+            event=event,
+            target_type="user",
+            target_id=str(user_id),
+            created_at=datetime.utcnow(),
+            priority=priority,
+        )
 
-    async def get_connection_count(self, target_type: str, target_id: str) -> int:
-        """Get the number of connections for a target.
+        await self._queue_broadcast_message(message)
+
+    async def broadcast_to_session(
+        self, session_id: UUID, event: dict[str, Any], priority: int = 2
+    ) -> None:
+        """Broadcast message to all connections for a session.
 
         Args:
-            target_type: Type of target ("user", "session", "channel")
-            target_id: Target identifier
-
-        Returns:
-            Number of connections
+            session_id: Session ID
+            event: Event data to broadcast
+            priority: Message priority (1=high, 2=medium, 3=low)
         """
-        if not self.redis_client:
-            return 0
+        message = BroadcastMessage(
+            id=event.get("id", ""),
+            event=event,
+            target_type="session",
+            target_id=str(session_id),
+            created_at=datetime.utcnow(),
+            priority=priority,
+        )
 
-        try:
-            if target_type == "user":
-                return await self.redis_client.scard(
-                    f"{self.USER_CHANNELS_KEY}:{target_id}"
-                )
-            elif target_type == "session":
-                return await self.redis_client.scard(
-                    f"{self.SESSION_CHANNELS_KEY}:{target_id}"
-                )
-            elif target_type == "channel":
-                if target_id in self._subscribers:
-                    return len(self._subscribers[target_id])
-                return 0
-            else:
-                return 0
+        await self._queue_broadcast_message(message)
 
-        except Exception as e:
-            logger.error(
-                f"Failed to get connection count for {target_type}:{target_id}: {e}"
-            )
-            return 0
-
-    async def _queue_broadcast_message(self, message: BroadcastMessage) -> bool:
+    async def _queue_broadcast_message(self, message: BroadcastMessage) -> None:
         """Queue a broadcast message for processing.
 
         Args:
-            message: Broadcast message to queue
-
-        Returns:
-            True if queued successfully
+            message: Message to queue
         """
         if not self.redis_client:
-            # Fallback to local broadcasting (would need WebSocketManager reference)
             logger.warning("Redis not available, cannot queue broadcast message")
-            return False
+            return
+
+        # Check for duplicate messages
+        if message.id in self._recent_message_ids:
+            logger.debug(f"Skipping duplicate message {message.id}")
+            return
+
+        # Track message ID for deduplication
+        self._recent_message_ids.add(message.id)
+        self._message_id_cleanup_counter += 1
+
+        # Cleanup old message IDs periodically
+        if self._message_id_cleanup_counter >= self._max_recent_messages // 2:
+            # Keep only the most recent half
+            recent_ids = list(self._recent_message_ids)
+            self._recent_message_ids = set(recent_ids[-self._max_recent_messages // 2 :])
+            self._message_id_cleanup_counter = 0
 
         try:
-            # Serialize message
-            message_data = {
-                "id": message.id,
-                "event": message.event,
-                "target_type": message.target_type,
-                "target_id": message.target_id,
-                "created_at": message.created_at.isoformat(),
-                "priority": message.priority,
-            }
+            # Queue message in Redis with priority
+            message_data = message.model_dump_json()
+            priority_key = f"{self.BROADCAST_QUEUE_KEY}:priority_{message.priority}"
 
-            # Add to priority queue (lower score = higher priority)
-            score = message.priority * 1000 + message.created_at.timestamp()
+            await self.redis_client.lpush(priority_key, message_data)
 
-            await self.redis_client.zadd(
-                self.BROADCAST_QUEUE_KEY,
-                {json.dumps(message_data): score},
+            logger.debug(
+                f"Queued broadcast message {message.id} "
+                f"for {message.target_type}:{message.target_id}"
             )
-
-            return True
 
         except Exception as e:
             logger.error(f"Failed to queue broadcast message: {e}")
-            return False
 
     async def _process_broadcast_queue(self) -> None:
-        """Background task to process the broadcast message queue."""
+        """Background task to process queued broadcast messages."""
         while self._running:
             try:
-                if not self.redis_client:
-                    await asyncio.sleep(5)
-                    continue
+                # Process messages by priority (1=high, 2=medium, 3=low)
+                for priority in [1, 2, 3]:
+                    priority_key = f"{self.BROADCAST_QUEUE_KEY}:priority_{priority}"
 
-                # Get highest priority messages
-                messages = await self.redis_client.zrange(
-                    self.BROADCAST_QUEUE_KEY,
-                    0,
-                    9,  # Process up to 10 messages at a time
-                    withscores=True,
-                )
+                    # Get message from queue (blocking with timeout)
+                    result = await self.redis_client.brpop(priority_key, timeout=1)
 
-                if not messages:
-                    await asyncio.sleep(0.1)
-                    continue
+                    if result:
+                        _, message_data = result
+                        message = BroadcastMessage.model_validate_json(message_data)
+                        await self._deliver_broadcast_message(message)
 
-                # Process messages
-                for message_json, _score in messages:
-                    try:
-                        message_data = json.loads(message_json)
-                        await self._process_broadcast_message(message_data)
-
-                        # Remove from queue
-                        await self.redis_client.zrem(
-                            self.BROADCAST_QUEUE_KEY, message_json
-                        )
-
-                    except Exception as e:
-                        logger.error(f"Failed to process broadcast message: {e}")
-                        # Remove failed message from queue
-                        await self.redis_client.zrem(
-                            self.BROADCAST_QUEUE_KEY, message_json
-                        )
+                        # Process only one message per iteration to maintain
+                        # priority ordering
+                        break
 
             except Exception as e:
-                logger.error(f"Error in broadcast queue processing: {e}")
+                logger.error(f"Error processing broadcast queue: {e}")
                 await asyncio.sleep(1)
 
-    async def _process_broadcast_message(self, message_data: Dict[str, Any]) -> None:
-        """Process a single broadcast message.
+    async def _deliver_broadcast_message(self, message: BroadcastMessage) -> None:
+        """Deliver a broadcast message to the appropriate targets.
 
         Args:
-            message_data: Message data dictionary
+            message: Message to deliver
         """
         try:
-            target_type = message_data["target_type"]
-            target_id = message_data.get("target_id")
-            _event_data = message_data["event"]
+            if message.target_type == "user" and message.target_id:
+                # Broadcast to all connections for user
+                connection_ids = await self.redis_client.smembers(
+                    f"{self.USER_CHANNELS_KEY}:{message.target_id}"
+                )
+            elif message.target_type == "session" and message.target_id:
+                # Broadcast to all connections for session
+                connection_ids = await self.redis_client.smembers(
+                    f"{self.SESSION_CHANNELS_KEY}:{message.target_id}"
+                )
+            elif message.target_type == "channel" and message.target_id:
+                # Broadcast to all connections subscribed to channel
+                connection_ids = await self.redis_client.smembers(
+                    f"channel:{message.target_id}"
+                )
+            else:
+                logger.warning(f"Unknown broadcast target: {message.target_type}")
+                return
 
-            # Publish to Redis channel for the WebSocket manager to pick up
-            channel_name = f"tripsage:websocket:broadcast:{target_type}"
-            if target_id:
-                channel_name += f":{target_id}"
+            # Publish to Redis pub/sub for each connection
+            for connection_id in connection_ids:
+                channel = f"tripsage:websocket:connection:{connection_id}"
+                await self.redis_client.publish(channel, message.event)
 
-            await self.redis_client.publish(channel_name, json.dumps(message_data))
+            logger.debug(
+                f"Delivered message {message.id} to {len(connection_ids)} connections"
+            )
 
         except Exception as e:
-            logger.error(f"Failed to process broadcast message: {e}")
+            logger.error(f"Failed to deliver broadcast message {message.id}: {e}")
 
     async def _handle_subscriptions(self) -> None:
         """Background task to handle Redis pub/sub subscriptions."""
@@ -599,70 +419,41 @@ class WebSocketBroadcaster:
 
         try:
             # Subscribe to broadcast channels
-            await self.pubsub.psubscribe("tripsage:websocket:broadcast:*")
+            await self.pubsub.psubscribe("tripsage:websocket:connection:*")
 
             async for message in self.pubsub.listen():
                 if message["type"] == "pmessage":
                     try:
-                        # This would be handled by the WebSocket manager
-                        # when it receives the Redis pub/sub message
-                        pass
+                        # Extract connection ID from channel
+                        channel = message["channel"]
+                        connection_id = channel.split(":")[-1]
+
+                        # Forward message to local WebSocket manager
+                        # This would be handled by the WebSocketManager
+                        logger.debug(
+                            f"Received broadcast for connection {connection_id}"
+                        )
+
                     except Exception as e:
-                        logger.error(f"Failed to handle subscription message: {e}")
+                        logger.error(f"Error handling subscription message: {e}")
 
         except Exception as e:
-            logger.error(f"Error in subscription handling: {e}")
+            logger.error(f"Error in subscription handler: {e}")
 
-    async def _subscribe_connection_to_channel(
-        self, connection_id: str, channel: str
-    ) -> None:
-        """Subscribe a connection to a channel.
+    def get_stats(self) -> dict[str, Any]:
+        """Get broadcaster statistics.
 
-        Args:
-            connection_id: Connection ID
-            channel: Channel name
+        Returns:
+            Dictionary with performance metrics
         """
-        if channel not in self._subscribers:
-            self._subscribers[channel] = set()
-
-        self._subscribers[channel].add(connection_id)
-
-        if self.redis_client:
-            try:
-                await self.redis_client.sadd(
-                    f"tripsage:websocket:channel:{channel}", connection_id
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to subscribe connection {connection_id} to channel "
-                    f"{channel}: {e}"
-                )
-
-    async def _unsubscribe_connection_from_channel(
-        self, connection_id: str, channel: str
-    ) -> None:
-        """Unsubscribe a connection from a channel.
-
-        Args:
-            connection_id: Connection ID
-            channel: Channel name
-        """
-        if channel in self._subscribers:
-            self._subscribers[channel].discard(connection_id)
-            if not self._subscribers[channel]:
-                del self._subscribers[channel]
-
-        if self.redis_client:
-            try:
-                await self.redis_client.srem(
-                    f"tripsage:websocket:channel:{channel}", connection_id
-                )
-            except Exception as e:
-                logger.error(
-                    f"Failed to unsubscribe connection {connection_id} from channel "
-                    f"{channel}: {e}"
-                )
+        return {
+            "running": self._running,
+            "redis_connected": self.redis_client is not None,
+            "local_subscribers": sum(len(subs) for subs in self._subscribers.values()),
+            "local_channels": len(self._subscribers),
+            "recent_message_ids": len(self._recent_message_ids),
+        }
 
 
-# Global broadcaster instance
+# Global WebSocket broadcaster instance
 websocket_broadcaster = WebSocketBroadcaster()
