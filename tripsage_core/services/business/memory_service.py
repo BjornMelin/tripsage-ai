@@ -216,7 +216,7 @@ class MemoryService:
         try:
             # Parse database URL securely
             url_parser = DatabaseURLParser()
-            credentials = url_parser.parse_url(settings.database_url)
+            credentials = url_parser.parse_url(settings.effective_postgres_url)
 
             logger.info(
                 "Database configuration parsed successfully",
@@ -297,7 +297,7 @@ class MemoryService:
 
             # Validate database connection before testing Mem0
             logger.info("Validating database connection for memory service")
-            await self.connection_manager.parse_and_validate_url(settings.database_url)
+            await self.connection_manager.parse_and_validate_url(settings.effective_postgres_url)
 
             # Test Mem0 memory backend with retry logic
             async def test_memory_operation():

@@ -202,13 +202,15 @@ class TestMemorySystemIntegration:
         assert "preferred_locations" in preferences
 
     @patch("tripsage.api.core.dependencies.get_memory_service")
+    @patch("tripsage_core.services.business.memory_service.MemoryService")
     def test_search_memories_endpoint(
-        self, mock_get_service, authenticated_client, mock_memory_service
+        self, mock_memory_class, mock_get_service, authenticated_client, mock_memory_service, mock_settings_and_redis
     ):
         """Test searching memories through API."""
         # Setup mock service
         mock_service = AsyncMock()
         mock_get_service.return_value = mock_service
+        mock_memory_class.return_value = mock_service
         mock_service.search_memories.return_value = (
             mock_memory_service.search_memories.return_value
         )

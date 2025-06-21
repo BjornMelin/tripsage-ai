@@ -92,6 +92,7 @@ def mock_settings():
     settings.environment = "testing"
     settings.debug = True
     settings.database_url = "https://test.supabase.com"
+    settings.effective_postgres_url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
     settings.database_public_key = SecretStr("test-public-key")
     settings.database_service_key = SecretStr("test-service-key")
     settings.database_jwt_secret = SecretStr("test-jwt-secret-for-testing-only")

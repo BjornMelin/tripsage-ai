@@ -131,10 +131,18 @@ async def search_memories(
     """
     try:
         user_id = get_principal_id(principal)
-        memories = await memory_service.search_memories(
-            user_id, request.query, request.limit
+        # Convert router request to service request
+        from tripsage_core.services.business.memory_service import MemorySearchRequest
+        search_request = MemorySearchRequest(
+            query=request.query,
+            limit=request.limit
         )
-        return {"memories": memories, "count": len(memories)}
+        memories = await memory_service.search_memories(user_id, search_request)
+        return {
+            "results": memories, 
+            "query": request.query,
+            "total": len(memories)
+        }
 
     except Exception as e:
         logger.error(f"Search memories failed: {str(e)}")
