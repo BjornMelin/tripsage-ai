@@ -63,8 +63,10 @@ Architecture Decision Records documenting technical choices
 
 Historical documentation and research materials are preserved in [`./archive/`](./archive/) for reference:
 
-- **Research Reports**: Comprehensive analysis and implementation studies
-- **Project Status**: Historical implementation status and roadmaps
+- **[Backups](./archive/backups/)**: Timestamped documentation backups from major refactoring efforts
+- **[Research Reports](./archive/research/)**: Comprehensive analysis and implementation studies  
+- **[Project Status](./archive/project-status/)**: Historical implementation status and roadmaps
+- **[Frontend Archives](./archive/frontend/)**: Historical frontend development documentation
 
 ---
 
