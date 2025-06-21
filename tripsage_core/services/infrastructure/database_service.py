@@ -1561,7 +1561,7 @@ class DatabaseService:
 
 class DatabaseTransactionContext:
     """Async context manager for database transactions."""
-    
+
     def __init__(self, service: "DatabaseService", user_id: str | None = None):
         self.service = service
         self.user_id = user_id
@@ -1571,7 +1571,9 @@ class DatabaseTransactionContext:
     async def __aenter__(self):
         """Enter the async context manager."""
         await self.service.ensure_connected()
-        self._monitor_ctx = self.service._monitor_query(QueryType.TRANSACTION, None, self.user_id)
+        self._monitor_ctx = self.service._monitor_query(
+            QueryType.TRANSACTION, None, self.user_id
+        )
         self._query_id = await self._monitor_ctx.__aenter__()
         return self
 
