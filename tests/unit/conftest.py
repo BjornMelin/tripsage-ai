@@ -223,9 +223,7 @@ def mock_web_operations_cache():
     cache.set = AsyncMock(return_value=True)
     cache.delete = AsyncMock(return_value=True)
     cache.invalidate_pattern = AsyncMock(return_value=0)
-    cache.get_stats = AsyncMock(
-        return_value={"hits": 0, "misses": 0, "hit_ratio": 0.0, "total": 0}
-    )
+    cache.get_stats = AsyncMock(return_value={"hits": 0, "misses": 0, "hit_ratio": 0.0, "total": 0})
     cache.determine_content_type = Mock(return_value=ContentType.DAILY)
     cache.generate_cache_key = Mock(return_value="test-key")
 

@@ -58,9 +58,7 @@ class RateLimitConfig(BaseModel):
     # Custom limits per endpoint pattern
     endpoint_overrides: Dict[str, Dict[str, int]] = Field(default_factory=dict)
 
-    def get_effective_limits(
-        self, service: Optional[str] = None, endpoint: Optional[str] = None
-    ) -> Dict[str, int]:
+    def get_effective_limits(self, service: Optional[str] = None, endpoint: Optional[str] = None) -> Dict[str, int]:
         """Get effective rate limits for a service/endpoint combination."""
         multiplier = self.service_multipliers.get(service, 1.0) if service else 1.0
 
@@ -68,21 +66,10 @@ class RateLimitConfig(BaseModel):
         if endpoint and endpoint in self.endpoint_overrides:
             overrides = self.endpoint_overrides[endpoint]
             return {
-                "requests_per_minute": int(
-                    overrides.get("requests_per_minute", self.requests_per_minute)
-                    * multiplier
-                ),
-                "requests_per_hour": int(
-                    overrides.get("requests_per_hour", self.requests_per_hour)
-                    * multiplier
-                ),
-                "requests_per_day": int(
-                    overrides.get("requests_per_day", self.requests_per_day)
-                    * multiplier
-                ),
-                "burst_size": int(
-                    overrides.get("burst_size", self.burst_size) * multiplier
-                ),
+                "requests_per_minute": int(overrides.get("requests_per_minute", self.requests_per_minute) * multiplier),
+                "requests_per_hour": int(overrides.get("requests_per_hour", self.requests_per_hour) * multiplier),
+                "requests_per_day": int(overrides.get("requests_per_day", self.requests_per_day) * multiplier),
+                "burst_size": int(overrides.get("burst_size", self.burst_size) * multiplier),
             }
 
         return {
@@ -178,9 +165,7 @@ class InMemoryRateLimiter(RateLimiter):
         hour_ago = current_time - 3600
         minute_ago = current_time - 60
 
-        self.requests[key] = [
-            req_time for req_time in self.requests[key] if req_time > day_ago
-        ]
+        self.requests[key] = [req_time for req_time in self.requests[key] if req_time > day_ago]
 
         # Count requests in different windows
         minute_count = sum(1 for t in self.requests[key] if t > minute_ago)
@@ -195,8 +180,7 @@ class InMemoryRateLimiter(RateLimiter):
                 current_usage=minute_count,
                 limit_value=limits["requests_per_minute"],
                 remaining=0,
-                reset_time=current_dt.replace(second=0, microsecond=0)
-                + timedelta(minutes=1),
+                reset_time=current_dt.replace(second=0, microsecond=0) + timedelta(minutes=1),
                 retry_after_seconds=60 - int(current_time % 60),
                 algorithm="sliding_window",
             )
@@ -208,8 +192,7 @@ class InMemoryRateLimiter(RateLimiter):
                 current_usage=hour_count,
                 limit_value=limits["requests_per_hour"],
                 remaining=0,
-                reset_time=current_dt.replace(minute=0, second=0, microsecond=0)
-                + timedelta(hours=1),
+                reset_time=current_dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1),
                 retry_after_seconds=3600 - int(current_time % 3600),
                 algorithm="sliding_window",
             )
@@ -221,8 +204,7 @@ class InMemoryRateLimiter(RateLimiter):
                 current_usage=day_count,
                 limit_value=limits["requests_per_day"],
                 remaining=0,
-                reset_time=current_dt.replace(hour=0, minute=0, second=0, microsecond=0)
-                + timedelta(days=1),
+                reset_time=current_dt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1),
                 retry_after_seconds=86400 - int(current_time % 86400),
                 algorithm="sliding_window",
             )
@@ -238,8 +220,7 @@ class InMemoryRateLimiter(RateLimiter):
             current_usage=minute_count + cost,
             limit_value=limits["requests_per_minute"],
             remaining=max(0, limits["requests_per_minute"] - minute_count - cost),
-            reset_time=current_dt.replace(second=0, microsecond=0)
-            + timedelta(minutes=1),
+            reset_time=current_dt.replace(second=0, microsecond=0) + timedelta(minutes=1),
             algorithm="sliding_window",
         )
 
@@ -284,12 +265,8 @@ class DragonflyRateLimiter(RateLimiter):
 
         # Fallback to in-memory if cache unavailable
         if not self.cache_service:
-            logger.warning(
-                "Cache service unavailable, falling back to in-memory rate limiting"
-            )
-            return await self.fallback_limiter.check_rate_limit(
-                key, config, service, endpoint, cost
-            )
+            logger.warning("Cache service unavailable, falling back to in-memory rate limiting")
+            return await self.fallback_limiter.check_rate_limit(key, config, service, endpoint, cost)
 
         try:
             # Get effective limits
@@ -299,13 +276,9 @@ class DragonflyRateLimiter(RateLimiter):
 
             # Use token bucket for burst control and sliding window for sustained limits
             if config.enable_token_bucket:
-                bucket_result = await self._check_token_bucket(
-                    key, config, limits, cost, current_time, current_dt
-                )
+                bucket_result = await self._check_token_bucket(key, config, limits, cost, current_time, current_dt)
                 if bucket_result.is_limited:
-                    await self._track_rate_limit_hit(
-                        key, service, "token_bucket", bucket_result
-                    )
+                    await self._track_rate_limit_hit(key, service, "token_bucket", bucket_result)
                     return bucket_result
 
             # Check sliding windows for sustained rate limits
@@ -321,9 +294,7 @@ class DragonflyRateLimiter(RateLimiter):
                     endpoint,
                 )
                 if window_result.is_limited:
-                    await self._track_rate_limit_hit(
-                        key, service, window_result.limit_type, window_result
-                    )
+                    await self._track_rate_limit_hit(key, service, window_result.limit_type, window_result)
                     return window_result
 
                 # Record successful request for monitoring
@@ -343,12 +314,8 @@ class DragonflyRateLimiter(RateLimiter):
             )
 
         except Exception as e:
-            logger.error(
-                f"DragonflyDB rate limiting failed: {e}, falling back to in-memory"
-            )
-            return await self.fallback_limiter.check_rate_limit(
-                key, config, service, endpoint, cost
-            )
+            logger.error(f"DragonflyDB rate limiting failed: {e}, falling back to in-memory")
+            return await self.fallback_limiter.check_rate_limit(key, config, service, endpoint, cost)
 
     async def _check_token_bucket(
         self,
@@ -420,8 +387,7 @@ class DragonflyRateLimiter(RateLimiter):
             current_usage=int(burst_size - tokens),
             limit_value=burst_size,
             remaining=int(tokens),
-            reset_time=current_dt
-            + timedelta(seconds=int((burst_size - tokens) / refill_rate)),
+            reset_time=current_dt + timedelta(seconds=int((burst_size - tokens) / refill_rate)),
             tokens_remaining=tokens,
             algorithm="token_bucket",
         )
@@ -460,17 +426,11 @@ class DragonflyRateLimiter(RateLimiter):
             if current_count + cost > limit:
                 # Calculate precise reset time
                 if window_name == "minute":
-                    reset_time = current_dt.replace(
-                        second=0, microsecond=0
-                    ) + timedelta(minutes=1)
+                    reset_time = current_dt.replace(second=0, microsecond=0) + timedelta(minutes=1)
                 elif window_name == "hour":
-                    reset_time = current_dt.replace(
-                        minute=0, second=0, microsecond=0
-                    ) + timedelta(hours=1)
+                    reset_time = current_dt.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
                 else:  # day
-                    reset_time = current_dt.replace(
-                        hour=0, minute=0, second=0, microsecond=0
-                    ) + timedelta(days=1)
+                    reset_time = current_dt.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
                 retry_after = int((reset_time - current_dt).total_seconds())
 
@@ -496,9 +456,7 @@ class DragonflyRateLimiter(RateLimiter):
                 await self.cache_service.zadd(window_key, {str(score): score})
 
             # Set expiration
-            await self.cache_service.expire(
-                window_key, int(window_seconds * 1.1)
-            )  # 10% buffer
+            await self.cache_service.expire(window_key, int(window_seconds * 1.1))  # 10% buffer
 
         # Return success with most restrictive remaining count (minute window)
         minute_count = await self.cache_service.zcard(f"rate_limit:window:minute:{key}")
@@ -509,14 +467,11 @@ class DragonflyRateLimiter(RateLimiter):
             current_usage=minute_count,
             limit_value=limits["requests_per_minute"],
             remaining=max(0, limits["requests_per_minute"] - minute_count),
-            reset_time=current_dt.replace(second=0, microsecond=0)
-            + timedelta(minutes=1),
+            reset_time=current_dt.replace(second=0, microsecond=0) + timedelta(minutes=1),
             algorithm="sliding_window",
         )
 
-    async def _track_rate_limit_hit(
-        self, key: str, service: Optional[str], limit_type: str, result: RateLimitResult
-    ):
+    async def _track_rate_limit_hit(self, key: str, service: Optional[str], limit_type: str, result: RateLimitResult):
         """Track rate limit hits for monitoring."""
         if self.monitoring_service:
             try:
@@ -557,9 +512,7 @@ class DragonflyRateLimiter(RateLimiter):
             }
 
             await self.cache_service.lpush(analytics_key, json.dumps(request_data))
-            await self.cache_service.ltrim(
-                analytics_key, 0, 999
-            )  # Keep last 1000 requests
+            await self.cache_service.ltrim(analytics_key, 0, 999)  # Keep last 1000 requests
             await self.cache_service.expire(analytics_key, 86400)  # 24 hours
 
         except Exception as e:
@@ -635,8 +588,8 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         # Initialize monitoring service if not provided
         if not self.monitoring_service and use_dragonfly:
             try:
-                from tripsage_core.services.business.api_key_monitoring import (
-                    ApiKeyMonitoringService,
+                from tripsage_core.services.infrastructure.key_monitoring_service import (
+                    KeyMonitoringService as ApiKeyMonitoringService,
                 )
 
                 self.monitoring_service = ApiKeyMonitoringService()
@@ -645,9 +598,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         # Create rate limiter
         if use_dragonfly:
-            self.rate_limiter = DragonflyRateLimiter(
-                monitoring_service=self.monitoring_service
-            )
+            self.rate_limiter = DragonflyRateLimiter(monitoring_service=self.monitoring_service)
         else:
             self.rate_limiter = InMemoryRateLimiter()
 
@@ -745,9 +696,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             ),
         }
 
-    async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
         """Process the request with enhanced rate limiting.
 
         Args:
@@ -789,9 +738,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         self._add_rate_limit_headers(response, result, rate_limit_context)
 
         # Track successful request
-        await self._track_successful_request(
-            request, rate_limit_context, start_time, response
-        )
+        await self._track_successful_request(request, rate_limit_context, start_time, response)
 
         return response
 
@@ -939,9 +886,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         return any(path.startswith(skip_path) for skip_path in skip_paths)
 
-    def _create_rate_limit_response(
-        self, result: RateLimitResult, context: Dict[str, Any]
-    ) -> Response:
+    def _create_rate_limit_response(self, result: RateLimitResult, context: Dict[str, Any]) -> Response:
         """Create a comprehensive 429 response."""
         retry_after = result.retry_after_seconds
 
@@ -962,10 +907,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                 f"allowed. Resets in {retry_after // 3600} hours."
             )
         elif result.limit_type == "burst":
-            message = (
-                f"Burst limit exceeded. Please slow down your requests. "
-                f"Try again in {retry_after} seconds."
-            )
+            message = f"Burst limit exceeded. Please slow down your requests. Try again in {retry_after} seconds."
         else:
             message = f"Rate limit exceeded. Try again in {retry_after} seconds."
 
@@ -1004,9 +946,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             media_type="application/json",
         )
 
-    def _add_rate_limit_headers(
-        self, response: Response, result: RateLimitResult, context: Dict[str, Any]
-    ):
+    def _add_rate_limit_headers(self, response: Response, result: RateLimitResult, context: Dict[str, Any]):
         """Add comprehensive rate limit headers to successful responses."""
         headers = {
             "X-RateLimit-Limit": str(result.limit_value),
@@ -1065,17 +1005,13 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         except (ValueError, AddressValueError):
             return False
 
-    async def _track_rate_limit_violation(
-        self, request: Request, context: Dict[str, Any], result: RateLimitResult
-    ):
+    async def _track_rate_limit_violation(self, request: Request, context: Dict[str, Any], result: RateLimitResult):
         """Track rate limit violations for monitoring and analytics."""
         if self.monitoring_service:
             try:
                 await self.monitoring_service.track_usage(
                     key_id=context["principal_id"],
-                    user_id=context["principal_id"]
-                    if context["principal_type"] == "user"
-                    else "unknown",
+                    user_id=context["principal_id"] if context["principal_type"] == "user" else "unknown",
                     service=context.get("service", "unknown"),
                     endpoint=context["endpoint"],
                     success=False,
@@ -1173,23 +1109,15 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
                 await self.monitoring_service.track_usage(
                     key_id=context["principal_id"],
-                    user_id=context["principal_id"]
-                    if context["principal_type"] == "user"
-                    else "unknown",
+                    user_id=context["principal_id"] if context["principal_type"] == "user" else "unknown",
                     service=context.get("service", "api"),
                     endpoint=context["endpoint"],
                     success=response.status_code < 400,
                     latency_ms=latency_ms,
-                    error_code=str(response.status_code)
-                    if response.status_code >= 400
-                    else None,
+                    error_code=str(response.status_code) if response.status_code >= 400 else None,
                     error_message=None,
-                    request_size=len(
-                        await request.body() if hasattr(request, "body") else b""
-                    ),
-                    response_size=len(response.body)
-                    if hasattr(response, "body")
-                    else 0,
+                    request_size=len(await request.body() if hasattr(request, "body") else b""),
+                    response_size=len(response.body) if hasattr(response, "body") else 0,
                     metadata={
                         "method": request.method,
                         "principal_type": context["principal_type"],
@@ -1208,9 +1136,7 @@ def create_rate_limit_config_from_dict(config_dict: Dict[str, Any]) -> RateLimit
     return RateLimitConfig(**config_dict)
 
 
-def create_rate_limit_config_from_settings(
-    settings: Settings, tier: str = "user"
-) -> RateLimitConfig:
+def create_rate_limit_config_from_settings(settings: Settings, tier: str = "user") -> RateLimitConfig:
     """Create a RateLimitConfig from application settings.
 
     Args:
@@ -1242,9 +1168,7 @@ def create_rate_limit_config_from_settings(
     multiplier = tier_multipliers.get(tier, 1.0)
 
     if multiplier != 1.0:
-        base_config.requests_per_minute = int(
-            base_config.requests_per_minute * multiplier
-        )
+        base_config.requests_per_minute = int(base_config.requests_per_minute * multiplier)
         base_config.requests_per_hour = int(base_config.requests_per_hour * multiplier)
         base_config.requests_per_day = int(base_config.requests_per_day * multiplier)
         base_config.burst_size = int(base_config.burst_size * multiplier)
@@ -1295,8 +1219,8 @@ def create_middleware_from_settings(
     monitoring_service = None
     if settings.rate_limit_enable_monitoring:
         try:
-            from tripsage_core.services.business.api_key_monitoring import (
-                ApiKeyMonitoringService,
+            from tripsage_core.services.infrastructure.key_monitoring_service import (
+                KeyMonitoringService as ApiKeyMonitoringService,
             )
 
             monitoring_service = ApiKeyMonitoringService()
@@ -1316,15 +1240,9 @@ def create_middleware_from_settings(
         {
             "user": create_rate_limit_config_from_settings(settings, "user"),
             "agent": create_rate_limit_config_from_settings(settings, "agent"),
-            "premium_user": create_rate_limit_config_from_settings(
-                settings, "premium_user"
-            ),
-            "premium_agent": create_rate_limit_config_from_settings(
-                settings, "premium_agent"
-            ),
-            "unauthenticated": create_rate_limit_config_from_settings(
-                settings, "unauthenticated"
-            ),
+            "premium_user": create_rate_limit_config_from_settings(settings, "premium_user"),
+            "premium_agent": create_rate_limit_config_from_settings(settings, "premium_agent"),
+            "unauthenticated": create_rate_limit_config_from_settings(settings, "unauthenticated"),
         }
     )
 

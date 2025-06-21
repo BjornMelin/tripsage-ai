@@ -98,9 +98,7 @@ def trip_service(mock_database, mock_cache):
     # Create mock user service
     mock_user_service = MagicMock(spec=UserService)
 
-    service = TripService(
-        database_service=mock_database, user_service=mock_user_service
-    )
+    service = TripService(database_service=mock_database, user_service=mock_user_service)
     service.cache = mock_cache
     return service
 
@@ -114,9 +112,7 @@ def accommodation_service(mock_cache, mock_mcp_manager):
         PropertyType,
     )
 
-    service = AccommodationService(
-        database_service=mock_cache, external_accommodation_service=None
-    )
+    service = AccommodationService(database_service=mock_cache, external_accommodation_service=None)
     service.cache = mock_cache
     service.mcp_manager = mock_mcp_manager
 
@@ -259,14 +255,10 @@ class TestTripPlanningJourney:
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
             destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
+            destinations=[TripLocation(name=sample_trip_data["destination"], country="France")],
             budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
-        trip_response = await trip_service.create_trip(
-            sample_trip_data["user_id"], trip_request
-        )
+        trip_response = await trip_service.create_trip(sample_trip_data["user_id"], trip_request)
         trip_id = trip_response.id
 
         # Mock flight service search (methods may not exist yet)
@@ -279,18 +271,10 @@ class TestTripPlanningJourney:
             check_out=sample_trip_data["end_date"],
             guests=sample_trip_data["travelers"],
         )
-        accommodations_response = await accommodation_service.search_accommodations(
-            accommodation_request
-        )
-        accommodations = {
-            "listings": [
-                listing.model_dump() for listing in accommodations_response.listings
-            ]
-        }
+        accommodations_response = await accommodation_service.search_accommodations(accommodation_request)
+        accommodations = {"listings": [listing.model_dump() for listing in accommodations_response.listings]}
 
-        weather = await weather_service.get_current_weather(
-            48.8566, 2.3522
-        )  # Paris coordinates
+        weather = await weather_service.get_current_weather(48.8566, 2.3522)  # Paris coordinates
 
         # Assert - Verify the complete workflow
         assert trip_id is not None
@@ -339,14 +323,10 @@ class TestTripPlanningJourney:
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
             destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
+            destinations=[TripLocation(name=sample_trip_data["destination"], country="France")],
             budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
-        trip_response = await trip_service.create_trip(
-            sample_trip_data["user_id"], trip_request
-        )
+        trip_response = await trip_service.create_trip(sample_trip_data["user_id"], trip_request)
         trip_id = trip_response.id
 
         accommodation_request = AccommodationSearchRequest(
@@ -355,14 +335,8 @@ class TestTripPlanningJourney:
             check_out=sample_trip_data["end_date"],
             guests=sample_trip_data["travelers"],
         )
-        accommodations_response = await accommodation_service.search_accommodations(
-            accommodation_request
-        )
-        accommodations = {
-            "listings": [
-                listing.model_dump() for listing in accommodations_response.listings
-            ]
-        }
+        accommodations_response = await accommodation_service.search_accommodations(accommodation_request)
+        accommodations = {"listings": [listing.model_dump() for listing in accommodations_response.listings]}
 
         # Assert
         assert trip_id is not None
@@ -425,14 +399,10 @@ class TestTripPlanningJourney:
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
             destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
+            destinations=[TripLocation(name=sample_trip_data["destination"], country="France")],
             budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
-        trip_response = await trip_service.create_trip(
-            sample_trip_data["user_id"], trip_request
-        )
+        trip_response = await trip_service.create_trip(sample_trip_data["user_id"], trip_request)
         trip_id = trip_response.id
 
         # Mock flight service search with budget constraints
@@ -446,23 +416,13 @@ class TestTripPlanningJourney:
             guests=sample_trip_data["travelers"],
             max_price=150.0,
         )
-        accommodations_response = await accommodation_service.search_accommodations(
-            accommodation_request
-        )
-        accommodations = {
-            "listings": [
-                listing.model_dump() for listing in accommodations_response.listings
-            ]
-        }
+        accommodations_response = await accommodation_service.search_accommodations(accommodation_request)
+        accommodations = {"listings": [listing.model_dump() for listing in accommodations_response.listings]}
 
         # Calculate total estimated cost (using mock data)
         flight_cost = flights["offers"][0]["price"] * sample_trip_data["travelers"]
         # Use accommodation price from mock data or default
-        accommodation_price = (
-            accommodations["listings"][0]["price_per_night"]
-            if accommodations["listings"]
-            else 120
-        )
+        accommodation_price = accommodations["listings"][0]["price_per_night"] if accommodations["listings"] else 120
         accommodation_cost = accommodation_price * 7  # 7 nights
         total_cost = flight_cost + accommodation_cost
 
@@ -478,9 +438,7 @@ class TestTripPlanningJourney:
         # assert mock_mcp_manager.invoke.call_count >= 0
 
     @pytest.mark.asyncio
-    async def test_trip_modification_workflow(
-        self, trip_service, mock_database, sample_trip_data
-    ):
+    async def test_trip_modification_workflow(self, trip_service, mock_database, sample_trip_data):
         """Test modifying an existing trip."""
         # Arrange
         from uuid import uuid4
@@ -586,9 +544,7 @@ class TestTripPlanningJourney:
         mock_database.delete_trip.return_value = True
 
         # Act
-        result = await trip_service.delete_trip(
-            trip_id, user_id
-        )  # Use delete_trip instead of cancel_trip
+        result = await trip_service.delete_trip(trip_id, user_id)  # Use delete_trip instead of cancel_trip
 
         # Assert
         assert result is True
@@ -615,14 +571,10 @@ class TestTripPlanningJourney:
             start_date=sample_trip_data["start_date"],
             end_date=sample_trip_data["end_date"],
             destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
+            destinations=[TripLocation(name=sample_trip_data["destination"], country="France")],
             budget=EnhancedBudget(total=sample_trip_data["budget"]),
         )
-        trip_response = await trip_service.create_trip(
-            sample_trip_data["user_id"], trip_request
-        )
+        trip_response = await trip_service.create_trip(sample_trip_data["user_id"], trip_request)
         trip_id = trip_response.id
         assert trip_id is not None
 

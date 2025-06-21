@@ -60,9 +60,7 @@ class ApiKeyDB(BaseModel):
         description="Optional description of the API key",
     )
     created_at: datetime = Field(description="Timestamp when the API key was created")
-    updated_at: datetime = Field(
-        description="Timestamp when the API key was last updated"
-    )
+    updated_at: datetime = Field(description="Timestamp when the API key was last updated")
     expires_at: Optional[datetime] = Field(
         default=None,
         description="Optional expiration timestamp for the API key",
@@ -86,10 +84,7 @@ class ApiKeyDB(BaseModel):
         import re
 
         if not re.match(r"^[a-z0-9_-]+$", v):
-            raise ValueError(
-                "Service name must contain only lowercase letters, "
-                "numbers, underscores, and hyphens"
-            )
+            raise ValueError("Service name must contain only lowercase letters, numbers, underscores, and hyphens")
         return v
 
     @field_validator("expires_at")
@@ -108,11 +103,7 @@ class ApiKeyDB(BaseModel):
         if self.expires_at is None:
             return False
         # Handle timezone-aware and timezone-naive datetime comparison
-        now = (
-            datetime.now(timezone.utc)
-            if self.expires_at.tzinfo is not None
-            else datetime.now()
-        )
+        now = datetime.now(timezone.utc) if self.expires_at.tzinfo is not None else datetime.now()
         return now > self.expires_at
 
     def is_usable(self) -> bool:

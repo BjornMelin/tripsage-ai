@@ -41,9 +41,7 @@ class UserCreateRequest(TripSageModel):
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password")
     full_name: Optional[str] = Field(None, max_length=100, description="Full name")
-    username: Optional[str] = Field(
-        None, min_length=3, max_length=30, description="Username"
-    )
+    username: Optional[str] = Field(None, min_length=3, max_length=30, description="Username")
 
     @field_validator("password")
     @classmethod
@@ -82,9 +80,7 @@ class UserResponse(TripSageModel):
     is_verified: bool = Field(False, description="Email verification status")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    preferences: Dict[str, Any] = Field(
-        default_factory=dict, description="User preferences"
-    )
+    preferences: Dict[str, Any] = Field(default_factory=dict, description="User preferences")
 
 
 class PasswordChangeRequest(TripSageModel):
@@ -133,9 +129,7 @@ class UserService:
         if database_service is None:
             # For now, we'll require database service to be injected
             # In production, this would be provided by the dependency injection system
-            raise ValueError(
-                "database_service is required for UserService initialization"
-            )
+            raise ValueError("database_service is required for UserService initialization")
 
         self.db = database_service
         self._pwd_context = pwd_context
@@ -157,17 +151,13 @@ class UserService:
             # Check if user already exists
             existing_user = await self.get_user_by_email(user_data.email)
             if existing_user:
-                raise ValidationError(
-                    f"User with email {user_data.email} already exists"
-                )
+                raise ValidationError(f"User with email {user_data.email} already exists")
 
             # Check username uniqueness if provided
             if user_data.username:
                 existing_username = await self.get_user_by_username(user_data.username)
                 if existing_username:
-                    raise ValidationError(
-                        f"Username {user_data.username} already taken"
-                    )
+                    raise ValidationError(f"Username {user_data.username} already taken")
 
             # Generate user ID and hash password
             user_id = str(uuid.uuid4())
@@ -244,9 +234,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to get user by ID", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.error("Failed to get user by ID", extra={"user_id": user_id, "error": str(e)})
             return None
 
     async def get_user_by_email(self, email: str) -> Optional[UserResponse]:
@@ -277,9 +265,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to get user by email", extra={"email": email, "error": str(e)}
-            )
+            logger.error("Failed to get user by email", extra={"email": email, "error": str(e)})
             return None
 
     async def get_user_by_username(self, username: str) -> Optional[UserResponse]:
@@ -316,9 +302,7 @@ class UserService:
             )
             return None
 
-    async def update_user(
-        self, user_id: str, update_data: UserUpdateRequest
-    ) -> UserResponse:
+    async def update_user(self, user_id: str, update_data: UserUpdateRequest) -> UserResponse:
         """
         Update user information.
 
@@ -341,13 +325,9 @@ class UserService:
 
             # Check username uniqueness if being updated
             if update_data.username and update_data.username != existing_user.username:
-                existing_username = await self.get_user_by_username(
-                    update_data.username
-                )
+                existing_username = await self.get_user_by_username(update_data.username)
                 if existing_username and existing_username.id != user_id:
-                    raise ValidationError(
-                        f"Username {update_data.username} already taken"
-                    )
+                    raise ValidationError(f"Username {update_data.username} already taken")
 
             # Prepare update data
             db_update_data = update_data.model_dump(exclude_unset=True)
@@ -379,14 +359,10 @@ class UserService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
-                "Failed to update user", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.error("Failed to update user", extra={"user_id": user_id, "error": str(e)})
             raise
 
-    async def change_password(
-        self, user_id: str, password_data: PasswordChangeRequest
-    ) -> bool:
+    async def change_password(self, user_id: str, password_data: PasswordChangeRequest) -> bool:
         """
         Change user password.
 
@@ -408,9 +384,7 @@ class UserService:
                 raise NotFoundError(f"User {user_id} not found")
 
             # Verify current password
-            if not self._verify_password(
-                password_data.current_password, user_data["hashed_password"]
-            ):
+            if not self._verify_password(password_data.current_password, user_data["hashed_password"]):
                 raise AuthenticationError("Current password is incorrect")
 
             # Hash new password
@@ -433,9 +407,7 @@ class UserService:
             )
             raise
 
-    async def verify_user_credentials(
-        self, identifier: str, password: str
-    ) -> Optional[UserResponse]:
+    async def verify_user_credentials(self, identifier: str, password: str) -> Optional[UserResponse]:
         """
         Verify user credentials for authentication.
 
@@ -537,14 +509,10 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.error(
-                "Failed to activate user", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.error("Failed to activate user", extra={"user_id": user_id, "error": str(e)})
             return False
 
-    async def update_user_preferences(
-        self, user_id: str, preferences: Dict[str, Any]
-    ) -> UserResponse:
+    async def update_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> UserResponse:
         """
         Update user preferences.
 
@@ -566,15 +534,11 @@ class UserService:
 
             # Merge preferences (deep merge)
             current_preferences = user_data.get("preferences", {})
-            merged_preferences = self._merge_preferences(
-                current_preferences, preferences
-            )
+            merged_preferences = self._merge_preferences(current_preferences, preferences)
 
             # Update in database
             updated_at = datetime.now(timezone.utc).isoformat()
-            await self.db.update_user_preferences(
-                user_id, merged_preferences, updated_at
-            )
+            await self.db.update_user_preferences(user_id, merged_preferences, updated_at)
 
             # Return updated user
             return UserResponse(
@@ -598,9 +562,7 @@ class UserService:
             )
             raise
 
-    def _merge_preferences(
-        self, current: Dict[str, Any], updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _merge_preferences(self, current: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
         """
         Deep merge preference dictionaries.
 
@@ -614,11 +576,7 @@ class UserService:
         result = current.copy()
 
         for key, value in updates.items():
-            if (
-                isinstance(value, dict)
-                and key in result
-                and isinstance(result[key], dict)
-            ):
+            if isinstance(value, dict) and key in result and isinstance(result[key], dict):
                 # Recursively merge nested dictionaries
                 result[key] = self._merge_preferences(result[key], value)
             else:

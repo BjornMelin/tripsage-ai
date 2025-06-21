@@ -52,14 +52,10 @@ class ExtensionDeployer:
                     try:
                         await self.connection.execute(statement)
                     except Exception as e:
-                        console.print(
-                            f"⚠️  Warning in statement {i + 1}: {e}", style="yellow"
-                        )
+                        console.print(f"⚠️  Warning in statement {i + 1}: {e}", style="yellow")
                         # Continue with other statements
 
-            console.print(
-                f"✅ Completed: {description or file_path.name}", style="green"
-            )
+            console.print(f"✅ Completed: {description or file_path.name}", style="green")
             return True
 
         except Exception as e:
@@ -82,10 +78,7 @@ class ExtensionDeployer:
                 continue
 
             # Track if we're in a function definition
-            if (
-                "CREATE OR REPLACE FUNCTION" in line.upper()
-                or "CREATE FUNCTION" in line.upper()
-            ):
+            if "CREATE OR REPLACE FUNCTION" in line.upper() or "CREATE FUNCTION" in line.upper():
                 in_function = True
             elif stripped.upper() == "END;" and in_function:
                 in_function = False
@@ -113,14 +106,10 @@ class ExtensionDeployer:
 
         extensions_file = self.schema_path / "00_extensions.sql"
         if not extensions_file.exists():
-            console.print(
-                f"❌ Extensions file not found: {extensions_file}", style="red"
-            )
+            console.print(f"❌ Extensions file not found: {extensions_file}", style="red")
             return False
 
-        return await self.execute_sql_file(
-            extensions_file, "Core Extensions and Realtime"
-        )
+        return await self.execute_sql_file(extensions_file, "Core Extensions and Realtime")
 
     async def deploy_automation(self) -> bool:
         """Deploy automation functions and jobs."""
@@ -128,14 +117,10 @@ class ExtensionDeployer:
 
         automation_file = self.schema_path / "07_automation.sql"
         if not automation_file.exists():
-            console.print(
-                f"❌ Automation file not found: {automation_file}", style="red"
-            )
+            console.print(f"❌ Automation file not found: {automation_file}", style="red")
             return False
 
-        return await self.execute_sql_file(
-            automation_file, "Scheduled Jobs and Maintenance"
-        )
+        return await self.execute_sql_file(automation_file, "Scheduled Jobs and Maintenance")
 
     async def deploy_webhooks(self) -> bool:
         """Deploy webhook functions."""
@@ -146,9 +131,7 @@ class ExtensionDeployer:
             console.print(f"❌ Webhooks file not found: {webhooks_file}", style="red")
             return False
 
-        return await self.execute_sql_file(
-            webhooks_file, "Webhook Functions and Triggers"
-        )
+        return await self.execute_sql_file(webhooks_file, "Webhook Functions and Triggers")
 
     async def run_migration(self) -> bool:
         """Run the migration file."""
@@ -164,9 +147,7 @@ class ExtensionDeployer:
             console.print(f"❌ Migration file not found: {migration_file}", style="red")
             return False
 
-        return await self.execute_sql_file(
-            migration_file, "Automation Extensions Migration"
-        )
+        return await self.execute_sql_file(migration_file, "Automation Extensions Migration")
 
     async def verify_deployment(self) -> dict[str, bool]:
         """Verify the deployment was successful."""
@@ -253,9 +234,7 @@ class ExtensionDeployer:
             return True
 
         except Exception as e:
-            console.print(
-                f"⚠️  Warning: Could not update webhook URLs: {e}", style="yellow"
-            )
+            console.print(f"⚠️  Warning: Could not update webhook URLs: {e}", style="yellow")
             return False
 
     async def full_deployment(self):
@@ -320,10 +299,7 @@ class ExtensionDeployer:
             console.print("1. Deploy Edge Functions to handle webhooks")
             console.print("2. Configure environment variables for external services")
             console.print("3. Test webhook endpoints and scheduled jobs")
-            console.print(
-                "4. Run 'python scripts/verification/verify_extensions.py' "
-                "for detailed verification"
-            )
+            console.print("4. Run 'python scripts/verification/verify_extensions.py' for detailed verification")
         else:
             console.print(
                 "⚠️  Deployment completed with issues. Review output above.",

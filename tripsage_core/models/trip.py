@@ -23,9 +23,7 @@ class BudgetBreakdown(TripSageModel):
     """Detailed budget breakdown by category."""
 
     accommodation: float = Field(default=0.0, ge=0, description="Accommodation budget")
-    transportation: float = Field(
-        default=0.0, ge=0, description="Transportation budget"
-    )
+    transportation: float = Field(default=0.0, ge=0, description="Transportation budget")
     food: float = Field(default=0.0, ge=0, description="Food budget")
     activities: float = Field(default=0.0, ge=0, description="Activities budget")
     miscellaneous: float = Field(default=0.0, ge=0, description="Miscellaneous budget")
@@ -37,36 +35,20 @@ class EnhancedBudget(TripSageModel):
     total: float = Field(..., ge=0, description="Total budget amount")
     currency: str = Field(default="USD", description="Currency code")
     spent: float = Field(default=0.0, ge=0, description="Amount spent")
-    breakdown: BudgetBreakdown = Field(
-        default_factory=BudgetBreakdown, description="Budget breakdown by category"
-    )
+    breakdown: BudgetBreakdown = Field(default_factory=BudgetBreakdown, description="Budget breakdown by category")
 
 
 class TripPreferences(TripSageModel):
     """Extended trip preferences and requirements."""
 
-    budget_flexibility: float = Field(
-        0.1, ge=0, le=1, description="Budget flexibility as percentage (0.0-1.0)"
-    )
+    budget_flexibility: float = Field(0.1, ge=0, le=1, description="Budget flexibility as percentage (0.0-1.0)")
     date_flexibility: int = Field(0, ge=0, description="Date flexibility in days")
-    destination_flexibility: bool = Field(
-        False, description="Whether destination is flexible"
-    )
-    accommodation_preferences: Dict[str, Any] = Field(
-        default_factory=dict, description="Accommodation preferences"
-    )
-    transportation_preferences: Dict[str, Any] = Field(
-        default_factory=dict, description="Transportation preferences"
-    )
-    activity_preferences: List[str] = Field(
-        default_factory=list, description="Activity preferences"
-    )
-    dietary_restrictions: List[str] = Field(
-        default_factory=list, description="Dietary restrictions"
-    )
-    accessibility_needs: List[str] = Field(
-        default_factory=list, description="Accessibility requirements"
-    )
+    destination_flexibility: bool = Field(False, description="Whether destination is flexible")
+    accommodation_preferences: Dict[str, Any] = Field(default_factory=dict, description="Accommodation preferences")
+    transportation_preferences: Dict[str, Any] = Field(default_factory=dict, description="Transportation preferences")
+    activity_preferences: List[str] = Field(default_factory=list, description="Activity preferences")
+    dietary_restrictions: List[str] = Field(default_factory=list, description="Dietary restrictions")
+    accessibility_needs: List[str] = Field(default_factory=list, description="Accessibility requirements")
 
 
 class Trip(TripSageModel):
@@ -82,23 +64,17 @@ class Trip(TripSageModel):
 
     # Core Trip Information
     title: str = Field(..., min_length=1, max_length=200, description="Trip title")
-    description: Optional[str] = Field(
-        None, max_length=2000, description="Trip description"
-    )
+    description: Optional[str] = Field(None, max_length=2000, description="Trip description")
     start_date: date = Field(..., description="Trip start date")
     end_date: date = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination of the trip")
 
     # Budget Information
-    budget_breakdown: EnhancedBudget = Field(
-        ..., description="Enhanced budget with breakdown"
-    )
+    budget_breakdown: EnhancedBudget = Field(..., description="Enhanced budget with breakdown")
 
     # Trip Details
     travelers: int = Field(default=1, ge=1, description="Number of travelers")
-    status: TripStatus = Field(
-        default=TripStatus.PLANNING, description="Current status of the trip"
-    )
+    status: TripStatus = Field(default=TripStatus.PLANNING, description="Current status of the trip")
     trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
 
     # Enhanced Features
@@ -107,23 +83,15 @@ class Trip(TripSageModel):
         description="Trip visibility (private/shared/public)",
     )
     tags: List[str] = Field(default_factory=list, max_items=20, description="Trip tags")
-    preferences_extended: TripPreferences = Field(
-        default_factory=TripPreferences, description="Extended preferences"
-    )
+    preferences_extended: TripPreferences = Field(default_factory=TripPreferences, description="Extended preferences")
 
     # Additional metadata
     notes: List[Dict[str, Any]] = Field(default_factory=list, description="Trip notes")
-    search_metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Search and discovery metadata"
-    )
+    search_metadata: Dict[str, Any] = Field(default_factory=dict, description="Search and discovery metadata")
 
     # Timestamps
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), description="Creation timestamp"
-    )
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow(), description="Last update timestamp"
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.utcnow(), description="Creation timestamp")
+    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow(), description="Last update timestamp")
 
     @model_validator(mode="after")
     def validate_dates(self) -> "Trip":
@@ -149,11 +117,7 @@ class Trip(TripSageModel):
     @property
     def budget_per_day(self) -> float:
         """Get the budget per day for the trip."""
-        return (
-            self.budget_breakdown.total / self.duration_days
-            if self.duration_days > 0
-            else 0
-        )
+        return self.budget_breakdown.total / self.duration_days if self.duration_days > 0 else 0
 
     @property
     def budget_per_person(self) -> float:
@@ -165,9 +129,7 @@ class Trip(TripSageModel):
         """Get budget utilization percentage."""
         if self.budget_breakdown.total <= 0:
             return 0.0
-        return min(
-            (self.budget_breakdown.spent / self.budget_breakdown.total) * 100, 100.0
-        )
+        return min((self.budget_breakdown.spent / self.budget_breakdown.total) * 100, 100.0)
 
     @property
     def remaining_budget(self) -> float:

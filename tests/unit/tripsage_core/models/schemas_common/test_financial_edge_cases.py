@@ -92,9 +92,7 @@ class TestPriceEdgeCases:
         assert formatted_zero == "$0.00"
 
         # Test with pre-formatted price
-        preformatted = Price(
-            amount=Decimal("99.99"), currency=CurrencyCode.USD, formatted="$99.99 USD"
-        )
+        preformatted = Price(amount=Decimal("99.99"), currency=CurrencyCode.USD, formatted="$99.99 USD")
         assert preformatted.format() == "$99.99 USD"
         assert preformatted.format("€") == "$99.99 USD"  # Should ignore new symbol
 
@@ -189,16 +187,12 @@ class TestPriceBreakdownEdgeCases:
 
         # Test with total that's 0.01 off (within tolerance)
         total_close = Price(amount=Decimal("114.01"), currency=CurrencyCode.USD)
-        breakdown = PriceBreakdown(
-            base_price=base, taxes=tax, fees=fee, total=total_close
-        )
+        breakdown = PriceBreakdown(base_price=base, taxes=tax, fees=fee, total=total_close)
         assert breakdown.total.amount == Decimal("114.01")
 
         # Test with total that's exactly correct
         total_exact = Price(amount=Decimal("114.00"), currency=CurrencyCode.USD)
-        breakdown_exact = PriceBreakdown(
-            base_price=base, taxes=tax, fees=fee, total=total_exact
-        )
+        breakdown_exact = PriceBreakdown(base_price=base, taxes=tax, fees=fee, total=total_exact)
         assert breakdown_exact.total.amount == Decimal("114.00")
 
         # Test with total that's too far off (should fail)
@@ -211,13 +205,9 @@ class TestPriceBreakdownEdgeCases:
         base = Price(amount=Decimal("200.00"), currency=CurrencyCode.USD)
         discount = Price(amount=Decimal("50.00"), currency=CurrencyCode.USD)
         tax = Price(amount=Decimal("15.00"), currency=CurrencyCode.USD)
-        total = Price(
-            amount=Decimal("165.00"), currency=CurrencyCode.USD
-        )  # 200 - 50 + 15
+        total = Price(amount=Decimal("165.00"), currency=CurrencyCode.USD)  # 200 - 50 + 15
 
-        breakdown = PriceBreakdown(
-            base_price=base, taxes=tax, discounts=discount, total=total
-        )
+        breakdown = PriceBreakdown(base_price=base, taxes=tax, discounts=discount, total=total)
         assert breakdown.discounts.amount == Decimal("50.00")
 
     def test_price_breakdown_minimal_components(self):
@@ -247,9 +237,7 @@ class TestBudgetEdgeCases:
     def test_budget_calculation_edge_cases(self):
         """Test budget calculation methods with edge cases."""
         total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
-        spent = Price(
-            amount=Decimal("1000"), currency=CurrencyCode.USD
-        )  # Exactly on budget
+        spent = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)  # Exactly on budget
 
         budget = Budget(total_budget=total, spent=spent)
 
@@ -310,9 +298,7 @@ class TestBudgetEdgeCases:
         total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
         categories = {
             "flights": Price(amount=Decimal("400"), currency=CurrencyCode.USD),
-            "hotels": Price(
-                amount=Decimal("300"), currency=CurrencyCode.EUR
-            ),  # Wrong currency
+            "hotels": Price(amount=Decimal("300"), currency=CurrencyCode.EUR),  # Wrong currency
             "food": Price(amount=Decimal("200"), currency=CurrencyCode.USD),
         }
 
@@ -359,17 +345,13 @@ class TestExchangeRateEdgeCases:
         amount = Decimal("100")
         converted = rate.convert(amount)
         back_converted = inverse.convert(converted)
-        assert abs(back_converted - amount) < Decimal(
-            "0.01"
-        )  # Allow small rounding error
+        assert abs(back_converted - amount) < Decimal("0.01")  # Allow small rounding error
 
     def test_exchange_rate_extreme_values(self):
         """Test exchange rate with extreme values."""
         # Test with very small rate (e.g., USD to Japanese Yen in fractional terms)
         tiny_rate = Decimal("0.0001")
-        tiny_rate_exchange = ExchangeRate(
-            from_currency=CurrencyCode.USD, to_currency=CurrencyCode.JPY, rate=tiny_rate
-        )
+        tiny_rate_exchange = ExchangeRate(from_currency=CurrencyCode.USD, to_currency=CurrencyCode.JPY, rate=tiny_rate)
 
         amount = Decimal("1000")
         converted = tiny_rate_exchange.convert(amount)
@@ -377,9 +359,7 @@ class TestExchangeRateEdgeCases:
 
         # Test with very large rate
         huge_rate = Decimal("10000")
-        huge_rate_exchange = ExchangeRate(
-            from_currency=CurrencyCode.JPY, to_currency=CurrencyCode.USD, rate=huge_rate
-        )
+        huge_rate_exchange = ExchangeRate(from_currency=CurrencyCode.JPY, to_currency=CurrencyCode.USD, rate=huge_rate)
 
         converted_huge = huge_rate_exchange.convert(Decimal("1"))
         assert converted_huge == Decimal("10000")
@@ -427,9 +407,7 @@ class TestDealEdgeCases:
         final_eur = Price(amount=Decimal("80"), currency=CurrencyCode.EUR)
 
         with pytest.raises(ValidationError, match="same currency"):
-            Deal(
-                title="Invalid Deal", original_price=original_usd, final_price=final_eur
-            )
+            Deal(title="Invalid Deal", original_price=original_usd, final_price=final_eur)
 
         # Test discount amount currency mismatch
         original = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
@@ -450,9 +428,7 @@ class TestDealEdgeCases:
         final_higher = Price(amount=Decimal("120"), currency=CurrencyCode.USD)
 
         with pytest.raises(ValidationError, match="cannot be greater than original"):
-            Deal(
-                title="Invalid Deal", original_price=original, final_price=final_higher
-            )
+            Deal(title="Invalid Deal", original_price=original, final_price=final_higher)
 
 
 class TestTaxInfoEdgeCases:
@@ -569,9 +545,7 @@ def test_price_property_based(amount: Decimal, currency: CurrencyCode):
     fee_amount=st.decimals(min_value=0, max_value=100, places=2),
 )
 @settings(max_examples=30, deadline=None)
-def test_price_breakdown_property_based(
-    base_amount: Decimal, tax_rate: Decimal, fee_amount: Decimal
-):
+def test_price_breakdown_property_based(base_amount: Decimal, tax_rate: Decimal, fee_amount: Decimal):
     """Test PriceBreakdown with property-based testing."""
     try:
         base = Price(amount=base_amount, currency=CurrencyCode.USD)

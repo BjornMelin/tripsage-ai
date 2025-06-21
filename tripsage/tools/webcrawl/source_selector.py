@@ -82,9 +82,7 @@ class WebCrawlSourceSelector:
         if extract_structured_data is not None:
             base_config["extract_structured_data"] = extract_structured_data
 
-        logger.debug(
-            f"Optimized config for content_type='{content_type}': {base_config}"
-        )
+        logger.debug(f"Optimized config for content_type='{content_type}': {base_config}")
 
         return base_config
 

@@ -99,9 +99,7 @@ class TestFlightAgentNode:
         # The MockChatOpenAI automatically handles parameter extraction
         message = "Find flights from NYC to LAX on June 15th"
         state = create_initial_state("user_123", message)
-        params = await flight_agent._extract_flight_parameters(
-            "Find flights from NYC to LAX on June 15th", state
-        )
+        params = await flight_agent._extract_flight_parameters("Find flights from NYC to LAX on June 15th", state)
 
         assert params["origin"] == "NYC"
         assert params["destination"] == "LAX"
@@ -151,9 +149,7 @@ class TestAccommodationAgentNode:
         with patch_openai_in_module("tripsage.orchestration.nodes.accommodation_agent"):
             return AccommodationAgentNode(mock_service_registry)
 
-    def test_accommodation_agent_initialization(
-        self, accommodation_agent, mock_service_registry
-    ):
+    def test_accommodation_agent_initialization(self, accommodation_agent, mock_service_registry):
         """Test accommodation agent initialization."""
         assert accommodation_agent.name == "accommodation_agent"
         assert accommodation_agent.service_registry == mock_service_registry
@@ -206,9 +202,7 @@ class TestBudgetAgentNode:
     def budget_agent(self, mock_service_registry):
         """Create budget agent with mocked tools."""
         with (
-            patch(
-                "tripsage.orchestration.nodes.budget_agent.get_tool_registry"
-            ) as mock_registry,
+            patch("tripsage.orchestration.nodes.budget_agent.get_tool_registry") as mock_registry,
             patch_openai_in_module("tripsage.orchestration.nodes.budget_agent"),
         ):
             mock_tool_registry = Mock()
@@ -267,9 +261,7 @@ class TestMemoryUpdateNode:
     async def test_memory_update_processing(self, memory_node):
         """Test memory update processing."""
         # Mock memory service
-        memory_node.service_registry.memory_service.add_memory = AsyncMock(
-            return_value={"id": "memory_123"}
-        )
+        memory_node.service_registry.memory_service.add_memory = AsyncMock(return_value={"id": "memory_123"})
 
         state = create_initial_state("user_123", "I prefer business class flights")
         result = await memory_node.process(state)
@@ -294,9 +286,7 @@ class TestErrorRecoveryNode:
         """Create error recovery node."""
         return ErrorRecoveryNode(mock_service_registry)
 
-    def test_error_recovery_initialization(
-        self, error_recovery_node, mock_service_registry
-    ):
+    def test_error_recovery_initialization(self, error_recovery_node, mock_service_registry):
         """Test error recovery node initialization."""
         assert error_recovery_node.name == "error_recovery"
         assert error_recovery_node.service_registry == mock_service_registry
@@ -505,9 +495,7 @@ class TestNodeIntegration:
     async def test_memory_integration_across_nodes(self, mock_service_registry):
         """Test memory integration works across different nodes."""
         # Setup memory service mock
-        mock_service_registry.memory_service.add_memory = AsyncMock(
-            return_value={"id": "memory_123"}
-        )
+        mock_service_registry.memory_service.add_memory = AsyncMock(return_value={"id": "memory_123"})
         mock_service_registry.memory_service.search_memories = AsyncMock(
             return_value={"memories": [{"content": "User prefers economy class"}]}
         )

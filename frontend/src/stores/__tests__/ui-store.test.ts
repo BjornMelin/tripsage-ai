@@ -1,5 +1,22 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Ensure matchMedia is mocked before importing the store
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  configurable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: query === "(prefers-color-scheme: dark)" ? false : false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 import { type Theme, useUIStore } from "../ui-store";
 
 // Mock setTimeout to make tests run faster
@@ -14,40 +31,9 @@ vi.mock("global", () => ({
 
 describe("UI Store", () => {
   beforeEach(() => {
+    // Clear all state before each test
     act(() => {
-      useUIStore.setState({
-        theme: "system",
-        sidebar: {
-          isOpen: true,
-          isCollapsed: false,
-          isPinned: true,
-        },
-        navigation: {
-          activeRoute: "/",
-          breadcrumbs: [],
-        },
-        loadingStates: {},
-        notifications: [],
-        modal: {
-          isOpen: false,
-          component: null,
-          props: {},
-          size: "md",
-          closeOnOverlayClick: true,
-        },
-        commandPalette: {
-          isOpen: false,
-          query: "",
-          results: [],
-        },
-        features: {
-          enableAnimations: true,
-          enableSounds: false,
-          enableHaptics: true,
-          enableAnalytics: true,
-          enableBetaFeatures: false,
-        },
-      });
+      useUIStore.getState().reset();
     });
   });
 
@@ -131,9 +117,9 @@ describe("UI Store", () => {
     it("computes isDarkMode correctly for system theme", () => {
       const { result } = renderHook(() => useUIStore());
 
-      // Mock dark mode preference
-      window.matchMedia = vi.fn().mockImplementation((query) => ({
-        matches: query === "(prefers-color-scheme: dark)",
+      // Mock dark mode preference - update the existing mock
+      const matchMediaMock = vi.fn().mockImplementation((query: string) => ({
+        matches: query === "(prefers-color-scheme: dark)" ? true : false,
         media: query,
         onchange: null,
         addListener: vi.fn(),
@@ -142,6 +128,11 @@ describe("UI Store", () => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       }));
+      
+      Object.defineProperty(window, "matchMedia", {
+        writable: true,
+        value: matchMediaMock,
+      });
 
       act(() => {
         result.current.setTheme("system");

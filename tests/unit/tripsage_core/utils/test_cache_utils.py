@@ -232,9 +232,7 @@ class TestDragonflyCache:
         ):
             result = await cache.set("test_key", "test_value", ttl=300)
             assert result is True
-            mock_cache_service.set.assert_called_with(
-                "test:test_key", "test_value", ttl=300
-            )
+            mock_cache_service.set.assert_called_with("test:test_key", "test_value", ttl=300)
 
     async def test_delete_operation_with_mock(self, cache, mock_cache_service):
         """Test delete operation with mocked service."""
@@ -379,9 +377,7 @@ class TestCachedDecorator:
             call_count += 1
             return f"result_{param}"
 
-        with patch(
-            "tripsage_core.utils.cache_utils.get_settings", return_value=mock_settings
-        ):
+        with patch("tripsage_core.utils.cache_utils.get_settings", return_value=mock_settings):
             # First call should execute function
             result1 = await test_function("test")
             assert result1 == "result_test"
@@ -402,9 +398,7 @@ class TestCachedDecorator:
             call_count += 1
             return f"result_{param}"
 
-        with patch(
-            "tripsage_core.utils.cache_utils.get_settings", return_value=mock_settings
-        ):
+        with patch("tripsage_core.utils.cache_utils.get_settings", return_value=mock_settings):
             # First call
             await test_function("test")
             assert call_count == 1
@@ -426,9 +420,7 @@ class TestCachedDecorator:
         settings = MagicMock()
         settings.enable_caching = False
 
-        with patch(
-            "tripsage_core.utils.cache_utils.get_settings", return_value=settings
-        ):
+        with patch("tripsage_core.utils.cache_utils.get_settings", return_value=settings):
             # Both calls should execute function
             await test_function("test")
             await test_function("test")
@@ -463,9 +455,7 @@ class TestCachedDecorator:
             functions.append("static")
             return "static_result"
 
-        with patch(
-            "tripsage_core.utils.cache_utils.get_settings", return_value=mock_settings
-        ):
+        with patch("tripsage_core.utils.cache_utils.get_settings", return_value=mock_settings):
             # Test all decorators work
             assert await realtime_func() == "realtime_result"
             assert await time_sensitive_func() == "time_sensitive_result"
@@ -611,9 +601,7 @@ class TestContentTypeDetection:
         assert content_type == ContentType.TIME_SENSITIVE
 
         # Documentation domains should be static
-        content_type = determine_content_type(
-            "api reference", domains=["docs.example.com"]
-        )
+        content_type = determine_content_type("api reference", domains=["docs.example.com"])
         assert content_type == ContentType.STATIC
 
     def test_default_content_type(self):

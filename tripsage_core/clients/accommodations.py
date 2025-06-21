@@ -9,14 +9,10 @@ from tripsage_core.models.accommodation import (
 )
 
 
-class AccommodationMCPClient(
-    BaseMCPClient[AccommodationSearchRequest, AccommodationSearchResponse]
-):
+class AccommodationMCPClient(BaseMCPClient[AccommodationSearchRequest, AccommodationSearchResponse]):
     """Client for Accommodation MCP services."""
 
-    async def search_accommodations(
-        self, request: AccommodationSearchRequest
-    ) -> AccommodationSearchResponse:
+    async def search_accommodations(self, request: AccommodationSearchRequest) -> AccommodationSearchResponse:
         """Search for accommodations.
 
         Args:
@@ -27,9 +23,7 @@ class AccommodationMCPClient(
         """
         return await self.call_mcp("search", request)
 
-    async def book_accommodation(
-        self, request: AccommodationBookingRequest
-    ) -> AccommodationBookingResponse:
+    async def book_accommodation(self, request: AccommodationBookingRequest) -> AccommodationBookingResponse:
         """Book an accommodation.
 
         Args:

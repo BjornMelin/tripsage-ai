@@ -115,9 +115,7 @@ class Temperature(BaseModel):
     temp_min: Optional[float] = Field(None, description="Minimum temperature")
     temp_max: Optional[float] = Field(None, description="Maximum temperature")
     pressure: Optional[int] = Field(None, description="Atmospheric pressure in hPa")
-    humidity: Optional[int] = Field(
-        None, description="Humidity percentage", ge=0, le=100
-    )
+    humidity: Optional[int] = Field(None, description="Humidity percentage", ge=0, le=100)
     sea_level: Optional[int] = Field(None, description="Sea level pressure in hPa")
     grnd_level: Optional[int] = Field(None, description="Ground level pressure in hPa")
 
@@ -126,9 +124,7 @@ class Wind(BaseModel):
     """Wind information."""
 
     speed: float = Field(..., description="Wind speed", ge=0)
-    deg: Optional[int] = Field(
-        None, description="Wind direction in degrees", ge=0, le=360
-    )
+    deg: Optional[int] = Field(None, description="Wind direction in degrees", ge=0, le=360)
     gust: Optional[float] = Field(None, description="Wind gust speed", ge=0)
 
     @property
@@ -168,23 +164,15 @@ class Clouds(BaseModel):
 class Precipitation(BaseModel):
     """Precipitation data."""
 
-    one_hour: Optional[float] = Field(
-        None, alias="1h", description="Rain volume for last 1 hour (mm)", ge=0
-    )
-    three_hours: Optional[float] = Field(
-        None, alias="3h", description="Rain volume for last 3 hours (mm)", ge=0
-    )
+    one_hour: Optional[float] = Field(None, alias="1h", description="Rain volume for last 1 hour (mm)", ge=0)
+    three_hours: Optional[float] = Field(None, alias="3h", description="Rain volume for last 3 hours (mm)", ge=0)
 
 
 class Snow(BaseModel):
     """Snow data."""
 
-    one_hour: Optional[float] = Field(
-        None, alias="1h", description="Snow volume for last 1 hour (mm)", ge=0
-    )
-    three_hours: Optional[float] = Field(
-        None, alias="3h", description="Snow volume for last 3 hours (mm)", ge=0
-    )
+    one_hour: Optional[float] = Field(None, alias="1h", description="Snow volume for last 1 hour (mm)", ge=0)
+    three_hours: Optional[float] = Field(None, alias="3h", description="Snow volume for last 3 hours (mm)", ge=0)
 
 
 class CurrentWeather(BaseModel):
@@ -219,9 +207,7 @@ class CurrentWeather(BaseModel):
     cod: int = Field(..., description="Internal parameter")
 
     # TripSage extensions
-    travel_rating: Optional[float] = Field(
-        None, ge=0, le=10, description="Weather rating for travel"
-    )
+    travel_rating: Optional[float] = Field(None, ge=0, le=10, description="Weather rating for travel")
     activity_recommendations: Optional[List[str]] = None
 
 
@@ -401,9 +387,7 @@ class WeatherMapTile(BaseModel):
     tile_url: HttpUrl
 
     @classmethod
-    def from_coordinates(
-        cls, layer: str, lat: float, lon: float, zoom: int
-    ) -> "WeatherMapTile":
+    def from_coordinates(cls, layer: str, lat: float, lon: float, zoom: int) -> "WeatherMapTile":
         """Create tile from geographic coordinates."""
         # Convert lat/lon to tile coordinates
         import math

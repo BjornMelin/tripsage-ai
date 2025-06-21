@@ -413,9 +413,7 @@ async def get_rate_limits_status(
                     remaining = status_data["remaining"]
                     reset_at = datetime.fromisoformat(status_data["reset_at"])
 
-                    percentage_used = (
-                        (current_usage / limit_value * 100) if limit_value > 0 else 0
-                    )
+                    percentage_used = (current_usage / limit_value * 100) if limit_value > 0 else 0
 
                     rate_limits.append(
                         RateLimitInfo(
@@ -644,11 +642,7 @@ async def get_user_activity(
 
             # Calculate success rate (simplified)
             error_count = int(request_count * 0.05)  # 5% error rate assumption
-            success_rate = (
-                (request_count - error_count) / request_count
-                if request_count > 0
-                else 1.0
-            )
+            success_rate = (request_count - error_count) / request_count if request_count > 0 else 1.0
 
             user_activities.append(
                 UserActivity(
@@ -796,20 +790,12 @@ async def get_analytics_summary(
             },
             "services": {
                 "total_services": len(dashboard_data.services_status),
-                "healthy_services": sum(
-                    1
-                    for status in dashboard_data.services_status.values()
-                    if status == "healthy"
-                ),
+                "healthy_services": sum(1 for status in dashboard_data.services_status.values() if status == "healthy"),
                 "degraded_services": sum(
-                    1
-                    for status in dashboard_data.services_status.values()
-                    if status == "degraded"
+                    1 for status in dashboard_data.services_status.values() if status == "degraded"
                 ),
                 "unhealthy_services": sum(
-                    1
-                    for status in dashboard_data.services_status.values()
-                    if status == "unhealthy"
+                    1 for status in dashboard_data.services_status.values() if status == "unhealthy"
                 ),
                 "service_breakdown": dashboard_data.services_status,
             },
@@ -821,21 +807,9 @@ async def get_analytics_summary(
             },
             "alerts": {
                 "total_alerts": len(dashboard_data.recent_alerts),
-                "critical_alerts": sum(
-                    1
-                    for alert in dashboard_data.recent_alerts
-                    if alert.severity == "critical"
-                ),
-                "high_alerts": sum(
-                    1
-                    for alert in dashboard_data.recent_alerts
-                    if alert.severity == "high"
-                ),
-                "unacknowledged_alerts": sum(
-                    1
-                    for alert in dashboard_data.recent_alerts
-                    if not alert.acknowledged
-                ),
+                "critical_alerts": sum(1 for alert in dashboard_data.recent_alerts if alert.severity == "critical"),
+                "high_alerts": sum(1 for alert in dashboard_data.recent_alerts if alert.severity == "high"),
+                "unacknowledged_alerts": sum(1 for alert in dashboard_data.recent_alerts if not alert.acknowledged),
             },
             "trends": {
                 "hourly_usage": dashboard_data.usage_trend,

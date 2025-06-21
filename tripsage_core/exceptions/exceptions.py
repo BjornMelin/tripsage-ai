@@ -90,10 +90,7 @@ class CoreTripSageError(Exception):
     def __repr__(self) -> str:
         """Detailed representation of the exception."""
         return (
-            f"{self.__class__.__name__}("
-            f"message='{self.message}', "
-            f"code='{self.code}', "
-            f"status_code={self.status_code})"
+            f"{self.__class__.__name__}(message='{self.message}', code='{self.code}', status_code={self.status_code})"
         )
 
 
@@ -241,6 +238,41 @@ class CoreValidationError(CoreTripSageError):
 
 
 # Service and Infrastructure Errors
+class CoreConnectionError(CoreTripSageError):
+    """Raised when a connection operation fails."""
+
+    def __init__(
+        self,
+        message: str = "Connection operation failed",
+        code: str = "CONNECTION_ERROR",
+        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+        connection_type: Optional[str] = None,
+    ):
+        """Initialize the CoreConnectionError.
+
+        Args:
+            message: Human-readable error message
+            code: Machine-readable error code
+            details: Additional error details
+            connection_type: Type of connection that failed
+        """
+        # Add connection-specific details
+        if details is None:
+            details = ErrorDetails()
+        elif isinstance(details, dict):
+            details = ErrorDetails(**details)
+
+        if connection_type:
+            details.additional_context["connection_type"] = connection_type
+
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            details=details,
+        )
+
+
 class CoreServiceError(CoreTripSageError):
     """Raised when a service operation fails."""
 
@@ -543,9 +575,7 @@ def format_exception(exc: Exception) -> Dict[str, Any]:
         }
 
 
-def create_error_response(
-    exc: Exception, include_traceback: bool = False
-) -> Dict[str, Any]:
+def create_error_response(exc: Exception, include_traceback: bool = False) -> Dict[str, Any]:
     """Create a standardized error response for API endpoints.
 
     Args:
@@ -563,9 +593,7 @@ def create_error_response(
     return error_data
 
 
-def safe_execute(
-    func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any
-) -> Union[T, R]:
+def safe_execute(func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any) -> Union[T, R]:
     """Execute a function with error handling and optional fallback.
 
     Args:
@@ -674,6 +702,7 @@ __all__ = [
     "CoreResourceNotFoundError",
     "CoreValidationError",
     # Service and infrastructure
+    "CoreConnectionError",
     "CoreServiceError",
     "CoreRateLimitError",
     "CoreKeyValidationError",

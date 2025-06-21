@@ -73,9 +73,7 @@ class RLSPolicyTester:
         # Create admin client after mock data is initialized
         self.admin_client = self._create_mock_client()
 
-    def _create_mock_client(
-        self, is_authenticated: bool = True, user_id: str = None
-    ) -> MagicMock:
+    def _create_mock_client(self, is_authenticated: bool = True, user_id: str = None) -> MagicMock:
         """Create a mock Supabase client that properly simulates RLS behavior."""
         client = MagicMock()
 
@@ -140,9 +138,7 @@ class RLSPolicyTester:
                         if trip_id not in client._collaboration_data:
                             client._collaboration_data[trip_id] = {}
                         # Store user with their permission level
-                        client._collaboration_data[trip_id][collaborator_user_id] = (
-                            permission_level
-                        )
+                        client._collaboration_data[trip_id][collaborator_user_id] = permission_level
 
                     return Mock(data=[record])
 
@@ -196,9 +192,7 @@ class RLSPolicyTester:
                                 trip_id = record.get("id")
                                 # Check if user is a collaborator
                                 if trip_id in client._collaboration_data:
-                                    collaborators = client._collaboration_data.get(
-                                        trip_id, {}
-                                    )
+                                    collaborators = client._collaboration_data.get(trip_id, {})
                                     has_access = client._user_id in collaborators
                                 else:
                                     has_access = False
@@ -221,24 +215,16 @@ class RLSPolicyTester:
                             trip_id = record.get("trip_id")
                             # Check if user owns the trip
                             trip_record = None
-                            for _tid, trip in client._mock_data.get(
-                                "trips", {}
-                            ).items():
+                            for _tid, trip in client._mock_data.get("trips", {}).items():
                                 if trip.get("id") == trip_id:
                                     trip_record = trip
                                     break
 
-                            if (
-                                trip_record
-                                and trip_record.get("user_id") == client._user_id
-                            ):
+                            if trip_record and trip_record.get("user_id") == client._user_id:
                                 has_access = True
                             elif trip_id in client._collaboration_data:
                                 # User is a collaborator (any permission level can view)
-                                has_access = (
-                                    client._user_id
-                                    in client._collaboration_data.get(trip_id, {})
-                                )
+                                has_access = client._user_id in client._collaboration_data.get(trip_id, {})
 
                         elif table_name == "notifications":
                             # Users can only see their own notifications
@@ -270,9 +256,7 @@ class RLSPolicyTester:
                                 # Check if user owns the trip
                                 any(
                                     trip.get("user_id") == client._user_id
-                                    for trip in client._mock_data.get(
-                                        "trips", {}
-                                    ).values()
+                                    for trip in client._mock_data.get("trips", {}).values()
                                     if trip.get("id") == record.get("trip_id")
                                 )
                             )
@@ -338,9 +322,7 @@ class RLSPolicyTester:
                                 trip_id = record.get("id")
                                 if trip_id in client._collaboration_data:
                                     # Check edit/admin collaboration permissions
-                                    collaborators = client._collaboration_data.get(
-                                        trip_id, {}
-                                    )
+                                    collaborators = client._collaboration_data.get(trip_id, {})
                                     if client._user_id in collaborators:
                                         # Check permission level
                                         permission = collaborators[client._user_id]
@@ -359,13 +341,8 @@ class RLSPolicyTester:
                             trip_id = record.get("trip_id")
                             # Check if user owns the trip
                             trip_owner = False
-                            for _tid, trip in client._mock_data.get(
-                                "trips", {}
-                            ).items():
-                                if (
-                                    trip.get("id") == trip_id
-                                    and trip.get("user_id") == client._user_id
-                                ):
+                            for _tid, trip in client._mock_data.get("trips", {}).items():
+                                if trip.get("id") == trip_id and trip.get("user_id") == client._user_id:
                                     trip_owner = True
                                     break
                             has_access = trip_owner
@@ -380,19 +357,14 @@ class RLSPolicyTester:
                             results.append(record)
 
                             # Special handling for trip_collaborators updates
-                            if (
-                                table_name == "trip_collaborators"
-                                and "permission_level" in data
-                            ):
+                            if table_name == "trip_collaborators" and "permission_level" in data:
                                 trip_id = record.get("trip_id")
                                 collab_user_id = record.get("user_id")
                                 if trip_id and collab_user_id:
                                     # Update the collaboration data
                                     if trip_id not in client._collaboration_data:
                                         client._collaboration_data[trip_id] = {}
-                                    client._collaboration_data[trip_id][
-                                        collab_user_id
-                                    ] = data["permission_level"]
+                                    client._collaboration_data[trip_id][collab_user_id] = data["permission_level"]
 
                     return Mock(data=results)
 
@@ -427,15 +399,11 @@ class RLSPolicyTester:
             user.id = unique_user_id
 
             # Create client with specific user_id for proper RLS simulation
-            user.client = self._create_mock_client(
-                is_authenticated=True, user_id=unique_user_id
-            )
+            user.client = self._create_mock_client(is_authenticated=True, user_id=unique_user_id)
 
             # Mock the auth response to return the correct user ID
             user.client.auth.sign_up.return_value = Mock(user=Mock(id=unique_user_id))
-            user.client.auth.sign_in_with_password.return_value = Mock(
-                user=Mock(id=unique_user_id)
-            )
+            user.client.auth.sign_in_with_password.return_value = Mock(user=Mock(id=unique_user_id))
 
             await self._sign_in_user(user)
 
@@ -444,9 +412,7 @@ class RLSPolicyTester:
 
     async def _sign_in_user(self, user: RLSTestUser) -> None:
         """Sign in a test user."""
-        user.client.auth.sign_in_with_password(
-            {"email": user.email, "password": user.password}
-        )
+        user.client.auth.sign_in_with_password({"email": user.email, "password": user.password})
 
     async def cleanup_test_users(self) -> None:
         """Clean up test users after testing."""
@@ -524,12 +490,7 @@ class RLSPolicyTester:
         start_time = time.time()
         error = None
         try:
-            other_trips = (
-                user_b.client.table("trips")
-                .select("*")
-                .eq("id", trip_a.data[0]["id"])
-                .execute()
-            )
+            other_trips = user_b.client.table("trips").select("*").eq("id", trip_a.data[0]["id"]).execute()
             access_granted = len(other_trips.data) > 0
         except Exception as e:
             access_granted = False
@@ -563,12 +524,7 @@ class RLSPolicyTester:
         )
 
         try:
-            other_memories = (
-                user_b.client.table("memories")
-                .select("*")
-                .eq("id", memory_a.data[0]["id"])
-                .execute()
-            )
+            other_memories = user_b.client.table("memories").select("*").eq("id", memory_a.data[0]["id"]).execute()
             access_granted = len(other_memories.data) > 0
         except Exception:
             access_granted = False
@@ -635,9 +591,7 @@ class RLSPolicyTester:
         )
 
         # User B can view the trip
-        shared_trip = (
-            user_b.client.table("trips").select("*").eq("id", trip_id).execute()
-        )
+        shared_trip = user_b.client.table("trips").select("*").eq("id", trip_id).execute()
         results.append(
             self.record_result(
                 "collaboration_permissions",
@@ -652,10 +606,7 @@ class RLSPolicyTester:
         # User B tries to update the trip (should fail)
         try:
             update_result = (
-                user_b.client.table("trips")
-                .update({"name": "Modified by User B"})
-                .eq("id", trip_id)
-                .execute()
+                user_b.client.table("trips").update({"name": "Modified by User B"}).eq("id", trip_id).execute()
             )
             update_allowed = len(update_result.data) > 0
         except Exception:
@@ -673,17 +624,14 @@ class RLSPolicyTester:
         )
 
         # User A upgrades User B to editor
-        user_a.client.table("trip_collaborators").update(
-            {"permission_level": "edit"}
-        ).eq("trip_id", trip_id).eq("user_id", user_b.id).execute()
+        user_a.client.table("trip_collaborators").update({"permission_level": "edit"}).eq("trip_id", trip_id).eq(
+            "user_id", user_b.id
+        ).execute()
 
         # User B can now update the trip
         try:
             update_result = (
-                user_b.client.table("trips")
-                .update({"name": "Modified by Editor"})
-                .eq("id", trip_id)
-                .execute()
+                user_b.client.table("trips").update({"name": "Modified by Editor"}).eq("id", trip_id).execute()
             )
             update_allowed = len(update_result.data) > 0
         except Exception:
@@ -702,9 +650,7 @@ class RLSPolicyTester:
 
         # User C cannot access the trip
         try:
-            no_access = (
-                user_c.client.table("trips").select("*").eq("id", trip_id).execute()
-            )
+            no_access = user_c.client.table("trips").select("*").eq("id", trip_id).execute()
             access_granted = len(no_access.data) > 0
         except Exception:
             access_granted = False
@@ -763,9 +709,7 @@ class RLSPolicyTester:
 
         # User B cannot see the flight
         try:
-            no_access = (
-                user_b.client.table("flights").select("*").eq("id", flight_id).execute()
-            )
+            no_access = user_b.client.table("flights").select("*").eq("id", flight_id).execute()
             access_granted = len(no_access.data) > 0
         except Exception:
             access_granted = False
@@ -792,9 +736,7 @@ class RLSPolicyTester:
         ).execute()
 
         # Now User B can see the flight
-        shared_flight = (
-            user_b.client.table("flights").select("*").eq("id", flight_id).execute()
-        )
+        shared_flight = user_b.client.table("flights").select("*").eq("id", flight_id).execute()
 
         results.append(
             self.record_result(
@@ -824,10 +766,7 @@ class RLSPolicyTester:
         )
 
         shared_accommodation = (
-            user_b.client.table("accommodations")
-            .select("*")
-            .eq("id", accommodation.data[0]["id"])
-            .execute()
+            user_b.client.table("accommodations").select("*").eq("id", accommodation.data[0]["id"]).execute()
         )
 
         results.append(
@@ -903,12 +842,7 @@ class RLSPolicyTester:
 
         # User B cannot see User A's search cache
         try:
-            other_cache = (
-                user_b.client.table("search_destinations")
-                .select("*")
-                .eq("query_hash", "abc123")
-                .execute()
-            )
+            other_cache = user_b.client.table("search_destinations").select("*").eq("query_hash", "abc123").execute()
             access_granted = len(other_cache.data) > 0
         except Exception:
             access_granted = False
@@ -951,12 +885,7 @@ class RLSPolicyTester:
             notification_id = notification.data[0]["id"]
 
             # User A can see their notification
-            user_a_notif = (
-                user_a.client.table("notifications")
-                .select("*")
-                .eq("id", notification_id)
-                .execute()
-            )
+            user_a_notif = user_a.client.table("notifications").select("*").eq("id", notification_id).execute()
             results.append(
                 self.record_result(
                     "notification_isolation",
@@ -970,12 +899,7 @@ class RLSPolicyTester:
 
             # User B cannot see User A's notification
             try:
-                user_b_notif = (
-                    user_b.client.table("notifications")
-                    .select("*")
-                    .eq("id", notification_id)
-                    .execute()
-                )
+                user_b_notif = user_b.client.table("notifications").select("*").eq("id", notification_id).execute()
                 access_granted = len(user_b_notif.data) > 0
             except Exception:
                 access_granted = False
@@ -994,10 +918,7 @@ class RLSPolicyTester:
             # User A can mark their notification as read
             try:
                 update_result = (
-                    user_a.client.table("notifications")
-                    .update({"read": True})
-                    .eq("id", notification_id)
-                    .execute()
+                    user_a.client.table("notifications").update({"read": True}).eq("id", notification_id).execute()
                 )
                 update_allowed = len(update_result.data) > 0
             except Exception:
@@ -1017,10 +938,7 @@ class RLSPolicyTester:
             # User B cannot update User A's notification
             try:
                 update_result = (
-                    user_b.client.table("notifications")
-                    .update({"read": True})
-                    .eq("id", notification_id)
-                    .execute()
+                    user_b.client.table("notifications").update({"read": True}).eq("id", notification_id).execute()
                 )
                 update_allowed = len(update_result.data) > 0
             except Exception:
@@ -1184,14 +1102,8 @@ Generated: {datetime.now().isoformat()}
 
         for category, results in categories.items():
             report += f"\n### {category.replace('_', ' ').title()}\n"
-            report += (
-                "| Table | Operation | User Role | Expected | Actual | Status | "
-                "Performance |\n"
-            )
-            report += (
-                "|-------|-----------|-----------|----------|--------|--------|"
-                "-------------|\n"
-            )
+            report += "| Table | Operation | User Role | Expected | Actual | Status | Performance |\n"
+            report += "|-------|-----------|-----------|----------|--------|--------|-------------|\n"
 
             for r in results:
                 status = "✅ PASS" if r.passed else "❌ FAIL"
@@ -1212,9 +1124,7 @@ Generated: {datetime.now().isoformat()}
             report += "\n## Performance Summary\n"
             report += f"- Average Operation Time: {avg_perf:.2f}ms\n"
             report += f"- Max Operation Time: {max_perf:.2f}ms\n"
-            overhead_status = (
-                "✅ Within limits" if max_perf < 10 else "⚠️ Exceeds 10ms target"
-            )
+            overhead_status = "✅ Within limits" if max_perf < 10 else "⚠️ Exceeds 10ms target"
             report += f"- RLS Overhead: {overhead_status}\n"
 
         # Add failed test details
@@ -1267,9 +1177,7 @@ async def test_rls_policies(mock_supabase_env):
         # Assert all tests passed
         failed_tests = [r for r in tester.test_results if not r.passed]
         if failed_tests:
-            pytest.fail(
-                f"{len(failed_tests)} RLS tests failed. See report for details."
-            )
+            pytest.fail(f"{len(failed_tests)} RLS tests failed. See report for details.")
 
     finally:
         # Cleanup

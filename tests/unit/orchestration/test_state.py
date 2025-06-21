@@ -227,9 +227,7 @@ class TestBookingProgress:
             "booking_id": "HT456",
             "status": "pending",
         }
-        assert progress.activity_bookings == [
-            {"booking_id": "AC789", "status": "confirmed"}
-        ]
+        assert progress.activity_bookings == [{"booking_id": "AC789", "status": "confirmed"}]
         assert progress.total_cost == 1500.0
         assert progress.currency == "EUR"
         assert progress.status == "booking"
@@ -263,9 +261,7 @@ class TestHandoffContext:
             routing_reasoning="User mentioned flights and specific dates",
             timestamp="2024-01-15T10:00:00Z",
             message_analyzed="I need flights from NYC to LAX on June 15th",
-            additional_context={
-                "extracted_entities": {"origin": "NYC", "destination": "LAX"}
-            },
+            additional_context={"extracted_entities": {"origin": "NYC", "destination": "LAX"}},
         )
 
         assert context.from_agent == "router"
@@ -274,9 +270,7 @@ class TestHandoffContext:
         assert context.routing_reasoning == "User mentioned flights and specific dates"
         assert context.timestamp == "2024-01-15T10:00:00Z"
         assert context.message_analyzed == "I need flights from NYC to LAX on June 15th"
-        assert context.additional_context == {
-            "extracted_entities": {"origin": "NYC", "destination": "LAX"}
-        }
+        assert context.additional_context == {"extracted_entities": {"origin": "NYC", "destination": "LAX"}}
 
     def test_handoff_context_required_fields(self):
         """Test HandoffContext with only required fields."""
@@ -348,9 +342,7 @@ class TestToolCallInfo:
 
     def test_tool_call_info_defaults(self):
         """Test ToolCallInfo with default values."""
-        tool_call = ToolCallInfo(
-            tool_name="test_tool", timestamp="2024-01-15T10:00:00Z", parameters={}
-        )
+        tool_call = ToolCallInfo(tool_name="test_tool", timestamp="2024-01-15T10:00:00Z", parameters={})
 
         assert tool_call.result is None
         assert tool_call.status == "pending"
@@ -386,9 +378,7 @@ class TestTravelPlanningState:
 
     def test_create_initial_state(self):
         """Test creating initial state with default values."""
-        state = create_initial_state(
-            user_id="user_123", message="I want to plan a trip to Paris"
-        )
+        state = create_initial_state(user_id="user_123", message="I want to plan a trip to Paris")
 
         # Check core fields
         assert state["user_id"] == "user_123"
@@ -439,9 +429,7 @@ class TestTravelPlanningState:
         """Test creating initial state with provided session ID."""
         custom_session_id = "custom_session_456"
 
-        state = create_initial_state(
-            user_id="user_123", message="Hello", session_id=custom_session_id
-        )
+        state = create_initial_state(user_id="user_123", message="Hello", session_id=custom_session_id)
 
         assert state["session_id"] == custom_session_id
 
@@ -467,9 +455,7 @@ class TestStateModels:
 
     def test_user_preferences_serialization(self):
         """Test UserPreferences model serialization for state storage."""
-        prefs = UserPreferences(
-            budget_total=2000.0, preferred_airlines=["Delta"], seat_class="economy"
-        )
+        prefs = UserPreferences(budget_total=2000.0, preferred_airlines=["Delta"], seat_class="economy")
 
         # Test serialization
         prefs_dict = prefs.model_dump()
@@ -573,14 +559,10 @@ class TestStateIntegration:
     def test_complete_state_workflow(self):
         """Test a complete state workflow with all components."""
         # Create initial state
-        state = create_initial_state(
-            user_id="user_456", message="I want to plan a honeymoon trip to Italy"
-        )
+        state = create_initial_state(user_id="user_456", message="I want to plan a honeymoon trip to Italy")
 
         # Add user preferences
-        preferences = UserPreferences(
-            budget_total=5000.0, travel_style="luxury", accommodation_type="hotel"
-        )
+        preferences = UserPreferences(budget_total=5000.0, travel_style="luxury", accommodation_type="hotel")
         state["user_preferences"] = preferences.model_dump()
 
         # Add travel dates
@@ -593,9 +575,7 @@ class TestStateIntegration:
         state["travel_dates"] = dates.model_dump()
 
         # Add destination info
-        destination = DestinationInfo(
-            destination="Italy", trip_type="round_trip", purpose="honeymoon"
-        )
+        destination = DestinationInfo(destination="Italy", trip_type="round_trip", purpose="honeymoon")
         state["destination_info"] = destination.model_dump()
 
         # Add a search result
@@ -630,8 +610,6 @@ class TestStateIntegration:
         assert reconstructed_dest.destination == "Italy"
         assert reconstructed_dest.purpose == "honeymoon"
 
-        reconstructed_search = SearchResult.model_validate(
-            state["accommodation_searches"][0]
-        )
+        reconstructed_search = SearchResult.model_validate(state["accommodation_searches"][0])
         assert reconstructed_search.agent == "accommodation_agent"
         assert reconstructed_search.status == "success"

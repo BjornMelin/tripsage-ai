@@ -33,19 +33,13 @@ class Transportation(TripSageModel):
 
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
-    transportation_type: TransportationType = Field(
-        ..., description="Type of transportation"
-    )
-    provider: Optional[str] = Field(
-        None, description="Name of the transportation provider"
-    )
+    transportation_type: TransportationType = Field(..., description="Type of transportation")
+    provider: Optional[str] = Field(None, description="Name of the transportation provider")
     pickup_date: datetime = Field(..., description="Pickup date and time")
     dropoff_date: datetime = Field(..., description="Dropoff date and time")
     price: float = Field(..., description="Price in default currency")
     notes: Optional[str] = Field(None, description="Additional notes or information")
-    booking_status: BookingStatus = Field(
-        BookingStatus.VIEWED, description="Status of the transportation booking"
-    )
+    booking_status: BookingStatus = Field(BookingStatus.VIEWED, description="Status of the transportation booking")
 
     @field_validator("price")
     @classmethod

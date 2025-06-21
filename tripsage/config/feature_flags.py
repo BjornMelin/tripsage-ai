@@ -125,9 +125,7 @@ class FeatureFlags(BaseSettings):
                     mcp_count += 1
 
         total_services = direct_count + mcp_count
-        migration_percentage = (
-            (direct_count / total_services * 100) if total_services > 0 else 0
-        )
+        migration_percentage = (direct_count / total_services * 100) if total_services > 0 else 0
 
         return {
             "services": services,

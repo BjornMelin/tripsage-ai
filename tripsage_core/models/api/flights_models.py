@@ -174,9 +174,7 @@ class Segment(BaseModel):
     @property
     def flight_number(self) -> str:
         """Get the marketing flight number."""
-        return (
-            f"{self.marketing_carrier.iata_code}{self.marketing_carrier_flight_number}"
-        )
+        return f"{self.marketing_carrier.iata_code}{self.marketing_carrier_flight_number}"
 
 
 class Slice(BaseModel):
@@ -304,9 +302,7 @@ class FlightOffer(BaseModel):
     available_services: Optional[List[Dict[str, Any]]] = None
 
     # TripSage extensions
-    score: Optional[float] = Field(
-        None, ge=0, le=1, description="TripSage quality score"
-    )
+    score: Optional[float] = Field(None, ge=0, le=1, description="TripSage quality score")
     user_preferences_match: Optional[Dict[str, Any]] = None
 
 

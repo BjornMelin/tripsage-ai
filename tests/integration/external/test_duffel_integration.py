@@ -33,9 +33,7 @@ class TestDuffelAPIIntegration:
     def flights_service(self, mock_duffel_client):
         """Create flights service with mocked Duffel client."""
         mock_db = AsyncMock()
-        service = FlightService(
-            database_service=mock_db, external_flight_service=mock_duffel_client
-        )
+        service = FlightService(database_service=mock_db, external_flight_service=mock_duffel_client)
         return service
 
     @pytest.fixture
@@ -78,9 +76,7 @@ class TestDuffelAPIIntegration:
                                         },
                                         "destination": {
                                             "iata_code": "JFK",
-                                            "name": (
-                                                "John F. Kennedy International Airport"
-                                            ),
+                                            "name": ("John F. Kennedy International Airport"),
                                             "city_name": "New York",
                                             "time_zone": "America/New_York",
                                         },
@@ -136,9 +132,7 @@ class TestDuffelAPIIntegration:
         # But in this case, the service logs an error and returns empty results
 
     @pytest.mark.asyncio
-    async def test_search_flights_no_results(
-        self, flights_service, mock_duffel_client, sample_flight_search_request
-    ):
+    async def test_search_flights_no_results(self, flights_service, mock_duffel_client, sample_flight_search_request):
         """Test flight search with no results."""
         # Mock empty response
         mock_duffel_client.search_flights.return_value = {
@@ -154,9 +148,7 @@ class TestDuffelAPIIntegration:
         assert result.total_results == 0
 
     @pytest.mark.asyncio
-    async def test_search_flights_api_error(
-        self, flights_service, mock_duffel_client, sample_flight_search_request
-    ):
+    async def test_search_flights_api_error(self, flights_service, mock_duffel_client, sample_flight_search_request):
         """Test flight search with API error."""
         # Mock API error
         mock_duffel_client.search_flights.side_effect = Exception("Duffel API Error")
@@ -170,9 +162,7 @@ class TestDuffelAPIIntegration:
         assert result.total_results == 0
 
     @pytest.mark.asyncio
-    async def test_get_flight_details_success(
-        self, flights_service, mock_duffel_client
-    ):
+    async def test_get_flight_details_success(self, flights_service, mock_duffel_client):
         """Test getting flight offer details - method doesn't exist in FlightService."""
         # This test is for a method that doesn't exist in the current FlightService
         # The service focuses on search and booking management, not individual offer
@@ -202,9 +192,7 @@ class TestDuffelAPIIntegration:
             "status": "booked",
             "offer_id": "off_123",
             "trip_id": "trip_123",
-            "passengers": [
-                {"type": "adult", "given_name": "John", "family_name": "Doe"}
-            ],
+            "passengers": [{"type": "adult", "given_name": "John", "family_name": "Doe"}],
             "outbound_segments": [
                 {
                     "origin": "LAX",
@@ -219,9 +207,7 @@ class TestDuffelAPIIntegration:
         }
 
         # Mock get_flight_booking
-        flights_service.db.get_flight_booking = AsyncMock(
-            return_value=mock_booking_data
-        )
+        flights_service.db.get_flight_booking = AsyncMock(return_value=mock_booking_data)
 
         # Mock update_flight_booking to return True (success)
         flights_service.db.update_flight_booking = AsyncMock(return_value=True)
@@ -232,24 +218,16 @@ class TestDuffelAPIIntegration:
         assert result is True
 
         # Verify database was called correctly
-        flights_service.db.get_flight_booking.assert_called_once_with(
-            booking_id, user_id
-        )
-        flights_service.db.update_flight_booking.assert_called_once_with(
-            booking_id, {"status": "cancelled"}
-        )
+        flights_service.db.get_flight_booking.assert_called_once_with(booking_id, user_id)
+        flights_service.db.update_flight_booking.assert_called_once_with(booking_id, {"status": "cancelled"})
 
     @pytest.mark.asyncio
-    async def test_authentication_error(
-        self, flights_service, mock_duffel_client, sample_flight_search_request
-    ):
+    async def test_authentication_error(self, flights_service, mock_duffel_client, sample_flight_search_request):
         """Test handling of authentication errors."""
         # Mock authentication error
         from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 
-        mock_duffel_client.search_flights.side_effect = CoreAuthenticationError(
-            "Invalid API key"
-        )
+        mock_duffel_client.search_flights.side_effect = CoreAuthenticationError("Invalid API key")
 
         # The service handles authentication errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)
@@ -259,9 +237,7 @@ class TestDuffelAPIIntegration:
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
-    async def test_rate_limit_handling(
-        self, flights_service, mock_duffel_client, sample_flight_search_request
-    ):
+    async def test_rate_limit_handling(self, flights_service, mock_duffel_client, sample_flight_search_request):
         """Test handling of rate limit errors."""
         # Mock rate limit error
         mock_duffel_client.search_flights.side_effect = Exception("Rate limit exceeded")
@@ -274,9 +250,7 @@ class TestDuffelAPIIntegration:
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
-    async def test_timeout_handling(
-        self, flights_service, mock_duffel_client, sample_flight_search_request
-    ):
+    async def test_timeout_handling(self, flights_service, mock_duffel_client, sample_flight_search_request):
         """Test handling of request timeouts."""
         import asyncio
 
@@ -306,9 +280,7 @@ class TestDuffelAPIIntegration:
         )
 
         # Mock API validation error for non-existent airports
-        mock_duffel_client.search_flights.side_effect = ValueError(
-            "Invalid airport codes"
-        )
+        mock_duffel_client.search_flights.side_effect = ValueError("Invalid airport codes")
 
         # The service handles validation errors gracefully
         result = await flights_service.search_flights(request)
@@ -318,16 +290,12 @@ class TestDuffelAPIIntegration:
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
-    async def test_network_error_handling(
-        self, flights_service, mock_duffel_client, sample_flight_search_request
-    ):
+    async def test_network_error_handling(self, flights_service, mock_duffel_client, sample_flight_search_request):
         """Test handling of network errors."""
         import aiohttp
 
         # Mock network error
-        mock_duffel_client.search_flights.side_effect = aiohttp.ClientError(
-            "Network connection failed"
-        )
+        mock_duffel_client.search_flights.side_effect = aiohttp.ClientError("Network connection failed")
 
         # The service handles network errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)

@@ -81,9 +81,7 @@ class TestAttachmentsRouter:
     def test_list_user_files_with_pagination(self, api_test_client):
         """Test user files listing with pagination parameters."""
         # Act
-        response = api_test_client.get(
-            "/api/attachments/files", params={"skip": 0, "limit": 10}
-        )
+        response = api_test_client.get("/api/attachments/files", params={"skip": 0, "limit": 10})
 
         # Assert
         assert response.status_code == status.HTTP_200_OK
@@ -123,9 +121,7 @@ class TestAttachmentsRouter:
         large_content = b"X" * (6 * 1024 * 1024)  # 6MB per file
         files = []
         for i in range(10):  # 10 files * 6MB = 60MB > 50MB limit
-            files.append(
-                ("files", (f"large{i}.txt", BytesIO(large_content), "text/plain"))
-            )
+            files.append(("files", (f"large{i}.txt", BytesIO(large_content), "text/plain")))
 
         # Act
         response = api_test_client.post(
@@ -246,9 +242,7 @@ class TestAttachmentsRouter:
         file_id = "test-file-id"
 
         # Act
-        response = unauthenticated_test_client.delete(
-            f"/api/attachments/files/{file_id}"
-        )
+        response = unauthenticated_test_client.delete(f"/api/attachments/files/{file_id}")
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED

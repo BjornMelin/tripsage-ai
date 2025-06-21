@@ -40,9 +40,7 @@ class User(TripSageModel):
     role: UserRole = Field(UserRole.USER, description="User's role")
     is_admin: bool = Field(False, description="Whether the user is an admin")
     is_disabled: bool = Field(False, description="Whether the user is disabled")
-    preferences_json: Optional[Dict[str, Any]] = Field(
-        None, description="User preferences", alias="preferences"
-    )
+    preferences_json: Optional[Dict[str, Any]] = Field(None, description="User preferences", alias="preferences")
 
     @property
     def full_preferences(self) -> Dict[str, Any]:
@@ -66,11 +64,7 @@ class User(TripSageModel):
         # Deep merge preferences with defaults
         result = defaults.copy()
         for key, value in self.preferences_json.items():
-            if (
-                isinstance(value, dict)
-                and key in result
-                and isinstance(result[key], dict)
-            ):
+            if isinstance(value, dict) and key in result and isinstance(result[key], dict):
                 # Merge nested dictionaries
                 result[key] = {**result[key], **value}
             else:

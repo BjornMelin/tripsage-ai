@@ -31,9 +31,7 @@ class MFAEnrollmentRequest(TripSageModel):
     """Request to enroll in MFA."""
 
     user_id: str = Field(..., description="User ID")
-    totp_code: str = Field(
-        ..., min_length=6, max_length=6, description="TOTP verification code"
-    )
+    totp_code: str = Field(..., min_length=6, max_length=6, description="TOTP verification code")
 
 
 class MFAEnrollmentResponse(TripSageModel):
@@ -70,9 +68,7 @@ class MFAVerificationResponse(TripSageModel):
 
     valid: bool = Field(..., description="Whether the code is valid")
     code_type: str = Field(..., description="Type of code (totp, backup)")
-    remaining_backup_codes: Optional[int] = Field(
-        None, description="Remaining backup codes"
-    )
+    remaining_backup_codes: Optional[int] = Field(None, description="Remaining backup codes")
 
 
 class MFAStatus(TripSageModel):
@@ -80,9 +76,7 @@ class MFAStatus(TripSageModel):
 
     enabled: bool = Field(..., description="Whether MFA is enabled")
     enrolled_at: Optional[str] = Field(None, description="Enrollment timestamp")
-    backup_codes_remaining: int = Field(
-        default=0, description="Number of backup codes remaining"
-    )
+    backup_codes_remaining: int = Field(default=0, description="Number of backup codes remaining")
     last_used: Optional[str] = Field(None, description="Last successful verification")
 
 
@@ -152,9 +146,7 @@ class MFAService:
             totp = pyotp.TOTP(secret)
 
             # Generate provisioning URI for QR code
-            provisioning_uri = totp.provisioning_uri(
-                name=user_email, issuer_name=self.app_name
-            )
+            provisioning_uri = totp.provisioning_uri(name=user_email, issuer_name=self.app_name)
 
             # Generate QR code
             qr_code_url = self._generate_qr_code(provisioning_uri)
@@ -211,9 +203,7 @@ class MFAService:
             await self._ensure_db()
 
             # Get user's MFA setup
-            mfa_data = await self.db.select(
-                "user_mfa_settings", "*", {"user_id": request.user_id}
-            )
+            mfa_data = await self.db.select("user_mfa_settings", "*", {"user_id": request.user_id})
 
             if not mfa_data:
                 raise CoreValidationError(
@@ -265,9 +255,7 @@ class MFAService:
                 details={"user_id": request.user_id, "error": str(e)},
             ) from e
 
-    async def verify_mfa(
-        self, request: MFAVerificationRequest
-    ) -> MFAVerificationResponse:
+    async def verify_mfa(self, request: MFAVerificationRequest) -> MFAVerificationResponse:
         """
         Verify MFA code (TOTP or backup code).
 
@@ -284,9 +272,7 @@ class MFAService:
             await self._ensure_db()
 
             # Get user's MFA settings
-            mfa_data = await self.db.select(
-                "user_mfa_settings", "*", {"user_id": request.user_id, "enabled": True}
-            )
+            mfa_data = await self.db.select("user_mfa_settings", "*", {"user_id": request.user_id, "enabled": True})
 
             if not mfa_data:
                 return MFAVerificationResponse(valid=False, code_type="none")
@@ -350,9 +336,7 @@ class MFAService:
         try:
             await self._ensure_db()
 
-            mfa_data = await self.db.select(
-                "user_mfa_settings", "*", {"user_id": user_id}
-            )
+            mfa_data = await self.db.select("user_mfa_settings", "*", {"user_id": user_id})
 
             if not mfa_data:
                 return MFAStatus(enabled=False)
@@ -409,9 +393,7 @@ class MFAService:
             await self._ensure_db()
 
             # Check if MFA is enabled
-            mfa_data = await self.db.select(
-                "user_mfa_settings", "*", {"user_id": user_id, "enabled": True}
-            )
+            mfa_data = await self.db.select("user_mfa_settings", "*", {"user_id": user_id, "enabled": True})
 
             if not mfa_data:
                 raise CoreServiceError(
@@ -482,10 +464,7 @@ class MFAService:
         Returns:
             List of backup codes
         """
-        return [
-            f"{secrets.randbelow(100000):05d}-{secrets.randbelow(100000):05d}"
-            for _ in range(count)
-        ]
+        return [f"{secrets.randbelow(100000):05d}-{secrets.randbelow(100000):05d}" for _ in range(count)]
 
 
 # Dependency function for FastAPI

@@ -37,9 +37,7 @@ class PerformanceBenchmark:
         end_time = time.perf_counter()
         return (end_time - start_time) * 1000  # Convert to milliseconds
 
-    async def benchmark_operation(
-        self, name: str, operation, *args, **kwargs
-    ) -> Dict[str, float]:
+    async def benchmark_operation(self, name: str, operation, *args, **kwargs) -> Dict[str, float]:
         """Benchmark an operation multiple times and return statistics."""
         times = []
         for _ in range(self.iterations):
@@ -96,9 +94,7 @@ def performance_benchmark():
 class TestDragonflyMigrationPerformance:
     """Test performance improvements from DragonflyDB migration."""
 
-    async def test_dragonfly_set_operations_performance(
-        self, dragonfly_service, performance_benchmark
-    ):
+    async def test_dragonfly_set_operations_performance(self, dragonfly_service, performance_benchmark):
         """Test DragonflyDB SET operation performance."""
         test_key = "benchmark:test:set"
         test_value = {"message": "performance test", "timestamp": time.time()}
@@ -118,32 +114,18 @@ class TestDragonflyMigrationPerformance:
         )
 
         print("\nDragonflyDB SET Performance Comparison:")
-        print(
-            f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, "
-            f"Median: {direct_stats['median']:.2f}ms"
-        )
-        print(
-            f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, "
-            f"Median: {cache_stats['median']:.2f}ms"
-        )
+        print(f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, Median: {direct_stats['median']:.2f}ms")
+        print(f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, Median: {cache_stats['median']:.2f}ms")
 
         # Verify both operations are performing well (under 50ms for local DragonflyDB)
-        assert direct_stats["mean"] < 50, (
-            f"Direct SDK too slow: {direct_stats['mean']:.2f}ms"
-        )
-        assert cache_stats["mean"] < 50, (
-            f"Cache tools too slow: {cache_stats['mean']:.2f}ms"
-        )
+        assert direct_stats["mean"] < 50, f"Direct SDK too slow: {direct_stats['mean']:.2f}ms"
+        assert cache_stats["mean"] < 50, f"Cache tools too slow: {cache_stats['mean']:.2f}ms"
 
         # Cache tools should be comparable to direct SDK (within 2x)
         performance_ratio = cache_stats["mean"] / direct_stats["mean"]
-        assert performance_ratio < 2.0, (
-            f"Cache tools overhead too high: {performance_ratio:.2f}x"
-        )
+        assert performance_ratio < 2.0, f"Cache tools overhead too high: {performance_ratio:.2f}x"
 
-    async def test_dragonfly_get_operations_performance(
-        self, dragonfly_service, performance_benchmark
-    ):
+    async def test_dragonfly_get_operations_performance(self, dragonfly_service, performance_benchmark):
         """Test DragonflyDB GET operation performance."""
         test_key = "benchmark:test:get"
         test_value = {"message": "performance test", "data": list(range(100))}
@@ -157,35 +139,21 @@ class TestDragonflyMigrationPerformance:
         )
 
         # Benchmark current cache_tools (using direct SDK)
-        cache_stats = await performance_benchmark.benchmark_operation(
-            "cache_tools_get", web_cache.get_cache, test_key
-        )
+        cache_stats = await performance_benchmark.benchmark_operation("cache_tools_get", web_cache.get_cache, test_key)
 
         print("\nDragonflyDB GET Performance Comparison:")
-        print(
-            f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, "
-            f"Median: {direct_stats['median']:.2f}ms"
-        )
-        print(
-            f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, "
-            f"Median: {cache_stats['median']:.2f}ms"
-        )
+        print(f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, Median: {direct_stats['median']:.2f}ms")
+        print(f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, Median: {cache_stats['median']:.2f}ms")
 
         # Verify both operations are performing well
-        assert direct_stats["mean"] < 50, (
-            f"Direct SDK too slow: {direct_stats['mean']:.2f}ms"
-        )
-        assert cache_stats["mean"] < 50, (
-            f"Cache tools too slow: {cache_stats['mean']:.2f}ms"
-        )
+        assert direct_stats["mean"] < 50, f"Direct SDK too slow: {direct_stats['mean']:.2f}ms"
+        assert cache_stats["mean"] < 50, f"Cache tools too slow: {cache_stats['mean']:.2f}ms"
 
 
 class TestSupabaseMigrationPerformance:
     """Test performance improvements from Supabase SDK migration."""
 
-    async def test_supabase_connection_performance(
-        self, supabase_service, performance_benchmark
-    ):
+    async def test_supabase_connection_performance(self, supabase_service, performance_benchmark):
         """Test Supabase connection establishment performance."""
         # Test connection performance
         connection_stats = await performance_benchmark.benchmark_operation(
@@ -193,19 +161,12 @@ class TestSupabaseMigrationPerformance:
         )
 
         print("\nSupabase Connection Performance:")
-        print(
-            f"Direct SDK - Mean: {connection_stats['mean']:.2f}ms, "
-            f"Median: {connection_stats['median']:.2f}ms"
-        )
+        print(f"Direct SDK - Mean: {connection_stats['mean']:.2f}ms, Median: {connection_stats['median']:.2f}ms")
 
         # Connection should be fast (under 100ms for already established connections)
-        assert connection_stats["mean"] < 100, (
-            f"Connection too slow: {connection_stats['mean']:.2f}ms"
-        )
+        assert connection_stats["mean"] < 100, f"Connection too slow: {connection_stats['mean']:.2f}ms"
 
-    async def test_supabase_query_performance(
-        self, supabase_service, performance_benchmark
-    ):
+    async def test_supabase_query_performance(self, supabase_service, performance_benchmark):
         """Test basic Supabase query performance."""
         # Simple query that should work on any Supabase instance
         query_stats = await performance_benchmark.benchmark_operation(
@@ -217,15 +178,10 @@ class TestSupabaseMigrationPerformance:
         )
 
         print("\nSupabase Query Performance:")
-        print(
-            f"Direct SDK - Mean: {query_stats['mean']:.2f}ms, Median: "
-            f"{query_stats['median']:.2f}ms"
-        )
+        print(f"Direct SDK - Mean: {query_stats['mean']:.2f}ms, Median: {query_stats['median']:.2f}ms")
 
         # Query should complete reasonably fast (allowing for network latency)
-        assert query_stats["mean"] < 1000, (
-            f"Query too slow: {query_stats['mean']:.2f}ms"
-        )
+        assert query_stats["mean"] < 1000, f"Query too slow: {query_stats['mean']:.2f}ms"
 
 
 class TestOverallMigrationImpact:
@@ -243,14 +199,8 @@ class TestOverallMigrationImpact:
             print(f"  {service}: {mode.value}")
 
         # Verify our migrated services are using direct mode by default
-        assert (
-            flags.redis_integration == IntegrationMode.DIRECT
-            or flags.redis_integration == IntegrationMode.MCP
-        )
-        assert (
-            flags.supabase_integration == IntegrationMode.DIRECT
-            or flags.supabase_integration == IntegrationMode.MCP
-        )
+        assert flags.redis_integration == IntegrationMode.DIRECT or flags.redis_integration == IntegrationMode.MCP
+        assert flags.supabase_integration == IntegrationMode.DIRECT or flags.supabase_integration == IntegrationMode.MCP
 
     async def test_performance_improvement_validation(self, performance_benchmark):
         """Validate that we've achieved meaningful performance improvements."""
@@ -277,9 +227,7 @@ class TestOverallMigrationImpact:
         print(f"DragonflyDB Pipeline (10 ops) - Mean: {batch_stats['mean']:.2f}ms")
 
         # Batch operations should be very fast
-        assert batch_stats["mean"] < 100, (
-            f"Batch operations too slow: {batch_stats['mean']:.2f}ms"
-        )
+        assert batch_stats["mean"] < 100, f"Batch operations too slow: {batch_stats['mean']:.2f}ms"
 
         await direct_dragonfly.close()
 
@@ -307,19 +255,11 @@ async def run_comprehensive_benchmark():
         )
 
         # DragonflyDB GET performance
-        get_stats = await benchmark.benchmark_operation(
-            "dragonfly_get", dragonfly_service.get_json, "benchmark:test"
-        )
+        get_stats = await benchmark.benchmark_operation("dragonfly_get", dragonfly_service.get_json, "benchmark:test")
 
         print("\nDragonflyDB Performance (100 iterations):")
-        print(
-            f"SET - Mean: {set_stats['mean']:.2f}ms, Median: "
-            f"{set_stats['median']:.2f}ms"
-        )
-        print(
-            f"GET - Mean: {get_stats['mean']:.2f}ms, Median: "
-            f"{get_stats['median']:.2f}ms"
-        )
+        print(f"SET - Mean: {set_stats['mean']:.2f}ms, Median: {set_stats['median']:.2f}ms")
+        print(f"GET - Mean: {get_stats['mean']:.2f}ms, Median: {get_stats['median']:.2f}ms")
 
     finally:
         if hasattr(dragonfly_service, "disconnect"):
@@ -330,15 +270,10 @@ async def run_comprehensive_benchmark():
     # Core database service auto-connects
 
     try:
-        connection_stats = await benchmark.benchmark_operation(
-            "supabase_connection", supabase_service.ensure_connected
-        )
+        connection_stats = await benchmark.benchmark_operation("supabase_connection", supabase_service.ensure_connected)
 
         print("\nSupabase Performance (100 iterations):")
-        print(
-            f"Connection - Mean: {connection_stats['mean']:.2f}ms, "
-            f"Median: {connection_stats['median']:.2f}ms"
-        )
+        print(f"Connection - Mean: {connection_stats['mean']:.2f}ms, Median: {connection_stats['median']:.2f}ms")
 
     finally:
         await supabase_service.disconnect()

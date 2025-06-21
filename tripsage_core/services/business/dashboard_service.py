@@ -64,9 +64,7 @@ class RealTimeMetrics(BaseModel):
     total_requests: int = Field(description="Total requests in time period")
     total_errors: int = Field(description="Total errors in time period")
     success_rate: float = Field(description="Success rate percentage (0.0-1.0)")
-    avg_latency_ms: float = Field(
-        description="Average response latency in milliseconds"
-    )
+    avg_latency_ms: float = Field(description="Average response latency in milliseconds")
     p95_latency_ms: float = Field(description="95th percentile latency")
     p99_latency_ms: float = Field(description="99th percentile latency")
     active_keys_count: int = Field(description="Number of active API keys")
@@ -101,9 +99,7 @@ class ServiceAnalytics(BaseModel):
     last_health_check: datetime = Field(description="Last health check timestamp")
     health_status: ServiceHealthStatus = Field(description="Current health status")
     rate_limit_hits: int = Field(default=0, description="Rate limit violations")
-    quota_usage_percent: float = Field(
-        default=0.0, description="Quota usage percentage"
-    )
+    quota_usage_percent: float = Field(default=0.0, description="Quota usage percentage")
 
 
 class UserActivityData(BaseModel):
@@ -147,41 +143,21 @@ class AlertData(BaseModel):
     api_key_id: Optional[str] = Field(default=None, description="Related API key")
 
     # Status tracking
-    acknowledged: bool = Field(
-        default=False, description="Whether alert is acknowledged"
-    )
-    acknowledged_by: Optional[str] = Field(
-        default=None, description="User who acknowledged"
-    )
-    acknowledged_at: Optional[datetime] = Field(
-        default=None, description="Acknowledgment timestamp"
-    )
+    acknowledged: bool = Field(default=False, description="Whether alert is acknowledged")
+    acknowledged_by: Optional[str] = Field(default=None, description="User who acknowledged")
+    acknowledged_at: Optional[datetime] = Field(default=None, description="Acknowledgment timestamp")
     resolved: bool = Field(default=False, description="Whether alert is resolved")
-    resolved_at: Optional[datetime] = Field(
-        default=None, description="Resolution timestamp"
-    )
+    resolved_at: Optional[datetime] = Field(default=None, description="Resolution timestamp")
 
     # Alert data
-    threshold_value: Optional[float] = Field(
-        default=None, description="Threshold that triggered alert"
-    )
-    current_value: Optional[float] = Field(
-        default=None, description="Current metric value"
-    )
-    affected_resources: List[str] = Field(
-        default_factory=list, description="Affected resources"
-    )
-    recommended_actions: List[str] = Field(
-        default_factory=list, description="Suggested remediation"
-    )
+    threshold_value: Optional[float] = Field(default=None, description="Threshold that triggered alert")
+    current_value: Optional[float] = Field(default=None, description="Current metric value")
+    affected_resources: List[str] = Field(default_factory=list, description="Affected resources")
+    recommended_actions: List[str] = Field(default_factory=list, description="Suggested remediation")
 
     # Metadata
-    tags: List[str] = Field(
-        default_factory=list, description="Alert tags for filtering"
-    )
-    details: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional context data"
-    )
+    tags: List[str] = Field(default_factory=list, description="Alert tags for filtering")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Additional context data")
 
     @computed_field
     @property
@@ -227,15 +203,9 @@ class DashboardData(BaseModel):
     metrics: RealTimeMetrics = Field(description="Real-time system metrics")
     services: List[ServiceAnalytics] = Field(description="Per-service analytics")
     top_users: List[UserActivityData] = Field(description="Top active users")
-    recent_alerts: List[AlertData] = Field(
-        default_factory=list, description="Recent system alerts"
-    )
-    usage_trend: List[Dict[str, Any]] = Field(
-        default_factory=list, description="Historical trend data"
-    )
-    cache_stats: Dict[str, Any] = Field(
-        default_factory=dict, description="Cache performance stats"
-    )
+    recent_alerts: List[AlertData] = Field(default_factory=list, description="Recent system alerts")
+    usage_trend: List[Dict[str, Any]] = Field(default_factory=list, description="Historical trend data")
+    cache_stats: Dict[str, Any] = Field(default_factory=dict, description="Cache performance stats")
 
     # Legacy compatibility fields
     total_requests: int = Field(description="Legacy compatibility field")
@@ -245,12 +215,8 @@ class DashboardData(BaseModel):
     top_users_legacy: List[Dict[str, Any]] = Field(
         default_factory=list, description="Legacy format top users", alias="top_users"
     )
-    services_status: Dict[str, str] = Field(
-        default_factory=dict, description="Legacy services status"
-    )
-    usage_by_service: Dict[str, int] = Field(
-        default_factory=dict, description="Legacy usage by service"
-    )
+    services_status: Dict[str, str] = Field(default_factory=dict, description="Legacy services status")
+    usage_by_service: Dict[str, int] = Field(default_factory=dict, description="Legacy usage by service")
 
     @computed_field
     @property
@@ -271,17 +237,12 @@ class DashboardData(BaseModel):
         avg_latency = self.metrics.avg_latency_ms
         latency_component = max(
             0.0,
-            (latency_weight * 100.0)
-            - (avg_latency / 1000.0) * (latency_weight * 100.0),
+            (latency_weight * 100.0) - (avg_latency / 1000.0) * (latency_weight * 100.0),
         )
 
         # Service health component (weighted)
-        healthy_services = sum(
-            1 for s in self.services if s.health_status == ServiceHealthStatus.HEALTHY
-        )
-        service_health_component = (healthy_services / len(self.services)) * (
-            service_health_weight * 100.0
-        )
+        healthy_services = sum(1 for s in self.services if s.health_status == ServiceHealthStatus.HEALTHY)
+        service_health_component = (healthy_services / len(self.services)) * (service_health_weight * 100.0)
 
         return success_component + latency_component + service_health_component
 
@@ -298,9 +259,7 @@ class RateLimitStatus(BaseModel):
     reset_at: datetime = Field(description="When the limit resets")
     percentage_used: float = Field(description="Percentage of limit used")
     is_throttled: bool = Field(default=False, description="Whether currently throttled")
-    last_request: Optional[datetime] = Field(
-        default=None, description="Last request timestamp"
-    )
+    last_request: Optional[datetime] = Field(default=None, description="Last request timestamp")
 
 
 class DashboardService:
@@ -333,9 +292,7 @@ class DashboardService:
 
         logger.info("DashboardService initialized with real analytics capabilities")
 
-    async def get_dashboard_data(
-        self, time_range_hours: int = 24, top_users_limit: int = 10
-    ) -> DashboardData:
+    async def get_dashboard_data(self, time_range_hours: int = 24, top_users_limit: int = 10) -> DashboardData:
         """Get comprehensive dashboard data with real analytics."""
         try:
             # Run analytics queries in parallel for performance
@@ -364,14 +321,9 @@ class DashboardService:
             )
 
             # Build legacy compatibility fields
-            legacy_services_status = {
-                service.service_name: service.health_status.value
-                for service in services
-            }
+            legacy_services_status = {service.service_name: service.health_status.value for service in services}
 
-            legacy_usage_by_service = {
-                service.service_name: service.total_requests for service in services
-            }
+            legacy_usage_by_service = {service.service_name: service.total_requests for service in services}
 
             legacy_top_users = [
                 {
@@ -404,9 +356,7 @@ class DashboardService:
             now = datetime.now(timezone.utc)
             return await self._get_fallback_dashboard_data(now, time_range_hours)
 
-    async def get_rate_limit_status(
-        self, key_id: str, window_minutes: int = 60
-    ) -> Dict[str, Any]:
+    async def get_rate_limit_status(self, key_id: str, window_minutes: int = 60) -> Dict[str, Any]:
         """Get real rate limit status from cache data."""
         try:
             if not self.cache:
@@ -424,10 +374,7 @@ class DashboardService:
                 reset_at = datetime.fromisoformat(
                     cached_data.get(
                         "reset_at",
-                        (
-                            datetime.now(timezone.utc)
-                            + timedelta(minutes=window_minutes)
-                        ).isoformat(),
+                        (datetime.now(timezone.utc) + timedelta(minutes=window_minutes)).isoformat(),
                     )
                 )
 
@@ -436,9 +383,7 @@ class DashboardService:
                     "limit": limit_value,
                     "remaining": remaining,
                     "reset_at": reset_at.isoformat(),
-                    "percentage_used": (current_usage / limit_value * 100)
-                    if limit_value > 0
-                    else 0,
+                    "percentage_used": (current_usage / limit_value * 100) if limit_value > 0 else 0,
                     "is_throttled": current_usage >= limit_value,
                 }
             else:
@@ -474,37 +419,17 @@ class DashboardService:
             # Calculate metrics from real data
             total_requests = len(usage_logs)
             total_errors = sum(1 for log in usage_logs if not log.get("success", True))
-            success_rate = (
-                (total_requests - total_errors) / total_requests
-                if total_requests > 0
-                else 1.0
-            )
+            success_rate = (total_requests - total_errors) / total_requests if total_requests > 0 else 1.0
 
             # Calculate latency metrics
-            latencies = [
-                log.get("latency_ms", 150.0)
-                for log in usage_logs
-                if log.get("latency_ms")
-            ]
+            latencies = [log.get("latency_ms", 150.0) for log in usage_logs if log.get("latency_ms")]
             avg_latency_ms = statistics.mean(latencies) if latencies else 150.0
-            p95_latency_ms = (
-                statistics.quantiles(latencies, n=20)[18]
-                if len(latencies) > 1
-                else avg_latency_ms * 1.5
-            )
-            p99_latency_ms = (
-                statistics.quantiles(latencies, n=100)[98]
-                if len(latencies) > 1
-                else avg_latency_ms * 2.0
-            )
+            p95_latency_ms = statistics.quantiles(latencies, n=20)[18] if len(latencies) > 1 else avg_latency_ms * 1.5
+            p99_latency_ms = statistics.quantiles(latencies, n=100)[98] if len(latencies) > 1 else avg_latency_ms * 2.0
 
             # Get unique counts
-            unique_users = len(
-                set(log.get("user_id") for log in usage_logs if log.get("user_id"))
-            )
-            unique_keys = len(
-                set(log.get("key_id") for log in usage_logs if log.get("key_id"))
-            )
+            unique_users = len(set(log.get("user_id") for log in usage_logs if log.get("user_id")))
+            unique_keys = len(set(log.get("key_id") for log in usage_logs if log.get("key_id")))
 
             # Calculate requests per minute
             duration_minutes = max(1, time_range_hours * 60)
@@ -526,9 +451,7 @@ class DashboardService:
 
             # Cache the results
             if self.cache:
-                await self.cache.set_json(
-                    cache_key, metrics.model_dump(), ttl=self._cache_ttl
-                )
+                await self.cache.set_json(cache_key, metrics.model_dump(), ttl=self._cache_ttl)
 
             return metrics
 
@@ -536,9 +459,7 @@ class DashboardService:
             logger.error(f"Failed to get real-time metrics: {e}")
             return self._get_default_metrics(time_range_hours)
 
-    async def _get_service_analytics(
-        self, time_range_hours: int
-    ) -> List[ServiceAnalytics]:
+    async def _get_service_analytics(self, time_range_hours: int) -> List[ServiceAnalytics]:
         """Get per-service analytics from real data."""
         try:
             # Get health checks for all services
@@ -547,9 +468,7 @@ class DashboardService:
             services = []
             for service_type, health_check in health_checks.items():
                 # Get usage data for this service
-                service_usage = await self._get_service_usage_data(
-                    service_type, time_range_hours
-                )
+                service_usage = await self._get_service_usage_data(service_type, time_range_hours)
 
                 services.append(
                     ServiceAnalytics(
@@ -573,9 +492,7 @@ class DashboardService:
             logger.error(f"Failed to get service analytics: {e}")
             return self._get_default_service_analytics()
 
-    async def _get_user_activity_data(
-        self, time_range_hours: int, limit: int
-    ) -> List[UserActivityData]:
+    async def _get_user_activity_data(self, time_range_hours: int, limit: int) -> List[UserActivityData]:
         """Get real user activity analytics."""
         try:
             if not self.db:
@@ -631,15 +548,12 @@ class DashboardService:
             user_activities = []
             for user_id, stats in user_stats.items():
                 success_rate = (
-                    (stats["request_count"] - stats["error_count"])
-                    / stats["request_count"]
+                    (stats["request_count"] - stats["error_count"]) / stats["request_count"]
                     if stats["request_count"] > 0
                     else 1.0
                 )
 
-                avg_latency = (
-                    statistics.mean(stats["latencies"]) if stats["latencies"] else 150.0
-                )
+                avg_latency = statistics.mean(stats["latencies"]) if stats["latencies"] else 150.0
 
                 user_activities.append(
                     UserActivityData(
@@ -741,9 +655,7 @@ class DashboardService:
             logger.error(f"Failed to get cache statistics: {e}")
             return {}
 
-    async def _query_usage_logs(
-        self, start_time: datetime, end_time: datetime
-    ) -> List[Dict[str, Any]]:
+    async def _query_usage_logs(self, start_time: datetime, end_time: datetime) -> List[Dict[str, Any]]:
         """Query usage logs from database."""
         try:
             if not self.db:
@@ -755,27 +667,21 @@ class DashboardService:
                 "timestamp__lte": end_time.isoformat(),
             }
 
-            logs = await self.db.select(
-                "api_key_usage_logs", filters=filters, limit=10000
-            )
+            logs = await self.db.select("api_key_usage_logs", filters=filters, limit=10000)
             return logs
 
         except Exception as e:
             logger.error(f"Failed to query usage logs: {e}")
             return []
 
-    async def _get_service_usage_data(
-        self, service_type: ServiceType, time_range_hours: int
-    ) -> Dict[str, Any]:
+    async def _get_service_usage_data(self, service_type: ServiceType, time_range_hours: int) -> Dict[str, Any]:
         """Get usage data for a specific service."""
         try:
             end_time = datetime.now(timezone.utc)
             start_time = end_time - timedelta(hours=time_range_hours)
 
             usage_logs = await self._query_usage_logs(start_time, end_time)
-            service_logs = [
-                log for log in usage_logs if log.get("service") == service_type.value
-            ]
+            service_logs = [log for log in usage_logs if log.get("service") == service_type.value]
 
             if not service_logs:
                 return {
@@ -790,9 +696,7 @@ class DashboardService:
             requests = len(service_logs)
             errors = sum(1 for log in service_logs if not log.get("success", True))
             success_rate = (requests - errors) / requests if requests > 0 else 1.0
-            active_keys = len(
-                set(log.get("key_id") for log in service_logs if log.get("key_id"))
-            )
+            active_keys = len(set(log.get("key_id") for log in service_logs if log.get("key_id")))
 
             return {
                 "requests": requests,
@@ -814,9 +718,7 @@ class DashboardService:
                 "quota_usage": 0.0,
             }
 
-    def _get_default_rate_limit_status(
-        self, key_id: str, window_minutes: int
-    ) -> Dict[str, Any]:
+    def _get_default_rate_limit_status(self, key_id: str, window_minutes: int) -> Dict[str, Any]:
         """Get default rate limit status when cache is unavailable."""
         # Use deterministic but varied values based on key_id
         base_usage = hash(key_id) % 500
@@ -880,9 +782,7 @@ class DashboardService:
 
         return services
 
-    async def _get_fallback_dashboard_data(
-        self, timestamp: datetime, time_range_hours: int
-    ) -> DashboardData:
+    async def _get_fallback_dashboard_data(self, timestamp: datetime, time_range_hours: int) -> DashboardData:
         """Get fallback dashboard data when queries fail."""
         metrics = self._get_default_metrics(time_range_hours)
         services = self._get_default_service_analytics()

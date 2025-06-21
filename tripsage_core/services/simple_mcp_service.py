@@ -39,9 +39,7 @@ class SimpleMCPService:
 
         return self._airbnb_client
 
-    async def invoke(
-        self, method_name: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    async def invoke(self, method_name: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Invoke an MCP method directly.
 
@@ -174,9 +172,7 @@ class SimpleMCPService:
 
         try:
             # Try a simple operation
-            await client.search_accommodations(
-                location="test", checkin="2025-01-01", checkout="2025-01-02"
-            )
+            await client.search_accommodations(location="test", checkin="2025-01-01", checkout="2025-01-02")
             return {"status": "healthy"}
         except Exception as e:
             return {"status": "unhealthy", "error": str(e)}
@@ -197,9 +193,7 @@ class SimpleMCPService:
         if self._airbnb_client:
             initialized.append("airbnb")
         # Mock services are always available
-        initialized.extend(
-            ["mock_flight", "mock_geocode", "mock_weather", "mock_memory"]
-        )
+        initialized.extend(["mock_flight", "mock_geocode", "mock_weather", "mock_memory"])
         return initialized
 
     async def shutdown(self) -> None:

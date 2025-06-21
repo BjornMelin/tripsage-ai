@@ -191,10 +191,19 @@ export class EnhancedApiClient {
     }
 
     // Prepare headers
-    const headers = {
+    let headers: Record<string, string> = {
       ...this.config.defaultHeaders,
       ...finalConfig.headers,
     };
+
+    // Add body for POST/PUT/PATCH requests
+    if (finalConfig.data !== undefined && finalConfig.method !== "GET") {
+      if (finalConfig.data instanceof FormData) {
+        // Remove content-type for FormData (browser will set it with boundary)
+        const { "Content-Type": _, ...headersWithoutContentType } = headers;
+        headers = headersWithoutContentType;
+      }
+    }
 
     // Prepare request options
     const requestOptions: RequestInit = {
@@ -207,8 +216,6 @@ export class EnhancedApiClient {
     if (finalConfig.data !== undefined && finalConfig.method !== "GET") {
       if (finalConfig.data instanceof FormData) {
         requestOptions.body = finalConfig.data;
-        // Remove content-type for FormData (browser will set it with boundary)
-        delete headers["Content-Type"];
       } else {
         requestOptions.body = JSON.stringify(finalConfig.data);
       }
@@ -306,7 +313,7 @@ export class EnhancedApiClient {
         }
 
         // Wait before retrying (exponential backoff)
-        const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+        const delay = Math.min(1000 * 2 ** attempt, 10000);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }

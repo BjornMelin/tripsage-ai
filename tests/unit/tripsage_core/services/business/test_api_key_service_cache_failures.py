@@ -82,9 +82,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should work without cache
-            result = await service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -92,16 +90,12 @@ class TestApiKeyServiceCacheFailures:
             mock_get.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cache_connection_error_during_get(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_connection_error_during_get(self, api_service, mock_dependencies):
         """Test cache retrieval when connection fails - targets line 1145."""
         user_id = str(uuid.uuid4())
 
         # Mock cache get to raise ConnectionError
-        mock_dependencies["cache"].get.side_effect = redis.exceptions.ConnectionError(
-            "Connection to Redis failed"
-        )
+        mock_dependencies["cache"].get.side_effect = redis.exceptions.ConnectionError("Connection to Redis failed")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
@@ -110,9 +104,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should fallback to actual validation
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -126,23 +118,17 @@ class TestApiKeyServiceCacheFailures:
         user_id = str(uuid.uuid4())
 
         # Mock cache get to raise TimeoutError
-        mock_dependencies["cache"].get.side_effect = redis.exceptions.TimeoutError(
-            "Cache operation timed out"
-        )
+        mock_dependencies["cache"].get.side_effect = redis.exceptions.TimeoutError("Cache operation timed out")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = {
-                "main": {"temp": 20}
-            }  # Weather API response format
+            mock_response.json.return_value = {"main": {"temp": 20}}  # Weather API response format
             mock_response.headers = {}  # Empty headers
             mock_get.return_value = mock_response
 
             # Should continue validation despite timeout - use valid weather key format
-            result = await api_service.validate_api_key(
-                ServiceType.WEATHER, "valid-weather-key-16-chars", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.WEATHER, "valid-weather-key-16-chars", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -164,18 +150,14 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should handle JSON decode error gracefully
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             # Should fall back to actual validation when cache is corrupted
             mock_get.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cache_validation_result_construction_error(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_validation_result_construction_error(self, api_service, mock_dependencies):
         """Test handling of ValidationResult construction errors - targets line 1148."""
         user_id = str(uuid.uuid4())
 
@@ -190,9 +172,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should handle ValidationResult construction error gracefully
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             # Should fall back to actual validation
@@ -219,9 +199,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should validate successfully despite cache write failure
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -235,9 +213,7 @@ class TestApiKeyServiceCacheFailures:
 
         # Mock cache operations
         mock_dependencies["cache"].get.return_value = None
-        mock_dependencies["cache"].set.side_effect = redis.exceptions.TimeoutError(
-            "Cache write operation timed out"
-        )
+        mock_dependencies["cache"].set.side_effect = redis.exceptions.TimeoutError("Cache write operation timed out")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
@@ -273,9 +249,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should complete validation despite serialization error
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -283,16 +257,12 @@ class TestApiKeyServiceCacheFailures:
     # Redis Client Specific Failures
 
     @pytest.mark.asyncio
-    async def test_redis_response_error_during_get(
-        self, api_service, mock_dependencies
-    ):
+    async def test_redis_response_error_during_get(self, api_service, mock_dependencies):
         """Test handling of Redis response errors."""
         user_id = str(uuid.uuid4())
 
         # Mock cache get to raise ResponseError
-        mock_dependencies["cache"].get.side_effect = redis.exceptions.ResponseError(
-            "Redis server returned an error"
-        )
+        mock_dependencies["cache"].get.side_effect = redis.exceptions.ResponseError("Redis server returned an error")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
@@ -301,9 +271,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should handle Redis error gracefully
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -314,9 +282,7 @@ class TestApiKeyServiceCacheFailures:
         user_id = str(uuid.uuid4())
 
         mock_dependencies["cache"].get.return_value = None
-        mock_dependencies["cache"].set.side_effect = redis.exceptions.DataError(
-            "Invalid data format for Redis"
-        )
+        mock_dependencies["cache"].set.side_effect = redis.exceptions.DataError("Invalid data format for Redis")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
@@ -325,9 +291,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should complete validation despite cache data error
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -335,9 +299,7 @@ class TestApiKeyServiceCacheFailures:
     # Comprehensive Failure Scenarios
 
     @pytest.mark.asyncio
-    async def test_cache_failures_during_concurrent_operations(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_failures_during_concurrent_operations(self, api_service, mock_dependencies):
         """Test cache failures during concurrent validation operations."""
         user_id = str(uuid.uuid4())
 
@@ -347,9 +309,7 @@ class TestApiKeyServiceCacheFailures:
             redis.exceptions.TimeoutError("Timeout"),
             None,  # Success case
         ]
-        mock_dependencies["cache"].set.side_effect = redis.exceptions.ConnectionError(
-            "Write failed"
-        )
+        mock_dependencies["cache"].set.side_effect = redis.exceptions.ConnectionError("Write failed")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
@@ -358,10 +318,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Run concurrent validations
-            tasks = [
-                api_service.validate_api_key(ServiceType.OPENAI, f"sk-key-{i}", user_id)
-                for i in range(3)
-            ]
+            tasks = [api_service.validate_api_key(ServiceType.OPENAI, f"sk-key-{i}", user_id) for i in range(3)]
             results = await asyncio.gather(*tasks)
 
             # All should succeed despite cache failures
@@ -370,16 +327,12 @@ class TestApiKeyServiceCacheFailures:
                 assert result.status == ValidationStatus.VALID
 
     @pytest.mark.asyncio
-    async def test_cache_failure_logging_behavior(
-        self, api_service, mock_dependencies, caplog
-    ):
+    async def test_cache_failure_logging_behavior(self, api_service, mock_dependencies, caplog):
         """Test that cache failures are properly logged as warnings."""
         user_id = str(uuid.uuid4())
 
         # Set up cache to fail with connection error
-        mock_dependencies["cache"].get.side_effect = redis.exceptions.ConnectionError(
-            "Cache connection lost"
-        )
+        mock_dependencies["cache"].get.side_effect = redis.exceptions.ConnectionError("Cache connection lost")
 
         with patch.object(api_service.client, "get") as mock_get:
             mock_response = Mock()
@@ -388,23 +341,17 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Perform validation
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
 
             # Check that warning was logged
-            warning_logs = [
-                record for record in caplog.records if record.levelname == "WARNING"
-            ]
+            warning_logs = [record for record in caplog.records if record.levelname == "WARNING"]
             assert len(warning_logs) >= 1
             assert "Cache retrieval error" in warning_logs[0].message
 
     @pytest.mark.asyncio
-    async def test_cache_successful_retrieval_after_failures(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_successful_retrieval_after_failures(self, api_service, mock_dependencies):
         """Test that cache works normally after previous failures."""
         user_id = str(uuid.uuid4())
 
@@ -429,25 +376,19 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # First validation - cache fails, real validation occurs
-            result1 = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result1 = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
             assert result1.is_valid is True
             assert mock_get.call_count == 1
 
             # Second validation - should use cached result
-            result2 = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result2 = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
             assert result2.is_valid is True
             assert result2.message == "Cached validation result"
             # No additional API calls should be made
             assert mock_get.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_cache_key_generation_with_special_characters(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_key_generation_with_special_characters(self, api_service, mock_dependencies):
         """Test cache key generation handles special characters in keys."""
         user_id = str(uuid.uuid4())
 
@@ -464,9 +405,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Should handle special characters in cache key generation
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, special_key, user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, special_key, user_id)
 
             assert result.is_valid is True
             # Verify cache operations were attempted
@@ -474,9 +413,7 @@ class TestApiKeyServiceCacheFailures:
             mock_dependencies["cache"].set.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cache_ttl_configuration_resilience(
-        self, api_service, mock_dependencies
-    ):
+    async def test_cache_ttl_configuration_resilience(self, api_service, mock_dependencies):
         """Test cache operations work with different TTL configurations."""
         user_id = str(uuid.uuid4())
 
@@ -490,9 +427,7 @@ class TestApiKeyServiceCacheFailures:
             mock_get.return_value = mock_response
 
             # Perform validation
-            result = await api_service.validate_api_key(
-                ServiceType.OPENAI, "sk-test-key-12345", user_id
-            )
+            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test-key-12345", user_id)
 
             assert result.is_valid is True
 
@@ -542,24 +477,18 @@ class TestApiKeyServiceCacheFailures:
         )
 
         # 5. Test with no cache service (lines 1159-1160)
-        await service_no_cache._cache_validation_result(
-            service_type, key_value, validation_result
-        )
+        await service_no_cache._cache_validation_result(service_type, key_value, validation_result)
         # Should complete without error
 
         # 6. Test with cache set exception (lines 1175-1176)
         mock_dependencies["cache"].set.side_effect = Exception("Cache write error")
-        await api_service._cache_validation_result(
-            service_type, key_value, validation_result
-        )
+        await api_service._cache_validation_result(service_type, key_value, validation_result)
         # Should complete without error (exception is caught and logged)
 
         # 7. Test successful path for coverage
         mock_dependencies["cache"].set.side_effect = None
         mock_dependencies["cache"].set.return_value = True
-        await api_service._cache_validation_result(
-            service_type, key_value, validation_result
-        )
+        await api_service._cache_validation_result(service_type, key_value, validation_result)
         mock_dependencies["cache"].set.assert_called()
 
     @pytest.mark.asyncio
@@ -584,9 +513,7 @@ class TestApiKeyServiceCacheFailures:
 
         # Should use the v2 format with SHA256 hash
         assert cache_key.startswith("api_validation:v2:")
-        assert (
-            len(cache_key) == len("api_validation:v2:") + 64
-        )  # SHA256 hash is 64 chars
+        assert len(cache_key) == len("api_validation:v2:") + 64  # SHA256 hash is 64 chars
 
         # Key should not contain the actual API key value
         assert key_value not in cache_key

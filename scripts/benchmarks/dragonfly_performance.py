@@ -53,9 +53,7 @@ class DragonflyBenchmark:
 
         # First, populate cache
         for i in range(min(1000, iterations)):
-            await self.cache_service.set_json(
-                f"bench:get:{i}", {"id": i, "value": f"test_value_{i}"}, ttl=300
-            )
+            await self.cache_service.set_json(f"bench:get:{i}", {"id": i, "value": f"test_value_{i}"}, ttl=300)
 
         times = []
         for i in range(iterations):
@@ -78,9 +76,7 @@ class DragonflyBenchmark:
             start = time.perf_counter()
 
             if i % 3 == 0:  # 33% writes
-                await self.cache_service.set_json(
-                    f"bench:mixed:{i}", {"id": i, "value": f"test_value_{i}"}, ttl=300
-                )
+                await self.cache_service.set_json(f"bench:mixed:{i}", {"id": i, "value": f"test_value_{i}"}, ttl=300)
             else:  # 67% reads
                 await self.cache_service.get_json(f"bench:mixed:{i % 1000}")
 
@@ -91,14 +87,9 @@ class DragonflyBenchmark:
         avg_ms = statistics.mean(times) * 1000
         print(f"✅ MIXED: {ops_per_sec:,.0f} ops/sec (avg: {avg_ms:.3f}ms)")
 
-    async def benchmark_bulk_operations(
-        self, batch_size: int = 100, batches: int = 100
-    ):
+    async def benchmark_bulk_operations(self, batch_size: int = 100, batches: int = 100):
         """Benchmark bulk operations."""
-        print(
-            f"\n📊 Benchmarking bulk operations "
-            f"({batch_size} items × {batches} batches)..."
-        )
+        print(f"\n📊 Benchmarking bulk operations ({batch_size} items × {batches} batches)...")
         times = []
 
         for batch in range(batches):
@@ -114,10 +105,7 @@ class DragonflyBenchmark:
 
             # Time bulk set
             start = time.perf_counter()
-            tasks = [
-                self.cache_service.set_json(key, value, ttl=300)
-                for key, value in batch_data.items()
-            ]
+            tasks = [self.cache_service.set_json(key, value, ttl=300) for key, value in batch_data.items()]
             await asyncio.gather(*tasks)
             times.append(time.perf_counter() - start)
 

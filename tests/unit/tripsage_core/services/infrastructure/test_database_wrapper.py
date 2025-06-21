@@ -42,15 +42,9 @@ class TestDatabaseServiceWrapper:
         )
 
     @patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService")
-    @patch(
-        "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-    )
-    @patch(
-        "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
-    )
-    def test_initialization_with_monitoring_enabled(
-        self, mock_monitor_class, mock_get_metrics, mock_db_service_class
-    ):
+    @patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics")
+    @patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor")
+    def test_initialization_with_monitoring_enabled(self, mock_monitor_class, mock_get_metrics, mock_db_service_class):
         """Test wrapper initialization with monitoring enabled."""
         mock_metrics = Mock(spec=DatabaseMetrics)
         mock_get_metrics.return_value = mock_metrics
@@ -83,12 +77,8 @@ class TestDatabaseServiceWrapper:
         assert wrapper.monitor is None
 
     @patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService")
-    @patch(
-        "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-    )
-    def test_initialization_with_metrics_error(
-        self, mock_get_metrics, mock_db_service_class
-    ):
+    @patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics")
+    def test_initialization_with_metrics_error(self, mock_get_metrics, mock_db_service_class):
         """Test wrapper initialization handles metrics initialization errors."""
         mock_get_metrics.side_effect = Exception("Metrics initialization failed")
         mock_db_service = Mock()
@@ -102,9 +92,7 @@ class TestDatabaseServiceWrapper:
 
     def test_property_delegation(self):
         """Test that properties are delegated to database service."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ) as mock_db_service_class:
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class:
             mock_db_service = Mock()
             mock_db_service.is_connected = True
             mock_db_service.client = "mock_client"
@@ -119,12 +107,8 @@ class TestDatabaseServiceWrapper:
     async def test_connect_with_monitoring(self):
         """Test connection with monitoring enabled."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
             patch(
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
             ) as mock_monitor_class,
@@ -166,12 +150,8 @@ class TestDatabaseServiceWrapper:
         )
 
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
         ):
             mock_db_service = Mock()
             mock_db_service.connect = AsyncMock()
@@ -192,20 +172,14 @@ class TestDatabaseServiceWrapper:
     async def test_connect_failure_recorded(self):
         """Test that connection failures are recorded."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
             patch(
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
             ) as mock_monitor_class,
         ):
             mock_db_service = Mock()
-            mock_db_service.connect = AsyncMock(
-                side_effect=Exception("Connection failed")
-            )
+            mock_db_service.connect = AsyncMock(side_effect=Exception("Connection failed"))
             mock_db_service_class.return_value = mock_db_service
 
             mock_metrics = Mock()
@@ -233,9 +207,7 @@ class TestDatabaseServiceWrapper:
     async def test_close_with_monitoring(self):
         """Test closing connection with monitoring."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
             patch(
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
             ) as mock_monitor_class,
@@ -262,9 +234,7 @@ class TestDatabaseServiceWrapper:
     async def test_close_with_monitor_error(self):
         """Test closing handles monitor errors gracefully."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
             patch(
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
             ) as mock_monitor_class,
@@ -274,9 +244,7 @@ class TestDatabaseServiceWrapper:
             mock_db_service_class.return_value = mock_db_service
 
             mock_monitor = Mock()
-            mock_monitor.stop_monitoring = AsyncMock(
-                side_effect=Exception("Monitor error")
-            )
+            mock_monitor.stop_monitoring = AsyncMock(side_effect=Exception("Monitor error"))
             mock_monitor.configure_monitoring = Mock()
             mock_monitor_class.return_value = mock_monitor
 
@@ -292,12 +260,8 @@ class TestDatabaseServiceWrapper:
     async def test_database_operations_with_metrics(self):
         """Test database operations with metrics collection."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
         ):
             mock_db_service = Mock()
             mock_db_service.insert = AsyncMock(return_value=[{"id": "123"}])
@@ -328,9 +292,7 @@ class TestDatabaseServiceWrapper:
     @pytest.mark.asyncio
     async def test_database_operations_without_metrics(self):
         """Test database operations without metrics collection."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ) as mock_db_service_class:
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class:
             mock_db_service = Mock()
             mock_db_service.insert = AsyncMock(return_value=[{"id": "123"}])
             mock_db_service.select = AsyncMock(return_value=[{"id": "456"}])
@@ -344,9 +306,7 @@ class TestDatabaseServiceWrapper:
 
             # Verify operations were called directly
             mock_db_service.insert.assert_called_once_with("users", {"name": "test"})
-            mock_db_service.select.assert_called_once_with(
-                "users", "*", None, None, None, None
-            )
+            mock_db_service.select.assert_called_once_with("users", "*", None, None, None, None)
 
             assert result1 == [{"id": "123"}]
             assert result2 == [{"id": "456"}]
@@ -355,18 +315,12 @@ class TestDatabaseServiceWrapper:
     async def test_transaction_with_metrics(self):
         """Test transaction context manager with metrics."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_service_class,
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
         ):
             mock_db_service = Mock()
             mock_transaction = AsyncMock()
-            mock_db_service.transaction.return_value.__aenter__ = AsyncMock(
-                return_value=mock_transaction
-            )
+            mock_db_service.transaction.return_value.__aenter__ = AsyncMock(return_value=mock_transaction)
             mock_db_service.transaction.return_value.__aexit__ = AsyncMock()
             mock_db_service_class.return_value = mock_db_service
 
@@ -386,9 +340,7 @@ class TestDatabaseServiceWrapper:
 
     def test_pass_through_methods(self):
         """Test that high-level methods are passed through correctly."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ) as mock_db_service_class:
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_service_class:
             mock_db_service = Mock()
             mock_db_service.create_trip = AsyncMock(return_value={"id": "trip123"})
             mock_db_service.get_user = AsyncMock(return_value={"id": "user123"})
@@ -405,12 +357,8 @@ class TestDatabaseServiceWrapper:
     def test_monitoring_access_methods_enabled(self):
         """Test monitoring access methods when monitoring is enabled."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ),
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService"),
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
             patch(
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
             ) as mock_monitor_class,
@@ -436,9 +384,7 @@ class TestDatabaseServiceWrapper:
 
     def test_monitoring_access_methods_disabled(self):
         """Test monitoring access methods when monitoring is disabled."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ):
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService"):
             wrapper = DatabaseServiceWrapper(self.settings_disabled)
 
             # Test monitoring access methods return None/empty when disabled
@@ -451,9 +397,7 @@ class TestDatabaseServiceWrapper:
     async def test_manual_checks_enabled(self):
         """Test manual health and security checks when monitoring is enabled."""
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ),
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService"),
             patch(
                 "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
             ) as mock_monitor_class,
@@ -476,9 +420,7 @@ class TestDatabaseServiceWrapper:
     @pytest.mark.asyncio
     async def test_manual_checks_disabled(self):
         """Test manual checks when monitoring is disabled."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ):
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService"):
             wrapper = DatabaseServiceWrapper(self.settings_disabled)
 
             # Test manual checks return None when disabled

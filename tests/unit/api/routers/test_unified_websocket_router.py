@@ -84,9 +84,7 @@ class TestWebSocketDependencyInjection:
         mock_db_session = MagicMock(spec=AsyncSession)
 
         # Call the dependency function
-        with patch(
-            "tripsage.api.routers.websocket.CoreChatService"
-        ) as mock_service_class:
+        with patch("tripsage.api.routers.websocket.CoreChatService") as mock_service_class:
             mock_instance = AsyncMock()
             mock_service_class.return_value = mock_instance
 
@@ -358,9 +356,7 @@ class TestWebSocketErrorHandling:
         assert get_service_registry is not None
 
         # Test that they return instances (with mocked dependencies)
-        with patch(
-            "tripsage.api.routers.websocket.ServiceRegistry"
-        ) as mock_service_registry:
+        with patch("tripsage.api.routers.websocket.ServiceRegistry") as mock_service_registry:
             with patch("tripsage.api.routers.websocket.ChatAgent") as mock_chat_agent:
                 mock_service_instance = MagicMock()
                 mock_agent_instance = MagicMock()

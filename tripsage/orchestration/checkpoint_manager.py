@@ -86,9 +86,7 @@ class SupabaseCheckpointManager:
             # Run validation in async context if needed
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(
-                    manager.parse_and_validate_url(self._connection_string)
-                )
+                loop.create_task(manager.parse_and_validate_url(self._connection_string))
             except RuntimeError:
                 # No running loop, create one for validation
                 asyncio.run(manager.parse_and_validate_url(self._connection_string))
@@ -101,9 +99,7 @@ class SupabaseCheckpointManager:
 
         except Exception as e:
             logger.error(f"Failed to build secure connection string: {e}")
-            raise DatabaseURLParsingError(
-                f"Could not create secure checkpoint connection: {e}"
-            ) from e
+            raise DatabaseURLParsingError(f"Could not create secure checkpoint connection: {e}") from e
 
     def _create_connection_pool(self, async_mode: bool = False) -> None:
         """
@@ -113,9 +109,7 @@ class SupabaseCheckpointManager:
             async_mode: Whether to create async or sync pool
         """
         if not POSTGRES_AVAILABLE:
-            logger.warning(
-                "PostgreSQL not available, skipping connection pool creation"
-            )
+            logger.warning("PostgreSQL not available, skipping connection pool creation")
             return
 
         conn_string = self._build_connection_string()
@@ -170,9 +164,7 @@ class SupabaseCheckpointManager:
                 self._create_connection_pool(async_mode=True)
 
             # Create checkpointer with connection pool
-            self._async_checkpointer = AsyncPostgresSaver(
-                connection=self._async_connection_pool
-            )
+            self._async_checkpointer = AsyncPostgresSaver(connection=self._async_connection_pool)
 
             # Setup checkpoint tables (idempotent operation)
             await self._setup_checkpoint_tables_async()
@@ -259,9 +251,7 @@ class SupabaseCheckpointManager:
                     deleted_rows = await cursor.fetchall()
 
             deleted_count = len(deleted_rows) if deleted_rows else 0
-            logger.info(
-                f"Cleaned up {deleted_count} checkpoints older than {days_old} days"
-            )
+            logger.info(f"Cleaned up {deleted_count} checkpoints older than {days_old} days")
             return deleted_count
 
         except Exception as e:

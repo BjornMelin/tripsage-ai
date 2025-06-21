@@ -25,13 +25,9 @@ class FlightSearchParams(BaseModel):
     origin: str = Field(description="Origin airport code or city")
     destination: str = Field(description="Destination airport code or city")
     departure_date: str = Field(description="Departure date (YYYY-MM-DD)")
-    return_date: Optional[str] = Field(
-        default=None, description="Return date (YYYY-MM-DD)"
-    )
+    return_date: Optional[str] = Field(default=None, description="Return date (YYYY-MM-DD)")
     passengers: int = Field(default=1, description="Number of passengers")
-    class_preference: Optional[str] = Field(
-        default="economy", description="Flight class (economy, business, first)"
-    )
+    class_preference: Optional[str] = Field(default="economy", description="Flight class (economy, business, first)")
 
 
 class AccommodationSearchParams(BaseModel):
@@ -41,12 +37,8 @@ class AccommodationSearchParams(BaseModel):
     check_in: str = Field(description="Check-in date (YYYY-MM-DD)")
     check_out: str = Field(description="Check-out date (YYYY-MM-DD)")
     guests: int = Field(default=1, description="Number of guests")
-    price_min: Optional[float] = Field(
-        default=None, description="Minimum price per night"
-    )
-    price_max: Optional[float] = Field(
-        default=None, description="Maximum price per night"
-    )
+    price_min: Optional[float] = Field(default=None, description="Minimum price per night")
+    price_max: Optional[float] = Field(default=None, description="Maximum price per night")
 
 
 class MemoryParams(BaseModel):
@@ -66,9 +58,7 @@ class WebSearchParams(BaseModel):
     """Parameters for web search."""
 
     query: str = Field(description="Search query")
-    location: Optional[str] = Field(
-        default=None, description="Location context for search"
-    )
+    location: Optional[str] = Field(default=None, description="Location context for search")
 
 
 # Core Travel Tools
@@ -137,9 +127,7 @@ async def search_accommodations(
 async def geocode_location(location: str) -> str:
     """Get geographic coordinates and details for a location."""
     try:
-        result = await mcp_manager.invoke(
-            method_name="geocode", params={"location": location}
-        )
+        result = await mcp_manager.invoke(method_name="geocode", params={"location": location})
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
@@ -151,9 +139,7 @@ async def geocode_location(location: str) -> str:
 async def get_weather(location: str) -> str:
     """Get current weather information for a location."""
     try:
-        result = await mcp_manager.invoke(
-            method_name="get_current_weather", params={"location": location}
-        )
+        result = await mcp_manager.invoke(method_name="get_current_weather", params={"location": location})
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:

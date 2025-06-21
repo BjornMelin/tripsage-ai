@@ -1,7 +1,10 @@
-# 🔧 TripSage Operators Documentation
+# 🔧 TripSage Operators Documentation Archive
 
-> **Deployment, Configuration & Operations Management**  
-> This section contains comprehensive documentation for TripSage operators covering deployment, configuration, security, and operational procedures.
+> **ARCHIVED: June 16, 2025 - Backup created during documentation consolidation**  
+> **Status**: Restored from archive for reference preservation  
+> **Current Documentation**: See [docs/operators/](../../operators/) for active operator documentation
+
+> **Historical Note**: This backup contains comprehensive documentation for TripSage operators covering deployment, configuration, security, and operational procedures as they existed before the consolidation effort.
 
 ## 📂 Documentation Structure
 

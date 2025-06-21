@@ -85,9 +85,7 @@ class TestToolCallValidation:
     """Test tool call validation functionality."""
 
     @pytest.mark.asyncio
-    async def test_validate_tool_call_valid_request(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_validate_tool_call_valid_request(self, tool_calling_service, sample_tool_call_request):
         """Test validation of valid tool call request."""
         result = await tool_calling_service.validate_tool_call(sample_tool_call_request)
 
@@ -100,9 +98,7 @@ class TestToolCallValidation:
     async def test_validate_tool_call_invalid_service(self, tool_calling_service):
         """Test validation with invalid service name."""
         # This should raise during model instantiation
-        with pytest.raises(
-            ValueError, match="Service 'invalid_service' not in allowed services"
-        ):
+        with pytest.raises(ValueError, match="Service 'invalid_service' not in allowed services"):
             ToolCallRequest(
                 id=str(uuid4()),
                 service="invalid_service",
@@ -132,9 +128,7 @@ class TestToolCallValidation:
     async def test_validate_tool_call_invalid_timeout(self, tool_calling_service):
         """Test validation with invalid timeout."""
         # Invalid timeout should raise during model instantiation
-        with pytest.raises(
-            ValueError, match="Timeout must be between 0 and 300 seconds"
-        ):
+        with pytest.raises(ValueError, match="Timeout must be between 0 and 300 seconds"):
             ToolCallRequest(
                 id=str(uuid4()),
                 service="duffel_flights",
@@ -171,16 +165,12 @@ class TestToolCallExecution:
     """Test tool call execution functionality."""
 
     @pytest.mark.asyncio
-    async def test_execute_tool_call_success(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_execute_tool_call_success(self, tool_calling_service, sample_tool_call_request):
         """Test successful tool call execution."""
         expected_result = {"flights": [{"id": "flight_1", "price": 299.99}]}
         tool_calling_service.mcp_manager.invoke.return_value = expected_result
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         assert response.status == "success"
         assert response.result == expected_result
@@ -190,17 +180,11 @@ class TestToolCallExecution:
         assert response.method == sample_tool_call_request.method
 
     @pytest.mark.asyncio
-    async def test_execute_tool_call_mcp_failure(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_execute_tool_call_mcp_failure(self, tool_calling_service, sample_tool_call_request):
         """Test tool call execution with MCP failure."""
-        tool_calling_service.mcp_manager.invoke.side_effect = Exception(
-            "MCP service unavailable"
-        )
+        tool_calling_service.mcp_manager.invoke.side_effect = Exception("MCP service unavailable")
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         assert response.status == "error"
         assert response.result is None
@@ -209,9 +193,7 @@ class TestToolCallExecution:
         assert response.method == sample_tool_call_request.method
 
     @pytest.mark.asyncio
-    async def test_execute_tool_call_timeout(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_execute_tool_call_timeout(self, tool_calling_service, sample_tool_call_request):
         """Test tool call execution with timeout."""
 
         async def slow_invoke(*args, **kwargs):
@@ -221,32 +203,24 @@ class TestToolCallExecution:
         tool_calling_service.mcp_manager.invoke.side_effect = slow_invoke
         sample_tool_call_request.timeout = 0.1  # Very short timeout
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         # Service now has error recovery that succeeds with alternative service
         assert response.status == "success"
         assert response.result is not None
 
     @pytest.mark.asyncio
-    async def test_execute_tool_call_exception(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_execute_tool_call_exception(self, tool_calling_service, sample_tool_call_request):
         """Test tool call execution with exception."""
         tool_calling_service.mcp_manager.invoke.side_effect = Exception("Network error")
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         assert response.status == "error"
         assert "Network error" in response.error
 
     @pytest.mark.asyncio
-    async def test_execute_tool_call_with_retry(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_execute_tool_call_with_retry(self, tool_calling_service, sample_tool_call_request):
         """Test tool call execution with error recovery."""
         # Mock error recovery to return a fallback result
         mock_recovery_result = MagicMock()
@@ -254,28 +228,20 @@ class TestToolCallExecution:
         mock_recovery_result.result = {"data": "success after recovery"}
         mock_recovery_result.strategy_used = MagicMock(value="retry")
 
-        tool_calling_service.error_recovery.handle_mcp_error = AsyncMock(
-            return_value=mock_recovery_result
-        )
+        tool_calling_service.error_recovery.handle_mcp_error = AsyncMock(return_value=mock_recovery_result)
 
         # First invoke fails
-        tool_calling_service.mcp_manager.invoke.side_effect = Exception(
-            "Temporary failure"
-        )
+        tool_calling_service.mcp_manager.invoke.side_effect = Exception("Temporary failure")
         sample_tool_call_request.retry_count = 2
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         assert response.status == "success"
         assert response.result == {"data": "success after recovery"}
         assert tool_calling_service.error_recovery.handle_mcp_error.called
 
     @pytest.mark.asyncio
-    async def test_execute_tool_call_max_retries_exceeded(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_execute_tool_call_max_retries_exceeded(self, tool_calling_service, sample_tool_call_request):
         """Test tool call execution when error recovery fails."""
         # Mock error recovery to fail
         mock_recovery_result = MagicMock()
@@ -283,18 +249,12 @@ class TestToolCallExecution:
         mock_recovery_result.result = None
         mock_recovery_result.error = "All recovery attempts failed"
 
-        tool_calling_service.error_recovery.handle_mcp_error = AsyncMock(
-            return_value=mock_recovery_result
-        )
+        tool_calling_service.error_recovery.handle_mcp_error = AsyncMock(return_value=mock_recovery_result)
 
-        tool_calling_service.mcp_manager.invoke.side_effect = Exception(
-            "Persistent failure"
-        )
+        tool_calling_service.mcp_manager.invoke.side_effect = Exception("Persistent failure")
         sample_tool_call_request.retry_count = 2
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         assert response.status == "error"
         assert "Tool call failed after error recovery" in response.error
@@ -340,9 +300,7 @@ class TestParallelToolCalls:
         assert responses[1].id == "call_2"
 
     @pytest.mark.asyncio
-    async def test_execute_parallel_tool_calls_mixed_results(
-        self, tool_calling_service
-    ):
+    async def test_execute_parallel_tool_calls_mixed_results(self, tool_calling_service):
         """Test parallel tool calls with mixed success/failure results."""
         requests = [
             ToolCallRequest(
@@ -395,9 +353,7 @@ class TestParallelToolCalls:
         assert responses == []
 
     @pytest.mark.asyncio
-    async def test_execute_parallel_tool_calls_concurrent_execution(
-        self, tool_calling_service
-    ):
+    async def test_execute_parallel_tool_calls_concurrent_execution(self, tool_calling_service):
         """Test that parallel tool calls execute concurrently."""
         requests = [
             ToolCallRequest(
@@ -434,9 +390,7 @@ class TestToolCallMetrics:
     """Test tool call metrics and monitoring."""
 
     @pytest.mark.asyncio
-    async def test_get_error_statistics(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_get_error_statistics(self, tool_calling_service, sample_tool_call_request):
         """Test getting error statistics."""
         # Execute some tool calls to generate metrics
         tool_calling_service.mcp_manager.invoke.return_value = {"data": "test"}
@@ -479,9 +433,7 @@ class TestToolCallMetrics:
         assert all(isinstance(r, ToolCallResponse) for r in history)
 
         # Test service filtering
-        flight_history = await tool_calling_service.get_execution_history(
-            limit=10, service="duffel_flights"
-        )
+        flight_history = await tool_calling_service.get_execution_history(limit=10, service="duffel_flights")
         assert all(r.service == "duffel_flights" for r in flight_history)
 
 
@@ -489,27 +441,19 @@ class TestErrorHandling:
     """Test error handling scenarios."""
 
     @pytest.mark.asyncio
-    async def test_handle_tool_call_error_logging(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_handle_tool_call_error_logging(self, tool_calling_service, sample_tool_call_request):
         """Test proper error logging for tool call failures."""
         tool_calling_service.mcp_manager.invoke.side_effect = Exception("Test error")
 
-        with patch(
-            "tripsage_core.services.business.tool_calling_service.logger"
-        ) as mock_logger:
-            response = await tool_calling_service.execute_tool_call(
-                sample_tool_call_request
-            )
+        with patch("tripsage_core.services.business.tool_calling_service.logger") as mock_logger:
+            response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
             # Verify error was logged
             mock_logger.error.assert_called()
             assert response.status == "error"
 
     @pytest.mark.asyncio
-    async def test_error_recovery_integration(
-        self, tool_calling_service, sample_tool_call_request
-    ):
+    async def test_error_recovery_integration(self, tool_calling_service, sample_tool_call_request):
         """Test integration with error recovery service."""
         # Mock successful result
         tool_calling_service.mcp_manager.invoke.return_value = {"data": "test"}
@@ -520,9 +464,7 @@ class TestErrorHandling:
             # Create the method if it doesn't exist
             tool_calling_service.error_recovery.store_successful_result = AsyncMock()
 
-        response = await tool_calling_service.execute_tool_call(
-            sample_tool_call_request
-        )
+        response = await tool_calling_service.execute_tool_call(sample_tool_call_request)
 
         # Verify error recovery service was called
         tool_calling_service.error_recovery.store_successful_result.assert_called_once()
@@ -538,9 +480,7 @@ class TestErrorHandling:
         mock_recovery_result = MagicMock()
         mock_recovery_result.success = False
         mock_recovery_result.error = "Service down"
-        tool_calling_service.error_recovery.handle_mcp_error = AsyncMock(
-            return_value=mock_recovery_result
-        )
+        tool_calling_service.error_recovery.handle_mcp_error = AsyncMock(return_value=mock_recovery_result)
 
         failing_request = ToolCallRequest(
             id=str(uuid4()),

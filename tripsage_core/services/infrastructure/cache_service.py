@@ -54,9 +54,7 @@ class CacheService:
 
         # Skip connection if redis_url is None (testing/disabled mode)
         if self.settings.redis_url is None:
-            logger.info(
-                "Redis URL not configured, cache service will operate in disabled mode"
-            )
+            logger.info("Redis URL not configured, cache service will operate in disabled mode")
             self._is_connected = False
             return
 
@@ -72,10 +70,7 @@ class CacheService:
                 parsed = urlparse(redis_url)
                 # Reconstruct with password
                 if parsed.username:
-                    netloc = (
-                        f"{parsed.username}:{self.settings.redis_password}"
-                        f"@{parsed.hostname}"
-                    )
+                    netloc = f"{parsed.username}:{self.settings.redis_password}@{parsed.hostname}"
                 else:
                     netloc = f":{self.settings.redis_password}@{parsed.hostname}"
                 if parsed.port:

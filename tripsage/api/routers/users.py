@@ -86,9 +86,7 @@ async def update_user_preferences(
 
     try:
         # Update preferences (service handles merging)
-        updated_user = await user_service.update_user_preferences(
-            user_id, preferences_request.preferences
-        )
+        updated_user = await user_service.update_user_preferences(user_id, preferences_request.preferences)
 
         return UserPreferencesResponse(preferences=updated_user.preferences or {})
 

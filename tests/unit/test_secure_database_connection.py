@@ -33,9 +33,7 @@ class TestSecureDatabaseConnection:
         settings = MagicMock()
         settings.database_url = "https://test-project.supabase.co"
         settings.database_service_key.get_secret_value.return_value = "test-key"
-        settings.effective_postgres_url = (
-            "postgresql://postgres:test-key@test.supabase.co:5432/postgres"
-        )
+        settings.effective_postgres_url = "postgresql://postgres:test-key@test.supabase.co:5432/postgres"
         settings.debug = False
         return settings
 
@@ -78,37 +76,21 @@ class TestSecureDatabaseConnection:
         assert manager1.validator.timeout == 10.0
 
     @pytest.mark.asyncio
-    async def test_create_secure_async_engine_with_supabase(
-        self, mock_settings, mock_credentials
-    ):
+    async def test_create_secure_async_engine_with_supabase(self, mock_settings, mock_credentials):
         """Test engine creation with Supabase URL."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
-                "tripsage_core.database.connection.DatabaseURLDetector"
-            ) as mock_detector:
-                with patch(
-                    "tripsage_core.database.connection.DatabaseURLConverter"
-                ) as mock_converter:
-                    with patch(
-                        "tripsage_core.database.connection.get_connection_manager"
-                    ) as mock_mgr:
-                        with patch(
-                            "tripsage_core.database.connection.create_async_engine"
-                        ) as mock_create:
+        with patch("tripsage_core.database.connection.get_settings", return_value=mock_settings):
+            with patch("tripsage_core.database.connection.DatabaseURLDetector") as mock_detector:
+                with patch("tripsage_core.database.connection.DatabaseURLConverter") as mock_converter:
+                    with patch("tripsage_core.database.connection.get_connection_manager") as mock_mgr:
+                        with patch("tripsage_core.database.connection.create_async_engine") as mock_create:
                             # Setup mocks
-                            mock_detector.return_value.detect_url_type.return_value = {
-                                "type": "supabase"
-                            }
+                            mock_detector.return_value.detect_url_type.return_value = {"type": "supabase"}
 
                             mock_converter.return_value.supabase_to_postgres.return_value = (  # noqa: E501
                                 "postgresql://postgres:key@test.supabase.co:5432/postgres"
                             )
 
-                            mock_mgr.return_value.parse_and_validate_url = AsyncMock(
-                                return_value=mock_credentials
-                            )
+                            mock_mgr.return_value.parse_and_validate_url = AsyncMock(return_value=mock_credentials)
 
                             mock_engine = AsyncMock()
                             mock_create.return_value = mock_engine
@@ -135,12 +117,8 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_create_secure_async_engine_with_invalid_url(self):
         """Test engine creation with invalid URL type."""
-        with patch(
-            "tripsage_core.database.connection.DatabaseURLDetector"
-        ) as mock_detector:
-            mock_detector.return_value.detect_url_type.return_value = {
-                "type": "unknown"
-            }
+        with patch("tripsage_core.database.connection.DatabaseURLDetector") as mock_detector:
+            mock_detector.return_value.detect_url_type.return_value = {"type": "unknown"}
 
             with pytest.raises(DatabaseURLParsingError) as exc_info:
                 await create_secure_async_engine("ftp://invalid.url")
@@ -148,27 +126,15 @@ class TestSecureDatabaseConnection:
             assert "Unsupported database URL type" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_create_secure_async_engine_validation_failure(
-        self, mock_credentials
-    ):
+    async def test_create_secure_async_engine_validation_failure(self, mock_credentials):
         """Test engine creation fails on validation."""
-        with patch(
-            "tripsage_core.database.connection.DatabaseURLDetector"
-        ) as mock_detector:
-            with patch(
-                "tripsage_core.database.connection.get_connection_manager"
-            ) as mock_mgr:
-                with patch(
-                    "tripsage_core.database.connection.create_async_engine"
-                ) as mock_create:
+        with patch("tripsage_core.database.connection.DatabaseURLDetector") as mock_detector:
+            with patch("tripsage_core.database.connection.get_connection_manager") as mock_mgr:
+                with patch("tripsage_core.database.connection.create_async_engine") as mock_create:
                     # Setup mocks
-                    mock_detector.return_value.detect_url_type.return_value = {
-                        "type": "postgresql"
-                    }
+                    mock_detector.return_value.detect_url_type.return_value = {"type": "postgresql"}
 
-                    mock_mgr.return_value.parse_and_validate_url = AsyncMock(
-                        return_value=mock_credentials
-                    )
+                    mock_mgr.return_value.parse_and_validate_url = AsyncMock(return_value=mock_credentials)
 
                     mock_engine = AsyncMock()
                     # Make validation fail
@@ -176,22 +142,16 @@ class TestSecureDatabaseConnection:
                     mock_create.return_value = mock_engine
 
                     with pytest.raises(DatabaseValidationError) as exc_info:
-                        await create_secure_async_engine(
-                            "postgresql://user:pass@host/db"
-                        )
+                        await create_secure_async_engine("postgresql://user:pass@host/db")
 
                     assert "Failed to validate engine connection" in str(exc_info.value)
                     mock_engine.dispose.assert_called_once()
 
     def test_get_engine_sync_context(self, mock_settings):
         """Test get_engine in synchronous context."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
+        with patch("tripsage_core.database.connection.get_settings", return_value=mock_settings):
             with patch("tripsage_core.database.connection.asyncio.run") as mock_run:
-                with patch(
-                    "tripsage_core.database.connection.create_secure_async_engine"
-                ):
+                with patch("tripsage_core.database.connection.create_secure_async_engine"):
                     mock_engine = MagicMock()
                     mock_run.return_value = mock_engine
 
@@ -208,9 +168,7 @@ class TestSecureDatabaseConnection:
     def test_get_session_factory(self, mock_settings):
         """Test session factory creation."""
         with patch("tripsage_core.database.connection.get_engine") as mock_get_engine:
-            with patch(
-                "tripsage_core.database.connection.async_sessionmaker"
-            ) as mock_maker:
+            with patch("tripsage_core.database.connection.async_sessionmaker") as mock_maker:
                 mock_engine = MagicMock()
                 mock_get_engine.return_value = mock_engine
 
@@ -236,9 +194,7 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_get_database_session_context(self):
         """Test database session context manager."""
-        with patch(
-            "tripsage_core.database.connection.get_session_factory"
-        ) as mock_factory:
+        with patch("tripsage_core.database.connection.get_session_factory") as mock_factory:
             # Setup mock session
             mock_session = AsyncMock()
             mock_session.rollback = AsyncMock()
@@ -261,9 +217,7 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_get_database_session_with_error(self):
         """Test database session rollback on error."""
-        with patch(
-            "tripsage_core.database.connection.get_session_factory"
-        ) as mock_factory:
+        with patch("tripsage_core.database.connection.get_session_factory") as mock_factory:
             # Setup mock session
             mock_session = AsyncMock()
             mock_session.rollback = AsyncMock()
@@ -287,9 +241,7 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_test_connection_success(self):
         """Test connection validation success."""
-        with patch(
-            "tripsage_core.database.connection.get_database_session"
-        ) as mock_session_ctx:
+        with patch("tripsage_core.database.connection.get_database_session") as mock_session_ctx:
             # Setup mock session
             mock_session = AsyncMock()
 
@@ -315,14 +267,10 @@ class TestSecureDatabaseConnection:
                 )
             )
 
-            mock_session.execute = AsyncMock(
-                side_effect=[mock_scalar_result, mock_info_result, mock_ext_result]
-            )
+            mock_session.execute = AsyncMock(side_effect=[mock_scalar_result, mock_info_result, mock_ext_result])
 
             # Setup context manager
-            mock_session_ctx.return_value.__aenter__ = AsyncMock(
-                return_value=mock_session
-            )
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session_ctx.return_value.__aexit__ = AsyncMock()
 
             result = await test_connection()
@@ -333,9 +281,7 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_test_connection_failure(self):
         """Test connection validation failure."""
-        with patch(
-            "tripsage_core.database.connection.get_database_session"
-        ) as mock_session_ctx:
+        with patch("tripsage_core.database.connection.get_database_session") as mock_session_ctx:
             # Make session creation fail
             mock_session_ctx.side_effect = Exception("Connection failed")
 
@@ -365,12 +311,8 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_get_engine_for_testing(self, mock_settings):
         """Test creating test engine with NullPool."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
-                "tripsage_core.database.connection.create_secure_async_engine"
-            ) as mock_create:
+        with patch("tripsage_core.database.connection.get_settings", return_value=mock_settings):
+            with patch("tripsage_core.database.connection.create_secure_async_engine") as mock_create:
                 mock_engine = AsyncMock()
                 mock_engine.dispose = AsyncMock()
                 mock_create.return_value = mock_engine
@@ -393,12 +335,8 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_get_engine_for_testing_with_queue_pool(self, mock_settings):
         """Test creating test engine with QueuePool."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
-                "tripsage_core.database.connection.create_secure_async_engine"
-            ) as mock_create:
+        with patch("tripsage_core.database.connection.get_settings", return_value=mock_settings):
+            with patch("tripsage_core.database.connection.create_secure_async_engine") as mock_create:
                 mock_engine = AsyncMock()
                 mock_engine.dispose = AsyncMock()
                 mock_create.return_value = mock_engine

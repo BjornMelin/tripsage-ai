@@ -396,3 +396,6 @@ export default function SecuritySettingsPage() {
     </div>
   );
 }
+
+// Force dynamic rendering for authenticated pages
+export const dynamic = 'force-dynamic';

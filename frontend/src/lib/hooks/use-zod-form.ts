@@ -508,18 +508,17 @@ export function useZodFormWizard<T extends FieldValues>(
     const result = finalSchema.safeParse(finalData);
     if (result.success) {
       return result.data;
-    } else {
-      throw new TripSageValidationError(
-        ValidationContext.FORM,
-        result.error.issues.map((issue) => ({
-          context: ValidationContext.FORM,
-          field: issue.path.join("."),
-          message: issue.message,
-          code: issue.code,
-          timestamp: new Date(),
-        }))
-      );
     }
+    throw new TripSageValidationError(
+      ValidationContext.FORM,
+      result.error.issues.map((issue) => ({
+        context: ValidationContext.FORM,
+        field: issue.path.join("."),
+        message: issue.message,
+        code: issue.code,
+        timestamp: new Date(),
+      }))
+    );
   }, [form, stepData, finalSchema]);
 
   const resetWizard = useCallback(() => {

@@ -59,10 +59,7 @@ class MemoryUpdateNode(BaseAgentNode):
             # Update session data in Supabase
             await self._update_session_data(state)
 
-            logger.info(
-                f"Updated memory with {len(insights)} insights "
-                f"for user {state['user_id']}"
-            )
+            logger.info(f"Updated memory with {len(insights)} insights for user {state['user_id']}")
 
         return state
 
@@ -109,9 +106,7 @@ class MemoryUpdateNode(BaseAgentNode):
             dates_info = state["travel_dates"]
             if isinstance(dates_info, dict):
                 if dates_info.get("departure"):
-                    insights.append(
-                        f"Departure date preference: {dates_info['departure']}"
-                    )
+                    insights.append(f"Departure date preference: {dates_info['departure']}")
                 if dates_info.get("return"):
                     insights.append(f"Return date preference: {dates_info['return']}")
                 if dates_info.get("flexibility"):
@@ -217,9 +212,7 @@ class MemoryUpdateNode(BaseAgentNode):
         # Analyze conversation length and complexity
         message_count = len(state.get("messages", []))
         if message_count > 5:
-            insights.append(
-                f"Engaged in detailed conversation ({message_count} messages)"
-            )
+            insights.append(f"Engaged in detailed conversation ({message_count} messages)")
 
         # Analyze error patterns
         error_info = state.get("error_info", {})
@@ -229,9 +222,7 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return insights
 
-    async def _update_knowledge_graph(
-        self, state: TravelPlanningState, insights: List[str]
-    ) -> None:
+    async def _update_knowledge_graph(self, state: TravelPlanningState, insights: List[str]) -> None:
         """
         Update knowledge graph with insights.
 

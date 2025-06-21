@@ -91,9 +91,7 @@ class ActivityService:
 
     @with_error_handling()
     @cached(content_type=ContentType.SEMI_STATIC, ttl=3600)  # 1 hour cache
-    async def search_activities(
-        self, request: ActivitySearchRequest
-    ) -> ActivitySearchResponse:
+    async def search_activities(self, request: ActivitySearchRequest) -> ActivitySearchResponse:
         """
         Search for activities based on the provided criteria.
 
@@ -112,13 +110,9 @@ class ActivityService:
             logger.info(f"Searching activities for destination: {request.destination}")
 
             # First, geocode the destination to get coordinates
-            geocode_results = await self.google_maps_service.geocode(
-                request.destination
-            )
+            geocode_results = await self.google_maps_service.geocode(request.destination)
             if not geocode_results:
-                logger.warning(
-                    f"No geocoding results for destination: {request.destination}"
-                )
+                logger.warning(f"No geocoding results for destination: {request.destination}")
                 return ActivitySearchResponse(
                     activities=[],
                     total=0,
@@ -147,9 +141,7 @@ class ActivityService:
                 # Search using specific place types
                 for place_type in place_types:
                     try:
-                        results = await self._search_places_by_type(
-                            search_location, place_type, search_radius, request
-                        )
+                        results = await self._search_places_by_type(search_location, place_type, search_radius, request)
                         activities.extend(results)
                     except Exception as e:
                         logger.warning(f"Failed to search for {place_type}: {e}")
@@ -166,16 +158,12 @@ class ActivityService:
 
                     if search_results.get("results"):
                         batch_tasks = []
-                        for place in search_results["results"][
-                            :20
-                        ]:  # Limit to 20 results
+                        for place in search_results["results"][:20]:  # Limit to 20 results
                             task = self._convert_place_to_activity(place, request)
                             batch_tasks.append(task)
 
                         if batch_tasks:
-                            batch_results = await asyncio.gather(
-                                *batch_tasks, return_exceptions=True
-                            )
+                            batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
                             for result in batch_results:
                                 if isinstance(result, ActivityResponse):
                                     activities.append(result)
@@ -198,15 +186,11 @@ class ActivityService:
             # Limit results
             total = len(sorted_activities)
             start_idx = 0  # request.skip if hasattr(request, 'skip') else 0
-            end_idx = min(
-                start_idx + 20, total
-            )  # request.limit if hasattr(request, 'limit') else 20
+            end_idx = min(start_idx + 20, total)  # request.limit if hasattr(request, 'limit') else 20
             page_activities = sorted_activities[start_idx:end_idx]
 
             search_id = str(uuid.uuid4())
-            logger.info(
-                f"Found {len(page_activities)} activities for {request.destination}"
-            )
+            logger.info(f"Found {len(page_activities)} activities for {request.destination}")
 
             return ActivitySearchResponse(
                 activities=page_activities,
@@ -218,23 +202,17 @@ class ActivityService:
                     "destination": request.destination,
                     "categories": request.categories,
                     "rating": request.rating,
-                    "price_range": request.price_range.model_dump()
-                    if request.price_range
-                    else None,
+                    "price_range": request.price_range.model_dump() if request.price_range else None,
                 },
                 cached=False,  # Set by caching decorator if from cache
             )
 
         except GoogleMapsServiceError as e:
             logger.error(f"Google Maps API error in activity search: {e}")
-            raise CoreServiceError(
-                f"Maps API error: {e}", service="ActivityService"
-            ) from e
+            raise CoreServiceError(f"Maps API error: {e}", service="ActivityService") from e
         except Exception as e:
             logger.error(f"Unexpected error in activity search: {e}")
-            raise CoreServiceError(
-                f"Activity search failed: {e}", service="ActivityService"
-            ) from e
+            raise CoreServiceError(f"Activity search failed: {e}", service="ActivityService") from e
 
     async def _search_places_by_type(
         self,
@@ -260,9 +238,7 @@ class ActivityService:
                     batch_tasks.append(task)
 
                 if batch_tasks:
-                    batch_results = await asyncio.gather(
-                        *batch_tasks, return_exceptions=True
-                    )
+                    batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
                     for result in batch_results:
                         if isinstance(result, ActivityResponse):
                             activities.append(result)
@@ -315,9 +291,7 @@ class ActivityService:
             duration = self._estimate_duration(activity_type, place_types)
 
             # Create activity ID
-            activity_id = (
-                f"gmp_{place_id}" if place_id else f"act_{uuid.uuid4().hex[:8]}"
-            )
+            activity_id = f"gmp_{place_id}" if place_id else f"act_{uuid.uuid4().hex[:8]}"
 
             return ActivityResponse(
                 id=activity_id,
@@ -423,11 +397,7 @@ class ActivityService:
 
         # Price range filter
         if request.price_range:
-            filtered = [
-                a
-                for a in filtered
-                if request.price_range.min <= a.price <= request.price_range.max
-            ]
+            filtered = [a for a in filtered if request.price_range.min <= a.price <= request.price_range.max]
 
         # Duration filter
         if request.duration:
@@ -442,9 +412,7 @@ class ActivityService:
         return filtered
 
     @with_error_handling()
-    async def get_activity_details(
-        self, activity_id: str
-    ) -> Optional[ActivityResponse]:
+    async def get_activity_details(self, activity_id: str) -> Optional[ActivityResponse]:
         """
         Get detailed information about a specific activity.
 
@@ -485,9 +453,7 @@ class ActivityService:
                 if place_details.get("result"):
                     place = place_details["result"]
                     # Convert to ActivityResponse with enhanced details
-                    return await self._convert_detailed_place_to_activity(
-                        place, activity_id
-                    )
+                    return await self._convert_detailed_place_to_activity(place, activity_id)
 
             # For non-Google Maps activities, this would query your database
             logger.warning(f"Activity details not found for ID: {activity_id}")
@@ -500,9 +466,7 @@ class ActivityService:
             logger.error(f"Error getting activity details for {activity_id}: {e}")
             raise ActivityServiceError(f"Failed to get activity details: {e}", e) from e
 
-    async def _convert_detailed_place_to_activity(
-        self, place: Dict[str, Any], activity_id: str
-    ) -> ActivityResponse:
+    async def _convert_detailed_place_to_activity(self, place: Dict[str, Any], activity_id: str) -> ActivityResponse:
         """Convert detailed Google Places result to ActivityResponse."""
         name = place.get("name", "Unknown Activity")
         formatted_address = place.get("formatted_address", "")

@@ -85,7 +85,7 @@ export function MutationStateHandler<
   children,
   showSuccess = false,
   successMessage = "Success!",
-  successDuration = 3000,
+  successDuration: _successDuration = 3000,
 }: MutationStateHandlerProps<TData, TError, TVariables>) {
   const { isPending, isError, isSuccess, error } = mutation;
 

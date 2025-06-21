@@ -101,9 +101,7 @@ class TestCoreTripSageError:
 
     def test_initialization_with_dict_details(self):
         """Test error initialization with dict details."""
-        error = CoreTripSageError(
-            message="Test", details={"service": "test_service", "operation": "test_op"}
-        )
+        error = CoreTripSageError(message="Test", details={"service": "test_service", "operation": "test_op"})
         assert isinstance(error.details, ErrorDetails)
         assert error.details.service == "test_service"
         assert error.details.operation == "test_op"
@@ -207,9 +205,7 @@ class TestSpecificExceptions:
         """Test CoreMCPError."""
         error = CoreMCPError("MCP operation failed", tool="test_tool")
         assert error.code == "MCP_ERROR"
-        assert (
-            error.status_code == status.HTTP_502_BAD_GATEWAY
-        )  # Inherits from CoreServiceError
+        assert error.status_code == status.HTTP_502_BAD_GATEWAY  # Inherits from CoreServiceError
         assert error.message == "MCP operation failed"
         assert error.details.additional_context["tool"] == "test_tool"
 
@@ -217,9 +213,7 @@ class TestSpecificExceptions:
         """Test CoreAgentError."""
         error = CoreAgentError("Agent failed", agent_type="test_agent")
         assert error.code == "AGENT_ERROR"
-        assert (
-            error.status_code == status.HTTP_502_BAD_GATEWAY
-        )  # Inherits from CoreServiceError
+        assert error.status_code == status.HTTP_502_BAD_GATEWAY  # Inherits from CoreServiceError
         assert error.message == "Agent failed"
         assert error.details.service == "test_agent"
 

@@ -36,16 +36,12 @@ class TestEnhancedRouterNode:
     @pytest.fixture
     def sample_state(self):
         """Create a sample travel planning state."""
-        return create_initial_state(
-            user_id="test_user", message="I want to book a flight from NYC to LAX"
-        )
+        return create_initial_state(user_id="test_user", message="I want to book a flight from NYC to LAX")
 
     @pytest.mark.asyncio
     async def test_enhanced_classification_success(self, router_node, sample_state):
         """Test successful enhanced classification."""
-        with patch.object(
-            router_node, "_classify_intent", new_callable=AsyncMock
-        ) as mock_classify:
+        with patch.object(router_node, "_classify_intent", new_callable=AsyncMock) as mock_classify:
             mock_classify.return_value = {
                 "agent": "flight_agent",
                 "confidence": 0.95,
@@ -58,13 +54,9 @@ class TestEnhancedRouterNode:
             assert result_state["handoff_context"]["routing_confidence"] == 0.95
 
     @pytest.mark.asyncio
-    async def test_classification_with_low_confidence_fallback(
-        self, router_node, sample_state
-    ):
+    async def test_classification_with_low_confidence_fallback(self, router_node, sample_state):
         """Test fallback to keyword classification when LLM confidence is low."""
-        with patch.object(
-            router_node, "_classify_intent", new_callable=AsyncMock
-        ) as mock_classify:
+        with patch.object(router_node, "_classify_intent", new_callable=AsyncMock) as mock_classify:
             mock_classify.return_value = {
                 "agent": "general_agent",
                 "confidence": 0.1,  # Lower than keyword classification
@@ -80,23 +72,17 @@ class TestEnhancedRouterNode:
     def test_keyword_based_classification(self, router_node):
         """Test keyword-based classification fallback."""
         # Test flight-related message
-        flight_classification = router_node._keyword_based_classification(
-            "I need to book a flight to Paris"
-        )
+        flight_classification = router_node._keyword_based_classification("I need to book a flight to Paris")
         assert flight_classification["agent"] == "flight_agent"
         assert flight_classification["confidence"] > 0.0
 
         # Test hotel-related message
-        hotel_classification = router_node._keyword_based_classification(
-            "Find me a good hotel in downtown"
-        )
+        hotel_classification = router_node._keyword_based_classification("Find me a good hotel in downtown")
         assert hotel_classification["agent"] == "accommodation_agent"
         assert hotel_classification["confidence"] > 0.0
 
         # Test budget-related message
-        budget_classification = router_node._keyword_based_classification(
-            "What's the cheapest option for my trip?"
-        )
+        budget_classification = router_node._keyword_based_classification("What's the cheapest option for my trip?")
         assert budget_classification["agent"] == "budget_agent"
         assert budget_classification["confidence"] > 0.0
 
@@ -133,9 +119,7 @@ class TestEnhancedRouterNode:
     @pytest.mark.asyncio
     async def test_classification_error_handling(self, router_node, sample_state):
         """Test classification error handling with safe fallback."""
-        with patch.object(
-            router_node, "_classify_intent", new_callable=AsyncMock
-        ) as mock_classify:
+        with patch.object(router_node, "_classify_intent", new_callable=AsyncMock) as mock_classify:
             mock_classify.side_effect = Exception("API Error")
 
             result_state = await router_node.process(sample_state)
@@ -169,9 +153,7 @@ class TestEnhancedHandoffCoordinator:
     @pytest.fixture
     def sample_state(self):
         """Create a sample state for handoff testing."""
-        state = create_initial_state(
-            user_id="test_user", message="I found a flight, now I need a hotel"
-        )
+        state = create_initial_state(user_id="test_user", message="I found a flight, now I need a hotel")
         state["flight_selections"] = [{"id": "flight_123"}]
         return state
 
@@ -180,23 +162,16 @@ class TestEnhancedHandoffCoordinator:
         assert len(handoff_coordinator.handoff_rules) > 0
 
         # Check for specific rules
-        rule_names = [
-            (rule.from_agent, rule.to_agent)
-            for rule in handoff_coordinator.handoff_rules
-        ]
+        rule_names = [(rule.from_agent, rule.to_agent) for rule in handoff_coordinator.handoff_rules]
         assert ("general", "flight_agent") in rule_names
         assert ("general", "accommodation_agent") in rule_names
 
     def test_keyword_based_handoff_detection(self, handoff_coordinator):
         """Test handoff detection based on keywords."""
         # Create a clean state with only hotel-related message
-        state = create_initial_state(
-            user_id="test_user", message="I need a hotel in downtown"
-        )
+        state = create_initial_state(user_id="test_user", message="I need a hotel in downtown")
 
-        handoff_result = handoff_coordinator.determine_next_agent(
-            "general", state, HandoffTrigger.USER_REQUEST
-        )
+        handoff_result = handoff_coordinator.determine_next_agent("general", state, HandoffTrigger.USER_REQUEST)
 
         assert handoff_result is not None
         next_agent, handoff_context = handoff_result
@@ -239,9 +214,7 @@ class TestEnhancedHandoffCoordinator:
         sample_state["travel_dates"] = {"departure": "2024-03-15"}
         sample_state["destination"] = "Paris"
 
-        handoff_result = handoff_coordinator.determine_next_agent(
-            "general", sample_state, HandoffTrigger.USER_REQUEST
-        )
+        handoff_result = handoff_coordinator.determine_next_agent("general", sample_state, HandoffTrigger.USER_REQUEST)
 
         if handoff_result:
             next_agent, handoff_context = handoff_result
@@ -255,17 +228,11 @@ class TestEnhancedHandoffCoordinator:
         from tripsage.orchestration.handoff_coordinator import AgentCapability
 
         # Test capability queries
-        assert handoff_coordinator.can_handle_capability(
-            "flight_agent", AgentCapability.FLIGHT_SEARCH
-        )
-        assert handoff_coordinator.can_handle_capability(
-            "accommodation_agent", AgentCapability.ACCOMMODATION_SEARCH
-        )
+        assert handoff_coordinator.can_handle_capability("flight_agent", AgentCapability.FLIGHT_SEARCH)
+        assert handoff_coordinator.can_handle_capability("accommodation_agent", AgentCapability.ACCOMMODATION_SEARCH)
 
         # Test finding agents by capability
-        flight_agents = handoff_coordinator.find_agents_with_capability(
-            AgentCapability.FLIGHT_SEARCH
-        )
+        flight_agents = handoff_coordinator.find_agents_with_capability(AgentCapability.FLIGHT_SEARCH)
         assert "flight_agent" in flight_agents
 
     def test_custom_handoff_rule_addition(self, handoff_coordinator):
@@ -293,14 +260,10 @@ class TestEnhancedHandoffCoordinator:
         initial_history_length = len(handoff_coordinator.handoff_history)
 
         # Trigger a handoff
-        handoff_result = handoff_coordinator.determine_next_agent(
-            "general", sample_state, HandoffTrigger.USER_REQUEST
-        )
+        handoff_result = handoff_coordinator.determine_next_agent("general", sample_state, HandoffTrigger.USER_REQUEST)
 
         if handoff_result:
-            assert (
-                len(handoff_coordinator.handoff_history) == initial_history_length + 1
-            )
+            assert len(handoff_coordinator.handoff_history) == initial_history_length + 1
 
             # Test history retrieval
             recent_history = handoff_coordinator.get_handoff_history(limit=1)
@@ -318,9 +281,7 @@ class TestEnhancedHandoffCoordinator:
             preserved_context={"destination": "Paris"},
         )
 
-        updated_state = await handoff_coordinator.execute_handoff(
-            handoff_context, sample_state
-        )
+        updated_state = await handoff_coordinator.execute_handoff(handoff_context, sample_state)
 
         assert updated_state["current_agent"] == "accommodation_agent"
         assert "handoff_context" in updated_state
@@ -349,9 +310,7 @@ class TestRoutingIntegration:
             message="I want to book a flight from New York to London",
         )
 
-        with patch.object(
-            router_node, "_classify_intent", new_callable=AsyncMock
-        ) as mock_classify:
+        with patch.object(router_node, "_classify_intent", new_callable=AsyncMock) as mock_classify:
             mock_classify.return_value = {
                 "agent": "flight_agent",
                 "confidence": 0.9,
@@ -369,15 +328,11 @@ class TestRoutingIntegration:
         router_node = RouterNode(MagicMock())
 
         # High confidence keywords
-        high_conf = router_node._keyword_based_classification(
-            "I need to book a flight immediately"
-        )
+        high_conf = router_node._keyword_based_classification("I need to book a flight immediately")
         assert high_conf["confidence"] > 0.2
 
         # Lower confidence - ambiguous message
-        low_conf = router_node._keyword_based_classification(
-            "What can you help me with?"
-        )
+        low_conf = router_node._keyword_based_classification("What can you help me with?")
         assert low_conf["confidence"] < 0.5
 
     def test_agent_mapping_consistency(self):

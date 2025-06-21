@@ -45,10 +45,7 @@ class TestSQLInjectionPrevention:
             # Boolean-based blind injection
             "' AND (SELECT COUNT(*) FROM api_keys) > 0 --",
             # Blind injection with ASCII
-            (
-                "' AND ASCII(SUBSTRING((SELECT password FROM users WHERE id=1),1,1)) "
-                "> 64 --"
-            ),
+            ("' AND ASCII(SUBSTRING((SELECT password FROM users WHERE id=1),1,1)) > 64 --"),
             # Time-based blind injection
             "'; WAITFOR DELAY '00:00:05'; --",
             "' AND (SELECT SLEEP(5)) --",
@@ -65,10 +62,7 @@ class TestSQLInjectionPrevention:
             "' || '1'=='1",
             # Advanced SQL injection
             # EXTRACTVALUE injection
-            (
-                "' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT password FROM users "
-                "LIMIT 1), 0x7e)) --"
-            ),
+            ("' AND EXTRACTVALUE(1, CONCAT(0x7e, (SELECT password FROM users LIMIT 1), 0x7e)) --"),
             # Error-based SQL injection
             "' AND (SELECT * FROM (SELECT COUNT(*),CONCAT(version(),FLOOR(RAND(0)*2))x "
             "FROM information_schema.tables GROUP BY x)a) --",
@@ -107,19 +101,13 @@ class TestSQLInjectionPrevention:
         ]
 
     @pytest.mark.asyncio
-    async def test_sql_injection_in_api_key_creation(
-        self, api_key_service, sql_injection_payloads
-    ):
+    async def test_sql_injection_in_api_key_creation(self, api_key_service, sql_injection_payloads):
         """Test SQL injection prevention in API key creation."""
         user_id = "test-user-123"
 
         # Mock successful database operations
-        mock_transaction = (
-            api_key_service.db.transaction.return_value.__aenter__.return_value
-        )
-        mock_transaction.execute.return_value = [
-            [{"id": "mock-key-id", "user_id": user_id, "service": "openai"}]
-        ]
+        mock_transaction = api_key_service.db.transaction.return_value.__aenter__.return_value
+        mock_transaction.execute.return_value = [[{"id": "mock-key-id", "user_id": user_id, "service": "openai"}]]
 
         for payload in sql_injection_payloads:
             # Test injection in key name
@@ -131,9 +119,7 @@ class TestSQLInjectionPrevention:
             )
 
             with patch.object(api_key_service, "validate_api_key") as mock_validate:
-                mock_validate.return_value = Mock(
-                    is_valid=True, validated_at="2024-01-01T00:00:00Z"
-                )
+                mock_validate.return_value = Mock(is_valid=True, validated_at="2024-01-01T00:00:00Z")
 
                 try:
                     await api_key_service.create_api_key(user_id, request_data)
@@ -156,9 +142,7 @@ class TestSQLInjectionPrevention:
             )
 
             with patch.object(api_key_service, "validate_api_key") as mock_validate:
-                mock_validate.return_value = Mock(
-                    is_valid=True, validated_at="2024-01-01T00:00:00Z"
-                )
+                mock_validate.return_value = Mock(is_valid=True, validated_at="2024-01-01T00:00:00Z")
 
                 try:
                     await api_key_service.create_api_key(user_id, request_data)
@@ -167,9 +151,7 @@ class TestSQLInjectionPrevention:
                     pass
 
     @pytest.mark.asyncio
-    async def test_sql_injection_in_user_lookup(
-        self, api_key_service, sql_injection_payloads
-    ):
+    async def test_sql_injection_in_user_lookup(self, api_key_service, sql_injection_payloads):
         """Test SQL injection prevention in user ID lookups."""
         api_key_service.db.get_user_api_keys.return_value = []
 
@@ -187,9 +169,7 @@ class TestSQLInjectionPrevention:
                 pass
 
     @pytest.mark.asyncio
-    async def test_sql_injection_in_service_lookup(
-        self, api_key_service, sql_injection_payloads
-    ):
+    async def test_sql_injection_in_service_lookup(self, api_key_service, sql_injection_payloads):
         """Test SQL injection prevention in service lookups."""
         api_key_service.db.get_api_key_for_service.return_value = None
 
@@ -199,9 +179,7 @@ class TestSQLInjectionPrevention:
                 await api_key_service.get_key_for_service(payload, ServiceType.OPENAI)
 
                 # Verify parameterized query was used
-                api_key_service.db.get_api_key_for_service.assert_called_with(
-                    payload, ServiceType.OPENAI.value
-                )
+                api_key_service.db.get_api_key_for_service.assert_called_with(payload, ServiceType.OPENAI.value)
 
             except Exception:
                 # Errors are acceptable if input validation catches them
@@ -266,9 +244,7 @@ class TestSQLInjectionPrevention:
 
         # Mock database to capture query structure
         mock_transaction = AsyncMock()
-        api_key_service.db.transaction.return_value.__aenter__.return_value = (
-            mock_transaction
-        )
+        api_key_service.db.transaction.return_value.__aenter__.return_value = mock_transaction
         mock_transaction.execute.return_value = [[]]
 
         # Test API key deletion with malicious key_id
@@ -280,9 +256,7 @@ class TestSQLInjectionPrevention:
         call_args = mock_transaction.delete.call_args
 
         # Verify the malicious input was passed as a parameter, not concatenated
-        assert malicious_input in str(call_args), (
-            "Malicious input should be parameterized"
-        )
+        assert malicious_input in str(call_args), "Malicious input should be parameterized"
 
     def test_database_error_message_sanitization(self, api_key_service):
         """Test that database error messages don't leak sensitive information."""
@@ -416,8 +390,7 @@ class TestSQLInjectionPrevention:
             # The sanitizer should handle encoded attacks
             # Either by rejecting them or by safely encoding them
             assert sanitized != encoded_attack or not any(
-                danger in sanitized.upper()
-                for danger in ["DROP", "DELETE", "UNION", "SELECT"]
+                danger in sanitized.upper() for danger in ["DROP", "DELETE", "UNION", "SELECT"]
             )
 
     def test_comment_injection_prevention(self):

@@ -17,19 +17,13 @@ class SearchFilters(BaseModel):
     rating_min: Optional[float] = Field(None, ge=0, le=5, description="Minimum rating")
 
     # Location filters
-    latitude: Optional[float] = Field(
-        None, ge=-90, le=90, description="Center latitude"
-    )
-    longitude: Optional[float] = Field(
-        None, ge=-180, le=180, description="Center longitude"
-    )
-    radius_km: Optional[float] = Field(
-        None, ge=0, le=100, description="Search radius in kilometers"
-    )
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="Center latitude")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="Center longitude")
+    radius_km: Optional[float] = Field(None, ge=0, le=100, description="Search radius in kilometers")
 
     # Additional filters as key-value pairs
-    custom_filters: Optional[Dict[str, Union[str, int, float, bool, List[str]]]] = (
-        Field(None, description="Additional type-specific filters")
+    custom_filters: Optional[Dict[str, Union[str, int, float, bool, List[str]]]] = Field(
+        None, description="Additional type-specific filters"
     )
 
 
@@ -45,9 +39,7 @@ class UnifiedSearchRequest(BaseModel):
 
     types: Optional[List[str]] = Field(
         None,
-        description=(
-            "Resource types to search (destination, flight, accommodation, activity)"
-        ),
+        description=("Resource types to search (destination, flight, accommodation, activity)"),
     )
 
     # Common parameters

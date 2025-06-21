@@ -88,9 +88,7 @@ class TestModernDockerArchitecture:
         monitoring_services = ["jaeger", "otel-collector", "prometheus", "grafana"]
 
         for service_name in monitoring_services:
-            assert service_name in services, (
-                f"Monitoring service {service_name} not found"
-            )
+            assert service_name in services, f"Monitoring service {service_name} not found"
 
     def test_resource_limits_optimized(self):
         """Test that resource limits are optimized for modern architecture."""
@@ -114,12 +112,8 @@ class TestModernDockerArchitecture:
                     if "reservations" in resources:
                         reservations = resources["reservations"]
                         # Basic validation that services have adequate resources
-                        assert "cpus" in reservations, (
-                            f"{service_name} missing CPU reservations"
-                        )
-                        assert "memory" in reservations, (
-                            f"{service_name} missing memory reservations"
-                        )
+                        assert "cpus" in reservations, f"{service_name} missing CPU reservations"
+                        assert "memory" in reservations, f"{service_name} missing memory reservations"
 
 
 class TestDockerfileModernization:
@@ -140,15 +134,11 @@ class TestDockerfileModernization:
         # Check for modern dependencies
         modern_deps = ["mem0ai", "crawl4ai", "playwright", "asyncpg"]
         for dep in modern_deps:
-            assert dep in content, (
-                f"Modern dependency {dep} not found in API Dockerfile"
-            )
+            assert dep in content, f"Modern dependency {dep} not found in API Dockerfile"
 
     def test_frontend_dockerfile_exists(self):
         """Test that frontend Dockerfile exists and uses Next.js 15."""
-        frontend_dockerfile = (
-            Path(__file__).parent.parent.parent / "frontend" / "Dockerfile.dev"
-        )
+        frontend_dockerfile = Path(__file__).parent.parent.parent / "frontend" / "Dockerfile.dev"
         assert frontend_dockerfile.exists(), "Frontend Dockerfile not found"
 
         with open(frontend_dockerfile, "r") as f:
@@ -156,9 +146,7 @@ class TestDockerfileModernization:
 
         # Check for modern frontend setup
         assert "pnpm" in content, "Frontend should use pnpm for package management"
-        assert "NODE_ENV=development" in content, (
-            "Development environment not configured"
-        )
+        assert "NODE_ENV=development" in content, "Development environment not configured"
 
     def test_only_airbnb_mcp_dockerfile_exists(self):
         """Test that only Airbnb MCP Dockerfile exists (others removed)."""
@@ -169,9 +157,7 @@ class TestDockerfileModernization:
             mcp_dirs = list(dev_services_dir.glob("*"))
             mcp_names = [d.name for d in mcp_dirs if d.is_dir()]
 
-            assert "airbnb_mcp" in mcp_names, (
-                "Airbnb MCP should be present (only remaining MCP)"
-            )
+            assert "airbnb_mcp" in mcp_names, "Airbnb MCP should be present (only remaining MCP)"
 
             # Check that legacy MCP Dockerfiles are removed
             legacy_mcps = [
@@ -184,9 +170,7 @@ class TestDockerfileModernization:
             ]
 
             for legacy_mcp in legacy_mcps:
-                assert legacy_mcp not in mcp_names, (
-                    f"Legacy MCP {legacy_mcp} should be removed"
-                )
+                assert legacy_mcp not in mcp_names, f"Legacy MCP {legacy_mcp} should be removed"
 
 
 class TestEnvironmentConfiguration:
@@ -224,9 +208,7 @@ class TestEnvironmentConfiguration:
 
         # Check DragonflyDB configuration
         assert "image" in dragonfly, "DragonflyDB image not specified"
-        assert "dragonflydb" in dragonfly["image"], (
-            "Should use official DragonflyDB image"
-        )
+        assert "dragonflydb" in dragonfly["image"], "Should use official DragonflyDB image"
 
         # Check Redis-compatible port
         assert "ports" in dragonfly, "DragonflyDB ports not configured"
@@ -288,12 +270,8 @@ class TestNetworkAndVolumeConfiguration:
         # Check all services use the network
         services = config["services"]
         for service_name, service_config in services.items():
-            assert "networks" in service_config, (
-                f"{service_name} not configured for network isolation"
-            )
-            assert "tripsage-network" in service_config["networks"], (
-                f"{service_name} not using tripsage-network"
-            )
+            assert "networks" in service_config, f"{service_name} not configured for network isolation"
+            assert "tripsage-network" in service_config["networks"], f"{service_name} not using tripsage-network"
 
     def test_volume_configuration(self):
         """Test that persistent volumes are configured for data services."""
@@ -336,9 +314,7 @@ class TestPerformanceArchitecture:
         assert "redis" not in services, "Redis should be replaced by DragonflyDB"
 
         dragonfly = services["dragonfly"]
-        assert "dragonflydb" in dragonfly["image"], (
-            "Should use official DragonflyDB image"
-        )
+        assert "dragonflydb" in dragonfly["image"], "Should use official DragonflyDB image"
 
     def test_supabase_pgvector_setup(self):
         """Test Supabase is configured for pgvector (11x faster vector search)."""

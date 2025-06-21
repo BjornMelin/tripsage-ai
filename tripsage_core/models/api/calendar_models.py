@@ -61,12 +61,8 @@ class EventDateTime(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     date_time: Optional[datetime] = Field(None, alias="dateTime")
-    date: Optional[str] = Field(
-        None, description="Date in YYYY-MM-DD format for all-day events"
-    )
-    time_zone: Optional[str] = Field(
-        None, alias="timeZone", description="IANA time zone"
-    )
+    date: Optional[str] = Field(None, description="Date in YYYY-MM-DD format for all-day events")
+    time_zone: Optional[str] = Field(None, alias="timeZone", description="IANA time zone")
 
     @field_validator("date")
     @classmethod
@@ -84,9 +80,7 @@ class EventReminder(BaseModel):
     """Event reminder configuration."""
 
     method: ReminderMethod = Field(default=ReminderMethod.POPUP)
-    minutes: int = Field(
-        ge=0, le=40320, description="Minutes before event (max 4 weeks)"
-    )
+    minutes: int = Field(ge=0, le=40320, description="Minutes before event (max 4 weeks)")
 
 
 class EventAttendee(BaseModel):
@@ -108,9 +102,7 @@ class ConferenceData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     conference_id: Optional[str] = Field(None, alias="conferenceId")
-    conference_solution: Optional[Dict[str, Any]] = Field(
-        None, alias="conferenceSolution"
-    )
+    conference_solution: Optional[Dict[str, Any]] = Field(None, alias="conferenceSolution")
     entry_points: Optional[List[Dict[str, Any]]] = Field(None, alias="entryPoints")
     notes: Optional[str] = None
 
@@ -145,13 +137,9 @@ class CalendarEvent(BaseModel):
     start: EventDateTime
     end: EventDateTime
     end_time_unspecified: bool = Field(False, alias="endTimeUnspecified")
-    recurrence: Optional[List[str]] = Field(
-        None, description="RFC5545 recurrence rules"
-    )
+    recurrence: Optional[List[str]] = Field(None, description="RFC5545 recurrence rules")
     recurring_event_id: Optional[str] = Field(None, alias="recurringEventId")
-    original_start_time: Optional[EventDateTime] = Field(
-        None, alias="originalStartTime"
-    )
+    original_start_time: Optional[EventDateTime] = Field(None, alias="originalStartTime")
 
     # Visibility and access
     transparency: str = Field("opaque", description="opaque or transparent")
@@ -162,9 +150,7 @@ class CalendarEvent(BaseModel):
     # Participants
     attendees: List[EventAttendee] = Field(default_factory=list)
     attendees_omitted: bool = Field(False, alias="attendeesOmitted")
-    extended_properties: Optional[ExtendedProperties] = Field(
-        None, alias="extendedProperties"
-    )
+    extended_properties: Optional[ExtendedProperties] = Field(None, alias="extendedProperties")
     hangout_link: Optional[HttpUrl] = Field(None, alias="hangoutLink")
     conference_data: Optional[ConferenceData] = Field(None, alias="conferenceData")
 
@@ -176,9 +162,7 @@ class CalendarEvent(BaseModel):
     creator: Optional[Dict[str, Any]] = None
 
     # Travel-specific extensions
-    travel_metadata: Optional[Dict[str, Any]] = Field(
-        None, description="TripSage travel-specific metadata"
-    )
+    travel_metadata: Optional[Dict[str, Any]] = Field(None, description="TripSage travel-specific metadata")
 
 
 class CreateEventRequest(BaseModel):
@@ -214,9 +198,7 @@ class CreateEventRequest(BaseModel):
         if self.travel_metadata:
             if "extendedProperties" not in data:
                 data["extendedProperties"] = {"private": {}}
-            data["extendedProperties"]["private"]["tripsage_metadata"] = str(
-                self.travel_metadata
-            )
+            data["extendedProperties"]["private"]["tripsage_metadata"] = str(self.travel_metadata)
             data.pop("travel_metadata", None)
 
         return data
@@ -254,9 +236,7 @@ class UpdateEventRequest(BaseModel):
         if self.travel_metadata:
             if "extendedProperties" not in data:
                 data["extendedProperties"] = {"private": {}}
-            data["extendedProperties"]["private"]["tripsage_metadata"] = str(
-                self.travel_metadata
-            )
+            data["extendedProperties"]["private"]["tripsage_metadata"] = str(self.travel_metadata)
             data.pop("travel_metadata", None)
 
         return data
@@ -281,17 +261,11 @@ class CalendarListEntry(BaseModel):
     hidden: bool = False
     selected: bool = True
     access_role: str = Field("reader", alias="accessRole")
-    default_reminders: List[EventReminder] = Field(
-        default_factory=list, alias="defaultReminders"
-    )
-    notification_settings: Optional[Dict[str, Any]] = Field(
-        None, alias="notificationSettings"
-    )
+    default_reminders: List[EventReminder] = Field(default_factory=list, alias="defaultReminders")
+    notification_settings: Optional[Dict[str, Any]] = Field(None, alias="notificationSettings")
     primary: bool = False
     deleted: bool = False
-    conference_properties: Optional[Dict[str, Any]] = Field(
-        None, alias="conferenceProperties"
-    )
+    conference_properties: Optional[Dict[str, Any]] = Field(None, alias="conferenceProperties")
 
 
 class CalendarList(BaseModel):
@@ -341,17 +315,11 @@ class EventsListRequest(BaseModel):
     ical_uid: Optional[str] = Field(None, alias="iCalUID")
     max_attendees: Optional[int] = Field(None, alias="maxAttendees", ge=1)
     max_results: int = Field(250, alias="maxResults", ge=1, le=2500)
-    order_by: Optional[str] = Field(
-        None, alias="orderBy", pattern="^(startTime|updated)$"
-    )
+    order_by: Optional[str] = Field(None, alias="orderBy", pattern="^(startTime|updated)$")
     page_token: Optional[str] = Field(None, alias="pageToken")
-    private_extended_property: Optional[List[str]] = Field(
-        None, alias="privateExtendedProperty"
-    )
+    private_extended_property: Optional[List[str]] = Field(None, alias="privateExtendedProperty")
     q: Optional[str] = Field(None, description="Free text search query")
-    shared_extended_property: Optional[List[str]] = Field(
-        None, alias="sharedExtendedProperty"
-    )
+    shared_extended_property: Optional[List[str]] = Field(None, alias="sharedExtendedProperty")
     show_deleted: bool = Field(False, alias="showDeleted")
     show_hidden_invitations: bool = Field(False, alias="showHiddenInvitations")
     single_events: bool = Field(False, alias="singleEvents")
@@ -374,9 +342,7 @@ class EventsListResponse(BaseModel):
     updated: datetime
     time_zone: str = Field(..., alias="timeZone")
     access_role: str = Field(..., alias="accessRole")
-    default_reminders: List[EventReminder] = Field(
-        default_factory=list, alias="defaultReminders"
-    )
+    default_reminders: List[EventReminder] = Field(default_factory=list, alias="defaultReminders")
     next_page_token: Optional[str] = Field(None, alias="nextPageToken")
     next_sync_token: Optional[str] = Field(None, alias="nextSyncToken")
     items: List[CalendarEvent] = Field(default_factory=list)

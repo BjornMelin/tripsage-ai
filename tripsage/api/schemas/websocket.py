@@ -17,18 +17,14 @@ class WebSocketAuthRequest(BaseModel):
 
     token: str = Field(..., description="JWT authentication token")
     session_id: Optional[UUID] = Field(None, description="Optional session ID to join")
-    channels: List[str] = Field(
-        default_factory=list, description="Channels to subscribe to"
-    )
+    channels: List[str] = Field(default_factory=list, description="Channels to subscribe to")
 
 
 class WebSocketSubscribeRequest(BaseModel):
     """WebSocket channel subscription request."""
 
     channels: List[str] = Field(..., description="Channels to subscribe to")
-    unsubscribe_channels: List[str] = Field(
-        default_factory=list, description="Channels to unsubscribe from"
-    )
+    unsubscribe_channels: List[str] = Field(default_factory=list, description="Channels to unsubscribe from")
 
 
 # ===== Response Schemas =====
@@ -41,22 +37,14 @@ class WebSocketAuthResponse(BaseModel):
     connection_id: str = Field(..., description="Connection ID")
     user_id: Optional[UUID] = Field(None, description="Authenticated user ID")
     session_id: Optional[UUID] = Field(None, description="Session ID")
-    error: Optional[str] = Field(
-        None, description="Error message if authentication failed"
-    )
-    available_channels: List[str] = Field(
-        default_factory=list, description="Available channels"
-    )
+    error: Optional[str] = Field(None, description="Error message if authentication failed")
+    available_channels: List[str] = Field(default_factory=list, description="Available channels")
 
 
 class WebSocketSubscribeResponse(BaseModel):
     """WebSocket channel subscription response."""
 
     success: bool = Field(..., description="Subscription success")
-    subscribed_channels: List[str] = Field(
-        default_factory=list, description="Successfully subscribed channels"
-    )
-    failed_channels: List[str] = Field(
-        default_factory=list, description="Failed subscription channels"
-    )
+    subscribed_channels: List[str] = Field(default_factory=list, description="Successfully subscribed channels")
+    failed_channels: List[str] = Field(default_factory=list, description="Failed subscription channels")
     error: Optional[str] = Field(None, description="Error message")

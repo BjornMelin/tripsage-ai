@@ -102,9 +102,7 @@ class TestSettings:
 
     def test_cors_origins_validation_production(self):
         """Test CORS origins validation in production environment."""
-        with pytest.raises(
-            ValidationError, match="Wildcard CORS origin not allowed in production"
-        ):
+        with pytest.raises(ValidationError, match="Wildcard CORS origin not allowed in production"):
             Settings(environment="production", cors_origins=["*"])
 
     def test_valid_cors_origins_production(self):
@@ -124,9 +122,7 @@ class TestSettings:
 
     def test_byok_services_validation_invalid(self):
         """Test BYOK services validation with invalid service."""
-        with pytest.raises(
-            ValidationError, match="Unknown BYOK service: invalid_service"
-        ):
+        with pytest.raises(ValidationError, match="Unknown BYOK service: invalid_service"):
             Settings(byok_services=["openai", "invalid_service"])
 
     def test_get_cors_config(self):

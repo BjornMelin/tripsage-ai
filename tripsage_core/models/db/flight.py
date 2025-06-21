@@ -39,23 +39,15 @@ class Flight(TripSageModel):
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     origin: str = Field(..., description="Origin airport code (IATA 3-letter code)")
-    destination: str = Field(
-        ..., description="Destination airport code (IATA 3-letter code)"
-    )
+    destination: str = Field(..., description="Destination airport code (IATA 3-letter code)")
     airline: AirlineProvider = Field(..., description="Airline provider")
     departure_time: datetime = Field(..., description="Departure date and time")
     arrival_time: datetime = Field(..., description="Arrival date and time")
     price: float = Field(..., description="Price in default currency")
     booking_link: Optional[str] = Field(None, description="URL for booking this flight")
-    segment_number: int = Field(
-        1, description="For multi-segment flights, the order of this segment (1-based)"
-    )
-    search_timestamp: datetime = Field(
-        ..., description="When this flight data was fetched"
-    )
-    booking_status: BookingStatus = Field(
-        BookingStatus.VIEWED, description="Status of the flight booking"
-    )
+    segment_number: int = Field(1, description="For multi-segment flights, the order of this segment (1-based)")
+    search_timestamp: datetime = Field(..., description="When this flight data was fetched")
+    booking_status: BookingStatus = Field(BookingStatus.VIEWED, description="Status of the flight booking")
     data_source: DataSource = Field(..., description="Source of the flight data")
 
     @field_validator("origin", "destination")

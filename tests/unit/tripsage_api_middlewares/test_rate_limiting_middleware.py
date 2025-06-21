@@ -106,9 +106,7 @@ class TestRateLimitConfig:
 
     def test_custom_values(self):
         """Test custom configuration values."""
-        config = RateLimitConfig(
-            requests_per_minute=120, requests_per_hour=5000, burst_size=20
-        )
+        config = RateLimitConfig(requests_per_minute=120, requests_per_hour=5000, burst_size=20)
         assert config.requests_per_minute == 120
         assert config.requests_per_hour == 5000
         assert config.burst_size == 20
@@ -319,9 +317,7 @@ class TestDragonflyRateLimiter:
 class TestEnhancedRateLimitMiddleware:
     """Test cases for EnhancedRateLimitMiddleware."""
 
-    async def test_skip_rate_limit_for_public_endpoints(
-        self, middleware, mock_request, mock_call_next
-    ):
+    async def test_skip_rate_limit_for_public_endpoints(self, middleware, mock_request, mock_call_next):
         """Test that rate limiting is skipped for public endpoints."""
         public_paths = ["/api/docs", "/api/redoc", "/api/openapi.json", "/api/health"]
 
@@ -330,9 +326,7 @@ class TestEnhancedRateLimitMiddleware:
             response = await middleware.dispatch(mock_request, mock_call_next)
             assert response.status_code == 200
 
-    async def test_unauthenticated_rate_limit(
-        self, middleware, mock_request, mock_call_next
-    ):
+    async def test_unauthenticated_rate_limit(self, middleware, mock_request, mock_call_next):
         """Test rate limiting for unauthenticated requests."""
         # No principal set
         mock_request.state.principal = None
@@ -347,9 +341,7 @@ class TestEnhancedRateLimitMiddleware:
         assert response.status_code == HTTP_429_TOO_MANY_REQUESTS
         assert "Rate limit exceeded" in response.body.decode()
 
-    async def test_user_rate_limit(
-        self, middleware, mock_request, mock_call_next, user_principal
-    ):
+    async def test_user_rate_limit(self, middleware, mock_request, mock_call_next, user_principal):
         """Test rate limiting for authenticated users."""
         # Set user principal
         mock_request.state.principal = user_principal
@@ -360,9 +352,7 @@ class TestEnhancedRateLimitMiddleware:
             response = await middleware.dispatch(mock_request, mock_call_next)
             assert response.status_code == 200
 
-    async def test_agent_rate_limit(
-        self, middleware, mock_request, mock_call_next, agent_principal
-    ):
+    async def test_agent_rate_limit(self, middleware, mock_request, mock_call_next, agent_principal):
         """Test rate limiting for agents."""
         # Set agent principal
         mock_request.state.principal = agent_principal
@@ -373,9 +363,7 @@ class TestEnhancedRateLimitMiddleware:
             response = await middleware.dispatch(mock_request, mock_call_next)
             assert response.status_code == 200
 
-    async def test_rate_limit_headers(
-        self, middleware, mock_request, mock_call_next, mock_response
-    ):
+    async def test_rate_limit_headers(self, middleware, mock_request, mock_call_next, mock_response):
         """Test that rate limit headers are added to response."""
         # Make request
         response = await middleware.dispatch(mock_request, mock_call_next)
@@ -406,9 +394,7 @@ class TestEnhancedRateLimitMiddleware:
         assert "X-RateLimit-Limit" in response.headers
         assert response.headers["X-RateLimit-Remaining"] == "0"
 
-    async def test_different_principals_independent_limits(
-        self, middleware, mock_request, mock_call_next
-    ):
+    async def test_different_principals_independent_limits(self, middleware, mock_request, mock_call_next):
         """Test that different principals have independent rate limits."""
         # User 1
         user1 = Principal(id="user1", type="user", auth_method="jwt")
@@ -428,9 +414,7 @@ class TestEnhancedRateLimitMiddleware:
             response = await middleware.dispatch(mock_request, mock_call_next)
             assert response.status_code == 200
 
-    async def test_service_specific_limits(
-        self, middleware, mock_request, mock_call_next
-    ):
+    async def test_service_specific_limits(self, middleware, mock_request, mock_call_next):
         """Test service-specific rate limits for agents."""
         # OpenAI agent (has custom higher limits)
         openai_agent = Principal(
@@ -447,9 +431,7 @@ class TestEnhancedRateLimitMiddleware:
         assert response.status_code == 200
 
     @patch("tripsage.api.middlewares.rate_limiting.logger")
-    async def test_rate_limit_logging(
-        self, mock_logger, middleware, mock_request, mock_call_next
-    ):
+    async def test_rate_limit_logging(self, mock_logger, middleware, mock_request, mock_call_next):
         """Test that rate limit violations are logged."""
         # No principal
         mock_request.state.principal = None
@@ -475,9 +457,7 @@ class TestEnhancedRateLimitMiddleware:
         mock_settings.redis_url = "redis://localhost:6379"
 
         # Create middleware
-        middleware = EnhancedRateLimitMiddleware(
-            app=mock_app, settings=mock_settings, use_dragonfly=True
-        )
+        middleware = EnhancedRateLimitMiddleware(app=mock_app, settings=mock_settings, use_dragonfly=True)
 
         # Should use DragonflyRateLimiter
         assert isinstance(middleware.rate_limiter, DragonflyRateLimiter)

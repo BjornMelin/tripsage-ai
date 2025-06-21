@@ -82,9 +82,7 @@ class TestTripDestination:
         with pytest.raises(ValidationError):
             TripDestination(
                 name="Invalid",
-                coordinates=Coordinates(
-                    latitude=91.0, longitude=2.3522
-                ),  # Invalid latitude
+                coordinates=Coordinates(latitude=91.0, longitude=2.3522),  # Invalid latitude
             )
 
 
@@ -182,9 +180,7 @@ class TestTripPreferences:
 
     def test_valid_preferences(self):
         """Test creating valid trip preferences."""
-        budget = Budget(
-            total_budget=Price(amount=Decimal("5000.00"), currency=CurrencyCode.USD)
-        )
+        budget = Budget(total_budget=Price(amount=Decimal("5000.00"), currency=CurrencyCode.USD))
         accommodation = AccommodationPreferences(
             type=AccommodationType.HOTEL,
             min_rating=4.0,
@@ -311,16 +307,10 @@ class TestTravelModelsIntegration:
         budget = Budget(
             total_budget=Price(amount=Decimal("5000.00"), currency=CurrencyCode.USD),
             categories={
-                "accommodation": Price(
-                    amount=Decimal("2000.00"), currency=CurrencyCode.USD
-                ),
-                "transportation": Price(
-                    amount=Decimal("1500.00"), currency=CurrencyCode.USD
-                ),
+                "accommodation": Price(amount=Decimal("2000.00"), currency=CurrencyCode.USD),
+                "transportation": Price(amount=Decimal("1500.00"), currency=CurrencyCode.USD),
                 "food": Price(amount=Decimal("1000.00"), currency=CurrencyCode.USD),
-                "activities": Price(
-                    amount=Decimal("500.00"), currency=CurrencyCode.USD
-                ),
+                "activities": Price(amount=Decimal("500.00"), currency=CurrencyCode.USD),
             },
         )
 
@@ -328,9 +318,7 @@ class TestTravelModelsIntegration:
         accommodation = AccommodationPreferences(
             type=AccommodationType.HOTEL,
             min_rating=4.0,
-            max_price_per_night=Price(
-                amount=Decimal("200.00"), currency=CurrencyCode.USD
-            ),
+            max_price_per_night=Price(amount=Decimal("200.00"), currency=CurrencyCode.USD),
             amenities=["wifi", "breakfast", "gym"],
             location_preference="city_center",
         )

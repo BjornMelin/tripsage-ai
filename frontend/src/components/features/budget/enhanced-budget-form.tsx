@@ -125,7 +125,7 @@ export function EnhancedBudgetForm({
   onCancel,
   initialData,
   currencies = DEFAULT_CURRENCIES,
-  tripId,
+  tripId: _tripId,
   className,
 }: BudgetFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);

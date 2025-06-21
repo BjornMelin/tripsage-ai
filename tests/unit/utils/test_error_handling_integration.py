@@ -160,9 +160,7 @@ class TestUpdatedUtilityFunctions:
         """Test that with_error_handling delegates to core implementation."""
         mock_logger = Mock()
 
-        @with_error_handling_and_logging(
-            fallback="error_result", logger_instance=mock_logger
-        )
+        @with_error_handling_and_logging(fallback="error_result", logger_instance=mock_logger)
         def test_func():
             raise ValueError("Test error")
 
@@ -312,9 +310,7 @@ class TestTripSageErrorContext:
         mock_logger = Mock()
 
         with pytest.raises(ValueError):
-            with TripSageErrorContext(
-                operation="test_operation", logger_instance=mock_logger
-            ):
+            with TripSageErrorContext(operation="test_operation", logger_instance=mock_logger):
                 raise ValueError("Standard error")
 
         # Should still log the start operation
@@ -324,9 +320,7 @@ class TestTripSageErrorContext:
         """Test context manager with minimal parameters."""
         mock_logger = Mock()
 
-        with TripSageErrorContext(
-            operation="minimal_test", logger_instance=mock_logger
-        ):
+        with TripSageErrorContext(operation="minimal_test", logger_instance=mock_logger):
             pass
 
         # Should work with just operation name
@@ -372,9 +366,7 @@ class TestIntegrationScenarios:
         # Verify exception enhancement
         enhanced_exc = exc_info.value
         assert enhanced_exc.details.operation == "search_flights"
-        assert (
-            enhanced_exc.details.service == "duffel-mcp"
-        )  # Service from MCP error takes precedence
+        assert enhanced_exc.details.service == "duffel-mcp"  # Service from MCP error takes precedence
         assert enhanced_exc.details.user_id == "user123"
         assert enhanced_exc.details.request_id == "req456"
 
@@ -407,15 +399,11 @@ class TestIntegrationScenarios:
             return True
 
         # Test successful validation
-        result = safe_execute_with_logging(
-            validate_email, "user@example.com", fallback=False
-        )
+        result = safe_execute_with_logging(validate_email, "user@example.com", fallback=False)
         assert result is True
 
         # Test validation error with fallback
-        result = safe_execute_with_logging(
-            validate_email, "invalid-email", fallback=False
-        )
+        result = safe_execute_with_logging(validate_email, "invalid-email", fallback=False)
         assert result is False
 
     def test_database_error_with_decorator(self):
@@ -424,9 +412,7 @@ class TestIntegrationScenarios:
 
         @with_error_handling_and_logging(fallback=[], logger_instance=mock_logger)
         def get_users():
-            raise create_database_error(
-                message="Connection timeout", operation="SELECT", table="users"
-            )
+            raise create_database_error(message="Connection timeout", operation="SELECT", table="users")
 
         result = get_users()
 

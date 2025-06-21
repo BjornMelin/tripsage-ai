@@ -69,13 +69,9 @@ class ChatSessionResponse(TripSageModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     ended_at: Optional[datetime] = Field(None, description="End timestamp")
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Session metadata"
-    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Session metadata")
     message_count: int = Field(default=0, description="Number of messages")
-    last_message_at: Optional[datetime] = Field(
-        None, description="Last message timestamp"
-    )
+    last_message_at: Optional[datetime] = Field(None, description="Last message timestamp")
 
 
 class MessageCreateRequest(TripSageModel):
@@ -84,9 +80,7 @@ class MessageCreateRequest(TripSageModel):
     role: str = Field(..., description="Message role")
     content: str = Field(..., min_length=1, description="Message content")
     metadata: Optional[Dict[str, Any]] = Field(None, description="Message metadata")
-    tool_calls: Optional[List[Dict[str, Any]]] = Field(
-        None, description="Tool calls data"
-    )
+    tool_calls: Optional[List[Dict[str, Any]]] = Field(None, description="Tool calls data")
 
     @field_validator("role")
     @classmethod
@@ -111,12 +105,8 @@ class MessageResponse(TripSageModel):
     role: str = Field(..., description="Message role")
     content: str = Field(..., description="Message content")
     created_at: datetime = Field(..., description="Creation timestamp")
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Message metadata"
-    )
-    tool_calls: List[Dict[str, Any]] = Field(
-        default_factory=list, description="Tool calls"
-    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Message metadata")
+    tool_calls: List[Dict[str, Any]] = Field(default_factory=list, description="Tool calls")
     estimated_tokens: Optional[int] = Field(None, description="Estimated token count")
 
 
@@ -138,9 +128,7 @@ class ToolCallResponse(TripSageModel):
 class RecentMessagesRequest(TripSageModel):
     """Request model for recent messages retrieval."""
 
-    limit: int = Field(
-        default=10, ge=1, le=100, description="Maximum number of messages"
-    )
+    limit: int = Field(default=10, ge=1, le=100, description="Maximum number of messages")
     max_tokens: int = Field(default=8000, ge=100, description="Maximum total tokens")
     offset: int = Field(default=0, ge=0, description="Number of messages to skip")
 
@@ -148,9 +136,7 @@ class RecentMessagesRequest(TripSageModel):
 class RecentMessagesResponse(TripSageModel):
     """Response model for recent messages."""
 
-    messages: List[MessageResponse] = Field(
-        ..., description="Messages within token limit"
-    )
+    messages: List[MessageResponse] = Field(..., description="Messages within token limit")
     total_tokens: int = Field(..., description="Total estimated tokens")
     truncated: bool = Field(..., description="Whether results were truncated")
 
@@ -189,9 +175,7 @@ class RateLimiter:
             self.user_windows[user_id] = []
 
         # Remove old timestamps
-        self.user_windows[user_id] = [
-            ts for ts in self.user_windows[user_id] if ts > window_start
-        ]
+        self.user_windows[user_id] = [ts for ts in self.user_windows[user_id] if ts > window_start]
 
         # Check if under limit
         if len(self.user_windows[user_id]) + count > self.max_messages:
@@ -248,9 +232,7 @@ class ChatService:
         self._retry_count = 3
         self._retry_delay = 0.1
 
-    async def create_session(
-        self, user_id: str, session_data: ChatSessionCreateRequest
-    ) -> ChatSessionResponse:
+    async def create_session(self, user_id: str, session_data: ChatSessionCreateRequest) -> ChatSessionResponse:
         """
         Create a new chat session.
 
@@ -291,9 +273,7 @@ class ChatService:
                 trip_id=result.get("trip_id"),
                 created_at=datetime.fromisoformat(result["created_at"]),
                 updated_at=datetime.fromisoformat(result["updated_at"]),
-                ended_at=datetime.fromisoformat(result["ended_at"])
-                if result.get("ended_at")
-                else None,
+                ended_at=datetime.fromisoformat(result["ended_at"]) if result.get("ended_at") else None,
                 metadata=result.get("metadata", {}),
             )
 
@@ -321,9 +301,7 @@ class ChatService:
             List of user's chat sessions
         """
         try:
-            results = await self.db.get_user_chat_sessions(
-                user_id, limit, include_ended
-            )
+            results = await self.db.get_user_chat_sessions(user_id, limit, include_ended)
 
             sessions = []
             for result in results:
@@ -335,14 +313,10 @@ class ChatService:
                         trip_id=result.get("trip_id"),
                         created_at=datetime.fromisoformat(result["created_at"]),
                         updated_at=datetime.fromisoformat(result["updated_at"]),
-                        ended_at=datetime.fromisoformat(result["ended_at"])
-                        if result.get("ended_at")
-                        else None,
+                        ended_at=datetime.fromisoformat(result["ended_at"]) if result.get("ended_at") else None,
                         metadata=result.get("metadata", {}),
                         message_count=result.get("message_count", 0),
-                        last_message_at=datetime.fromisoformat(
-                            result["last_message_at"]
-                        )
+                        last_message_at=datetime.fromisoformat(result["last_message_at"])
                         if result.get("last_message_at")
                         else None,
                     )
@@ -357,9 +331,7 @@ class ChatService:
             )
             return []
 
-    async def add_message(
-        self, session_id: str, user_id: str, message_data: MessageCreateRequest
-    ) -> MessageResponse:
+    async def add_message(self, session_id: str, user_id: str, message_data: MessageCreateRequest) -> MessageResponse:
         """
         Add message to chat session.
 
@@ -470,9 +442,7 @@ class ChatService:
             # Verify session access
             session = await self._get_session_internal(session_id, user_id)
             if not session:
-                return RecentMessagesResponse(
-                    messages=[], total_tokens=0, truncated=False
-                )
+                return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
             # Get messages with token estimation
             results = await self.db.get_recent_messages_with_tokens(
@@ -498,9 +468,7 @@ class ChatService:
                     created_at=datetime.fromisoformat(result["created_at"]),
                     metadata=result.get("metadata", {}),
                     tool_calls=[tc for tc in tool_calls],
-                    estimated_tokens=result.get(
-                        "estimated_tokens", self._estimate_tokens(result["content"])
-                    ),
+                    estimated_tokens=result.get("estimated_tokens", self._estimate_tokens(result["content"])),
                 )
 
                 messages.append(message)
@@ -514,9 +482,7 @@ class ChatService:
             if messages and total_tokens >= request.max_tokens:
                 truncated = True
 
-            return RecentMessagesResponse(
-                messages=messages, total_tokens=total_tokens, truncated=truncated
-            )
+            return RecentMessagesResponse(messages=messages, total_tokens=total_tokens, truncated=truncated)
 
         except Exception as e:
             logger.error(
@@ -601,9 +567,7 @@ class ChatService:
                 "completed_at": completed_at.isoformat() if completed_at else None,
             }
 
-            updated_tool_call = await self.db.update_tool_call(
-                tool_call_id, update_data
-            )
+            updated_tool_call = await self.db.update_tool_call(tool_call_id, update_data)
 
             if updated_tool_call:
                 logger.info(
@@ -686,9 +650,7 @@ class ChatService:
             return 0
         return max(1, len(content) // self.chars_per_token)
 
-    async def add_tool_call(
-        self, message_id: str, tool_call_data: Dict[str, Any]
-    ) -> ToolCallResponse:
+    async def add_tool_call(self, message_id: str, tool_call_data: Dict[str, Any]) -> ToolCallResponse:
         """
         Create a tool call record.
 
@@ -706,12 +668,8 @@ class ChatService:
             "id": tool_call_id,
             "message_id": message_id,
             "tool_id": tool_call_data.get("tool_id", tool_call_data.get("id", "")),
-            "tool_name": tool_call_data.get(
-                "tool_name", tool_call_data.get("function", {}).get("name", "")
-            ),
-            "arguments": tool_call_data.get(
-                "arguments", tool_call_data.get("function", {}).get("arguments", {})
-            ),
+            "tool_name": tool_call_data.get("tool_name", tool_call_data.get("function", {}).get("name", "")),
+            "arguments": tool_call_data.get("arguments", tool_call_data.get("function", {}).get("arguments", {})),
             "status": ToolCallStatus.PENDING,
             "created_at": now.isoformat(),
         }
@@ -872,9 +830,7 @@ class ChatService:
         sessions = await self.get_user_sessions(user_id)
         return [session.model_dump() for session in sessions]
 
-    async def create_message(
-        self, user_id: str, session_id: str, message_request
-    ) -> Dict[str, Any]:
+    async def create_message(self, user_id: str, session_id: str, message_request) -> Dict[str, Any]:
         """
         Create a message in a session (router compatibility method).
 
@@ -909,9 +865,7 @@ class ChatService:
         return await self.end_session(session_id, user_id)
 
     # Rename original methods to avoid conflicts with router compatibility methods
-    async def _get_session_internal(
-        self, session_id: str, user_id: str
-    ) -> Optional[ChatSessionResponse]:
+    async def _get_session_internal(self, session_id: str, user_id: str) -> Optional[ChatSessionResponse]:
         """Internal get_session method with original signature."""
         try:
             result = await self.db.get_chat_session(session_id, user_id)
@@ -928,9 +882,7 @@ class ChatService:
                 trip_id=result.get("trip_id"),
                 created_at=datetime.fromisoformat(result["created_at"]),
                 updated_at=datetime.fromisoformat(result["updated_at"]),
-                ended_at=datetime.fromisoformat(result["ended_at"])
-                if result.get("ended_at")
-                else None,
+                ended_at=datetime.fromisoformat(result["ended_at"]) if result.get("ended_at") else None,
                 metadata=result.get("metadata", {}),
                 message_count=stats.get("message_count", 0),
                 last_message_at=datetime.fromisoformat(stats["last_message_at"])
@@ -989,9 +941,7 @@ class ChatService:
             return []
 
     # Router-compatible methods with simplified signatures
-    async def get_session(
-        self, user_id: str, session_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def get_session(self, user_id: str, session_id: str) -> Optional[Dict[str, Any]]:
         """
         Get chat session (router-compatible method).
 
@@ -1005,9 +955,7 @@ class ChatService:
         session = await self._get_session_internal(session_id, user_id)
         return session.model_dump() if session else None
 
-    async def get_messages(
-        self, user_id: str, session_id: str, limit: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
+    async def get_messages(self, user_id: str, session_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get messages (router-compatible method).
 
