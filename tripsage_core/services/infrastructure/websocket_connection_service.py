@@ -99,20 +99,20 @@ class WebSocketConnection:
         self,
         websocket: WebSocket,
         connection_id: str,
-        user_id: Optional[UUID] = None,
-        session_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
+        session_id: UUID | None = None,
     ):
         self.websocket = websocket
         self.connection_id = connection_id
         self.user_id = user_id
         self.session_id = session_id
-        self.connected_at = datetime.utcnow()
-        self.last_heartbeat = datetime.utcnow()
-        self.last_pong = datetime.utcnow()
+        self.connected_at = datetime.now()
+        self.last_heartbeat = datetime.now()
+        self.last_pong = datetime.now()
         self.state = ConnectionState.CONNECTED
-        self.subscribed_channels: Set[str] = set()
-        self.client_ip: Optional[str] = None
-        self.user_agent: Optional[str] = None
+        self.subscribed_channels: set[str] = set()
+        self.client_ip: str | None = None
+        self.user_agent: str | None = None
 
         # Configuration for queue limits and backpressure
         self.MAX_TOTAL_QUEUE_SIZE = 2000  # Total messages across all priority queues
@@ -122,7 +122,7 @@ class WebSocketConnection:
         self.message_queue: Deque[Any] = MonitoredDeque(
             maxlen=1000, priority_name="main", connection_id=connection_id
         )
-        self.priority_queue: Dict[int, Deque[Any]] = {
+        self.priority_queue: dict[int, Deque[Any]] = {
             1: MonitoredDeque(
                 maxlen=100, priority_name="high", connection_id=connection_id
             ),
@@ -148,11 +148,11 @@ class WebSocketConnection:
 
         # Connection health - fix latency calculation for low sample counts
         self.latency_samples: Deque[float] = deque(maxlen=10)
-        self.ping_sent_times: Dict[str, float] = {}  # ping_id -> timestamp
+        self.ping_sent_times: dict[str, float] = {}  # ping_id -> timestamp
         self.ping_timeout_threshold = 5.0  # seconds
 
         # Backward compatibility property for tests
-        self._ping_sent_time_compat: Optional[float] = None
+        self._ping_sent_time_compat: float | None = None
 
         # Error recovery components that were moved from manager
         from .websocket_manager import CircuitBreaker, ExponentialBackoff
@@ -162,10 +162,10 @@ class WebSocketConnection:
 
         # Concurrency control
         self._send_lock = asyncio.Lock()
-        self._ping_task: Optional[asyncio.Task] = None
+        self._ping_task: asyncio.Task | None = None
 
     @property
-    def ping_sent_time(self) -> Optional[float]:
+    def ping_sent_time(self) -> float | None:
         """Backward compatibility property for tests."""
         if self.ping_sent_times:
             # Return the oldest ping time for compatibility
@@ -173,7 +173,7 @@ class WebSocketConnection:
         return self._ping_sent_time_compat
 
     @ping_sent_time.setter
-    def ping_sent_time(self, value: Optional[float]) -> None:
+    def ping_sent_time(self, value: float | None) -> None:
         """Backward compatibility setter for tests."""
         self._ping_sent_time_compat = value
         if value is not None:
@@ -250,20 +250,19 @@ class WebSocketConnection:
                     # Now add the higher priority message
                     self.priority_queue[priority].append(event)
                     return True
-                else:
-                    # No low priority messages to drop, reject the new message
-                    logger.error(
-                        f"Queue full and no low priority messages to drop for "
-                        f"connection {self.connection_id}. "
-                        f"Rejecting priority {priority} message."
-                    )
-                    return False
+                # No low priority messages to drop, reject the new message
+                logger.error(
+                    f"Queue full and no low priority messages to drop for "
+                    f"connection {self.connection_id}. "
+                    f"Rejecting priority {priority} message."
+                )
+                return False
 
         # Queue not full, add normally
         self.priority_queue[priority].append(event)
         return True
 
-    async def send(self, event: Dict[str, Any]) -> bool:
+    async def send(self, event: dict[str, Any]) -> bool:
         """Send event to WebSocket connection with error handling."""
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
             # For cascade failure prevention: if connection is in ERROR state but
@@ -404,7 +403,7 @@ class WebSocketConnection:
             ping_event = {
                 "type": "connection.heartbeat",
                 "payload": {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                     "ping": True,
                     "ping_id": ping_id,
                 },
@@ -439,7 +438,7 @@ class WebSocketConnection:
             self.state = ConnectionState.ERROR
             return False
 
-    def handle_pong(self, ping_id: Optional[str] = None):
+    def handle_pong(self, ping_id: str | None = None):
         """Handle pong response and calculate latency with support for multiple pings.
 
         Args:
@@ -471,18 +470,16 @@ class WebSocketConnection:
         if not self.ping_sent_times:
             self._ping_sent_time_compat = None
 
-        self.last_pong = datetime.utcnow()
-        self.last_heartbeat = datetime.utcnow()
+        self.last_pong = datetime.now()
+        self.last_heartbeat = datetime.now()
 
     def update_heartbeat(self) -> None:
         """Update last heartbeat timestamp."""
-        self.last_heartbeat = datetime.utcnow()
+        self.last_heartbeat = datetime.now()
 
     def is_stale(self, timeout_seconds: int = 60) -> bool:
         """Check if connection is stale based on last heartbeat."""
-        return (
-            datetime.utcnow() - self.last_heartbeat
-        ).total_seconds() > timeout_seconds
+        return (datetime.now() - self.last_heartbeat).total_seconds() > timeout_seconds
 
     def is_ping_timeout(self, timeout_seconds: int = 5) -> bool:
         """Check if any ping response is overdue."""
@@ -569,11 +566,10 @@ class WebSocketConnection:
                             sent_count += 1
                         else:
                             break  # Stop on failure
+                    elif await self.send(event):
+                        sent_count += 1
                     else:
-                        if await self.send(event):
-                            sent_count += 1
-                        else:
-                            break  # Stop on failure
+                        break  # Stop on failure
 
         return sent_count
 
@@ -596,14 +592,14 @@ class WebSocketConnectionService:
     """Service for managing individual WebSocket connections."""
 
     def __init__(self):
-        self.connections: Dict[str, WebSocketConnection] = {}
+        self.connections: dict[str, WebSocketConnection] = {}
 
     async def create_connection(
         self,
         websocket: WebSocket,
         connection_id: str,
-        user_id: Optional[UUID] = None,
-        session_id: Optional[UUID] = None,
+        user_id: UUID | None = None,
+        session_id: UUID | None = None,
     ) -> WebSocketConnection:
         """Create a new WebSocket connection."""
         connection = WebSocketConnection(
@@ -627,7 +623,7 @@ class WebSocketConnectionService:
             connection.state = ConnectionState.DISCONNECTED
             logger.info(f"Removed WebSocket connection {connection_id}")
 
-    def get_connection(self, connection_id: str) -> Optional[WebSocketConnection]:
+    def get_connection(self, connection_id: str) -> WebSocketConnection | None:
         """Get a connection by ID with better encapsulation."""
         return self.connections.get(connection_id)
 
@@ -635,7 +631,7 @@ class WebSocketConnectionService:
         """Check if connection exists."""
         return connection_id in self.connections
 
-    def get_all_connections(self) -> Dict[str, WebSocketConnection]:
+    def get_all_connections(self) -> dict[str, WebSocketConnection]:
         """Get all connections (returns a copy for safety)."""
         return self.connections.copy()
 
@@ -645,7 +641,7 @@ class WebSocketConnectionService:
 
     def get_connections_by_state(
         self, state: ConnectionState
-    ) -> Dict[str, WebSocketConnection]:
+    ) -> dict[str, WebSocketConnection]:
         """Get connections filtered by state."""
         return {
             conn_id: conn
@@ -653,7 +649,7 @@ class WebSocketConnectionService:
             if conn.state == state
         }
 
-    def get_connections_for_user(self, user_id: UUID) -> Dict[str, WebSocketConnection]:
+    def get_connections_for_user(self, user_id: UUID) -> dict[str, WebSocketConnection]:
         """Get all connections for a user."""
         return {
             conn_id: conn
@@ -663,7 +659,7 @@ class WebSocketConnectionService:
 
     def get_connections_for_session(
         self, session_id: UUID
-    ) -> Dict[str, WebSocketConnection]:
+    ) -> dict[str, WebSocketConnection]:
         """Get all connections for a session."""
         return {
             conn_id: conn

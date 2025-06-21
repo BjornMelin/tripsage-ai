@@ -27,7 +27,7 @@ class WebSocketEvent(BaseModel):
 
     id: str = Field(default_factory=lambda: str(__import__("uuid").uuid4()))
     type: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=datetime.now)
     user_id: UUID | None = None
     session_id: UUID | None = None
     connection_id: str | None = None
@@ -103,10 +103,10 @@ class WebSocketMessagingService:
         self.auth_service = auth_service
 
         # Connection tracking
-        self.connections: Dict[str, WebSocketConnection] = {}
-        self.user_connections: Dict[UUID, Set[str]] = {}
-        self.session_connections: Dict[UUID, Set[str]] = {}
-        self.channel_connections: Dict[str, Set[str]] = {}
+        self.connections: dict[str, WebSocketConnection] = {}
+        self.user_connections: dict[UUID, set[str]] = {}
+        self.session_connections: dict[UUID, set[str]] = {}
+        self.channel_connections: dict[str, set[str]] = {}
 
         # Performance metrics
         self.performance_metrics = {
@@ -210,7 +210,7 @@ class WebSocketMessagingService:
                 warning_event = {
                     "id": f"rate_limit_{connection_id}",
                     "type": WebSocketEventType.RATE_LIMIT_EXCEEDED,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now().isoformat(),
                     "payload": {
                         "reason": rate_check["reason"],
                         "retry_after": 60,  # Default window
@@ -293,7 +293,7 @@ class WebSocketMessagingService:
     async def send_by_target(
         self,
         target_type: str,
-        target_id: Optional[str],
+        target_id: str | None,
         event: WebSocketEvent,
         rate_limiter=None,
     ) -> int:
@@ -304,19 +304,18 @@ class WebSocketMessagingService:
         if target_type == "connection" and target_id:
             success = await self.send_to_connection(target_id, event, rate_limiter)
             return 1 if success else 0
-        elif target_type == "user" and target_id:
+        if target_type == "user" and target_id:
             return await self.send_to_user(UUID(target_id), event, rate_limiter)
-        elif target_type == "session" and target_id:
+        if target_type == "session" and target_id:
             return await self.send_to_session(UUID(target_id), event, rate_limiter)
-        elif target_type == "channel" and target_id:
+        if target_type == "channel" and target_id:
             return await self.send_to_channel(target_id, event, rate_limiter)
-        elif target_type == "broadcast":
+        if target_type == "broadcast":
             return await self.broadcast_to_all(event, rate_limiter)
-        else:
-            logger.warning(f"Unknown target type: {target_type}")
-            return 0
+        logger.warning(f"Unknown target type: {target_type}")
+        return 0
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """Get messaging statistics."""
         total_queued = sum(
             len(conn.message_queue) + sum(len(q) for q in conn.priority_queue.values())
