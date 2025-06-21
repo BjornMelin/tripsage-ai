@@ -18,11 +18,16 @@ from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
 from tripsage_core.services.infrastructure.websocket_manager import (
-    ConnectionState,
     WebSocketAuthRequest,
-    WebSocketEvent,
     WebSocketManager,
     websocket_manager,
+)
+from tripsage_core.services.infrastructure.websocket_connection_service import (
+    ConnectionState,
+    WebSocketConnection,
+)
+from tripsage_core.services.infrastructure.websocket_messaging_service import (
+    WebSocketEvent,
 )
 
 
@@ -44,7 +49,7 @@ class TestHeartbeatMechanisms:
         mock_connection.state = ConnectionState.AUTHENTICATED
         mock_connection.send_ping = AsyncMock(return_value=True)
 
-        manager.connections["test"] = mock_connection
+        manager.connection_service.connections["test"] = mock_connection
         manager._running = True
 
         # Run heartbeat monitor for a short time
@@ -72,7 +77,7 @@ class TestHeartbeatMechanisms:
         mock_connection.is_ping_timeout.return_value = True
         mock_connection.connection_id = "timeout-test"
 
-        manager.connections["timeout-test"] = mock_connection
+        manager.connection_service.connections["timeout-test"] = mock_connection
         manager._running = True
 
         # Run cleanup task
@@ -159,7 +164,7 @@ class TestRateLimitingEdgeCases:
         connection = WebSocketConnection(
             websocket=mock_ws, connection_id=connection_id, user_id=user_id
         )
-        manager.connections[connection_id] = connection
+        manager.connection_service.connections[connection_id] = connection
 
         # Send burst of messages
         events = [
@@ -230,7 +235,7 @@ class TestRateLimitingEdgeCases:
             conn.user_id = user_id
             conn.send = AsyncMock(return_value=True)
             conn_id = f"conn-{i}"
-            manager.connections[conn_id] = conn
+            manager.connection_service.connections[conn_id] = conn
             connections.append((conn_id, conn))
 
         # Send message from each connection
@@ -385,7 +390,7 @@ class TestRedisIntegrationFailures:
         mock_conn = MagicMock()
         mock_conn.send = AsyncMock(return_value=True)
         mock_conn.subscribed_channels = {"general"}
-        manager.connections["test-conn"] = mock_conn
+        manager.connection_service.connections["test-conn"] = mock_conn
         manager.channel_connections["general"] = {"test-conn"}
 
         # Handle the message
@@ -416,14 +421,14 @@ class TestConcurrentOperations:
             conn = WebSocketConnection(
                 websocket=mock_ws, connection_id=f"conn-{i}", user_id=uuid4()
             )
-            manager.connections[f"conn-{i}"] = conn
+            manager.connection_service.connections[f"conn-{i}"] = conn
             manager.user_connections[conn.user_id] = {f"conn-{i}"}
 
         # Send to all connections concurrently
         event = WebSocketEvent(type="broadcast", payload={"msg": "test"})
 
         tasks = []
-        for conn_id in manager.connections:
+        for conn_id in manager.connection_service.connections:
             tasks.append(manager.send_to_connection(conn_id, event))
 
         results = await asyncio.gather(*tasks)
@@ -467,7 +472,7 @@ class TestConcurrentOperations:
         await asyncio.gather(*tasks)
 
         # All connections should be cleaned up
-        assert len(manager.connections) == 0
+        assert len(manager.connection_service.connections) == 0
 
         await manager.stop()
 
@@ -493,7 +498,7 @@ class TestConcurrentOperations:
             )
             conn.subscribe_to_channel(channel)
 
-            manager.connections[f"load-{i}"] = conn
+            manager.connection_service.connections[f"load-{i}"] = conn
             if channel not in manager.channel_connections:
                 manager.channel_connections[channel] = set()
             manager.channel_connections[channel].add(f"load-{i}")
@@ -592,7 +597,7 @@ class TestPerformanceOptimization:
         )
 
         connection = WebSocketConnection(websocket=mock_ws, connection_id="perf-test")
-        manager.connections["perf-test"] = connection
+        manager.connection_service.connections["perf-test"] = connection
 
         # Queue multiple messages
         for i in range(10):
