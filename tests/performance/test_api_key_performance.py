@@ -81,20 +81,27 @@ class TestApiKeyPerformance:
         transaction_mock.__aexit__ = AsyncMock()
         transaction_mock.insert = AsyncMock()
         transaction_mock.delete = AsyncMock()
-        transaction_mock.execute = AsyncMock(return_value=[[{
-            "id": str(uuid.uuid4()),
-            "name": "Test API Key",
-            "service": "openai",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "is_active": True,
-            "is_valid": True,
-            "usage_count": 0,
-            "description": "Test key description",
-            "expires_at": None,
-            "last_used": None,
-            "last_validated": datetime.now(timezone.utc).isoformat(),
-        }], []])
+        transaction_mock.execute = AsyncMock(
+            return_value=[
+                [
+                    {
+                        "id": str(uuid.uuid4()),
+                        "name": "Test API Key",
+                        "service": "openai",
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "is_active": True,
+                        "is_valid": True,
+                        "usage_count": 0,
+                        "description": "Test key description",
+                        "expires_at": None,
+                        "last_used": None,
+                        "last_validated": datetime.now(timezone.utc).isoformat(),
+                    }
+                ],
+                [],
+            ]
+        )
         db.transaction = Mock(return_value=transaction_mock)
 
         return db

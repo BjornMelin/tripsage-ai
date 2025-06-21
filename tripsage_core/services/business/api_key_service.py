@@ -305,11 +305,7 @@ class ApiKeyService:
         Returns:
             String representation of the service type
         """
-        return (
-            service.value
-            if hasattr(service, "value")
-            else str(service)
-        )
+        return service.value if hasattr(service, "value") else str(service)
 
     def _initialize_encryption(self, master_secret: str) -> None:
         """
@@ -583,7 +579,7 @@ class ApiKeyService:
 
             # Calculate latency and create new result with latency included
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
-            
+
             # Create new ValidationResult with latency (since original is frozen)
             result_with_latency = ValidationResult(
                 is_valid=result.is_valid,
@@ -600,7 +596,9 @@ class ApiKeyService:
 
             # Cache successful validation
             if result_with_latency.is_valid and self.cache:
-                await self._cache_validation_result(service, key_value, result_with_latency)
+                await self._cache_validation_result(
+                    service, key_value, result_with_latency
+                )
 
             return result_with_latency
 
