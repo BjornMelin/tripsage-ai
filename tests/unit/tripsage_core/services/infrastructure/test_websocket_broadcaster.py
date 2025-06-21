@@ -154,12 +154,8 @@ class TestWebSocketBroadcaster:
             broadcaster = WebSocketBroadcaster()
 
             with (
-                patch.object(
-                    broadcaster, "_process_broadcast_queue", new_callable=AsyncMock
-                ),
-                patch.object(
-                    broadcaster, "_handle_subscriptions", new_callable=AsyncMock
-                ),
+                patch.object(broadcaster, "_process_broadcast_queue", new_callable=AsyncMock),
+                patch.object(broadcaster, "_handle_subscriptions", new_callable=AsyncMock),
             ):
                 await broadcaster.start()
 
@@ -185,9 +181,7 @@ class TestWebSocketBroadcaster:
             assert broadcaster.redis_client is None
 
     @pytest.mark.asyncio
-    async def test_start_broadcaster_connection_failure(
-        self, mock_settings, mock_redis_client
-    ):
+    async def test_start_broadcaster_connection_failure(self, mock_settings, mock_redis_client):
         """Test broadcaster startup with Redis connection failure."""
         mock_redis_client.ping.side_effect = Exception("Connection failed")
 
@@ -200,9 +194,7 @@ class TestWebSocketBroadcaster:
         ):
             broadcaster = WebSocketBroadcaster()
 
-            with pytest.raises(
-                CoreServiceError, match="Failed to start WebSocket broadcaster"
-            ):
+            with pytest.raises(CoreServiceError, match="Failed to start WebSocket broadcaster"):
                 await broadcaster.start()
 
     @pytest.mark.asyncio
@@ -223,9 +215,7 @@ class TestWebSocketBroadcaster:
         websocket_broadcaster.redis_client.close.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_broadcast_to_connection(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_broadcast_to_connection(self, websocket_broadcaster, mock_redis_client):
         """Test broadcasting to specific connection."""
         connection_id = "conn-123"
         event = {
@@ -234,9 +224,7 @@ class TestWebSocketBroadcaster:
             "payload": {"message": "Hello"},
         }
 
-        result = await websocket_broadcaster.broadcast_to_connection(
-            connection_id, event, priority=1
-        )
+        result = await websocket_broadcaster.broadcast_to_connection(connection_id, event, priority=1)
 
         assert result is True
         mock_redis_client.zadd.assert_called_once()
@@ -267,9 +255,7 @@ class TestWebSocketBroadcaster:
             "payload": {"status": "active"},
         }
 
-        result = await websocket_broadcaster.broadcast_to_user(
-            user_id, event, priority=2
-        )
+        result = await websocket_broadcaster.broadcast_to_user(user_id, event, priority=2)
 
         assert result is True
         mock_redis_client.zadd.assert_called_once()
@@ -312,9 +298,7 @@ class TestWebSocketBroadcaster:
             "payload": {"announcement": "Server maintenance scheduled"},
         }
 
-        result = await websocket_broadcaster.broadcast_to_channel(
-            channel, event, priority=3
-        )
+        result = await websocket_broadcaster.broadcast_to_channel(channel, event, priority=3)
 
         assert result is True
         mock_redis_client.zadd.assert_called_once()
@@ -365,9 +349,7 @@ class TestWebSocketBroadcaster:
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_broadcast_redis_error(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_broadcast_redis_error(self, websocket_broadcaster, mock_redis_client):
         """Test broadcasting with Redis error."""
         mock_redis_client.zadd.side_effect = Exception("Redis error")
 
@@ -377,26 +359,19 @@ class TestWebSocketBroadcaster:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_register_connection_success(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_register_connection_success(self, websocket_broadcaster, mock_redis_client):
         """Test successful connection registration."""
         connection_id = "conn-123"
         user_id = uuid4()
         session_id = uuid4()
         channels = ["general", "notifications"]
 
-        await websocket_broadcaster.register_connection(
-            connection_id, user_id, session_id, channels
-        )
+        await websocket_broadcaster.register_connection(connection_id, user_id, session_id, channels)
 
         # Verify connection info was stored
         mock_redis_client.hset.assert_called_once()
         call_args = mock_redis_client.hset.call_args
-        assert (
-            f"{websocket_broadcaster.CONNECTION_INFO_KEY}:{connection_id}"
-            in call_args[0]
-        )
+        assert f"{websocket_broadcaster.CONNECTION_INFO_KEY}:{connection_id}" in call_args[0]
 
         # Verify user and session mappings
         expected_sadd_calls = [
@@ -409,9 +384,7 @@ class TestWebSocketBroadcaster:
             assert expected_call in sadd_calls
 
     @pytest.mark.asyncio
-    async def test_register_connection_without_session(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_register_connection_without_session(self, websocket_broadcaster, mock_redis_client):
         """Test connection registration without session ID."""
         connection_id = "conn-456"
         user_id = uuid4()
@@ -439,9 +412,7 @@ class TestWebSocketBroadcaster:
             await broadcaster.register_connection("conn-123", uuid4())
 
     @pytest.mark.asyncio
-    async def test_register_connection_redis_error(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_register_connection_redis_error(self, websocket_broadcaster, mock_redis_client):
         """Test connection registration with Redis error."""
         mock_redis_client.hset.side_effect = Exception("Redis error")
 
@@ -449,9 +420,7 @@ class TestWebSocketBroadcaster:
         await websocket_broadcaster.register_connection("conn-123", uuid4())
 
     @pytest.mark.asyncio
-    async def test_unregister_connection_success(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_unregister_connection_success(self, websocket_broadcaster, mock_redis_client):
         """Test successful connection unregistration."""
         connection_id = "conn-123"
         user_id = str(uuid4())
@@ -484,14 +453,10 @@ class TestWebSocketBroadcaster:
             assert expected_call in srem_calls
 
         # Verify connection info was deleted
-        mock_redis_client.delete.assert_called_once_with(
-            f"{websocket_broadcaster.CONNECTION_INFO_KEY}:{connection_id}"
-        )
+        mock_redis_client.delete.assert_called_once_with(f"{websocket_broadcaster.CONNECTION_INFO_KEY}:{connection_id}")
 
     @pytest.mark.asyncio
-    async def test_unregister_connection_not_found(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_unregister_connection_not_found(self, websocket_broadcaster, mock_redis_client):
         """Test unregistering non-existent connection."""
         mock_redis_client.hgetall.return_value = {}
 
@@ -517,30 +482,22 @@ class TestWebSocketBroadcaster:
             await broadcaster.unregister_connection("conn-123")
 
     @pytest.mark.asyncio
-    async def test_subscribe_connection_to_channel(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_subscribe_connection_to_channel(self, websocket_broadcaster, mock_redis_client):
         """Test subscribing connection to channel."""
         connection_id = "conn-123"
         channel = "test-channel"
 
-        await websocket_broadcaster.subscribe_connection_to_channel(
-            connection_id, channel
-        )
+        await websocket_broadcaster.subscribe_connection_to_channel(connection_id, channel)
 
         # Verify local subscription
         assert channel in websocket_broadcaster._subscribers
         assert connection_id in websocket_broadcaster._subscribers[channel]
 
         # Verify Redis operation
-        mock_redis_client.sadd.assert_called_once_with(
-            f"tripsage:websocket:channel:{channel}", connection_id
-        )
+        mock_redis_client.sadd.assert_called_once_with(f"tripsage:websocket:channel:{channel}", connection_id)
 
     @pytest.mark.asyncio
-    async def test_unsubscribe_connection_from_channel(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_unsubscribe_connection_from_channel(self, websocket_broadcaster, mock_redis_client):
         """Test unsubscribing connection from channel."""
         connection_id = "conn-123"
         channel = "test-channel"
@@ -548,22 +505,16 @@ class TestWebSocketBroadcaster:
         # Set up initial subscription
         websocket_broadcaster._subscribers[channel] = {connection_id}
 
-        await websocket_broadcaster.unsubscribe_connection_from_channel(
-            connection_id, channel
-        )
+        await websocket_broadcaster.unsubscribe_connection_from_channel(connection_id, channel)
 
         # Verify local unsubscription
         assert channel not in websocket_broadcaster._subscribers
 
         # Verify Redis operation
-        mock_redis_client.srem.assert_called_once_with(
-            f"tripsage:websocket:channel:{channel}", connection_id
-        )
+        mock_redis_client.srem.assert_called_once_with(f"tripsage:websocket:channel:{channel}", connection_id)
 
     @pytest.mark.asyncio
-    async def test_unsubscribe_connection_multiple_subscribers(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_unsubscribe_connection_multiple_subscribers(self, websocket_broadcaster, mock_redis_client):
         """Test unsubscribing when channel has multiple subscribers."""
         connection_id1 = "conn-123"
         connection_id2 = "conn-456"
@@ -572,9 +523,7 @@ class TestWebSocketBroadcaster:
         # Set up initial subscriptions
         websocket_broadcaster._subscribers[channel] = {connection_id1, connection_id2}
 
-        await websocket_broadcaster.unsubscribe_connection_from_channel(
-            connection_id1, channel
-        )
+        await websocket_broadcaster.unsubscribe_connection_from_channel(connection_id1, channel)
 
         # Verify only one connection was removed, channel still exists
         assert channel in websocket_broadcaster._subscribers
@@ -582,9 +531,7 @@ class TestWebSocketBroadcaster:
         assert connection_id2 in websocket_broadcaster._subscribers[channel]
 
     @pytest.mark.asyncio
-    async def test_get_connection_count_user(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_get_connection_count_user(self, websocket_broadcaster, mock_redis_client):
         """Test getting connection count for user."""
         user_id = str(uuid4())
         mock_redis_client.scard.return_value = 3
@@ -592,14 +539,10 @@ class TestWebSocketBroadcaster:
         count = await websocket_broadcaster.get_connection_count("user", user_id)
 
         assert count == 3
-        mock_redis_client.scard.assert_called_once_with(
-            f"{websocket_broadcaster.USER_CHANNELS_KEY}:{user_id}"
-        )
+        mock_redis_client.scard.assert_called_once_with(f"{websocket_broadcaster.USER_CHANNELS_KEY}:{user_id}")
 
     @pytest.mark.asyncio
-    async def test_get_connection_count_session(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_get_connection_count_session(self, websocket_broadcaster, mock_redis_client):
         """Test getting connection count for session."""
         session_id = str(uuid4())
         mock_redis_client.scard.return_value = 2
@@ -607,9 +550,7 @@ class TestWebSocketBroadcaster:
         count = await websocket_broadcaster.get_connection_count("session", session_id)
 
         assert count == 2
-        mock_redis_client.scard.assert_called_once_with(
-            f"{websocket_broadcaster.SESSION_CHANNELS_KEY}:{session_id}"
-        )
+        mock_redis_client.scard.assert_called_once_with(f"{websocket_broadcaster.SESSION_CHANNELS_KEY}:{session_id}")
 
     @pytest.mark.asyncio
     async def test_get_connection_count_channel(self, websocket_broadcaster):
@@ -624,9 +565,7 @@ class TestWebSocketBroadcaster:
     @pytest.mark.asyncio
     async def test_get_connection_count_channel_not_found(self, websocket_broadcaster):
         """Test getting connection count for non-existent channel."""
-        count = await websocket_broadcaster.get_connection_count(
-            "channel", "nonexistent"
-        )
+        count = await websocket_broadcaster.get_connection_count("channel", "nonexistent")
 
         assert count == 0
 
@@ -652,9 +591,7 @@ class TestWebSocketBroadcaster:
             assert count == 0
 
     @pytest.mark.asyncio
-    async def test_get_connection_count_redis_error(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_get_connection_count_redis_error(self, websocket_broadcaster, mock_redis_client):
         """Test getting connection count with Redis error."""
         mock_redis_client.scard.side_effect = Exception("Redis error")
 
@@ -662,75 +599,142 @@ class TestWebSocketBroadcaster:
 
         assert count == 0
 
-    @pytest.mark.skip(
-        reason=(
-            "Test hangs due to complex async loop - needs refactoring for "
-            "proper mocking"
-        )
-    )
     @pytest.mark.asyncio
-    @pytest.mark.timeout(30)  # Explicit timeout for this test
-    async def test_process_broadcast_queue_success(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_process_broadcast_queue_success(self, websocket_broadcaster, mock_redis_client):
         """Test successful broadcast queue processing."""
-        # TODO: Refactor this test to properly mock the async loop and Redis calls
-        # The issue is that _process_broadcast_queue has a complex while loop with
-        # multiple async Redis operations that are difficult to mock properly.
-        # This test should be rewritten to test the functionality without the loop
-        # or use a more sophisticated async mocking approach.
-        pass
+        # Mock Redis zrange to return a message and then empty list to exit loop
+        message_data = {
+            "id": "msg-123",
+            "target_type": "user",
+            "target_id": "user-456",
+            "event": {"type": "test", "payload": {"data": "test"}},
+            "created_at": datetime.utcnow().isoformat(),
+            "priority": 1,
+        }
+        message_json = json.dumps(message_data)
 
-    @pytest.mark.skip(
-        reason=(
-            "Test hangs due to complex async loop - needs refactoring for "
-            "proper mocking"
-        )
-    )
+        mock_redis_client.zrange.side_effect = [
+            [(message_json, 1.0)],  # First call returns message
+            [],  # Second call returns empty to exit loop
+        ]
+
+        # Mock the running state to exit after one iteration
+        websocket_broadcaster._running = True
+
+        # Create a task that will stop after processing one message
+        async def controlled_process():
+            await asyncio.sleep(0.001)  # Let one iteration run
+            websocket_broadcaster._running = False
+
+        # Start the controlled process
+        stop_task = asyncio.create_task(controlled_process())
+
+        # Run the broadcast queue processor briefly
+        try:
+            await asyncio.wait_for(websocket_broadcaster._process_broadcast_queue(), timeout=1.0)
+        except asyncio.TimeoutError:
+            pass  # Expected to timeout when _running becomes False
+
+        await stop_task
+
+        # Verify message was processed
+        assert mock_redis_client.zrange.called
+        assert mock_redis_client.publish.called
+
     @pytest.mark.asyncio
-    @pytest.mark.timeout(30)  # Explicit timeout for this test
-    async def test_process_broadcast_queue_no_messages(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_process_broadcast_queue_no_messages(self, websocket_broadcaster, mock_redis_client):
         """Test broadcast queue processing with no messages."""
-        # TODO: Same issue as test_process_broadcast_queue_success
-        # Needs proper async mocking strategy
-        pass
+        # Mock Redis zrange to return empty list
+        mock_redis_client.zrange.return_value = []
 
-    @pytest.mark.skip(
-        reason=(
-            "Test hangs due to complex async loop - needs refactoring for "
-            "proper mocking"
-        )
-    )
+        # Mock the running state to exit after checking once
+        websocket_broadcaster._running = True
+
+        # Create a task that will stop the process quickly
+        async def controlled_process():
+            await asyncio.sleep(0.01)  # Let one iteration run
+            websocket_broadcaster._running = False
+
+        stop_task = asyncio.create_task(controlled_process())
+
+        # Run the broadcast queue processor briefly
+        try:
+            await asyncio.wait_for(websocket_broadcaster._process_broadcast_queue(), timeout=1.0)
+        except asyncio.TimeoutError:
+            pass  # Expected to timeout when _running becomes False
+
+        await stop_task
+
+        # Verify empty queue was checked
+        assert mock_redis_client.zrange.called
+        # No messages should be published
+        mock_redis_client.publish.assert_not_called()
+
     @pytest.mark.asyncio
-    @pytest.mark.timeout(30)  # Explicit timeout for this test
-    async def test_process_broadcast_queue_invalid_message(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_process_broadcast_queue_invalid_message(self, websocket_broadcaster, mock_redis_client):
         """Test broadcast queue processing with invalid message."""
-        # TODO: Refactor this test to properly mock the async loop and Redis calls
-        # Same issue as other _process_broadcast_queue tests - complex while loop
-        # that's difficult to mock properly without hanging
-        pass
+        # Mock Redis zrange to return invalid JSON message
+        invalid_message = "invalid-json-{not-parseable"
 
-    @pytest.mark.skip(
-        reason=(
-            "Test hangs due to complex async loop - needs refactoring for "
-            "proper mocking"
-        )
-    )
+        mock_redis_client.zrange.side_effect = [
+            [(invalid_message, 1.0)],  # First call returns invalid message
+            [],  # Second call returns empty to exit loop
+        ]
+
+        # Mock the running state to exit after processing invalid message
+        websocket_broadcaster._running = True
+
+        # Create a task that will stop after processing
+        async def controlled_process():
+            await asyncio.sleep(0.01)  # Let one iteration run
+            websocket_broadcaster._running = False
+
+        stop_task = asyncio.create_task(controlled_process())
+
+        # Run the broadcast queue processor briefly
+        try:
+            await asyncio.wait_for(websocket_broadcaster._process_broadcast_queue(), timeout=1.0)
+        except asyncio.TimeoutError:
+            pass  # Expected to timeout when _running becomes False
+
+        await stop_task
+
+        # Verify invalid message was attempted to be processed
+        assert mock_redis_client.zrange.called
+        # Should remove invalid message from queue
+        assert mock_redis_client.zrem.called
+
     @pytest.mark.asyncio
-    @pytest.mark.timeout(30)  # Explicit timeout for this test
     async def test_process_broadcast_queue_without_redis(self, mock_settings):
         """Test broadcast queue processing without Redis."""
-        # TODO: Same issue as other _process_broadcast_queue tests
-        pass
+        with patch(
+            "tripsage_core.services.infrastructure.websocket_broadcaster.get_settings",
+            return_value=mock_settings,
+        ):
+            broadcaster = WebSocketBroadcaster()
+            broadcaster.redis_client = None
+            broadcaster._running = True
+
+            # Create a task that will stop the process quickly
+            async def controlled_process():
+                await asyncio.sleep(0.01)  # Let one iteration run
+                broadcaster._running = False
+
+            stop_task = asyncio.create_task(controlled_process())
+
+            # Run the broadcast queue processor briefly
+            try:
+                await asyncio.wait_for(broadcaster._process_broadcast_queue(), timeout=1.0)
+            except asyncio.TimeoutError:
+                pass  # Expected to timeout when _running becomes False
+
+            await stop_task
+
+            # Should handle gracefully without Redis
+            assert broadcaster.redis_client is None
 
     @pytest.mark.asyncio
-    async def test_process_broadcast_message_success(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_process_broadcast_message_success(self, websocket_broadcaster, mock_redis_client):
         """Test successful broadcast message processing."""
         message_data = {
             "target_type": "user",
@@ -751,9 +755,7 @@ class TestWebSocketBroadcaster:
         assert published_data == message_data
 
     @pytest.mark.asyncio
-    async def test_process_broadcast_message_no_target_id(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_process_broadcast_message_no_target_id(self, websocket_broadcaster, mock_redis_client):
         """Test broadcast message processing without target ID."""
         message_data = {"target_type": "broadcast", "event": {"type": "test"}}
 
@@ -788,9 +790,7 @@ class TestWebSocketBroadcaster:
         # Should complete without errors
         await websocket_broadcaster._handle_subscriptions()
 
-        websocket_broadcaster.pubsub.psubscribe.assert_called_once_with(
-            "tripsage:websocket:broadcast:*"
-        )
+        websocket_broadcaster.pubsub.psubscribe.assert_called_once_with("tripsage:websocket:broadcast:*")
 
     @pytest.mark.asyncio
     async def test_handle_subscriptions_without_pubsub(self, mock_settings):
@@ -806,23 +806,17 @@ class TestWebSocketBroadcaster:
             await broadcaster._handle_subscriptions()
 
     @pytest.mark.asyncio
-    async def test_priority_queue_ordering(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_priority_queue_ordering(self, websocket_broadcaster, mock_redis_client):
         """Test message priority queue ordering."""
         # Create messages with different priorities
         high_priority_event = {"id": "high", "type": "urgent"}
         low_priority_event = {"id": "low", "type": "normal"}
 
         # Queue high priority message (priority 1)
-        await websocket_broadcaster.broadcast_to_connection(
-            "conn1", high_priority_event, priority=1
-        )
+        await websocket_broadcaster.broadcast_to_connection("conn1", high_priority_event, priority=1)
 
         # Queue low priority message (priority 3)
-        await websocket_broadcaster.broadcast_to_connection(
-            "conn2", low_priority_event, priority=3
-        )
+        await websocket_broadcaster.broadcast_to_connection("conn2", low_priority_event, priority=3)
 
         # Verify both messages were queued
         assert mock_redis_client.zadd.call_count == 2
@@ -837,20 +831,12 @@ class TestWebSocketBroadcaster:
         assert high_priority_score < low_priority_score
 
     @pytest.mark.asyncio
-    async def test_concurrent_broadcasting(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_concurrent_broadcasting(self, websocket_broadcaster, mock_redis_client):
         """Test concurrent message broadcasting."""
-        events = [
-            {"id": f"event-{i}", "type": "test", "data": f"message {i}"}
-            for i in range(5)
-        ]
+        events = [{"id": f"event-{i}", "type": "test", "data": f"message {i}"} for i in range(5)]
 
         # Broadcast messages concurrently
-        tasks = [
-            websocket_broadcaster.broadcast_to_connection(f"conn-{i}", event)
-            for i, event in enumerate(events)
-        ]
+        tasks = [websocket_broadcaster.broadcast_to_connection(f"conn-{i}", event) for i, event in enumerate(events)]
 
         results = await asyncio.gather(*tasks)
 
@@ -859,18 +845,14 @@ class TestWebSocketBroadcaster:
         assert mock_redis_client.zadd.call_count == 5
 
     @pytest.mark.asyncio
-    async def test_channel_subscription_management(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_channel_subscription_management(self, websocket_broadcaster, mock_redis_client):
         """Test channel subscription management."""
         connection_id = "conn-123"
         channels = ["channel1", "channel2", "channel3"]
 
         # Subscribe to multiple channels
         for channel in channels:
-            await websocket_broadcaster.subscribe_connection_to_channel(
-                connection_id, channel
-            )
+            await websocket_broadcaster.subscribe_connection_to_channel(connection_id, channel)
 
         # Verify local subscriptions
         for channel in channels:
@@ -878,29 +860,41 @@ class TestWebSocketBroadcaster:
             assert connection_id in websocket_broadcaster._subscribers[channel]
 
         # Unsubscribe from one channel
-        await websocket_broadcaster.unsubscribe_connection_from_channel(
-            connection_id, "channel2"
-        )
+        await websocket_broadcaster.unsubscribe_connection_from_channel(connection_id, "channel2")
 
         # Verify partial unsubscription
         assert "channel1" in websocket_broadcaster._subscribers
         assert "channel3" in websocket_broadcaster._subscribers
         assert "channel2" not in websocket_broadcaster._subscribers
 
-    @pytest.mark.skip(
-        reason=(
-            "Test hangs due to complex async loop - needs refactoring for "
-            "proper mocking"
-        )
-    )
     @pytest.mark.asyncio
-    @pytest.mark.timeout(30)  # Explicit timeout for this test
-    async def test_error_handling_in_background_tasks(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_error_handling_in_background_tasks(self, websocket_broadcaster, mock_redis_client):
         """Test error handling in background tasks."""
-        # TODO: Same issue as other _process_broadcast_queue tests
-        pass
+        # Mock Redis to raise exception on first zrange call
+        mock_redis_client.zrange.side_effect = [
+            Exception("Redis connection lost"),  # First call fails
+            [],  # Second call succeeds (after reconnection)
+        ]
+
+        websocket_broadcaster._running = True
+
+        # Create a task that will stop after error handling
+        async def controlled_process():
+            await asyncio.sleep(0.02)  # Let error handling run
+            websocket_broadcaster._running = False
+
+        stop_task = asyncio.create_task(controlled_process())
+
+        # Run the broadcast queue processor briefly
+        try:
+            await asyncio.wait_for(websocket_broadcaster._process_broadcast_queue(), timeout=1.0)
+        except asyncio.TimeoutError:
+            pass  # Expected to timeout when _running becomes False
+
+        await stop_task
+
+        # Verify error was handled and processing continued
+        assert mock_redis_client.zrange.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_message_expiration_handling(self, websocket_broadcaster):
@@ -925,17 +919,10 @@ class TestWebSocketBroadcaster:
     @pytest.mark.asyncio
     async def test_redis_key_prefixes(self, websocket_broadcaster):
         """Test Redis key prefix constants."""
-        assert (
-            websocket_broadcaster.BROADCAST_QUEUE_KEY == "tripsage:websocket:broadcast"
-        )
+        assert websocket_broadcaster.BROADCAST_QUEUE_KEY == "tripsage:websocket:broadcast"
         assert websocket_broadcaster.USER_CHANNELS_KEY == "tripsage:websocket:users"
-        assert (
-            websocket_broadcaster.SESSION_CHANNELS_KEY == "tripsage:websocket:sessions"
-        )
-        assert (
-            websocket_broadcaster.CONNECTION_INFO_KEY
-            == "tripsage:websocket:connections"
-        )
+        assert websocket_broadcaster.SESSION_CHANNELS_KEY == "tripsage:websocket:sessions"
+        assert websocket_broadcaster.CONNECTION_INFO_KEY == "tripsage:websocket:connections"
 
     @pytest.mark.asyncio
     async def test_custom_redis_url(self, mock_settings):
@@ -951,23 +938,17 @@ class TestWebSocketBroadcaster:
             assert broadcaster.redis_url == custom_url
 
     @pytest.mark.asyncio
-    async def test_edge_case_empty_event(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_edge_case_empty_event(self, websocket_broadcaster, mock_redis_client):
         """Test broadcasting with empty event."""
         empty_event = {}
 
-        result = await websocket_broadcaster.broadcast_to_connection(
-            "conn-123", empty_event
-        )
+        result = await websocket_broadcaster.broadcast_to_connection("conn-123", empty_event)
 
         assert result is True
         mock_redis_client.zadd.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_edge_case_large_payload(
-        self, websocket_broadcaster, mock_redis_client
-    ):
+    async def test_edge_case_large_payload(self, websocket_broadcaster, mock_redis_client):
         """Test broadcasting with large payload."""
         large_event = {
             "id": "large-event",
@@ -975,9 +956,7 @@ class TestWebSocketBroadcaster:
             "payload": {"data": "x" * 10000},  # 10KB of data
         }
 
-        result = await websocket_broadcaster.broadcast_to_connection(
-            "conn-123", large_event
-        )
+        result = await websocket_broadcaster.broadcast_to_connection("conn-123", large_event)
 
         assert result is True
         mock_redis_client.zadd.assert_called_once()
@@ -988,9 +967,7 @@ class TestWebSocketBroadcaster:
         connection_id = "conn-123"
 
         # Try to unsubscribe from non-existent channel
-        await websocket_broadcaster.unsubscribe_connection_from_channel(
-            connection_id, "nonexistent"
-        )
+        await websocket_broadcaster.unsubscribe_connection_from_channel(connection_id, "nonexistent")
 
         # Should not raise exception
         assert "nonexistent" not in websocket_broadcaster._subscribers

@@ -167,9 +167,7 @@ class MockServiceRegistry:
                 "total_count": 1,
             }
         )
-        service.book_accommodation = AsyncMock(
-            return_value={"booking_id": "booking_456", "status": "confirmed"}
-        )
+        service.book_accommodation = AsyncMock(return_value={"booking_id": "booking_456", "status": "confirmed"})
         return service
 
     def _create_flight_service_mock(self):
@@ -206,18 +204,14 @@ class MockServiceRegistry:
                 ]
             }
         )
-        service.add_conversation_memory = AsyncMock(
-            return_value={"memory_id": "memory_456", "status": "stored"}
-        )
+        service.add_conversation_memory = AsyncMock(return_value={"memory_id": "memory_456", "status": "stored"})
         service.connect = AsyncMock()
         return service
 
     def _create_weather_service_mock(self):
         """Create mock weather service."""
         service = AsyncMock()
-        service.get_current_weather = AsyncMock(
-            return_value={"temperature": 75, "condition": "sunny", "humidity": 60}
-        )
+        service.get_current_weather = AsyncMock(return_value={"temperature": 75, "condition": "sunny", "humidity": 60})
         return service
 
 
@@ -240,17 +234,9 @@ class MockMCPManager:
         """Mock MCP invoke method."""
         # Return different mock responses based on method name
         if "search_flights" in method_name:
-            return {
-                "flights": [
-                    {"id": "flight_123", "price": 299.99, "airline": "Test Airways"}
-                ]
-            }
+            return {"flights": [{"id": "flight_123", "price": 299.99, "airline": "Test Airways"}]}
         elif "search_accommodations" in method_name:
-            return {
-                "accommodations": [
-                    {"id": "hotel_123", "price_per_night": 150.0, "name": "Test Hotel"}
-                ]
-            }
+            return {"accommodations": [{"id": "hotel_123", "price_per_night": 150.0, "name": "Test Hotel"}]}
         elif "weather" in method_name:
             return {"temperature": 75, "condition": "sunny"}
         else:

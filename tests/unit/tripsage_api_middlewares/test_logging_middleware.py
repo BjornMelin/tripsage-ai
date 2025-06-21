@@ -64,9 +64,7 @@ class TestLoggingMiddleware:
 
     @patch("tripsage.api.middlewares.logging.uuid.uuid4")
     @patch("tripsage.api.middlewares.logging.logger")
-    async def test_successful_request_logging(
-        self, mock_logger, mock_uuid, middleware, mock_request, mock_call_next
-    ):
+    async def test_successful_request_logging(self, mock_logger, mock_uuid, middleware, mock_request, mock_call_next):
         """Test logging for successful requests."""
         # Mock UUID generation
         test_uuid = "test-correlation-id"
@@ -134,9 +132,7 @@ class TestLoggingMiddleware:
 
     @patch("tripsage.api.middlewares.logging.uuid.uuid4")
     @patch("tripsage.api.middlewares.logging.logger")
-    async def test_failed_request_logging(
-        self, mock_logger, mock_uuid, middleware, mock_request
-    ):
+    async def test_failed_request_logging(self, mock_logger, mock_uuid, middleware, mock_request):
         """Test logging for failed requests."""
         # Mock UUID
         test_uuid = "test-correlation-id"
@@ -165,9 +161,7 @@ class TestLoggingMiddleware:
         assert "processing_time_ms" in extra
 
     @patch("tripsage.api.middlewares.logging.uuid.uuid4")
-    async def test_correlation_id_propagation(
-        self, mock_uuid, middleware, mock_request, mock_call_next
-    ):
+    async def test_correlation_id_propagation(self, mock_uuid, middleware, mock_request, mock_call_next):
         """Test that correlation ID is properly propagated."""
         # Mock UUID
         test_uuid = "unique-correlation-id"
@@ -203,9 +197,7 @@ class TestLoggingMiddleware:
             assert extra["client_host"] is None
 
     @patch("tripsage.api.middlewares.logging.logger")
-    async def test_empty_query_params(
-        self, mock_logger, middleware, mock_request, mock_call_next
-    ):
+    async def test_empty_query_params(self, mock_logger, middleware, mock_request, mock_call_next):
         """Test handling empty query parameters."""
         # Set empty query params
         mock_request.query_params = {}
@@ -219,9 +211,7 @@ class TestLoggingMiddleware:
         assert extra["query_params"] == {}
 
     @patch("tripsage.api.middlewares.logging.logger")
-    async def test_missing_user_agent(
-        self, mock_logger, middleware, mock_request, mock_call_next
-    ):
+    async def test_missing_user_agent(self, mock_logger, middleware, mock_request, mock_call_next):
         """Test handling missing user agent header."""
         # Remove user agent
         mock_request.headers = {}
@@ -236,9 +226,7 @@ class TestLoggingMiddleware:
 
     @patch("tripsage.api.middlewares.logging.time.time")
     @patch("tripsage.api.middlewares.logging.logger")
-    async def test_exception_timing(
-        self, mock_logger, mock_time, middleware, mock_request
-    ):
+    async def test_exception_timing(self, mock_logger, mock_time, middleware, mock_request):
         """Test that timing is calculated even when exception occurs."""
         # Mock time
         start_time = 1000.0

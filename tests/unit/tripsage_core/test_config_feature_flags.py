@@ -305,15 +305,9 @@ class TestSettingsIntegration:
         )
 
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ),
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ),
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"
-            ),
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService"),
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"),
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseConnectionMonitor"),
         ):
             wrapper = DatabaseServiceWrapper(settings_enabled)
             assert wrapper.settings.enable_database_monitoring is True

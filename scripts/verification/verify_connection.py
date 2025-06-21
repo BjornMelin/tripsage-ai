@@ -75,14 +75,10 @@ async def verify_connection() -> None:
             # Alternative method to check tables individually
             for table in REQUIRED_TABLES:
                 try:
-                    _test_response = (
-                        supabase.table(table).select("id").limit(1).execute()
-                    )
+                    _test_response = supabase.table(table).select("id").limit(1).execute()
                     print(f"✅ Table '{table}' exists")
                 except Exception as e:
-                    if "42P01" in str(
-                        e
-                    ):  # PostgreSQL error code for table does not exist
+                    if "42P01" in str(e):  # PostgreSQL error code for table does not exist
                         print(f"❌ Table '{table}' does not exist")
                     else:
                         print(f"❓ Could not verify table '{table}': {str(e)}")

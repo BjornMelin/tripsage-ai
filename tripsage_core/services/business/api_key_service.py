@@ -106,17 +106,11 @@ class ApiKeyCreateRequest(TripSageModel):
         extra="forbid",  # Strict validation for security
     )
 
-    name: str = Field(
-        min_length=1, max_length=100, description="Descriptive name for the key"
-    )
+    name: str = Field(min_length=1, max_length=100, description="Descriptive name for the key")
     service: ServiceType = Field(description="Service name")
     key_value: str = Field(min_length=1, description="The actual API key", alias="key")
-    description: str | None = Field(
-        default=None, max_length=500, description="Optional description"
-    )
-    expires_at: datetime | None = Field(
-        default=None, description="Optional expiration date"
-    )
+    description: str | None = Field(default=None, max_length=500, description="Optional description")
+    expires_at: datetime | None = Field(default=None, description="Optional expiration date")
 
     @field_validator("key_value")
     @classmethod
@@ -150,13 +144,9 @@ class ApiKeyResponse(TripSageModel):
     is_valid: bool = Field(description="Validation status")
     created_at: datetime = Field(description="Creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
-    expires_at: datetime | None = Field(
-        default=None, description="Expiration timestamp"
-    )
+    expires_at: datetime | None = Field(default=None, description="Expiration timestamp")
     last_used: datetime | None = Field(default=None, description="Last usage timestamp")
-    last_validated: datetime | None = Field(
-        default=None, description="Last validation timestamp"
-    )
+    last_validated: datetime | None = Field(default=None, description="Last validation timestamp")
     usage_count: int = Field(default=0, description="Number of times used")
 
     @computed_field
@@ -332,20 +322,14 @@ class ApiKeyService:
         )
 
         # Handle SecretStr objects and regular strings securely
-        secret_value = (
-            master_secret.get_secret_value()
-            if hasattr(master_secret, "get_secret_value")
-            else master_secret
-        )
+        secret_value = master_secret.get_secret_value() if hasattr(master_secret, "get_secret_value") else master_secret
 
         # Derive master key with enhanced security
         key_bytes = kdf.derive(secret_value.encode("utf-8"))
         self.master_key = base64.urlsafe_b64encode(key_bytes)
         self.master_cipher = Fernet(self.master_key)
 
-    async def create_api_key(
-        self, user_id: str, key_data: ApiKeyCreateRequest
-    ) -> ApiKeyResponse:
+    async def create_api_key(self, user_id: str, key_data: ApiKeyCreateRequest) -> ApiKeyResponse:
         """
         Create and store a new API key atomically.
 
@@ -361,9 +345,7 @@ class ApiKeyService:
         """
         try:
             # Validate the API key first
-            validation_result = await self.validate_api_key(
-                key_data.service, key_data.key_value
-            )
+            validation_result = await self.validate_api_key(key_data.service, key_data.key_value)
 
             # Generate secure key ID and encrypt key
             key_id = str(uuid.uuid4())
@@ -381,9 +363,7 @@ class ApiKeyService:
                 "is_valid": validation_result.is_valid,
                 "created_at": now.isoformat(),
                 "updated_at": now.isoformat(),
-                "expires_at": key_data.expires_at.isoformat()
-                if key_data.expires_at
-                else None,
+                "expires_at": key_data.expires_at.isoformat() if key_data.expires_at else None,
                 "last_validated": validation_result.validated_at.isoformat(),
                 "usage_count": 0,
             }
@@ -407,9 +387,7 @@ class ApiKeyService:
             result = results[0][0]  # First operation (create_api_key) result
 
             # Audit log (fire-and-forget)
-            asyncio.create_task(
-                self._audit_key_creation(key_id, user_id, key_data, validation_result)
-            )
+            asyncio.create_task(self._audit_key_creation(key_id, user_id, key_data, validation_result))
 
             logger.info(
                 "API key created successfully",
@@ -460,9 +438,7 @@ class ApiKeyService:
         """
         return await self.db.get_api_key_by_id(key_id, user_id)
 
-    async def get_key_for_service(
-        self, user_id: str, service: ServiceType
-    ) -> str | None:
+    async def get_key_for_service(self, user_id: str, service: ServiceType) -> str | None:
         """
         Get decrypted API key for a specific service.
 
@@ -473,9 +449,7 @@ class ApiKeyService:
         Returns:
             Decrypted API key or None if not found/expired
         """
-        result = await self.db.get_api_key_for_service(
-            user_id, self._get_service_value(service)
-        )
+        result = await self.db.get_api_key_for_service(user_id, self._get_service_value(service))
         if not result:
             return None
 
@@ -483,10 +457,7 @@ class ApiKeyService:
         if result.get("expires_at"):
             expires_at = datetime.fromisoformat(result["expires_at"])
             if datetime.now(UTC) > expires_at:
-                logger.info(
-                    f"API key expired for user {user_id}, "
-                    f"service {self._get_service_value(service)}"
-                )
+                logger.info(f"API key expired for user {user_id}, service {self._get_service_value(service)}")
                 return None
 
         # Decrypt the API key
@@ -596,9 +567,7 @@ class ApiKeyService:
 
             # Cache successful validation
             if result_with_latency.is_valid and self.cache:
-                await self._cache_validation_result(
-                    service, key_value, result_with_latency
-                )
+                await self._cache_validation_result(service, key_value, result_with_latency)
 
             return result_with_latency
 
@@ -1043,9 +1012,7 @@ class ApiKeyService:
         """Validate flights API key (placeholder for specific implementation)."""
         return await self._validate_generic_key(ServiceType.FLIGHTS, key_value)
 
-    async def _validate_generic_key(
-        self, service: ServiceType, key_value: str
-    ) -> ValidationResult:
+    async def _validate_generic_key(self, service: ServiceType, key_value: str) -> ValidationResult:
         """Generic validation for services without specific implementation."""
         if len(key_value) < 10:
             return ValidationResult(
@@ -1225,9 +1192,7 @@ class ApiKeyService:
 
         return capabilities
 
-    def _handle_rate_limit_response(
-        self, response: httpx.Response, service: ServiceType
-    ) -> ValidationResult:
+    def _handle_rate_limit_response(self, response: httpx.Response, service: ServiceType) -> ValidationResult:
         """
         Handle rate limit responses efficiently.
 
@@ -1252,9 +1217,7 @@ class ApiKeyService:
             },
         )
 
-    def _process_openai_success_response(
-        self, response: httpx.Response
-    ) -> ValidationResult:
+    def _process_openai_success_response(self, response: httpx.Response) -> ValidationResult:
         """
         Process successful OpenAI API response efficiently.
 
@@ -1293,18 +1256,14 @@ class ApiKeyService:
             },
         )
 
-    async def _get_cached_validation(
-        self, service: ServiceType, key_value: str
-    ) -> ValidationResult | None:
+    async def _get_cached_validation(self, service: ServiceType, key_value: str) -> ValidationResult | None:
         """Get cached validation result if available using optimized JSON validation."""
         if not self.cache:
             return None
 
         try:
             # Create secure cache key
-            key_hash = hashlib.sha256(
-                f"{self._get_service_value(service)}:{key_value}".encode()
-            ).hexdigest()
+            key_hash = hashlib.sha256(f"{self._get_service_value(service)}:{key_value}".encode()).hexdigest()
             cache_key = f"api_validation:v3:{key_hash}"  # v3 for new optimizations
 
             cached_data = await self.cache.get(cache_key)
@@ -1317,17 +1276,13 @@ class ApiKeyService:
 
         return None
 
-    async def _cache_validation_result(
-        self, service: ServiceType, key_value: str, result: ValidationResult
-    ) -> None:
+    async def _cache_validation_result(self, service: ServiceType, key_value: str, result: ValidationResult) -> None:
         """Cache validation result with optimized JSON serialization."""
         if not self.cache:
             return
 
         try:
-            key_hash = hashlib.sha256(
-                f"{self._get_service_value(service)}:{key_value}".encode()
-            ).hexdigest()
+            key_hash = hashlib.sha256(f"{self._get_service_value(service)}:{key_value}".encode()).hexdigest()
             cache_key = f"api_validation:v3:{key_hash}"  # v3 for new optimizations
 
             # Use Pydantic V2 optimized JSON serialization
@@ -1355,10 +1310,7 @@ class ApiKeyService:
                 key_id=key_id,
                 service=self._get_service_value(key_data.service),
                 ip_address="127.0.0.1",  # TODO: Extract from request context
-                message=(
-                    f"API key created for service "
-                    f"{self._get_service_value(key_data.service)}"
-                ),
+                message=(f"API key created for service {self._get_service_value(key_data.service)}"),
                 key_name=key_data.name,
                 user_id=user_id,
                 validation_result=validation_result.is_valid,
@@ -1366,9 +1318,7 @@ class ApiKeyService:
         except Exception as e:
             logger.warning(f"Audit logging failed for key creation: {e}")
 
-    async def _audit_key_deletion(
-        self, key_id: str, user_id: str, key_data: dict[str, Any]
-    ) -> None:
+    async def _audit_key_deletion(self, key_id: str, user_id: str, key_data: dict[str, Any]) -> None:
         """Fire-and-forget audit logging for key deletion."""
         try:
             await audit_api_key(
@@ -1407,8 +1357,7 @@ class ApiKeyService:
 
         # Convert datetime strings efficiently
         parsed_datetimes = {
-            key: datetime.fromisoformat(value) if value else None
-            for key, value in datetime_fields.items()
+            key: datetime.fromisoformat(value) if value else None for key, value in datetime_fields.items()
         }
 
         return ApiKeyResponse(

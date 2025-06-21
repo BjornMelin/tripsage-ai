@@ -33,9 +33,7 @@ class ToolCallRequest(BaseModel):
     id: str = Field(..., description="Unique identifier for the tool call")
     service: str = Field(..., description="MCP service name")
     method: str = Field(..., description="Method to invoke")
-    params: Dict[str, Any] = Field(
-        default_factory=dict, description="Method parameters"
-    )
+    params: Dict[str, Any] = Field(default_factory=dict, description="Method parameters")
     timeout: Optional[float] = Field(default=30.0, description="Timeout in seconds")
     retry_count: int = Field(default=3, description="Number of retries on failure")
 
@@ -55,9 +53,7 @@ class ToolCallRequest(BaseModel):
             "linkup",
         ]
         if v not in allowed_services:
-            raise ValueError(
-                f"Service '{v}' not in allowed services: {allowed_services}"
-            )
+            raise ValueError(f"Service '{v}' not in allowed services: {allowed_services}")
         return v
 
     @field_validator("timeout")
@@ -74,16 +70,12 @@ class ToolCallResponse(BaseModel):
 
     id: str = Field(..., description="Tool call identifier")
     status: str = Field(..., description="Response status (success/error/timeout)")
-    result: Optional[Dict[str, Any]] = Field(
-        default=None, description="Tool result data"
-    )
+    result: Optional[Dict[str, Any]] = Field(default=None, description="Tool result data")
     error: Optional[str] = Field(default=None, description="Error message if failed")
     execution_time: float = Field(..., description="Execution time in seconds")
     service: str = Field(..., description="MCP service used")
     method: str = Field(..., description="Method invoked")
-    timestamp: float = Field(
-        default_factory=time.time, description="Response timestamp"
-    )
+    timestamp: float = Field(default_factory=time.time, description="Response timestamp")
 
 
 class ToolCallValidationResult(BaseModel):
@@ -91,9 +83,7 @@ class ToolCallValidationResult(BaseModel):
 
     is_valid: bool = Field(..., description="Whether tool call is valid")
     errors: List[str] = Field(default_factory=list, description="Validation errors")
-    sanitized_params: Optional[Dict[str, Any]] = Field(
-        default=None, description="Sanitized parameters"
-    )
+    sanitized_params: Optional[Dict[str, Any]] = Field(default=None, description="Sanitized parameters")
 
 
 class ToolCallService:
@@ -158,9 +148,7 @@ class ToolCallService:
                 )
 
             # Execute tool call with retries
-            result = await self._execute_with_retries(
-                request, validation.sanitized_params
-            )
+            result = await self._execute_with_retries(request, validation.sanitized_params)
 
             response = ToolCallResponse(
                 id=request.id,
@@ -198,9 +186,7 @@ class ToolCallService:
             )
 
     @with_error_handling()
-    async def execute_parallel_tool_calls(
-        self, requests: List[ToolCallRequest]
-    ) -> List[ToolCallResponse]:
+    async def execute_parallel_tool_calls(self, requests: List[ToolCallRequest]) -> List[ToolCallResponse]:
         """Execute multiple tool calls in parallel for efficiency.
 
         Args:
@@ -247,9 +233,7 @@ class ToolCallService:
             logger.error(f"Parallel tool call execution failed: {str(e)}")
             raise ToolCallError(f"Parallel execution failed: {str(e)}") from e
 
-    async def validate_tool_call(
-        self, request: ToolCallRequest
-    ) -> ToolCallValidationResult:
+    async def validate_tool_call(self, request: ToolCallRequest) -> ToolCallValidationResult:
         """Validate and sanitize tool call request.
 
         Args:
@@ -280,9 +264,7 @@ class ToolCallService:
             sanitized_params=sanitized_params,
         )
 
-    async def format_tool_result_for_chat(
-        self, response: ToolCallResponse
-    ) -> Dict[str, Any]:
+    async def format_tool_result_for_chat(self, response: ToolCallResponse) -> Dict[str, Any]:
         """Format tool call result for chat display.
 
         Args:
@@ -324,9 +306,7 @@ class ToolCallService:
                 "execution_time": response.execution_time,
             }
 
-    async def get_execution_history(
-        self, limit: int = 100, service: Optional[str] = None
-    ) -> List[ToolCallResponse]:
+    async def get_execution_history(self, limit: int = 100, service: Optional[str] = None) -> List[ToolCallResponse]:
         """Get tool call execution history.
 
         Args:
@@ -358,9 +338,7 @@ class ToolCallService:
         timeout_calls = sum(1 for r in self.execution_history if r.status == "timeout")
 
         avg_execution_time = (
-            sum(r.execution_time for r in self.execution_history) / total_calls
-            if total_calls > 0
-            else 0
+            sum(r.execution_time for r in self.execution_history) / total_calls if total_calls > 0 else 0
         )
 
         return {
@@ -372,21 +350,16 @@ class ToolCallService:
                 "timeout_rate": timeout_calls / total_calls if total_calls > 0 else 0,
                 "average_execution_time": avg_execution_time,
             },
-            "rate_limit_status": {
-                service: len(calls) for service, calls in self.rate_limits.items()
-            },
+            "rate_limit_status": {service: len(calls) for service, calls in self.rate_limits.items()},
         }
 
     # Private helper methods
 
-    async def _execute_with_retries(
-        self, request: ToolCallRequest, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _execute_with_retries(self, request: ToolCallRequest, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute tool call with comprehensive error recovery."""
         # MCP abstraction removed - direct service calls should be used
         raise NotImplementedError(
-            f"Direct service integration needed for {request.service}.{request.method} "
-            f"after MCP removal"
+            f"Direct service integration needed for {request.service}.{request.method} after MCP removal"
         )
 
     async def _check_rate_limit(self, service: str) -> bool:
@@ -471,9 +444,7 @@ class ToolCallService:
             "actions": ["book", "compare", "save"],
         }
 
-    async def _format_accommodation_results(
-        self, result: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _format_accommodation_results(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """Format accommodation search results for chat display."""
         return {
             "type": "accommodations",

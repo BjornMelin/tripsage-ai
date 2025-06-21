@@ -102,9 +102,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
         # Add prefix for namespacing
         return f"{self._cache_prefix}:search:{key_hash}"
 
-    async def get_cached_search(
-        self, request: SearchRequestType
-    ) -> Optional[SearchResponseType]:
+    async def get_cached_search(self, request: SearchRequestType) -> Optional[SearchResponseType]:
         """
         Get cached search results if available.
 
@@ -188,9 +186,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             response_data["_cache_version"] = "1.0"
 
             # Store in cache
-            success = await self._cache_service.set_json(
-                cache_key, response_data, ttl=ttl
-            )
+            success = await self._cache_service.set_json(cache_key, response_data, ttl=ttl)
 
             if success:
                 logger.info(

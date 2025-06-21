@@ -28,9 +28,7 @@ class TestSessionModels:
 
     def test_conversation_message_model(self):
         """Test ConversationMessage model."""
-        message = ConversationMessage(
-            role="user", content="I want to plan a trip to Paris"
-        )
+        message = ConversationMessage(role="user", content="I want to plan a trip to Paris")
         assert message.role == "user"
         assert message.content == "I want to plan a trip to Paris"
 
@@ -51,9 +49,7 @@ class TestSessionModels:
 
     def test_session_summary_model_minimal(self):
         """Test SessionSummary model with minimal data."""
-        summary = SessionSummary(
-            user_id="user123", session_id="session456", summary="Brief session"
-        )
+        summary = SessionSummary(user_id="user123", session_id="session456", summary="Brief session")
         assert summary.user_id == "user123"
         assert summary.session_id == "session456"
         assert summary.summary == "Brief session"
@@ -453,9 +449,7 @@ class TestStoreSessionSummary:
             "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
-            result = await store_session_summary(
-                user_id="user123", summary="Failed summary", session_id="session456"
-            )
+            result = await store_session_summary(user_id="user123", summary="Failed summary", session_id="session456")
 
             assert result["status"] == "error"
             assert result["error"] == "Failed to create memory"
@@ -494,9 +488,7 @@ class TestPrivateHelperFunctions:
         }
         result = {"errors": [], "memories_created": 0}
 
-        await _update_user_preferences_memory(
-            "user123", preferences, result, mock_memory_service
-        )
+        await _update_user_preferences_memory("user123", preferences, result, mock_memory_service)
 
         assert result["preferences_updated"] == 1
         assert result["memories_created"] == 1
@@ -508,9 +500,7 @@ class TestPrivateHelperFunctions:
         preferences = {"invalid_field": "invalid_value"}
         result = {"errors": []}
 
-        await _update_user_preferences_memory(
-            "user123", preferences, result, mock_memory_service
-        )
+        await _update_user_preferences_memory("user123", preferences, result, mock_memory_service)
 
         # Should handle the error gracefully
         assert "errors" in result
@@ -541,9 +531,7 @@ class TestPrivateHelperFunctions:
         }
         result = {"errors": [], "memories_created": 0}
 
-        await _process_conversation_context(
-            "user123", context, result, mock_memory_service
-        )
+        await _process_conversation_context("user123", context, result, mock_memory_service)
 
         assert result["memories_created"] == 1
 
@@ -562,9 +550,7 @@ class TestPrivateHelperFunctions:
         context = {"irrelevant_field1": "value1", "irrelevant_field2": "value2"}
         result = {"errors": [], "memories_created": 0}
 
-        await _process_conversation_context(
-            "user123", context, result, mock_memory_service
-        )
+        await _process_conversation_context("user123", context, result, mock_memory_service)
 
         # Should not create any memories for irrelevant data
         assert result.get("memories_created", 0) == 0
@@ -592,9 +578,7 @@ class TestErrorHandling:
             "tripsage_core.services.business.memory_service.MemoryService",
             side_effect=ConnectionError("Cannot connect"),
         ):
-            result = await update_session_memory(
-                "user123", {"preferences": {"style": "luxury"}}
-            )
+            result = await update_session_memory("user123", {"preferences": {"style": "luxury"}})
 
             assert result["success"] is False
             assert "Cannot connect" in result["errors"][0]

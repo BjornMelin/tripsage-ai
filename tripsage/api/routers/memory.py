@@ -70,9 +70,7 @@ async def add_conversation_memory(
             messages=request.messages,
             session_id=request.session_id,
             # context_type is not in the core model, add to metadata if needed
-            metadata=(
-                {"context_type": request.context_type} if request.context_type else None
-            ),
+            metadata=({"context_type": request.context_type} if request.context_type else None),
         )
 
         result = await memory_service.add_conversation_memory(user_id, core_request)
@@ -133,16 +131,10 @@ async def search_memories(
         user_id = get_principal_id(principal)
         # Convert router request to service request
         from tripsage_core.services.business.memory_service import MemorySearchRequest
-        search_request = MemorySearchRequest(
-            query=request.query,
-            limit=request.limit
-        )
+
+        search_request = MemorySearchRequest(query=request.query, limit=request.limit)
         memories = await memory_service.search_memories(user_id, search_request)
-        return {
-            "results": memories, 
-            "query": request.query,
-            "total": len(memories)
-        }
+        return {"results": memories, "query": request.query, "total": len(memories)}
 
     except Exception as e:
         logger.error(f"Search memories failed: {str(e)}")
@@ -170,9 +162,7 @@ async def update_preferences(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.update_user_preferences(
-            user_id, request.preferences
-        )
+        result = await memory_service.update_user_preferences(user_id, request.preferences)
         return result
 
     except Exception as e:
@@ -237,9 +227,7 @@ async def delete_memory(
         success = await memory_service.delete_memory(user_id, memory_id)
 
         if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found")
 
         return {"message": "Memory deleted successfully"}
 

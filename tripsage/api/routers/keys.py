@@ -210,9 +210,7 @@ async def rotate_key(
         )
 
     # Validate the new key
-    validation = await key_service.validate_key(
-        key_data.new_key, key["service"], user_id
-    )
+    validation = await key_service.validate_key(key_data.new_key, key["service"], user_id)
 
     if not validation.is_valid:
         raise HTTPException(

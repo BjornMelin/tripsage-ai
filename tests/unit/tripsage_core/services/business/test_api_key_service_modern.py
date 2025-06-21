@@ -119,13 +119,9 @@ class TestApiKeyServiceModern:
         return settings
 
     @pytest_asyncio.fixture
-    async def api_key_service(
-        self, mock_database, mock_cache, mock_settings
-    ) -> ApiKeyService:
+    async def api_key_service(self, mock_database, mock_cache, mock_settings) -> ApiKeyService:
         """Create API key service with mocked dependencies."""
-        service = ApiKeyService(
-            db=mock_database, cache=mock_cache, settings=mock_settings
-        )
+        service = ApiKeyService(db=mock_database, cache=mock_cache, settings=mock_settings)
         return service
 
     @pytest.fixture
@@ -143,14 +139,10 @@ class TestApiKeyServiceModern:
     @given(
         user_id=st.uuids(),
         name=st.text(min_size=1, max_size=255),
-        service=st.text(min_size=1, max_size=50).filter(
-            lambda x: x.replace("-", "").replace("_", "").isalnum()
-        ),
+        service=st.text(min_size=1, max_size=50).filter(lambda x: x.replace("-", "").replace("_", "").isalnum()),
         description=st.one_of(st.none(), st.text(max_size=1000)),
     )
-    def test_api_key_create_model_validation(
-        self, user_id: UUID, name: str, service: str, description: Optional[str]
-    ):
+    def test_api_key_create_model_validation(self, user_id: UUID, name: str, service: str, description: Optional[str]):
         """Test API key creation model with property-based testing."""
         # Create valid encrypted key data
         encrypted_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
@@ -177,9 +169,7 @@ class TestApiKeyServiceModern:
             assert len(e.errors()) > 0
 
     @pytest.mark.asyncio
-    async def test_create_api_key_success(
-        self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]
-    ):
+    async def test_create_api_key_success(self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]):
         """Test successful API key creation with modern async patterns."""
         # Mock database to return a successful creation
         expected_api_key = ApiKeyDB(
@@ -223,9 +213,7 @@ class TestApiKeyServiceModern:
             await api_key_service.create_api_key(create_request)
 
     @pytest.mark.asyncio
-    async def test_validate_api_key_openai_success(
-        self, api_key_service: ApiKeyService
-    ):
+    async def test_validate_api_key_openai_success(self, api_key_service: ApiKeyService):
         """Test OpenAI API key validation with mocked HTTP responses."""
         test_key = "sk-test_valid_openai_key_12345"
 
@@ -243,9 +231,7 @@ class TestApiKeyServiceModern:
             assert "OpenAI" in result.message
 
     @pytest.mark.asyncio
-    async def test_validate_api_key_openai_invalid(
-        self, api_key_service: ApiKeyService
-    ):
+    async def test_validate_api_key_openai_invalid(self, api_key_service: ApiKeyService):
         """Test OpenAI API key validation with invalid key."""
         test_key = "sk-invalid_key"
 
@@ -389,13 +375,9 @@ class TestApiKeyServiceModern:
         assert service_type == ServiceType.OPENAI
 
     @pytest.mark.asyncio
-    async def test_audit_logging_integration(
-        self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]
-    ):
+    async def test_audit_logging_integration(self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]):
         """Test that audit logging is properly integrated."""
-        with patch(
-            "tripsage_core.services.business.audit_logging_service.audit_api_key"
-        ) as mock_audit:
+        with patch("tripsage_core.services.business.audit_logging_service.audit_api_key") as mock_audit:
             api_key_service.db.fetch_one.return_value = None  # No existing key
             api_key_service.db.execute.return_value = None  # Successful creation
 
@@ -407,9 +389,7 @@ class TestApiKeyServiceModern:
 
     @pytest.mark.asyncio
     @pytest.mark.performance
-    async def test_validation_performance_benchmark(
-        self, api_key_service: ApiKeyService, benchmark
-    ):
+    async def test_validation_performance_benchmark(self, api_key_service: ApiKeyService, benchmark):
         """Performance benchmark for API key validation."""
         test_key = "sk-performance_test_key"
 
@@ -566,9 +546,7 @@ class TestApiKeyServicePropertyBased:
         service=st.sampled_from(["openai", "weather", "google_maps"]),
         description=st.one_of(st.none(), st.text(max_size=1000)),
     )
-    def test_api_key_creation_properties(
-        self, name: str, service: str, description: Optional[str]
-    ):
+    def test_api_key_creation_properties(self, name: str, service: str, description: Optional[str]):
         """Property-based test for API key creation with various inputs."""
         user_id = uuid.uuid4()
         encrypted_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
@@ -635,9 +613,7 @@ class TestApiKeyServiceErrorScenarios:
         mock_settings = Mock()
         mock_settings.secret_key = "test-key"
 
-        service = ApiKeyService(
-            db=AsyncMock(), cache=AsyncMock(), settings=mock_settings
-        )
+        service = ApiKeyService(db=AsyncMock(), cache=AsyncMock(), settings=mock_settings)
 
         with patch("httpx.AsyncClient.get") as mock_get:
             # Simulate network timeout
@@ -656,9 +632,7 @@ class TestApiKeyServiceErrorScenarios:
         mock_settings = Mock()
         mock_settings.secret_key = "test-key"
 
-        service = ApiKeyService(
-            db=AsyncMock(), cache=AsyncMock(), settings=mock_settings
-        )
+        service = ApiKeyService(db=AsyncMock(), cache=AsyncMock(), settings=mock_settings)
 
         with patch("httpx.AsyncClient.get") as mock_get:
             # Simulate malformed JSON response

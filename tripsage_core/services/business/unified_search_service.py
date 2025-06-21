@@ -45,11 +45,7 @@ class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
     def __init__(self, message: str, original_error: Optional[Exception] = None):
-        details = {
-            "additional_context": {
-                "original_error": str(original_error) if original_error else None
-            }
-        }
+        details = {"additional_context": {"original_error": str(original_error) if original_error else None}}
         super().__init__(
             message=message,
             code="UNIFIED_SEARCH_ERROR",
@@ -59,9 +55,7 @@ class UnifiedSearchServiceError(CoreServiceError):
         self.original_error = original_error
 
 
-class UnifiedSearchService(
-    SearchCacheMixin[UnifiedSearchRequest, UnifiedSearchResponse]
-):
+class UnifiedSearchService(SearchCacheMixin[UnifiedSearchRequest, UnifiedSearchResponse]):
     """Service for unified search across multiple resource types."""
 
     def __init__(self, cache_service=None):
@@ -99,9 +93,7 @@ class UnifiedSearchService(
             "query": request.query,
             "types": sorted(request.types or DEFAULT_SEARCH_TYPES),
             "destination": request.destination,
-            "start_date": request.start_date.isoformat()
-            if request.start_date
-            else None,
+            "start_date": request.start_date.isoformat() if request.start_date else None,
             "end_date": request.end_date.isoformat() if request.end_date else None,
             "origin": request.origin,
             "adults": request.adults,
@@ -131,9 +123,7 @@ class UnifiedSearchService(
         return UnifiedSearchResponse
 
     @with_error_handling()
-    async def unified_search(
-        self, request: UnifiedSearchRequest
-    ) -> UnifiedSearchResponse:
+    async def unified_search(self, request: UnifiedSearchRequest) -> UnifiedSearchResponse:
         """
         Perform unified search across multiple resource types.
 
@@ -149,19 +139,14 @@ class UnifiedSearchService(
         await self.ensure_services()
 
         try:
-            logger.info(
-                f"Unified search request: '{request.query}' "
-                f"across types: {request.types}"
-            )
+            logger.info(f"Unified search request: '{request.query}' across types: {request.types}")
 
             start_time = datetime.now()
 
             # Check cache first
             cached_result = await self.get_cached_search(request)
             if cached_result:
-                logger.info(
-                    f"Returning cached unified search results for: {request.query}"
-                )
+                logger.info(f"Returning cached unified search results for: {request.query}")
                 return cached_result
 
             # Determine which types to search
@@ -189,17 +174,13 @@ class UnifiedSearchService(
 
             # Execute searches in parallel
             if search_tasks:
-                search_results = await asyncio.gather(
-                    *search_tasks.values(), return_exceptions=True
-                )
+                search_results = await asyncio.gather(*search_tasks.values(), return_exceptions=True)
 
                 # Process results
                 all_results = []
                 results_by_type = {}
 
-                for search_type, result in zip(
-                    search_tasks.keys(), search_results, strict=False
-                ):
+                for search_type, result in zip(search_tasks.keys(), search_results, strict=False):
                     if isinstance(result, Exception):
                         logger.warning(f"Search failed for {search_type}: {result}")
                         provider_errors[search_type] = str(result)
@@ -212,9 +193,7 @@ class UnifiedSearchService(
             else:
                 all_results = []
                 results_by_type = {}
-                logger.warning(
-                    "No valid search types provided or insufficient parameters"
-                )
+                logger.warning("No valid search types provided or insufficient parameters")
 
             # Apply cross-type sorting and filtering
             filtered_results = self._apply_unified_filters(all_results, request)
@@ -246,18 +225,14 @@ class UnifiedSearchService(
             # Cache the results
             await self.cache_search_results(request, response)
 
-            logger.info(
-                f"Unified search completed: {len(sorted_results)} total results"
-            )
+            logger.info(f"Unified search completed: {len(sorted_results)} total results")
             return response
 
         except Exception as e:
             logger.error(f"Unified search failed: {e}")
             raise UnifiedSearchServiceError(f"Unified search failed: {e}", e) from e
 
-    async def _search_destinations(
-        self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    async def _search_destinations(self, request: UnifiedSearchRequest) -> List[SearchResultItem]:
         """Search destinations and convert to unified results."""
         try:
             # Use the destination service to search
@@ -273,8 +248,7 @@ class UnifiedSearchService(
                     type="destination",
                     title=destination_query.title(),
                     description=(
-                        f"Explore {destination_query} - discover attractions, "
-                        f"activities, and local experiences"
+                        f"Explore {destination_query} - discover attractions, activities, and local experiences"
                     ),
                     location=destination_query,
                     relevance_score=0.9,
@@ -297,9 +271,7 @@ class UnifiedSearchService(
             logger.warning(f"Destination search failed: {e}")
             return []
 
-    async def _search_activities(
-        self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    async def _search_activities(self, request: UnifiedSearchRequest) -> List[SearchResultItem]:
         """Search activities and convert to unified results."""
         try:
             if not request.destination:
@@ -318,9 +290,7 @@ class UnifiedSearchService(
             )
 
             # Search using activity service
-            activity_response = await self._activity_service.search_activities(
-                activity_request
-            )
+            activity_response = await self._activity_service.search_activities(activity_request)
 
             # Convert to unified results
             results = []
@@ -345,9 +315,7 @@ class UnifiedSearchService(
                         "activity_type": activity.type,
                         "duration": activity.duration,
                         "provider": activity.provider,
-                        "coordinates": activity.coordinates.model_dump()
-                        if activity.coordinates
-                        else None,
+                        "coordinates": activity.coordinates.model_dump() if activity.coordinates else None,
                     },
                 )
                 results.append(result)
@@ -357,9 +325,7 @@ class UnifiedSearchService(
             logger.warning(f"Activity search failed: {e}")
             return []
 
-    async def _search_flights(
-        self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    async def _search_flights(self, request: UnifiedSearchRequest) -> List[SearchResultItem]:
         """Search flights and convert to unified results."""
         try:
             # For now, return empty as flight service integration needs more work
@@ -370,9 +336,7 @@ class UnifiedSearchService(
             logger.warning(f"Flight search failed: {e}")
             return []
 
-    async def _search_accommodations(
-        self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    async def _search_accommodations(self, request: UnifiedSearchRequest) -> List[SearchResultItem]:
         """Search accommodations and convert to unified results."""
         try:
             # For now, return empty as accommodation service integration needs more work
@@ -394,26 +358,14 @@ class UnifiedSearchService(
 
         # Price range filter
         if request.filters.price_min is not None:
-            filtered = [
-                r
-                for r in filtered
-                if r.price is None or r.price >= request.filters.price_min
-            ]
+            filtered = [r for r in filtered if r.price is None or r.price >= request.filters.price_min]
 
         if request.filters.price_max is not None:
-            filtered = [
-                r
-                for r in filtered
-                if r.price is None or r.price <= request.filters.price_max
-            ]
+            filtered = [r for r in filtered if r.price is None or r.price <= request.filters.price_max]
 
         # Rating filter
         if request.filters.rating_min is not None:
-            filtered = [
-                r
-                for r in filtered
-                if r.rating is None or r.rating >= request.filters.rating_min
-            ]
+            filtered = [r for r in filtered if r.rating is None or r.rating >= request.filters.rating_min]
 
         return filtered
 
@@ -459,10 +411,7 @@ class UnifiedSearchService(
                 field="type",
                 label="Type",
                 type="terms",
-                values=[
-                    {"value": k, "label": k.title(), "count": v}
-                    for k, v in sorted(type_counts.items())
-                ],
+                values=[{"value": k, "label": k.title(), "count": v} for k, v in sorted(type_counts.items())],
             )
             facets.append(type_facet)
 
@@ -484,9 +433,7 @@ class UnifiedSearchService(
                 field="rating",
                 label="Rating",
                 type="range",
-                values=[
-                    {"min": min(ratings), "max": max(ratings), "count": len(ratings)}
-                ],
+                values=[{"min": min(ratings), "max": max(ratings), "count": len(ratings)}],
             )
             facets.append(rating_facet)
 
@@ -525,9 +472,7 @@ class UnifiedSearchService(
                 "Dubai, UAE",
             ]
 
-            destination_suggestions = [
-                dest for dest in common_destinations if query_lower in dest.lower()
-            ]
+            destination_suggestions = [dest for dest in common_destinations if query_lower in dest.lower()]
             suggestions.extend(destination_suggestions[: limit // 2])
 
             # Activity type suggestions
@@ -542,9 +487,7 @@ class UnifiedSearchService(
                 "adventure sports",
             ]
 
-            activity_suggestions = [
-                f"{atype} in {query}" for atype in activity_types if len(query) > 2
-            ]
+            activity_suggestions = [f"{atype} in {query}" for atype in activity_types if len(query) > 2]
             suggestions.extend(activity_suggestions[: limit // 2])
 
             return suggestions[:limit]

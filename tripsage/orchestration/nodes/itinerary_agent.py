@@ -64,9 +64,7 @@ class ItineraryAgentNode(BaseAgentNode):
         # Bind tools to LLM for direct use
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
-        logger.info(
-            f"Initialized itinerary agent with {len(self.available_tools)} tools"
-        )
+        logger.info(f"Initialized itinerary agent with {len(self.available_tools)} tools")
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """
@@ -92,17 +90,13 @@ class ItineraryAgentNode(BaseAgentNode):
                 itinerary_result = await self._create_itinerary(itinerary_params, state)
             elif operation_type == "optimize":
                 # Optimize existing itinerary
-                itinerary_result = await self._optimize_itinerary(
-                    itinerary_params, state
-                )
+                itinerary_result = await self._optimize_itinerary(itinerary_params, state)
             elif operation_type == "modify":
                 # Modify existing itinerary (add/remove activities)
                 itinerary_result = await self._modify_itinerary(itinerary_params, state)
             elif operation_type == "calendar":
                 # Create calendar events from itinerary
-                itinerary_result = await self._create_calendar_events(
-                    itinerary_params, state
-                )
+                itinerary_result = await self._create_calendar_events(itinerary_params, state)
             else:
                 # Default to creating new itinerary
                 itinerary_result = await self._create_itinerary(itinerary_params, state)
@@ -126,18 +120,14 @@ class ItineraryAgentNode(BaseAgentNode):
             )
         else:
             # Handle general itinerary inquiries
-            response_message = await self._handle_general_itinerary_inquiry(
-                user_message, state
-            )
+            response_message = await self._handle_general_itinerary_inquiry(user_message, state)
 
         # Add response to conversation
         state["messages"].append(response_message)
 
         return state
 
-    async def _extract_itinerary_parameters(
-        self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    async def _extract_itinerary_parameters(self, message: str, state: TravelPlanningState) -> Optional[Dict[str, Any]]:
         """
         Extract itinerary parameters from user message and conversation context.
 
@@ -192,10 +182,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(
-                    content="You are an itinerary planning parameter extraction "
-                    "assistant."
-                ),
+                SystemMessage(content="You are an itinerary planning parameter extraction assistant."),
                 HumanMessage(content=extraction_prompt),
             ]
 
@@ -208,11 +195,7 @@ class ItineraryAgentNode(BaseAgentNode):
             params = json.loads(response.content)
 
             # Validate that this is itinerary-related
-            if params and (
-                "operation" in params
-                or "itinerary" in message.lower()
-                or "schedule" in message.lower()
-            ):
+            if params and ("operation" in params or "itinerary" in message.lower() or "schedule" in message.lower()):
                 return params
             else:
                 return None
@@ -221,9 +204,7 @@ class ItineraryAgentNode(BaseAgentNode):
             logger.error(f"Error extracting itinerary parameters: {str(e)}")
             return None
 
-    async def _create_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _create_itinerary(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
         """
         Create a detailed daily itinerary.
 
@@ -268,13 +249,9 @@ class ItineraryAgentNode(BaseAgentNode):
             )
 
             # Calculate travel times between locations
-            optimized_schedule = await self._optimize_schedule_logistics(
-                daily_schedule, destination
-            )
+            optimized_schedule = await self._optimize_schedule_logistics(daily_schedule, destination)
 
-            itinerary_id = (
-                f"itinerary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-            )
+            itinerary_id = f"itinerary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
             return {
                 "itinerary_id": itinerary_id,
@@ -284,12 +261,8 @@ class ItineraryAgentNode(BaseAgentNode):
                 "duration": duration,
                 "pace": pace,
                 "daily_schedule": optimized_schedule,
-                "total_activities": sum(
-                    len(day.get("activities", [])) for day in optimized_schedule
-                ),
-                "estimated_cost": self._calculate_estimated_cost(
-                    optimized_schedule, budget_per_day
-                ),
+                "total_activities": sum(len(day.get("activities", [])) for day in optimized_schedule),
+                "estimated_cost": self._calculate_estimated_cost(optimized_schedule, budget_per_day),
             }
 
         except Exception as e:
@@ -313,9 +286,7 @@ class ItineraryAgentNode(BaseAgentNode):
         # Determine activities per day based on pace
         pace_multiplier = {"relaxed": 0.7, "moderate": 1.0, "busy": 1.3}
         base_activities_per_day = 3
-        activities_per_day = int(
-            base_activities_per_day * pace_multiplier.get(pace, 1.0)
-        )
+        activities_per_day = int(base_activities_per_day * pace_multiplier.get(pace, 1.0))
 
         # Combine and filter attractions/activities based on interests
         all_options = attractions + activities
@@ -325,10 +296,7 @@ class ItineraryAgentNode(BaseAgentNode):
             for option in all_options:
                 name = option.get("name", "").lower()
                 description = option.get("description", "").lower()
-                if any(
-                    interest.lower() in name or interest.lower() in description
-                    for interest in interests
-                ):
+                if any(interest.lower() in name or interest.lower() in description for interest in interests):
                     filtered_options.append(option)
 
             # If filtered list is too short, add some general options
@@ -342,11 +310,7 @@ class ItineraryAgentNode(BaseAgentNode):
             all_options = filtered_options
 
         # Generate daily schedules
-        current_date = (
-            datetime.strptime(start_date, "%Y-%m-%d")
-            if start_date
-            else datetime.now(timezone.utc)
-        )
+        current_date = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now(timezone.utc)
 
         for day in range(duration):
             day_date = (current_date + timedelta(days=day)).strftime("%Y-%m-%d")
@@ -368,9 +332,7 @@ class ItineraryAgentNode(BaseAgentNode):
                     "description": option.get("description", ""),
                     "type": option.get("type", option.get("category", "activity")),
                     "duration": "2-3 hours",
-                    "estimated_cost": (
-                        budget_per_day / activities_per_day if budget_per_day > 0 else 0
-                    ),
+                    "estimated_cost": (budget_per_day / activities_per_day if budget_per_day > 0 else 0),
                 }
                 day_activities.append(activity)
 
@@ -383,9 +345,7 @@ class ItineraryAgentNode(BaseAgentNode):
                     "description": f"Local cuisine in {destination}",
                     "type": "meal",
                     "duration": "1 hour",
-                    "estimated_cost": (
-                        budget_per_day * 0.3 if budget_per_day > 0 else 0
-                    ),
+                    "estimated_cost": (budget_per_day * 0.3 if budget_per_day > 0 else 0),
                 },
             )
 
@@ -400,9 +360,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
         return daily_schedule
 
-    async def _optimize_schedule_logistics(
-        self, daily_schedule: List[Dict], destination: str
-    ) -> List[Dict]:
+    async def _optimize_schedule_logistics(self, daily_schedule: List[Dict], destination: str) -> List[Dict]:
         """Optimize the schedule for logistics and travel times."""
         # This would use Google Maps API to calculate travel times and optimize routes
         # For now, we'll add basic logistics information
@@ -420,9 +378,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
         return daily_schedule
 
-    def _calculate_estimated_cost(
-        self, daily_schedule: List[Dict], budget_per_day: float
-    ) -> Dict[str, float]:
+    def _calculate_estimated_cost(self, daily_schedule: List[Dict], budget_per_day: float) -> Dict[str, float]:
         """Calculate estimated costs for the itinerary."""
         total_cost = 0
         daily_costs = []
@@ -436,15 +392,11 @@ class ItineraryAgentNode(BaseAgentNode):
 
         return {
             "total_estimated_cost": round(total_cost, 2),
-            "average_daily_cost": (
-                round(total_cost / len(daily_schedule), 2) if daily_schedule else 0
-            ),
+            "average_daily_cost": (round(total_cost / len(daily_schedule), 2) if daily_schedule else 0),
             "daily_costs": [round(cost, 2) for cost in daily_costs],
         }
 
-    async def _optimize_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _optimize_itinerary(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
         """
         Optimize an existing itinerary for better flow and efficiency.
 
@@ -478,16 +430,12 @@ class ItineraryAgentNode(BaseAgentNode):
 
                 # Sort activities by time for better flow
                 # Group nearby activities together (simplified logic)
-                optimized_activities = sorted(
-                    activities, key=lambda x: x.get("time", "00:00")
-                )
+                optimized_activities = sorted(activities, key=lambda x: x.get("time", "00:00"))
 
                 optimized_day = {
                     **day,
                     "activities": optimized_activities,
-                    "optimization_notes": (
-                        "Optimized for better flow and reduced travel time"
-                    ),
+                    "optimization_notes": ("Optimized for better flow and reduced travel time"),
                 }
                 optimized_schedule.append(optimized_day)
 
@@ -502,9 +450,7 @@ class ItineraryAgentNode(BaseAgentNode):
             logger.error(f"Itinerary optimization failed: {str(e)}")
             return {"error": f"Failed to optimize itinerary: {str(e)}"}
 
-    async def _modify_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _modify_itinerary(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
         """
         Modify an existing itinerary by adding or removing activities.
 
@@ -546,9 +492,7 @@ class ItineraryAgentNode(BaseAgentNode):
                         "estimated_cost": activity_details.get("estimated_cost", 0),
                     }
                     daily_schedule[day_index]["activities"].append(new_activity)
-                    daily_schedule[day_index]["activities"].sort(
-                        key=lambda x: x.get("time", "00:00")
-                    )
+                    daily_schedule[day_index]["activities"].sort(key=lambda x: x.get("time", "00:00"))
 
             elif modification_type == "remove":
                 # Remove activity from specified day
@@ -558,9 +502,7 @@ class ItineraryAgentNode(BaseAgentNode):
                     day_index = day_number - 1
                     activities = daily_schedule[day_index]["activities"]
                     daily_schedule[day_index]["activities"] = [
-                        act
-                        for act in activities
-                        if act.get("name", "") != activity_name
+                        act for act in activities if act.get("name", "") != activity_name
                     ]
 
             return {
@@ -575,9 +517,7 @@ class ItineraryAgentNode(BaseAgentNode):
             logger.error(f"Itinerary modification failed: {str(e)}")
             return {"error": f"Failed to modify itinerary: {str(e)}"}
 
-    async def _create_calendar_events(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _create_calendar_events(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
         """
         Create calendar events from an itinerary.
 
@@ -649,10 +589,7 @@ class ItineraryAgentNode(BaseAgentNode):
             Formatted response message
         """
         if result.get("error"):
-            content = (
-                f"I apologize, but I encountered an issue with your itinerary: "
-                f"{result['error']}"
-            )
+            content = f"I apologize, but I encountered an issue with your itinerary: {result['error']}"
         else:
             if operation_type == "create":
                 content = self._format_create_response(result, params)
@@ -673,36 +610,27 @@ class ItineraryAgentNode(BaseAgentNode):
             },
         )
 
-    def _format_create_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
-    ) -> str:
+    def _format_create_response(self, result: Dict[str, Any], params: Dict[str, Any]) -> str:
         """Format itinerary creation response."""
         destination = result.get("destination", "")
         duration = result.get("duration", 0)
         total_activities = result.get("total_activities", 0)
         daily_schedule = result.get("daily_schedule", [])
 
-        content = (
-            f"I've created a {duration}-day itinerary for {destination} with "
-            f"{total_activities} activities!\n\n"
-        )
+        content = f"I've created a {duration}-day itinerary for {destination} with {total_activities} activities!\n\n"
 
         for day in daily_schedule[:3]:  # Show first 3 days
             day_num = day.get("day", 1)
             date = day.get("date", "")
             content += f"**Day {day_num}** ({date}):\n"
 
-            for activity in day.get("activities", [])[
-                :3
-            ]:  # Show first 3 activities per day
+            for activity in day.get("activities", [])[:3]:  # Show first 3 activities per day
                 time = activity.get("time", "")
                 name = activity.get("name", "")
                 content += f"• {time} - {name}\n"
 
             if len(day.get("activities", [])) > 3:
-                content += (
-                    f"• ... and {len(day.get('activities', [])) - 3} more activities\n"
-                )
+                content += f"• ... and {len(day.get('activities', [])) - 3} more activities\n"
             content += "\n"
 
         if len(daily_schedule) > 3:
@@ -715,16 +643,11 @@ class ItineraryAgentNode(BaseAgentNode):
                 f"total (${estimated_cost['average_daily_cost']:.0f}/day)\n\n"
             )
 
-        content += (
-            "Would you like me to optimize this itinerary, add calendar events, or "
-            "make any modifications?"
-        )
+        content += "Would you like me to optimize this itinerary, add calendar events, or make any modifications?"
 
         return content
 
-    def _format_optimize_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
-    ) -> str:
+    def _format_optimize_response(self, result: Dict[str, Any], params: Dict[str, Any]) -> str:
         """Format itinerary optimization response."""
         destination = result.get("destination", "")
 
@@ -733,68 +656,43 @@ class ItineraryAgentNode(BaseAgentNode):
         content += "• Improved activity flow and timing\n"
         content += "• Reduced travel time between locations\n"
         content += "• Better grouped nearby activities\n\n"
-        content += (
-            "The optimized schedule maintains all your original activities while "
-            "improving efficiency. "
-        )
-        content += (
-            "Would you like to see the updated schedule or make any other changes?"
-        )
+        content += "The optimized schedule maintains all your original activities while improving efficiency. "
+        content += "Would you like to see the updated schedule or make any other changes?"
 
         return content
 
-    def _format_modify_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
-    ) -> str:
+    def _format_modify_response(self, result: Dict[str, Any], params: Dict[str, Any]) -> str:
         """Format itinerary modification response."""
         modification_type = result.get("modification_type", "")
         destination = result.get("destination", "")
 
         if modification_type == "add":
-            content = (
-                f"I've successfully added the new activity to your {destination} "
-                "itinerary!\n\n"
-            )
+            content = f"I've successfully added the new activity to your {destination} itinerary!\n\n"
         elif modification_type == "remove":
-            content = (
-                f"I've successfully removed the activity from your {destination} "
-                "itinerary!\n\n"
-            )
+            content = f"I've successfully removed the activity from your {destination} itinerary!\n\n"
         else:
             content = f"I've successfully modified your {destination} itinerary!\n\n"
 
         content += "Your itinerary has been updated with the changes. "
-        content += (
-            "Would you like to make any other modifications or see the full updated "
-            "schedule?"
-        )
+        content += "Would you like to make any other modifications or see the full updated schedule?"
 
         return content
 
-    def _format_calendar_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
-    ) -> str:
+    def _format_calendar_response(self, result: Dict[str, Any], params: Dict[str, Any]) -> str:
         """Format calendar events creation response."""
         events_count = result.get("events_count", 0)
 
-        content = (
-            f"I've created {events_count} calendar events from your itinerary!\n\n"
-        )
+        content = f"I've created {events_count} calendar events from your itinerary!\n\n"
         content += "**Calendar Events Include:**\n"
         content += "• All scheduled activities with times\n"
         content += "• Location information\n"
         content += "• Activity descriptions\n"
         content += "• Estimated durations\n\n"
-        content += (
-            "You can now import these events into your calendar app for easy "
-            "reference during your trip!"
-        )
+        content += "You can now import these events into your calendar app for easy reference during your trip!"
 
         return content
 
-    async def _handle_general_itinerary_inquiry(
-        self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _handle_general_itinerary_inquiry(self, message: str, state: TravelPlanningState) -> Dict[str, Any]:
         """
         Handle general itinerary inquiries that don't require specific planning.
 
@@ -824,9 +722,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(
-                    content="You are a helpful itinerary planning assistant."
-                ),
+                SystemMessage(content="You are a helpful itinerary planning assistant."),
                 HumanMessage(content=response_prompt),
             ]
 

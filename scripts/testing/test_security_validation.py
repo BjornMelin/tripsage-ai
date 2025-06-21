@@ -66,25 +66,19 @@ class TestSecurityValidation(unittest.TestCase):
 
         # Should log an info finding
         self.assertEqual(len(SECURITY_CHECKS["info"]), 1)
-        self.assertIn(
-            "No obvious hardcoded secrets found", SECURITY_CHECKS["info"][0]["message"]
-        )
+        self.assertIn("No obvious hardcoded secrets found", SECURITY_CHECKS["info"][0]["message"])
 
     @patch("subprocess.run")
     def test_check_hardcoded_secrets_found(self, mock_run):
         """Test hardcoded secrets check when secrets are found."""
         # Mock grep returning potential secrets
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout="file.py:password = 'actual-secret-key-here'"
-        )
+        mock_run.return_value = MagicMock(returncode=0, stdout="file.py:password = 'actual-secret-key-here'")
 
         check_hardcoded_secrets()
 
         # Should log a high severity finding
         self.assertEqual(len(SECURITY_CHECKS["high"]), 1)
-        self.assertIn(
-            "Potential hardcoded secret found", SECURITY_CHECKS["high"][0]["message"]
-        )
+        self.assertIn("Potential hardcoded secret found", SECURITY_CHECKS["high"][0]["message"])
 
     @patch("subprocess.run")
     def test_check_hardcoded_secrets_excluded_patterns(self, mock_run):
@@ -92,8 +86,7 @@ class TestSecurityValidation(unittest.TestCase):
         # Mock grep returning excluded patterns
         mock_run.return_value = MagicMock(
             returncode=0,
-            stdout="file.py:password = 'fallback-secret'\n"
-            "other.py:key = 'test-password'",
+            stdout="file.py:password = 'fallback-secret'\nother.py:key = 'test-password'",
         )
 
         check_hardcoded_secrets()
@@ -111,18 +104,14 @@ class TestSecurityValidation(unittest.TestCase):
 
         # Should log medium severity error
         self.assertEqual(len(SECURITY_CHECKS["medium"]), 1)
-        self.assertIn(
-            "Could not scan for secrets", SECURITY_CHECKS["medium"][0]["message"]
-        )
+        self.assertIn("Could not scan for secrets", SECURITY_CHECKS["medium"][0]["message"])
 
     @patch("glob.glob")
     @patch("builtins.open", new_callable=mock_open)
     def test_check_sql_injection_protection_none_found(self, mock_file, mock_glob):
         """Test SQL injection check when no issues are found."""
         mock_glob.return_value = ["test.py"]
-        mock_file.return_value.read.return_value = (
-            "safe_code = 'SELECT * FROM table WHERE id = ?'"
-        )
+        mock_file.return_value.read.return_value = "safe_code = 'SELECT * FROM table WHERE id = ?'"
 
         check_sql_injection_protection()
 
@@ -137,9 +126,7 @@ class TestSecurityValidation(unittest.TestCase):
     def test_check_sql_injection_protection_found(self, mock_file, mock_glob):
         """Test SQL injection check when vulnerabilities are found."""
         mock_glob.return_value = ["vulnerable.py"]
-        mock_file.return_value.read.return_value = (
-            'execute("SELECT * FROM users WHERE id = " + user_input)'
-        )
+        mock_file.return_value.read.return_value = 'execute("SELECT * FROM users WHERE id = " + user_input)'
 
         check_sql_injection_protection()
 
@@ -151,9 +138,7 @@ class TestSecurityValidation(unittest.TestCase):
     def test_check_xss_protection_none_found(self, mock_file, mock_glob):
         """Test XSS protection check when no issues are found."""
         mock_glob.return_value = ["safe.tsx"]
-        mock_file.return_value.read.return_value = (
-            "const safe = <div>{sanitizedContent}</div>"
-        )
+        mock_file.return_value.read.return_value = "const safe = <div>{sanitizedContent}</div>"
 
         check_xss_protection()
 
@@ -173,9 +158,7 @@ class TestSecurityValidation(unittest.TestCase):
         check_xss_protection()
 
         self.assertEqual(len(SECURITY_CHECKS["medium"]), 1)
-        self.assertIn(
-            "Potential XSS vulnerability", SECURITY_CHECKS["medium"][0]["message"]
-        )
+        self.assertIn("Potential XSS vulnerability", SECURITY_CHECKS["medium"][0]["message"])
 
     @patch("builtins.open", new_callable=mock_open)
     def test_check_authentication_security_complete(self, mock_file):
@@ -194,9 +177,7 @@ class TestSecurityValidation(unittest.TestCase):
         check_authentication_security()
 
         # Should find 4 info findings for all checks passed
-        info_findings = [
-            f for f in SECURITY_CHECKS["info"] if "Authentication" in f["category"]
-        ]
+        info_findings = [f for f in SECURITY_CHECKS["info"] if "Authentication" in f["category"]]
         self.assertGreaterEqual(len(info_findings), 4)
 
     @patch("builtins.open", side_effect=FileNotFoundError)
@@ -205,9 +186,7 @@ class TestSecurityValidation(unittest.TestCase):
         check_authentication_security()
 
         # Should find critical findings for missing files
-        critical_findings = [
-            f for f in SECURITY_CHECKS["critical"] if "Authentication" in f["category"]
-        ]
+        critical_findings = [f for f in SECURITY_CHECKS["critical"] if "Authentication" in f["category"]]
         self.assertGreaterEqual(len(critical_findings), 1)
 
     @patch("glob.glob")
@@ -215,9 +194,7 @@ class TestSecurityValidation(unittest.TestCase):
     def test_check_cors_configuration_found(self, mock_file, mock_glob):
         """Test CORS configuration check when CORS is found."""
         mock_glob.return_value = ["api.py"]
-        mock_file.return_value.read.return_value = (
-            "CORSMiddleware(app, allow_origins=['https://example.com'])"
-        )
+        mock_file.return_value.read.return_value = "CORSMiddleware(app, allow_origins=['https://example.com'])"
 
         check_cors_configuration()
 
@@ -234,9 +211,7 @@ class TestSecurityValidation(unittest.TestCase):
         check_cors_configuration()
 
         self.assertEqual(len(SECURITY_CHECKS["high"]), 1)
-        self.assertIn(
-            "Wildcard CORS origins found", SECURITY_CHECKS["high"][0]["message"]
-        )
+        self.assertIn("Wildcard CORS origins found", SECURITY_CHECKS["high"][0]["message"])
 
     @patch("subprocess.run")
     def test_check_dependency_security_success(self, mock_run):
@@ -258,11 +233,7 @@ class TestSecurityValidation(unittest.TestCase):
 
         check_dependency_security()
 
-        info_findings = [
-            f
-            for f in SECURITY_CHECKS["info"]
-            if "Frontend package.json found" in f["message"]
-        ]
+        info_findings = [f for f in SECURITY_CHECKS["info"] if "Frontend package.json found" in f["message"]]
         self.assertEqual(len(info_findings), 1)
 
     def test_generate_security_report_passed(self):
@@ -329,10 +300,8 @@ class TestSecurityValidationIntegration(unittest.TestCase):
             test_files = {
                 "safe.py": "password = get_from_env('PASSWORD')",
                 "vulnerable.py": "password = 'hardcoded-secret-123'",
-                "sql_safe.py": "cursor.execute('SELECT * FROM users WHERE id = ?', "
-                "(user_id,))",
-                "sql_vulnerable.py": "cursor.execute('SELECT * FROM users WHERE "
-                "id = ' + user_id)",
+                "sql_safe.py": "cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))",
+                "sql_vulnerable.py": "cursor.execute('SELECT * FROM users WHERE id = ' + user_id)",
             }
 
             for filename, content in test_files.items():
@@ -352,12 +321,8 @@ class TestSecurityValidationIntegration(unittest.TestCase):
                 check_sql_injection_protection()
 
                 # Verify findings
-                total_findings = sum(
-                    len(SECURITY_CHECKS[cat]) for cat in SECURITY_CHECKS
-                )
-                self.assertGreater(
-                    total_findings, 0, "Should find some security issues in test files"
-                )
+                total_findings = sum(len(SECURITY_CHECKS[cat]) for cat in SECURITY_CHECKS)
+                self.assertGreater(total_findings, 0, "Should find some security issues in test files")
 
             finally:
                 os.chdir(original_cwd)

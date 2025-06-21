@@ -137,15 +137,9 @@ class DragonflyCache:
             self._cache_service = await get_cache_instance()
 
         # Additional connection check if the service has an is_connected property
-        if hasattr(self._cache_service, "adapter") and hasattr(
-            self._cache_service.adapter, "_direct_service"
-        ):
+        if hasattr(self._cache_service, "adapter") and hasattr(self._cache_service.adapter, "_direct_service"):
             direct_service = self._cache_service.adapter._direct_service
-            if (
-                direct_service
-                and hasattr(direct_service, "_connected")
-                and not direct_service._connected
-            ):
+            if direct_service and hasattr(direct_service, "_connected") and not direct_service._connected:
                 await direct_service.connect()
 
     def _make_key(self, key: str) -> str:
@@ -229,16 +223,12 @@ class DragonflyCache:
                         keys.append(key)
                 else:
                     # Alternative approach if scan_iter not available
-                    logger.warning(
-                        "scan_iter not available, pattern invalidation limited"
-                    )
+                    logger.warning("scan_iter not available, pattern invalidation limited")
                     return 0
 
                 if keys:
                     count = await self._cache_service.delete(*keys)
-                    logger.info(
-                        f"Invalidated {count} keys matching pattern {full_pattern}"
-                    )
+                    logger.info(f"Invalidated {count} keys matching pattern {full_pattern}")
                     return count
                 return 0
 
@@ -310,9 +300,7 @@ class DragonflyCache:
             return CacheStats()
 
 
-def generate_cache_key(
-    prefix: str, query: str, args: Optional[List[Any]] = None, **kwargs: Any
-) -> str:
+def generate_cache_key(prefix: str, query: str, args: Optional[List[Any]] = None, **kwargs: Any) -> str:
     """Generate a deterministic cache key."""
     # Normalize the query
     normalized_query = query.lower().strip()
@@ -381,9 +369,7 @@ def cached(
                     query_components.append(arg)
 
             query = ":".join(query_components) if query_components else function_name
-            cache_key = generate_cache_key(
-                cache_prefix, query, list(args), **key_kwargs
-            )
+            cache_key = generate_cache_key(cache_prefix, query, list(args), **key_kwargs)
 
             # Try to get from cache
             cached_result = await cache.get(cache_key)
@@ -463,9 +449,7 @@ async def batch_cache_set(
     if not use_redis or not settings.redis_url:
         results = []
         for item in items:
-            success = await memory_cache.set(
-                item["key"], item["value"], ttl=item.get("ttl")
-            )
+            success = await memory_cache.set(item["key"], item["value"], ttl=item.get("ttl"))
             results.append(success)
         return results
 
@@ -479,16 +463,10 @@ async def batch_cache_set(
             batch_items = {}
             ttl = None
             for item in items:
-                key = (
-                    f"{namespace}:{item['key']}"
-                    if not item["key"].startswith(f"{namespace}:")
-                    else item["key"]
-                )
+                key = f"{namespace}:{item['key']}" if not item["key"].startswith(f"{namespace}:") else item["key"]
                 batch_items[key] = item["value"]
                 if "ttl" in item:
-                    ttl = item[
-                        "ttl"
-                    ]  # Use last TTL found - limitation of batch operation
+                    ttl = item["ttl"]  # Use last TTL found - limitation of batch operation
 
             success = await cache_service.batch_set(batch_items, ex=ttl)
             return [success] * len(items)  # Return same result for all items
@@ -496,11 +474,7 @@ async def batch_cache_set(
         # Fallback to individual operations
         results = []
         for item in items:
-            key = (
-                f"{namespace}:{item['key']}"
-                if not item["key"].startswith(f"{namespace}:")
-                else item["key"]
-            )
+            key = f"{namespace}:{item['key']}" if not item["key"].startswith(f"{namespace}:") else item["key"]
             success = await cache_service.set(key, item["value"], ttl=item.get("ttl"))
             results.append(bool(success))
         return results
@@ -510,9 +484,7 @@ async def batch_cache_set(
         return [False] * len(items)
 
 
-async def batch_cache_get(
-    keys: List[str], namespace: str = "tripsage", use_redis: bool = True
-) -> List[Optional[Any]]:
+async def batch_cache_get(keys: List[str], namespace: str = "tripsage", use_redis: bool = True) -> List[Optional[Any]]:
     """
     Get multiple cache entries in batch for improved performance.
 
@@ -537,10 +509,7 @@ async def batch_cache_get(
         cache_service = await get_cache_instance()
 
         # Prepare namespaced keys
-        full_keys = [
-            f"{namespace}:{key}" if not key.startswith(f"{namespace}:") else key
-            for key in keys
-        ]
+        full_keys = [f"{namespace}:{key}" if not key.startswith(f"{namespace}:") else key for key in keys]
 
         # Use batch operations if available
         if hasattr(cache_service, "batch_get"):
@@ -655,9 +624,7 @@ async def invalidate_pattern(pattern: str, namespace: str = "tripsage") -> int:
     return await redis_cache.invalidate_pattern(pattern)
 
 
-def determine_content_type(
-    query: str, domains: Optional[List[str]] = None
-) -> ContentType:
+def determine_content_type(query: str, domains: Optional[List[str]] = None) -> ContentType:
     """Determine content type based on query and domains."""
     # Simple heuristic-based content type determination
     query_lower = query.lower()
@@ -699,11 +666,7 @@ async def prefetch_cache_keys(pattern: str, namespace: str = "tripsage") -> List
         cache_service = await get_cache_instance()
 
         # Build the full pattern
-        full_pattern = (
-            f"{namespace}:{pattern}"
-            if not pattern.startswith(f"{namespace}:")
-            else pattern
-        )
+        full_pattern = f"{namespace}:{pattern}" if not pattern.startswith(f"{namespace}:") else pattern
 
         keys = []
         # If scan_iter is available on the cache service

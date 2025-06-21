@@ -37,11 +37,15 @@ from tripsage_core.services.business.chat_service import (
     MessageRole,
 )
 from tripsage_core.services.infrastructure.websocket_manager import (
+    WebSocketMessageLimits,
     websocket_manager,
 )
 from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
     WebSocketEventType,
+)
+from tripsage_core.services.infrastructure.websocket_validation import (
+    WebSocketMessageValidator,
 )
 
 
@@ -59,17 +63,13 @@ class ChatMessageChunkEvent(WebSocketEvent):
 
 
 class ConnectionEvent(WebSocketEvent):
-    type: str = Field(
-        default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type"
-    )
+    type: str = Field(default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type")
     status: str = Field(..., description="Connection status")
     connection_id: str = Field(..., description="Connection ID")
 
 
 class ErrorEvent(WebSocketEvent):
-    type: str = Field(
-        default=WebSocketEventType.CONNECTION_ERROR, description="Event type"
-    )
+    type: str = Field(default=WebSocketEventType.CONNECTION_ERROR, description="Event type")
     error_code: str
     error_message: str
 
@@ -77,6 +77,66 @@ class ErrorEvent(WebSocketEvent):
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Message size limits for incoming messages
+message_limits = WebSocketMessageLimits()
+
+
+def validate_incoming_message_size(message_data: str, message_type: str = "message") -> bool:
+    """Validate incoming WebSocket message size.
+
+    Args:
+        message_data: Raw message data as string
+        message_type: Type of message for size limit determination
+
+    Returns:
+        True if message size is valid, False otherwise
+    """
+    try:
+        message_size = len(message_data.encode("utf-8"))
+        max_size = message_limits.get_limit_for_message_type(message_type)
+
+        if message_size > max_size:
+            logger.warning(f"Message size exceeds limit for type '{message_type}': {message_size} > {max_size}")
+            return False
+        return True
+    except Exception as e:
+        logger.error(f"Error validating message size: {e}")
+        return True  # Allow message if validation fails
+
+
+def validate_and_parse_message(message_data: str) -> tuple[bool, dict, str]:
+    """Validate and parse incoming WebSocket message with comprehensive security checks.
+
+    Args:
+        message_data: Raw message data as string
+
+    Returns:
+        Tuple of (is_valid, parsed_message_dict, error_message)
+    """
+    try:
+        # First validate message size
+        if not validate_incoming_message_size(message_data, "message"):
+            return False, {}, "Message too large"
+
+        # Validate using Pydantic models
+        validated_message = WebSocketMessageValidator.validate_message(message_data)
+
+        # Convert back to dict for processing
+        if hasattr(validated_message, "model_dump"):
+            message_dict = validated_message.model_dump()
+        else:
+            message_dict = validated_message.dict()
+
+        return True, message_dict, ""
+
+    except ValueError as e:
+        logger.warning(f"Message validation failed: {e}")
+        return False, {}, str(e)
+    except Exception as e:
+        logger.error(f"Unexpected error validating message: {e}")
+        return False, {}, "Message validation error"
+
 
 # Services for test compatibility - tests expect these attributes to exist
 auth_service = websocket_manager.auth_service
@@ -122,9 +182,7 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
     # Additional check for wildcard origins if configured
     for allowed_origin in settings.cors_origins:
         if allowed_origin == "*":
-            logger.warning(
-                "Wildcard CORS origin detected - allowing all origins (insecure)"
-            )
+            logger.warning("Wildcard CORS origin detected - allowing all origins (insecure)")
             return True
 
     logger.error(f"WebSocket connection rejected from unauthorized origin: {origin}")
@@ -189,9 +247,23 @@ async def generic_websocket(websocket: WebSocket):
 
         # Wait for authentication message
         auth_data = await websocket.receive_text()
+
+        # Validate authentication message using comprehensive validation
         try:
-            auth_request = WebSocketAuthRequest.model_validate_json(auth_data)
-        except ValidationError as e:
+            # Use the new validation for auth messages
+            validated_auth = WebSocketMessageValidator.validate_message(auth_data)
+            if hasattr(validated_auth, "model_dump"):
+                auth_dict = validated_auth.model_dump()
+            else:
+                auth_dict = validated_auth.dict()
+
+            # Create WebSocketAuthRequest from validated data
+            auth_request = WebSocketAuthRequest(
+                token=auth_dict.get("token", ""),
+                session_id=auth_dict.get("session_id"),
+                channels=auth_dict.get("channels", []),
+            )
+        except (ValueError, ValidationError) as e:
             await websocket.send_text(
                 json.dumps(
                     {
@@ -243,8 +315,7 @@ async def generic_websocket(websocket: WebSocket):
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
         logger.info(
-            f"Generic WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}",
+            f"Generic WebSocket authenticated: connection_id={connection_id}, user_id={user_id}",
         )
 
         # Basic message handling loop
@@ -252,7 +323,17 @@ async def generic_websocket(websocket: WebSocket):
             try:
                 # Receive message from client
                 message_data = await websocket.receive_text()
-                message_json = json.loads(message_data)
+
+                # Validate and parse message using comprehensive validation
+                is_valid, message_json, error_msg = validate_and_parse_message(message_data)
+                if not is_valid:
+                    error_event = ErrorEvent(
+                        error_code="message_validation_failed",
+                        error_message=error_msg,
+                        user_id=user_id,
+                    )
+                    await websocket_manager.send_to_connection(connection_id, error_event)
+                    continue
 
                 message_type = message_json.get("type", "")
 
@@ -277,9 +358,7 @@ async def generic_websocket(websocket: WebSocket):
                             user_id=user_id,
                             connection_id=connection_id,
                         )
-                        await websocket_manager.send_to_connection(
-                            connection_id, pong_event
-                        )
+                        await websocket_manager.send_to_connection(connection_id, pong_event)
 
                 elif message_type == "pong":
                     # Handle pong response from client (in response to our ping)
@@ -292,7 +371,7 @@ async def generic_websocket(websocket: WebSocket):
                     payload = message_json.get("payload", {})
                     message_session_id = payload.get("session_id")
                     content = payload.get("content", "")
-                    
+
                     if message_session_id and content:
                         # Create chat message event
                         chat_event = WebSocketEvent(
@@ -307,9 +386,7 @@ async def generic_websocket(websocket: WebSocket):
                             connection_id=connection_id,
                         )
                         # Broadcast to session
-                        await websocket_manager.send_to_session(
-                            UUID(message_session_id), chat_event
-                        )
+                        await websocket_manager.send_to_session(UUID(message_session_id), chat_event)
                     else:
                         await websocket.send_text(
                             json.dumps(
@@ -357,9 +434,7 @@ async def generic_websocket(websocket: WebSocket):
                         user_id=user_id,
                         connection_id=connection_id,
                     )
-                    await websocket_manager.send_to_connection(
-                        connection_id, echo_event
-                    )
+                    await websocket_manager.send_to_connection(connection_id, echo_event)
 
             except WebSocketDisconnect:
                 logger.info(
@@ -429,10 +504,23 @@ async def chat_websocket(
 
         # Wait for authentication message
         auth_data = await websocket.receive_text()
+
+        # Validate authentication message using comprehensive validation
         try:
-            auth_request = WebSocketAuthRequest.model_validate_json(auth_data)
-            auth_request.session_id = session_id  # Ensure session ID matches URL
-        except ValidationError as e:
+            # Use the new validation for auth messages
+            validated_auth = WebSocketMessageValidator.validate_message(auth_data)
+            if hasattr(validated_auth, "model_dump"):
+                auth_dict = validated_auth.model_dump()
+            else:
+                auth_dict = validated_auth.dict()
+
+            # Create WebSocketAuthRequest from validated data
+            auth_request = WebSocketAuthRequest(
+                token=auth_dict.get("token", ""),
+                session_id=session_id,  # Ensure session ID matches URL
+                channels=auth_dict.get("channels", []),
+            )
+        except (ValueError, ValidationError) as e:
             await websocket.send_text(
                 json.dumps(
                     {
@@ -488,8 +576,7 @@ async def chat_websocket(
         chat_agent = get_chat_agent()
 
         logger.info(
-            f"Chat WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}",
+            f"Chat WebSocket authenticated: connection_id={connection_id}, user_id={user_id}",
         )
 
         # Message handling loop
@@ -497,7 +584,18 @@ async def chat_websocket(
             try:
                 # Receive message from client
                 message_data = await websocket.receive_text()
-                message_json = json.loads(message_data)
+
+                # Validate and parse message using comprehensive validation
+                is_valid, message_json, error_msg = validate_and_parse_message(message_data)
+                if not is_valid:
+                    error_event = ErrorEvent(
+                        error_code="message_validation_failed",
+                        error_message=error_msg,
+                        user_id=user_id,
+                        session_id=session_id,
+                    )
+                    await websocket_manager.send_to_connection(connection_id, error_event)
+                    continue
 
                 message_type = message_json.get("type", "")
 
@@ -534,9 +632,7 @@ async def chat_websocket(
                             session_id=session_id,
                             connection_id=connection_id,
                         )
-                        await websocket_manager.send_to_connection(
-                            connection_id, pong_event
-                        )
+                        await websocket_manager.send_to_connection(connection_id, pong_event)
 
                 elif message_type == "pong":
                     # Handle pong response from client (in response to our ping)
@@ -642,11 +738,23 @@ async def agent_status_websocket(
 
         # Wait for authentication message
         auth_data = await websocket.receive_text()
+
+        # Validate authentication message using comprehensive validation
         try:
-            auth_request = WebSocketAuthRequest.model_validate_json(auth_data)
-            # Subscribe to user-specific agent status channel
-            auth_request.channels = [f"agent_status:{user_id}"]
-        except ValidationError as e:
+            # Use the new validation for auth messages
+            validated_auth = WebSocketMessageValidator.validate_message(auth_data)
+            if hasattr(validated_auth, "model_dump"):
+                auth_dict = validated_auth.model_dump()
+            else:
+                auth_dict = validated_auth.dict()
+
+            # Create WebSocketAuthRequest from validated data
+            auth_request = WebSocketAuthRequest(
+                token=auth_dict.get("token", ""),
+                session_id=auth_dict.get("session_id"),
+                channels=[f"agent_status:{user_id}"],  # Subscribe to user-specific channel
+            )
+        except (ValueError, ValidationError) as e:
             await websocket.send_text(
                 json.dumps(
                     {
@@ -706,8 +814,7 @@ async def agent_status_websocket(
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
         logger.info(
-            f"Agent status WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}",
+            f"Agent status WebSocket authenticated: connection_id={connection_id}, user_id={user_id}",
         )
 
         # Message handling loop (mainly for heartbeats and subscription changes)
@@ -715,7 +822,14 @@ async def agent_status_websocket(
             try:
                 # Receive message from client
                 message_data = await websocket.receive_text()
-                message_json = json.loads(message_data)
+
+                # Validate and parse message using comprehensive validation
+                is_valid, message_json, error_msg = validate_and_parse_message(message_data)
+                if not is_valid:
+                    logger.warning(
+                        f"Message validation failed for agent status connection {connection_id}: {error_msg}"
+                    )
+                    continue
 
                 message_type = message_json.get("type", "")
 
@@ -740,9 +854,7 @@ async def agent_status_websocket(
                             user_id=user_id,
                             connection_id=connection_id,
                         )
-                        await websocket_manager.send_to_connection(
-                            connection_id, pong_event
-                        )
+                        await websocket_manager.send_to_connection(connection_id, pong_event)
 
                 elif message_type == "pong":
                     # Handle pong response from client (in response to our ping)
@@ -786,19 +898,16 @@ async def agent_status_websocket(
 
             except WebSocketDisconnect:
                 logger.info(
-                    f"Agent status WebSocket disconnected: "
-                    f"connection_id={connection_id}",
+                    f"Agent status WebSocket disconnected: connection_id={connection_id}",
                 )
                 break
             except json.JSONDecodeError:
                 logger.error(
-                    f"Invalid JSON received from agent status connection "
-                    f"{connection_id}",
+                    f"Invalid JSON received from agent status connection {connection_id}",
                 )
             except Exception as e:
                 logger.error(
-                    f"Error handling agent status message from connection "
-                    f"{connection_id}: {e}",
+                    f"Error handling agent status message from connection {connection_id}: {e}",
                 )
 
     except Exception as e:
@@ -829,7 +938,7 @@ async def handle_chat_message(
         chat_agent: Chat agent instance
     """
     try:
-        # Extract message content
+        # Extract and sanitize message content
         content = message_data.get("content", "")
         if not content:
             error_event = ErrorEvent(
@@ -841,10 +950,13 @@ async def handle_chat_message(
             await websocket_manager.send_to_connection(connection_id, error_event)
             return
 
-        # Create user message
+        # Sanitize content to prevent XSS and injection attacks
+        sanitized_content = WebSocketMessageValidator.sanitize_message_content(content)
+
+        # Create user message with sanitized content
         user_message = WebSocketMessage(
             role="user",
-            content=content,
+            content=sanitized_content,
             session_id=session_id,
             user_id=user_id,
         )
@@ -857,10 +969,10 @@ async def handle_chat_message(
         )
         await websocket_manager.send_to_session(session_id, user_message_event)
 
-        # Store user message in database
+        # Store user message in database with sanitized content
         user_message_request = MessageCreateRequest(
             role=MessageRole.USER,
-            content=content,
+            content=sanitized_content,
         )
         await chat_service.add_message(
             session_id=str(session_id),

@@ -138,9 +138,7 @@ class TestWebSocketAuthentication:
     """Test WebSocket authentication flow."""
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
-    async def test_successful_authentication(
-        self, mock_ws_manager, mock_websocket, valid_jwt_token
-    ):
+    async def test_successful_authentication(self, mock_ws_manager, mock_websocket, valid_jwt_token):
         """Test successful WebSocket authentication."""
 
         # Create a proper serializable response object that supports model_dump
@@ -190,16 +188,12 @@ class TestWebSocketAuthentication:
         assert len(mock_websocket.messages_sent) > 0
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
-    async def test_authentication_failure(
-        self, mock_ws_manager, mock_websocket, invalid_jwt_token
-    ):
+    async def test_authentication_failure(self, mock_ws_manager, mock_websocket, invalid_jwt_token):
         """Test WebSocket authentication failure."""
         # Create a proper serializable response object instead of MagicMock
         from types import SimpleNamespace
 
-        auth_response = SimpleNamespace(
-            success=False, connection_id="", error="Invalid token"
-        )
+        auth_response = SimpleNamespace(success=False, connection_id="", error="Invalid token")
 
         # Mock failed authentication response
         mock_ws_manager.authenticate_connection = AsyncMock(return_value=auth_response)
@@ -249,9 +243,7 @@ class TestWebSocketChatMessages:
     """Test WebSocket chat message handling."""
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
-    async def test_chat_message_handling(
-        self, mock_ws_manager, mock_chat_service, mock_chat_agent
-    ):
+    async def test_chat_message_handling(self, mock_ws_manager, mock_chat_service, mock_chat_agent):
         """Test handling of chat messages."""
         connection_id = "test-connection-id"
         user_id = uuid.UUID("12345678-1234-5678-9abc-123456789012")
@@ -276,9 +268,7 @@ class TestWebSocketChatMessages:
         )
 
         # Verify messages were sent to session
-        assert (
-            mock_ws_manager.send_to_session.call_count >= 2
-        )  # User message + agent response
+        assert mock_ws_manager.send_to_session.call_count >= 2  # User message + agent response
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
     async def test_empty_message_handling(self, mock_ws_manager):
@@ -315,9 +305,7 @@ class TestWebSocketChatMessages:
 
         message_data = {
             "content": "Here's my travel document",
-            "attachments": [
-                {"name": "passport.pdf", "size": 1024, "type": "application/pdf"}
-            ],
+            "attachments": [{"name": "passport.pdf", "size": 1024, "type": "application/pdf"}],
         }
 
         mock_ws_manager.send_to_session = AsyncMock()
@@ -369,9 +357,7 @@ class TestWebSocketAgentStatus:
     """Test WebSocket agent status functionality."""
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
-    async def test_agent_status_connection(
-        self, mock_ws_manager, mock_websocket, valid_jwt_token
-    ):
+    async def test_agent_status_connection(self, mock_ws_manager, mock_websocket, valid_jwt_token):
         """Test agent status WebSocket connection."""
         user_id = uuid.UUID("12345678-1234-5678-9abc-123456789012")
 
@@ -402,9 +388,7 @@ class TestWebSocketAgentStatus:
         mock_ws_manager.authenticate_connection.assert_called_once()
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
-    async def test_agent_status_user_mismatch(
-        self, mock_ws_manager, mock_websocket, valid_jwt_token
-    ):
+    async def test_agent_status_user_mismatch(self, mock_ws_manager, mock_websocket, valid_jwt_token):
         """Test agent status connection with user ID mismatch."""
         user_id = uuid.UUID("12345678-1234-5678-9abc-123456789012")
         different_user_id = uuid.UUID("87654321-4321-8765-cbba-210987654321")
@@ -455,18 +439,12 @@ class TestWebSocketSubscriptions:
             error=None,
         )
 
-        mock_ws_manager.subscribe_connection = AsyncMock(
-            return_value=subscription_response
-        )
+        mock_ws_manager.subscribe_connection = AsyncMock(return_value=subscription_response)
 
         # This would be called within the WebSocket message loop
-        subscribe_request = WebSocketSubscribeRequest(
-            channels=["channel1", "channel2"], unsubscribe_channels=[]
-        )
+        subscribe_request = WebSocketSubscribeRequest(channels=["channel1", "channel2"], unsubscribe_channels=[])
 
-        response = await mock_ws_manager.subscribe_connection(
-            "test-connection-id", subscribe_request
-        )
+        response = await mock_ws_manager.subscribe_connection("test-connection-id", subscribe_request)
 
         assert response.success is True
         assert "channel1" in response.subscribed_channels
@@ -478,21 +456,15 @@ class TestWebSocketSubscriptions:
         # Create a proper serializable response object instead of MagicMock
         from types import SimpleNamespace
 
-        subscription_response = SimpleNamespace(
-            success=True, subscribed_channels=[], failed_channels=[], error=None
-        )
+        subscription_response = SimpleNamespace(success=True, subscribed_channels=[], failed_channels=[], error=None)
 
-        mock_ws_manager.subscribe_connection = AsyncMock(
-            return_value=subscription_response
-        )
+        mock_ws_manager.subscribe_connection = AsyncMock(return_value=subscription_response)
 
         subscribe_request = WebSocketSubscribeRequest(
             channels=[], unsubscribe_channels=["old_channel1", "old_channel2"]
         )
 
-        response = await mock_ws_manager.subscribe_connection(
-            "test-connection-id", subscribe_request
-        )
+        response = await mock_ws_manager.subscribe_connection("test-connection-id", subscribe_request)
 
         assert response.success is True
 
@@ -554,10 +526,7 @@ class TestWebSocketPerformance:
 
         # Test with a message that will be chunked
         message_data = {
-            "content": (
-                "This is a longer message that will be broken into chunks for "
-                "streaming."
-            ),
+            "content": ("This is a longer message that will be broken into chunks for streaming."),
         }
 
         await handle_chat_message(
@@ -570,9 +539,7 @@ class TestWebSocketPerformance:
         )
 
         # Verify multiple chunks were sent (streaming simulation)
-        assert (
-            mock_ws_manager.send_to_session.call_count > 3
-        )  # User message + typing + chunks + complete
+        assert mock_ws_manager.send_to_session.call_count > 3  # User message + typing + chunks + complete
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
     async def test_typing_indicators(self, mock_ws_manager):
@@ -595,17 +562,13 @@ class TestWebSocketPerformance:
         )
 
         # Verify that send_to_session was called
-        assert mock_ws_manager.send_to_session.call_count > 0, (
-            "No messages were sent to session"
-        )
+        assert mock_ws_manager.send_to_session.call_count > 0, "No messages were sent to session"
 
         # Verify typing-related events were sent
         # Note: Due to object mutation in the current implementation, the typing start
         # event may appear as typing stop by the time we check it. This is a known
         # issue with the current implementation where the same event object is reused.
-        sent_events = [
-            call[0][1] for call in mock_ws_manager.send_to_session.call_args_list
-        ]
+        sent_events = [call[0][1] for call in mock_ws_manager.send_to_session.call_args_list]
 
         # Look for typing events (both start and stop show as typing_stop due to mutation)
         typing_events = [
@@ -620,11 +583,7 @@ class TestWebSocketPerformance:
         ]
 
         # Look for chunk events (streaming content)
-        chunk_events = [
-            e
-            for e in sent_events
-            if hasattr(e, "type") and e.type == WebSocketEventType.CHAT_TYPING
-        ]
+        chunk_events = [e for e in sent_events if hasattr(e, "type") and e.type == WebSocketEventType.CHAT_TYPING]
 
         # Should have typing events (start/stop indicators) and chunk events (content)
         assert len(typing_events) >= 1, (

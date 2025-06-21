@@ -67,9 +67,7 @@ class TestErrorDetails:
 
     def test_model_dump(self):
         """Test Pydantic model serialization."""
-        details = ErrorDetails(
-            service="test-service", additional_context={"key": "value"}
-        )
+        details = ErrorDetails(service="test-service", additional_context={"key": "value"})
 
         dumped = details.model_dump(exclude_none=True)
         expected = {"service": "test-service", "additional_context": {"key": "value"}}
@@ -144,12 +142,7 @@ class TestCoreTripSageError:
             status_code=status.HTTP_400_BAD_REQUEST,
         )
 
-        expected = (
-            "CoreTripSageError("
-            "message='Test error', "
-            "code='TEST_ERROR', "
-            "status_code=400)"
-        )
+        expected = "CoreTripSageError(message='Test error', code='TEST_ERROR', status_code=400)"
 
         assert repr(exc) == expected
 
@@ -230,9 +223,7 @@ class TestSpecificExceptions:
 
     def test_database_error(self):
         """Test CoreDatabaseError."""
-        exc = CoreDatabaseError(
-            message="Query failed", operation="SELECT", table="users"
-        )
+        exc = CoreDatabaseError(message="Query failed", operation="SELECT", table="users")
 
         assert exc.message == "Query failed"
         assert exc.code == "DATABASE_ERROR"
@@ -243,9 +234,7 @@ class TestSpecificExceptions:
     def test_external_api_error(self):
         """Test CoreExternalAPIError."""
         api_response = {"error": "Rate limit exceeded"}
-        exc = CoreExternalAPIError(
-            api_service="openai", api_status_code=429, api_response=api_response
-        )
+        exc = CoreExternalAPIError(api_service="openai", api_status_code=429, api_response=api_response)
 
         assert exc.message == "External API call failed"
         assert exc.code == "EXTERNAL_API_ERROR"
@@ -531,15 +520,9 @@ class TestExceptionIntegration:
 
         # Verify context preservation
         assert tripsage_exc.details.service == "user-service"
-        assert (
-            tripsage_exc.details.additional_context["original_error"]
-            == "Original error"
-        )
+        assert tripsage_exc.details.additional_context["original_error"] == "Original error"
 
         # Test error formatting
         formatted = format_exception(tripsage_exc)
         assert formatted["error"] == "CoreServiceError"
-        assert (
-            formatted["details"]["additional_context"]["original_error"]
-            == "Original error"
-        )
+        assert formatted["details"]["additional_context"]["original_error"] == "Original error"

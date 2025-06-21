@@ -112,11 +112,7 @@ class ConnectionMigrationTester:
                     version = result.scalar()
 
                     # Check for pgvector extension
-                    ext_result = await conn.execute(
-                        text(
-                            "SELECT extname FROM pg_extension WHERE extname = 'vector'"
-                        )
-                    )
+                    ext_result = await conn.execute(text("SELECT extname FROM pg_extension WHERE extname = 'vector'"))
                     has_vector = ext_result.scalar() is not None
 
                 self.results[test_name] = {
@@ -267,9 +263,7 @@ class ConnectionMigrationTester:
 
             # Verify it's a valid PostgreSQL URL
             if not conn_string.startswith("postgresql://"):
-                raise ValueError(
-                    f"Invalid connection string format: {conn_string[:20]}..."
-                )
+                raise ValueError(f"Invalid connection string format: {conn_string[:20]}...")
 
             # Test async checkpointer initialization
             _ = await manager.get_async_checkpointer()

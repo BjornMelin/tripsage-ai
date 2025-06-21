@@ -105,9 +105,7 @@ class TestHeartbeatMechanisms:
 
         connection_id = str(uuid4())
         user_id = uuid4()
-        connection = WebSocketConnection(
-            websocket=mock_ws, connection_id=connection_id, user_id=user_id
-        )
+        connection = WebSocketConnection(websocket=mock_ws, connection_id=connection_id, user_id=user_id)
 
         # Add to manager
         manager.connection_service.connections[connection_id] = connection
@@ -141,18 +139,14 @@ class TestHeartbeatMechanisms:
 
         # Run single cleanup iteration (avoiding infinite loop)
         stale_connections = [
-            conn_id
-            for conn_id, conn in manager.connection_service.connections.items()
-            if conn.is_stale()
+            conn_id for conn_id, conn in manager.connection_service.connections.items() if conn.is_stale()
         ]
 
         for conn_id in stale_connections:
             await manager.connection_service.disconnect_connection(conn_id)
 
         # Should have attempted to disconnect stale connection
-        manager.connection_service.disconnect_connection.assert_called_once_with(
-            "stale-conn"
-        )
+        manager.connection_service.disconnect_connection.assert_called_once_with("stale-conn")
 
 
 class TestRateLimitingEdgeCases:
@@ -167,9 +161,7 @@ class TestRateLimitingEdgeCases:
         mock_ws = MagicMock()
         mock_ws.send_text = AsyncMock(return_value=None)
 
-        connection = WebSocketConnection(
-            websocket=mock_ws, connection_id=connection_id, user_id=user_id
-        )
+        connection = WebSocketConnection(websocket=mock_ws, connection_id=connection_id, user_id=user_id)
         connection.state = ConnectionState.AUTHENTICATED  # Set proper state
 
         # Send burst of messages directly to connection
@@ -413,9 +405,7 @@ class TestConcurrentOperations:
             mock_ws = MagicMock()
             mock_ws.send_text = AsyncMock()
 
-            conn = WebSocketConnection(
-                websocket=mock_ws, connection_id=f"conn-{i}", user_id=uuid4()
-            )
+            conn = WebSocketConnection(websocket=mock_ws, connection_id=f"conn-{i}", user_id=uuid4())
             # Add to both connection service and messaging service
             manager.connection_service.connections[f"conn-{i}"] = conn
             manager.messaging_service.connections[f"conn-{i}"] = conn
@@ -441,21 +431,15 @@ class TestConcurrentOperations:
         async def connect_and_disconnect(i):
             # Mock authentication
             mock_ws = MagicMock()
-            auth_request = WebSocketAuthRequest(
-                token="test-token", channels=["general"]
-            )
+            auth_request = WebSocketAuthRequest(token="test-token", channels=["general"])
 
-            with patch(
-                "jwt.decode", return_value={"sub": "user", "user_id": str(uuid4())}
-            ):
+            with patch("jwt.decode", return_value={"sub": "user", "user_id": str(uuid4())}):
                 # Mock settings for authentication
                 with patch("tripsage_core.config.get_settings") as mock_settings:
                     mock_settings.return_value.secret_key = "test-secret"
                     # Authenticate
                     try:
-                        response = await manager.authenticate_connection(
-                            mock_ws, auth_request
-                        )
+                        response = await manager.authenticate_connection(mock_ws, auth_request)
                         if response.success:
                             # Disconnect after short delay
                             await asyncio.sleep(0.01)
@@ -486,9 +470,7 @@ class TestConcurrentOperations:
             mock_ws = MagicMock()
             mock_ws.send_text = AsyncMock()
 
-            conn = WebSocketConnection(
-                websocket=mock_ws, connection_id=f"load-{i}", user_id=uuid4()
-            )
+            conn = WebSocketConnection(websocket=mock_ws, connection_id=f"load-{i}", user_id=uuid4())
             conn.subscribe_to_channel(channel)
 
             # Add to both connection service and messaging service
@@ -575,7 +557,7 @@ class TestPerformanceOptimization:
         manager._running = True
 
         # Track performance metrics
-        initial_sent = manager.performance_metrics["total_messages_sent"]
+        _initial_sent = manager.performance_metrics["total_messages_sent"]
 
         # Create connection with queued messages
         mock_ws = MagicMock()
@@ -610,22 +592,16 @@ class TestPerformanceOptimization:
             manager.connection_service.connections[f"conn-{i}"] = MagicMock()
 
         # Update metrics
-        manager.performance_metrics["active_connections"] = len(
-            manager.connection_service.connections
-        )
+        manager.performance_metrics["active_connections"] = len(manager.connection_service.connections)
         if manager.performance_metrics["active_connections"] > initial_peak:
-            manager.performance_metrics["peak_connections"] = (
-                manager.performance_metrics["active_connections"]
-            )
+            manager.performance_metrics["peak_connections"] = manager.performance_metrics["active_connections"]
 
         assert manager.performance_metrics["peak_connections"] >= 5
 
     def test_memory_efficient_message_queuing(self):
         """Test memory-efficient message queuing with size limits."""
 
-        connection = WebSocketConnection(
-            websocket=MagicMock(), connection_id=str(uuid4())
-        )
+        connection = WebSocketConnection(websocket=MagicMock(), connection_id=str(uuid4()))
 
         # Message queue has maxlen=1000
         for _ in range(1500):

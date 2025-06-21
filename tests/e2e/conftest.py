@@ -69,9 +69,7 @@ async def test_client():
     app.dependency_overrides[get_settings] = mock_get_settings
 
     # Create async client
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
 
     # Cleanup

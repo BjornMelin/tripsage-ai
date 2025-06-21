@@ -87,23 +87,17 @@ class FlightAgentNode(BaseAgentNode):
             state["flight_searches"].append(flight_search_record)
 
             # Generate user-friendly response
-            response_message = await self._generate_flight_response(
-                search_results, search_params, state
-            )
+            response_message = await self._generate_flight_response(search_results, search_params, state)
         else:
             # Handle general flight inquiries
-            response_message = await self._handle_general_flight_inquiry(
-                user_message, state
-            )
+            response_message = await self._handle_general_flight_inquiry(user_message, state)
 
         # Add response to conversation
         state["messages"].append(response_message)
 
         return state
 
-    async def _extract_flight_parameters(
-        self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
+    async def _extract_flight_parameters(self, message: str, state: TravelPlanningState) -> Optional[Dict[str, Any]]:
         """
         Extract flight search parameters from user message and conversation context.
 
@@ -144,9 +138,7 @@ class FlightAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(
-                    content="You are a flight search parameter extraction assistant."
-                ),
+                SystemMessage(content="You are a flight search parameter extraction assistant."),
                 HumanMessage(content=extraction_prompt),
             ]
 
@@ -186,9 +178,7 @@ class FlightAgentNode(BaseAgentNode):
             result_str = search_flights.invoke(search_params)
             result = json.loads(result_str)
 
-            flights_count = (
-                len(result.get("flights", [])) if isinstance(result, dict) else 0
-            )
+            flights_count = len(result.get("flights", [])) if isinstance(result, dict) else 0
             logger.info(f"Flight search completed: {flights_count} flights found")
             return result
 
@@ -232,16 +222,13 @@ class FlightAgentNode(BaseAgentNode):
                     airline = flight.get("airline", "Unknown")
                     departure = flight.get("departure_time", "Unknown")
                     price = flight.get("price", "Unknown")
-                    content += (
-                        f"{i}. {airline} - Departure: {departure} - Price: {price}\n"
-                    )
+                    content += f"{i}. {airline} - Departure: {departure} - Price: {price}\n"
 
                 if len(flights) > 3:
                     content += f"\n... and {len(flights) - 3} more options available."
 
                 content += (
-                    "\n\nWould you like me to help you book one of these flights "
-                    "or search with different criteria?"
+                    "\n\nWould you like me to help you book one of these flights or search with different criteria?"
                 )
             else:
                 content = (
@@ -258,9 +245,7 @@ class FlightAgentNode(BaseAgentNode):
             },
         )
 
-    async def _handle_general_flight_inquiry(
-        self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _handle_general_flight_inquiry(self, message: str, state: TravelPlanningState) -> Dict[str, Any]:
         """
         Handle general flight inquiries that don't require a specific search.
 

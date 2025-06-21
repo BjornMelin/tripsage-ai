@@ -49,9 +49,7 @@ class AccommodationAgentNode(BaseAgentNode):
         # Bind tools to LLM for direct use
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
-        logger.info(
-            f"Initialized accommodation agent with {len(self.available_tools)} tools"
-        )
+        logger.info(f"Initialized accommodation agent with {len(self.available_tools)} tools")
 
         logger.info("Initialized accommodation agent with service-based architecture")
 
@@ -68,9 +66,7 @@ class AccommodationAgentNode(BaseAgentNode):
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract accommodation search parameters from user message and context
-        search_params = await self._extract_accommodation_parameters(
-            user_message, state
-        )
+        search_params = await self._extract_accommodation_parameters(user_message, state)
 
         if search_params:
             # Perform accommodation search using service
@@ -89,14 +85,10 @@ class AccommodationAgentNode(BaseAgentNode):
             state["accommodation_searches"].append(accommodation_search_record)
 
             # Generate user-friendly response
-            response_message = await self._generate_accommodation_response(
-                search_results, search_params, state
-            )
+            response_message = await self._generate_accommodation_response(search_results, search_params, state)
         else:
             # Handle general accommodation inquiries
-            response_message = await self._handle_general_accommodation_inquiry(
-                user_message, state
-            )
+            response_message = await self._handle_general_accommodation_inquiry(user_message, state)
 
         # Add response to conversation
         state["messages"].append(response_message)
@@ -150,9 +142,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(
-                    content="You are an accommodation parameter extraction assistant."
-                ),
+                SystemMessage(content="You are an accommodation parameter extraction assistant."),
                 HumanMessage(content=extraction_prompt),
             ]
 
@@ -174,9 +164,7 @@ class AccommodationAgentNode(BaseAgentNode):
             logger.error(f"Error extracting accommodation parameters: {str(e)}")
             return None
 
-    async def _search_accommodations(
-        self, search_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _search_accommodations(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
         """
         Perform accommodation search using service layer.
 
@@ -188,9 +176,7 @@ class AccommodationAgentNode(BaseAgentNode):
         """
         try:
             # Use accommodation service to search
-            result = await self.accommodation_service.search_accommodations(
-                **search_params
-            )
+            result = await self.accommodation_service.search_accommodations(**search_params)
 
             if result.get("status") == "success":
                 properties_found = len(result.get("listings", []))
@@ -242,20 +228,13 @@ class AccommodationAgentNode(BaseAgentNode):
 
                 content += ":\n\n"
 
-                for i, property in enumerate(
-                    accommodations[:3], 1
-                ):  # Show top 3 results
+                for i, property in enumerate(accommodations[:3], 1):  # Show top 3 results
                     name = property.get("name", "Unknown Property")
                     property_type = property.get("property_type", "Property")
-                    price = property.get("price", {}).get(
-                        "per_night", "Price not available"
-                    )
+                    price = property.get("price", {}).get("per_night", "Price not available")
                     rating = property.get("rating", "No rating")
 
-                    content += (
-                        f"{i}. {name} ({property_type})\n"
-                        f"   Rating: {rating} | Price: {price}/night\n"
-                    )
+                    content += f"{i}. {name} ({property_type})\n   Rating: {rating} | Price: {price}/night\n"
 
                     amenities = property.get("amenities", [])
                     if amenities:
@@ -265,14 +244,9 @@ class AccommodationAgentNode(BaseAgentNode):
                     content += "\n"
 
                 if len(accommodations) > 3:
-                    content += (
-                        f"... and {len(accommodations) - 3} more options available.\n\n"
-                    )
+                    content += f"... and {len(accommodations) - 3} more options available.\n\n"
 
-                content += (
-                    "Would you like details about any properties "
-                    "or search with different criteria?"
-                )
+                content += "Would you like details about any properties or search with different criteria?"
             else:
                 location = search_params.get("location", "the specified location")
                 content = (
@@ -289,9 +263,7 @@ class AccommodationAgentNode(BaseAgentNode):
             },
         )
 
-    async def _handle_general_accommodation_inquiry(
-        self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
+    async def _handle_general_accommodation_inquiry(self, message: str, state: TravelPlanningState) -> Dict[str, Any]:
         """
         Handle general accommodation inquiries that don't require a specific search.
 
@@ -320,9 +292,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(
-                    content="You are a helpful accommodation booking assistant."
-                ),
+                SystemMessage(content="You are a helpful accommodation booking assistant."),
                 HumanMessage(content=response_prompt),
             ]
 

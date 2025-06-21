@@ -75,9 +75,7 @@ async def test_type_parameters():
         user_data: UserData = {"id": 123, "name": "Alice", "age": 30}
         db_result: DatabaseResult[str] = [{"name": "Alice"}, {"name": "Bob"}]
 
-        test.complete(
-            success=True, user_data_keys=len(user_data), db_result_count=len(db_result)
-        )
+        test.complete(success=True, user_data_keys=len(user_data), db_result_count=len(db_result))
 
     except Exception as e:
         test.complete(success=False, error=e)
@@ -221,9 +219,7 @@ async def test_string_optimization():
 
         # Test string builder
         builder = OptimizedStringBuilder()
-        builder.append("Test: ").append("Success").append_formatted(
-            " ({status})", status="OK"
-        )
+        builder.append("Test: ").append("Success").append_formatted(" ({status})", status="OK")
         built_string = builder.build()
 
         test.complete(
@@ -281,9 +277,7 @@ async def test_memory_service_modernizations():
         )
 
         # Test that imports work and types are available
-        search_request = MemorySearchRequest(
-            query="test query", limit=5, similarity_threshold=0.7
-        )
+        search_request = MemorySearchRequest(query="test query", limit=5, similarity_threshold=0.7)
 
         test.complete(
             success=True,

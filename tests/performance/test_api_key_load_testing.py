@@ -5,13 +5,6 @@ This module provides comprehensive load testing scenarios using Locust to simula
 real-world usage patterns and identify performance bottlenecks under load.
 """
 
-# Skip this file due to gevent monkey patching issues in pytest
-import pytest
-pytest.skip(
-    "Skipping locust tests due to gevent monkey patching issues",
-    allow_module_level=True,
-)
-
 import asyncio
 import json
 import random
@@ -22,6 +15,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from locust import HttpUser, between, task
+
+# Skip this file due to gevent monkey patching issues in pytest
+pytest.skip(
+    "Skipping locust tests due to gevent monkey patching issues",
+    allow_module_level=True,
+)
 from locust.env import Environment
 
 from tripsage_core.services.business.api_key_service import (
@@ -112,15 +111,11 @@ class ApiKeyLoadTestUser(HttpUser):
             if response_scenario == 200:
                 mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             elif response_scenario == 401:
-                mock_response.json.return_value = {
-                    "error": {"message": "Invalid API key"}
-                }
+                mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
             elif response_scenario == 429:
                 mock_response.headers = {"retry-after": "60"}
             else:
-                mock_response.json.return_value = {
-                    "error": {"message": "Service error"}
-                }
+                mock_response.json.return_value = {"error": {"message": "Service error"}}
 
             mock_get.return_value = mock_response
 
@@ -128,9 +123,7 @@ class ApiKeyLoadTestUser(HttpUser):
                 # Run async validation in event loop
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(
-                    self.api_service.validate_api_key(service, test_key, self.user_id)
-                )
+                result = loop.run_until_complete(self.api_service.validate_api_key(service, test_key, self.user_id))
                 loop.close()
 
                 elapsed_time = (time.time() - start_time) * 1000  # Convert to ms
@@ -190,9 +183,7 @@ class ApiKeyLoadTestUser(HttpUser):
 
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(
-                    self.api_service.create_api_key(self.user_id, request)
-                )
+                result = loop.run_until_complete(self.api_service.create_api_key(self.user_id, request))
                 loop.close()
 
                 # Track created key for potential cleanup
@@ -225,9 +216,7 @@ class ApiKeyLoadTestUser(HttpUser):
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            results = loop.run_until_complete(
-                self.api_service.list_user_keys(self.user_id)
-            )
+            results = loop.run_until_complete(self.api_service.list_user_keys(self.user_id))
             loop.close()
 
             elapsed_time = (time.time() - start_time) * 1000
@@ -258,9 +247,7 @@ class ApiKeyLoadTestUser(HttpUser):
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(
-                self.api_service.get_key_for_service(self.user_id, service)
-            )
+            result = loop.run_until_complete(self.api_service.get_key_for_service(self.user_id, service))
             loop.close()
 
             elapsed_time = (time.time() - start_time) * 1000
@@ -296,9 +283,7 @@ class HighFrequencyApiKeyUser(HttpUser):
     def on_start(self):
         """Initialize high-frequency user."""
         self.user_id = str(uuid.uuid4())
-        self.cached_keys = [
-            f"sk-heavy_user_{i:04d}_{uuid.uuid4().hex[:12]}" for i in range(10)
-        ]
+        self.cached_keys = [f"sk-heavy_user_{i:04d}_{uuid.uuid4().hex[:12]}" for i in range(10)]
         self.api_service = self._create_optimized_api_service()
 
     def _create_optimized_api_service(self) -> ApiKeyService:
@@ -343,9 +328,7 @@ class HighFrequencyApiKeyUser(HttpUser):
             try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(
-                    self.api_service.validate_api_key(service, key, self.user_id)
-                )
+                result = loop.run_until_complete(self.api_service.validate_api_key(service, key, self.user_id))
                 loop.close()
 
                 elapsed_time = (time.time() - start_time) * 1000
@@ -416,9 +399,7 @@ class TestApiKeyLoadTesting:
 
         # Performance assertions
         assert failure_rate < 0.05, f"Failure rate too high: {failure_rate:.2%}"
-        assert avg_response_time < 1000, (
-            f"Response time too slow: {avg_response_time:.2f}ms"
-        )
+        assert avg_response_time < 1000, f"Response time too slow: {avg_response_time:.2f}ms"
         assert total_requests > 0, "No requests completed"
 
     @pytest.mark.asyncio
@@ -454,12 +435,8 @@ class TestApiKeyLoadTesting:
         print(f"Peak RPS: {stats.total.current_rps:.2f}")
 
         # More lenient assertions for stress testing
-        assert failure_rate < 0.15, (
-            f"Stress test failure rate too high: {failure_rate:.2%}"
-        )
-        assert avg_response_time < 2000, (
-            f"Stress test response time too slow: {avg_response_time:.2f}ms"
-        )
+        assert failure_rate < 0.15, f"Stress test failure rate too high: {failure_rate:.2%}"
+        assert avg_response_time < 2000, f"Stress test response time too slow: {avg_response_time:.2f}ms"
 
     @pytest.mark.asyncio
     async def test_spike_load_scenario(self):
@@ -517,9 +494,7 @@ class TestApiKeyLoadTesting:
         )
 
         # Spike test should handle load changes gracefully
-        assert final_stats.fail_ratio < 0.1, (
-            f"Spike test failure rate too high: {final_stats.fail_ratio:.2%}"
-        )
+        assert final_stats.fail_ratio < 0.1, f"Spike test failure rate too high: {final_stats.fail_ratio:.2%}"
         assert phase2_stats["failure_rate"] < 0.2, "Service couldn't handle spike load"
 
     @pytest.mark.asyncio
@@ -575,21 +550,13 @@ class TestApiKeyLoadTesting:
         first_half_avg = sum(cp["avg_response_time"] for cp in checkpoints[:2]) / 2
         second_half_avg = sum(cp["avg_response_time"] for cp in checkpoints[2:]) / 2
 
-        degradation = (
-            (second_half_avg - first_half_avg) / first_half_avg
-            if first_half_avg > 0
-            else 0
-        )
+        degradation = (second_half_avg - first_half_avg) / first_half_avg if first_half_avg > 0 else 0
 
         print(f"Performance degradation: {degradation:.2%}")
 
         # Endurance test assertions
-        assert final_stats.fail_ratio < 0.05, (
-            f"Endurance test failure rate too high: {final_stats.fail_ratio:.2%}"
-        )
-        assert degradation < 0.5, (
-            f"Performance degraded too much over time: {degradation:.2%}"
-        )
+        assert final_stats.fail_ratio < 0.05, f"Endurance test failure rate too high: {final_stats.fail_ratio:.2%}"
+        assert degradation < 0.5, f"Performance degraded too much over time: {degradation:.2%}"
 
 
 def run_performance_report():

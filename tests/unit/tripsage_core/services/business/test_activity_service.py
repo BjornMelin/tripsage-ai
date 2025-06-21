@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from tripsage.api.schemas.requests.activities import ActivitySearchRequest
+from tripsage.api.schemas.requests.activities import ActivitySearchRequest, PriceRange
 from tripsage.api.schemas.responses.activities import (
     ActivityResponse,
     ActivitySearchResponse,
@@ -67,7 +67,7 @@ class TestActivityService:
             destination="New York, NY",
             start_date=date(2025, 7, 15),
             categories=["cultural", "entertainment"],
-            price_range=(0, 100),
+            price_range=PriceRange(min=0, max=100),
             rating=4.0,
             duration=180,
             wheelchair_accessible=True,
@@ -150,14 +150,8 @@ class TestActivityService:
             "website": "https://www.metmuseum.org",
             "formatted_phone_number": "(212) 535-7710",
             "wheelchair_accessible_entrance": True,
-            "editorial_summary": {
-                "overview": (
-                    "One of the world's largest and most comprehensive art museums."
-                )
-            },
-            "reviews": [
-                {"rating": 5, "text": "Amazing collection!", "time": 1704153600}
-            ],
+            "editorial_summary": {"overview": ("One of the world's largest and most comprehensive art museums.")},
+            "reviews": [{"rating": 5, "text": "Amazing collection!", "time": 1704153600}],
         }
 
     async def test_search_activities_success(
@@ -192,14 +186,10 @@ class TestActivityService:
 
         # Verify mock calls
         mock_google_maps_service.geocode.assert_called_once_with("New York, NY")
-        assert (
-            mock_google_maps_service.search_places.call_count == 2
-        )  # One for each category
+        assert mock_google_maps_service.search_places.call_count == 2  # One for each category
         mock_cache_service.set.assert_called_once()
 
-    async def test_search_activities_with_cache_hit(
-        self, activity_service, mock_cache_service, sample_search_request
-    ):
+    async def test_search_activities_with_cache_hit(self, activity_service, mock_cache_service, sample_search_request):
         """Test activity search with cache hit."""
         # Setup cached response
         cached_response = {
@@ -289,9 +279,7 @@ class TestActivityService:
         mock_google_maps_service.search_places.return_value = sample_places_response
 
         # Request with high rating requirement
-        request = ActivitySearchRequest(
-            destination="New York, NY", start_date=date(2025, 7, 15), rating=4.6
-        )
+        request = ActivitySearchRequest(destination="New York, NY", start_date=date(2025, 7, 15), rating=4.6)
 
         # Execute search
         result = await activity_service.search_activities(request)
@@ -310,9 +298,7 @@ class TestActivityService:
         """Test activity search with geocoding error."""
         # Setup mock to raise error
         mock_cache_service.get.return_value = None
-        mock_google_maps_service.geocode.side_effect = GoogleMapsServiceError(
-            "Geocoding failed"
-        )
+        mock_google_maps_service.geocode.side_effect = GoogleMapsServiceError("Geocoding failed")
 
         # Execute and verify error
         with pytest.raises(CoreServiceError) as exc_info:
@@ -332,9 +318,7 @@ class TestActivityService:
         # Setup mocks
         mock_cache_service.get.return_value = None
         mock_google_maps_service.geocode.return_value = sample_geocode_response
-        mock_google_maps_service.search_places.side_effect = GoogleMapsServiceError(
-            "API quota exceeded"
-        )
+        mock_google_maps_service.search_places.side_effect = GoogleMapsServiceError("API quota exceeded")
 
         # Execute and verify error
         with pytest.raises(CoreServiceError) as exc_info:
@@ -389,14 +373,10 @@ class TestActivityService:
         assert result.languages == ["en"]  # Default language
 
         # Verify mock calls
-        mock_google_maps_service.get_place_details.assert_called_once_with(
-            "gmp_museum123"
-        )
+        mock_google_maps_service.get_place_details.assert_called_once_with("gmp_museum123")
         mock_cache_service.set.assert_called_once()
 
-    async def test_get_activity_details_with_cache(
-        self, activity_service, mock_cache_service
-    ):
+    async def test_get_activity_details_with_cache(self, activity_service, mock_cache_service):
         """Test activity details retrieval from cache."""
         # Setup cached details
         cached_details = {
@@ -429,9 +409,7 @@ class TestActivityService:
         # Verify no API call was made
         activity_service.google_maps_service.get_place_details.assert_not_called()
 
-    async def test_get_activity_details_not_found(
-        self, activity_service, mock_google_maps_service, mock_cache_service
-    ):
+    async def test_get_activity_details_not_found(self, activity_service, mock_google_maps_service, mock_cache_service):
         """Test activity details when not found."""
         # Setup mocks
         mock_cache_service.get.return_value = None
@@ -443,15 +421,11 @@ class TestActivityService:
         # Verify None returned
         assert result is None
 
-    async def test_get_activity_details_api_error(
-        self, activity_service, mock_google_maps_service, mock_cache_service
-    ):
+    async def test_get_activity_details_api_error(self, activity_service, mock_google_maps_service, mock_cache_service):
         """Test activity details with API error."""
         # Setup mock to raise error
         mock_cache_service.get.return_value = None
-        mock_google_maps_service.get_place_details.side_effect = GoogleMapsServiceError(
-            "API error"
-        )
+        mock_google_maps_service.get_place_details.side_effect = GoogleMapsServiceError("API error")
 
         # Execute and verify error
         with pytest.raises(CoreServiceError) as exc_info:
@@ -527,17 +501,10 @@ class TestActivityService:
         mock_google_maps_service.search_places.return_value = sample_places_response
 
         # Create multiple search requests
-        requests = [
-            ActivitySearchRequest(
-                destination=f"City {i}", start_date=date(2025, 7, i + 1)
-            )
-            for i in range(5)
-        ]
+        requests = [ActivitySearchRequest(destination=f"City {i}", start_date=date(2025, 7, i + 1)) for i in range(5)]
 
         # Execute concurrent searches
-        results = await asyncio.gather(
-            *[activity_service.search_activities(req) for req in requests]
-        )
+        results = await asyncio.gather(*[activity_service.search_activities(req) for req in requests])
 
         # Verify all completed successfully
         assert len(results) == 5
@@ -603,9 +570,7 @@ class TestActivityService:
         mock_cache_service.get.return_value = None
         mock_google_maps_service.geocode.return_value = None
 
-        request = ActivitySearchRequest(
-            destination="Invalid Location XYZ123", start_date=date(2025, 7, 15)
-        )
+        request = ActivitySearchRequest(destination="Invalid Location XYZ123", start_date=date(2025, 7, 15))
 
         # Execute and verify error
         with pytest.raises(CoreServiceError) as exc_info:
@@ -716,9 +681,7 @@ class TestActivityService:
             },
         ]
 
-        request = ActivitySearchRequest(
-            destination="Test City", start_date=date(2025, 7, 15), price_range=(0, 50)
-        )
+        request = ActivitySearchRequest(destination="Test City", start_date=date(2025, 7, 15), price_range=(0, 50))
 
         # Execute search
         result = await activity_service.search_activities(request)
@@ -824,9 +787,7 @@ class TestActivityService:
         assert result.description == "A popular destination"
         assert result.availability == "Contact for hours"
 
-    async def test_invalid_activity_id_format(
-        self, activity_service, mock_cache_service
-    ):
+    async def test_invalid_activity_id_format(self, activity_service, mock_cache_service):
         """Test get_activity_details with non-Google Maps ID."""
         mock_cache_service.get.return_value = None
 
@@ -859,9 +820,7 @@ class TestActivityService:
         # Verify accessibility
         assert result.wheelchair_accessible is True
 
-    async def test_activity_images_mapping(
-        self, activity_service, mock_google_maps_service, mock_cache_service
-    ):
+    async def test_activity_images_mapping(self, activity_service, mock_google_maps_service, mock_cache_service):
         """Test activity images are properly mapped."""
         # Place with photos
         place_with_photos = {
@@ -883,14 +842,9 @@ class TestActivityService:
 
         # Verify images
         assert len(result.images) == 2
-        assert all(
-            img.startswith("https://maps.googleapis.com/maps/api/place/photo")
-            for img in result.images
-        )
+        assert all(img.startswith("https://maps.googleapis.com/maps/api/place/photo") for img in result.images)
 
-    async def test_opening_hours_parsing(
-        self, activity_service, mock_google_maps_service, mock_cache_service
-    ):
+    async def test_opening_hours_parsing(self, activity_service, mock_google_maps_service, mock_cache_service):
         """Test opening hours are properly parsed."""
         # Place with detailed opening hours
         place_with_hours = {
@@ -922,9 +876,7 @@ class TestActivityService:
         assert result.availability == "Open now"
         assert result.meeting_point == "Main entrance"
 
-    async def test_reviews_aggregation(
-        self, activity_service, mock_google_maps_service, mock_cache_service
-    ):
+    async def test_reviews_aggregation(self, activity_service, mock_google_maps_service, mock_cache_service):
         """Test reviews are properly aggregated in description."""
         # Place with reviews
         place_with_reviews = {

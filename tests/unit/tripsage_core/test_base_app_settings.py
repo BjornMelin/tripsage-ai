@@ -40,9 +40,7 @@ class TestSettings:
             # Database configuration (flat structure)
             assert settings.database_url == "https://test-project.supabase.co"
             assert settings.database_public_key.get_secret_value() == "test-anon-key"
-            assert (
-                settings.database_service_key.get_secret_value() == "test-service-key"
-            )
+            assert settings.database_service_key.get_secret_value() == "test-service-key"
             assert settings.database_jwt_secret.get_secret_value() == "test-jwt-secret"
 
             # Security
@@ -98,18 +96,14 @@ class TestSettings:
         }
 
         # Development
-        with patch.dict(
-            os.environ, {**test_env, "ENVIRONMENT": "development"}, clear=True
-        ):
+        with patch.dict(os.environ, {**test_env, "ENVIRONMENT": "development"}, clear=True):
             settings = Settings()
             assert settings.is_development is True
             assert settings.is_production is False
             assert settings.is_testing is False
 
         # Production
-        with patch.dict(
-            os.environ, {**test_env, "ENVIRONMENT": "production"}, clear=True
-        ):
+        with patch.dict(os.environ, {**test_env, "ENVIRONMENT": "production"}, clear=True):
             settings = Settings()
             assert settings.is_development is False
             assert settings.is_production is True
@@ -147,10 +141,7 @@ class TestSettings:
             assert settings.log_level == "DEBUG"
             assert settings.database_url == "https://staging.supabase.co"
             assert settings.database_public_key.get_secret_value() == "staging-anon-key"
-            assert (
-                settings.database_service_key.get_secret_value()
-                == "staging-service-key"
-            )
+            assert settings.database_service_key.get_secret_value() == "staging-service-key"
             assert settings.database_jwt_secret.get_secret_value() == "my-jwt-secret"
             assert settings.secret_key.get_secret_value() == "staging-secret-key"
             assert settings.openai_api_key.get_secret_value() == "sk-test-key-123"
@@ -213,9 +204,7 @@ class TestSettings:
             # Database settings
             assert settings.database_url == "https://prod.supabase.co"
             assert settings.database_public_key.get_secret_value() == "prod-anon-key"
-            assert (
-                settings.database_service_key.get_secret_value() == "prod-service-key"
-            )
+            assert settings.database_service_key.get_secret_value() == "prod-service-key"
             assert settings.database_jwt_secret.get_secret_value() == "prod-jwt-secret"
 
             # Security

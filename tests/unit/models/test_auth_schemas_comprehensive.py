@@ -198,9 +198,7 @@ class TestRegisterRequestValidation:
         username=st.text(
             min_size=3,
             max_size=50,
-            alphabet=st.characters(
-                whitelist_categories=["Lu", "Ll", "Nd"], whitelist_characters="_-"
-            ),
+            alphabet=st.characters(whitelist_categories=["Lu", "Ll", "Nd"], whitelist_characters="_-"),
         ),
         full_name=st.text(min_size=1, max_size=100),
     )
@@ -340,9 +338,7 @@ class TestRefreshTokenRequestValidation:
 
     def test_valid_refresh_token(self):
         """Test valid refresh token request."""
-        request = RefreshTokenRequest(
-            refresh_token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-        )
+        request = RefreshTokenRequest(refresh_token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...")
 
         assert request.refresh_token == "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 
@@ -759,9 +755,7 @@ class TestAuthSchemaIntegration:
         username=st.text(
             min_size=3,
             max_size=50,
-            alphabet=st.characters(
-                whitelist_categories=["Lu", "Ll", "Nd"], whitelist_characters="_-"
-            ),
+            alphabet=st.characters(whitelist_categories=["Lu", "Ll", "Nd"], whitelist_characters="_-"),
         ),
         full_name=st.text(min_size=1, max_size=100),
         preferences=st.dictionaries(
@@ -771,9 +765,7 @@ class TestAuthSchemaIntegration:
             max_size=10,
         ),
     )
-    def test_user_response_property_validation(
-        self, username: str, full_name: str, preferences: Dict
-    ):
+    def test_user_response_property_validation(self, username: str, full_name: str, preferences: Dict):
         """Test user response with property-based testing."""
         try:
             now = datetime.utcnow()

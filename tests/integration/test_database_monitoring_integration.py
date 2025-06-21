@@ -130,9 +130,7 @@ class TestDatabaseMonitoringIntegration:
 
             # Verify alerts were triggered
             assert len(alerts) > 0
-            assert any(
-                alert.event_type == SecurityEvent.CONNECTION_FAILURE for alert in alerts
-            )
+            assert any(alert.event_type == SecurityEvent.CONNECTION_FAILURE for alert in alerts)
 
             # Verify metrics recorded unhealthy status
             summary = metrics.get_metrics_summary()
@@ -146,9 +144,7 @@ class TestDatabaseMonitoringIntegration:
     @pytest.mark.asyncio
     async def test_wrapper_integration_with_monitoring(self):
         """Test database wrapper integration with monitoring."""
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ) as mock_db_class:
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_class:
             mock_db_class.return_value = self.mock_db_service
 
             # Create wrapper with monitoring enabled
@@ -192,9 +188,7 @@ class TestDatabaseMonitoringIntegration:
             enable_prometheus_metrics=False,
         )
 
-        with patch(
-            "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-        ) as mock_db_class:
+        with patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_class:
             mock_db_class.return_value = self.mock_db_service
 
             # Create wrapper with monitoring disabled
@@ -274,9 +268,7 @@ class TestDatabaseMonitoringIntegration:
 
         # Simulate high error rate
         for _i in range(15):  # Above threshold of 10
-            metrics.record_query(
-                "supabase", "SELECT", "users", 0.1, False, "TimeoutError"
-            )
+            metrics.record_query("supabase", "SELECT", "users", 0.1, False, "TimeoutError")
 
         alerts = []
         monitor.add_alert_callback(alerts.append)
@@ -289,9 +281,7 @@ class TestDatabaseMonitoringIntegration:
             await asyncio.sleep(0.3)
 
             # Should trigger suspicious query alert
-            security_alerts = [
-                a for a in alerts if a.event_type == SecurityEvent.SUSPICIOUS_QUERY
-            ]
+            security_alerts = [a for a in alerts if a.event_type == SecurityEvent.SUSPICIOUS_QUERY]
             assert len(security_alerts) > 0
 
         finally:
@@ -314,9 +304,7 @@ class TestDatabaseMonitoringIntegration:
 
         # Record failed queries
         for _i in range(3):
-            metrics.record_query(
-                "supabase", "INSERT", "users", 0.05, False, "ValidationError"
-            )
+            metrics.record_query("supabase", "INSERT", "users", 0.05, False, "ValidationError")
 
         # Record health checks
         metrics.record_health_check("supabase", True)
@@ -331,9 +319,7 @@ class TestDatabaseMonitoringIntegration:
 
         # Check active connections
         active_connections = summary["active_connections"]
-        supabase_active = next(
-            (v for k, v in active_connections.items() if "supabase" in k), None
-        )
+        supabase_active = next((v for k, v in active_connections.items() if "supabase" in k), None)
         assert supabase_active == 10
 
         # Check query totals
@@ -346,9 +332,7 @@ class TestDatabaseMonitoringIntegration:
 
         # Check health status (should be last recorded - False = 0.0)
         health_status = summary["health_status"]
-        supabase_health = next(
-            (v for k, v in health_status.items() if "supabase" in k), None
-        )
+        supabase_health = next((v for k, v in health_status.items() if "supabase" in k), None)
         assert supabase_health == 0.0
 
     @pytest.mark.asyncio
@@ -371,9 +355,7 @@ class TestDatabaseMonitoringIntegration:
                     with metrics.time_query("supabase", "SELECT", f"table_{worker_id}"):
                         await asyncio.sleep(0.01)
 
-                    metrics.record_query(
-                        "supabase", "INSERT", f"table_{worker_id}", 0.01, True
-                    )
+                    metrics.record_query("supabase", "INSERT", f"table_{worker_id}", 0.01, True)
 
             # Run multiple workers concurrently
             tasks = [worker(i) for i in range(5)]
@@ -505,9 +487,7 @@ class TestDatabaseMonitoringIntegration:
         metrics.record_query("supabase", "SELECT", "users", 0.1, True)
 
         # Test metrics server startup (mocked)
-        with patch(
-            "tripsage_core.monitoring.database_metrics.start_http_server"
-        ) as mock_start_server:
+        with patch("tripsage_core.monitoring.database_metrics.start_http_server") as mock_start_server:
             metrics.start_metrics_server(8001)
             mock_start_server.assert_called_once_with(8001, registry=metrics.registry)
 
@@ -516,12 +496,8 @@ class TestDatabaseMonitoringIntegration:
         """Test graceful degradation when monitoring components fail."""
         # Create wrapper with failing monitoring initialization
         with (
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.get_database_metrics"
-            ) as mock_get_metrics,
-            patch(
-                "tripsage_core.services.infrastructure.database_wrapper.DatabaseService"
-            ) as mock_db_class,
+            patch("tripsage_core.services.infrastructure.database_wrapper.get_database_metrics") as mock_get_metrics,
+            patch("tripsage_core.services.infrastructure.database_wrapper.DatabaseService") as mock_db_class,
         ):
             mock_get_metrics.side_effect = Exception("Metrics initialization failed")
             mock_db_class.return_value = self.mock_db_service

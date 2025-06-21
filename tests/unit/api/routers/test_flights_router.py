@@ -166,9 +166,7 @@ class TestFlightsRouter:
 
     # === AUTHENTICATION TESTS ===
 
-    def test_search_flights_unauthorized(
-        self, unauthenticated_test_client, valid_flight_search
-    ):
+    def test_search_flights_unauthorized(self, unauthenticated_test_client, valid_flight_search):
         """Test flight search without authentication."""
         # Act
         response = unauthenticated_test_client.post(

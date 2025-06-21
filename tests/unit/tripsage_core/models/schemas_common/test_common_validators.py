@@ -115,12 +115,8 @@ class TestEmailValidator:
     def test_valid_emails(self):
         """Test valid email addresses."""
         assert CommonValidators.email_lowercase(None) is None
-        assert (
-            CommonValidators.email_lowercase("TEST@EXAMPLE.COM") == "test@example.com"
-        )
-        assert (
-            CommonValidators.email_lowercase(" User@Domain.org ") == "user@domain.org"
-        )
+        assert CommonValidators.email_lowercase("TEST@EXAMPLE.COM") == "test@example.com"
+        assert CommonValidators.email_lowercase(" User@Domain.org ") == "user@domain.org"
 
     def test_invalid_emails(self):
         """Test invalid email addresses."""

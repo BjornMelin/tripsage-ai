@@ -26,9 +26,7 @@ class DatabaseTester:
         if message:
             result += f" - {message}"
         print(result)
-        self.test_results.append(
-            {"test": test_name, "passed": passed, "message": message}
-        )
+        self.test_results.append({"test": test_name, "passed": passed, "message": message})
 
     def test_schema_files_exist(self) -> bool:
         """Test that all required schema files exist."""
@@ -51,9 +49,7 @@ class DatabaseTester:
             self.log_test("Schema Files Exist", False, f"Missing: {missing_files}")
             return False
         else:
-            self.log_test(
-                "Schema Files Exist", True, f"All {len(required_files)} files found"
-            )
+            self.log_test("Schema Files Exist", True, f"All {len(required_files)} files found")
             return True
 
     def test_trip_collaborators_integration(self) -> bool:
@@ -97,10 +93,7 @@ class DatabaseTester:
         missing_collab_policies = []
         for table in tables_with_collab_access:
             # Look for "shared trips" pattern in policies
-            if (
-                f"{table}" in policies_content
-                and "shared trips" not in policies_content
-            ):
+            if f"{table}" in policies_content and "shared trips" not in policies_content:
                 missing_collab_policies.append(table)
 
         if missing_collab_policies:
@@ -111,9 +104,7 @@ class DatabaseTester:
             )
             return False
         else:
-            self.log_test(
-                "RLS Policy Consistency", True, "All tables support collaboration"
-            )
+            self.log_test("RLS Policy Consistency", True, "All tables support collaboration")
             return True
 
     def test_foreign_key_relationships(self) -> bool:
@@ -135,14 +126,10 @@ class DatabaseTester:
                 missing_fks.append(table)
 
         if missing_fks:
-            self.log_test(
-                "Foreign Key Relationships", False, f"Missing FKs: {missing_fks}"
-            )
+            self.log_test("Foreign Key Relationships", False, f"Missing FKs: {missing_fks}")
             return False
         else:
-            self.log_test(
-                "Foreign Key Relationships", True, "All FK relationships found"
-            )
+            self.log_test("Foreign Key Relationships", True, "All FK relationships found")
             return True
 
     def test_vector_search_setup(self) -> bool:
@@ -190,9 +177,7 @@ class DatabaseTester:
                 missing_functions.append(func)
 
         if missing_functions:
-            self.log_test(
-                "Maintenance Functions", False, f"Missing: {missing_functions}"
-            )
+            self.log_test("Maintenance Functions", False, f"Missing: {missing_functions}")
             return False
         else:
             self.log_test(
@@ -218,23 +203,17 @@ class DatabaseTester:
                     if open_parens == close_parens:
                         valid_files.append(sql_file.name)
                     else:
-                        invalid_files.append(
-                            f"{sql_file.name} (unbalanced parentheses)"
-                        )
+                        invalid_files.append(f"{sql_file.name} (unbalanced parentheses)")
                 else:
                     invalid_files.append(f"{sql_file.name} (empty file)")
             except Exception as e:
                 invalid_files.append(f"{sql_file.name} (read error: {e})")
 
         if invalid_files:
-            self.log_test(
-                "SQL Syntax Validity", False, f"Invalid files: {invalid_files}"
-            )
+            self.log_test("SQL Syntax Validity", False, f"Invalid files: {invalid_files}")
             return False
         else:
-            self.log_test(
-                "SQL Syntax Validity", True, f"All {len(valid_files)} files valid"
-            )
+            self.log_test("SQL Syntax Validity", True, f"All {len(valid_files)} files valid")
             return True
 
     def test_migration_consistency(self) -> bool:
@@ -254,9 +233,7 @@ class DatabaseTester:
                 break
 
         if not collab_migration:
-            self.log_test(
-                "Migration Consistency", False, "trip_collaborators migration not found"
-            )
+            self.log_test("Migration Consistency", False, "trip_collaborators migration not found")
             return False
 
         self.log_test(
@@ -283,9 +260,7 @@ class DatabaseTester:
                 missing_security.append(check_name)
 
         if missing_security:
-            self.log_test(
-                "Security Configuration", False, f"Missing: {missing_security}"
-            )
+            self.log_test("Security Configuration", False, f"Missing: {missing_security}")
             return False
         else:
             self.log_test("Security Configuration", True, "Complete RLS security setup")
@@ -307,9 +282,7 @@ class DatabaseTester:
             import re
 
             # Count tables
-            table_matches = re.findall(
-                r"CREATE TABLE.*?(\w+)\s*\(", tables_content, re.IGNORECASE
-            )
+            table_matches = re.findall(r"CREATE TABLE.*?(\w+)\s*\(", tables_content, re.IGNORECASE)
             summary["tables"] = len(table_matches)
 
             # Count indexes
@@ -319,16 +292,12 @@ class DatabaseTester:
 
             # Count functions
             functions_content = (self.schema_dir / "03_functions.sql").read_text()
-            function_matches = re.findall(
-                r"CREATE.*?FUNCTION", functions_content, re.IGNORECASE
-            )
+            function_matches = re.findall(r"CREATE.*?FUNCTION", functions_content, re.IGNORECASE)
             summary["functions"] = len(function_matches)
 
             # Count policies
             policies_content = (self.schema_dir / "05_policies.sql").read_text()
-            policy_matches = re.findall(
-                r"CREATE POLICY", policies_content, re.IGNORECASE
-            )
+            policy_matches = re.findall(r"CREATE POLICY", policies_content, re.IGNORECASE)
             summary["policies"] = len(policy_matches)
 
         except Exception as e:

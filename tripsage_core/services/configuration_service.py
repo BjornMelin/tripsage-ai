@@ -33,9 +33,7 @@ class ConfigurationService:
         self.settings = get_settings()
         self._cache_ttl = 300  # 5 minutes cache TTL for config data
 
-    async def get_agent_config(
-        self, agent_type: str, environment: Optional[str] = None, **overrides
-    ) -> Dict[str, Any]:
+    async def get_agent_config(self, agent_type: str, environment: Optional[str] = None, **overrides) -> Dict[str, Any]:
         """Get configuration for an agent with caching and fallback logic.
 
         Priority order:
@@ -48,9 +46,7 @@ class ConfigurationService:
             environment = self.settings.environment
 
         # Check cache first
-        cache_key_str = generate_cache_key(
-            "agent_config", f"{agent_type}:{environment}"
-        )
+        cache_key_str = generate_cache_key("agent_config", f"{agent_type}:{environment}")
         cached_config = await get_cache(cache_key_str)
         if cached_config and not overrides:
             logger.debug(f"Using cached config for {agent_type} in {environment}")
@@ -71,12 +67,8 @@ class ConfigurationService:
                 return final_config
             else:
                 # Fallback to settings-based config
-                fallback_config = self.settings.get_agent_config(
-                    agent_type, **overrides
-                )
-                logger.warning(
-                    f"No database config found for {agent_type}, using fallback"
-                )
+                fallback_config = self.settings.get_agent_config(agent_type, **overrides)
+                logger.warning(f"No database config found for {agent_type}, using fallback")
                 return fallback_config
 
         except Exception as e:
@@ -84,9 +76,7 @@ class ConfigurationService:
             # Fallback to settings-based config
             return self.settings.get_agent_config(agent_type, **overrides)
 
-    async def _get_agent_config_from_db(
-        self, agent_type: str, environment: str
-    ) -> Optional[Dict[str, Any]]:
+    async def _get_agent_config_from_db(self, agent_type: str, environment: str) -> Optional[Dict[str, Any]]:
         """Get agent configuration from database."""
         async with get_database_session() as session:
             result = await session.execute(
@@ -132,9 +122,7 @@ class ConfigurationService:
         try:
             async with get_database_session() as session:
                 # Get current configuration
-                current_config = await self._get_agent_config_from_db(
-                    agent_type, environment
-                )
+                current_config = await self._get_agent_config_from_db(agent_type, environment)
 
                 if not current_config:
                     # Create new configuration profile
@@ -160,18 +148,13 @@ class ConfigurationService:
                 await session.commit()
 
                 # Clear cache
-                cache_key_str = generate_cache_key(
-                    "agent_config", f"{agent_type}:{environment}"
-                )
+                cache_key_str = generate_cache_key("agent_config", f"{agent_type}:{environment}")
                 await delete_cache(cache_key_str)
 
                 # Get updated configuration
                 updated_config = await self.get_agent_config(agent_type, environment)
 
-                logger.info(
-                    f"Agent config updated for {agent_type} in {environment} "
-                    f"by {updated_by}"
-                )
+                logger.info(f"Agent config updated for {agent_type} in {environment} by {updated_by}")
                 return updated_config
 
         except Exception as e:
@@ -272,9 +255,7 @@ class ConfigurationService:
         row = result.fetchone()
 
         if not row:
-            raise ValueError(
-                f"No active configuration found for {agent_type} in {environment}"
-            )
+            raise ValueError(f"No active configuration found for {agent_type} in {environment}")
 
         return row[0]
 
@@ -383,15 +364,10 @@ class ConfigurationService:
                 await session.commit()
 
                 # Clear cache
-                cache_key_str = generate_cache_key(
-                    "agent_config", f"{agent_type}:{environment}"
-                )
+                cache_key_str = generate_cache_key("agent_config", f"{agent_type}:{environment}")
                 await delete_cache(cache_key_str)
 
-                logger.info(
-                    f"Configuration rolled back to {version_id} for {agent_type} "
-                    f"by {rolled_back_by}"
-                )
+                logger.info(f"Configuration rolled back to {version_id} for {agent_type} by {rolled_back_by}")
 
                 # Return updated configuration
                 return await self.get_agent_config(agent_type, environment)
@@ -400,9 +376,7 @@ class ConfigurationService:
             logger.error(f"Error rolling back configuration: {e}")
             raise
 
-    async def get_all_agent_configs(
-        self, environment: Optional[str] = None
-    ) -> Dict[str, Dict[str, Any]]:
+    async def get_all_agent_configs(self, environment: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
         """Get all agent configurations for an environment."""
         if environment is None:
             environment = self.settings.environment
@@ -412,9 +386,7 @@ class ConfigurationService:
 
         for agent_type in agent_types:
             try:
-                configs[agent_type] = await self.get_agent_config(
-                    agent_type, environment
-                )
+                configs[agent_type] = await self.get_agent_config(agent_type, environment)
             except Exception as e:
                 logger.error(f"Error getting config for {agent_type}: {e}")
                 # Use fallback
@@ -447,10 +419,7 @@ class ConfigurationService:
 
                 row = result.fetchone()
                 if not row:
-                    logger.warning(
-                        f"No configuration profile found for metrics recording: "
-                        f"{agent_type}"
-                    )
+                    logger.warning(f"No configuration profile found for metrics recording: {agent_type}")
                     return
 
                 profile_id = row[0]
@@ -477,12 +446,8 @@ class ConfigurationService:
                         "token_usage": json.dumps(metrics.get("token_usage", {})),
                         "cost_estimate": metrics.get("cost_estimate", 0.0),
                         "sample_size": metrics.get("sample_size", 1),
-                        "period_start": metrics.get(
-                            "period_start", datetime.now(timezone.utc)
-                        ),
-                        "period_end": metrics.get(
-                            "period_end", datetime.now(timezone.utc)
-                        ),
+                        "period_start": metrics.get("period_start", datetime.now(timezone.utc)),
+                        "period_end": metrics.get("period_end", datetime.now(timezone.utc)),
                     },
                 )
 

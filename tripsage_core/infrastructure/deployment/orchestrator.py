@@ -43,32 +43,18 @@ class DeploymentResult(BaseModel):
     environment: str = Field(..., description="Target environment")
     image_tag: str = Field(..., description="Deployed image tag")
 
-    start_time: float = Field(
-        default_factory=time.time, description="Deployment start time"
-    )
+    start_time: float = Field(default_factory=time.time, description="Deployment start time")
     end_time: Optional[float] = Field(default=None, description="Deployment end time")
 
-    metrics: Optional[DeploymentMetrics] = Field(
-        default=None, description="Deployment metrics"
-    )
-    rollback_metrics: Optional[DeploymentMetrics] = Field(
-        default=None, description="Rollback metrics"
-    )
+    metrics: Optional[DeploymentMetrics] = Field(default=None, description="Deployment metrics")
+    rollback_metrics: Optional[DeploymentMetrics] = Field(default=None, description="Rollback metrics")
 
-    success: bool = Field(
-        default=False, description="Whether deployment was successful"
-    )
-    error_message: Optional[str] = Field(
-        default=None, description="Error message if failed"
-    )
+    success: bool = Field(default=False, description="Whether deployment was successful")
+    error_message: Optional[str] = Field(default=None, description="Error message if failed")
 
     # Enterprise features
-    monitoring_enabled: bool = Field(
-        default=False, description="Whether monitoring is enabled"
-    )
-    auto_rollback_triggered: bool = Field(
-        default=False, description="Whether auto-rollback was triggered"
-    )
+    monitoring_enabled: bool = Field(default=False, description="Whether monitoring is enabled")
+    auto_rollback_triggered: bool = Field(default=False, description="Whether auto-rollback was triggered")
 
     def get_duration(self) -> float:
         """Get total deployment duration in seconds."""
@@ -102,10 +88,7 @@ class ConfigurableDeploymentOrchestrator:
         self.active_deployments: Dict[str, DeploymentResult] = {}
         self.deployment_history: List[DeploymentResult] = []
 
-        logger.info(
-            f"Initialized deployment orchestrator with strategy: "
-            f"{self.enterprise_config.deployment_strategy}"
-        )
+        logger.info(f"Initialized deployment orchestrator with strategy: {self.enterprise_config.deployment_strategy}")
 
     async def deploy(
         self,
@@ -127,17 +110,13 @@ class ConfigurableDeploymentOrchestrator:
         """
         deployment_id = str(uuid.uuid4())[:8]
 
-        logger.info(
-            f"Starting deployment {deployment_id}: {image_tag} to {environment}"
-        )
+        logger.info(f"Starting deployment {deployment_id}: {image_tag} to {environment}")
 
         # Create deployment result
         result = DeploymentResult(
             deployment_id=deployment_id,
             status=DeploymentStatus.PENDING,
-            strategy=strategy.value
-            if strategy
-            else self.enterprise_config.deployment_strategy.value,
+            strategy=strategy.value if strategy else self.enterprise_config.deployment_strategy.value,
             environment=environment,
             image_tag=image_tag,
             monitoring_enabled=self.enterprise_config.enable_deployment_monitoring,
@@ -155,9 +134,7 @@ class ConfigurableDeploymentOrchestrator:
             result.status = DeploymentStatus.IN_PROGRESS
 
             # Execute deployment
-            logger.info(
-                f"Executing {deployment_strategy.name} deployment for {deployment_id}"
-            )
+            logger.info(f"Executing {deployment_strategy.name} deployment for {deployment_id}")
 
             metrics = await deployment_strategy.deploy(
                 deployment_id=deployment_id,
@@ -176,18 +153,11 @@ class ConfigurableDeploymentOrchestrator:
             else:
                 result.status = DeploymentStatus.FAILED
                 result.error_message = f"Deployment failed in phase: {metrics.phase}"
-                logger.error(
-                    f"Deployment {deployment_id} failed in phase: {metrics.phase}"
-                )
+                logger.error(f"Deployment {deployment_id} failed in phase: {metrics.phase}")
 
                 # Auto-rollback if enabled and not already rolled back
-                if (
-                    self.enterprise_config.enable_auto_rollback
-                    and metrics.phase != DeploymentPhase.ROLLING_BACK
-                ):
-                    logger.info(
-                        f"Triggering auto-rollback for deployment {deployment_id}"
-                    )
+                if self.enterprise_config.enable_auto_rollback and metrics.phase != DeploymentPhase.ROLLING_BACK:
+                    logger.info(f"Triggering auto-rollback for deployment {deployment_id}")
                     result.auto_rollback_triggered = True
 
                     rollback_result = await self.rollback(
@@ -198,13 +168,9 @@ class ConfigurableDeploymentOrchestrator:
 
                     if rollback_result.success:
                         result.status = DeploymentStatus.ROLLED_BACK
-                        logger.info(
-                            f"Auto-rollback successful for deployment {deployment_id}"
-                        )
+                        logger.info(f"Auto-rollback successful for deployment {deployment_id}")
                     else:
-                        logger.error(
-                            f"Auto-rollback failed for deployment {deployment_id}"
-                        )
+                        logger.error(f"Auto-rollback failed for deployment {deployment_id}")
 
             result.end_time = time.time()
 
@@ -273,13 +239,9 @@ class ConfigurableDeploymentOrchestrator:
 
         try:
             # Get the same strategy used for original deployment
-            deployment_strategy = get_deployment_strategy(
-                DeploymentStrategy(deployment.strategy)
-            )
+            deployment_strategy = get_deployment_strategy(DeploymentStrategy(deployment.strategy))
 
-            logger.info(
-                f"Executing {deployment_strategy.name} rollback for {deployment_id}"
-            )
+            logger.info(f"Executing {deployment_strategy.name} rollback for {deployment_id}")
 
             # Execute rollback
             rollback_metrics = await deployment_strategy.rollback(
@@ -320,9 +282,7 @@ class ConfigurableDeploymentOrchestrator:
                 end_time=time.time(),
             )
 
-    async def get_deployment_status(
-        self, deployment_id: str
-    ) -> Optional[DeploymentResult]:
+    async def get_deployment_status(self, deployment_id: str) -> Optional[DeploymentResult]:
         """Get status of a specific deployment.
 
         Args:
@@ -395,21 +355,15 @@ class ConfigurableDeploymentOrchestrator:
         # Strategy distribution
         strategy_counts = {}
         for deployment in self.deployment_history:
-            strategy_counts[deployment.strategy] = (
-                strategy_counts.get(deployment.strategy, 0) + 1
-            )
+            strategy_counts[deployment.strategy] = strategy_counts.get(deployment.strategy, 0) + 1
 
         # Environment distribution
         env_counts = {}
         for deployment in self.deployment_history:
-            env_counts[deployment.environment] = (
-                env_counts.get(deployment.environment, 0) + 1
-            )
+            env_counts[deployment.environment] = env_counts.get(deployment.environment, 0) + 1
 
         # Auto-rollback statistics
-        auto_rollbacks = sum(
-            1 for d in self.deployment_history if d.auto_rollback_triggered
-        )
+        auto_rollbacks = sum(1 for d in self.deployment_history if d.auto_rollback_triggered)
 
         return {
             "total_deployments": total_deployments,
@@ -418,19 +372,13 @@ class ConfigurableDeploymentOrchestrator:
             "success_rate": round(success_rate * 100, 2),
             "active_deployments": len(self.active_deployments),
             "auto_rollbacks": auto_rollbacks,
-            "auto_rollback_rate": round((auto_rollbacks / total_deployments) * 100, 2)
-            if total_deployments > 0
-            else 0,
+            "auto_rollback_rate": round((auto_rollbacks / total_deployments) * 100, 2) if total_deployments > 0 else 0,
             "strategies": strategy_counts,
             "environments": env_counts,
             "enterprise_features": {
-                "monitoring_enabled": (
-                    self.enterprise_config.enable_deployment_monitoring
-                ),
+                "monitoring_enabled": (self.enterprise_config.enable_deployment_monitoring),
                 "auto_rollback_enabled": self.enterprise_config.enable_auto_rollback,
-                "canary_analysis_enabled": (
-                    self.enterprise_config.enable_canary_analysis
-                ),
+                "canary_analysis_enabled": (self.enterprise_config.enable_canary_analysis),
             },
         }
 
@@ -463,9 +411,7 @@ class ConfigurableDeploymentOrchestrator:
         while time.time() - start_time < max_duration:
             # Check if deployment is still active
             if deployment_id not in self.active_deployments:
-                logger.info(
-                    f"Deployment {deployment_id} completed, stopping monitoring"
-                )
+                logger.info(f"Deployment {deployment_id} completed, stopping monitoring")
                 break
 
             # Perform monitoring checks
@@ -478,13 +424,8 @@ class ConfigurableDeploymentOrchestrator:
 
                 # Check deployment status
                 current_deployment = self.active_deployments.get(deployment_id)
-                if (
-                    current_deployment
-                    and current_deployment.status == DeploymentStatus.FAILED
-                ):
-                    logger.warning(
-                        f"Deployment {deployment_id} failed, stopping monitoring"
-                    )
+                if current_deployment and current_deployment.status == DeploymentStatus.FAILED:
+                    logger.warning(f"Deployment {deployment_id} failed, stopping monitoring")
                     break
 
             except Exception as e:

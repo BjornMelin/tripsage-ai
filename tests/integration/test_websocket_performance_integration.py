@@ -90,9 +90,7 @@ class TestWebSocketPerformanceIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_connection_lifecycle_with_monitoring(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_connection_lifecycle_with_monitoring(self, performance_monitor, mock_websocket_connection):
         """Test complete connection lifecycle with performance monitoring."""
         connection = mock_websocket_connection
 
@@ -125,23 +123,19 @@ class TestWebSocketPerformanceIntegration:
         assert summary["connection_count"] >= 0
 
         # Test connection performance data
-        perf_data = performance_monitor.get_connection_performance(
-            connection.connection_id
-        )
+        perf_data = performance_monitor.get_connection_performance(connection.connection_id)
         assert perf_data["connection_id"] == connection.connection_id
         assert "total_messages" in perf_data
         assert "current_latency" in perf_data
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_circuit_breaker_monitoring_integration(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_circuit_breaker_monitoring_integration(self, performance_monitor, mock_websocket_connection):
         """Test circuit breaker pattern integration with performance monitoring."""
         connection = mock_websocket_connection
 
         # Simulate multiple failures to trigger circuit breaker
-        for i in range(10):
+        for _i in range(10):
             connection.circuit_breaker.record_failure()
             performance_monitor.collect_connection_metrics(connection)
 
@@ -154,16 +148,12 @@ class TestWebSocketPerformanceIntegration:
 
         # Verify alert was generated
         alerts = performance_monitor.get_active_alerts()
-        circuit_breaker_alerts = [
-            alert for alert in alerts if alert.get("type") == "circuit_breaker"
-        ]
+        circuit_breaker_alerts = [alert for alert in alerts if alert.get("type") == "circuit_breaker"]
         assert len(circuit_breaker_alerts) > 0
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_performance_alert_generation(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_performance_alert_generation(self, performance_monitor, mock_websocket_connection):
         """Test performance alert generation and management."""
         connection = mock_websocket_connection
 
@@ -193,9 +183,7 @@ class TestWebSocketPerformanceIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_queue_backpressure_monitoring(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_queue_backpressure_monitoring(self, performance_monitor, mock_websocket_connection):
         """Test queue backpressure detection and monitoring."""
         connection = mock_websocket_connection
 
@@ -222,9 +210,7 @@ class TestWebSocketPerformanceIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_error_rate_monitoring(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_error_rate_monitoring(self, performance_monitor, mock_websocket_connection):
         """Test error rate monitoring and alerting."""
         connection = mock_websocket_connection
 
@@ -252,9 +238,7 @@ class TestWebSocketPerformanceIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_metrics_aggregation_and_export(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_metrics_aggregation_and_export(self, performance_monitor, mock_websocket_connection):
         """Test metrics aggregation and data export functionality."""
         connection = mock_websocket_connection
 
@@ -293,9 +277,7 @@ class TestWebSocketPerformanceIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_performance_health_score_calculation(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_performance_health_score_calculation(self, performance_monitor, mock_websocket_connection):
         """Test health score calculation based on multiple performance factors."""
         connection = mock_websocket_connection
 
@@ -378,16 +360,12 @@ class TestWebSocketPerformanceIntegration:
 
         # Verify metrics were collected for all connections
         for connection in connections:
-            perf_data = performance_monitor.get_connection_performance(
-                connection.connection_id
-            )
+            perf_data = performance_monitor.get_connection_performance(connection.connection_id)
             assert perf_data["connection_id"] == connection.connection_id
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_performance_data_cleanup(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_performance_data_cleanup(self, performance_monitor, mock_websocket_connection):
         """Test automatic cleanup of old performance data."""
         connection = mock_websocket_connection
 
@@ -429,9 +407,7 @@ class TestWebSocketPerformanceIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.integration
-    async def test_alert_cooldown_mechanism(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_alert_cooldown_mechanism(self, performance_monitor, mock_websocket_connection):
         """Test alert cooldown to prevent spam."""
         connection = mock_websocket_connection
 
@@ -461,9 +437,7 @@ class TestWebSocketPerformanceRegression:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.performance
-    async def test_latency_regression_detection(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_latency_regression_detection(self, performance_monitor, mock_websocket_connection):
         """Test detection of latency performance regressions."""
         connection = mock_websocket_connection
 
@@ -494,9 +468,7 @@ class TestWebSocketPerformanceRegression:
         # Simulate performance regression (sudden increase in latency)
         regression_latencies = []
         for i in range(10):
-            latency = 250.0 + (
-                i * 10
-            )  # Much higher latencies (well above critical threshold)
+            latency = 250.0 + (i * 10)  # Much higher latencies (well above critical threshold)
             regression_latencies.append(latency)
 
             with patch.object(connection, "get_health") as mock_health:
@@ -518,24 +490,18 @@ class TestWebSocketPerformanceRegression:
         regression_avg_latency = regression_summary["avg_latency_ms"]
 
         # Verify regression was detected
-        latency_increase = (
-            regression_avg_latency - baseline_avg_latency
-        ) / baseline_avg_latency
+        latency_increase = (regression_avg_latency - baseline_avg_latency) / baseline_avg_latency
         assert latency_increase > 1.0  # More than 100% increase indicates regression
 
         # Should have generated critical alerts
         alerts = performance_monitor.get_active_alerts()
-        critical_alerts = [
-            alert for alert in alerts if alert.get("severity") == "critical"
-        ]
+        critical_alerts = [alert for alert in alerts if alert.get("severity") == "critical"]
         assert len(critical_alerts) > 0
 
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.performance
-    async def test_throughput_regression_detection(
-        self, performance_monitor, mock_websocket_connection
-    ):
+    async def test_throughput_regression_detection(self, performance_monitor, mock_websocket_connection):
         """Test detection of message throughput regressions."""
         connection = mock_websocket_connection
 
@@ -559,10 +525,10 @@ class TestWebSocketPerformanceRegression:
 
         # Get baseline metrics
         baseline_summary = performance_monitor.get_performance_summary()
-        baseline_total_messages = baseline_summary["total_messages"]
+        _baseline_total_messages = baseline_summary["total_messages"]
 
         # Simulate throughput regression (lower message processing)
-        for i in range(20):
+        for _i in range(20):
             connection.message_count += 2  # Much slower processing
 
             with patch.object(connection, "get_health") as mock_health:
@@ -595,9 +561,7 @@ class TestWebSocketEndToEndPerformance:
     @pytest.mark.asyncio
     @pytest.mark.integration
     @pytest.mark.e2e
-    async def test_complete_websocket_performance_workflow(
-        self, test_client, performance_monitor
-    ):
+    async def test_complete_websocket_performance_workflow(self, test_client, performance_monitor):
         """Test complete WebSocket workflow with performance monitoring."""
 
         # This test would ideally use a real WebSocket connection
@@ -653,9 +617,7 @@ class TestWebSocketEndToEndPerformance:
 
         # Verify individual connection metrics
         for connection in connections:
-            perf_data = performance_monitor.get_connection_performance(
-                connection.connection_id
-            )
+            perf_data = performance_monitor.get_connection_performance(connection.connection_id)
             assert perf_data["total_messages"] > 0
             assert perf_data["connection_id"] == connection.connection_id
 

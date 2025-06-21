@@ -28,9 +28,7 @@ class ActivityResponse(BaseModel):
     rating: float = Field(..., ge=0, le=5, description="Average rating")
     description: str = Field(..., description="Activity description")
     images: List[str] = Field(default_factory=list, description="Activity images")
-    coordinates: Optional[ActivityCoordinates] = Field(
-        None, description="Geographic coordinates"
-    )
+    coordinates: Optional[ActivityCoordinates] = Field(None, description="Geographic coordinates")
 
     # Additional details
     provider: Optional[str] = Field(None, description="Activity provider name")
@@ -42,33 +40,23 @@ class ActivityResponse(BaseModel):
     languages: Optional[List[str]] = Field(None, description="Available languages")
     max_participants: Optional[int] = Field(None, description="Maximum participants")
     min_participants: Optional[int] = Field(None, description="Minimum participants")
-    wheelchair_accessible: Optional[bool] = Field(
-        None, description="Wheelchair accessibility"
-    )
-    instant_confirmation: Optional[bool] = Field(
-        None, description="Instant confirmation available"
-    )
+    wheelchair_accessible: Optional[bool] = Field(None, description="Wheelchair accessibility")
+    instant_confirmation: Optional[bool] = Field(None, description="Instant confirmation available")
 
 
 class ActivitySearchResponse(BaseModel):
     """Activity search response model."""
 
-    activities: List[ActivityResponse] = Field(
-        default_factory=list, description="List of activities"
-    )
+    activities: List[ActivityResponse] = Field(default_factory=list, description="List of activities")
     total: int = Field(0, ge=0, description="Total number of results")
     skip: int = Field(0, ge=0, description="Number of results skipped")
     limit: int = Field(20, ge=1, description="Results per page")
-    filters_applied: Optional[Dict[str, Any]] = Field(
-        None, description="Applied search filters"
-    )
+    filters_applied: Optional[Dict[str, Any]] = Field(None, description="Applied search filters")
 
     # Search metadata
     search_id: Optional[str] = Field(None, description="Search session ID")
     cached: Optional[bool] = Field(None, description="Whether results are from cache")
-    provider_responses: Optional[Dict[str, int]] = Field(
-        None, description="Number of results from each provider"
-    )
+    provider_responses: Optional[Dict[str, int]] = Field(None, description="Number of results from each provider")
 
 
 class SavedActivityResponse(BaseModel):
@@ -81,6 +69,4 @@ class SavedActivityResponse(BaseModel):
     notes: Optional[str] = Field(None, description="User notes about the activity")
 
     # Optional activity details (for list views)
-    activity: Optional[ActivityResponse] = Field(
-        None, description="Full activity details"
-    )
+    activity: Optional[ActivityResponse] = Field(None, description="Full activity details")

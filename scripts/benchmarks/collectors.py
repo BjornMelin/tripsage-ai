@@ -70,9 +70,7 @@ class MetricsCollector:
         self._start_time = time.time()
 
         # Use modern asyncio.create_task with proper error handling
-        self._monitor_task = asyncio.create_task(
-            self._monitor_loop(), name="metrics_monitor"
-        )
+        self._monitor_task = asyncio.create_task(self._monitor_loop(), name="metrics_monitor")
         logger.info("Metrics monitoring started")
 
     async def stop_monitoring(self) -> None:
@@ -120,9 +118,7 @@ class MetricsCollector:
         except Exception:
             return 0.0
 
-    def record_timing(
-        self, operation_type: str, duration_seconds: float, success: bool = True
-    ) -> None:
+    def record_timing(self, operation_type: str, duration_seconds: float, success: bool = True) -> None:
         """Record a timing result."""
         timing = TimingResult(
             operation_type=operation_type,
@@ -171,15 +167,10 @@ class MetricsCollector:
         return {
             "total_operations": len(self._timings),
             "successful_operations": len(successful_timings),
-            "error_rate": (len(self._timings) - len(successful_timings))
-            / len(self._timings),
+            "error_rate": (len(self._timings) - len(successful_timings)) / len(self._timings),
             "avg_duration_ms": (sum(durations) / len(durations)) * 1000,
-            "p95_duration_ms": durations[int(len(durations) * 0.95)] * 1000
-            if durations
-            else 0,
-            "operations_per_second": len(successful_timings) / total_duration
-            if total_duration > 0
-            else 0,
+            "p95_duration_ms": durations[int(len(durations) * 0.95)] * 1000 if durations else 0,
+            "operations_per_second": len(successful_timings) / total_duration if total_duration > 0 else 0,
             "by_operation_type": self._get_by_operation_type(successful_timings),
         }
 
@@ -200,9 +191,7 @@ class MetricsCollector:
             by_type[op_type] = {
                 "count": len(durations),
                 "avg_duration_ms": (sum(durations) / len(durations)) * 1000,
-                "p95_duration_ms": durations[int(len(durations) * 0.95)] * 1000
-                if durations
-                else 0,
+                "p95_duration_ms": durations[int(len(durations) * 0.95)] * 1000 if durations else 0,
             }
 
         return by_type
@@ -219,16 +208,12 @@ class MetricsCollector:
             "peak_mb": max(process_mbs),
             "avg_mb": sum(process_mbs) / len(process_mbs),
             "min_mb": min(process_mbs),
-            "memory_growth_mb": process_mbs[-1] - process_mbs[0]
-            if len(process_mbs) > 1
-            else 0,
+            "memory_growth_mb": process_mbs[-1] - process_mbs[0] if len(process_mbs) > 1 else 0,
         }
 
     def get_connection_summary(self) -> dict[str, Any]:
         """Get connection efficiency summary."""
-        total_ops = (
-            self._connection_stats["reuses"] + self._connection_stats["creations"]
-        )
+        total_ops = self._connection_stats["reuses"] + self._connection_stats["creations"]
 
         if total_ops == 0:
             efficiency_ratio = 0.0
@@ -284,9 +269,7 @@ class ReportGenerator:
         csv_path = await self._generate_csv_summary(report_data, report_type, timestamp)
 
         # Generate simple HTML summary
-        html_path = await self._generate_html_summary(
-            report_data, report_type, timestamp
-        )
+        html_path = await self._generate_html_summary(report_data, report_type, timestamp)
 
         logger.info("Reports generated:")
         logger.info(f"  JSON: {json_path}")
@@ -299,9 +282,7 @@ class ReportGenerator:
         """Create high-level summary of results."""
         summary = {
             "test_completed": True,
-            "execution_time_formatted": self._format_duration(
-                data.get("execution_time", 0)
-            ),
+            "execution_time_formatted": self._format_duration(data.get("execution_time", 0)),
         }
 
         # Extract key metrics
@@ -310,9 +291,7 @@ class ReportGenerator:
         if "query_performance" in metrics:
             query_perf = metrics["query_performance"]
             if "operations_per_second" in query_perf:
-                summary["query_ops_per_sec"] = (
-                    f"{query_perf['operations_per_second']:.1f}"
-                )
+                summary["query_ops_per_sec"] = f"{query_perf['operations_per_second']:.1f}"
             if "avg_duration_ms" in query_perf:
                 summary["avg_query_latency_ms"] = f"{query_perf['avg_duration_ms']:.2f}"
 
@@ -336,9 +315,7 @@ class ReportGenerator:
 
         return summary
 
-    async def _generate_csv_summary(
-        self, data: dict[str, Any], report_type: str, timestamp: int
-    ) -> Path:
+    async def _generate_csv_summary(self, data: dict[str, Any], report_type: str, timestamp: int) -> Path:
         """Generate CSV summary for easy analysis."""
         csv_path = self.output_dir / f"benchmark_{report_type}_{timestamp}.csv"
 
@@ -352,12 +329,8 @@ class ReportGenerator:
             qp = metrics["query_performance"]
             ops_per_sec = qp.get("operations_per_second", 0)
             csv_lines.append(f"operations_per_second,{ops_per_sec:.2f},ops/sec")
-            csv_lines.append(
-                f"avg_duration_ms,{qp.get('avg_duration_ms', 0):.2f},milliseconds"
-            )
-            csv_lines.append(
-                f"p95_duration_ms,{qp.get('p95_duration_ms', 0):.2f},milliseconds"
-            )
+            csv_lines.append(f"avg_duration_ms,{qp.get('avg_duration_ms', 0):.2f},milliseconds")
+            csv_lines.append(f"p95_duration_ms,{qp.get('p95_duration_ms', 0):.2f},milliseconds")
             csv_lines.append(f"error_rate,{qp.get('error_rate', 0):.3f},ratio")
 
         # Memory metrics
@@ -365,22 +338,14 @@ class ReportGenerator:
             mem = metrics["memory_usage"]
             csv_lines.append(f"peak_memory_mb,{mem.get('peak_mb', 0):.2f},MB")
             csv_lines.append(f"avg_memory_mb,{mem.get('avg_mb', 0):.2f},MB")
-            csv_lines.append(
-                f"memory_growth_mb,{mem.get('memory_growth_mb', 0):.2f},MB"
-            )
+            csv_lines.append(f"memory_growth_mb,{mem.get('memory_growth_mb', 0):.2f},MB")
 
         # Connection metrics
         if "connection_efficiency" in metrics:
             conn = metrics["connection_efficiency"]
-            csv_lines.append(
-                f"connection_efficiency,{conn.get('efficiency_ratio', 0):.3f},ratio"
-            )
-            csv_lines.append(
-                f"connection_reuses,{conn.get('connection_reuses', 0)},count"
-            )
-            csv_lines.append(
-                f"connection_creations,{conn.get('connection_creations', 0)},count"
-            )
+            csv_lines.append(f"connection_efficiency,{conn.get('efficiency_ratio', 0):.3f},ratio")
+            csv_lines.append(f"connection_reuses,{conn.get('connection_reuses', 0)},count")
+            csv_lines.append(f"connection_creations,{conn.get('connection_creations', 0)},count")
 
         # Execution metrics
         exec_time = data.get("execution_time_seconds", 0)
@@ -392,9 +357,7 @@ class ReportGenerator:
 
         return csv_path
 
-    async def _generate_html_summary(
-        self, data: dict[str, Any], report_type: str, timestamp: int
-    ) -> Path:
+    async def _generate_html_summary(self, data: dict[str, Any], report_type: str, timestamp: int) -> Path:
         """Generate simple HTML summary report."""
         html_path = self.output_dir / f"benchmark_{report_type}_{timestamp}.html"
 
@@ -435,9 +398,7 @@ class ReportGenerator:
         <div class="header">
             <h1>🚀 TripSage Benchmark Report</h1>
             <h2>{report_type.replace("_", " ").title()}</h2>
-            <p>Generated on {
-            time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))
-        }</p>
+            <p>Generated on {time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))}</p>
             <p>Execution time: {summary.get("execution_time_formatted", "Unknown")}</p>
         </div>
         
@@ -476,14 +437,8 @@ class ReportGenerator:
 
         # Add validation results if available
         if validation:
-            success_class = (
-                "success" if validation.get("overall_success", False) else "warning"
-            )
-            status_text = (
-                "PASSED"
-                if validation.get("overall_success", False)
-                else "NEEDS ATTENTION"
-            )
+            success_class = "success" if validation.get("overall_success", False) else "warning"
+            status_text = "PASSED" if validation.get("overall_success", False) else "NEEDS ATTENTION"
 
             html_content += f"""
         </div>

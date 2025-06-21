@@ -136,21 +136,14 @@ COMMIT;
     def test_migration_contains_rls_policies(self, migration_sql):
         """Test that migration SQL contains RLS policies."""
         assert "ENABLE ROW LEVEL SECURITY" in migration_sql
-        assert (
-            'CREATE POLICY "Users can only access their own memories"' in migration_sql
-        )
-        assert (
-            'CREATE POLICY "Users can only access their own session memories"'
-            in migration_sql
-        )
+        assert 'CREATE POLICY "Users can only access their own memories"' in migration_sql
+        assert 'CREATE POLICY "Users can only access their own session memories"' in migration_sql
         assert "auth.uid() = user_id" in migration_sql
 
     def test_migration_contains_indexes(self, migration_sql):
         """Test that migration SQL creates performance indexes."""
         assert "CREATE INDEX IF NOT EXISTS idx_memories_user_id" in migration_sql
-        assert (
-            "CREATE INDEX IF NOT EXISTS idx_session_memories_user_id" in migration_sql
-        )
+        assert "CREATE INDEX IF NOT EXISTS idx_session_memories_user_id" in migration_sql
 
     async def test_foreign_key_constraint_validation_mocked(self, mock_db_service):
         """Test foreign key constraint validation with mocked database."""
@@ -179,8 +172,7 @@ COMMIT;
         """Test that foreign key violations are properly raised."""
         # Mock a foreign key violation error
         fk_error = MockForeignKeyViolationError(
-            'insert or update on table "memories" violates foreign key '
-            'constraint "memories_user_id_fkey"'
+            'insert or update on table "memories" violates foreign key constraint "memories_user_id_fkey"'
         )
         mock_db_service.execute_query.side_effect = fk_error
 
@@ -207,19 +199,13 @@ COMMIT;
 
         # Mock successful user deletion that triggers cascade
         mock_db_service.execute_query.return_value = None
-        mock_db_service.fetch_one.return_value = {
-            "count": 0
-        }  # No memories remain after cascade
+        mock_db_service.fetch_one.return_value = {"count": 0}  # No memories remain after cascade
 
         # Simulate deleting user (should cascade to memories)
-        await mock_db_service.execute_query(
-            "DELETE FROM auth.users WHERE id = $1", user_id
-        )
+        await mock_db_service.execute_query("DELETE FROM auth.users WHERE id = $1", user_id)
 
         # Verify no memories remain after cascade delete
-        result = await mock_db_service.fetch_one(
-            "SELECT COUNT(*) as count FROM memories WHERE user_id = $1", user_id
-        )
+        result = await mock_db_service.fetch_one("SELECT COUNT(*) as count FROM memories WHERE user_id = $1", user_id)
 
         assert result["count"] == 0
 
@@ -375,10 +361,7 @@ COMMIT;
     def test_migration_pre_validation(self, migration_sql):
         """Test that migration includes pre-validation of existing data."""
         # Check for UUID format validation
-        assert (
-            "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-            in migration_sql
-        )
+        assert "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" in migration_sql
 
         # Check for data cleaning before migration
         assert "invalid_count" in migration_sql
@@ -412,8 +395,7 @@ COMMIT;
 
         # Verify RLS policies exist
         policies = await mock_db_service.fetch_all(
-            "SELECT * FROM pg_policies "
-            "WHERE tablename IN ('memories', 'session_memories')"
+            "SELECT * FROM pg_policies WHERE tablename IN ('memories', 'session_memories')"
         )
 
         assert len(policies) == 2
@@ -421,7 +403,5 @@ COMMIT;
         memories_policy = next(p for p in policies if p["tablename"] == "memories")
         assert "auth.uid() = user_id" in memories_policy["qual"]
 
-        session_policy = next(
-            p for p in policies if p["tablename"] == "session_memories"
-        )
+        session_policy = next(p for p in policies if p["tablename"] == "session_memories")
         assert "auth.uid() = user_id" in session_policy["qual"]

@@ -186,10 +186,7 @@ class ConfigurationAuditService:
         # Start periodic scanning
         asyncio.create_task(self._periodic_scan_loop())
 
-        logger.info(
-            f"Configuration audit service started, monitoring "
-            f"{len(self.config_paths)} paths"
-        )
+        logger.info(f"Configuration audit service started, monitoring {len(self.config_paths)} paths")
 
         # Log service startup
         await audit_config_change(
@@ -238,9 +235,7 @@ class ConfigurationAuditService:
         for config_path in self.config_paths:
             dir_path = Path(config_path).parent
             if dir_path not in watched_dirs:
-                self._file_observer.schedule(
-                    self._file_handler, str(dir_path), recursive=False
-                )
+                self._file_observer.schedule(self._file_handler, str(dir_path), recursive=False)
                 watched_dirs.add(dir_path)
 
         self._file_observer.start()
@@ -385,9 +380,7 @@ class ConfigurationAuditService:
             change_type=config_change_type,
             config_path=file_path,
             old_hash=self._file_hashes.get(file_path),
-            new_hash=await self._calculate_file_hash(file_path)
-            if file_path_obj.exists()
-            else None,
+            new_hash=await self._calculate_file_hash(file_path) if file_path_obj.exists() else None,
             change_source="file_watcher",
             is_security_relevant=self._is_file_security_relevant(file_path),
             risk_level=self._assess_file_risk_level(file_path),
@@ -415,11 +408,7 @@ class ConfigurationAuditService:
             await self._log_security_event(change)
 
         # Log to application logger
-        log_level = (
-            logging.WARNING
-            if change.risk_level in ["high", "critical"]
-            else logging.INFO
-        )
+        log_level = logging.WARNING if change.risk_level in ["high", "critical"] else logging.INFO
         logger.log(
             log_level,
             f"Configuration change detected: {change.config_path}",
@@ -460,11 +449,7 @@ class ConfigurationAuditService:
 
     async def _log_security_event(self, change: ConfigChange):
         """Log high-risk configuration changes as security events."""
-        severity = (
-            AuditSeverity.HIGH
-            if change.risk_level == "critical"
-            else AuditSeverity.MEDIUM
-        )
+        severity = AuditSeverity.HIGH if change.risk_level == "critical" else AuditSeverity.MEDIUM
         risk_score = 80 if change.risk_level == "critical" else 60
 
         await audit_security_event(
@@ -538,17 +523,11 @@ class ConfigurationAuditService:
             return "critical"
 
         # High risk patterns
-        if any(
-            pattern in key.upper()
-            for pattern in ["SECRET", "PASSWORD", "TOKEN", "KEY", "PRIVATE"]
-        ):
+        if any(pattern in key.upper() for pattern in ["SECRET", "PASSWORD", "TOKEN", "KEY", "PRIVATE"]):
             return "high"
 
         # Medium risk patterns
-        if any(
-            pattern in key.upper()
-            for pattern in ["AUTH", "SSL", "TLS", "CERT", "SECURITY"]
-        ):
+        if any(pattern in key.upper() for pattern in ["AUTH", "SSL", "TLS", "CERT", "SECURITY"]):
             return "medium"
 
         # Check if it's a security-relevant change
@@ -594,9 +573,7 @@ class ConfigurationAuditService:
             return value
 
         # If it looks like a secret, hash it
-        alphanumeric_chars = (
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-        )
+        alphanumeric_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         if (
             len(value) > 20
             and any(char in value for char in alphanumeric_chars)
@@ -605,10 +582,7 @@ class ConfigurationAuditService:
             return f"<hash:{hashlib.sha256(value.encode()).hexdigest()[:16]}>"
 
         # If it contains secret patterns, mask it
-        if any(
-            pattern in value.lower()
-            for pattern in ["password", "secret", "token", "key"]
-        ):
+        if any(pattern in value.lower() for pattern in ["password", "secret", "token", "key"]):
             return f"<masked:{len(value)} chars>"
 
         # Truncate very long values
@@ -648,9 +622,7 @@ class ConfigurationAuditService:
             changed_by=changed_by,
             change_reason=change_reason,
             change_source="manual",
-            is_security_relevant=self._is_security_relevant(
-                config_key, str(new_value or "")
-            ),
+            is_security_relevant=self._is_security_relevant(config_key, str(new_value or "")),
             risk_level=self._assess_risk_level(config_key, str(new_value or "")),
             requires_approval=requires_approval,
         )
@@ -666,9 +638,7 @@ class ConfigurationAuditService:
             "monitored_files": len(self.config_paths),
             "tracked_files": len(self._file_hashes),
             "tracked_env_vars": len(self._env_vars),
-            "last_scan": self._last_scan_time.isoformat()
-            if self._last_scan_time
-            else None,
+            "last_scan": self._last_scan_time.isoformat() if self._last_scan_time else None,
         }
 
 
@@ -680,21 +650,15 @@ class ConfigFileHandler(FileSystemEventHandler):
 
     def on_modified(self, event):
         if not event.is_directory and event.src_path in self.audit_service.config_paths:
-            asyncio.create_task(
-                self.audit_service._handle_file_change(event.src_path, "modified")
-            )
+            asyncio.create_task(self.audit_service._handle_file_change(event.src_path, "modified"))
 
     def on_created(self, event):
         if not event.is_directory and event.src_path in self.audit_service.config_paths:
-            asyncio.create_task(
-                self.audit_service._handle_file_change(event.src_path, "created")
-            )
+            asyncio.create_task(self.audit_service._handle_file_change(event.src_path, "created"))
 
     def on_deleted(self, event):
         if not event.is_directory and event.src_path in self.audit_service.config_paths:
-            asyncio.create_task(
-                self.audit_service._handle_file_change(event.src_path, "deleted")
-            )
+            asyncio.create_task(self.audit_service._handle_file_change(event.src_path, "deleted"))
 
 
 # Global configuration audit service instance

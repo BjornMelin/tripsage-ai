@@ -142,9 +142,7 @@ class ExtensionVerifier:
         console.print("\n🔍 Checking Realtime Configuration...", style="bold blue")
 
         # Check if publication exists
-        pub_query = (
-            "SELECT pubname FROM pg_publication WHERE pubname = 'supabase_realtime'"
-        )
+        pub_query = "SELECT pubname FROM pg_publication WHERE pubname = 'supabase_realtime'"
         pub_result = await self.connection.fetchval(pub_query)
 
         if not pub_result:
@@ -214,11 +212,7 @@ class ExtensionVerifier:
             table.add_column("Command Preview", style="white")
 
             for row in results:
-                command_preview = (
-                    row["command"][:50] + "..."
-                    if len(row["command"]) > 50
-                    else row["command"]
-                )
+                command_preview = row["command"][:50] + "..." if len(row["command"]) > 50 else row["command"]
                 status = "✅ Active" if row["active"] else "❌ Inactive"
                 table.add_row(row["jobname"], row["schedule"], status, command_preview)
 
@@ -254,13 +248,9 @@ class ExtensionVerifier:
             table.add_column("Events", style="yellow")
 
             for row in results:
-                url_preview = (
-                    row["url"][:40] + "..." if len(row["url"]) > 40 else row["url"]
-                )
+                url_preview = row["url"][:40] + "..." if len(row["url"]) > 40 else row["url"]
                 status = "✅ Active" if row["is_active"] else "❌ Inactive"
-                table.add_row(
-                    row["name"], url_preview, status, str(row["event_count"] or 0)
-                )
+                table.add_row(row["name"], url_preview, status, str(row["event_count"] or 0))
 
             console.print(table)
             console.print(f"\nTotal webhook configs: {len(results)}")
@@ -350,9 +340,7 @@ class ExtensionVerifier:
                 style="bold green",
             )
         else:
-            console.print(
-                "⚠️  Some checks failed. Review the output above.", style="bold yellow"
-            )
+            console.print("⚠️  Some checks failed. Review the output above.", style="bold yellow")
 
         return all_passed
 
@@ -367,8 +355,7 @@ async def main():
 
     if not database_url:
         console.print(
-            "❌ No database URL found. Set SUPABASE_DB_URL or "
-            "DATABASE_URL environment variable.",
+            "❌ No database URL found. Set SUPABASE_DB_URL or DATABASE_URL environment variable.",
             style="red",
         )
         sys.exit(1)

@@ -66,16 +66,12 @@ class DatabasePoolConfig(BaseModel):
         ge=1,
         le=1000,
     )
-    max_overflow: int = Field(
-        default=500, description="Maximum overflow connections allowed", ge=0, le=2000
-    )
+    max_overflow: int = Field(default=500, description="Maximum overflow connections allowed", ge=0, le=2000)
     pool_use_lifo: bool = Field(
         default=True,
         description="Use LIFO connection strategy for better cache locality",
     )
-    pool_pre_ping: bool = Field(
-        default=True, description="Enable connection validation before use"
-    )
+    pool_pre_ping: bool = Field(default=True, description="Enable connection validation before use")
     pool_recycle: int = Field(
         default=3600,
         description="Connection recycle time in seconds",
@@ -109,15 +105,9 @@ class DatabaseMonitoringConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    enable_monitoring: bool = Field(
-        default=True, description="Enable comprehensive monitoring"
-    )
-    enable_metrics: bool = Field(
-        default=True, description="Enable Prometheus metrics collection"
-    )
-    enable_query_tracking: bool = Field(
-        default=True, description="Track individual query performance"
-    )
+    enable_monitoring: bool = Field(default=True, description="Enable comprehensive monitoring")
+    enable_metrics: bool = Field(default=True, description="Enable Prometheus metrics collection")
+    enable_query_tracking: bool = Field(default=True, description="Track individual query performance")
     slow_query_threshold: float = Field(
         default=1.0,
         description="Threshold in seconds for slow query detection",
@@ -140,15 +130,9 @@ class DatabaseSecurityConfig(BaseModel):
 
     enable_security: bool = Field(default=True, description="Enable security features")
     enable_rate_limiting: bool = Field(default=True, description="Enable rate limiting")
-    enable_audit_logging: bool = Field(
-        default=True, description="Enable audit logging for compliance"
-    )
-    rate_limit_requests: int = Field(
-        default=1000, description="Requests per minute limit", ge=1, le=100000
-    )
-    rate_limit_burst: int = Field(
-        default=2000, description="Burst limit for rate limiting", ge=1, le=200000
-    )
+    enable_audit_logging: bool = Field(default=True, description="Enable audit logging for compliance")
+    rate_limit_requests: int = Field(default=1000, description="Requests per minute limit", ge=1, le=100000)
+    rate_limit_burst: int = Field(default=2000, description="Burst limit for rate limiting", ge=1, le=200000)
 
     @field_validator("rate_limit_burst")
     @classmethod
@@ -163,15 +147,9 @@ class DatabasePerformanceConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    enable_read_replicas: bool = Field(
-        default=True, description="Enable read replica support"
-    )
-    enable_circuit_breaker: bool = Field(
-        default=True, description="Enable circuit breaker pattern"
-    )
-    circuit_breaker_threshold: int = Field(
-        default=5, description="Failures before circuit breaker opens", ge=1, le=100
-    )
+    enable_read_replicas: bool = Field(default=True, description="Enable read replica support")
+    enable_circuit_breaker: bool = Field(default=True, description="Enable circuit breaker pattern")
+    circuit_breaker_threshold: int = Field(default=5, description="Failures before circuit breaker opens", ge=1, le=100)
     circuit_breaker_timeout: float = Field(
         default=60.0,
         description="Circuit breaker timeout in seconds",
@@ -199,9 +177,7 @@ class DatabaseConfig(BaseModel):
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    pool: DatabasePoolConfig = Field(
-        default_factory=DatabasePoolConfig, description="Connection pool configuration"
-    )
+    pool: DatabasePoolConfig = Field(default_factory=DatabasePoolConfig, description="Connection pool configuration")
     monitoring: DatabaseMonitoringConfig = Field(
         default_factory=DatabaseMonitoringConfig,
         description="Monitoring and metrics configuration",
@@ -223,9 +199,7 @@ class DatabaseConfig(BaseModel):
     def create_production(cls) -> "DatabaseConfig":
         """Create production-optimized configuration."""
         return cls(
-            pool=DatabasePoolConfig(
-                pool_size=100, max_overflow=500, pool_use_lifo=True, pool_recycle=3600
-            ),
+            pool=DatabasePoolConfig(pool_size=100, max_overflow=500, pool_use_lifo=True, pool_recycle=3600),
             monitoring=DatabaseMonitoringConfig(
                 enable_monitoring=True,
                 enable_metrics=True,
@@ -251,9 +225,7 @@ class DatabaseConfig(BaseModel):
     def create_development(cls) -> "DatabaseConfig":
         """Create development-friendly configuration."""
         return cls(
-            pool=DatabasePoolConfig(
-                pool_size=10, max_overflow=20, pool_use_lifo=True, pool_recycle=1800
-            ),
+            pool=DatabasePoolConfig(pool_size=10, max_overflow=20, pool_use_lifo=True, pool_recycle=1800),
             monitoring=DatabaseMonitoringConfig(
                 enable_monitoring=True,
                 enable_metrics=True,
@@ -503,9 +475,7 @@ class DatabaseService:
 
         self.enable_read_replicas = self._config.performance.enable_read_replicas
         self.enable_circuit_breaker = self._config.performance.enable_circuit_breaker
-        self.circuit_breaker_threshold = (
-            self._config.performance.circuit_breaker_threshold
-        )
+        self.circuit_breaker_threshold = self._config.performance.circuit_breaker_threshold
         self.circuit_breaker_timeout = self._config.performance.circuit_breaker_timeout
 
         # Service state
@@ -517,9 +487,7 @@ class DatabaseService:
         # Monitoring and metrics
         self._query_metrics: list[QueryMetrics] = []
         self._security_alerts: list[SecurityAlert] = []
-        self._connection_stats = ConnectionStats(
-            pool_size=self.pool_size, max_overflow=self.max_overflow
-        )
+        self._connection_stats = ConnectionStats(pool_size=self.pool_size, max_overflow=self.max_overflow)
 
         # Circuit breaker state
         self._circuit_breaker_failures = 0
@@ -540,9 +508,7 @@ class DatabaseService:
             f"LIFO={'enabled' if self.pool_use_lifo else 'disabled'}"
         )
 
-    def _initialize_config(
-        self, config: DatabaseConfig | None = None, **legacy_params
-    ) -> DatabaseConfig:
+    def _initialize_config(self, config: DatabaseConfig | None = None, **legacy_params) -> DatabaseConfig:
         """Initialize configuration from config object or legacy parameters.
 
         Args:
@@ -584,72 +550,44 @@ class DatabaseService:
             pool_config_params["pool_timeout"] = legacy_params["pool_timeout"]
 
         if legacy_params.get("enable_monitoring") is not None:
-            monitoring_config_params["enable_monitoring"] = legacy_params[
-                "enable_monitoring"
-            ]
+            monitoring_config_params["enable_monitoring"] = legacy_params["enable_monitoring"]
         if legacy_params.get("enable_metrics") is not None:
             monitoring_config_params["enable_metrics"] = legacy_params["enable_metrics"]
         if legacy_params.get("enable_query_tracking") is not None:
-            monitoring_config_params["enable_query_tracking"] = legacy_params[
-                "enable_query_tracking"
-            ]
+            monitoring_config_params["enable_query_tracking"] = legacy_params["enable_query_tracking"]
         if legacy_params.get("slow_query_threshold") is not None:
-            monitoring_config_params["slow_query_threshold"] = legacy_params[
-                "slow_query_threshold"
-            ]
+            monitoring_config_params["slow_query_threshold"] = legacy_params["slow_query_threshold"]
 
         if legacy_params.get("enable_security") is not None:
             security_config_params["enable_security"] = legacy_params["enable_security"]
         if legacy_params.get("enable_rate_limiting") is not None:
-            security_config_params["enable_rate_limiting"] = legacy_params[
-                "enable_rate_limiting"
-            ]
+            security_config_params["enable_rate_limiting"] = legacy_params["enable_rate_limiting"]
         if legacy_params.get("enable_audit_logging") is not None:
-            security_config_params["enable_audit_logging"] = legacy_params[
-                "enable_audit_logging"
-            ]
+            security_config_params["enable_audit_logging"] = legacy_params["enable_audit_logging"]
         if legacy_params.get("rate_limit_requests") is not None:
-            security_config_params["rate_limit_requests"] = legacy_params[
-                "rate_limit_requests"
-            ]
+            security_config_params["rate_limit_requests"] = legacy_params["rate_limit_requests"]
         if legacy_params.get("rate_limit_burst") is not None:
-            security_config_params["rate_limit_burst"] = legacy_params[
-                "rate_limit_burst"
-            ]
+            security_config_params["rate_limit_burst"] = legacy_params["rate_limit_burst"]
 
         if legacy_params.get("enable_read_replicas") is not None:
-            performance_config_params["enable_read_replicas"] = legacy_params[
-                "enable_read_replicas"
-            ]
+            performance_config_params["enable_read_replicas"] = legacy_params["enable_read_replicas"]
         if legacy_params.get("enable_circuit_breaker") is not None:
-            performance_config_params["enable_circuit_breaker"] = legacy_params[
-                "enable_circuit_breaker"
-            ]
+            performance_config_params["enable_circuit_breaker"] = legacy_params["enable_circuit_breaker"]
         if legacy_params.get("circuit_breaker_threshold") is not None:
-            performance_config_params["circuit_breaker_threshold"] = legacy_params[
-                "circuit_breaker_threshold"
-            ]
+            performance_config_params["circuit_breaker_threshold"] = legacy_params["circuit_breaker_threshold"]
         if legacy_params.get("circuit_breaker_timeout") is not None:
-            performance_config_params["circuit_breaker_timeout"] = legacy_params[
-                "circuit_breaker_timeout"
-            ]
+            performance_config_params["circuit_breaker_timeout"] = legacy_params["circuit_breaker_timeout"]
 
         # Create sub-configurations with provided parameters, using defaults for
         # missing ones
-        pool_config = (
-            DatabasePoolConfig(**pool_config_params)
-            if pool_config_params
-            else DatabasePoolConfig()
-        )
+        pool_config = DatabasePoolConfig(**pool_config_params) if pool_config_params else DatabasePoolConfig()
         monitoring_config = (
             DatabaseMonitoringConfig(**monitoring_config_params)
             if monitoring_config_params
             else DatabaseMonitoringConfig()
         )
         security_config = (
-            DatabaseSecurityConfig(**security_config_params)
-            if security_config_params
-            else DatabaseSecurityConfig()
+            DatabaseSecurityConfig(**security_config_params) if security_config_params else DatabaseSecurityConfig()
         )
         performance_config = (
             DatabasePerformanceConfig(**performance_config_params)
@@ -838,9 +776,7 @@ class DatabaseService:
             )
 
             # Create Supabase client
-            self._supabase_client = create_client(
-                supabase_url, supabase_key, options=options
-            )
+            self._supabase_client = create_client(supabase_url, supabase_key, options=options)
 
             logger.debug("Supabase client initialized successfully")
 
@@ -910,9 +846,7 @@ class DatabaseService:
         @event.listens_for(self._sqlalchemy_engine, "checkin")
         def receive_checkin(dbapi_conn, connection_record):
             """Track connection checkin to pool."""
-            self._connection_stats.active_connections = max(
-                0, self._connection_stats.active_connections - 1
-            )
+            self._connection_stats.active_connections = max(0, self._connection_stats.active_connections - 1)
             if self._metrics:
                 self._metrics.connection_pool_used.labels(pool_type="lifo").set(
                     self._connection_stats.active_connections
@@ -935,12 +869,7 @@ class DatabaseService:
         async with asyncio.TaskGroup() as tg:
             # Test Supabase connection concurrently
             supabase_task = tg.create_task(
-                asyncio.to_thread(
-                    lambda: self._supabase_client.table("users")
-                    .select("id")
-                    .limit(1)
-                    .execute()
-                ),
+                asyncio.to_thread(lambda: self._supabase_client.table("users").select("id").limit(1).execute()),
                 name="supabase_connection_test",
             )
 
@@ -1013,10 +942,7 @@ class DatabaseService:
         # Check if circuit is open
         if self._circuit_breaker_open:
             # Check if timeout has passed
-            if (
-                time.time() - self._circuit_breaker_last_failure
-                > self.circuit_breaker_timeout
-            ):
+            if time.time() - self._circuit_breaker_last_failure > self.circuit_breaker_timeout:
                 # Try to close the circuit
                 self._circuit_breaker_open = False
                 self._circuit_breaker_failures = 0
@@ -1049,10 +975,7 @@ class DatabaseService:
         # Open circuit if threshold reached
         if self._circuit_breaker_failures >= self.circuit_breaker_threshold:
             self._circuit_breaker_open = True
-            logger.warning(
-                f"Circuit breaker opened after {self._circuit_breaker_failures} "
-                "failures"
-            )
+            logger.warning(f"Circuit breaker opened after {self._circuit_breaker_failures} failures")
 
     # Rate limiting implementation
 
@@ -1168,9 +1091,7 @@ class DatabaseService:
                         alert = SecurityAlert(
                             event_type=SecurityEvent.SLOW_QUERY_DETECTED,
                             severity="low",
-                            message=(
-                                f"Slow query detected: {query_type.value} on {table}"
-                            ),
+                            message=(f"Slow query detected: {query_type.value} on {table}"),
                             details={
                                 "query_type": query_type.value,
                                 "table": table,
@@ -1236,9 +1157,7 @@ class DatabaseService:
 
         async with self._monitor_query(QueryType.INSERT, table, user_id):
             try:
-                result = await asyncio.to_thread(
-                    lambda: self.client.table(table).insert(data).execute()
-                )
+                result = await asyncio.to_thread(lambda: self.client.table(table).insert(data).execute())
 
                 # Audit logging
                 if self.enable_audit_logging:
@@ -1493,10 +1412,7 @@ class DatabaseService:
                         # Add similarity threshold if provided
                         if similarity_threshold:
                             distance_threshold = 1 - similarity_threshold
-                            sql += (
-                                f" AND ({vector_column} <-> {vector_str}::vector) < "
-                                f"{distance_threshold}"
-                            )
+                            sql += f" AND ({vector_column} <-> {vector_str}::vector) < {distance_threshold}"
 
                         # Add filters
                         params = {}
@@ -1506,10 +1422,7 @@ class DatabaseService:
                                 params[f"param_{i}"] = value
 
                         # Order by similarity and limit
-                        sql += (
-                            f" ORDER BY {vector_column} <-> {vector_str}::vector "
-                            f"LIMIT {limit}"
-                        )
+                        sql += f" ORDER BY {vector_column} <-> {vector_str}::vector LIMIT {limit}"
 
                         # Execute query
                         result = conn.execute(text(sql), params)
@@ -1521,9 +1434,7 @@ class DatabaseService:
                     # Fallback to Supabase client (less efficient)
                     vector_str = f"[{','.join(map(str, query_vector))}]"
 
-                    query = self.client.table(table).select(
-                        f"*, {vector_column} <-> '{vector_str}' as distance"
-                    )
+                    query = self.client.table(table).select(f"*, {vector_column} <-> '{vector_str}' as distance")
 
                     if filters:
                         for key, value in filters.items():
@@ -1531,13 +1442,9 @@ class DatabaseService:
 
                     if similarity_threshold:
                         distance_threshold = 1 - similarity_threshold
-                        query = query.lt(
-                            f"{vector_column} <-> '{vector_str}'", distance_threshold
-                        )
+                        query = query.lt(f"{vector_column} <-> '{vector_str}'", distance_threshold)
 
-                    query = query.order(f"{vector_column} <-> '{vector_str}'").limit(
-                        limit
-                    )
+                    query = query.order(f"{vector_column} <-> '{vector_str}'").limit(limit)
 
                     result = await asyncio.to_thread(lambda: query.execute())
                     return result.data
@@ -1571,9 +1478,7 @@ class DatabaseTransactionContext:
     async def __aenter__(self):
         """Enter the async context manager."""
         await self.service.ensure_connected()
-        self._monitor_ctx = self.service._monitor_query(
-            QueryType.TRANSACTION, None, self.user_id
-        )
+        self._monitor_ctx = self.service._monitor_query(QueryType.TRANSACTION, None, self.user_id)
         self._query_id = await self._monitor_ctx.__aenter__()
         return self
 
@@ -1600,32 +1505,22 @@ class DatabaseTransactionContext:
         for operation in self.operations:
             op_type = operation[0]
             if op_type == "insert":
-                result = await self.service.insert(
-                    operation[1], operation[2], self.user_id
-                )
+                result = await self.service.insert(operation[1], operation[2], self.user_id)
             elif op_type == "update":
-                result = await self.service.update(
-                    operation[1], operation[2], operation[3], self.user_id
-                )
+                result = await self.service.update(operation[1], operation[2], operation[3], self.user_id)
             elif op_type == "delete":
-                result = await self.service.delete(
-                    operation[1], operation[2], self.user_id
-                )
+                result = await self.service.delete(operation[1], operation[2], self.user_id)
             results.append(result)
         return results
 
     # High-level business operations
 
-    async def create_trip(
-        self, trip_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def create_trip(self, trip_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Create a new trip record."""
         result = await self.insert("trips", trip_data, user_id)
         return result[0] if result else {}
 
-    async def get_trip(
-        self, trip_id: str, user_id: str | None = None
-    ) -> dict[str, Any] | None:
+    async def get_trip(self, trip_id: str, user_id: str | None = None) -> dict[str, Any] | None:
         """Get trip by ID."""
         result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
         if not result:
@@ -1637,13 +1532,9 @@ class DatabaseTransactionContext:
 
     async def get_user_trips(self, user_id: str) -> list[dict[str, Any]]:
         """Get all trips for a user."""
-        return await self.select(
-            "trips", "*", {"user_id": user_id}, order_by="-created_at", user_id=user_id
-        )
+        return await self.select("trips", "*", {"user_id": user_id}, order_by="-created_at", user_id=user_id)
 
-    async def update_trip(
-        self, trip_id: str, trip_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def update_trip(self, trip_id: str, trip_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Update trip record."""
         result = await self.update("trips", trip_data, {"id": trip_id}, user_id)
         if not result:
@@ -1680,9 +1571,7 @@ class DatabaseTransactionContext:
         result = await self.select("users", "*", {"email": email})
         return result[0] if result else None
 
-    async def update_user(
-        self, user_id: str, user_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def update_user(self, user_id: str, user_data: dict[str, Any]) -> dict[str, Any]:
         """Update user record."""
         result = await self.update("users", user_data, {"id": user_id})
         if not result:
@@ -1694,16 +1583,12 @@ class DatabaseTransactionContext:
 
     # Flight operations
 
-    async def save_flight_search(
-        self, search_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def save_flight_search(self, search_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Save flight search parameters."""
         result = await self.insert("flight_searches", search_data, user_id)
         return result[0] if result else {}
 
-    async def save_flight_option(
-        self, option_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def save_flight_option(self, option_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Save flight option."""
         result = await self.insert("flight_options", option_data, user_id)
         return result[0] if result else {}
@@ -1734,9 +1619,7 @@ class DatabaseTransactionContext:
         result = await self.insert("accommodation_options", option_data, user_id)
         return result[0] if result else {}
 
-    async def get_user_accommodation_searches(
-        self, user_id: str
-    ) -> list[dict[str, Any]]:
+    async def get_user_accommodation_searches(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's accommodation searches."""
         return await self.select(
             "accommodation_searches",
@@ -1748,16 +1631,12 @@ class DatabaseTransactionContext:
 
     # Chat operations
 
-    async def create_chat_session(
-        self, session_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def create_chat_session(self, session_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Create chat session."""
         result = await self.insert("chat_sessions", session_data, user_id)
         return result[0] if result else {}
 
-    async def save_chat_message(
-        self, message_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def save_chat_message(self, message_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Save chat message."""
         result = await self.insert("chat_messages", message_data, user_id)
         return result[0] if result else {}
@@ -1777,22 +1656,16 @@ class DatabaseTransactionContext:
 
     # API key operations
 
-    async def save_api_key(
-        self, key_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def save_api_key(self, key_data: dict[str, Any], user_id: str | None = None) -> dict[str, Any]:
         """Save API key configuration."""
-        result = await self.upsert(
-            "api_keys", key_data, on_conflict="user_id,service_name", user_id=user_id
-        )
+        result = await self.upsert("api_keys", key_data, on_conflict="user_id,service_name", user_id=user_id)
         return result[0] if result else {}
 
     async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's API keys."""
         return await self.select("api_keys", "*", {"user_id": user_id}, user_id=user_id)
 
-    async def get_api_key(
-        self, user_id: str, service_name: str
-    ) -> dict[str, Any] | None:
+    async def get_api_key(self, user_id: str, service_name: str) -> dict[str, Any] | None:
         """Get specific API key for user and service."""
         result = await self.select(
             "api_keys",
@@ -1804,16 +1677,12 @@ class DatabaseTransactionContext:
 
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         """Delete API key by ID with user authorization."""
-        result = await self.delete(
-            "api_keys", {"id": key_id, "user_id": user_id}, user_id
-        )
+        result = await self.delete("api_keys", {"id": key_id, "user_id": user_id}, user_id)
         return len(result) > 0
 
     async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
         """Delete API key by service name."""
-        result = await self.delete(
-            "api_keys", {"user_id": user_id, "service_name": service_name}, user_id
-        )
+        result = await self.delete("api_keys", {"user_id": user_id, "service_name": service_name}, user_id)
         return len(result) > 0
 
     # Additional API key methods for compatibility
@@ -1824,19 +1693,13 @@ class DatabaseTransactionContext:
         result = await self.insert("api_keys", key_data, user_id)
         return result[0] if result else {}
 
-    async def get_api_key_for_service(
-        self, user_id: str, service: str
-    ) -> dict[str, Any] | None:
+    async def get_api_key_for_service(self, user_id: str, service: str) -> dict[str, Any] | None:
         """Get API key for specific service - alias for get_api_key."""
         return await self.get_api_key(user_id, service)
 
-    async def get_api_key_by_id(
-        self, key_id: str, user_id: str
-    ) -> dict[str, Any] | None:
+    async def get_api_key_by_id(self, key_id: str, user_id: str) -> dict[str, Any] | None:
         """Get API key by ID with user authorization."""
-        result = await self.select(
-            "api_keys", "*", {"id": key_id, "user_id": user_id}, user_id=user_id
-        )
+        result = await self.select("api_keys", "*", {"id": key_id, "user_id": user_id}, user_id=user_id)
         return result[0] if result else None
 
     async def update_api_key_last_used(self, key_id: str) -> bool:
@@ -1853,9 +1716,7 @@ class DatabaseTransactionContext:
         )
         return len(result) > 0
 
-    async def update_api_key_validation(
-        self, key_id: str, is_valid: bool, validated_at: datetime
-    ) -> bool:
+    async def update_api_key_validation(self, key_id: str, is_valid: bool, validated_at: datetime) -> bool:
         """Update API key validation status."""
         from datetime import datetime, timezone
 
@@ -1870,9 +1731,7 @@ class DatabaseTransactionContext:
         )
         return len(result) > 0
 
-    async def update_api_key(
-        self, key_id: str, update_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def update_api_key(self, key_id: str, update_data: dict[str, Any]) -> dict[str, Any]:
         """Update an API key with new data."""
         result = await self.update("api_keys", update_data, {"id": key_id})
         return result[0] if result else {}
@@ -1910,9 +1769,7 @@ class DatabaseTransactionContext:
     ) -> dict[str, Any]:
         """Save destination with embedding."""
         destination_data["embedding"] = embedding
-        result = await self.upsert(
-            "destinations", destination_data, on_conflict="id", user_id=user_id
-        )
+        result = await self.upsert("destinations", destination_data, on_conflict="id", user_id=user_id)
         return result[0] if result else {}
 
     # Advanced query operations
@@ -1944,9 +1801,7 @@ class DatabaseTransactionContext:
                 else:
                     # Fallback to Supabase RPC
                     result = await asyncio.to_thread(
-                        lambda: self.client.rpc(
-                            "execute_sql", {"sql": sql, "params": params or {}}
-                        ).execute()
+                        lambda: self.client.rpc("execute_sql", {"sql": sql, "params": params or {}}).execute()
                     )
                     return result.data
             except Exception as e:
@@ -1969,9 +1824,7 @@ class DatabaseTransactionContext:
 
         async with self._monitor_query(QueryType.FUNCTION_CALL, function_name, user_id):
             try:
-                result = await asyncio.to_thread(
-                    lambda: self.client.rpc(function_name, params or {}).execute()
-                )
+                result = await asyncio.to_thread(lambda: self.client.rpc(function_name, params or {}).execute())
                 return result.data
             except Exception as e:
                 logger.error(f"Function call error for '{function_name}': {e}")
@@ -1984,9 +1837,7 @@ class DatabaseTransactionContext:
 
     # Trip-specific operations
 
-    async def get_trip_by_id(
-        self, trip_id: str, user_id: str | None = None
-    ) -> dict[str, Any] | None:
+    async def get_trip_by_id(self, trip_id: str, user_id: str | None = None) -> dict[str, Any] | None:
         """Get trip by ID - compatibility method."""
         try:
             result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
@@ -2022,9 +1873,7 @@ class DatabaseTransactionContext:
                 # Text search
                 if "query" in search_filters and search_filters["query"]:
                     search_text = search_filters["query"]
-                    query = query.or_(
-                        f"name.ilike.%{search_text}%,destination.ilike.%{search_text}%"
-                    )
+                    query = query.or_(f"name.ilike.%{search_text}%,destination.ilike.%{search_text}%")
 
                 # Filter by destinations
                 if "destinations" in search_filters and search_filters["destinations"]:
@@ -2042,13 +1891,9 @@ class DatabaseTransactionContext:
                 if "date_range" in search_filters:
                     date_range = search_filters["date_range"]
                     if "start_date" in date_range:
-                        query = query.gte(
-                            "start_date", date_range["start_date"].isoformat()
-                        )
+                        query = query.gte("start_date", date_range["start_date"].isoformat())
                     if "end_date" in date_range:
-                        query = query.lte(
-                            "end_date", date_range["end_date"].isoformat()
-                        )
+                        query = query.lte("end_date", date_range["end_date"].isoformat())
 
                 # Apply pagination and ordering
                 query = query.order("created_at", desc=True)
@@ -2069,14 +1914,10 @@ class DatabaseTransactionContext:
                     details={"error": str(e), "filters": search_filters},
                 ) from e
 
-    async def get_trip_collaborators(
-        self, trip_id: str, user_id: str | None = None
-    ) -> list[dict[str, Any]]:
+    async def get_trip_collaborators(self, trip_id: str, user_id: str | None = None) -> list[dict[str, Any]]:
         """Get trip collaborators."""
         try:
-            return await self.select(
-                "trip_collaborators", "*", {"trip_id": trip_id}, user_id=user_id
-            )
+            return await self.select("trip_collaborators", "*", {"trip_id": trip_id}, user_id=user_id)
         except Exception as e:
             logger.error(f"Failed to get trip collaborators for trip {trip_id}: {e}")
             raise CoreDatabaseError(
@@ -2087,37 +1928,25 @@ class DatabaseTransactionContext:
                 details={"error": str(e), "trip_id": trip_id},
             ) from e
 
-    async def get_trip_related_counts(
-        self, trip_id: str, user_id: str | None = None
-    ) -> dict[str, int]:
+    async def get_trip_related_counts(self, trip_id: str, user_id: str | None = None) -> dict[str, int]:
         """Get counts of related trip data."""
         try:
             results = {}
 
             # Count itinerary items
-            results["itinerary_count"] = await self.count(
-                "itinerary_items", {"trip_id": trip_id}, user_id
-            )
+            results["itinerary_count"] = await self.count("itinerary_items", {"trip_id": trip_id}, user_id)
 
             # Count flights
-            results["flight_count"] = await self.count(
-                "flights", {"trip_id": trip_id}, user_id
-            )
+            results["flight_count"] = await self.count("flights", {"trip_id": trip_id}, user_id)
 
             # Count accommodations
-            results["accommodation_count"] = await self.count(
-                "accommodations", {"trip_id": trip_id}, user_id
-            )
+            results["accommodation_count"] = await self.count("accommodations", {"trip_id": trip_id}, user_id)
 
             # Count transportation
-            results["transportation_count"] = await self.count(
-                "transportation", {"trip_id": trip_id}, user_id
-            )
+            results["transportation_count"] = await self.count("transportation", {"trip_id": trip_id}, user_id)
 
             # Count collaborators
-            results["collaborator_count"] = await self.count(
-                "trip_collaborators", {"trip_id": trip_id}, user_id
-            )
+            results["collaborator_count"] = await self.count("trip_collaborators", {"trip_id": trip_id}, user_id)
 
             return results
 
@@ -2130,9 +1959,7 @@ class DatabaseTransactionContext:
                 details={"error": str(e), "trip_id": trip_id},
             ) from e
 
-    async def add_trip_collaborator(
-        self, collaborator_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def add_trip_collaborator(self, collaborator_data: dict[str, Any]) -> dict[str, Any]:
         """Add trip collaborator."""
         try:
             # Ensure required fields
@@ -2168,9 +1995,7 @@ class DatabaseTransactionContext:
                 details={"error": str(e), "collaborator_data": collaborator_data},
             ) from e
 
-    async def get_trip_collaborator(
-        self, trip_id: str, user_id: str
-    ) -> dict[str, Any] | None:
+    async def get_trip_collaborator(self, trip_id: str, user_id: str) -> dict[str, Any] | None:
         """Get specific trip collaborator."""
         try:
             result = await self.select(
@@ -2182,14 +2007,9 @@ class DatabaseTransactionContext:
             return result[0] if result else None
 
         except Exception as e:
-            logger.error(
-                f"Failed to get trip collaborator for trip {trip_id}, "
-                f"user {user_id}: {e}"
-            )
+            logger.error(f"Failed to get trip collaborator for trip {trip_id}, user {user_id}: {e}")
             raise CoreDatabaseError(
-                message=(
-                    f"Failed to get collaborator for trip {trip_id} and user {user_id}"
-                ),
+                message=(f"Failed to get collaborator for trip {trip_id} and user {user_id}"),
                 code="GET_COLLABORATOR_FAILED",
                 operation="GET_TRIP_COLLABORATOR",
                 table="trip_collaborators",
@@ -2204,12 +2024,8 @@ class DatabaseTransactionContext:
         trip_count = await self.count("trips", {"user_id": user_id}, user_id)
 
         # Get search count
-        flight_searches = await self.count(
-            "flight_searches", {"user_id": user_id}, user_id
-        )
-        accommodation_searches = await self.count(
-            "accommodation_searches", {"user_id": user_id}, user_id
-        )
+        flight_searches = await self.count("flight_searches", {"user_id": user_id}, user_id)
+        accommodation_searches = await self.count("accommodation_searches", {"user_id": user_id}, user_id)
 
         return {
             "trip_count": trip_count,
@@ -2218,9 +2034,7 @@ class DatabaseTransactionContext:
             "total_searches": flight_searches + accommodation_searches,
         }
 
-    async def get_popular_destinations(
-        self, limit: int = 10, user_id: str | None = None
-    ) -> list[dict[str, Any]]:
+    async def get_popular_destinations(self, limit: int = 10, user_id: str | None = None) -> list[dict[str, Any]]:
         """Get most popular destinations."""
         return await self.execute_sql(
             """
@@ -2243,9 +2057,7 @@ class DatabaseTransactionContext:
             await self.ensure_connected()
 
             # Test Supabase connection
-            await asyncio.to_thread(
-                lambda: self.client.table("users").select("id").limit(1).execute()
-            )
+            await asyncio.to_thread(lambda: self.client.table("users").select("id").limit(1).execute())
 
             # Test SQLAlchemy connection if available
             if self._sqlalchemy_engine:
@@ -2266,9 +2078,7 @@ class DatabaseTransactionContext:
 
             return False
 
-    async def get_table_info(
-        self, table: str, user_id: str | None = None
-    ) -> dict[str, Any]:
+    async def get_table_info(self, table: str, user_id: str | None = None) -> dict[str, Any]:
         """Get table schema information."""
         try:
             result = await self.execute_sql(
@@ -2309,8 +2119,7 @@ class DatabaseTransactionContext:
                     "successful_queries": len(successful_queries),
                     "failed_queries": len(failed_queries),
                     "avg_query_time_ms": (
-                        sum(m.duration_ms for m in successful_queries)
-                        / len(successful_queries)
+                        sum(m.duration_ms for m in successful_queries) / len(successful_queries)
                         if successful_queries
                         else 0
                     ),
@@ -2322,9 +2131,7 @@ class DatabaseTransactionContext:
                 stats["security_stats"] = {
                     "total_alerts": len(self._security_alerts),
                     "alerts_by_type": self._get_alerts_by_type(),
-                    "recent_alerts": [
-                        alert.dict() for alert in self._security_alerts[-10:]
-                    ],
+                    "recent_alerts": [alert.dict() for alert in self._security_alerts[-10:]],
                 }
 
             # Add pool stats from SQLAlchemy
@@ -2445,9 +2252,7 @@ class DatabaseTransactionContext:
             pool = self._sqlalchemy_engine.pool
             total_capacity = self.pool_size + self.max_overflow
             used_connections = pool.checked_out_connections()
-            self._connection_stats.pool_utilization = (
-                used_connections / total_capacity
-            ) * 100
+            self._connection_stats.pool_utilization = (used_connections / total_capacity) * 100
             self._connection_stats.active_connections = used_connections
             self._connection_stats.idle_connections = pool.size() - used_connections
 
@@ -2455,31 +2260,25 @@ class DatabaseTransactionContext:
         if self._query_metrics:
             successful_queries = [m for m in self._query_metrics if m.success]
             if successful_queries:
-                self._connection_stats.avg_query_time_ms = sum(
-                    m.duration_ms for m in successful_queries
-                ) / len(successful_queries)
+                self._connection_stats.avg_query_time_ms = sum(m.duration_ms for m in successful_queries) / len(
+                    successful_queries
+                )
 
         # Update uptime
         self._connection_stats.uptime_seconds = time.time() - self._start_time
 
         return self._connection_stats
 
-    def get_recent_queries(
-        self, limit: int = 100, include_slow_only: bool = False
-    ) -> list[QueryMetrics]:
+    def get_recent_queries(self, limit: int = 100, include_slow_only: bool = False) -> list[QueryMetrics]:
         """Get recent query metrics."""
         queries = self._query_metrics[-limit:]
 
         if include_slow_only:
-            queries = [
-                q for q in queries if q.duration_ms > self.slow_query_threshold * 1000
-            ]
+            queries = [q for q in queries if q.duration_ms > self.slow_query_threshold * 1000]
 
         return queries
 
-    def get_security_alerts(
-        self, limit: int | None = None, severity: str | None = None
-    ) -> list[SecurityAlert]:
+    def get_security_alerts(self, limit: int | None = None, severity: str | None = None) -> list[SecurityAlert]:
         """Get security alerts with optional filtering."""
         alerts = self._security_alerts
 

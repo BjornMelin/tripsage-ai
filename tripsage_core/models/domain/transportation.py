@@ -64,36 +64,24 @@ class TransportationOffer(TripSageDomainModel):
     """
 
     id: str = Field(..., description="Offer ID")
-    transportation_type: TransportationType = Field(
-        ..., description="Type of transportation"
-    )
-    provider: Optional[TransportationProvider] = Field(
-        None, description="Transportation provider"
-    )
+    transportation_type: TransportationType = Field(..., description="Type of transportation")
+    provider: Optional[TransportationProvider] = Field(None, description="Transportation provider")
     pickup_location: TransportationLocation = Field(..., description="Pickup location")
-    dropoff_location: TransportationLocation = Field(
-        ..., description="Dropoff location"
-    )
+    dropoff_location: TransportationLocation = Field(..., description="Dropoff location")
     pickup_datetime: str = Field(..., description="Pickup date and time (ISO format)")
     dropoff_datetime: str = Field(..., description="Dropoff date and time (ISO format)")
     price: float = Field(..., description="Price for the transportation")
     currency: str = Field(..., description="Currency code")
-    vehicle: Optional[TransportationVehicle] = Field(
-        None, description="Vehicle information"
-    )
+    vehicle: Optional[TransportationVehicle] = Field(None, description="Vehicle information")
     distance_km: Optional[float] = Field(None, description="Distance in kilometers")
     duration_minutes: Optional[int] = Field(None, description="Duration in minutes")
     booking_url: Optional[str] = Field(None, description="URL for booking")
     cancellation_policy: Optional[str] = Field(None, description="Cancellation policy")
 
     # Source and tracking information
-    source: Optional[str] = Field(
-        None, description="Source of the offer (e.g., 'uber', 'lyft', 'rental_cars')"
-    )
+    source: Optional[str] = Field(None, description="Source of the offer (e.g., 'uber', 'lyft', 'rental_cars')")
     search_id: Optional[str] = Field(None, description="Associated search ID")
-    expires_at: Optional[str] = Field(
-        None, description="Offer expiration timestamp (ISO format)"
-    )
+    expires_at: Optional[str] = Field(None, description="Offer expiration timestamp (ISO format)")
 
     @field_validator("price")
     @classmethod

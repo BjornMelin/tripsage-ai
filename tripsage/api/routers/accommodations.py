@@ -121,20 +121,12 @@ async def search_accommodations(
     api_response = AccommodationSearchResponse(
         listings=service_results.listings,
         count=service_results.total_results,
-        currency=service_results.currency
-        if hasattr(service_results, "currency")
-        else "USD",
+        currency=service_results.currency if hasattr(service_results, "currency") else "USD",
         search_id=service_results.search_id,
         trip_id=getattr(request, "trip_id", None),
-        min_price=service_results.min_price
-        if hasattr(service_results, "min_price")
-        else None,
-        max_price=service_results.max_price
-        if hasattr(service_results, "max_price")
-        else None,
-        avg_price=service_results.avg_price
-        if hasattr(service_results, "avg_price")
-        else None,
+        min_price=service_results.min_price if hasattr(service_results, "min_price") else None,
+        max_price=service_results.max_price if hasattr(service_results, "max_price") else None,
+        avg_price=service_results.avg_price if hasattr(service_results, "avg_price") else None,
         search_request=request,  # Use the original API request
     )
 
@@ -162,9 +154,7 @@ async def get_accommodation_details(
     """
     user_id = get_principal_id(principal)
     # Service method is get_listing_details(listing_id, user_id), not get_accommodation_details(request)  # noqa: E501
-    listing = await accommodation_service.get_listing_details(
-        request.listing_id, user_id
-    )
+    listing = await accommodation_service.get_listing_details(request.listing_id, user_id)
     if not listing:
         raise ResourceNotFoundError(
             message=f"Accommodation listing with ID {request.listing_id} not found",
@@ -205,9 +195,7 @@ async def save_accommodation(
     user_id = get_principal_id(principal)
 
     # First get the listing details
-    listing = await accommodation_service.get_listing_details(
-        request.listing_id, user_id
-    )
+    listing = await accommodation_service.get_listing_details(request.listing_id, user_id)
     if not listing:
         raise ResourceNotFoundError(
             message=f"Accommodation listing with ID {request.listing_id} not found",
@@ -239,9 +227,7 @@ async def save_accommodation(
     )
 
 
-@router.delete(
-    "/saved/{saved_accommodation_id}", status_code=status.HTTP_204_NO_CONTENT
-)
+@router.delete("/saved/{saved_accommodation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_accommodation(
     saved_accommodation_id: UUID,
     principal: Principal = Depends(require_principal),
@@ -259,9 +245,7 @@ async def delete_saved_accommodation(
     """
     user_id = get_principal_id(principal)
     # Use cancel_booking to delete the saved accommodation
-    success = await accommodation_service.cancel_booking(
-        str(saved_accommodation_id), user_id
-    )
+    success = await accommodation_service.cancel_booking(str(saved_accommodation_id), user_id)
     if not success:
         raise ResourceNotFoundError(
             message=f"Saved accommodation with ID {saved_accommodation_id} not found",

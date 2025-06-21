@@ -139,9 +139,7 @@ def test_search_summary_unknown_type():
         timestamp=now,
         parameter_json={"type": "unknown", "query": "something"},
     )
-    expected_summary = (
-        "Search for unknown with parameters: {'type': 'unknown', 'query': 'something'}"
-    )
+    expected_summary = "Search for unknown with parameters: {'type': 'unknown', 'query': 'something'}"
     assert search_params.search_summary == expected_summary
 
 

@@ -40,18 +40,14 @@ class PlaywrightConfig(BaseModel):
     """Configuration for Playwright service."""
 
     headless: bool = Field(True, description="Run browser in headless mode")
-    browser_type: str = Field(
-        "chromium", description="Browser type: chromium, firefox, webkit"
-    )
+    browser_type: str = Field("chromium", description="Browser type: chromium, firefox, webkit")
     viewport_width: int = Field(1920, description="Viewport width")
     viewport_height: int = Field(1080, description="Viewport height")
     timeout: int = Field(30000, description="Default timeout in milliseconds")
     user_agent: Optional[str] = Field(None, description="Custom user agent")
     proxy: Optional[str] = Field(None, description="Proxy URL")
     disable_javascript: bool = Field(False, description="Disable JavaScript execution")
-    block_images: bool = Field(
-        False, description="Block image loading for faster scraping"
-    )
+    block_images: bool = Field(False, description="Block image loading for faster scraping")
     block_css: bool = Field(False, description="Block CSS loading for faster scraping")
 
 
@@ -64,12 +60,8 @@ class ScrapingResult(BaseModel):
     title: Optional[str] = Field(None, description="Page title")
     links: List[str] = Field(default_factory=list, description="Extracted links")
     images: List[str] = Field(default_factory=list, description="Extracted image URLs")
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
-    performance: Dict[str, Union[int, float]] = Field(
-        default_factory=dict, description="Performance metrics"
-    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    performance: Dict[str, Union[int, float]] = Field(default_factory=dict, description="Performance metrics")
     success: bool = Field(True, description="Whether scraping was successful")
     error: Optional[str] = Field(None, description="Error message if failed")
 
@@ -102,9 +94,7 @@ class PlaywrightService:
         self._connected = False
 
         # Concurrency control from settings
-        self._max_concurrent_pages = getattr(
-            self.settings, "playwright_max_concurrent_pages", 3
-        )
+        self._max_concurrent_pages = getattr(self.settings, "playwright_max_concurrent_pages", 3)
         self._page_semaphore = asyncio.Semaphore(self._max_concurrent_pages)
 
     def _build_config_from_settings(self) -> PlaywrightConfig:
@@ -117,9 +107,7 @@ class PlaywrightService:
             timeout=getattr(self.settings, "playwright_timeout", 30000),
             user_agent=getattr(self.settings, "playwright_user_agent", None),
             proxy=getattr(self.settings, "playwright_proxy", None),
-            disable_javascript=getattr(
-                self.settings, "playwright_disable_javascript", False
-            ),
+            disable_javascript=getattr(self.settings, "playwright_disable_javascript", False),
             block_images=getattr(self.settings, "playwright_block_images", False),
             block_css=getattr(self.settings, "playwright_block_css", False),
         )
@@ -275,17 +263,9 @@ class PlaywrightService:
                 # Disable JavaScript if configured
                 if self.config.disable_javascript:
                     await page.set_extra_http_headers(
-                        {
-                            "Accept": (
-                                "text/html,application/xhtml+xml,"
-                                "application/xml;q=0.9,*/*;q=0.8"
-                            )
-                        }
+                        {"Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")}
                     )
-                    await page.add_init_script(
-                        "Object.defineProperty(navigator, 'webdriver', "
-                        "{get: () => undefined})"
-                    )
+                    await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
                 # Navigate to URL
                 nav_start = time.time()
@@ -293,10 +273,7 @@ class PlaywrightService:
                 nav_time = time.time() - nav_start
 
                 if not response or not response.ok:
-                    error_msg = (
-                        f"Failed to load page: "
-                        f"{response.status if response else 'No response'}"
-                    )
+                    error_msg = f"Failed to load page: {response.status if response else 'No response'}"
                     return ScrapingResult(
                         url=url,
                         content="",
@@ -408,9 +385,7 @@ class PlaywrightService:
 
             except Exception as e:
                 total_time = time.time() - start_time
-                raise PlaywrightServiceError(
-                    f"Error scraping {url}: {str(e)}", original_error=e
-                ) from e
+                raise PlaywrightServiceError(f"Error scraping {url}: {str(e)}", original_error=e) from e
             finally:
                 if page:
                     await page.close()
@@ -476,9 +451,7 @@ class PlaywrightService:
 
         return processed_results
 
-    async def execute_custom_script(
-        self, url: str, script: str, wait_before_script: float = 1.0
-    ) -> Dict[str, Any]:
+    async def execute_custom_script(self, url: str, script: str, wait_before_script: float = 1.0) -> Dict[str, Any]:
         """
         Execute custom JavaScript on a page.
 
@@ -508,9 +481,7 @@ class PlaywrightService:
                 return {"success": True, "result": result}
 
             except Exception as e:
-                raise PlaywrightServiceError(
-                    f"Error executing script on {url}: {str(e)}", original_error=e
-                ) from e
+                raise PlaywrightServiceError(f"Error executing script on {url}: {str(e)}", original_error=e) from e
             finally:
                 if page:
                     await page.close()
@@ -548,9 +519,7 @@ class PlaywrightService:
                 return screenshot if not output_path else None
 
             except Exception as e:
-                raise PlaywrightServiceError(
-                    f"Error taking screenshot of {url}: {str(e)}", original_error=e
-                ) from e
+                raise PlaywrightServiceError(f"Error taking screenshot of {url}: {str(e)}", original_error=e) from e
             finally:
                 if page:
                     await page.close()
@@ -588,9 +557,7 @@ class PlaywrightService:
             options["wait_for_selector"] = ".menu, .hours, .contact, .reviews"
 
         # Add wait function for dynamic content
-        options["wait_for_function"] = (
-            f"() => new Promise(resolve => setTimeout(resolve, {wait_time * 1000}))"
-        )
+        options["wait_for_function"] = f"() => new Promise(resolve => setTimeout(resolve, {wait_time * 1000}))"
 
         return await self.scrape_url(url, **options)
 

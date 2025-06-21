@@ -70,9 +70,7 @@ def valid_jwt_token(mock_settings):
         "exp": int(time.time()) + 3600,  # Expires in 1 hour
         "iat": int(time.time()),
     }
-    return jwt.encode(
-        payload, mock_settings.database_jwt_secret.get_secret_value(), algorithm="HS256"
-    )
+    return jwt.encode(payload, mock_settings.database_jwt_secret.get_secret_value(), algorithm="HS256")
 
 
 @pytest.fixture
@@ -85,9 +83,7 @@ def expired_jwt_token(mock_settings):
         "exp": int(time.time()) - 3600,  # Expired 1 hour ago
         "iat": int(time.time()) - 7200,
     }
-    return jwt.encode(
-        payload, mock_settings.database_jwt_secret.get_secret_value(), algorithm="HS256"
-    )
+    return jwt.encode(payload, mock_settings.database_jwt_secret.get_secret_value(), algorithm="HS256")
 
 
 @pytest.fixture
@@ -101,9 +97,7 @@ class TestWebSocketAuthentication:
 
     @pytest.mark.asyncio
     @pytest.mark.security
-    async def test_valid_token_authentication(
-        self, auth_service, valid_jwt_token, mock_settings
-    ):
+    async def test_valid_token_authentication(self, auth_service, valid_jwt_token, mock_settings):
         """Test authentication with valid JWT token."""
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
@@ -117,9 +111,7 @@ class TestWebSocketAuthentication:
 
     @pytest.mark.asyncio
     @pytest.mark.security
-    async def test_expired_token_rejection(
-        self, auth_service, expired_jwt_token, mock_settings
-    ):
+    async def test_expired_token_rejection(self, auth_service, expired_jwt_token, mock_settings):
         """Test rejection of expired JWT tokens."""
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
@@ -132,9 +124,7 @@ class TestWebSocketAuthentication:
 
     @pytest.mark.asyncio
     @pytest.mark.security
-    async def test_malformed_token_rejection(
-        self, auth_service, malformed_jwt_token, mock_settings
-    ):
+    async def test_malformed_token_rejection(self, auth_service, malformed_jwt_token, mock_settings):
         """Test rejection of malformed JWT tokens."""
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
@@ -156,10 +146,7 @@ class TestWebSocketAuthentication:
             with pytest.raises(CoreAuthenticationError) as exc_info:
                 await auth_service.authenticate_token("")
 
-            assert (
-                "missing" in str(exc_info.value).lower()
-                or "empty" in str(exc_info.value).lower()
-            )
+            assert "missing" in str(exc_info.value).lower() or "empty" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
     @pytest.mark.security
@@ -209,9 +196,7 @@ class TestWebSocketAuthorization:
 
     @pytest.mark.asyncio
     @pytest.mark.security
-    async def test_user_session_access_control(
-        self, auth_service, valid_jwt_token, mock_settings
-    ):
+    async def test_user_session_access_control(self, auth_service, valid_jwt_token, mock_settings):
         """Test that users can only access their own sessions."""
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
@@ -226,9 +211,7 @@ class TestWebSocketAuthorization:
             with patch.object(auth_service, "_verify_session_access") as mock_verify:
                 mock_verify.return_value = True
 
-                access_result = await auth_service.verify_session_access(
-                    user_id, own_session_id
-                )
+                access_result = await auth_service.verify_session_access(user_id, own_session_id)
                 assert access_result is True
 
             # Test access to other user's session (should fail)
@@ -241,9 +224,7 @@ class TestWebSocketAuthorization:
 
     @pytest.mark.asyncio
     @pytest.mark.security
-    async def test_channel_subscription_authorization(
-        self, auth_service, valid_jwt_token, mock_settings
-    ):
+    async def test_channel_subscription_authorization(self, auth_service, valid_jwt_token, mock_settings):
         """Test that users can only subscribe to authorized channels."""
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
@@ -256,9 +237,7 @@ class TestWebSocketAuthorization:
             allowed_channels = [f"user:{user_id}", f"session:{uuid4()}", "general"]
 
             for channel in allowed_channels:
-                with patch.object(
-                    auth_service, "_verify_channel_access"
-                ) as mock_verify:
+                with patch.object(auth_service, "_verify_channel_access") as mock_verify:
                     mock_verify.return_value = True
 
                     result = await auth_service.verify_channel_access(user_id, channel)
@@ -272,12 +251,8 @@ class TestWebSocketAuthorization:
             ]
 
             for channel in forbidden_channels:
-                with patch.object(
-                    auth_service, "_verify_channel_access"
-                ) as mock_verify:
-                    mock_verify.side_effect = CoreAuthorizationError(
-                        "Channel access denied"
-                    )
+                with patch.object(auth_service, "_verify_channel_access") as mock_verify:
+                    mock_verify.side_effect = CoreAuthorizationError("Channel access denied")
 
                     with pytest.raises(CoreAuthorizationError):
                         await auth_service.verify_channel_access(user_id, channel)
@@ -332,7 +307,6 @@ class TestWebSocketRateLimiting:
 
         # Send messages rapidly
         messages_sent = 0
-        rate_limit_hit = False
 
         for i in range(100):
             try:
@@ -341,7 +315,7 @@ class TestWebSocketRateLimiting:
                 # Small delay to simulate rapid sending
                 await asyncio.sleep(0.001)
             except CoreRateLimitError:
-                rate_limit_hit = True
+                _rate_limit_hit = True
                 break
 
         # Should have hit rate limit before sending all 100 messages
@@ -359,7 +333,7 @@ class TestWebSocketRateLimiting:
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
             return_value=mock_settings,
         ):
-            user_id = "test-user-123"
+            _user_id = "test-user-123"
 
             # Simulate rapid connection attempts
             connection_attempts = 0
@@ -616,9 +590,7 @@ class TestWebSocketSessionSecurity:
 
     @pytest.mark.asyncio
     @pytest.mark.security
-    async def test_session_isolation(
-        self, auth_service, valid_jwt_token, mock_settings
-    ):
+    async def test_session_isolation(self, auth_service, valid_jwt_token, mock_settings):
         """Test that user sessions are properly isolated."""
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
@@ -652,14 +624,10 @@ class TestWebSocketSessionSecurity:
             user2_session = uuid4()
 
             with patch.object(auth_service, "_verify_session_access") as mock_verify:
-                mock_verify.side_effect = CoreAuthorizationError(
-                    "Session access denied"
-                )
+                mock_verify.side_effect = CoreAuthorizationError("Session access denied")
 
                 with pytest.raises(CoreAuthorizationError):
-                    await auth_service.verify_session_access(
-                        auth1["user_id"], user2_session
-                    )
+                    await auth_service.verify_session_access(auth1["user_id"], user2_session)
 
     @pytest.mark.asyncio
     @pytest.mark.security
@@ -722,9 +690,7 @@ class TestWebSocketSecurityIntegration:
     @pytest.mark.asyncio
     @pytest.mark.security
     @pytest.mark.integration
-    async def test_comprehensive_security_workflow(
-        self, test_client, auth_service, valid_jwt_token, mock_settings
-    ):
+    async def test_comprehensive_security_workflow(self, test_client, auth_service, valid_jwt_token, mock_settings):
         """Test complete security workflow from connection to cleanup."""
 
         with patch(
@@ -805,17 +771,13 @@ class TestWebSocketSecurityIntegration:
             with patch.object(auth_service, "_verify_session_access") as mock_verify:
                 # Legitimate access should work
                 mock_verify.return_value = True
-                result = await auth_service.verify_session_access(
-                    legitimate_user, victim_session
-                )
+                result = await auth_service.verify_session_access(legitimate_user, victim_session)
                 assert result is True
 
                 # Attacker access should fail
                 mock_verify.side_effect = CoreAuthorizationError("Access denied")
                 with pytest.raises(CoreAuthorizationError):
-                    await auth_service.verify_session_access(
-                        attacker_user, victim_session
-                    )
+                    await auth_service.verify_session_access(attacker_user, victim_session)
 
             # Scenario 3: DoS via connection flooding
             attacker_id = "attacker-789"

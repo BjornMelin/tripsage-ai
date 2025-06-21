@@ -169,9 +169,7 @@ class TestApiKeyPerformance:
         print(f"Max time: {benchmark.stats['max']:.4f}s")
 
     @pytest.mark.asyncio
-    async def test_api_key_creation_performance(
-        self, api_key_service, sample_users, benchmark
-    ):
+    async def test_api_key_creation_performance(self, api_key_service, sample_users, benchmark):
         """Benchmark API key creation performance."""
         user_id = sample_users[0]
 
@@ -244,9 +242,7 @@ class TestApiKeyPerformance:
             # Create validation tasks
             tasks = []
             for i in range(50):  # 50 concurrent validations
-                task = api_key_service.validate_api_key(
-                    ServiceType.OPENAI, sample_api_keys[i], str(uuid.uuid4())
-                )
+                task = api_key_service.validate_api_key(ServiceType.OPENAI, sample_api_keys[i], str(uuid.uuid4()))
                 tasks.append(task)
 
             # Execute all validations concurrently
@@ -256,16 +252,12 @@ class TestApiKeyPerformance:
             total_time = end_time - start_time
 
             # Analyze results
-            successful_validations = sum(
-                1 for r in results if isinstance(r, ValidationResult) and r.is_valid
-            )
+            successful_validations = sum(1 for r in results if isinstance(r, ValidationResult) and r.is_valid)
             failed_validations = len(results) - successful_validations
 
             # Performance assertions
             assert total_time < 10.0, f"Load test took too long: {total_time:.2f}s"
-            assert successful_validations >= 45, (
-                f"Too many failures: {failed_validations}"
-            )
+            assert successful_validations >= 45, f"Too many failures: {failed_validations}"
 
             # Calculate performance metrics
             throughput = len(results) / total_time
@@ -280,9 +272,7 @@ class TestApiKeyPerformance:
             print(f"Average latency: {avg_latency * 1000:.2f}ms")
 
     @pytest.mark.asyncio
-    async def test_database_performance_under_load(
-        self, api_key_service, sample_users, sample_api_keys
-    ):
+    async def test_database_performance_under_load(self, api_key_service, sample_users, sample_api_keys):
         """Test database performance under concurrent operations."""
         start_time = time.time()
 
@@ -306,16 +296,12 @@ class TestApiKeyPerformance:
                     key_value=sample_api_keys[i],
                     description=f"Load test key {i}",
                 )
-                task = api_key_service.create_api_key(
-                    sample_users[i % len(sample_users)], request
-                )
+                task = api_key_service.create_api_key(sample_users[i % len(sample_users)], request)
                 tasks.append(("create", task))
 
             # List operations (20 concurrent)
             for i in range(20):
-                task = api_key_service.list_user_keys(
-                    sample_users[i % len(sample_users)]
-                )
+                task = api_key_service.list_user_keys(sample_users[i % len(sample_users)])
                 tasks.append(("list", task))
 
             # Execute all operations
@@ -329,17 +315,11 @@ class TestApiKeyPerformance:
             create_count = sum(1 for op_type, _ in tasks if op_type == "create")
             list_count = sum(1 for op_type, _ in tasks if op_type == "list")
 
-            successful_operations = sum(
-                1 for r in results if not isinstance(r, Exception)
-            )
+            successful_operations = sum(1 for r in results if not isinstance(r, Exception))
 
             # Performance assertions
-            assert total_time < 15.0, (
-                f"Database load test took too long: {total_time:.2f}s"
-            )
-            assert successful_operations >= 45, (
-                f"Too many database failures: {len(results) - successful_operations}"
-            )
+            assert total_time < 15.0, f"Database load test took too long: {total_time:.2f}s"
+            assert successful_operations >= 45, f"Too many database failures: {len(results) - successful_operations}"
 
             print("\nDatabase Load Test Results:")
             print(f"Create operations: {create_count}")
@@ -383,21 +363,15 @@ class TestApiKeyPerformance:
 
             # First round - should be cache misses
             for key in test_keys:
-                await api_key_service.validate_api_key(
-                    ServiceType.OPENAI, key, str(uuid.uuid4())
-                )
+                await api_key_service.validate_api_key(ServiceType.OPENAI, key, str(uuid.uuid4()))
 
             # Second round - should be cache hits
             for key in test_keys:
-                await api_key_service.validate_api_key(
-                    ServiceType.OPENAI, key, str(uuid.uuid4())
-                )
+                await api_key_service.validate_api_key(ServiceType.OPENAI, key, str(uuid.uuid4()))
 
             # Third round - more cache hits
             for key in test_keys:
-                await api_key_service.validate_api_key(
-                    ServiceType.OPENAI, key, str(uuid.uuid4())
-                )
+                await api_key_service.validate_api_key(ServiceType.OPENAI, key, str(uuid.uuid4()))
 
             end_time = time.time()
             total_time = end_time - start_time
@@ -457,9 +431,7 @@ class TestApiKeyPerformance:
             print(f"Memory per operation: {memory_increase / 100:.3f} MB")
 
             # Memory usage assertions
-            assert memory_increase < 50, (
-                f"Memory usage too high: {memory_increase:.2f} MB"
-            )
+            assert memory_increase < 50, f"Memory usage too high: {memory_increase:.2f} MB"
 
     @pytest.mark.asyncio
     async def test_stress_test_extreme_load(self, api_key_service):
@@ -480,9 +452,7 @@ class TestApiKeyPerformance:
             # Create extreme load: 200 concurrent operations
             tasks = []
             for i in range(200):
-                task = api_key_service.validate_api_key(
-                    ServiceType.OPENAI, f"sk-stress_test_{i}", str(uuid.uuid4())
-                )
+                task = api_key_service.validate_api_key(ServiceType.OPENAI, f"sk-stress_test_{i}", str(uuid.uuid4()))
                 tasks.append(task)
 
             start_time = time.time()
@@ -527,9 +497,7 @@ class TestApiKeyPerformance:
             print(f"Throughput: {total_ops / total_time:.2f} ops/sec")
 
             # Stress test assertions (more lenient)
-            assert success_rate > 0.7, (
-                f"Success rate too low under stress: {success_rate:.2%}"
-            )
+            assert success_rate > 0.7, f"Success rate too low under stress: {success_rate:.2%}"
             assert timeouts < total_ops * 0.1, f"Too many timeouts: {timeouts}"
 
     def test_hash_performance_benchmark(self, benchmark):
@@ -573,10 +541,7 @@ class TestApiKeyPerformance:
             print("\nService Health Check Performance:")
             print(f"Services checked: {len(health_checks)}")
             print(f"Total time: {total_time:.3f}s")
-            print(
-                f"Average time per service: "
-                f"{total_time / len(health_checks) * 1000:.2f}ms"
-            )
+            print(f"Average time per service: {total_time / len(health_checks) * 1000:.2f}ms")
 
             # Performance assertions
             assert total_time < 5.0, f"Health checks took too long: {total_time:.2f}s"
@@ -622,32 +587,19 @@ class TestApiKeyPerformance:
 
             print("\nPerformance Baseline Results:")
             print(
-                f"Encryption time: {encryption_time * 1000:.2f}ms "
-                f"(baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
+                f"Encryption time: {encryption_time * 1000:.2f}ms (baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
             )
             print(
-                f"Decryption time: {decryption_time * 1000:.2f}ms "
-                f"(baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
+                f"Decryption time: {decryption_time * 1000:.2f}ms (baseline: {BASELINE_ENCRYPTION_TIME * 1000:.2f}ms)"
             )
-            print(
-                f"Creation time: {creation_time * 1000:.2f}ms "
-                f"(baseline: {BASELINE_CREATION_TIME * 1000:.2f}ms)"
-            )
+            print(f"Creation time: {creation_time * 1000:.2f}ms (baseline: {BASELINE_CREATION_TIME * 1000:.2f}ms)")
 
             # Regression assertions (allow 50% variance from baseline)
-            assert encryption_time < BASELINE_ENCRYPTION_TIME * 1.5, (
-                "Encryption performance regression"
-            )
-            assert decryption_time < BASELINE_ENCRYPTION_TIME * 1.5, (
-                "Decryption performance regression"
-            )
-            assert creation_time < BASELINE_CREATION_TIME * 1.5, (
-                "Creation performance regression"
-            )
+            assert encryption_time < BASELINE_ENCRYPTION_TIME * 1.5, "Encryption performance regression"
+            assert decryption_time < BASELINE_ENCRYPTION_TIME * 1.5, "Decryption performance regression"
+            assert creation_time < BASELINE_CREATION_TIME * 1.5, "Creation performance regression"
 
-    def test_database_performance_under_concurrent_load(
-        self, api_key_service, mock_cache, mock_db, benchmark
-    ):
+    def test_database_performance_under_concurrent_load(self, api_key_service, mock_cache, mock_db, benchmark):
         """
         Test database performance under high concurrent load.
 
@@ -707,9 +659,7 @@ class TestApiKeyPerformance:
                     }
 
                     query_end = time.time()
-                    query_metrics["response_times"].append(
-                        (query_end - query_start) * 1000
-                    )
+                    query_metrics["response_times"].append((query_end - query_start) * 1000)
 
                     return [result]
 
@@ -750,9 +700,7 @@ class TestApiKeyPerformance:
                         results = []
 
                     query_end = time.time()
-                    query_metrics["response_times"].append(
-                        (query_end - query_start) * 1000
-                    )
+                    query_metrics["response_times"].append((query_end - query_start) * 1000)
 
                     return results
 
@@ -775,16 +723,12 @@ class TestApiKeyPerformance:
 
                     result = {
                         "id": filters.get("id", str(uuid.uuid4())),
-                        "last_used": data.get(
-                            "last_used", datetime.now(timezone.utc).isoformat()
-                        ),
+                        "last_used": data.get("last_used", datetime.now(timezone.utc).isoformat()),
                         "usage_count": random.randint(1, 100),
                     }
 
                     query_end = time.time()
-                    query_metrics["response_times"].append(
-                        (query_end - query_start) * 1000
-                    )
+                    query_metrics["response_times"].append((query_end - query_start) * 1000)
 
                     return [result]
 
@@ -816,14 +760,10 @@ class TestApiKeyPerformance:
                 creation_tasks.append(mock_db.insert("api_keys", key_data))
 
             creation_start = time.time()
-            creation_results = await asyncio.gather(
-                *creation_tasks, return_exceptions=True
-            )
+            creation_results = await asyncio.gather(*creation_tasks, return_exceptions=True)
             creation_time = (time.time() - creation_start) * 1000
 
-            successful_creations = len(
-                [r for r in creation_results if not isinstance(r, Exception)]
-            )
+            successful_creations = len([r for r in creation_results if not isinstance(r, Exception)])
 
             # Phase 2: Concurrent key retrieval (read-heavy)
             retrieval_tasks = []
@@ -831,14 +771,10 @@ class TestApiKeyPerformance:
                 retrieval_tasks.append(mock_db.select("api_keys", {"user_id": user_id}))
 
             retrieval_start = time.time()
-            retrieval_results = await asyncio.gather(
-                *retrieval_tasks, return_exceptions=True
-            )
+            retrieval_results = await asyncio.gather(*retrieval_tasks, return_exceptions=True)
             retrieval_time = (time.time() - retrieval_start) * 1000
 
-            successful_retrievals = len(
-                [r for r in retrieval_results if not isinstance(r, Exception)]
-            )
+            successful_retrievals = len([r for r in retrieval_results if not isinstance(r, Exception)])
 
             # Phase 3: Mixed operations (concurrent read/write)
             mixed_tasks = []
@@ -867,9 +803,7 @@ class TestApiKeyPerformance:
             mixed_results = await asyncio.gather(*mixed_tasks, return_exceptions=True)
             mixed_time = (time.time() - mixed_start) * 1000
 
-            successful_mixed = len(
-                [r for r in mixed_results if not isinstance(r, Exception)]
-            )
+            successful_mixed = len([r for r in mixed_results if not isinstance(r, Exception)])
 
             # Calculate performance metrics
             performance_metrics = {
@@ -883,9 +817,7 @@ class TestApiKeyPerformance:
                 "avg_query_time_ms": statistics.mean(query_metrics["response_times"])
                 if query_metrics["response_times"]
                 else 0,
-                "max_query_time_ms": max(query_metrics["response_times"])
-                if query_metrics["response_times"]
-                else 0,
+                "max_query_time_ms": max(query_metrics["response_times"]) if query_metrics["response_times"] else 0,
                 "connection_timeouts": query_metrics["connection_timeouts"],
                 "deadlock_detections": query_metrics["deadlock_detections"],
                 "queries_per_second": query_metrics["total_queries"]
@@ -900,24 +832,12 @@ class TestApiKeyPerformance:
         results = benchmark(lambda: asyncio.run(run_concurrent_database_operations()))
 
         # Performance assertions
-        assert results["successful_creations"] >= 20, (
-            "Too many creation failures under load"
-        )
-        assert results["successful_retrievals"] >= 45, (
-            "Too many retrieval failures under load"
-        )
-        assert results["successful_mixed"] >= 25, (
-            "Too many mixed operation failures under load"
-        )
-        assert results["creation_time_ms"] < 2000, (
-            "Creation operations too slow under concurrent load"
-        )
-        assert results["retrieval_time_ms"] < 1000, (
-            "Retrieval operations too slow under concurrent load"
-        )
-        assert results["mixed_operations_time_ms"] < 1500, (
-            "Mixed operations too slow under concurrent load"
-        )
+        assert results["successful_creations"] >= 20, "Too many creation failures under load"
+        assert results["successful_retrievals"] >= 45, "Too many retrieval failures under load"
+        assert results["successful_mixed"] >= 25, "Too many mixed operation failures under load"
+        assert results["creation_time_ms"] < 2000, "Creation operations too slow under concurrent load"
+        assert results["retrieval_time_ms"] < 1000, "Retrieval operations too slow under concurrent load"
+        assert results["mixed_operations_time_ms"] < 1500, "Mixed operations too slow under concurrent load"
         assert results["avg_query_time_ms"] < 50, "Average query time too slow"
         assert results["connection_timeouts"] < 5, "Too many connection timeouts"
         assert results["queries_per_second"] > 50, "Query throughput too low"
@@ -925,10 +845,7 @@ class TestApiKeyPerformance:
         print("\nDatabase Concurrent Performance Results:")
         print(f"  Creation Time: {results['creation_time_ms']:.2f}ms (25 concurrent)")
         print(f"  Retrieval Time: {results['retrieval_time_ms']:.2f}ms (50 concurrent)")
-        print(
-            f"  Mixed Operations: {results['mixed_operations_time_ms']:.2f}ms "
-            f"(30 concurrent)"
-        )
+        print(f"  Mixed Operations: {results['mixed_operations_time_ms']:.2f}ms (30 concurrent)")
         print(f"  Average Query Time: {results['avg_query_time_ms']:.2f}ms")
         print(f"  Max Query Time: {results['max_query_time_ms']:.2f}ms")
         print(f"  Queries Per Second: {results['queries_per_second']:.2f}")
@@ -937,9 +854,7 @@ class TestApiKeyPerformance:
 
         return results
 
-    def test_cache_hit_miss_ratio_under_load(
-        self, api_key_service, mock_cache, benchmark
-    ):
+    def test_cache_hit_miss_ratio_under_load(self, api_key_service, mock_cache, benchmark):
         """
         Test cache hit/miss ratios under various load conditions.
 
@@ -978,24 +893,18 @@ class TestApiKeyPerformance:
                     if ttl_expiry and time.time() > ttl_expiry:
                         del cache_storage[key]
                         cache_metrics["misses"] += 1
-                        cache_metrics["avg_miss_time"].append(
-                            (time.time() - start_time) * 1000
-                        )
+                        cache_metrics["avg_miss_time"].append((time.time() - start_time) * 1000)
                         return None
 
                     cache_metrics["hits"] += 1
-                    cache_metrics["avg_hit_time"].append(
-                        (time.time() - start_time) * 1000
-                    )
+                    cache_metrics["avg_hit_time"].append((time.time() - start_time) * 1000)
 
                     # Simulate cache hit latency (faster than miss)
                     await asyncio.sleep(random.uniform(0.0001, 0.0005))
                     return value
                 else:
                     cache_metrics["misses"] += 1
-                    cache_metrics["avg_miss_time"].append(
-                        (time.time() - start_time) * 1000
-                    )
+                    cache_metrics["avg_miss_time"].append((time.time() - start_time) * 1000)
 
                     # Simulate cache miss latency (slower)
                     await asyncio.sleep(random.uniform(0.001, 0.003))
@@ -1007,9 +916,7 @@ class TestApiKeyPerformance:
                 # Simulate memory pressure - evict random keys if at capacity
                 if len(cache_storage) >= MAX_CACHE_SIZE:
                     cache_metrics["memory_pressure_events"] += 1
-                    evict_keys = random.sample(
-                        list(cache_storage.keys()), min(10, len(cache_storage) // 4)
-                    )
+                    evict_keys = random.sample(list(cache_storage.keys()), min(10, len(cache_storage) // 4))
                     for evict_key in evict_keys:
                         del cache_storage[evict_key]
                         cache_metrics["evictions"] += 1
@@ -1113,14 +1020,8 @@ class TestApiKeyPerformance:
 
             # Calculate final metrics
             total_operations = cache_metrics["hits"] + cache_metrics["misses"]
-            hit_ratio = (
-                cache_metrics["hits"] / total_operations if total_operations > 0 else 0
-            )
-            miss_ratio = (
-                cache_metrics["misses"] / total_operations
-                if total_operations > 0
-                else 0
-            )
+            hit_ratio = cache_metrics["hits"] / total_operations if total_operations > 0 else 0
+            miss_ratio = cache_metrics["misses"] / total_operations if total_operations > 0 else 0
 
             performance_metrics = {
                 "cold_cache_time_ms": cold_time,
@@ -1140,8 +1041,7 @@ class TestApiKeyPerformance:
                 "avg_miss_time_ms": statistics.mean(cache_metrics["avg_miss_time"])
                 if cache_metrics["avg_miss_time"]
                 else 0,
-                "cache_efficiency": hit_ratio
-                * (1 - (cache_metrics["evictions"] / total_operations))
+                "cache_efficiency": hit_ratio * (1 - (cache_metrics["evictions"] / total_operations))
                 if total_operations > 0
                 else 0,
             }
@@ -1152,18 +1052,12 @@ class TestApiKeyPerformance:
         results = benchmark(lambda: asyncio.run(run_cache_load_scenarios()))
 
         # Performance assertions
-        assert results["hit_ratio"] >= 0.3, (
-            "Cache hit ratio too low - ineffective caching"
-        )
+        assert results["hit_ratio"] >= 0.3, "Cache hit ratio too low - ineffective caching"
         assert results["avg_hit_time_ms"] < 5, "Cache hits too slow"
         assert results["avg_miss_time_ms"] < 20, "Cache misses too slow"
-        assert results["hot_cache_time_ms"] < results["cold_cache_time_ms"], (
-            "Hot cache should be faster than cold"
-        )
+        assert results["hot_cache_time_ms"] < results["cold_cache_time_ms"], "Hot cache should be faster than cold"
         assert results["cache_efficiency"] >= 0.25, "Overall cache efficiency too low"
-        assert results["evictions"] < results["total_hits"] + results["total_misses"], (
-            "Too many evictions"
-        )
+        assert results["evictions"] < results["total_hits"] + results["total_misses"], "Too many evictions"
 
         print("\nCache Performance Under Load Results:")
         print(f"  Hit Ratio: {results['hit_ratio']:.2%}")
@@ -1179,9 +1073,7 @@ class TestApiKeyPerformance:
 
         return results
 
-    def test_memory_usage_and_resource_monitoring(
-        self, api_key_service, mock_cache, mock_db, benchmark
-    ):
+    def test_memory_usage_and_resource_monitoring(self, api_key_service, mock_cache, mock_db, benchmark):
         """
         Test memory usage and system resource monitoring during API key operations.
 
@@ -1250,16 +1142,12 @@ class TestApiKeyPerformance:
                         resource_metrics["gc_collections"].append(
                             {
                                 "timestamp": time.time(),
-                                "collections": [
-                                    stat["collections"] for stat in gc_stats
-                                ],
+                                "collections": [stat["collections"] for stat in gc_stats],
                             }
                         )
 
                         # Memory leak detection (simple heuristic)
-                        if (
-                            memory_mb > baseline_memory * 2
-                        ):  # 2x baseline = potential leak
+                        if memory_mb > baseline_memory * 2:  # 2x baseline = potential leak
                             resource_metrics["memory_leaks_detected"] += 1
 
                         time.sleep(0.1)  # Sample every 100ms
@@ -1275,23 +1163,13 @@ class TestApiKeyPerformance:
 
         async def run_memory_intensive_operations():
             """Run memory-intensive API key operations."""
-            resource_metrics, monitoring_active, monitor_thread = (
-                setup_resource_monitoring()
-            )
+            resource_metrics, monitoring_active, monitor_thread = setup_resource_monitoring()
 
             # Phase 1: Baseline memory measurement
             baseline_start = time.time()
             await asyncio.sleep(0.5)  # Let baseline settle
-            baseline_samples = [
-                s
-                for s in resource_metrics["memory_samples"]
-                if s["timestamp"] >= baseline_start
-            ]
-            baseline_memory = (
-                statistics.mean([s["memory_mb"] for s in baseline_samples])
-                if baseline_samples
-                else 0
-            )
+            baseline_samples = [s for s in resource_metrics["memory_samples"] if s["timestamp"] >= baseline_start]
+            baseline_memory = statistics.mean([s["memory_mb"] for s in baseline_samples]) if baseline_samples else 0
 
             # Phase 2: Memory-intensive encryption operations
             print("  Running memory-intensive encryption operations...")
@@ -1318,9 +1196,7 @@ class TestApiKeyPerformance:
             # Setup mocks for concurrent operations
             async def mock_memory_intensive_insert(table, data):
                 # Simulate memory allocation during database operations
-                temp_data = [
-                    data.copy() for _ in range(50)
-                ]  # Temporary memory allocation
+                temp_data = [data.copy() for _ in range(50)]  # Temporary memory allocation
                 await asyncio.sleep(random.uniform(0.005, 0.015))
                 temp_data.clear()  # Cleanup
                 return [data]
@@ -1330,9 +1206,7 @@ class TestApiKeyPerformance:
                 large_results = [
                     {
                         "id": f"key_{i}",
-                        "user_id": filters.get("user_id", "test")
-                        if filters
-                        else "test",
+                        "user_id": filters.get("user_id", "test") if filters else "test",
                         "large_data": "x" * 1000,  # 1KB per result
                         "service": "openai",
                     }
@@ -1353,15 +1227,11 @@ class TestApiKeyPerformance:
                         "user_id": str(uuid.uuid4()),
                         "name": f"Memory Test Key {i}",
                         "service": "openai",
-                        "encrypted_key": (
-                            f"encrypted_{'z' * 500}_{i}"
-                        ),  # Large encrypted values
+                        "encrypted_key": (f"encrypted_{'z' * 500}_{i}"),  # Large encrypted values
                     }
                     concurrent_tasks.append(mock_db.insert("api_keys", key_data))
                 else:
-                    concurrent_tasks.append(
-                        mock_db.select("api_keys", {"user_id": "test"})
-                    )
+                    concurrent_tasks.append(mock_db.select("api_keys", {"user_id": "test"}))
 
             await asyncio.gather(*concurrent_tasks)
             concurrent_time = time.time() - concurrent_start
@@ -1387,9 +1257,7 @@ class TestApiKeyPerformance:
             # Calculate final metrics
             final_samples = resource_metrics["memory_samples"][-10:]  # Last 10 samples
             final_memory = (
-                statistics.mean([s["memory_mb"] for s in final_samples])
-                if final_samples
-                else baseline_memory
+                statistics.mean([s["memory_mb"] for s in final_samples]) if final_samples else baseline_memory
             )
 
             # Memory efficiency calculations
@@ -1399,16 +1267,10 @@ class TestApiKeyPerformance:
                 else baseline_memory
             )
             memory_overhead = max_memory_during_ops - baseline_memory
-            memory_efficiency = (
-                1 - (memory_overhead / baseline_memory) if baseline_memory > 0 else 0
-            )
+            memory_efficiency = 1 - (memory_overhead / baseline_memory) if baseline_memory > 0 else 0
 
             # CPU analysis
-            cpu_samples = [
-                s["cpu_percent"]
-                for s in resource_metrics["cpu_samples"]
-                if s["cpu_percent"] > 0
-            ]
+            cpu_samples = [s["cpu_percent"] for s in resource_metrics["cpu_samples"] if s["cpu_percent"] > 0]
             avg_cpu = statistics.mean(cpu_samples) if cpu_samples else 0
             peak_cpu = max(cpu_samples) if cpu_samples else 0
 
@@ -1426,9 +1288,7 @@ class TestApiKeyPerformance:
                 "cleanup_time_sec": cleanup_time,
                 "gc_collections": collected,
                 "total_memory_samples": len(resource_metrics["memory_samples"]),
-                "memory_growth_rate": (final_memory - baseline_memory) / encryption_time
-                if encryption_time > 0
-                else 0,
+                "memory_growth_rate": (final_memory - baseline_memory) / encryption_time if encryption_time > 0 else 0,
             }
 
             return performance_metrics
@@ -1437,24 +1297,12 @@ class TestApiKeyPerformance:
         results = benchmark(lambda: asyncio.run(run_memory_intensive_operations()))
 
         # Resource usage assertions
-        assert results["memory_leaks_detected"] == 0, (
-            "Memory leaks detected during operations"
-        )
-        assert results["memory_efficiency"] >= 0.6, (
-            "Memory efficiency too low - excessive overhead"
-        )
-        assert results["peak_memory_mb"] < results["baseline_memory_mb"] * 3, (
-            "Excessive memory usage (>3x baseline)"
-        )
-        assert results["avg_cpu_percent"] < 80, (
-            "Average CPU usage too high during operations"
-        )
-        assert results["memory_growth_rate"] < 10, (
-            "Memory growth rate too high (MB/sec)"
-        )
-        assert results["final_memory_mb"] <= results["baseline_memory_mb"] * 1.2, (
-            "Memory not properly cleaned up"
-        )
+        assert results["memory_leaks_detected"] == 0, "Memory leaks detected during operations"
+        assert results["memory_efficiency"] >= 0.6, "Memory efficiency too low - excessive overhead"
+        assert results["peak_memory_mb"] < results["baseline_memory_mb"] * 3, "Excessive memory usage (>3x baseline)"
+        assert results["avg_cpu_percent"] < 80, "Average CPU usage too high during operations"
+        assert results["memory_growth_rate"] < 10, "Memory growth rate too high (MB/sec)"
+        assert results["final_memory_mb"] <= results["baseline_memory_mb"] * 1.2, "Memory not properly cleaned up"
 
         print("\nMemory and Resource Monitoring Results:")
         print(f"  Baseline Memory: {results['baseline_memory_mb']:.2f} MB")
@@ -1471,9 +1319,7 @@ class TestApiKeyPerformance:
 
         return results
 
-    def test_comprehensive_performance_regression_suite(
-        self, api_key_service, mock_cache, mock_db, benchmark
-    ):
+    def test_comprehensive_performance_regression_suite(self, api_key_service, mock_cache, mock_db, benchmark):
         """
         Comprehensive performance regression test suite.
 
@@ -1544,17 +1390,13 @@ class TestApiKeyPerformance:
             results["encryption_performance"] = {
                 "avg_time_ms": statistics.mean(encryption_times),
                 "max_time_ms": max(encryption_times),
-                "std_dev_ms": statistics.stdev(encryption_times)
-                if len(encryption_times) > 1
-                else 0,
+                "std_dev_ms": statistics.stdev(encryption_times) if len(encryption_times) > 1 else 0,
             }
 
             results["decryption_performance"] = {
                 "avg_time_ms": statistics.mean(decryption_times),
                 "max_time_ms": max(decryption_times),
-                "std_dev_ms": statistics.stdev(decryption_times)
-                if len(decryption_times) > 1
-                else 0,
+                "std_dev_ms": statistics.stdev(decryption_times) if len(decryption_times) > 1 else 0,
             }
 
             # Test 2: Validation performance with external API mocking
@@ -1582,9 +1424,7 @@ class TestApiKeyPerformance:
                         validation_errors += 1
 
                 results["validation_performance"] = {
-                    "avg_time_ms": statistics.mean(validation_times)
-                    if validation_times
-                    else 0,
+                    "avg_time_ms": statistics.mean(validation_times) if validation_times else 0,
                     "max_time_ms": max(validation_times) if validation_times else 0,
                     "error_rate": validation_errors / 15,
                 }
@@ -1606,9 +1446,7 @@ class TestApiKeyPerformance:
                 validation_tasks = []
                 for i in range(50):
                     validation_tasks.append(
-                        api_key_service.validate_api_key(
-                            ServiceType.OPENAI, f"sk-throughput_{i}", str(uuid.uuid4())
-                        )
+                        api_key_service.validate_api_key(ServiceType.OPENAI, f"sk-throughput_{i}", str(uuid.uuid4()))
                     )
 
                 await asyncio.gather(*validation_tasks)
@@ -1627,9 +1465,7 @@ class TestApiKeyPerformance:
                         key_value=f"sk-throughput_create_{i}",
                         description="Throughput test",
                     )
-                    creation_tasks.append(
-                        api_key_service.create_api_key(user_id, request)
-                    )
+                    creation_tasks.append(api_key_service.create_api_key(user_id, request))
 
                 await asyncio.gather(*creation_tasks)
                 creation_throughput_time = time.time() - start
@@ -1662,16 +1498,8 @@ class TestApiKeyPerformance:
                     cache_misses += 1
             cache_hit_time = time.time() - start
 
-            cache_hit_ratio = (
-                cache_hits / (cache_hits + cache_misses)
-                if (cache_hits + cache_misses) > 0
-                else 0
-            )
-            cache_ops_per_sec = (
-                (cache_hits + cache_misses) / cache_hit_time
-                if cache_hit_time > 0
-                else 0
-            )
+            cache_hit_ratio = cache_hits / (cache_hits + cache_misses) if (cache_hits + cache_misses) > 0 else 0
+            cache_ops_per_sec = (cache_hits + cache_misses) / cache_hit_time if cache_hit_time > 0 else 0
 
             results["cache_performance"] = {
                 "hit_ratio": cache_hit_ratio,
@@ -1748,56 +1576,25 @@ class TestApiKeyPerformance:
         results = benchmark(lambda: asyncio.run(run_comprehensive_performance_tests()))
 
         # Regression assertions
-        assert not results["regression_detected"], (
-            f"Performance regression detected: {results['failed_baselines']}"
-        )
-        assert results["encryption_performance"]["max_time_ms"] < 15, (
-            "Encryption performance regression"
-        )
-        assert results["validation_performance"]["error_rate"] < 0.1, (
-            "Validation error rate too high"
-        )
-        assert results["throughput_metrics"]["validation_ops_per_sec"] > 30, (
-            "Validation throughput regression"
-        )
-        assert results["cache_performance"]["hit_ratio"] > 0.5, (
-            "Cache performance regression"
-        )
+        assert not results["regression_detected"], f"Performance regression detected: {results['failed_baselines']}"
+        assert results["encryption_performance"]["max_time_ms"] < 15, "Encryption performance regression"
+        assert results["validation_performance"]["error_rate"] < 0.1, "Validation error rate too high"
+        assert results["throughput_metrics"]["validation_ops_per_sec"] > 30, "Validation throughput regression"
+        assert results["cache_performance"]["hit_ratio"] > 0.5, "Cache performance regression"
 
         print("\nComprehensive Performance Regression Results:")
-        print(
-            f"  Encryption Max Time: "
-            f"{results['encryption_performance']['max_time_ms']:.2f}ms"
-        )
-        print(
-            f"  Decryption Max Time: "
-            f"{results['decryption_performance']['max_time_ms']:.2f}ms"
-        )
-        print(
-            f"  Validation Max Time: "
-            f"{results['validation_performance']['max_time_ms']:.2f}ms"
-        )
-        print(
-            f"  Validation Throughput: "
-            f"{results['throughput_metrics']['validation_ops_per_sec']:.2f} ops/sec"
-        )
-        print(
-            f"  Creation Throughput: "
-            f"{results['throughput_metrics']['creation_ops_per_sec']:.2f} ops/sec"
-        )
+        print(f"  Encryption Max Time: {results['encryption_performance']['max_time_ms']:.2f}ms")
+        print(f"  Decryption Max Time: {results['decryption_performance']['max_time_ms']:.2f}ms")
+        print(f"  Validation Max Time: {results['validation_performance']['max_time_ms']:.2f}ms")
+        print(f"  Validation Throughput: {results['throughput_metrics']['validation_ops_per_sec']:.2f} ops/sec")
+        print(f"  Creation Throughput: {results['throughput_metrics']['creation_ops_per_sec']:.2f} ops/sec")
         print(f"  Cache Hit Ratio: {results['cache_performance']['hit_ratio']:.2%}")
-        print(
-            f"  Validation Error Rate: "
-            f"{results['validation_performance']['error_rate']:.2%}"
-        )
+        print(f"  Validation Error Rate: {results['validation_performance']['error_rate']:.2%}")
         print(f"  Regression Detected: {results['regression_detected']}")
 
         if results["failed_baselines"]:
             print("  Failed Baselines:")
             for failure in results["failed_baselines"]:
-                print(
-                    f"    {failure['metric']}: {failure['actual']:.2f} "
-                    f"(baseline: {failure['baseline']:.2f})"
-                )
+                print(f"    {failure['metric']}: {failure['actual']:.2f} (baseline: {failure['baseline']:.2f})")
 
         return results

@@ -191,9 +191,7 @@ UserPrincipalDep = Annotated[Principal, Depends(require_user_principal)]
 AgentPrincipalDep = Annotated[Principal, Depends(require_agent_principal)]
 
 # Business service dependencies
-AccommodationServiceDep = Annotated[
-    AccommodationService, Depends(get_accommodation_service)
-]
+AccommodationServiceDep = Annotated[AccommodationService, Depends(get_accommodation_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 DestinationServiceDep = Annotated[DestinationService, Depends(get_destination_service)]
 FlightServiceDep = Annotated[FlightService, Depends(get_flight_service)]

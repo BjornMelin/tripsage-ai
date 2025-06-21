@@ -205,9 +205,7 @@ class MockSupabaseClient:
         for trip_id, trip_data in self.data_store["trips"].items():
             # Owner access
             if trip_data.get("user_id") == str(self.current_user_id):
-                accessible_trips.append(
-                    {**trip_data, "user_role": "owner", "permission_level": "admin"}
-                )
+                accessible_trips.append({**trip_data, "user_role": "owner", "permission_level": "admin"})
             # Collaborator access
             else:
                 collab_key = f"{trip_id}_{self.current_user_id}"
@@ -223,9 +221,7 @@ class MockSupabaseClient:
 
         return accessible_trips
 
-    async def _select_collaborators(
-        self, query: str, params: tuple
-    ) -> List[Dict[str, Any]]:
+    async def _select_collaborators(self, query: str, params: tuple) -> List[Dict[str, Any]]:
         """Handle trip_collaborators table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -240,9 +236,9 @@ class MockSupabaseClient:
             if collab_data["user_id"] == str(self.current_user_id):
                 accessible_collabs.append(collab_data)
             # User owns the trip
-            elif trip_id in self.data_store["trips"] and self.data_store["trips"][
-                trip_id
-            ]["user_id"] == str(self.current_user_id):
+            elif trip_id in self.data_store["trips"] and self.data_store["trips"][trip_id]["user_id"] == str(
+                self.current_user_id
+            ):
                 accessible_collabs.append(collab_data)
 
         return accessible_collabs
@@ -298,21 +294,15 @@ class MockSupabaseClient:
         # FK validation: trip and users must exist
         if self.constraints_enabled:
             if trip_id not in self.data_store["trips"]:
-                raise Exception(
-                    'Foreign key constraint "trip_collaborators_trip_id_fkey" violated'
-                )
+                raise Exception('Foreign key constraint "trip_collaborators_trip_id_fkey" violated')
             if not self._user_exists(user_id):
-                raise Exception(
-                    'Foreign key constraint "trip_collaborators_user_id_fkey" violated'
-                )
+                raise Exception('Foreign key constraint "trip_collaborators_user_id_fkey" violated')
 
         # RLS validation: only trip owner can add collaborators
         if self.rls_enabled:
             trip = self.data_store["trips"].get(trip_id)
             if trip and trip["user_id"] != str(self.current_user_id):
-                raise Exception(
-                    "RLS policy violation: only trip owners can add collaborators"
-                )
+                raise Exception("RLS policy violation: only trip owners can add collaborators")
 
         collab_key = f"{trip_id}_{user_id}"
         self.data_store["trip_collaborators"][collab_key] = {
@@ -447,9 +437,7 @@ def schema_files():
     for filename in schema_files:
         file_path = base_path / "schemas" / filename
         if file_path.exists():
-            files[filename.replace(".sql", "").replace("0", "").replace("_", "")] = (
-                file_path.read_text()
-            )
+            files[filename.replace(".sql", "").replace("0", "").replace("_", "")] = file_path.read_text()
 
     migration_files = [
         "20250610_01_fix_user_id_constraints.sql",
@@ -459,11 +447,7 @@ def schema_files():
     for filename in migration_files:
         file_path = base_path / "migrations" / filename
         if file_path.exists():
-            key = (
-                filename.replace(".sql", "")
-                .replace("20250610_01_", "")
-                .replace("20250609_02_", "")
-            )
+            key = filename.replace(".sql", "").replace("20250610_01_", "").replace("20250609_02_", "")
             files[key] = file_path.read_text()
 
     return files
@@ -527,9 +511,7 @@ async def populated_database(mock_supabase_client, test_users, test_trips):
         # Add collaborators
         for collab_data in trip.collaborators.values():
             await client.execute_sql(
-                "INSERT INTO trip_collaborators "
-                "(trip_id, user_id, permission_level, added_by) "
-                "VALUES ($1, $2, $3, $4)",
+                "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
                 (
                     trip.id,
                     collab_data["user"].id,
@@ -584,14 +566,11 @@ def performance_tracker():
     def get_summary():
         return {
             "total_queries": len(metrics["query_times"]),
-            "avg_query_time": sum(q["duration"] for q in metrics["query_times"])
-            / max(len(metrics["query_times"]), 1),
+            "avg_query_time": sum(q["duration"] for q in metrics["query_times"]) / max(len(metrics["query_times"]), 1),
             "memory_operations": len(metrics["memory_operations"]),
             "collaboration_queries": len(metrics["collaboration_queries"]),
             "performance_violations": [
-                q
-                for q in metrics["query_times"]
-                if q["duration"] > TestConfig.QUERY_PERFORMANCE_THRESHOLD
+                q for q in metrics["query_times"] if q["duration"] > TestConfig.QUERY_PERFORMANCE_THRESHOLD
             ],
         }
 
@@ -621,36 +600,24 @@ async def cleanup_after_test():
 def assert_performance_threshold(duration: float, threshold: float, operation: str):
     """Assert operation meets performance threshold."""
     if duration > threshold:
-        pytest.fail(
-            f"{operation} took {duration:.3f}s, exceeding threshold of {threshold:.3f}s"
-        )
+        pytest.fail(f"{operation} took {duration:.3f}s, exceeding threshold of {threshold:.3f}s")
 
 
-def assert_rls_isolation(
-    user1_data: List[Any], user2_data: List[Any], user1_id: UUID, user2_id: UUID
-):
+def assert_rls_isolation(user1_data: List[Any], user2_data: List[Any], user1_id: UUID, user2_id: UUID):
     """Assert RLS properly isolates data between users."""
     # Check user1 data belongs to user1
     for item in user1_data:
         if hasattr(item, "user_id"):
-            assert str(item.user_id) == str(user1_id), (
-                "User1 data contains data from another user"
-            )
+            assert str(item.user_id) == str(user1_id), "User1 data contains data from another user"
         elif isinstance(item, dict) and "user_id" in item:
-            assert str(item["user_id"]) == str(user1_id), (
-                "User1 data contains data from another user"
-            )
+            assert str(item["user_id"]) == str(user1_id), "User1 data contains data from another user"
 
     # Check user2 cannot see user1's data
     for item in user2_data:
         if hasattr(item, "user_id"):
-            assert str(item.user_id) != str(user1_id), (
-                "User2 can see User1's data - RLS violation"
-            )
+            assert str(item.user_id) != str(user1_id), "User2 can see User1's data - RLS violation"
         elif isinstance(item, dict) and "user_id" in item:
-            assert str(item["user_id"]) != str(user1_id), (
-                "User2 can see User1's data - RLS violation"
-            )
+            assert str(item["user_id"]) != str(user1_id), "User2 can see User1's data - RLS violation"
 
 
 def create_test_memory_embedding() -> List[float]:
@@ -661,9 +628,7 @@ def create_test_memory_embedding() -> List[float]:
     return [random.uniform(-1, 1) for _ in range(1536)]
 
 
-async def simulate_concurrent_access(
-    operations: List[callable], max_concurrent: int = 3
-) -> List[Any]:
+async def simulate_concurrent_access(operations: List[callable], max_concurrent: int = 3) -> List[Any]:
     """Simulate concurrent database access for testing."""
     semaphore = asyncio.Semaphore(max_concurrent)
 

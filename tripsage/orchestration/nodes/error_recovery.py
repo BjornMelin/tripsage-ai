@@ -60,9 +60,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         else:
             return await self._escalate_to_human(state, error_info)
 
-    async def _attempt_retry(
-        self, state: TravelPlanningState, error_info: ErrorInfo
-    ) -> TravelPlanningState:
+    async def _attempt_retry(self, state: TravelPlanningState, error_info: ErrorInfo) -> TravelPlanningState:
         """
         Attempt retry with modified parameters using enhanced error tracking.
 
@@ -98,10 +96,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         # Add retry message to conversation
         retry_message = {
             "role": "assistant",
-            "content": (
-                "I encountered an issue with that request. "
-                "Let me try a different approach..."
-            ),
+            "content": ("I encountered an issue with that request. Let me try a different approach..."),
             "agent": "error_recovery",
             "retry_attempt": retry_count + 1,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -116,9 +111,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             from_agent="error_recovery",
             to_agent="router",
             routing_confidence=0.8,  # High confidence for retry
-            routing_reasoning=(
-                f"Retry attempt {retry_count + 1} after error in {current_agent}"
-            ),
+            routing_reasoning=(f"Retry attempt {retry_count + 1} after error in {current_agent}"),
             timestamp=datetime.now(timezone.utc).isoformat(),
             message_analyzed="Error recovery retry",
             additional_context={
@@ -134,9 +127,7 @@ class ErrorRecoveryNode(BaseAgentNode):
 
         return state
 
-    async def _attempt_fallback(
-        self, state: TravelPlanningState
-    ) -> TravelPlanningState:
+    async def _attempt_fallback(self, state: TravelPlanningState) -> TravelPlanningState:
         """
         Use fallback strategies when retries aren't working.
 
@@ -177,9 +168,7 @@ class ErrorRecoveryNode(BaseAgentNode):
 
         return state
 
-    async def _escalate_to_human(
-        self, state: TravelPlanningState
-    ) -> TravelPlanningState:
+    async def _escalate_to_human(self, state: TravelPlanningState) -> TravelPlanningState:
         """
         Escalate to human support for complex issues.
 
@@ -189,9 +178,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         Returns:
             State with escalation information
         """
-        logger.warning(
-            f"Escalating to human support for session {state.get('session_id')}"
-        )
+        logger.warning(f"Escalating to human support for session {state.get('session_id')}")
 
         escalation_message = {
             "role": "assistant",
@@ -239,9 +226,7 @@ class ErrorRecoveryNode(BaseAgentNode):
 
         return fallback_mapping.get(failed_agent, "travel_agent")
 
-    def _generate_fallback_message(
-        self, original_agent: str, fallback_agent: str
-    ) -> str:
+    def _generate_fallback_message(self, original_agent: str, fallback_agent: str) -> str:
         """
         Generate appropriate fallback message.
 

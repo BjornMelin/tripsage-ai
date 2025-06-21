@@ -121,9 +121,7 @@ class BaseAgentNode(ABC):
             log_exception(e, logger_name=f"orchestration.{self.node_name}")
             return self._handle_error(state, e)
 
-    def _handle_error(
-        self, state: TravelPlanningState, error: Exception
-    ) -> TravelPlanningState:
+    def _handle_error(self, state: TravelPlanningState, error: Exception) -> TravelPlanningState:
         """
         Standardized error handling for all nodes.
 
@@ -146,10 +144,7 @@ class BaseAgentNode(ABC):
         # Add error message to conversation
         error_message = {
             "role": "assistant",
-            "content": (
-                "I encountered an issue while processing your request. "
-                "Let me try a different approach."
-            ),
+            "content": ("I encountered an issue while processing your request. Let me try a different approach."),
             "agent": self.node_name,
             "error": True,
             "timestamp": datetime.now(timezone.utc).isoformat(),

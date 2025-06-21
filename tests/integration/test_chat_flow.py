@@ -99,13 +99,9 @@ class TestChatSessionFlow:
         return agent
 
     @pytest.mark.asyncio
-    async def test_chat_session_creation_flow(
-        self, client, mock_chat_service, mock_principal
-    ):
+    async def test_chat_session_creation_flow(self, client, mock_chat_service, mock_principal):
         """Test complete chat session creation flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
@@ -128,21 +124,15 @@ class TestChatSessionFlow:
                 mock_chat_service.create_session.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_chat_message_flow(
-        self, client, mock_chat_service, mock_chat_agent, mock_principal
-    ):
+    async def test_chat_message_flow(self, client, mock_chat_service, mock_chat_agent, mock_principal):
         """Test complete chat message handling flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.agents.chat.ChatAgent") as mock_agent_class:
                 mock_agent_class.return_value = mock_chat_agent
 
-                with patch(
-                    "tripsage.api.core.dependencies.require_principal"
-                ) as mock_auth:
+                with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                     mock_auth.return_value = mock_principal
 
                     session_id = str(uuid4())
@@ -158,23 +148,16 @@ class TestChatSessionFlow:
                     assert response.status_code == 200
                     response_data = response.json()
                     assert "message" in response_data
-                    assert (
-                        response_data["message"]["content"]
-                        == "Hello, can you help me plan a trip?"
-                    )
+                    assert response_data["message"]["content"] == "Hello, can you help me plan a trip?"
 
                     # Verify services were called
                     mock_chat_service.send_message.assert_called_once()
                     mock_chat_agent.process_message.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_chat_history_retrieval_flow(
-        self, client, mock_chat_service, mock_principal
-    ):
+    async def test_chat_history_retrieval_flow(self, client, mock_chat_service, mock_principal):
         """Test chat history retrieval flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
@@ -198,13 +181,9 @@ class TestChatSessionFlow:
                 mock_chat_service.get_session_history.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_chat_session_deletion_flow(
-        self, client, mock_chat_service, mock_principal
-    ):
+    async def test_chat_session_deletion_flow(self, client, mock_chat_service, mock_principal):
         """Test chat session deletion flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
@@ -227,22 +206,16 @@ class TestChatSessionFlow:
                 mock_chat_service.delete_session.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_chat_error_handling_flow(
-        self, client, mock_chat_service, mock_principal
-    ):
+    async def test_chat_error_handling_flow(self, client, mock_chat_service, mock_principal):
         """Test error handling in chat flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_auth.return_value = mock_principal
 
                 # Configure service to raise exception
-                mock_chat_service.send_message.side_effect = Exception(
-                    "Chat service error"
-                )
+                mock_chat_service.send_message.side_effect = Exception("Chat service error")
 
                 session_id = str(uuid4())
 
@@ -267,29 +240,21 @@ class TestChatSessionFlow:
             mock_auth.side_effect = CoreAuthenticationError("Invalid token")
 
             # Test API call with invalid authentication
-            response = client.get(
-                "/api/chat/sessions", headers={"Authorization": "Bearer invalid-token"}
-            )
+            response = client.get("/api/chat/sessions", headers={"Authorization": "Bearer invalid-token"})
 
             # Verify authentication error response
             assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_chat_concurrent_messages_flow(
-        self, client, mock_chat_service, mock_chat_agent, mock_principal
-    ):
+    async def test_chat_concurrent_messages_flow(self, client, mock_chat_service, mock_chat_agent, mock_principal):
         """Test concurrent message handling in chat flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.agents.chat.ChatAgent") as mock_agent_class:
                 mock_agent_class.return_value = mock_chat_agent
 
-                with patch(
-                    "tripsage.api.core.dependencies.require_principal"
-                ) as mock_auth:
+                with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                     mock_auth.return_value = mock_principal
 
                     session_id = str(uuid4())
@@ -328,13 +293,9 @@ class TestChatSessionFlow:
             assert "detail" in response_data
 
     @pytest.mark.asyncio
-    async def test_chat_websocket_integration_flow(
-        self, client, mock_chat_service, mock_principal
-    ):
+    async def test_chat_websocket_integration_flow(self, client, mock_chat_service, mock_principal):
         """Test WebSocket integration in chat flow."""
-        with patch(
-            "tripsage_core.services.business.chat_service.get_chat_service"
-        ) as mock_service_dep:
+        with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
