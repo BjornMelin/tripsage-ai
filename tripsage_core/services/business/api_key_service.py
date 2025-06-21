@@ -306,7 +306,7 @@ class ApiKeyService:
             String representation of the service type
         """
         return (
-            self._get_service_value(service)
+            service.value
             if hasattr(service, "value")
             else str(service)
         )
@@ -581,15 +581,28 @@ class ApiKeyService:
             else:
                 result = await self._validate_generic_key(service, key_value)
 
-            # Calculate latency
+            # Calculate latency and create new result with latency included
             latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
-            result.latency_ms = latency_ms
+            
+            # Create new ValidationResult with latency (since original is frozen)
+            result_with_latency = ValidationResult(
+                is_valid=result.is_valid,
+                status=result.status,
+                service=result.service,
+                message=result.message,
+                details=result.details,
+                latency_ms=latency_ms,
+                validated_at=result.validated_at,
+                rate_limit_info=result.rate_limit_info,
+                quota_info=result.quota_info,
+                capabilities=result.capabilities,
+            )
 
             # Cache successful validation
-            if result.is_valid and self.cache:
-                await self._cache_validation_result(service, key_value, result)
+            if result_with_latency.is_valid and self.cache:
+                await self._cache_validation_result(service, key_value, result_with_latency)
 
-            return result
+            return result_with_latency
 
         except Exception as e:
             logger.error(
