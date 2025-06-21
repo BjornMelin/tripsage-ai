@@ -1554,55 +1554,63 @@ class DatabaseService:
 
     # Transaction support
 
-    @asynccontextmanager
-    async def transaction(self, user_id: str | None = None):
-        """Context manager for database transactions."""
-        await self.ensure_connected()
+    def transaction(self, user_id: str | None = None):
+        """Create a transaction context manager for database transactions."""
+        return DatabaseTransactionContext(self, user_id)
 
-        async with self._monitor_query(QueryType.TRANSACTION, None, user_id):
-            # Note: Supabase client doesn't have built-in transaction support
-            # We simulate it with batch operations
-            operations = []
 
-            class TransactionContext:
-                def __init__(self, service):
-                    self.service = service
-                    self.operations = operations
+class DatabaseTransactionContext:
+    """Async context manager for database transactions."""
+    
+    def __init__(self, service: "DatabaseService", user_id: str | None = None):
+        self.service = service
+        self.user_id = user_id
+        self.operations = []
+        self._monitor_ctx = None
 
-                def insert(
-                    self, table: str, data: dict[str, Any] | list[dict[str, Any]]
-                ):
-                    self.operations.append(("insert", table, data))
+    async def __aenter__(self):
+        """Enter the async context manager."""
+        await self.service.ensure_connected()
+        self._monitor_ctx = self.service._monitor_query(QueryType.TRANSACTION, None, self.user_id)
+        self._query_id = await self._monitor_ctx.__aenter__()
+        return self
 
-                def update(
-                    self, table: str, data: dict[str, Any], filters: dict[str, Any]
-                ):
-                    self.operations.append(("update", table, data, filters))
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit the async context manager."""
+        if self._monitor_ctx:
+            return await self._monitor_ctx.__aexit__(exc_type, exc_val, exc_tb)
 
-                def delete(self, table: str, filters: dict[str, Any]):
-                    self.operations.append(("delete", table, filters))
+    def insert(self, table: str, data: dict[str, Any] | list[dict[str, Any]]):
+        """Add an insert operation to the transaction."""
+        self.operations.append(("insert", table, data))
 
-                async def execute(self):
-                    """Execute all operations in the transaction."""
-                    results = []
-                    for operation in self.operations:
-                        op_type = operation[0]
-                        if op_type == "insert":
-                            result = await self.service.insert(
-                                operation[1], operation[2], user_id
-                            )
-                        elif op_type == "update":
-                            result = await self.service.update(
-                                operation[1], operation[2], operation[3], user_id
-                            )
-                        elif op_type == "delete":
-                            result = await self.service.delete(
-                                operation[1], operation[2], user_id
-                            )
-                        results.append(result)
-                    return results
+    def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]):
+        """Add an update operation to the transaction."""
+        self.operations.append(("update", table, data, filters))
 
-            yield TransactionContext(self)
+    def delete(self, table: str, filters: dict[str, Any]):
+        """Add a delete operation to the transaction."""
+        self.operations.append(("delete", table, filters))
+
+    async def execute(self):
+        """Execute all operations in the transaction."""
+        results = []
+        for operation in self.operations:
+            op_type = operation[0]
+            if op_type == "insert":
+                result = await self.service.insert(
+                    operation[1], operation[2], self.user_id
+                )
+            elif op_type == "update":
+                result = await self.service.update(
+                    operation[1], operation[2], operation[3], self.user_id
+                )
+            elif op_type == "delete":
+                result = await self.service.delete(
+                    operation[1], operation[2], self.user_id
+                )
+            results.append(result)
+        return results
 
     # High-level business operations
 

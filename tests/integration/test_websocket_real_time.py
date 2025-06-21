@@ -27,9 +27,11 @@ from tripsage.api.routers.websocket import (
 )
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.websocket_manager import (
+    websocket_manager,
+)
+from tripsage_core.services.infrastructure.websocket_messaging_service import (
     WebSocketEvent,
     WebSocketEventType,
-    websocket_manager,
 )
 
 
