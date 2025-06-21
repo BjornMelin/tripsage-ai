@@ -259,7 +259,7 @@ def mock_settings_and_redis(monkeypatch):
     mock_settings = Settings(
         environment="testing",
         debug=True,
-        database_url="https://test.supabase.co",
+        database_url="https://test.supabase.com",
         database_public_key="test_anon_key",
         database_service_key="test_service_key",
         openai_api_key="test_openai_key",
