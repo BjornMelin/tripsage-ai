@@ -776,6 +776,21 @@ class WebSocketManager:
 
         return combined_stats
 
+    @property
+    def connections(self):
+        """Get connections from the connection service for compatibility."""
+        return self.connection_service.connections
+
+    @property
+    def channel_connections(self):
+        """Get channel connections from the messaging service for compatibility."""
+        return self.messaging_service.channel_connections
+
+    @property
+    def user_connections(self):
+        """Get user connections from the messaging service for compatibility."""
+        return self.messaging_service.user_connections
+
     # Helper methods moved to auth service
 
     async def _cleanup_stale_connections(self) -> None:

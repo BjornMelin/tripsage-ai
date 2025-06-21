@@ -6,8 +6,11 @@ real-world usage patterns and identify performance bottlenecks under load.
 """
 
 # Skip this file due to gevent monkey patching issues in pytest
-pytest = pytest.importorskip("pytest")
-pytest.skip("Skipping locust tests due to gevent monkey patching issues", allow_module_level=True)
+import pytest
+pytest.skip(
+    "Skipping locust tests due to gevent monkey patching issues",
+    allow_module_level=True,
+)
 
 import asyncio
 import json

@@ -239,7 +239,9 @@ class WebSocketBroadcaster:
                     await self.redis_client.srem(f"channel:{channel}", connection_id)
 
             # Remove connection info
-            await self.redis_client.delete(f"{self.CONNECTION_INFO_KEY}:{connection_id}")
+            await self.redis_client.delete(
+                f"{self.CONNECTION_INFO_KEY}:{connection_id}"
+            )
 
             logger.info(f"Unregistered connection {connection_id}")
 
@@ -332,7 +334,9 @@ class WebSocketBroadcaster:
         if self._message_id_cleanup_counter >= self._max_recent_messages // 2:
             # Keep only the most recent half
             recent_ids = list(self._recent_message_ids)
-            self._recent_message_ids = set(recent_ids[-self._max_recent_messages // 2 :])
+            self._recent_message_ids = set(
+                recent_ids[-self._max_recent_messages // 2 :]
+            )
             self._message_id_cleanup_counter = 0
 
         try:
