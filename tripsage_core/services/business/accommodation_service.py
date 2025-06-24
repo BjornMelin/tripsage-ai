@@ -867,7 +867,8 @@ class AccommodationService:
                 id=str(uuid4()),
                 name=f"Sample {property_types[i].value.title()} {i + 1}",
                 description=(
-                    f"A beautiful {property_types[i].value} in {search_request.location}"
+                    f"A beautiful {property_types[i].value} in "
+                    f"{search_request.location}"
                 ),
                 property_type=property_types[i],
                 location=AccommodationLocation(

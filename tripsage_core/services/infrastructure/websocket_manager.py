@@ -81,7 +81,8 @@ def redis_with_fallback(fallback_method: Optional[str] = None):
                     )
                 else:
                     logger.warning(
-                        f"No Redis client and no fallback method {fallback_name} found for {func.__name__}"
+                        f"No Redis client and no fallback method {fallback_name} "
+                        f"found for {func.__name__}"
                     )
                     return None
 

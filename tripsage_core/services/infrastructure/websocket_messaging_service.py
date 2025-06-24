@@ -220,7 +220,8 @@ class WebSocketMessagingService:
                         "retry_after": 60,  # Default window
                     },
                 }
-                # Send warning without rate limiting and size validation to avoid recursion
+                # Send warning without rate limiting and size validation to
+                # avoid recursion
                 await connection.send(warning_event)
                 return False
 

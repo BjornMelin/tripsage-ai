@@ -215,7 +215,10 @@ class KeyMonitoringService:
             log_data: The log data for the operation
         """
         # Create alert message
-        alert_message = f"ALERT: Suspicious API key {operation.value} activity detected for user {user_id}"
+        alert_message = (
+            f"ALERT: Suspicious API key {operation.value} activity detected "
+            f"for user {user_id}"
+        )
 
         # Log the alert
         logger.error(

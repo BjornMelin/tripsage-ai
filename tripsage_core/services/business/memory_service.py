@@ -590,13 +590,15 @@ class MemoryService:
                 {
                     "role": "system",
                     "content": (
-                        "Extract and update user travel preferences from the following information."
+                        "Extract and update user travel preferences from the "
+                        "following information."
                     ),
                 },
                 {
                     "role": "user",
                     "content": (
-                        f"My travel preferences: {json.dumps(preferences_request.preferences, indent=2)}"
+                        f"My travel preferences: "
+                        f"{json.dumps(preferences_request.preferences, indent=2)}"
                     ),
                 },
             ]
@@ -709,7 +711,10 @@ class MemoryService:
         self, user_id: str, search_request: MemorySearchRequest
     ) -> str:
         """Generate cache key for search request."""
-        key_data = f"{user_id}:{search_request.query}:{search_request.limit}:{hash(str(search_request.filters))}"
+        key_data = (
+            f"{user_id}:{search_request.query}:{search_request.limit}:"
+            f"{hash(str(search_request.filters))}"
+        )
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
     def _get_cached_result(self, cache_key: str) -> Optional[List[MemorySearchResult]]:

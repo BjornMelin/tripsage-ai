@@ -385,7 +385,8 @@ class ToolCallService:
         """Execute tool call with comprehensive error recovery."""
         # MCP abstraction removed - direct service calls should be used
         raise NotImplementedError(
-            f"Direct service integration needed for {request.service}.{request.method} after MCP removal"
+            f"Direct service integration needed for {request.service}.{request.method} "
+            f"after MCP removal"
         )
 
     async def _check_rate_limit(self, service: str) -> bool:

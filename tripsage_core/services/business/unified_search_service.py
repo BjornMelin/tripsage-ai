@@ -150,7 +150,8 @@ class UnifiedSearchService(
 
         try:
             logger.info(
-                f"Unified search request: '{request.query}' across types: {request.types}"
+                f"Unified search request: '{request.query}' across types: "
+                f"{request.types}"
             )
 
             start_time = datetime.now()
@@ -272,7 +273,8 @@ class UnifiedSearchService(
                     type="destination",
                     title=destination_query.title(),
                     description=(
-                        f"Explore {destination_query} - discover attractions, activities, and local experiences"
+                        f"Explore {destination_query} - discover attractions, "
+                        f"activities, and local experiences"
                     ),
                     location=destination_query,
                     relevance_score=0.9,

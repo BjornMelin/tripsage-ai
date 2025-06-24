@@ -840,7 +840,8 @@ class DestinationService:
                 images=[
                     DestinationImage(
                         url=(
-                            f"https://example.com/{data['name'].lower().replace(' ', '_')}.jpg"
+                            f"https://example.com/"
+                            f"{data['name'].lower().replace(' ', '_')}.jpg"
                         ),
                         is_primary=True,
                     )

@@ -195,7 +195,8 @@ class WebSocketPerformanceMonitor:
 
         except Exception as e:
             logger.error(
-                f"Failed to collect metrics for connection {connection.connection_id}: {e}"
+                f"Failed to collect metrics for connection "
+                f"{connection.connection_id}: {e}"
             )
 
     def _check_performance_alerts(

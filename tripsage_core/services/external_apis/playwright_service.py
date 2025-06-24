@@ -282,7 +282,8 @@ class PlaywrightService:
                         }
                     )
                     await page.add_init_script(
-                        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                        "Object.defineProperty(navigator, 'webdriver', "
+                        "{get: () => undefined})"
                     )
 
                 # Navigate to URL
@@ -291,7 +292,10 @@ class PlaywrightService:
                 nav_time = time.time() - nav_start
 
                 if not response or not response.ok:
-                    error_msg = f"Failed to load page: {response.status if response else 'No response'}"
+                    error_msg = (
+                        f"Failed to load page: "
+                        f"{response.status if response else 'No response'}"
+                    )
                     return ScrapingResult(
                         url=url,
                         content="",

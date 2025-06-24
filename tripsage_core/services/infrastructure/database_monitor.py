@@ -347,7 +347,8 @@ class DatabaseConnectionMonitor:
                     event_type=SecurityEvent.CONNECTION_FAILURE,
                     severity="warning",
                     message=(
-                        f"Multiple connection failures detected: {self._failed_connection_count}"
+                        f"Multiple connection failures detected: "
+                        f"{self._failed_connection_count}"
                     ),
                     details={
                         "failed_count": self._failed_connection_count,
@@ -437,7 +438,8 @@ class DatabaseConnectionMonitor:
                         event_type=SecurityEvent.CONNECTION_FAILURE,
                         severity="critical",
                         message=(
-                            f"Database connection recovery failed after {self._max_recovery_attempts} attempts"
+                            f"Database connection recovery failed after "
+                            f"{self._max_recovery_attempts} attempts"
                         ),
                         details={
                             "recovery_attempts": self._max_recovery_attempts,

@@ -79,7 +79,8 @@ class WebSocketBaseMessage(BaseModel):
             # Allow alphanumeric, hyphens, and underscores only
             if not v.replace("-", "").replace("_", "").isalnum():
                 raise ValueError(
-                    "Message ID must contain only alphanumeric characters, hyphens, and underscores"
+                    "Message ID must contain only alphanumeric characters, "
+                    "hyphens, and underscores"
                 )
         return v
 
@@ -155,7 +156,8 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
         if v is not None:
             if not v.replace("_", "").replace("-", "").isalnum():
                 raise ValueError(
-                    "Ping ID must contain only alphanumeric characters, hyphens, and underscores"
+                    "Ping ID must contain only alphanumeric characters, "
+                    "hyphens, and underscores"
                 )
         return v
 
@@ -270,7 +272,8 @@ class WebSocketErrorMessage(WebSocketBaseMessage):
         """Validate error code format."""
         if not v.replace("_", "").replace("-", "").isalnum():
             raise ValueError(
-                "Error code must contain only alphanumeric characters, hyphens, and underscores"
+                "Error code must contain only alphanumeric characters, "
+                "hyphens, and underscores"
             )
         return v.upper()
 

@@ -187,7 +187,8 @@ class ConfigurationAuditService:
         asyncio.create_task(self._periodic_scan_loop())
 
         logger.info(
-            f"Configuration audit service started, monitoring {len(self.config_paths)} paths"
+            f"Configuration audit service started, monitoring "
+            f"{len(self.config_paths)} paths"
         )
 
         # Log service startup

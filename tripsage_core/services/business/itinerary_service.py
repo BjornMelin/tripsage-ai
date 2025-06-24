@@ -1131,7 +1131,8 @@ class ItineraryService:
                         conflict_type=ConflictType.TIME_OVERLAP,
                         severity=0.8,
                         description=(
-                            f"Time overlap between '{current.title}' and '{next_item.title}'"
+                            f"Time overlap between '{current.title}' and "
+                            f"'{next_item.title}'"
                         ),
                         affected_items=[current.id, next_item.id],
                         suggestions=[
@@ -1166,7 +1167,8 @@ class ItineraryService:
                     conflict_type=ConflictType.BUDGET_EXCEEDED,
                     severity=0.9,
                     description=(
-                        f"Budget exceeded: spent {itinerary.budget_spent} of {itinerary.total_budget}"
+                        f"Budget exceeded: spent {itinerary.budget_spent} of "
+                        f"{itinerary.total_budget}"
                     ),
                     affected_items=[],
                     suggestions=[

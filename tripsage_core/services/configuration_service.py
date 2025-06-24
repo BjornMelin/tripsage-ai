@@ -169,7 +169,8 @@ class ConfigurationService:
                 updated_config = await self.get_agent_config(agent_type, environment)
 
                 logger.info(
-                    f"Agent config updated for {agent_type} in {environment} by {updated_by}"
+                    f"Agent config updated for {agent_type} in {environment} "
+                    f"by {updated_by}"
                 )
                 return updated_config
 
@@ -388,7 +389,8 @@ class ConfigurationService:
                 await delete_cache(cache_key_str)
 
                 logger.info(
-                    f"Configuration rolled back to {version_id} for {agent_type} by {rolled_back_by}"
+                    f"Configuration rolled back to {version_id} for {agent_type} "
+                    f"by {rolled_back_by}"
                 )
 
                 # Return updated configuration
@@ -446,7 +448,8 @@ class ConfigurationService:
                 row = result.fetchone()
                 if not row:
                     logger.warning(
-                        f"No configuration profile found for metrics recording: {agent_type}"
+                        f"No configuration profile found for metrics recording: "
+                        f"{agent_type}"
                     )
                     return
 

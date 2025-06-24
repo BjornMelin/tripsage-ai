@@ -340,7 +340,8 @@ class WebSocketConnection:
 
                 if message_size > max_size:
                     raise CoreValidationError(
-                        f"Message size exceeds limit for type '{message_type}': {message_size} > {max_size}",
+                        f"Message size exceeds limit for type '{message_type}': "
+                        f"{message_size} > {max_size}",
                         code="MESSAGE_TOO_LARGE",
                     )
             except (TypeError, ValueError) as e:
@@ -359,7 +360,8 @@ class WebSocketConnection:
                 pass
             else:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} in state {self.state}"
+                    f"Cannot send to connection {self.connection_id} in "
+                    f"state {self.state}"
                 )
                 return False
 
@@ -370,7 +372,8 @@ class WebSocketConnection:
             # circuit breaker, fail
             if self.state == ConnectionState.ERROR:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} - circuit breaker OPEN and in ERROR state"
+                    f"Cannot send to connection {self.connection_id} - "
+                    "circuit breaker OPEN and in ERROR state"
                 )
                 return False
 
@@ -395,7 +398,8 @@ class WebSocketConnection:
                 # Drop low priority messages during backpressure
                 self.dropped_messages_count += 1
                 logger.debug(
-                    f"Dropped low priority message due to backpressure on connection {self.connection_id}"
+                    f"Dropped low priority message due to backpressure on "
+                    f"connection {self.connection_id}"
                 )
                 return False
 
@@ -546,7 +550,8 @@ class WebSocketConnection:
             self.latency_samples.append(latency)
         else:
             logger.debug(
-                f"Received pong but no outstanding pings for connection {self.connection_id}"
+                f"Received pong but no outstanding pings for "
+                f"connection {self.connection_id}"
             )
 
         # Clear compatibility attribute when all pings are handled (for tests)
