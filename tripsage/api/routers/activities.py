@@ -3,10 +3,14 @@ Router for activity-related endpoints in the TripSage API.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import List
+from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
+from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
     SaveActivityRequest,
@@ -19,6 +23,16 @@ from tripsage.api.schemas.responses.activities import (
 from tripsage_core.services.business.activity_service import (
     ActivityServiceError,
     get_activity_service,
+)
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditSeverity,
+    audit_security_event,
+)
+from tripsage_core.services.business.trip_service import TripService, get_trip_service
+from tripsage_core.services.infrastructure.database_service import (
+    DatabaseService,
+    get_database_service,
 )
 
 router = APIRouter()
@@ -39,7 +53,9 @@ async def search_activities(request: ActivitySearchRequest):
         activity_service = await get_activity_service()
         result = await activity_service.search_activities(request)
 
-        logger.info(f"Found {len(result.activities)} activities for {request.destination}")
+        logger.info(
+            f"Found {len(result.activities)} activities for {request.destination}"
+        )
         return result
 
     except ActivityServiceError as e:
@@ -97,49 +113,354 @@ async def get_activity_details(activity_id: str):
 
 
 @router.post("/save", response_model=SavedActivityResponse)
-async def save_activity(request: SaveActivityRequest):
+async def save_activity(
+    request: SaveActivityRequest,
+    principal: Principal = Depends(require_principal),
+    db_service: DatabaseService = Depends(get_database_service),
+    trip_service: TripService = Depends(get_trip_service),
+):
     """
     Save an activity for a user.
 
-    Note: This endpoint stores activity preferences but requires
-    user authentication and database integration.
+    Security features:
+    - User authentication required
+    - Trip access verification if trip_id provided
+    - Audit logging for save operations
+    - Database persistence with user isolation
     """
     logger.info(f"Save activity request: {request.activity_id}")
 
-    # TODO: Implement user authentication and database storage
-    # For now, return a mock response to maintain API contract
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Save activity endpoint requires user authentication implementation",
-    )
+    try:
+        user_id = get_principal_id(principal)
+
+        # Verify trip access if trip_id is provided
+        if request.trip_id:
+            trip = await trip_service.get_trip(trip_id=request.trip_id, user_id=user_id)
+            if not trip:
+                await audit_security_event(
+                    event_type=AuditEventType.ACCESS_DENIED,
+                    severity=AuditSeverity.MEDIUM,
+                    message=f"Trip access denied for user {user_id} to trip {request.trip_id}",
+                    actor_id=user_id,
+                    ip_address="unknown",
+                    target_resource=f"trip:{request.trip_id}",
+                    resource_type="trip",
+                    resource_id=request.trip_id,
+                    action="save_activity",
+                    reason="trip_not_found_or_access_denied",
+                )
+
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Trip not found or access denied",
+                )
+
+        # Save activity to itinerary_items table
+        saved_at = datetime.now(timezone.utc)
+        itinerary_data = {
+            "id": str(uuid4()),
+            "trip_id": request.trip_id,
+            "user_id": user_id,
+            "title": f"Saved Activity: {request.activity_id}",
+            "description": request.notes or "Activity saved from search results",
+            "item_type": "activity",
+            "external_id": request.activity_id,
+            "metadata": {
+                "activity_id": request.activity_id,
+                "saved_from": "activity_search",
+                "notes": request.notes,
+            },
+            "created_at": saved_at.isoformat(),
+            "booking_status": "planned",
+        }
+
+        # Insert into database
+        result = await db_service.insert(
+            table="itinerary_items",
+            data=itinerary_data,
+            user_id=user_id,
+        )
+
+        # Log successful save
+        await audit_security_event(
+            event_type=AuditEventType.DATA_MODIFICATION,
+            severity=AuditSeverity.LOW,
+            message=f"Activity {request.activity_id} saved for user {user_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource=f"saved_activity:{request.activity_id}",
+            resource_type="saved_activity",
+            resource_id=request.activity_id,
+            action="save_activity",
+            trip_id=request.trip_id,
+        )
+
+        logger.info(f"Activity {request.activity_id} saved for user {user_id}")
+
+        return SavedActivityResponse(
+            activity_id=request.activity_id,
+            trip_id=request.trip_id,
+            user_id=user_id,
+            saved_at=saved_at.isoformat(),
+            notes=request.notes,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to save activity {request.activity_id}: {str(e)}")
+
+        # Log system error
+        await audit_security_event(
+            event_type=AuditEventType.SYSTEM_ERROR,
+            severity=AuditSeverity.HIGH,
+            message=f"System error saving activity {request.activity_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource=f"saved_activity:{request.activity_id}",
+            resource_type="saved_activity",
+            resource_id=request.activity_id,
+            action="save_activity",
+            error=str(e),
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save activity",
+        ) from e
 
 
 @router.get("/saved", response_model=List[SavedActivityResponse])
-async def get_saved_activities():
+async def get_saved_activities(
+    principal: Principal = Depends(require_principal),
+    db_service: DatabaseService = Depends(get_database_service),
+    limit: int = 50,
+    offset: int = 0,
+):
     """
     Get all activities saved by a user.
 
-    Note: This endpoint requires user authentication and database integration.
+    Security features:
+    - User authentication required
+    - User data isolation (only returns user's saved activities)
+    - Audit logging for data access
+    - Pagination support
     """
     logger.info("Get saved activities request")
 
-    # TODO: Implement user authentication and database retrieval
-    # For now, return empty list to maintain API contract
-    return []
+    try:
+        user_id = get_principal_id(principal)
+
+        # Query saved activities from itinerary_items table
+        filters = {
+            "user_id": user_id,
+            "item_type": "activity",
+        }
+
+        saved_items = await db_service.select(
+            table="itinerary_items",
+            columns="*",
+            filters=filters,
+            order_by="-created_at",  # Most recent first
+            limit=limit,
+            offset=offset,
+            user_id=user_id,
+        )
+
+        # Convert to SavedActivityResponse format
+        saved_activities = []
+        for item in saved_items:
+            metadata = item.get("metadata", {})
+            saved_activities.append(
+                SavedActivityResponse(
+                    activity_id=metadata.get(
+                        "activity_id", item.get("external_id", "")
+                    ),
+                    trip_id=item.get("trip_id"),
+                    user_id=user_id,
+                    saved_at=item.get(
+                        "created_at", datetime.now(timezone.utc).isoformat()
+                    ),
+                    notes=metadata.get("notes"),
+                )
+            )
+
+        # Log successful access
+        await audit_security_event(
+            event_type=AuditEventType.DATA_ACCESS,
+            severity=AuditSeverity.LOW,
+            message=f"User {user_id} accessed saved activities list",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource="saved_activities",
+            resource_type="saved_activities",
+            action="list_saved_activities",
+            count=len(saved_activities),
+            limit=limit,
+            offset=offset,
+        )
+
+        logger.info(
+            f"Retrieved {len(saved_activities)} saved activities for user {user_id}"
+        )
+
+        return saved_activities
+
+    except Exception as e:
+        logger.error(f"Failed to get saved activities: {str(e)}")
+
+        # Log system error
+        await audit_security_event(
+            event_type=AuditEventType.SYSTEM_ERROR,
+            severity=AuditSeverity.HIGH,
+            message=f"System error listing saved activities for user {user_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource="saved_activities",
+            resource_type="saved_activities",
+            action="list_saved_activities",
+            error=str(e),
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve saved activities",
+        ) from e
 
 
 @router.delete("/saved/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_saved_activity(activity_id: str):
+async def delete_saved_activity(
+    activity_id: str,
+    principal: Principal = Depends(require_principal),
+    db_service: DatabaseService = Depends(get_database_service),
+):
     """
     Delete a saved activity for a user.
 
-    Note: This endpoint requires user authentication and database integration.
+    Security features:
+    - User authentication required
+    - User authorization (can only delete own saved activities)
+    - Audit logging for deletion operations
+    - Data integrity checks
     """
     logger.info(f"Delete saved activity request: {activity_id}")
 
-    # TODO: Implement user authentication and database operations
-    # For now, return 501 to maintain API contract
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=("Delete saved activity endpoint requires user authentication implementation"),
-    )
+    try:
+        user_id = get_principal_id(principal)
+
+        # First, check if the saved activity exists and belongs to the user
+        filters = {
+            "user_id": user_id,
+            "item_type": "activity",
+            "external_id": activity_id,
+        }
+
+        existing_items = await db_service.select(
+            table="itinerary_items",
+            columns="*",
+            filters=filters,
+            user_id=user_id,
+        )
+
+        if not existing_items:
+            # Also check by metadata.activity_id for items saved with the new format
+            metadata_filter = {
+                "user_id": user_id,
+                "item_type": "activity",
+            }
+
+            all_items = await db_service.select(
+                table="itinerary_items",
+                columns="*",
+                filters=metadata_filter,
+                user_id=user_id,
+            )
+
+            # Find item with matching activity_id in metadata
+            existing_items = [
+                item
+                for item in all_items
+                if item.get("metadata", {}).get("activity_id") == activity_id
+            ]
+
+        if not existing_items:
+            await audit_security_event(
+                event_type=AuditEventType.ACCESS_DENIED,
+                severity=AuditSeverity.MEDIUM,
+                message=f"Access denied deleting activity {activity_id} for user {user_id}",
+                actor_id=user_id,
+                ip_address="unknown",
+                target_resource=f"saved_activity:{activity_id}",
+                resource_type="saved_activity",
+                resource_id=activity_id,
+                action="delete_saved_activity",
+                reason="activity_not_found_or_not_owned",
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Saved activity not found or access denied",
+            )
+
+        # Delete the saved activity(ies)
+        deleted_count = 0
+        for item in existing_items:
+            # Use Supabase delete with proper filters
+            try:
+                await (
+                    db_service.client.table("itinerary_items")
+                    .delete()
+                    .eq("id", item["id"])
+                    .execute()
+                )
+                deleted_count += 1
+            except Exception as delete_error:
+                logger.warning(f"Failed to delete item {item['id']}: {delete_error}")
+
+        if deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete saved activity",
+            )
+
+        # Log successful deletion
+        await audit_security_event(
+            event_type=AuditEventType.DATA_DELETION,
+            severity=AuditSeverity.LOW,
+            message=f"Activity {activity_id} deleted for user {user_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource=f"saved_activity:{activity_id}",
+            resource_type="saved_activity",
+            resource_id=activity_id,
+            action="delete_saved_activity",
+            deleted_count=deleted_count,
+        )
+
+        logger.info(
+            f"Deleted {deleted_count} saved activity entries for activity {activity_id} by user {user_id}"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete saved activity {activity_id}: {str(e)}")
+
+        # Log system error
+        await audit_security_event(
+            event_type=AuditEventType.SYSTEM_ERROR,
+            severity=AuditSeverity.HIGH,
+            message=f"System error deleting activity {activity_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource=f"saved_activity:{activity_id}",
+            resource_type="saved_activity",
+            resource_id=activity_id,
+            action="delete_saved_activity",
+            error=str(e),
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete saved activity",
+        ) from e
