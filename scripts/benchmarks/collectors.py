@@ -435,9 +435,9 @@ class ReportGenerator:
         <div class="header">
             <h1>🚀 TripSage Benchmark Report</h1>
             <h2>{report_type.replace("_", " ").title()}</h2>
-            <p>Generated on {time.strftime(
-                "%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp)
-            )}</p>
+            <p>Generated on {
+            time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(timestamp))
+        }</p>
             <p>Execution time: {summary.get("execution_time_formatted", "Unknown")}</p>
         </div>
         

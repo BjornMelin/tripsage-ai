@@ -810,10 +810,10 @@ class TestCircuitBreakerAndErrorRecovery:
 
         # Mock operation that fails
         async def failing_operation():
-            raise Exception("Database connection failed")
+            raise CoreDatabaseError("Database connection failed")
 
         # Should fail and increment circuit breaker
-        with pytest.raises(Exception):
+        with pytest.raises(CoreDatabaseError):
             await service._execute_with_circuit_breaker(failing_operation)
 
         assert service._circuit_breaker_failures == 1

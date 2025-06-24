@@ -86,7 +86,9 @@ class SupabaseCheckpointManager:
             # Run validation in async context if needed
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(manager.parse_and_validate_url(self._connection_string))
+                loop.create_task(
+                    manager.parse_and_validate_url(self._connection_string)
+                )
             except RuntimeError:
                 # No running loop, create one for validation
                 asyncio.run(manager.parse_and_validate_url(self._connection_string))

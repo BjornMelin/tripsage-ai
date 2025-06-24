@@ -249,9 +249,9 @@ class WebCrawlPersistence:
             else:
                 logger.warning(
                     (
-                f"Memory storage completed with issues: "
-                f"{memory_result.get('error', 'Unknown')}"
-            )
+                        f"Memory storage completed with issues: "
+                        f"{memory_result.get('error', 'Unknown')}"
+                    )
                 )
                 return False
 
@@ -329,9 +329,9 @@ class WebCrawlPersistence:
             else:
                 logger.warning(
                     (
-                f"Events memory storage had issues: "
-                f"{memory_result.get('error', 'Unknown')}"
-            )
+                        f"Events memory storage had issues: "
+                        f"{memory_result.get('error', 'Unknown')}"
+                    )
                 )
                 return False
 
@@ -401,19 +401,15 @@ class WebCrawlPersistence:
                 ConversationMessage(
                     role="system",
                     content=(
-                        (
-                "Extract travel insights, tips, and destination information "
-                "from travel blog content."
-            )
+                        "Extract travel insights, tips, and destination information "
+                        "from travel blog content."
                     ),
                 ),
                 ConversationMessage(
                     role="user",
                     content=(
-                        (
-                f"Travel blog content from {url} ({extract_type}): "
-                f"{content_text}"
-            )
+                        f"Travel blog content from {url} ({extract_type}): "
+                        f"{content_text}"
                     ),
                 ),
             ]
@@ -432,9 +428,9 @@ class WebCrawlPersistence:
             else:
                 logger.warning(
                     (
-                f"Blog memory storage had issues: "
-                f"{memory_result.get('error', 'Unknown')}"
-            )
+                        f"Blog memory storage had issues: "
+                        f"{memory_result.get('error', 'Unknown')}"
+                    )
                 )
                 return False
 
@@ -479,9 +475,9 @@ class WebCrawlPersistence:
 
             logger.info(
                 (
-                f"Successfully stored price history in Supabase for "
-                f"{item.get('title', '')}"
-            )
+                    f"Successfully stored price history in Supabase for "
+                    f"{item.get('title', '')}"
+                )
             )
             return True
 

@@ -101,7 +101,9 @@ class SessionMemoryBridge:
                     trip.get("destination")
                     for trip in recent_trips[-5:]  # Last 5 trips
                 ],
-                "favorite_destinations": self._extract_favorite_destinations(recent_trips),
+                "favorite_destinations": self._extract_favorite_destinations(
+                    recent_trips
+                ),
                 "travel_frequency": len(recent_trips),
             }
 
@@ -110,7 +112,9 @@ class SessionMemoryBridge:
         if budget_history:
             state["budget_constraints"] = {
                 "typical_range": self._calculate_typical_budget_range(budget_history),
-                "last_budget": budget_history[-1].get("total_budget") if budget_history else None,
+                "last_budget": budget_history[-1].get("total_budget")
+                if budget_history
+                else None,
                 "spending_patterns": self._analyze_spending_patterns(budget_history),
             }
 
@@ -120,9 +124,15 @@ class SessionMemoryBridge:
             state["user_insights"] = {
                 "learned_facts": [insight.get("fact") for insight in insights],
                 "preferences_learned": [
-                    insight.get("preference") for insight in insights if insight.get("type") == "preference"
+                    insight.get("preference")
+                    for insight in insights
+                    if insight.get("type") == "preference"
                 ],
-                "dislikes": [insight.get("dislike") for insight in insights if insight.get("type") == "dislike"],
+                "dislikes": [
+                    insight.get("dislike")
+                    for insight in insights
+                    if insight.get("type") == "dislike"
+                ],
             }
 
         # Add session metadata
@@ -144,12 +154,20 @@ class SessionMemoryBridge:
 
         # Return destinations visited more than once, sorted by frequency
         return [
-            dest for dest, count in sorted(destination_counts.items(), key=lambda x: x[1], reverse=True) if count > 1
+            dest
+            for dest, count in sorted(
+                destination_counts.items(), key=lambda x: x[1], reverse=True
+            )
+            if count > 1
         ]
 
-    def _calculate_typical_budget_range(self, budget_history: List[Dict[str, Any]]) -> Dict[str, float]:
+    def _calculate_typical_budget_range(
+        self, budget_history: List[Dict[str, Any]]
+    ) -> Dict[str, float]:
         """Calculate typical budget range from history."""
-        budgets = [b.get("total_budget", 0) for b in budget_history if b.get("total_budget")]
+        budgets = [
+            b.get("total_budget", 0) for b in budget_history if b.get("total_budget")
+        ]
         if not budgets:
             return {}
 
@@ -161,7 +179,9 @@ class SessionMemoryBridge:
             "average": sum(budgets) / len(budgets),
         }
 
-    def _analyze_spending_patterns(self, budget_history: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _analyze_spending_patterns(
+        self, budget_history: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Analyze spending patterns from budget history."""
         patterns = {
             "accommodation_percentage": [],
@@ -178,9 +198,14 @@ class SessionMemoryBridge:
                     patterns[category].append((category_amount / total) * 100)
 
         # Calculate averages
-        return {category: sum(values) / len(values) if values else 0 for category, values in patterns.items()}
+        return {
+            category: sum(values) / len(values) if values else 0
+            for category, values in patterns.items()
+        }
 
-    async def extract_and_persist_insights(self, state: TravelPlanningState) -> Dict[str, Any]:
+    async def extract_and_persist_insights(
+        self, state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Extract insights from state and update knowledge graph.
 
@@ -214,7 +239,9 @@ class SessionMemoryBridge:
             logger.error(f"Failed to persist insights for user {user_id}: {e}")
             return {"error": str(e)}
 
-    async def _extract_insights_from_state(self, state: TravelPlanningState) -> Dict[str, Any]:
+    async def _extract_insights_from_state(
+        self, state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Extract insights from LangGraph state.
 
@@ -279,15 +306,24 @@ class SessionMemoryBridge:
             # Extract facts from user messages (preferences, constraints, etc.)
             if role == "user":
                 # Look for preference statements
-                if any(keyword in content.lower() for keyword in ["prefer", "like", "want", "need"]):
+                if any(
+                    keyword in content.lower()
+                    for keyword in ["prefer", "like", "want", "need"]
+                ):
                     facts.append(f"User preference: {content}")
 
                 # Look for constraints
-                if any(keyword in content.lower() for keyword in ["budget", "cost", "price", "afford"]):
+                if any(
+                    keyword in content.lower()
+                    for keyword in ["budget", "cost", "price", "afford"]
+                ):
                     facts.append(f"Budget constraint: {content}")
 
                 # Look for requirements
-                if any(keyword in content.lower() for keyword in ["must", "require", "need", "necessary"]):
+                if any(
+                    keyword in content.lower()
+                    for keyword in ["must", "require", "need", "necessary"]
+                ):
                     facts.append(f"Requirement: {content}")
 
         return facts[-5:]  # Keep last 5 facts to avoid overwhelming memory
@@ -310,7 +346,9 @@ class SessionMemoryBridge:
             "budget_constraints": state.get("budget_constraints"),
             "travel_dates": state.get("travel_dates"),
             "destination_info": state.get("destination_info"),
-            "agent_history": state.get("agent_history", [])[-10:],  # Last 10 interactions
+            "agent_history": state.get("agent_history", [])[
+                -10:
+            ],  # Last 10 interactions
             "current_context": state.get("current_context"),
             "session_metadata": state.get("session_metadata"),
         }
@@ -319,18 +357,24 @@ class SessionMemoryBridge:
         if state.get("flight_searches"):
             checkpoint_data["flight_search_summary"] = {
                 "count": len(state["flight_searches"]),
-                "last_search": state["flight_searches"][-1] if state["flight_searches"] else None,
+                "last_search": state["flight_searches"][-1]
+                if state["flight_searches"]
+                else None,
             }
 
         if state.get("accommodation_searches"):
             checkpoint_data["accommodation_search_summary"] = {
                 "count": len(state["accommodation_searches"]),
-                "last_search": state["accommodation_searches"][-1] if state["accommodation_searches"] else None,
+                "last_search": state["accommodation_searches"][-1]
+                if state["accommodation_searches"]
+                else None,
             }
 
         return checkpoint_data
 
-    async def restore_from_checkpoint(self, checkpoint_data: Dict[str, Any]) -> TravelPlanningState:
+    async def restore_from_checkpoint(
+        self, checkpoint_data: Dict[str, Any]
+    ) -> TravelPlanningState:
         """
         Restore state from checkpoint data.
 
@@ -380,9 +424,13 @@ class SessionMemoryBridge:
             }
 
             # Store in session memory as checkpoint reference
-            await update_session_memory(user_id, {"checkpoint_references": [checkpoint_ref]})
+            await update_session_memory(
+                user_id, {"checkpoint_references": [checkpoint_ref]}
+            )
 
-            logger.debug(f"Stored checkpoint reference {checkpoint_id} for user {user_id}")
+            logger.debug(
+                f"Stored checkpoint reference {checkpoint_id} for user {user_id}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to store checkpoint reference: {e}")

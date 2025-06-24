@@ -82,24 +82,34 @@ class FileValidationResult(TripSageModel):
     """File validation result model."""
 
     is_valid: bool = Field(..., description="Whether file passed validation")
-    error_message: Optional[str] = Field(None, description="Error message if validation failed")
+    error_message: Optional[str] = Field(
+        None, description="Error message if validation failed"
+    )
     file_size: int = Field(..., description="File size in bytes")
     detected_mime_type: Optional[str] = Field(None, description="Detected MIME type")
     file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
-    security_warnings: List[str] = Field(default_factory=list, description="Security warnings")
+    security_warnings: List[str] = Field(
+        default_factory=list, description="Security warnings"
+    )
 
 
 class FileMetadata(TripSageModel):
     """File metadata model."""
 
-    dimensions: Optional[Dict[str, int]] = Field(None, description="Image/video dimensions")
-    duration: Optional[float] = Field(None, description="Audio/video duration in seconds")
+    dimensions: Optional[Dict[str, int]] = Field(
+        None, description="Image/video dimensions"
+    )
+    duration: Optional[float] = Field(
+        None, description="Audio/video duration in seconds"
+    )
     page_count: Optional[int] = Field(None, description="Document page count")
     word_count: Optional[int] = Field(None, description="Text word count")
     character_count: Optional[int] = Field(None, description="Text character count")
     encoding: Optional[str] = Field(None, description="Text encoding")
     creation_date: Optional[datetime] = Field(None, description="File creation date")
-    modification_date: Optional[datetime] = Field(None, description="File modification date")
+    modification_date: Optional[datetime] = Field(
+        None, description="File modification date"
+    )
     author: Optional[str] = Field(None, description="Document author")
     title: Optional[str] = Field(None, description="Document title")
     keywords: List[str] = Field(default_factory=list, description="Extracted keywords")
@@ -109,15 +119,27 @@ class FileMetadata(TripSageModel):
 class FileAnalysisResult(TripSageModel):
     """AI analysis result for file content."""
 
-    content_summary: Optional[str] = Field(None, description="AI-generated content summary")
+    content_summary: Optional[str] = Field(
+        None, description="AI-generated content summary"
+    )
     extracted_text: Optional[str] = Field(None, description="Extracted text content")
     entities: List[str] = Field(default_factory=list, description="Detected entities")
-    categories: List[str] = Field(default_factory=list, description="Content categories")
-    sentiment: Optional[float] = Field(None, ge=-1, le=1, description="Sentiment score (-1 to 1)")
-    confidence_score: Optional[float] = Field(None, ge=0, le=1, description="Analysis confidence")
+    categories: List[str] = Field(
+        default_factory=list, description="Content categories"
+    )
+    sentiment: Optional[float] = Field(
+        None, ge=-1, le=1, description="Sentiment score (-1 to 1)"
+    )
+    confidence_score: Optional[float] = Field(
+        None, ge=0, le=1, description="Analysis confidence"
+    )
     language_detected: Optional[str] = Field(None, description="Detected language")
-    travel_related: bool = Field(default=False, description="Whether content is travel-related")
-    travel_context: Optional[Dict[str, Any]] = Field(None, description="Travel-specific context")
+    travel_related: bool = Field(
+        default=False, description="Whether content is travel-related"
+    )
+    travel_context: Optional[Dict[str, Any]] = Field(
+        None, description="Travel-specific context"
+    )
 
 
 class ProcessedFile(TripSageModel):
@@ -140,17 +162,27 @@ class ProcessedFile(TripSageModel):
 
     processing_status: ProcessingStatus = Field(..., description="Processing status")
     upload_timestamp: datetime = Field(..., description="Upload timestamp")
-    processed_timestamp: Optional[datetime] = Field(None, description="Processing completion timestamp")
+    processed_timestamp: Optional[datetime] = Field(
+        None, description="Processing completion timestamp"
+    )
 
     metadata: Optional[FileMetadata] = Field(None, description="File metadata")
-    analysis_result: Optional[FileAnalysisResult] = Field(None, description="AI analysis result")
+    analysis_result: Optional[FileAnalysisResult] = Field(
+        None, description="AI analysis result"
+    )
 
-    visibility: FileVisibility = Field(default=FileVisibility.PRIVATE, description="File visibility")
-    shared_with: List[str] = Field(default_factory=list, description="User IDs with access")
+    visibility: FileVisibility = Field(
+        default=FileVisibility.PRIVATE, description="File visibility"
+    )
+    shared_with: List[str] = Field(
+        default_factory=list, description="User IDs with access"
+    )
     tags: List[str] = Field(default_factory=list, description="File tags")
 
     version: int = Field(default=1, description="File version")
-    parent_file_id: Optional[str] = Field(None, description="Parent file ID for versions")
+    parent_file_id: Optional[str] = Field(
+        None, description="Parent file ID for versions"
+    )
 
     # Usage tracking
     download_count: int = Field(default=0, description="Download count")
@@ -164,8 +196,12 @@ class FileUploadRequest(TripSageModel):
     content: bytes = Field(..., description="File content")
     trip_id: Optional[str] = Field(None, description="Associated trip ID")
     tags: List[str] = Field(default_factory=list, description="File tags")
-    visibility: FileVisibility = Field(default=FileVisibility.PRIVATE, description="File visibility")
-    auto_analyze: bool = Field(default=True, description="Whether to perform AI analysis")
+    visibility: FileVisibility = Field(
+        default=FileVisibility.PRIVATE, description="File visibility"
+    )
+    auto_analyze: bool = Field(
+        default=True, description="Whether to perform AI analysis"
+    )
 
 
 class FileBatchUploadRequest(TripSageModel):
@@ -173,7 +209,9 @@ class FileBatchUploadRequest(TripSageModel):
 
     files: List[FileUploadRequest] = Field(..., description="Files to upload")
     trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    max_total_size: int = Field(default=50 * 1024 * 1024, description="Maximum total size in bytes")
+    max_total_size: int = Field(
+        default=50 * 1024 * 1024, description="Maximum total size in bytes"
+    )
 
 
 class FileSearchRequest(TripSageModel):
@@ -255,7 +293,9 @@ class FileProcessingService:
 
                 storage_service = StorageService()
             except ImportError:
-                logger.warning("External storage service not available, using local storage")
+                logger.warning(
+                    "External storage service not available, using local storage"
+                )
                 storage_service = None
 
         if ai_analysis_service is None:
@@ -351,7 +391,9 @@ class FileProcessingService:
         (self.storage_root / "processed").mkdir(exist_ok=True)
         (self.storage_root / "thumbnails").mkdir(exist_ok=True)
 
-    async def upload_file(self, user_id: str, upload_request: FileUploadRequest) -> ProcessedFile:
+    async def upload_file(
+        self, user_id: str, upload_request: FileUploadRequest
+    ) -> ProcessedFile:
         """
         Upload and process a single file.
 
@@ -368,14 +410,18 @@ class FileProcessingService:
         """
         try:
             # Validate file
-            validation_result = await self._validate_file_content(upload_request.filename, upload_request.content)
+            validation_result = await self._validate_file_content(
+                upload_request.filename, upload_request.content
+            )
 
             if not validation_result.is_valid:
                 raise ValidationError(validation_result.error_message)
 
             # Security scan
             if self.virus_scanner:
-                scan_result = await self.virus_scanner.scan_content(upload_request.content)
+                scan_result = await self.virus_scanner.scan_content(
+                    upload_request.content
+                )
                 if scan_result.threats_detected:
                     raise ValidationError("File contains malicious content")
 
@@ -395,10 +441,14 @@ class FileProcessingService:
                     },
                 )
                 # Create new reference to existing file
-                return await self._create_file_reference(existing_file, upload_request, user_id)
+                return await self._create_file_reference(
+                    existing_file, upload_request, user_id
+                )
 
             # Store file
-            storage_result = await self._store_file(file_id, user_id, upload_request.filename, upload_request.content)
+            storage_result = await self._store_file(
+                file_id, user_id, upload_request.filename, upload_request.content
+            )
 
             # Extract file metadata
             metadata = await self._extract_metadata(
@@ -465,7 +515,9 @@ class FileProcessingService:
             )
             raise ServiceError(f"File upload failed: {str(e)}") from e
 
-    async def upload_batch(self, user_id: str, batch_request: FileBatchUploadRequest) -> List[ProcessedFile]:
+    async def upload_batch(
+        self, user_id: str, batch_request: FileBatchUploadRequest
+    ) -> List[ProcessedFile]:
         """
         Upload multiple files in batch.
 
@@ -484,7 +536,9 @@ class FileProcessingService:
             # Validate batch size
             total_size = sum(len(file.content) for file in batch_request.files)
             if total_size > batch_request.max_total_size:
-                raise ValidationError(f"Batch size {total_size} exceeds limit {batch_request.max_total_size}")
+                raise ValidationError(
+                    f"Batch size {total_size} exceeds limit {batch_request.max_total_size}"
+                )
 
             # Process files concurrently
             tasks = []
@@ -503,7 +557,9 @@ class FileProcessingService:
 
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    errors.append(f"File {batch_request.files[i].filename}: {str(result)}")
+                    errors.append(
+                        f"File {batch_request.files[i].filename}: {str(result)}"
+                    )
                 else:
                     processed_files.append(result)
 
@@ -525,10 +581,14 @@ class FileProcessingService:
         except (ValidationError, ServiceError):
             raise
         except Exception as e:
-            logger.error("Batch upload failed", extra={"user_id": user_id, "error": str(e)})
+            logger.error(
+                "Batch upload failed", extra={"user_id": user_id, "error": str(e)}
+            )
             raise ServiceError(f"Batch upload failed: {str(e)}") from e
 
-    async def get_file(self, file_id: str, user_id: str, check_access: bool = True) -> Optional[ProcessedFile]:
+    async def get_file(
+        self, file_id: str, user_id: str, check_access: bool = True
+    ) -> Optional[ProcessedFile]:
         """
         Get file information by ID.
 
@@ -548,7 +608,9 @@ class FileProcessingService:
             processed_file = ProcessedFile(**file_data)
 
             # Check access permissions
-            if check_access and not await self._check_file_access(processed_file, user_id):
+            if check_access and not await self._check_file_access(
+                processed_file, user_id
+            ):
                 raise PermissionError("Access denied to file")
 
             # Update last accessed timestamp
@@ -584,7 +646,9 @@ class FileProcessingService:
 
             # Get content from storage
             if self.storage_service:
-                content = await self.storage_service.get_file_content(processed_file.storage_path)
+                content = await self.storage_service.get_file_content(
+                    processed_file.storage_path
+                )
             else:
                 # Local storage fallback
                 file_path = self.storage_root / processed_file.storage_path
@@ -607,7 +671,9 @@ class FileProcessingService:
             )
             return None
 
-    async def search_files(self, user_id: str, search_request: FileSearchRequest) -> List[ProcessedFile]:
+    async def search_files(
+        self, user_id: str, search_request: FileSearchRequest
+    ) -> List[ProcessedFile]:
         """
         Search files for a user.
 
@@ -659,7 +725,9 @@ class FileProcessingService:
             return processed_files
 
         except Exception as e:
-            logger.error("File search failed", extra={"user_id": user_id, "error": str(e)})
+            logger.error(
+                "File search failed", extra={"user_id": user_id, "error": str(e)}
+            )
             return []
 
     async def delete_file(self, file_id: str, user_id: str) -> bool:
@@ -739,7 +807,9 @@ class FileProcessingService:
                 most_accessed=[],
             )
 
-    async def _validate_file_content(self, filename: str, content: bytes) -> FileValidationResult:
+    async def _validate_file_content(
+        self, filename: str, content: bytes
+    ) -> FileValidationResult:
         """Validate file content and metadata."""
         file_size = len(content)
         file_hash = hashlib.sha256(content).hexdigest()
@@ -747,7 +817,9 @@ class FileProcessingService:
 
         # Size validation
         if file_size == 0:
-            return FileValidationResult(is_valid=False, error_message="File is empty", file_size=file_size)
+            return FileValidationResult(
+                is_valid=False, error_message="File is empty", file_size=file_size
+            )
 
         if file_size > self.max_file_size:
             return FileValidationResult(
@@ -767,7 +839,9 @@ class FileProcessingService:
         # Check for suspicious patterns
         for pattern in self.suspicious_patterns:
             if pattern in filename.lower():
-                security_warnings.append(f"Filename contains suspicious pattern: {pattern}")
+                security_warnings.append(
+                    f"Filename contains suspicious pattern: {pattern}"
+                )
 
         # Extension validation
         file_path = Path(filename)
@@ -790,7 +864,9 @@ class FileProcessingService:
             )
 
         # Content validation
-        content_valid, content_error = self._validate_file_format(content, detected_mime_type)
+        content_valid, content_error = self._validate_file_format(
+            content, detected_mime_type
+        )
         if not content_valid:
             return FileValidationResult(
                 is_valid=False,
@@ -830,7 +906,9 @@ class FileProcessingService:
 
         return "application/octet-stream"
 
-    def _validate_file_format(self, content: bytes, mime_type: str) -> Tuple[bool, Optional[str]]:
+    def _validate_file_format(
+        self, content: bytes, mime_type: str
+    ) -> Tuple[bool, Optional[str]]:
         """Validate file format consistency."""
         if mime_type.startswith("image/"):
             return self._validate_image_format(content, mime_type)
@@ -841,13 +919,17 @@ class FileProcessingService:
 
         return True, None
 
-    def _validate_image_format(self, content: bytes, mime_type: str) -> Tuple[bool, Optional[str]]:
+    def _validate_image_format(
+        self, content: bytes, mime_type: str
+    ) -> Tuple[bool, Optional[str]]:
         """Validate image format."""
         if mime_type == "image/jpeg" and not content.startswith(b"\xff\xd8\xff"):
             return False, "Invalid JPEG header"
         elif mime_type == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
             return False, "Invalid PNG header"
-        elif mime_type == "image/gif" and not (content.startswith(b"GIF87a") or content.startswith(b"GIF89a")):
+        elif mime_type == "image/gif" and not (
+            content.startswith(b"GIF87a") or content.startswith(b"GIF89a")
+        ):
             return False, "Invalid GIF header"
 
         return True, None
@@ -892,7 +974,9 @@ class FileProcessingService:
         else:
             return FileType.OTHER
 
-    async def _check_duplicate(self, user_id: str, file_hash: str) -> Optional[ProcessedFile]:
+    async def _check_duplicate(
+        self, user_id: str, file_hash: str
+    ) -> Optional[ProcessedFile]:
         """Check for duplicate files by hash."""
         try:
             duplicate_data = await self.db.get_file_by_hash(user_id, file_hash)
@@ -921,11 +1005,15 @@ class FileProcessingService:
         await self._store_file_record(new_file)
         return new_file
 
-    async def _store_file(self, file_id: str, user_id: str, filename: str, content: bytes) -> Dict[str, Any]:
+    async def _store_file(
+        self, file_id: str, user_id: str, filename: str, content: bytes
+    ) -> Dict[str, Any]:
         """Store file content to storage provider."""
         if self.storage_service:
             # Use external storage service
-            storage_result = await self.storage_service.store_file(file_id, user_id, filename, content)
+            storage_result = await self.storage_service.store_file(
+                file_id, user_id, filename, content
+            )
             return {
                 "provider": StorageProvider.AWS_S3,  # or detect from service
                 "path": storage_result["path"],
@@ -950,7 +1038,9 @@ class FileProcessingService:
                 "stored_filename": stored_filename,
             }
 
-    async def _extract_metadata(self, content: bytes, mime_type: str, filename: str) -> FileMetadata:
+    async def _extract_metadata(
+        self, content: bytes, mime_type: str, filename: str
+    ) -> FileMetadata:
         """Extract file metadata."""
         metadata = FileMetadata()
 
@@ -974,7 +1064,9 @@ class FileProcessingService:
                             word_freq[word] = word_freq.get(word, 0) + 1
 
                     # Get top 10 most frequent words as keywords
-                    metadata.keywords = sorted(word_freq.keys(), key=word_freq.get, reverse=True)[:10]
+                    metadata.keywords = sorted(
+                        word_freq.keys(), key=word_freq.get, reverse=True
+                    )[:10]
 
                 except UnicodeDecodeError:
                     pass
@@ -997,7 +1089,9 @@ class FileProcessingService:
 
             # Get file content
             if self.storage_service:
-                content = await self.storage_service.get_file_content(processed_file.storage_path)
+                content = await self.storage_service.get_file_content(
+                    processed_file.storage_path
+                )
             else:
                 file_path = self.storage_root / processed_file.storage_path
                 content = file_path.read_bytes()
@@ -1035,7 +1129,9 @@ class FileProcessingService:
             processed_file.processing_status = ProcessingStatus.FAILED
             await self._update_file_record(processed_file)
 
-    async def _check_file_access(self, processed_file: ProcessedFile, user_id: str) -> bool:
+    async def _check_file_access(
+        self, processed_file: ProcessedFile, user_id: str
+    ) -> bool:
         """Check if user has access to file."""
         # Owner always has access
         if processed_file.user_id == user_id:

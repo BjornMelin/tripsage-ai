@@ -55,8 +55,7 @@ class CacheService:
         # Skip connection if redis_url is None (testing/disabled mode)
         if self.settings.redis_url is None:
             logger.info(
-                "Redis URL not configured, cache service will operate in "
-                "disabled mode"
+                "Redis URL not configured, cache service will operate in disabled mode"
             )
             self._is_connected = False
             return

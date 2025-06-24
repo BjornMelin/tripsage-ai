@@ -261,7 +261,6 @@ class TestAttachmentUserDataIsolation:
     ):
         """Test that users cannot access attachments from inaccessible trips."""
         attachment_id = sample_attachment_data["id"]
-        trip_id = sample_attachment_data["trip_id"]
 
         # User doesn't have access to the trip
         mock_trip_service._check_trip_access.return_value = False
@@ -355,7 +354,9 @@ class TestActivityAuthenticationImplementation:
         # In the actual implementation, this would be handled by FastAPI dependencies
 
         # Simulate unauthenticated access
-        with pytest.raises(Exception):  # Would be HTTPException in real implementation
+        with pytest.raises(
+            HTTPException
+        ):  # Would be HTTPException in real implementation
             # This represents calling an activity endpoint without authentication
             # The actual endpoint would have @require_principal decorator
             pass
@@ -370,7 +371,6 @@ class TestActivityAuthenticationImplementation:
         mock_audit_service,
     ):
         """Test that activities are properly isolated by user access."""
-        trip_id = str(uuid4())
         activity_id = str(uuid4())
 
         # Setup: activity belongs to a trip the unauthorized user can't access
@@ -646,7 +646,7 @@ class TestParametrizedSecurityScenarios:
 
         # Test operation based on type
         if operation == "list_attachments":
-            result = await list_trip_attachments(
+            await list_trip_attachments(
                 trip_id=trip_id,
                 principal=mock_principal,
                 service=mock_file_service,
@@ -654,7 +654,7 @@ class TestParametrizedSecurityScenarios:
             )
         elif operation == "get_attachment":
             mock_file_service.verify_attachment_access.return_value = True
-            result = await get_attachment(
+            await get_attachment(
                 attachment_id=attachment_id,
                 principal=mock_principal,
                 service=mock_file_service,

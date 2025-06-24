@@ -59,8 +59,12 @@ class TripCollaboratorDB(BaseModel):
         description="Permission level for the collaborator",
     )
     added_by: UUID = Field(description="ID of the user who added this collaborator")
-    added_at: datetime = Field(description="Timestamp when the collaboration was created")
-    updated_at: datetime = Field(description="Timestamp when the collaboration was last updated")
+    added_at: datetime = Field(
+        description="Timestamp when the collaboration was created"
+    )
+    updated_at: datetime = Field(
+        description="Timestamp when the collaboration was last updated"
+    )
 
     @property
     def can_view(self) -> bool:

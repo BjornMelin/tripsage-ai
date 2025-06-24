@@ -74,7 +74,9 @@ class FlightSegment(TripSageModel):
     airline: Optional[str] = Field(None, description="Airline code")
     flight_number: Optional[str] = Field(None, description="Flight number")
     aircraft_type: Optional[str] = Field(None, description="Aircraft type")
-    duration_minutes: Optional[int] = Field(None, description="Flight duration in minutes")
+    duration_minutes: Optional[int] = Field(
+        None, description="Flight duration in minutes"
+    )
 
     @field_validator("origin", "destination")
     @classmethod
@@ -90,8 +92,12 @@ class FlightOffer(TripSageModel):
 
     id: str = Field(..., description="Offer ID")
     search_id: Optional[str] = Field(None, description="Associated search ID")
-    outbound_segments: List[FlightSegment] = Field(..., description="Outbound flight segments")
-    return_segments: Optional[List[FlightSegment]] = Field(None, description="Return flight segments")
+    outbound_segments: List[FlightSegment] = Field(
+        ..., description="Outbound flight segments"
+    )
+    return_segments: Optional[List[FlightSegment]] = Field(
+        None, description="Return flight segments"
+    )
 
     total_price: float = Field(..., description="Total price")
     base_price: Optional[float] = Field(None, description="Base fare price")
@@ -101,20 +107,30 @@ class FlightOffer(TripSageModel):
     cabin_class: CabinClass = Field(..., description="Cabin class")
     booking_class: Optional[str] = Field(None, description="Booking class code")
 
-    total_duration: Optional[int] = Field(None, description="Total travel time in minutes")
+    total_duration: Optional[int] = Field(
+        None, description="Total travel time in minutes"
+    )
     stops_count: int = Field(default=0, description="Number of stops")
     airlines: List[str] = Field(default_factory=list, description="Airlines involved")
 
     expires_at: Optional[datetime] = Field(None, description="Offer expiration time")
     bookable: bool = Field(default=True, description="Whether offer can be booked")
 
-    source: Optional[str] = Field(None, description="Source API (duffel, amadeus, etc.)")
-    source_offer_id: Optional[str] = Field(None, description="Original offer ID from source")
+    source: Optional[str] = Field(
+        None, description="Source API (duffel, amadeus, etc.)"
+    )
+    source_offer_id: Optional[str] = Field(
+        None, description="Original offer ID from source"
+    )
 
     # Scoring and ranking
     score: Optional[float] = Field(None, ge=0, le=1, description="Quality score")
-    price_score: Optional[float] = Field(None, ge=0, le=1, description="Price competitiveness")
-    convenience_score: Optional[float] = Field(None, ge=0, le=1, description="Convenience score")
+    price_score: Optional[float] = Field(
+        None, ge=0, le=1, description="Price competitiveness"
+    )
+    convenience_score: Optional[float] = Field(
+        None, ge=0, le=1, description="Convenience score"
+    )
 
 
 class FlightBooking(TripSageModel):
@@ -125,11 +141,15 @@ class FlightBooking(TripSageModel):
     user_id: str = Field(..., description="User ID")
 
     offer_id: str = Field(..., description="Booked offer ID")
-    confirmation_number: Optional[str] = Field(None, description="Airline confirmation number")
+    confirmation_number: Optional[str] = Field(
+        None, description="Airline confirmation number"
+    )
 
     passengers: List[FlightPassenger] = Field(..., description="Passenger details")
     outbound_segments: List[FlightSegment] = Field(..., description="Outbound segments")
-    return_segments: Optional[List[FlightSegment]] = Field(None, description="Return segments")
+    return_segments: Optional[List[FlightSegment]] = Field(
+        None, description="Return segments"
+    )
 
     total_price: float = Field(..., description="Total booking price")
     currency: str = Field(..., description="Price currency")
@@ -138,10 +158,14 @@ class FlightBooking(TripSageModel):
     booked_at: datetime = Field(..., description="Booking timestamp")
     expires_at: Optional[datetime] = Field(None, description="Booking expiration")
 
-    cancellable: bool = Field(default=False, description="Whether booking can be cancelled")
+    cancellable: bool = Field(
+        default=False, description="Whether booking can be cancelled"
+    )
     refundable: bool = Field(default=False, description="Whether booking is refundable")
 
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
 
 class FlightSearchResponse(TripSageModel):
@@ -149,9 +173,13 @@ class FlightSearchResponse(TripSageModel):
 
     search_id: str = Field(..., description="Search ID")
     offers: List[FlightOffer] = Field(..., description="Flight offers")
-    search_parameters: FlightSearchRequest = Field(..., description="Original search parameters")
+    search_parameters: FlightSearchRequest = Field(
+        ..., description="Original search parameters"
+    )
     total_results: int = Field(..., description="Total number of results")
-    search_duration_ms: Optional[int] = Field(None, description="Search duration in milliseconds")
+    search_duration_ms: Optional[int] = Field(
+        None, description="Search duration in milliseconds"
+    )
     cached: bool = Field(default=False, description="Whether results were cached")
 
 
@@ -159,10 +187,14 @@ class FlightBookingRequest(TripSageModel):
     """Request model for flight booking."""
 
     offer_id: str = Field(..., description="Offer ID to book")
-    passengers: List[FlightPassenger] = Field(..., description="Complete passenger information")
+    passengers: List[FlightPassenger] = Field(
+        ..., description="Complete passenger information"
+    )
     trip_id: Optional[str] = Field(None, description="Associated trip ID")
     hold_only: bool = Field(default=False, description="Hold booking without payment")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional booking metadata")
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, description="Additional booking metadata"
+    )
 
     @field_validator("passengers")
     @classmethod
@@ -187,7 +219,9 @@ class FlightService:
     - Trip integration
     """
 
-    def __init__(self, database_service=None, external_flight_service=None, cache_ttl: int = 300):
+    def __init__(
+        self, database_service=None, external_flight_service=None, cache_ttl: int = 300
+    ):
         """
         Initialize the flight service.
 
@@ -221,7 +255,9 @@ class FlightService:
         # In-memory cache for search results
         self._search_cache: Dict[str, tuple] = {}
 
-    async def search_flights(self, search_request: FlightSearchRequest) -> FlightSearchResponse:
+    async def search_flights(
+        self, search_request: FlightSearchRequest
+    ) -> FlightSearchResponse:
         """
         Search for flight offers.
 
@@ -282,7 +318,9 @@ class FlightService:
             # Store search in database
             await self._store_search_history(search_id, search_request, scored_offers)
 
-            search_duration = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+            search_duration = int(
+                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            )
 
             logger.info(
                 "Flight search completed",
@@ -313,7 +351,9 @@ class FlightService:
             )
             raise ServiceError(f"Flight search failed: {str(e)}") from e
 
-    async def get_offer_details(self, offer_id: str, user_id: str) -> Optional[FlightOffer]:
+    async def get_offer_details(
+        self, offer_id: str, user_id: str
+    ) -> Optional[FlightOffer]:
         """
         Get detailed information about a flight offer.
 
@@ -333,10 +373,14 @@ class FlightService:
             # Try external service if available
             if self.external_service:
                 try:
-                    external_offer = await self.external_service.get_offer_details(offer_id)
+                    external_offer = await self.external_service.get_offer_details(
+                        offer_id
+                    )
                     if external_offer:
                         # Convert to our model
-                        converted_offer = await self._convert_external_offer(external_offer)
+                        converted_offer = await self._convert_external_offer(
+                            external_offer
+                        )
 
                         # Store for future reference
                         await self._store_offer(converted_offer, user_id)
@@ -357,7 +401,9 @@ class FlightService:
             )
             return None
 
-    async def book_flight(self, user_id: str, booking_request: FlightBookingRequest) -> FlightBooking:
+    async def book_flight(
+        self, user_id: str, booking_request: FlightBookingRequest
+    ) -> FlightBooking:
         """
         Book a flight offer.
 
@@ -400,7 +446,9 @@ class FlightService:
                 return_segments=offer.return_segments,
                 total_price=offer.total_price,
                 currency=offer.currency,
-                status=BookingStatus.HOLD if booking_request.hold_only else BookingStatus.BOOKED,
+                status=BookingStatus.HOLD
+                if booking_request.hold_only
+                else BookingStatus.BOOKED,
                 booked_at=now,
                 metadata=booking_request.metadata or {},
             )
@@ -408,9 +456,13 @@ class FlightService:
             # Attempt external booking if not hold-only
             if not booking_request.hold_only and self.external_service:
                 try:
-                    external_booking = await self._book_external_flight(offer, booking_request)
+                    external_booking = await self._book_external_flight(
+                        offer, booking_request
+                    )
                     if external_booking:
-                        booking.confirmation_number = external_booking.get("confirmation_number")
+                        booking.confirmation_number = external_booking.get(
+                            "confirmation_number"
+                        )
                         booking.status = BookingStatus.BOOKED
                         booking.cancellable = external_booking.get("cancellable", False)
                         booking.refundable = external_booking.get("refundable", False)
@@ -534,7 +586,9 @@ class FlightService:
                     )
 
             # Update booking status
-            success = await self.db.update_flight_booking(booking_id, {"status": BookingStatus.CANCELLED.value})
+            success = await self.db.update_flight_booking(
+                booking_id, {"status": BookingStatus.CANCELLED.value}
+            )
 
             if success:
                 logger.info(
@@ -553,7 +607,9 @@ class FlightService:
             )
             return False
 
-    async def _search_external_api(self, search_request: FlightSearchRequest) -> List[FlightOffer]:
+    async def _search_external_api(
+        self, search_request: FlightSearchRequest
+    ) -> List[FlightOffer]:
         """Search flights using external API."""
         if not self.external_service:
             return []
@@ -607,7 +663,9 @@ class FlightService:
             source_offer_id=external_offer.get("id"),
         )
 
-    async def _generate_mock_offers(self, search_request: FlightSearchRequest) -> List[FlightOffer]:
+    async def _generate_mock_offers(
+        self, search_request: FlightSearchRequest
+    ) -> List[FlightOffer]:
         """Generate mock flight offers for testing."""
         offers = []
 
@@ -621,7 +679,9 @@ class FlightService:
                         origin=search_request.origin,
                         destination=search_request.destination,
                         departure_date=search_request.departure_date,
-                        arrival_date=search_request.departure_date.replace(hour=search_request.departure_date.hour + 3),
+                        arrival_date=search_request.departure_date.replace(
+                            hour=search_request.departure_date.hour + 3
+                        ),
                         airline=f"AA{100 + i}",
                         flight_number=f"AA{1000 + i}",
                     )
@@ -638,7 +698,9 @@ class FlightService:
 
         return offers
 
-    async def _score_offers(self, offers: List[FlightOffer], search_request: FlightSearchRequest) -> List[FlightOffer]:
+    async def _score_offers(
+        self, offers: List[FlightOffer], search_request: FlightSearchRequest
+    ) -> List[FlightOffer]:
         """Score and rank flight offers."""
         if not offers:
             return offers
@@ -651,7 +713,9 @@ class FlightService:
         for offer in offers:
             # Price score (lower price = higher score)
             if max_price > min_price:
-                price_score = 1 - (offer.total_price - min_price) / (max_price - min_price)
+                price_score = 1 - (offer.total_price - min_price) / (
+                    max_price - min_price
+                )
             else:
                 price_score = 1.0
 
@@ -701,7 +765,9 @@ class FlightService:
 
         # Simple cache cleanup
         if len(self._search_cache) > 1000:
-            oldest_keys = sorted(self._search_cache.keys(), key=lambda k: self._search_cache[k][1])[:200]
+            oldest_keys = sorted(
+                self._search_cache.keys(), key=lambda k: self._search_cache[k][1]
+            )[:200]
             for key in oldest_keys:
                 del self._search_cache[key]
 
@@ -718,7 +784,9 @@ class FlightService:
                 "origin": search_request.origin,
                 "destination": search_request.destination,
                 "departure_date": search_request.departure_date.isoformat(),
-                "return_date": search_request.return_date.isoformat() if search_request.return_date else None,
+                "return_date": search_request.return_date.isoformat()
+                if search_request.return_date
+                else None,
                 "passenger_count": len(search_request.passengers),
                 "cabin_class": search_request.cabin_class.value,
                 "offers_count": len(offers),
@@ -743,7 +811,9 @@ class FlightService:
             await self.db.store_flight_offer(offer_data)
 
         except Exception as e:
-            logger.warning("Failed to store offer", extra={"offer_id": offer.id, "error": str(e)})
+            logger.warning(
+                "Failed to store offer", extra={"offer_id": offer.id, "error": str(e)}
+            )
 
     async def _store_booking(self, booking: FlightBooking) -> None:
         """Store flight booking in database."""
@@ -776,7 +846,9 @@ class FlightService:
                         "type": passenger.type.value,
                         "given_name": passenger.given_name,
                         "family_name": passenger.family_name,
-                        "born_on": passenger.date_of_birth.date() if passenger.date_of_birth else None,
+                        "born_on": passenger.date_of_birth.date()
+                        if passenger.date_of_birth
+                        else None,
                         "email": passenger.email,
                         "phone_number": passenger.phone,
                     }

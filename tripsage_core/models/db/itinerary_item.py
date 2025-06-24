@@ -42,7 +42,9 @@ class ItineraryItem(TripSageModel):
     trip_id: int = Field(..., description="Reference to the associated trip")
     item_type: ItemType = Field(..., description="Type of itinerary item")
     date: Date = Field(..., description="Date of the itinerary item")
-    scheduled_time: Optional[dt_time] = Field(None, description="Time of the itinerary item")
+    scheduled_time: Optional[dt_time] = Field(
+        None, description="Time of the itinerary item"
+    )
     description: str = Field(..., description="Description of the itinerary item")
     cost: Optional[float] = Field(None, description="Cost in default currency")
     notes: Optional[str] = Field(None, description="Additional notes or information")

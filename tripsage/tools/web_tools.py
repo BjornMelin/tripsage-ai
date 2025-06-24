@@ -171,17 +171,17 @@ class CachedWebSearchTool(WebSearchTool):
                 if cached_result is not None:
                     logger.info(
                         (
-                f"Cache hit for web search query: {query} "
-                f"(key: {cache_key.split(':')[-1][:8]}...)"
-            )
+                            f"Cache hit for web search query: {query} "
+                            f"(key: {cache_key.split(':')[-1][:8]}...)"
+                        )
                     )
                     return cached_result
 
                 logger.info(
                     (
-                f"Cache miss for web search query: {query} "
-                f"(key: {cache_key.split(':')[-1][:8]}...)"
-            )
+                        f"Cache miss for web search query: {query} "
+                        f"(key: {cache_key.split(':')[-1][:8]}...)"
+                    )
                 )
 
                 # Execute the actual search

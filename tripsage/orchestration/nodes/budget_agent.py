@@ -69,7 +69,9 @@ class BudgetAgentNode(BaseAgentNode):
         """Load agent configuration from database with fallback to settings."""
         try:
             # Get configuration from database with runtime overrides
-            self.agent_config = await self.config_service.get_agent_config("budget_agent", **self.config_overrides)
+            self.agent_config = await self.config_service.get_agent_config(
+                "budget_agent", **self.config_overrides
+            )
 
             # Initialize LLM with loaded configuration
             self.llm = ChatOpenAI(
@@ -80,14 +82,18 @@ class BudgetAgentNode(BaseAgentNode):
                 api_key=self.agent_config["api_key"],
             )
 
-            logger.info(f"Loaded budget agent configuration from database: temp={self.agent_config['temperature']}")
+            logger.info(
+                f"Loaded budget agent configuration from database: temp={self.agent_config['temperature']}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to load database configuration, using fallback: {e}")
 
             # Fallback to settings-based configuration
             settings = get_settings()
-            self.agent_config = settings.get_agent_config("budget_agent", **self.config_overrides)
+            self.agent_config = settings.get_agent_config(
+                "budget_agent", **self.config_overrides
+            )
 
             self.llm = ChatOpenAI(
                 model=self.agent_config["model"],
@@ -155,14 +161,18 @@ class BudgetAgentNode(BaseAgentNode):
             )
         else:
             # Handle general budget inquiries
-            response_message = await self._handle_general_budget_inquiry(user_message, state)
+            response_message = await self._handle_general_budget_inquiry(
+                user_message, state
+            )
 
         # Add response to conversation
         state["messages"].append(response_message)
 
         return state
 
-    async def _extract_budget_parameters(self, message: str, state: TravelPlanningState) -> Optional[Dict[str, Any]]:
+    async def _extract_budget_parameters(
+        self, message: str, state: TravelPlanningState
+    ) -> Optional[Dict[str, Any]]:
         """
         Extract budget parameters from user message and conversation context.
 
@@ -212,7 +222,9 @@ class BudgetAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(content="You are a budget analysis parameter extraction assistant."),
+                SystemMessage(
+                    content="You are a budget analysis parameter extraction assistant."
+                ),
                 HumanMessage(content=extraction_prompt),
             ]
 
@@ -225,7 +237,11 @@ class BudgetAgentNode(BaseAgentNode):
             params = json.loads(response.content)
 
             # Validate that this is budget-related
-            if params and ("operation" in params or "total_budget" in params or "budget" in message.lower()):
+            if params and (
+                "operation" in params
+                or "total_budget" in params
+                or "budget" in message.lower()
+            ):
                 return params
             else:
                 return None
@@ -234,7 +250,9 @@ class BudgetAgentNode(BaseAgentNode):
             logger.error(f"Error extracting budget parameters: {str(e)}")
             return None
 
-    async def _optimize_budget(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
+    async def _optimize_budget(
+        self, params: Dict[str, Any], state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Optimize budget allocation based on trip parameters and preferences.
 
@@ -317,7 +335,9 @@ class BudgetAgentNode(BaseAgentNode):
             },
         }
 
-    async def _track_expenses(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
+    async def _track_expenses(
+        self, params: Dict[str, Any], state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Track and categorize travel expenses.
 
@@ -329,7 +349,9 @@ class BudgetAgentNode(BaseAgentNode):
             Expense tracking analysis
         """
         expenses = params.get("expenses", [])
-        trip_id = params.get("trip_id", f"trip_{datetime.now(timezone.utc).strftime('%Y%m%d')}")
+        trip_id = params.get(
+            "trip_id", f"trip_{datetime.now(timezone.utc).strftime('%Y%m%d')}"
+        )
 
         # Categorize and sum expenses
         categories = {
@@ -358,7 +380,9 @@ class BudgetAgentNode(BaseAgentNode):
             "expenses": expenses,
         }
 
-    async def _compare_costs(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
+    async def _compare_costs(
+        self, params: Dict[str, Any], state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Compare cost options for travel components.
 
@@ -399,7 +423,9 @@ class BudgetAgentNode(BaseAgentNode):
 
         # Find best value within budget
         best_option = None
-        cheapest_option = min(analyzed_options, key=lambda x: x.get("cost", float("inf")))
+        cheapest_option = min(
+            analyzed_options, key=lambda x: x.get("cost", float("inf"))
+        )
 
         for option in analyzed_options:
             if option["within_budget"]:
@@ -415,7 +441,9 @@ class BudgetAgentNode(BaseAgentNode):
             "cheapest": cheapest_option,
         }
 
-    async def _analyze_spending(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
+    async def _analyze_spending(
+        self, params: Dict[str, Any], state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Analyze spending patterns against budget.
 
@@ -462,7 +490,11 @@ class BudgetAgentNode(BaseAgentNode):
                 "actual": actual,
                 "variance": round(variance, 2),
                 "variance_percentage": round(variance_pct, 2),
-                "status": "over" if variance > 0 else "under" if variance < 0 else "on_track",
+                "status": "over"
+                if variance > 0
+                else "under"
+                if variance < 0
+                else "on_track",
             }
 
         return {
@@ -539,7 +571,9 @@ class BudgetAgentNode(BaseAgentNode):
             },
         )
 
-    def _format_optimization_response(self, analysis: Dict[str, Any], params: Dict[str, Any]) -> str:
+    def _format_optimization_response(
+        self, analysis: Dict[str, Any], params: Dict[str, Any]
+    ) -> str:
         """Format budget optimization response."""
         total_budget = analysis.get("total_budget", 0)
         destination = analysis.get("destination", "your destination")
@@ -560,7 +594,9 @@ class BudgetAgentNode(BaseAgentNode):
             f"• Food: ${daily_budget.get('food_per_day', 0):.0f}/day "
             f"(${daily_budget.get('food_per_meal', 0):.0f}/meal)\n"
         )
-        content += f"• Activities: ${daily_budget.get('activities_per_day', 0):.0f}/day\n"
+        content += (
+            f"• Activities: ${daily_budget.get('activities_per_day', 0):.0f}/day\n"
+        )
         content += f"• Daily Total: ${daily_budget.get('daily_total', 0):.0f}/day\n"
 
         content += "\nWould you like me to help you find flights and "
@@ -568,13 +604,17 @@ class BudgetAgentNode(BaseAgentNode):
 
         return content
 
-    def _format_tracking_response(self, analysis: Dict[str, Any], params: Dict[str, Any]) -> str:
+    def _format_tracking_response(
+        self, analysis: Dict[str, Any], params: Dict[str, Any]
+    ) -> str:
         """Format expense tracking response."""
         total_spent = analysis.get("total_spent", 0)
         categories = analysis.get("categories", {})
         expenses_count = analysis.get("expenses_count", 0)
 
-        content = f"I've tracked {expenses_count} expenses totaling ${total_spent:,.2f}:\n\n"
+        content = (
+            f"I've tracked {expenses_count} expenses totaling ${total_spent:,.2f}:\n\n"
+        )
 
         content += "**Spending by Category:**\n"
         for category, amount in categories.items():
@@ -585,7 +625,9 @@ class BudgetAgentNode(BaseAgentNode):
 
         return content
 
-    def _format_comparison_response(self, analysis: Dict[str, Any], params: Dict[str, Any]) -> str:
+    def _format_comparison_response(
+        self, analysis: Dict[str, Any], params: Dict[str, Any]
+    ) -> str:
         """Format cost comparison response."""
         category = analysis.get("category", "options")
         options_count = analysis.get("options_count", 0)
@@ -608,7 +650,9 @@ class BudgetAgentNode(BaseAgentNode):
 
         return content
 
-    def _format_analysis_response(self, analysis: Dict[str, Any], params: Dict[str, Any]) -> str:
+    def _format_analysis_response(
+        self, analysis: Dict[str, Any], params: Dict[str, Any]
+    ) -> str:
         """Format spending analysis response."""
         if "message" in analysis:
             return analysis["message"]
@@ -626,11 +670,15 @@ class BudgetAgentNode(BaseAgentNode):
         for category, data in variance_analysis.items():
             status_emoji = "⚠️" if data["status"] == "over" else "✅"
             content += f"{status_emoji} {category.title()}: ${data['actual']:,.2f} vs ${data['planned']:,.2f} "
-            content += f"({data['variance']:+,.2f}, {data['variance_percentage']:+.1f}%)\n"
+            content += (
+                f"({data['variance']:+,.2f}, {data['variance_percentage']:+.1f}%)\n"
+            )
 
         return content
 
-    async def _handle_general_budget_inquiry(self, message: str, state: TravelPlanningState) -> Dict[str, Any]:
+    async def _handle_general_budget_inquiry(
+        self, message: str, state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Handle general budget inquiries that don't require specific analysis.
 
@@ -661,7 +709,9 @@ class BudgetAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(content="You are a helpful travel budget optimization assistant."),
+                SystemMessage(
+                    content="You are a helpful travel budget optimization assistant."
+                ),
                 HumanMessage(content=response_prompt),
             ]
 

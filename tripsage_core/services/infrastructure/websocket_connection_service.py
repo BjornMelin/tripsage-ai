@@ -63,7 +63,9 @@ class ExponentialBackoffException(Exception):
 class MonitoredDeque(deque):
     """Deque that logs when items are dropped due to maxlen."""
 
-    def __init__(self, *args, priority_name: str = "", connection_id: str = "", **kwargs):
+    def __init__(
+        self, *args, priority_name: str = "", connection_id: str = "", **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.priority_name = priority_name
         self.connection_id = connection_id
@@ -117,11 +119,19 @@ class WebSocketConnection:
         self.BACKPRESSURE_THRESHOLD = 0.8  # 80% of max size triggers backpressure
 
         # Message queue with priority support - fix starvation issue
-        self.message_queue: Deque[Any] = MonitoredDeque(maxlen=1000, priority_name="main", connection_id=connection_id)
+        self.message_queue: Deque[Any] = MonitoredDeque(
+            maxlen=1000, priority_name="main", connection_id=connection_id
+        )
         self.priority_queue: dict[int, Deque[Any]] = {
-            1: MonitoredDeque(maxlen=100, priority_name="high", connection_id=connection_id),
-            2: MonitoredDeque(maxlen=500, priority_name="medium", connection_id=connection_id),
-            3: MonitoredDeque(maxlen=1000, priority_name="low", connection_id=connection_id),
+            1: MonitoredDeque(
+                maxlen=100, priority_name="high", connection_id=connection_id
+            ),
+            2: MonitoredDeque(
+                maxlen=500, priority_name="medium", connection_id=connection_id
+            ),
+            3: MonitoredDeque(
+                maxlen=1000, priority_name="low", connection_id=connection_id
+            ),
         }
 
         # Backpressure tracking
@@ -180,7 +190,9 @@ class WebSocketConnection:
 
     def get_total_queue_size(self) -> int:
         """Get total number of messages across all priority queues."""
-        return sum(len(queue) for queue in self.priority_queue.values()) + len(self.message_queue)
+        return sum(len(queue) for queue in self.priority_queue.values()) + len(
+            self.message_queue
+        )
 
     def is_queue_full(self) -> bool:
         """Check if total queue size exceeds maximum."""
@@ -318,7 +330,9 @@ class WebSocketConnection:
                         event_dict["user_id"] = str(event_dict["user_id"])
                     if "session_id" in event_dict and event_dict["session_id"]:
                         event_dict["session_id"] = str(event_dict["session_id"])
-                    if "timestamp" in event_dict and hasattr(event_dict["timestamp"], "isoformat"):
+                    if "timestamp" in event_dict and hasattr(
+                        event_dict["timestamp"], "isoformat"
+                    ):
                         event_dict["timestamp"] = event_dict["timestamp"].isoformat()
                     message_size = len(json.dumps(event_dict).encode("utf-8"))
                 else:
@@ -337,11 +351,16 @@ class WebSocketConnection:
             # For cascade failure prevention: if connection is in ERROR state but
             # circuit breaker is CLOSED, allow the send attempt to proceed
             # (connection might have recovered)
-            if self.state == ConnectionState.ERROR and self.circuit_breaker.can_execute():
+            if (
+                self.state == ConnectionState.ERROR
+                and self.circuit_breaker.can_execute()
+            ):
                 # Allow retry - temporarily set state to CONNECTED for this attempt
                 pass
             else:
-                logger.warning(f"Cannot send to connection {self.connection_id} in state {self.state}")
+                logger.warning(
+                    f"Cannot send to connection {self.connection_id} in state {self.state}"
+                )
                 return False
 
         # Check circuit breaker state - if OPEN, queue instead of dropping for
@@ -357,17 +376,27 @@ class WebSocketConnection:
 
             # Circuit breaker is OPEN but connection is healthy - queue the message
             # instead of failing
-            priority = getattr(event, "priority", 2) if hasattr(event, "priority") else event.get("priority", 2)
+            priority = (
+                getattr(event, "priority", 2)
+                if hasattr(event, "priority")
+                else event.get("priority", 2)
+            )
             return self.handle_queue_overflow(event, priority)
 
         # Add to priority queue if connection is busy, with backpressure handling
-        priority = getattr(event, "priority", 2) if hasattr(event, "priority") else event.get("priority", 2)
+        priority = (
+            getattr(event, "priority", 2)
+            if hasattr(event, "priority")
+            else event.get("priority", 2)
+        )
         if self._send_lock.locked():
             # Check backpressure before queueing
             if self.is_backpressure_active() and priority == 3:
                 # Drop low priority messages during backpressure
                 self.dropped_messages_count += 1
-                logger.debug(f"Dropped low priority message due to backpressure on connection {self.connection_id}")
+                logger.debug(
+                    f"Dropped low priority message due to backpressure on connection {self.connection_id}"
+                )
                 return False
 
             return self.handle_queue_overflow(event, priority)
@@ -382,7 +411,9 @@ class WebSocketConnection:
                         event_dict["user_id"] = str(event_dict["user_id"])
                     if "session_id" in event_dict and event_dict["session_id"]:
                         event_dict["session_id"] = str(event_dict["session_id"])
-                    if "timestamp" in event_dict and hasattr(event_dict["timestamp"], "isoformat"):
+                    if "timestamp" in event_dict and hasattr(
+                        event_dict["timestamp"], "isoformat"
+                    ):
                         event_dict["timestamp"] = event_dict["timestamp"].isoformat()
                     data = json.dumps(event_dict)
                 else:
@@ -400,7 +431,9 @@ class WebSocketConnection:
                 # If we were in ERROR state but successfully sent, recover to CONNECTED
                 if self.state == ConnectionState.ERROR:
                     self.state = ConnectionState.CONNECTED
-                    logger.info(f"Connection {self.connection_id} recovered from ERROR state")
+                    logger.info(
+                        f"Connection {self.connection_id} recovered from ERROR state"
+                    )
 
                 return True
 
@@ -414,7 +447,9 @@ class WebSocketConnection:
 
                 # Queue for retry if not permanent error, using backpressure handling
                 retry_count = (
-                    getattr(event, "retry_count", 0) if hasattr(event, "retry_count") else event.get("retry_count", 0)
+                    getattr(event, "retry_count", 0)
+                    if hasattr(event, "retry_count")
+                    else event.get("retry_count", 0)
                 )
                 if retry_count < 3:
                     # Preserve original event type (Pydantic or dict) for compatibility
@@ -467,7 +502,9 @@ class WebSocketConnection:
             ]
             for pid in timed_out_pings:
                 del self.ping_sent_times[pid]
-                logger.warning(f"Ping {pid} timed out for connection {self.connection_id}")
+                logger.warning(
+                    f"Ping {pid} timed out for connection {self.connection_id}"
+                )
 
             # Track this ping
             self.ping_sent_times[ping_id] = current_time
@@ -501,12 +538,16 @@ class WebSocketConnection:
             self.latency_samples.append(latency)
         elif self.ping_sent_times:
             # Handle oldest ping if no specific ID provided (backward compatibility)
-            oldest_ping_id = min(self.ping_sent_times.keys(), key=lambda k: self.ping_sent_times[k])
+            oldest_ping_id = min(
+                self.ping_sent_times.keys(), key=lambda k: self.ping_sent_times[k]
+            )
             sent_time = self.ping_sent_times.pop(oldest_ping_id)
             latency = (current_time - sent_time) * 1000  # Convert to ms
             self.latency_samples.append(latency)
         else:
-            logger.debug(f"Received pong but no outstanding pings for connection {self.connection_id}")
+            logger.debug(
+                f"Received pong but no outstanding pings for connection {self.connection_id}"
+            )
 
         # Clear compatibility attribute when all pings are handled (for tests)
         if not self.ping_sent_times:
@@ -575,8 +616,10 @@ class WebSocketConnection:
 
         return ConnectionHealth(
             latency=avg_latency,
-            message_rate=self.message_count / max(1, (time.time() - self.connected_at.timestamp())),
-            error_rate=self.error_count / max(1, (time.time() - self.connected_at.timestamp()) / 60),
+            message_rate=self.message_count
+            / max(1, (time.time() - self.connected_at.timestamp())),
+            error_rate=self.error_count
+            / max(1, (time.time() - self.connected_at.timestamp()) / 60),
             reconnect_count=self.reconnect_count,
             last_activity=datetime.fromtimestamp(self.last_activity),
             quality=quality,
@@ -588,7 +631,9 @@ class WebSocketConnection:
     async def process_priority_queue(self, circuit_breaker_open: bool = False) -> int:
         """Process queued messages by priority with anti-starvation measures."""
         sent_count = 0
-        max_batch_size = 5 if circuit_breaker_open else 10  # Limit queue size when circuit breaker is open
+        max_batch_size = (
+            5 if circuit_breaker_open else 10
+        )  # Limit queue size when circuit breaker is open
 
         # Anti-starvation: process each priority level fairly
         for _ in range(max_batch_size):
@@ -610,8 +655,12 @@ class WebSocketConnection:
                             event_dict["user_id"] = str(event_dict["user_id"])
                         if "session_id" in event_dict and event_dict["session_id"]:
                             event_dict["session_id"] = str(event_dict["session_id"])
-                        if "timestamp" in event_dict and hasattr(event_dict["timestamp"], "isoformat"):
-                            event_dict["timestamp"] = event_dict["timestamp"].isoformat()
+                        if "timestamp" in event_dict and hasattr(
+                            event_dict["timestamp"], "isoformat"
+                        ):
+                            event_dict["timestamp"] = event_dict[
+                                "timestamp"
+                            ].isoformat()
                         if await self.send(event_dict):
                             sent_count += 1
                         else:
@@ -689,17 +738,33 @@ class WebSocketConnectionService:
         """Get total number of active connections."""
         return len(self.connections)
 
-    def get_connections_by_state(self, state: ConnectionState) -> dict[str, WebSocketConnection]:
+    def get_connections_by_state(
+        self, state: ConnectionState
+    ) -> dict[str, WebSocketConnection]:
         """Get connections filtered by state."""
-        return {conn_id: conn for conn_id, conn in self.connections.items() if conn.state == state}
+        return {
+            conn_id: conn
+            for conn_id, conn in self.connections.items()
+            if conn.state == state
+        }
 
     def get_connections_for_user(self, user_id: UUID) -> dict[str, WebSocketConnection]:
         """Get all connections for a user."""
-        return {conn_id: conn for conn_id, conn in self.connections.items() if conn.user_id == user_id}
+        return {
+            conn_id: conn
+            for conn_id, conn in self.connections.items()
+            if conn.user_id == user_id
+        }
 
-    def get_connections_for_session(self, session_id: UUID) -> dict[str, WebSocketConnection]:
+    def get_connections_for_session(
+        self, session_id: UUID
+    ) -> dict[str, WebSocketConnection]:
         """Get all connections for a session."""
-        return {conn_id: conn for conn_id, conn in self.connections.items() if conn.session_id == session_id}
+        return {
+            conn_id: conn
+            for conn_id, conn in self.connections.items()
+            if conn.session_id == session_id
+        }
 
     def get_stale_connections(self, timeout_seconds: int = 60) -> list[str]:
         """Get list of stale connection IDs."""

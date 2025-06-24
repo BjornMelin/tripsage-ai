@@ -630,11 +630,10 @@ async def conditional_action(
     Different actions are available based on the user's permission level.
     """
     logger.info(
-        f"Conditional action for trip {trip_id} by user {principal.user_id} "
-        (
-        f"(level: {access_result.access_level}, "
-        f"permission: {access_result.permission_granted})"
-    )
+        f"Conditional action for trip {trip_id} by user {principal.user_id} "(
+            f"(level: {access_result.access_level}, "
+            f"permission: {access_result.permission_granted})"
+        )
     )
 
     response = {

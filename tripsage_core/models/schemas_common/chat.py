@@ -50,7 +50,9 @@ class ToolCall(BaseModel):
     name: str = Field(..., description="Name of the tool")
     arguments: DictOrEmpty = Field(default_factory=dict, description="Tool arguments")
     result: Optional[DictOrEmpty] = Field(None, description="Tool result")
-    status: ToolCallStatus = Field(ToolCallStatus.PENDING, description="Tool call status")
+    status: ToolCallStatus = Field(
+        ToolCallStatus.PENDING, description="Tool call status"
+    )
     error: Optional[str] = Field(None, description="Error message if failed")
 
 
@@ -78,8 +80,12 @@ class ChatContext(BaseModel):
     """Common model for chat context and memory."""
 
     session_id: str = Field(..., description="Session ID")
-    messages: List[ChatMessage] = Field(default_factory=list, description="Conversation messages")
+    messages: List[ChatMessage] = Field(
+        default_factory=list, description="Conversation messages"
+    )
     system_prompt: Optional[str] = Field(None, description="System prompt")
-    temperature: Optional[float] = Field(None, description="Model temperature", ge=0, le=2)
+    temperature: Optional[float] = Field(
+        None, description="Model temperature", ge=0, le=2
+    )
     max_tokens: Optional[int] = Field(None, description="Maximum tokens", gt=0)
     tools: Optional[List[str]] = Field(None, description="Available tools")

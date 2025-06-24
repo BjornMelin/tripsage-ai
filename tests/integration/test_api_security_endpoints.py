@@ -726,7 +726,7 @@ class TestAPISecurityEndpoints:
 
             # Simulate rapid requests
             responses = []
-            for i in range(50):  # High number of requests
+            for _ in range(50):  # High number of requests
                 response = client.get("/api/trips", headers=valid_headers)
                 responses.append(response.status_code)
 

@@ -1846,7 +1846,7 @@ class TestDatabaseTransactionContext:
             assert operation[2]["user_id"] == user_id
 
 
-class TestSQLAlchemyIntegration:
+class TestSQLAlchemyComprehensiveIntegration:
     """Comprehensive SQLAlchemy 2.0 integration tests."""
 
     @pytest.fixture
@@ -2215,7 +2215,7 @@ class TestSQLAlchemyIntegration:
             await service._execute_sql_with_sqlalchemy("SELECT 1", {})
 
 
-class TestDatabaseTransactionContext:
+class TestDatabaseTransactionContextComprehensive:
     """Test database transaction context manager implementation."""
 
     @pytest.fixture

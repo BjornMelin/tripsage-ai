@@ -79,14 +79,18 @@ class DatabaseServiceExtensions:
     async def _recycle_connections(self):
         """Recycle connection pool connections."""
         try:
-            if self._sqlalchemy_engine and hasattr(self._sqlalchemy_engine.pool, "recreate"):
+            if self._sqlalchemy_engine and hasattr(
+                self._sqlalchemy_engine.pool, "recreate"
+            ):
                 self._sqlalchemy_engine.pool.recreate()
         except Exception as e:
             logger.error(f"Failed to recycle connections: {e}")
 
     # Vector Operations Methods
 
-    async def save_document_embedding(self, document_data: dict[str, Any], embedding: list[float]) -> dict[str, Any]:
+    async def save_document_embedding(
+        self, document_data: dict[str, Any], embedding: list[float]
+    ) -> dict[str, Any]:
         """Save document with vector embedding."""
         await self.ensure_connected()
 
@@ -191,7 +195,9 @@ class DatabaseServiceExtensions:
         is_healthy = await self.health_check()
 
         return {
-            "status": HealthStatus.HEALTHY.value if is_healthy else HealthStatus.CRITICAL.value,
+            "status": HealthStatus.HEALTHY.value
+            if is_healthy
+            else HealthStatus.CRITICAL.value,
             "connected": self._connected,
             "circuit_breaker_open": self._circuit_breaker_open,
             "pool_utilization": self._get_pool_statistics().pool_utilization,
@@ -380,7 +386,9 @@ class DatabaseServiceExtensions:
                     raise
                 await asyncio.sleep(2**attempt)  # Exponential backoff
 
-    async def _execute_with_timeout(self, operation, *args, timeout: float = 30.0, **kwargs):
+    async def _execute_with_timeout(
+        self, operation, *args, timeout: float = 30.0, **kwargs
+    ):
         """Execute operation with timeout."""
         try:
             return await asyncio.wait_for(operation(*args, **kwargs), timeout=timeout)
@@ -392,7 +400,9 @@ class DatabaseServiceExtensions:
                 details={"timeout": timeout},
             ) from e
 
-    async def _execute_with_retry(self, operation, max_retries: int = 3, backoff_factor: float = 1.0):
+    async def _execute_with_retry(
+        self, operation, max_retries: int = 3, backoff_factor: float = 1.0
+    ):
         """Execute operation with retry logic."""
         last_exception = None
 

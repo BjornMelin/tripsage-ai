@@ -82,10 +82,14 @@ class FallbackResult(BaseModel):
 
     success: bool = Field(..., description="Whether fallback succeeded")
     strategy_used: FallbackStrategy = Field(..., description="Fallback strategy used")
-    result: Optional[Dict[str, Any]] = Field(default=None, description="Fallback result data")
+    result: Optional[Dict[str, Any]] = Field(
+        default=None, description="Fallback result data"
+    )
     error: Optional[str] = Field(default=None, description="Fallback error message")
     execution_time: float = Field(..., description="Fallback execution time")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
 
 class ErrorRecoveryService:
@@ -179,7 +183,9 @@ class ErrorRecoveryService:
             self.circuit_breakers[service] = breaker
             register_circuit_breaker(breaker)
 
-        logger.info(f"Initialized {len(self.circuit_breakers)} configurable circuit breakers")
+        logger.info(
+            f"Initialized {len(self.circuit_breakers)} configurable circuit breakers"
+        )
 
     @with_error_handling()
     async def handle_mcp_error(
@@ -225,7 +231,9 @@ class ErrorRecoveryService:
             strategy = self._determine_fallback_strategy(mcp_error, params)
 
             # Execute fallback strategy
-            result = await self._execute_fallback_strategy(strategy, service, method, params, mcp_error)
+            result = await self._execute_fallback_strategy(
+                strategy, service, method, params, mcp_error
+            )
 
             result.execution_time = time.time() - start_time
             return result
@@ -299,7 +307,9 @@ class ErrorRecoveryService:
             @breaker
             async def protected_operation():
                 # MCP abstraction removed - direct service calls should be used
-                raise NotImplementedError(f"Direct service integration needed for {service}.{method} after MCP removal")
+                raise NotImplementedError(
+                    f"Direct service integration needed for {service}.{method} after MCP removal"
+                )
 
             result = await protected_operation()
 
@@ -311,7 +321,9 @@ class ErrorRecoveryService:
                 execution_time=0.0,  # Will be set by caller
                 metadata={
                     "circuit_breaker": breaker.name,
-                    "circuit_mode": "simple" if hasattr(breaker, "max_retries") else "enterprise",
+                    "circuit_mode": "simple"
+                    if hasattr(breaker, "max_retries")
+                    else "enterprise",
                 },
             )
 
@@ -330,7 +342,9 @@ class ErrorRecoveryService:
             )
 
         except Exception as retry_error:
-            logger.warning(f"Circuit breaker retry failed for {service}.{method}: {str(retry_error)}")
+            logger.warning(
+                f"Circuit breaker retry failed for {service}.{method}: {str(retry_error)}"
+            )
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.RETRY,
@@ -362,10 +376,14 @@ class ErrorRecoveryService:
 
                 # Retry the operation
                 # MCP abstraction removed - direct service calls should be used
-                raise NotImplementedError(f"Direct service integration needed for {service}.{method} after MCP removal")
+                raise NotImplementedError(
+                    f"Direct service integration needed for {service}.{method} after MCP removal"
+                )
 
             except Exception as retry_error:
-                logger.warning(f"Simple retry attempt {attempt + 1} failed: {str(retry_error)}")
+                logger.warning(
+                    f"Simple retry attempt {attempt + 1} failed: {str(retry_error)}"
+                )
                 continue
 
         return FallbackResult(
@@ -404,7 +422,9 @@ class ErrorRecoveryService:
                     )
 
             except Exception as alt_error:
-                logger.warning(f"Alternative service {alt_service} failed: {str(alt_error)}")
+                logger.warning(
+                    f"Alternative service {alt_service} failed: {str(alt_error)}"
+                )
                 continue
 
         return FallbackResult(
@@ -414,7 +434,9 @@ class ErrorRecoveryService:
             execution_time=0.0,
         )
 
-    async def _get_cached_response(self, service: str, method: str, params: Dict[str, Any]) -> FallbackResult:
+    async def _get_cached_response(
+        self, service: str, method: str, params: Dict[str, Any]
+    ) -> FallbackResult:
         """Get cached response for the operation."""
         cache_key = self._generate_cache_key(service, method, params)
 
@@ -439,7 +461,9 @@ class ErrorRecoveryService:
             execution_time=0.0,
         )
 
-    async def _graceful_degradation(self, service: str, method: str, params: Dict[str, Any]) -> FallbackResult:
+    async def _graceful_degradation(
+        self, service: str, method: str, params: Dict[str, Any]
+    ) -> FallbackResult:
         """Provide graceful degradation response."""
         # Map service to degradation category
         service_category = self._get_service_category(service)
@@ -465,12 +489,17 @@ class ErrorRecoveryService:
             execution_time=0.0,
         )
 
-    def _assess_error_severity(self, error: Exception, service: str, method: str) -> ErrorSeverity:
+    def _assess_error_severity(
+        self, error: Exception, service: str, method: str
+    ) -> ErrorSeverity:
         """Assess error severity based on error type and context."""
         error_type = type(error).__name__
 
         # Critical errors
-        if any(keyword in str(error).lower() for keyword in ["authentication", "permission", "quota"]):
+        if any(
+            keyword in str(error).lower()
+            for keyword in ["authentication", "permission", "quota"]
+        ):
             return ErrorSeverity.CRITICAL
 
         # High severity errors
@@ -478,13 +507,17 @@ class ErrorRecoveryService:
             return ErrorSeverity.HIGH
 
         # Medium severity errors
-        if any(keyword in error_type.lower() for keyword in ["validation", "parameter"]):
+        if any(
+            keyword in error_type.lower() for keyword in ["validation", "parameter"]
+        ):
             return ErrorSeverity.MEDIUM
 
         # Default to low severity
         return ErrorSeverity.LOW
 
-    def _determine_fallback_strategy(self, error: MCPOperationError, params: Dict[str, Any]) -> FallbackStrategy:
+    def _determine_fallback_strategy(
+        self, error: MCPOperationError, params: Dict[str, Any]
+    ) -> FallbackStrategy:
         """Determine appropriate fallback strategy based on error characteristics."""
         # Critical errors should fail fast
         if error.severity == ErrorSeverity.CRITICAL:
@@ -532,7 +565,9 @@ class ErrorRecoveryService:
         adapted_params["_adapted_to"] = target_service
         return adapted_params
 
-    def _generate_cache_key(self, service: str, method: str, params: Dict[str, Any]) -> str:
+    def _generate_cache_key(
+        self, service: str, method: str, params: Dict[str, Any]
+    ) -> str:
         """Generate cache key for operation."""
         import hashlib
 
@@ -556,7 +591,9 @@ class ErrorRecoveryService:
         return service_mapping.get(service, "general")
 
     @with_error_handling()
-    async def store_successful_result(self, service: str, method: str, params: Dict[str, Any], result: Any) -> None:
+    async def store_successful_result(
+        self, service: str, method: str, params: Dict[str, Any], result: Any
+    ) -> None:
         """Store successful result in cache for future fallback use."""
         try:
             cache_key = self._generate_cache_key(service, method, params)
@@ -570,7 +607,9 @@ class ErrorRecoveryService:
             # Limit cache size
             if len(self.fallback_cache) > 1000:
                 # Remove oldest entries
-                sorted_items = sorted(self.fallback_cache.items(), key=lambda x: x[1]["timestamp"])
+                sorted_items = sorted(
+                    self.fallback_cache.items(), key=lambda x: x[1]["timestamp"]
+                )
                 for key, _ in sorted_items[:100]:  # Remove oldest 100
                     del self.fallback_cache[key]
 

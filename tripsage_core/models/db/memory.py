@@ -41,14 +41,22 @@ class Memory(BaseModel):
         None,
         description="Vector embedding (1536 dims for OpenAI text-embedding-3-small)",
     )
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the memory")
-    categories: List[str] = Field(default_factory=list, description="Categories for organizing memories")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata for the memory"
+    )
+    categories: List[str] = Field(
+        default_factory=list, description="Categories for organizing memories"
+    )
     created_at: datetime = Field(description="Timestamp when the memory was created")
-    updated_at: datetime = Field(description="Timestamp when the memory was last updated")
+    updated_at: datetime = Field(
+        description="Timestamp when the memory was last updated"
+    )
     is_deleted: bool = Field(False, description="Whether the memory is soft deleted")
     version: int = Field(1, description="Version number for tracking changes")
     hash: Optional[str] = Field(None, description="Content hash for deduplication")
-    relevance_score: float = Field(1.0, description="Relevance score for the memory (0.0 to 1.0)")
+    relevance_score: float = Field(
+        1.0, description="Relevance score for the memory (0.0 to 1.0)"
+    )
 
     @field_validator("memory")
     @classmethod
@@ -151,9 +159,15 @@ class SessionMemory(BaseModel):
     message_index: int = Field(description="Index of the message within the session")
     role: str = Field(description="Role of the message (user, assistant, system)")
     content: str = Field(description="Content of the message")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the session memory")
-    created_at: datetime = Field(description="Timestamp when the session memory was created")
-    expires_at: datetime = Field(description="Timestamp when the session memory should expire")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata for the session memory"
+    )
+    created_at: datetime = Field(
+        description="Timestamp when the session memory was created"
+    )
+    expires_at: datetime = Field(
+        description="Timestamp when the session memory should expire"
+    )
 
     @field_validator("role")
     @classmethod
@@ -275,9 +289,15 @@ class MemoryCreate(BaseModel):
 
     user_id: UUID = Field(description="ID of the user this memory belongs to")
     memory: str = Field(description="The actual memory content")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata for the memory")
-    categories: List[str] = Field(default_factory=list, description="Categories for organizing memories")
-    relevance_score: float = Field(1.0, description="Relevance score for the memory (0.0 to 1.0)")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata for the memory"
+    )
+    categories: List[str] = Field(
+        default_factory=list, description="Categories for organizing memories"
+    )
+    relevance_score: float = Field(
+        1.0, description="Relevance score for the memory (0.0 to 1.0)"
+    )
 
     @field_validator("memory")
     @classmethod
@@ -355,9 +375,15 @@ class MemoryUpdate(BaseModel):
     )
 
     memory: Optional[str] = Field(None, description="Updated memory content")
-    metadata: Optional[dict[str, Any]] = Field(None, description="Updated metadata for the memory")
-    categories: Optional[List[str]] = Field(None, description="Updated categories for organizing memories")
-    relevance_score: Optional[float] = Field(None, description="Updated relevance score for the memory (0.0 to 1.0)")
+    metadata: Optional[dict[str, Any]] = Field(
+        None, description="Updated metadata for the memory"
+    )
+    categories: Optional[List[str]] = Field(
+        None, description="Updated categories for organizing memories"
+    )
+    relevance_score: Optional[float] = Field(
+        None, description="Updated relevance score for the memory (0.0 to 1.0)"
+    )
 
     @field_validator("memory")
     @classmethod

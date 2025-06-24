@@ -175,8 +175,7 @@ class Segment(BaseModel):
     def flight_number(self) -> str:
         """Get the marketing flight number."""
         return (
-            f"{self.marketing_carrier.iata_code}"
-            f"{self.marketing_carrier_flight_number}"
+            f"{self.marketing_carrier.iata_code}{self.marketing_carrier_flight_number}"
         )
 
 

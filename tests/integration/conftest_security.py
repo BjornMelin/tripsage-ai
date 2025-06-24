@@ -915,7 +915,7 @@ def generate_concurrent_requests(
     """Generate concurrent requests for load testing."""
     responses = []
 
-    for i in range(count):
+    for _ in range(count):
         if method.upper() == "GET":
             response = client.get(endpoint, headers=headers)
         elif method.upper() == "POST":

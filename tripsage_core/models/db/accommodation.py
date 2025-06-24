@@ -43,21 +43,35 @@ class Accommodation(TripSageModel):
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     name: str = Field(..., description="Name of the accommodation")
-    accommodation_type: AccommodationType = Field(..., description="Type of accommodation")
+    accommodation_type: AccommodationType = Field(
+        ..., description="Type of accommodation"
+    )
     check_in: date = Field(..., description="Check-in date")
     check_out: date = Field(..., description="Check-out date")
-    price_per_night: float = Field(..., description="Price per night in default currency")
-    total_price: float = Field(..., description="Total price for the stay in default currency")
+    price_per_night: float = Field(
+        ..., description="Price per night in default currency"
+    )
+    total_price: float = Field(
+        ..., description="Total price for the stay in default currency"
+    )
     location: str = Field(..., description="Address or location description")
     rating: Optional[float] = Field(None, description="Rating score out of 5")
     amenities: Optional[Dict[str, Any]] = Field(None, description="Available amenities")
-    booking_link: Optional[str] = Field(None, description="URL for booking this accommodation")
-    search_timestamp: Optional[datetime] = Field(None, description="When this accommodation data was fetched")
-    booking_status: BookingStatus = Field(BookingStatus.VIEWED, description="Status of the accommodation booking")
+    booking_link: Optional[str] = Field(
+        None, description="URL for booking this accommodation"
+    )
+    search_timestamp: Optional[datetime] = Field(
+        None, description="When this accommodation data was fetched"
+    )
+    booking_status: BookingStatus = Field(
+        BookingStatus.VIEWED, description="Status of the accommodation booking"
+    )
     cancellation_policy: CancellationPolicy = Field(
         CancellationPolicy.UNKNOWN, description="Cancellation policy for the booking"
     )
-    distance_to_center: Optional[float] = Field(None, description="Distance to city center in kilometers")
+    distance_to_center: Optional[float] = Field(
+        None, description="Distance to city center in kilometers"
+    )
     neighborhood: Optional[str] = Field(None, description="Neighborhood or area name")
     images: List[str] = Field(default_factory=list, description="List of image URLs")
 
@@ -101,7 +115,9 @@ class Accommodation(TripSageModel):
         expected_min = self.price_per_night * 0.95 * nights  # Allow 5% variation
         expected_max = self.price_per_night * 1.05 * nights  # Allow 5% variation
 
-        if nights > 0 and (self.total_price < expected_min or self.total_price > expected_max):
+        if nights > 0 and (
+            self.total_price < expected_min or self.total_price > expected_max
+        ):
             # This is a warning - total price might include fees, taxes, etc.
             # We won't raise an error but could log this inconsistency in a real system
             pass

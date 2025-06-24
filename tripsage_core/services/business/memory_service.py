@@ -36,7 +36,9 @@ class MemorySearchResult(TripSageModel):
 
     id: str = Field(..., description="Memory ID")
     memory: str = Field(..., description="Memory content")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Memory metadata")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Memory metadata"
+    )
     categories: List[str] = Field(default_factory=list, description="Memory categories")
     similarity: float = Field(default=0.0, description="Similarity score")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -58,23 +60,41 @@ class MemorySearchRequest(TripSageModel):
     query: str = Field(..., min_length=1, description="Search query")
     limit: int = Field(default=5, ge=1, le=50, description="Maximum results")
     filters: Optional[Dict[str, Any]] = Field(None, description="Search filters")
-    similarity_threshold: float = Field(default=0.3, ge=0.0, le=1.0, description="Minimum similarity")
+    similarity_threshold: float = Field(
+        default=0.3, ge=0.0, le=1.0, description="Minimum similarity"
+    )
 
 
 class UserContextResponse(TripSageModel):
     """Response model for user context."""
 
-    preferences: List[Dict[str, Any]] = Field(default_factory=list, description="User preferences")
-    past_trips: List[Dict[str, Any]] = Field(default_factory=list, description="Past trip memories")
-    saved_destinations: List[Dict[str, Any]] = Field(default_factory=list, description="Saved destinations")
-    budget_patterns: List[Dict[str, Any]] = Field(default_factory=list, description="Budget patterns")
-    travel_style: List[Dict[str, Any]] = Field(default_factory=list, description="Travel style memories")
-    dietary_restrictions: List[Dict[str, Any]] = Field(default_factory=list, description="Dietary restrictions")
+    preferences: List[Dict[str, Any]] = Field(
+        default_factory=list, description="User preferences"
+    )
+    past_trips: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Past trip memories"
+    )
+    saved_destinations: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Saved destinations"
+    )
+    budget_patterns: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Budget patterns"
+    )
+    travel_style: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Travel style memories"
+    )
+    dietary_restrictions: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Dietary restrictions"
+    )
     accommodation_preferences: List[Dict[str, Any]] = Field(
         default_factory=list, description="Accommodation preferences"
     )
-    activity_preferences: List[Dict[str, Any]] = Field(default_factory=list, description="Activity preferences")
-    insights: Dict[str, Any] = Field(default_factory=dict, description="Derived insights")
+    activity_preferences: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Activity preferences"
+    )
+    insights: Dict[str, Any] = Field(
+        default_factory=dict, description="Derived insights"
+    )
     summary: str = Field(default="", description="Context summary")
 
 
@@ -277,7 +297,9 @@ class MemoryService:
 
             # Validate database connection before testing Mem0
             logger.info("Validating database connection for memory service")
-            await self.connection_manager.parse_and_validate_url(settings.effective_postgres_url)
+            await self.connection_manager.parse_and_validate_url(
+                settings.effective_postgres_url
+            )
 
             # Test Mem0 memory backend with retry logic
             async def test_memory_operation():
@@ -323,7 +345,9 @@ class MemoryService:
         except Exception as e:
             logger.error(f"Error closing memory service: {str(e)}")
 
-    async def add_conversation_memory(self, user_id: str, memory_request: ConversationMemoryRequest) -> Dict[str, Any]:
+    async def add_conversation_memory(
+        self, user_id: str, memory_request: ConversationMemoryRequest
+    ) -> Dict[str, Any]:
         """
         Extract and store memories from conversation.
 
@@ -378,10 +402,14 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.error("Memory extraction failed", extra={"user_id": user_id, "error": str(e)})
+            logger.error(
+                "Memory extraction failed", extra={"user_id": user_id, "error": str(e)}
+            )
             return {"results": [], "error": str(e)}
 
-    async def search_memories(self, user_id: str, search_request: MemorySearchRequest) -> List[MemorySearchResult]:
+    async def search_memories(
+        self, user_id: str, search_request: MemorySearchRequest
+    ) -> List[MemorySearchResult]:
         """
         Search user memories with caching and optimization.
 
@@ -420,7 +448,9 @@ class MemoryService:
                     metadata=result.get("metadata", {}),
                     categories=result.get("categories", []),
                     similarity=result.get("score", 0.0),
-                    created_at=self._parse_datetime(result.get("created_at", datetime.now(timezone.utc).isoformat())),
+                    created_at=self._parse_datetime(
+                        result.get("created_at", datetime.now(timezone.utc).isoformat())
+                    ),
                     user_id=user_id,
                 )
 
@@ -456,7 +486,9 @@ class MemoryService:
             )
             return []
 
-    async def get_user_context(self, user_id: str, context_type: Optional[str] = None) -> UserContextResponse:
+    async def get_user_context(
+        self, user_id: str, context_type: Optional[str] = None
+    ) -> UserContextResponse:
         """
         Get comprehensive user context for personalization.
 
@@ -472,7 +504,9 @@ class MemoryService:
 
         try:
             # Retrieve all user memories
-            all_memories = await asyncio.to_thread(self.memory.get_all, user_id=user_id, limit=100)
+            all_memories = await asyncio.to_thread(
+                self.memory.get_all, user_id=user_id, limit=100
+            )
 
             # Organize by category
             context = {
@@ -496,11 +530,17 @@ class MemoryService:
                         context[category].append(memory)
 
                 # Additional categorization based on content
-                if any(word in memory_content for word in ["prefer", "like", "dislike", "favorite"]):
+                if any(
+                    word in memory_content
+                    for word in ["prefer", "like", "dislike", "favorite"]
+                ):
                     if "preferences" not in [cat for cat in categories]:
                         context["preferences"].append(memory)
 
-                if any(word in memory_content for word in ["budget", "cost", "price", "expensive", "cheap"]):
+                if any(
+                    word in memory_content
+                    for word in ["budget", "cost", "price", "expensive", "cheap"]
+                ):
                     if "budget_patterns" not in [cat for cat in categories]:
                         context["budget_patterns"].append(memory)
 
@@ -549,11 +589,15 @@ class MemoryService:
             preference_messages = [
                 {
                     "role": "system",
-                    "content": ("Extract and update user travel preferences from the following information."),
+                    "content": (
+                        "Extract and update user travel preferences from the following information."
+                    ),
                 },
                 {
                     "role": "user",
-                    "content": (f"My travel preferences: {json.dumps(preferences_request.preferences, indent=2)}"),
+                    "content": (
+                        f"My travel preferences: {json.dumps(preferences_request.preferences, indent=2)}"
+                    ),
                 },
             ]
 
@@ -585,7 +629,9 @@ class MemoryService:
             )
             return {"error": str(e)}
 
-    async def delete_user_memories(self, user_id: str, memory_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def delete_user_memories(
+        self, user_id: str, memory_ids: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
         """
         Delete user memories (GDPR compliance).
 
@@ -620,10 +666,14 @@ class MemoryService:
 
                 for memory in all_memories.get("results", []):
                     try:
-                        await asyncio.to_thread(self.memory.delete, memory_id=memory.get("id"))
+                        await asyncio.to_thread(
+                            self.memory.delete, memory_id=memory.get("id")
+                        )
                         deleted_count += 1
                     except Exception as e:
-                        logger.warning(f"Failed to delete memory {memory.get('id')}: {str(e)}")
+                        logger.warning(
+                            f"Failed to delete memory {memory.get('id')}: {str(e)}"
+                        )
 
             # Clear user's cache
             self._invalidate_user_cache(user_id)
@@ -655,7 +705,9 @@ class MemoryService:
 
         return self._connected
 
-    def _generate_cache_key(self, user_id: str, search_request: MemorySearchRequest) -> str:
+    def _generate_cache_key(
+        self, user_id: str, search_request: MemorySearchRequest
+    ) -> str:
         """Generate cache key for search request."""
         key_data = f"{user_id}:{search_request.query}:{search_request.limit}:{hash(str(search_request.filters))}"
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
@@ -698,19 +750,29 @@ class MemoryService:
         except Exception:
             return datetime.now(timezone.utc)
 
-    async def _enrich_travel_memories(self, memories: List[MemorySearchResult]) -> List[MemorySearchResult]:
+    async def _enrich_travel_memories(
+        self, memories: List[MemorySearchResult]
+    ) -> List[MemorySearchResult]:
         """Enrich memories with travel-specific context."""
         for memory in memories:
             memory_content = memory.memory.lower()
 
             # Add travel context flags
-            if any(word in memory_content for word in ["destination", "city", "country", "place"]):
+            if any(
+                word in memory_content
+                for word in ["destination", "city", "country", "place"]
+            ):
                 memory.metadata["has_location"] = True
 
-            if any(word in memory_content for word in ["budget", "cost", "price", "money"]):
+            if any(
+                word in memory_content for word in ["budget", "cost", "price", "money"]
+            ):
                 memory.metadata["has_budget"] = True
 
-            if any(word in memory_content for word in ["hotel", "accommodation", "stay", "room"]):
+            if any(
+                word in memory_content
+                for word in ["hotel", "accommodation", "stay", "room"]
+            ):
                 memory.metadata["has_accommodation"] = True
 
         return memories
@@ -730,7 +792,9 @@ class MemoryService:
     def _analyze_destinations(self, context: Dict[str, List]) -> Dict[str, Any]:
         """Analyze destination preferences from context."""
         destinations = []
-        for memory in context.get("past_trips", []) + context.get("saved_destinations", []):
+        for memory in context.get("past_trips", []) + context.get(
+            "saved_destinations", []
+        ):
             content = memory.get("memory", "").lower()
             # Simple destination extraction (could be enhanced with NER)
             for word in content.split():
@@ -780,7 +844,9 @@ class MemoryService:
     def _analyze_activities(self, context: Dict[str, List]) -> Dict[str, Any]:
         """Analyze activity preferences from context."""
         activities = []
-        for memory in context.get("activity_preferences", []) + context.get("preferences", []):
+        for memory in context.get("activity_preferences", []) + context.get(
+            "preferences", []
+        ):
             content = memory.get("memory", "").lower()
             activity_keywords = [
                 "museum",
@@ -797,7 +863,9 @@ class MemoryService:
 
         return {
             "preferred_activities": list(set(activities)),
-            "activity_style": "Cultural" if "museum" in activities or "culture" in activities else "Adventure",
+            "activity_style": "Cultural"
+            if "museum" in activities or "culture" in activities
+            else "Adventure",
         }
 
     def _analyze_travel_style(self, context: Dict[str, List]) -> Dict[str, Any]:
@@ -829,14 +897,20 @@ class MemoryService:
             "primary_style": detected_styles[0] if detected_styles else "general",
         }
 
-    def _generate_context_summary(self, context: Dict[str, Any], insights: Dict[str, Any]) -> str:
+    def _generate_context_summary(
+        self, context: Dict[str, Any], insights: Dict[str, Any]
+    ) -> str:
         """Generate a human-readable summary of user context."""
         summary_parts = []
 
         # Destination preferences
-        destinations = insights.get("preferred_destinations", {}).get("most_visited", [])
+        destinations = insights.get("preferred_destinations", {}).get(
+            "most_visited", []
+        )
         if destinations:
-            summary_parts.append(f"Frequently travels to: {', '.join(destinations[:3])}")
+            summary_parts.append(
+                f"Frequently travels to: {', '.join(destinations[:3])}"
+            )
 
         # Travel style
         travel_style = insights.get("travel_style", {}).get("primary_style")
@@ -850,11 +924,17 @@ class MemoryService:
             summary_parts.append(f"Average budget: ${avg_budget:.0f}")
 
         # Activity preferences
-        activities = insights.get("preferred_activities", {}).get("preferred_activities", [])
+        activities = insights.get("preferred_activities", {}).get(
+            "preferred_activities", []
+        )
         if activities:
             summary_parts.append(f"Enjoys: {', '.join(activities[:3])}")
 
-        return ". ".join(summary_parts) if summary_parts else "New user with limited travel history"
+        return (
+            ". ".join(summary_parts)
+            if summary_parts
+            else "New user with limited travel history"
+        )
 
 
 # Dependency function for FastAPI

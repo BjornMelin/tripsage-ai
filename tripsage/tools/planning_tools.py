@@ -122,9 +122,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             await memory_service.connect()
 
             # Create memory for the travel plan
-            plan_memory = (
-            f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
-        )
+            plan_memory = f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
             plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
             plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
             plan_memory += f" for {plan_input.travelers} travelers"
@@ -628,9 +626,9 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             if finalize:
                 finalization_time = datetime.now(timezone.utc).isoformat()
                 finalize_memory = (
-                f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
-                f"finalized on {finalization_time}"
-            )
+                    f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
+                    f"finalized on {finalization_time}"
+                )
 
                 await memory_service.add_conversation_memory(
                     messages=[

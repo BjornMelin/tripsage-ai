@@ -43,7 +43,9 @@ class Price(TripSageModel):
         symbol = currency_symbol or str(self.currency.value)
         return f"{symbol}{self.amount:.2f}"
 
-    def convert_to(self, target_currency: CurrencyCode, exchange_rate: Decimal) -> "Price":
+    def convert_to(
+        self, target_currency: CurrencyCode, exchange_rate: Decimal
+    ) -> "Price":
         """Convert price to another currency using exchange rate."""
         new_amount = self.amount * exchange_rate
         return Price(amount=new_amount, currency=target_currency)
@@ -124,7 +126,9 @@ class Budget(TripSageModel):
     allocated: Optional[Price] = Field(None, description="Allocated amount")
     spent: Optional[Price] = Field(None, description="Spent amount")
     remaining: Optional[Price] = Field(None, description="Remaining amount")
-    categories: Optional[Dict[str, Price]] = Field(None, description="Budget by category")
+    categories: Optional[Dict[str, Price]] = Field(
+        None, description="Budget by category"
+    )
 
     @model_validator(mode="after")
     def validate_budget_currencies(self) -> "Budget":
@@ -223,7 +227,9 @@ class Deal(TripSageModel):
     title: str = Field(description="Deal title")
     description: Optional[str] = Field(None, description="Deal description")
     discount_amount: Optional[Price] = Field(None, description="Discount amount")
-    discount_percentage: Optional[Decimal] = Field(None, description="Discount percentage", ge=0, le=100)
+    discount_percentage: Optional[Decimal] = Field(
+        None, description="Discount percentage", ge=0, le=100
+    )
     original_price: Price = Field(description="Original price before discount")
     final_price: Price = Field(description="Final price after discount")
     valid_until: Optional[str] = Field(None, description="Deal expiration")
@@ -240,7 +246,10 @@ class Deal(TripSageModel):
             raise ValueError("Final price cannot be greater than original price")
 
         # Validate discount amount if provided
-        if self.discount_amount and self.discount_amount.currency != self.original_price.currency:
+        if (
+            self.discount_amount
+            and self.discount_amount.currency != self.original_price.currency
+        ):
             raise ValueError("Discount amount must use the same currency as prices")
 
         return self

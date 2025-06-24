@@ -114,8 +114,8 @@ class AgentConfigRequest(BaseConfigModel):
                 ge=1,
                 le=8000,
                 description=(
-                "Maximum tokens in response (affects cost and response length)"
-            ),
+                    "Maximum tokens in response (affects cost and response length)"
+                ),
             ),
         ]
     ] = None
@@ -160,9 +160,9 @@ class AgentConfigRequest(BaseConfigModel):
             if "gpt-3.5" in self.model and self.temperature > 1.5:
                 raise ValueError(
                     (
-                    "GPT-3.5 models work best with temperature ≤ 1.5 "
-                    "for optimal performance"
-                )
+                        "GPT-3.5 models work best with temperature ≤ 1.5 "
+                        "for optimal performance"
+                    )
                 )
 
             # Claude models have different optimal ranges
@@ -301,25 +301,25 @@ class AgentConfigResponse(BaseConfigModel):
         if abs(self.temperature - recommended_temp) > 0.2:
             suggestions.append(
                 (
-                f"Consider temperature {recommended_temp} for optimal "
-                f"{self.agent_type.display_name} performance"
-            )
+                    f"Consider temperature {recommended_temp} for optimal "
+                    f"{self.agent_type.display_name} performance"
+                )
             )
 
         if self.agent_type == AgentType.BUDGET_AGENT and self.temperature > 0.5:
             suggestions.append(
                 (
-                "Budget agents work best with lower temperature (≤0.3) "
-                "for consistent calculations"
-            )
+                    "Budget agents work best with lower temperature (≤0.3) "
+                    "for consistent calculations"
+                )
             )
 
         if self.max_tokens > 2000 and self.agent_type == AgentType.BUDGET_AGENT:
             suggestions.append(
                 (
-                "Budget responses are typically concise; consider reducing "
-                "max_tokens for cost efficiency"
-            )
+                    "Budget responses are typically concise; consider reducing "
+                    "max_tokens for cost efficiency"
+                )
             )
 
         return suggestions
@@ -453,9 +453,9 @@ class ConfigurationRecommendation(BaseConfigModel):
             if self.confidence_score > 0.9:
                 raise ValueError(
                     (
-                    "High confidence recommendations should not suggest "
-                    "dramatic temperature changes"
-                )
+                        "High confidence recommendations should not suggest "
+                        "dramatic temperature changes"
+                    )
                 )
 
         return self
@@ -569,9 +569,9 @@ class ConfigurationValidationResponse(BaseConfigModel):
             return f"✅ Valid configuration ({len(self.warnings)} warnings)"
         else:
             return (
-            f"❌ Invalid configuration ({len(self.errors)} errors, "
-            f"{len(self.warnings)} warnings)"
-        )
+                f"❌ Invalid configuration ({len(self.errors)} errors, "
+                f"{len(self.warnings)} warnings)"
+            )
 
 
 class ConfigurationImportResult(BaseConfigModel):

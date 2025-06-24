@@ -1,7 +1,7 @@
 """
 WebSocket Security Integration Tests.
 
-This module provides comprehensive security testing for WebSocket functionality 
+This module provides comprehensive security testing for WebSocket functionality
 including:
 - Authentication and authorization
 - Rate limiting and DoS protection

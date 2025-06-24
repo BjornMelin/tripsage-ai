@@ -34,14 +34,24 @@ class WebCrawlServiceError(CoreAPIError):
 class WebCrawlParams(BaseModel):
     """Parameters for web crawling operations."""
 
-    javascript_enabled: bool = Field(default=True, description="Enable JavaScript execution")
+    javascript_enabled: bool = Field(
+        default=True, description="Enable JavaScript execution"
+    )
     extract_markdown: bool = Field(default=True, description="Extract markdown content")
     extract_html: bool = Field(default=False, description="Extract raw HTML content")
-    extract_structured_data: bool = Field(default=False, description="Extract structured data")
+    extract_structured_data: bool = Field(
+        default=False, description="Extract structured data"
+    )
     use_cache: bool = Field(default=True, description="Use caching for results")
-    wait_for: Optional[str] = Field(default=None, description="CSS selector or time to wait for")
-    css_selector: Optional[str] = Field(default=None, description="CSS selector for content extraction")
-    excluded_tags: Optional[list] = Field(default=None, description="HTML tags to exclude")
+    wait_for: Optional[str] = Field(
+        default=None, description="CSS selector or time to wait for"
+    )
+    css_selector: Optional[str] = Field(
+        default=None, description="CSS selector for content extraction"
+    )
+    excluded_tags: Optional[list] = Field(
+        default=None, description="HTML tags to exclude"
+    )
     screenshot: bool = Field(default=False, description="Take screenshot")
     pdf: bool = Field(default=False, description="Generate PDF")
     timeout: int = Field(default=30, description="Request timeout in seconds")
@@ -90,9 +100,13 @@ class WebCrawlService:
         self._verbose = getattr(self.settings, "webcrawl_verbose", False)
 
         # Cache and performance settings
-        self._default_cache_enabled = getattr(self.settings, "webcrawl_cache_enabled", True)
+        self._default_cache_enabled = getattr(
+            self.settings, "webcrawl_cache_enabled", True
+        )
         self._default_timeout = getattr(self.settings, "webcrawl_timeout", 30)
-        self._max_concurrent_crawls = getattr(self.settings, "webcrawl_max_concurrent", 3)
+        self._max_concurrent_crawls = getattr(
+            self.settings, "webcrawl_max_concurrent", 3
+        )
 
         # Rate limiting
         self._semaphore = asyncio.Semaphore(self._max_concurrent_crawls)
@@ -132,7 +146,9 @@ class WebCrawlService:
         if not self._connected:
             await self.connect()
 
-    async def crawl_url(self, url: str, params: Optional[WebCrawlParams] = None) -> WebCrawlResult:
+    async def crawl_url(
+        self, url: str, params: Optional[WebCrawlParams] = None
+    ) -> WebCrawlResult:
         """
         Crawl a single URL using direct Crawl4AI SDK.
 
@@ -176,7 +192,9 @@ class WebCrawlService:
                 end_time = time.time()
                 duration_ms = (end_time - start_time) * 1000
 
-                raise WebCrawlServiceError(f"Web crawl failed for {url}: {str(e)}", original_error=e) from e
+                raise WebCrawlServiceError(
+                    f"Web crawl failed for {url}: {str(e)}", original_error=e
+                ) from e
 
     async def crawl_multiple_urls(
         self, urls: list[str], params: Optional[WebCrawlParams] = None
@@ -230,7 +248,9 @@ class WebCrawlService:
             return final_results
 
         except Exception as e:
-            raise WebCrawlServiceError(f"Failed to crawl multiple URLs: {str(e)}", original_error=e) from e
+            raise WebCrawlServiceError(
+                f"Failed to crawl multiple URLs: {str(e)}", original_error=e
+            ) from e
 
     def _build_crawler_config(self, params: WebCrawlParams) -> CrawlerRunConfig:
         """
@@ -243,7 +263,11 @@ class WebCrawlService:
             Configured CrawlerRunConfig
         """
         # Set cache mode - use setting default if not specified in params
-        use_cache = params.use_cache if params.use_cache is not None else self._default_cache_enabled
+        use_cache = (
+            params.use_cache
+            if params.use_cache is not None
+            else self._default_cache_enabled
+        )
         cache_mode = CacheMode.ENABLED if use_cache else CacheMode.BYPASS
 
         # Build configuration
@@ -285,7 +309,9 @@ class WebCrawlService:
 
         return config
 
-    def _convert_crawl_result(self, crawl_result: Any, url: str, duration_ms: float) -> WebCrawlResult:
+    def _convert_crawl_result(
+        self, crawl_result: Any, url: str, duration_ms: float
+    ) -> WebCrawlResult:
         """
         Convert Crawl4AI result to WebCrawlResult format.
 
@@ -301,7 +327,9 @@ class WebCrawlService:
             success = getattr(crawl_result, "success", False)
 
             if not success:
-                error_msg = getattr(crawl_result, "error_message", "Unknown crawl error")
+                error_msg = getattr(
+                    crawl_result, "error_message", "Unknown crawl error"
+                )
                 return WebCrawlResult(
                     success=False,
                     url=url,
@@ -323,7 +351,10 @@ class WebCrawlService:
 
             # Extract structured data if available
             structured_data = None
-            if hasattr(crawl_result, "extracted_content") and crawl_result.extracted_content:
+            if (
+                hasattr(crawl_result, "extracted_content")
+                and crawl_result.extracted_content
+            ):
                 try:
                     import json
 
@@ -373,7 +404,9 @@ class WebCrawlService:
                 },
             )
 
-    async def extract_travel_content(self, url: str, content_type: str = "general") -> WebCrawlResult:
+    async def extract_travel_content(
+        self, url: str, content_type: str = "general"
+    ) -> WebCrawlResult:
         """
         Extract travel-specific content from a URL.
 

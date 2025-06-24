@@ -31,10 +31,16 @@ class UserSession(TripSageModel):
     session_token: str = Field(..., description="Session token hash")
     ip_address: Optional[str] = Field(None, description="IP address")
     user_agent: Optional[str] = Field(None, description="User agent string")
-    device_info: Dict[str, Any] = Field(default_factory=dict, description="Device information")
-    location_info: Dict[str, Any] = Field(default_factory=dict, description="Location information")
+    device_info: Dict[str, Any] = Field(
+        default_factory=dict, description="Device information"
+    )
+    location_info: Dict[str, Any] = Field(
+        default_factory=dict, description="Location information"
+    )
     is_active: bool = Field(True, description="Session active status")
-    last_activity_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_activity_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     expires_at: datetime = Field(..., description="Session expiration time")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ended_at: Optional[datetime] = Field(None, description="Session end time")
@@ -212,12 +218,18 @@ class SessionSecurityMetrics(TripSageModel):
 
     user_id: str = Field(..., description="User ID")
     active_sessions: int = Field(default=0, description="Number of active sessions")
-    failed_login_attempts_24h: int = Field(default=0, description="Failed logins in 24h")
-    successful_logins_24h: int = Field(default=0, description="Successful logins in 24h")
+    failed_login_attempts_24h: int = Field(
+        default=0, description="Failed logins in 24h"
+    )
+    successful_logins_24h: int = Field(
+        default=0, description="Successful logins in 24h"
+    )
     security_events_7d: int = Field(default=0, description="Security events in 7 days")
     risk_score: int = Field(default=0, description="Overall risk score")
     last_login_at: Optional[datetime] = Field(None, description="Last login time")
-    password_changed_at: Optional[datetime] = Field(None, description="Last password change")
+    password_changed_at: Optional[datetime] = Field(
+        None, description="Last password change"
+    )
 
 
 class SessionSecurityService:
@@ -296,7 +308,9 @@ class SessionSecurityService:
             if len(active_sessions) >= self.max_sessions_per_user:
                 # Terminate oldest session
                 oldest_session = min(active_sessions, key=lambda s: s.created_at)
-                await self.terminate_session(oldest_session.id, reason="max_sessions_exceeded")
+                await self.terminate_session(
+                    oldest_session.id, reason="max_sessions_exceeded"
+                )
 
             # Generate secure session token
             session_token = secrets.token_urlsafe(32)
@@ -408,7 +422,9 @@ class SessionSecurityService:
             )
 
             # Check for suspicious activity
-            risk_score = self._calculate_activity_risk_score(session, ip_address, user_agent)
+            risk_score = self._calculate_activity_risk_score(
+                session, ip_address, user_agent
+            )
             if risk_score > 70:  # High risk threshold
                 await self.log_security_event(
                     user_id=session.user_id,
@@ -664,18 +680,28 @@ class SessionSecurityService:
                 {
                     "failed_logins": failed_logins[0]["count"] if failed_logins else 0,
                     "active_sessions": len(active_sessions),
-                    "security_events": security_events[0]["count"] if security_events else 0,
+                    "security_events": security_events[0]["count"]
+                    if security_events
+                    else 0,
                 },
             )
 
             return SessionSecurityMetrics(
                 user_id=user_id,
                 active_sessions=len(active_sessions),
-                failed_login_attempts_24h=failed_logins[0]["count"] if failed_logins else 0,
-                successful_logins_24h=successful_logins[0]["count"] if successful_logins else 0,
-                security_events_7d=security_events[0]["count"] if security_events else 0,
+                failed_login_attempts_24h=failed_logins[0]["count"]
+                if failed_logins
+                else 0,
+                successful_logins_24h=successful_logins[0]["count"]
+                if successful_logins
+                else 0,
+                security_events_7d=security_events[0]["count"]
+                if security_events
+                else 0,
                 risk_score=risk_score,
-                last_login_at=datetime.fromisoformat(last_login[0]["created_at"]) if last_login else None,
+                last_login_at=datetime.fromisoformat(last_login[0]["created_at"])
+                if last_login
+                else None,
             )
 
         except Exception as e:
@@ -685,7 +711,9 @@ class SessionSecurityService:
             )
             return SessionSecurityMetrics(user_id=user_id)
 
-    def _calculate_login_risk_score(self, user_id: str, ip_address: Optional[str]) -> int:
+    def _calculate_login_risk_score(
+        self, user_id: str, ip_address: Optional[str]
+    ) -> int:
         """Calculate risk score for login attempt."""
         risk_score = 0
 
@@ -831,7 +859,11 @@ class SessionSecurityService:
             risk_score += 30
 
         # User agent change
-        if session.user_agent and current_user_agent and session.user_agent != current_user_agent:
+        if (
+            session.user_agent
+            and current_user_agent
+            and session.user_agent != current_user_agent
+        ):
             risk_score += 20
 
         return min(risk_score, 100)

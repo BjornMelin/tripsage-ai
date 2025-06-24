@@ -60,7 +60,9 @@ class LangGraphMCPBridge:
             # Load Airbnb tool metadata
             await self._load_airbnb_tools()
             self._initialized = True
-            logger.info(f"Bridge initialized with {len(self._tool_metadata)} Airbnb tools")
+            logger.info(
+                f"Bridge initialized with {len(self._tool_metadata)} Airbnb tools"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize Airbnb MCP bridge: {e}")
             raise
@@ -73,7 +75,9 @@ class LangGraphMCPBridge:
         # Define metadata for each Airbnb method
         tool_metadata = {
             "search_listings": {
-                "description": ("Search for Airbnb accommodations in a specific location"),
+                "description": (
+                    "Search for Airbnb accommodations in a specific location"
+                ),
                 "parameters": {
                     "location": {
                         "type": "string",
@@ -113,7 +117,9 @@ class LangGraphMCPBridge:
                 },
             },
             "get_listing_details": {
-                "description": ("Get detailed information about a specific Airbnb listing"),
+                "description": (
+                    "Get detailed information about a specific Airbnb listing"
+                ),
                 "parameters": {
                     "listing_id": {
                         "type": "string",
@@ -195,7 +201,9 @@ class LangGraphMCPBridge:
         async def tool_function(**kwargs) -> str:
             """Execute Airbnb tool via MCPManager."""
             try:
-                logger.debug(f"Executing Airbnb tool: {metadata.name} with params: {kwargs}")
+                logger.debug(
+                    f"Executing Airbnb tool: {metadata.name} with params: {kwargs}"
+                )
 
                 # Use existing MCPManager for tool execution
                 result = await self.mcp_manager.invoke(
@@ -264,7 +272,9 @@ class LangGraphMCPBridge:
                     field_defaults[param_name] = Field(description=param_desc)
                 else:
                     annotations[param_name] = Optional[field_type]
-                    field_defaults[param_name] = Field(default=None, description=param_desc)
+                    field_defaults[param_name] = Field(
+                        default=None, description=param_desc
+                    )
 
         if not annotations:
             return None
@@ -291,7 +301,9 @@ class LangGraphMCPBridge:
         if not metadata:
             raise ValueError(f"Tool {tool_name} not found")
 
-        return await self.mcp_manager.invoke(method_name=metadata.mcp_method, params=params)
+        return await self.mcp_manager.invoke(
+            method_name=metadata.mcp_method, params=params
+        )
 
     def get_tool_metadata(self, tool_name: str) -> Optional[AirbnbToolWrapper]:
         """Get metadata for a specific tool."""

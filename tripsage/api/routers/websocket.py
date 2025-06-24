@@ -105,9 +105,9 @@ def validate_incoming_message_size(
         if message_size > max_size:
             logger.warning(
                 (
-                f"Message size exceeds limit for type '{message_type}': "
-                f"{message_size} > {max_size}"
-            )
+                    f"Message size exceeds limit for type '{message_type}': "
+                    f"{message_size} > {max_size}"
+                )
             )
             return False
         return True
@@ -329,9 +329,9 @@ async def generic_websocket(websocket: WebSocket):
 
         logger.info(
             (
-            f"Generic WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}"
-        ),
+                f"Generic WebSocket authenticated: connection_id={connection_id}, "
+                f"user_id={user_id}"
+            ),
         )
 
         # Basic message handling loop
@@ -603,9 +603,9 @@ async def chat_websocket(
 
         logger.info(
             (
-            f"Chat WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}"
-        ),
+                f"Chat WebSocket authenticated: connection_id={connection_id}, "
+                f"user_id={user_id}"
+            ),
         )
 
         # Message handling loop
@@ -852,9 +852,9 @@ async def agent_status_websocket(
 
         logger.info(
             (
-            f"Agent status WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}"
-        ),
+                f"Agent status WebSocket authenticated: connection_id={connection_id}, "
+                f"user_id={user_id}"
+            ),
         )
 
         # Message handling loop (mainly for heartbeats and subscription changes)

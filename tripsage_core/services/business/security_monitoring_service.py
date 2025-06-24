@@ -159,7 +159,9 @@ class SecurityMonitoringService:
         self._patterns = self._initialize_patterns()
         self._actor_activity: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
         self._ip_activity: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self._service_activity: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
+        self._service_activity: Dict[str, deque] = defaultdict(
+            lambda: deque(maxlen=1000)
+        )
 
         # Statistics
         self.stats = {
@@ -207,7 +209,9 @@ class SecurityMonitoringService:
             ActivityPattern(
                 pattern_id="rate_limit_evasion",
                 name="Rate Limit Evasion",
-                description=("Multiple rate limit violations suggesting evasion attempts"),
+                description=(
+                    "Multiple rate limit violations suggesting evasion attempts"
+                ),
                 threat_category=ThreatCategory.RATE_LIMIT_EVASION,
                 threat_level=ThreatLevel.MEDIUM,
                 event_types=[AuditEventType.RATE_LIMIT_EXCEEDED],
@@ -334,7 +338,9 @@ class SecurityMonitoringService:
 
         return threats
 
-    async def _check_pattern(self, event: AuditEvent, pattern: ActivityPattern) -> Optional[ThreatIndicator]:
+    async def _check_pattern(
+        self, event: AuditEvent, pattern: ActivityPattern
+    ) -> Optional[ThreatIndicator]:
         """Check if an event matches a suspicious pattern."""
         now = datetime.now(timezone.utc)
         time_window = timedelta(minutes=pattern.time_window_minutes)
@@ -360,12 +366,17 @@ class SecurityMonitoringService:
             relevant_events.extend(ip_events)
 
         if pattern.same_service and event.target:
-            service = event.target.resource_attributes.get("service") if event.target.resource_attributes else None
+            service = (
+                event.target.resource_attributes.get("service")
+                if event.target.resource_attributes
+                else None
+            )
             if service:
                 service_events = [
                     e
                     for e in self._service_activity[service]
-                    if e.timestamp >= cutoff_time and e.event_type in pattern.event_types
+                    if e.timestamp >= cutoff_time
+                    and e.event_type in pattern.event_types
                 ]
                 relevant_events.extend(service_events)
 
@@ -374,7 +385,9 @@ class SecurityMonitoringService:
 
         # Apply outcome filter
         if pattern.outcome_filter:
-            relevant_events = [e for e in relevant_events if e.outcome.value == pattern.outcome_filter]
+            relevant_events = [
+                e for e in relevant_events if e.outcome.value == pattern.outcome_filter
+            ]
 
         # Check if pattern threshold is met
         if len(relevant_events) >= pattern.min_occurrences:
@@ -384,7 +397,8 @@ class SecurityMonitoringService:
             # Adjust confidence based on time distribution
             if len(relevant_events) > 1:
                 time_spread = (
-                    max(e.timestamp for e in relevant_events) - min(e.timestamp for e in relevant_events)
+                    max(e.timestamp for e in relevant_events)
+                    - min(e.timestamp for e in relevant_events)
                 ).total_seconds()
                 if time_spread < 60:  # Very rapid succession increases confidence
                     confidence *= 1.2
@@ -398,7 +412,9 @@ class SecurityMonitoringService:
                     f"{pattern.name}: {len(relevant_events)} occurrences in {pattern.time_window_minutes} minutes"
                 ),
                 affected_entities=[event.actor.actor_id, event.source.ip_address],
-                source_events=[e.event_id for e in relevant_events[-10:]],  # Last 10 events
+                source_events=[
+                    e.event_id for e in relevant_events[-10:]
+                ],  # Last 10 events
                 metadata={
                     "pattern_id": pattern.pattern_id,
                     "occurrences": len(relevant_events),
@@ -425,7 +441,9 @@ class SecurityMonitoringService:
                     threat_category=ThreatCategory.UNUSUAL_PATTERN,
                     threat_level=ThreatLevel.LOW,
                     confidence=0.4,
-                    description=(f"Unusual activity time: {hour_of_day}:00 on {weekdays[day_of_week]}"),
+                    description=(
+                        f"Unusual activity time: {hour_of_day}:00 on {weekdays[day_of_week]}"
+                    ),
                     affected_entities=[event.actor.actor_id],
                     source_events=[event.event_id],
                     metadata={
@@ -437,7 +455,9 @@ class SecurityMonitoringService:
             )
 
         # Geographic anomaly detection
-        if event.source.country and await self._is_unusual_location(event.actor.actor_id, event.source.country):
+        if event.source.country and await self._is_unusual_location(
+            event.actor.actor_id, event.source.country
+        ):
             threats.append(
                 ThreatIndicator(
                     threat_category=ThreatCategory.SUSPICIOUS_LOGIN,
@@ -508,7 +528,9 @@ class SecurityMonitoringService:
         # If country hasn't been seen before and we have significant history
         return country not in historical_countries and len(historical_countries) > 0
 
-    async def _is_unusual_volume(self, actor_id: str, event_type: AuditEventType) -> bool:
+    async def _is_unusual_volume(
+        self, actor_id: str, event_type: AuditEventType
+    ) -> bool:
         """Check if the event volume is unusually high."""
         actor_events = list(self._actor_activity[actor_id])
         if len(actor_events) < 20:  # Not enough data
@@ -518,7 +540,11 @@ class SecurityMonitoringService:
         now = datetime.now(timezone.utc)
         hour_ago = now - timedelta(hours=1)
 
-        recent_events = [e for e in actor_events if e.timestamp >= hour_ago and e.event_type == event_type]
+        recent_events = [
+            e
+            for e in actor_events
+            if e.timestamp >= hour_ago and e.event_type == event_type
+        ]
 
         # Simple threshold: more than 50 events of same type in an hour
         return len(recent_events) > 50
@@ -541,12 +567,15 @@ class SecurityMonitoringService:
         if threat.confidence >= 0.7:
             await self._send_alert(threat, incident)
 
-    async def _find_or_create_incident(self, threat: ThreatIndicator) -> SecurityIncident:
+    async def _find_or_create_incident(
+        self, threat: ThreatIndicator
+    ) -> SecurityIncident:
         """Find existing incident or create new one for threat."""
         # Look for existing incidents with same affected entities and threat category
         for incident in self._active_incidents.values():
             if threat.threat_category in incident.threat_categories and any(
-                entity in incident.affected_users + incident.affected_ips for entity in threat.affected_entities
+                entity in incident.affected_users + incident.affected_ips
+                for entity in threat.affected_entities
             ):
                 # Update existing incident
                 incident.indicators.append(threat)
@@ -563,8 +592,12 @@ class SecurityMonitoringService:
             description=f"Security incident involving {threat.threat_category.value}",
             threat_level=threat.threat_level,
             threat_categories=[threat.threat_category],
-            affected_users=[e for e in threat.affected_entities if not self._is_ip_address(e)],
-            affected_ips=[e for e in threat.affected_entities if self._is_ip_address(e)],
+            affected_users=[
+                e for e in threat.affected_entities if not self._is_ip_address(e)
+            ],
+            affected_ips=[
+                e for e in threat.affected_entities if self._is_ip_address(e)
+            ],
             indicators=[threat],
             risk_score=int(threat.confidence * 100),
             confidence=threat.confidence,
@@ -622,7 +655,9 @@ class SecurityMonitoringService:
             return 0.0
 
         # Average confidence of all indicators
-        avg_confidence = sum(i.confidence for i in incident.indicators) / len(incident.indicators)
+        avg_confidence = sum(i.confidence for i in incident.indicators) / len(
+            incident.indicators
+        )
 
         # Boost confidence for multiple correlated indicators
         correlation_boost = min(0.2, len(incident.indicators) * 0.05)
@@ -639,7 +674,9 @@ class SecurityMonitoringService:
         except ValueError:
             return False
 
-    async def _take_automated_action(self, threat: ThreatIndicator, incident: SecurityIncident):
+    async def _take_automated_action(
+        self, threat: ThreatIndicator, incident: SecurityIncident
+    ):
         """Take automated defensive actions based on threat."""
         actions_taken = []
 
@@ -730,7 +767,9 @@ class SecurityMonitoringService:
         for actor_id in list(self._actor_activity.keys()):
             events = self._actor_activity[actor_id]
             # Keep only events from last 24 hours
-            self._actor_activity[actor_id] = deque([e for e in events if e.timestamp >= cutoff], maxlen=1000)
+            self._actor_activity[actor_id] = deque(
+                [e for e in events if e.timestamp >= cutoff], maxlen=1000
+            )
 
             # Remove empty entries
             if not self._actor_activity[actor_id]:
@@ -739,18 +778,26 @@ class SecurityMonitoringService:
         # Similar cleanup for IP and service activity
         for ip in list(self._ip_activity.keys()):
             events = self._ip_activity[ip]
-            self._ip_activity[ip] = deque([e for e in events if e.timestamp >= cutoff], maxlen=1000)
+            self._ip_activity[ip] = deque(
+                [e for e in events if e.timestamp >= cutoff], maxlen=1000
+            )
             if not self._ip_activity[ip]:
                 del self._ip_activity[ip]
 
         for service in list(self._service_activity.keys()):
             events = self._service_activity[service]
-            self._service_activity[service] = deque([e for e in events if e.timestamp >= cutoff], maxlen=1000)
+            self._service_activity[service] = deque(
+                [e for e in events if e.timestamp >= cutoff], maxlen=1000
+            )
             if not self._service_activity[service]:
                 del self._service_activity[service]
 
         # Clean up old threat indicators
-        old_indicators = [tid for tid, threat in self._threat_indicators.items() if threat.last_seen < cutoff]
+        old_indicators = [
+            tid
+            for tid, threat in self._threat_indicators.items()
+            if threat.last_seen < cutoff
+        ]
         for tid in old_indicators:
             del self._threat_indicators[tid]
 
@@ -787,10 +834,14 @@ class SecurityMonitoringService:
 
     def get_threat_indicators(self, limit: int = 100) -> List[ThreatIndicator]:
         """Get recent threat indicators."""
-        indicators = sorted(self._threat_indicators.values(), key=lambda x: x.last_seen, reverse=True)
+        indicators = sorted(
+            self._threat_indicators.values(), key=lambda x: x.last_seen, reverse=True
+        )
         return indicators[:limit]
 
-    async def resolve_incident(self, incident_id: str, resolution: str, notes: Optional[str] = None):
+    async def resolve_incident(
+        self, incident_id: str, resolution: str, notes: Optional[str] = None
+    ):
         """Mark an incident as resolved."""
         if incident_id in self._active_incidents:
             incident = self._active_incidents[incident_id]

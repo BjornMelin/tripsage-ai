@@ -90,7 +90,9 @@ class TimeSlot(TripSageModel):
         pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$",
         description="Start time (HH:MM)",
     )
-    end_time: str = Field(..., pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", description="End time (HH:MM)")
+    end_time: str = Field(
+        ..., pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", description="End time (HH:MM)"
+    )
     duration_minutes: int = Field(..., ge=0, description="Duration in minutes")
     timezone: Optional[str] = Field(None, description="Timezone for the time slot")
 
@@ -125,7 +127,9 @@ class Location(TripSageModel):
     country: Optional[str] = Field(None, description="Country")
     latitude: Optional[float] = Field(None, description="Latitude coordinate")
     longitude: Optional[float] = Field(None, description="Longitude coordinate")
-    place_id: Optional[str] = Field(None, description="External place ID (Google, etc.)")
+    place_id: Optional[str] = Field(
+        None, description="External place ID (Google, etc.)"
+    )
 
 
 class ItineraryItem(TripSageModel):
@@ -147,7 +151,9 @@ class ItineraryItem(TripSageModel):
     created_by: Optional[str] = Field(None, description="User ID who created the item")
 
     # Type-specific data stored as dict for flexibility
-    type_specific_data: Dict[str, Any] = Field(default_factory=dict, description="Type-specific data")
+    type_specific_data: Dict[str, Any] = Field(
+        default_factory=dict, description="Type-specific data"
+    )
 
 
 class ItineraryConflict(TripSageModel):
@@ -158,7 +164,9 @@ class ItineraryConflict(TripSageModel):
     severity: float = Field(..., ge=0, le=1, description="Conflict severity (0-1)")
     description: str = Field(..., description="Conflict description")
     affected_items: List[str] = Field(..., description="IDs of affected items")
-    suggestions: List[str] = Field(default_factory=list, description="Resolution suggestions")
+    suggestions: List[str] = Field(
+        default_factory=list, description="Resolution suggestions"
+    )
     auto_resolvable: bool = Field(default=False, description="Whether auto-resolvable")
 
 
@@ -168,8 +176,12 @@ class ItineraryDay(TripSageModel):
     date: DateType = Field(..., description="Day date")
     items: List[ItineraryItem] = Field(default_factory=list, description="Day items")
     notes: Optional[str] = Field(None, description="Day notes")
-    budget_allocated: Optional[float] = Field(None, ge=0, description="Budget allocated for the day")
-    budget_spent: Optional[float] = Field(None, ge=0, description="Budget spent for the day")
+    budget_allocated: Optional[float] = Field(
+        None, ge=0, description="Budget allocated for the day"
+    )
+    budget_spent: Optional[float] = Field(
+        None, ge=0, description="Budget spent for the day"
+    )
 
     @property
     def sorted_items(self) -> List[ItineraryItem]:
@@ -186,11 +198,19 @@ class ItineraryDay(TripSageModel):
 class ItineraryShareSettings(TripSageModel):
     """Itinerary sharing settings."""
 
-    visibility: ItineraryVisibility = Field(default=ItineraryVisibility.PRIVATE, description="Visibility level")
-    shared_with: List[str] = Field(default_factory=list, description="User IDs with access")
-    editable_by: List[str] = Field(default_factory=list, description="User IDs with edit access")
+    visibility: ItineraryVisibility = Field(
+        default=ItineraryVisibility.PRIVATE, description="Visibility level"
+    )
+    shared_with: List[str] = Field(
+        default_factory=list, description="User IDs with access"
+    )
+    editable_by: List[str] = Field(
+        default_factory=list, description="User IDs with edit access"
+    )
     share_link: Optional[str] = Field(None, description="Public share link")
-    password_protected: bool = Field(default=False, description="Whether password protected")
+    password_protected: bool = Field(
+        default=False, description="Whether password protected"
+    )
     expires_at: Optional[datetime] = Field(None, description="Share link expiration")
 
 
@@ -220,7 +240,9 @@ class ItineraryCreateRequest(TripSageModel):
 class ItineraryUpdateRequest(TripSageModel):
     """Request model for updating an itinerary."""
 
-    title: Optional[str] = Field(None, min_length=1, max_length=200, description="Itinerary title")
+    title: Optional[str] = Field(
+        None, min_length=1, max_length=200, description="Itinerary title"
+    )
     description: Optional[str] = Field(None, description="Itinerary description")
     status: Optional[ItineraryStatus] = Field(None, description="Itinerary status")
     start_date: Optional[DateType] = Field(None, description="Start date")
@@ -229,7 +251,9 @@ class ItineraryUpdateRequest(TripSageModel):
     total_budget: Optional[float] = Field(None, ge=0, description="Total budget")
     currency: Optional[str] = Field(None, description="Currency code")
     tags: Optional[List[str]] = Field(None, description="Tags")
-    share_settings: Optional[ItineraryShareSettings] = Field(None, description="Share settings")
+    share_settings: Optional[ItineraryShareSettings] = Field(
+        None, description="Share settings"
+    )
 
 
 class Itinerary(TripSageModel):
@@ -253,14 +277,20 @@ class Itinerary(TripSageModel):
     currency: Optional[str] = Field(None, description="Currency code")
 
     tags: List[str] = Field(default_factory=list, description="Tags")
-    share_settings: ItineraryShareSettings = Field(default_factory=ItineraryShareSettings, description="Share settings")
+    share_settings: ItineraryShareSettings = Field(
+        default_factory=ItineraryShareSettings, description="Share settings"
+    )
 
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     # Collaboration
-    collaborators: List[str] = Field(default_factory=list, description="Collaborator user IDs")
-    version: int = Field(default=1, description="Version number for conflict resolution")
+    collaborators: List[str] = Field(
+        default_factory=list, description="Collaborator user IDs"
+    )
+    version: int = Field(
+        default=1, description="Version number for conflict resolution"
+    )
 
     @property
     def duration_days(self) -> int:
@@ -282,7 +312,9 @@ class ItineraryItemCreateRequest(TripSageModel):
     booking_reference: Optional[str] = Field(None, description="Booking reference")
     notes: Optional[str] = Field(None, description="Additional notes")
     is_flexible: bool = Field(default=False, description="Whether timing is flexible")
-    type_specific_data: Optional[Dict[str, Any]] = Field(None, description="Type-specific data")
+    type_specific_data: Optional[Dict[str, Any]] = Field(
+        None, description="Type-specific data"
+    )
 
 
 class OptimizationSettings(TripSageModel):
@@ -295,8 +327,12 @@ class OptimizationSettings(TripSageModel):
     break_duration_minutes: int = Field(default=30, ge=0, description="Break duration")
     start_day_time: Optional[str] = Field(None, description="Preferred day start time")
     end_day_time: Optional[str] = Field(None, description="Preferred day end time")
-    meal_preferences: Optional[Dict[str, str]] = Field(None, description="Meal time preferences")
-    max_daily_budget: Optional[float] = Field(None, ge=0, description="Maximum daily budget")
+    meal_preferences: Optional[Dict[str, str]] = Field(
+        None, description="Meal time preferences"
+    )
+    max_daily_budget: Optional[float] = Field(
+        None, ge=0, description="Maximum daily budget"
+    )
 
 
 class ItineraryOptimizeRequest(TripSageModel):
@@ -304,7 +340,9 @@ class ItineraryOptimizeRequest(TripSageModel):
 
     itinerary_id: str = Field(..., description="Itinerary ID to optimize")
     settings: OptimizationSettings = Field(..., description="Optimization settings")
-    preserve_confirmed: bool = Field(default=True, description="Preserve confirmed items")
+    preserve_confirmed: bool = Field(
+        default=True, description="Preserve confirmed items"
+    )
 
 
 class ItineraryOptimizeResponse(TripSageModel):
@@ -314,7 +352,9 @@ class ItineraryOptimizeResponse(TripSageModel):
     optimized_itinerary: Itinerary = Field(..., description="Optimized itinerary")
     changes: List[Dict[str, Any]] = Field(..., description="Changes made")
     optimization_score: float = Field(..., ge=0, le=1, description="Optimization score")
-    estimated_savings: Optional[Dict[str, float]] = Field(None, description="Estimated savings")
+    estimated_savings: Optional[Dict[str, float]] = Field(
+        None, description="Estimated savings"
+    )
 
 
 class ItinerarySearchRequest(TripSageModel):
@@ -322,8 +362,12 @@ class ItinerarySearchRequest(TripSageModel):
 
     query: Optional[str] = Field(None, description="Search query")
     status: Optional[ItineraryStatus] = Field(None, description="Status filter")
-    start_date_from: Optional[DateType] = Field(None, description="Start date filter (from)")
-    start_date_to: Optional[DateType] = Field(None, description="Start date filter (to)")
+    start_date_from: Optional[DateType] = Field(
+        None, description="Start date filter (from)"
+    )
+    start_date_to: Optional[DateType] = Field(
+        None, description="Start date filter (to)"
+    )
     destinations: Optional[List[str]] = Field(None, description="Destination filters")
     tags: Optional[List[str]] = Field(None, description="Tag filters")
     shared_only: bool = Field(default=False, description="Only shared itineraries")
@@ -393,7 +437,9 @@ class ItineraryService:
         self._itinerary_cache: Dict[str, tuple] = {}
         self._conflict_cache: Dict[str, tuple] = {}
 
-    async def create_itinerary(self, user_id: str, create_request: ItineraryCreateRequest) -> Itinerary:
+    async def create_itinerary(
+        self, user_id: str, create_request: ItineraryCreateRequest
+    ) -> Itinerary:
         """
         Create a new itinerary.
 
@@ -421,7 +467,9 @@ class ItineraryService:
 
             # If template specified, apply template
             if create_request.template_id:
-                template_data = await self._apply_template(create_request.template_id, days)
+                template_data = await self._apply_template(
+                    create_request.template_id, days
+                )
                 if template_data:
                     days = template_data.get("days", days)
 
@@ -467,7 +515,9 @@ class ItineraryService:
             )
             raise ServiceError(f"Failed to create itinerary: {str(e)}") from e
 
-    async def get_itinerary(self, itinerary_id: str, user_id: str, check_access: bool = True) -> Optional[Itinerary]:
+    async def get_itinerary(
+        self, itinerary_id: str, user_id: str, check_access: bool = True
+    ) -> Optional[Itinerary]:
         """
         Get an itinerary by ID.
 
@@ -537,7 +587,9 @@ class ItineraryService:
         """
         try:
             # Validate access and get itinerary
-            itinerary = await self._validate_itinerary_access(itinerary_id, user_id, edit_access=True)
+            itinerary = await self._validate_itinerary_access(
+                itinerary_id, user_id, edit_access=True
+            )
 
             # Apply updates
             updated = await self._apply_itinerary_updates(itinerary, update_request)
@@ -561,7 +613,9 @@ class ItineraryService:
             )
             raise ServiceError(f"Failed to update itinerary: {str(e)}") from e
 
-    async def _validate_itinerary_access(self, itinerary_id: str, user_id: str, edit_access: bool = False) -> Itinerary:
+    async def _validate_itinerary_access(
+        self, itinerary_id: str, user_id: str, edit_access: bool = False
+    ) -> Itinerary:
         """Validate access to itinerary and return it."""
         itinerary = await self.get_itinerary(itinerary_id, user_id)
         if not itinerary:
@@ -572,7 +626,9 @@ class ItineraryService:
 
         return itinerary
 
-    async def _apply_itinerary_updates(self, itinerary: Itinerary, update_request: ItineraryUpdateRequest) -> bool:
+    async def _apply_itinerary_updates(
+        self, itinerary: Itinerary, update_request: ItineraryUpdateRequest
+    ) -> bool:
         """Apply updates to itinerary and return whether any changes were made."""
         updated = False
 
@@ -599,7 +655,9 @@ class ItineraryService:
 
         return updated or date_updated
 
-    async def _update_itinerary_dates(self, itinerary: Itinerary, update_request: ItineraryUpdateRequest) -> bool:
+    async def _update_itinerary_dates(
+        self, itinerary: Itinerary, update_request: ItineraryUpdateRequest
+    ) -> bool:
         """Update itinerary dates and return whether changes were made."""
         if not (update_request.start_date or update_request.end_date):
             return False
@@ -621,7 +679,9 @@ class ItineraryService:
 
         return True
 
-    async def _save_itinerary_updates(self, itinerary: Itinerary, itinerary_id: str) -> None:
+    async def _save_itinerary_updates(
+        self, itinerary: Itinerary, itinerary_id: str
+    ) -> None:
         """Save itinerary updates and update metadata."""
         itinerary.updated_at = datetime.now(timezone.utc)
         itinerary.version += 1
@@ -661,7 +721,10 @@ class ItineraryService:
                 raise PermissionError("Edit access denied")
 
             # Validate item date is within itinerary range
-            if item_request.item_date < itinerary.start_date or item_request.item_date > itinerary.end_date:
+            if (
+                item_request.item_date < itinerary.start_date
+                or item_request.item_date > itinerary.end_date
+            ):
                 raise ValidationError("Item date is outside itinerary date range")
 
             # Create item
@@ -732,7 +795,9 @@ class ItineraryService:
             )
             raise ServiceError(f"Failed to add item: {str(e)}") from e
 
-    async def detect_conflicts(self, itinerary_id: str, user_id: str) -> List[ItineraryConflict]:
+    async def detect_conflicts(
+        self, itinerary_id: str, user_id: str
+    ) -> List[ItineraryConflict]:
         """
         Detect conflicts in an itinerary.
 
@@ -802,7 +867,9 @@ class ItineraryService:
             ServiceError: If optimization fails
         """
         try:
-            original_itinerary = await self.get_itinerary(optimize_request.itinerary_id, user_id)
+            original_itinerary = await self.get_itinerary(
+                optimize_request.itinerary_id, user_id
+            )
             if not original_itinerary:
                 raise NotFoundError("Itinerary not found")
 
@@ -834,7 +901,9 @@ class ItineraryService:
                 optimization_score = optimization_result["score"]
 
             # Calculate estimated savings
-            estimated_savings = await self._calculate_savings(original_itinerary, optimized_itinerary)
+            estimated_savings = await self._calculate_savings(
+                original_itinerary, optimized_itinerary
+            )
 
             logger.info(
                 "Itinerary optimized",
@@ -867,7 +936,9 @@ class ItineraryService:
             )
             raise ServiceError(f"Failed to optimize itinerary: {str(e)}") from e
 
-    async def search_itineraries(self, user_id: str, search_request: ItinerarySearchRequest) -> List[Itinerary]:
+    async def search_itineraries(
+        self, user_id: str, search_request: ItinerarySearchRequest
+    ) -> List[Itinerary]:
         """
         Search itineraries for a user.
 
@@ -966,7 +1037,9 @@ class ItineraryService:
             )
             return False
 
-    async def _apply_template(self, template_id: str, days: List[ItineraryDay]) -> Optional[Dict[str, Any]]:
+    async def _apply_template(
+        self, template_id: str, days: List[ItineraryDay]
+    ) -> Optional[Dict[str, Any]]:
         """Apply a template to itinerary days."""
         try:
             template_data = await self.db.get_itinerary_template(template_id)
@@ -1031,7 +1104,9 @@ class ItineraryService:
 
         return False
 
-    async def _detect_time_conflicts(self, itinerary: Itinerary) -> List[ItineraryConflict]:
+    async def _detect_time_conflicts(
+        self, itinerary: Itinerary
+    ) -> List[ItineraryConflict]:
         """Detect time-based conflicts."""
         conflicts = []
 
@@ -1055,7 +1130,9 @@ class ItineraryService:
                         id=str(uuid4()),
                         conflict_type=ConflictType.TIME_OVERLAP,
                         severity=0.8,
-                        description=(f"Time overlap between '{current.title}' and '{next_item.title}'"),
+                        description=(
+                            f"Time overlap between '{current.title}' and '{next_item.title}'"
+                        ),
                         affected_items=[current.id, next_item.id],
                         suggestions=[
                             "Adjust start/end times",
@@ -1068,13 +1145,17 @@ class ItineraryService:
 
         return conflicts
 
-    async def _detect_location_conflicts(self, itinerary: Itinerary) -> List[ItineraryConflict]:
+    async def _detect_location_conflicts(
+        self, itinerary: Itinerary
+    ) -> List[ItineraryConflict]:
         """Detect location-based conflicts."""
         conflicts = []
         # Implementation for location conflict detection
         return conflicts
 
-    async def _detect_budget_conflicts(self, itinerary: Itinerary) -> List[ItineraryConflict]:
+    async def _detect_budget_conflicts(
+        self, itinerary: Itinerary
+    ) -> List[ItineraryConflict]:
         """Detect budget-related conflicts."""
         conflicts = []
 
@@ -1084,7 +1165,9 @@ class ItineraryService:
                     id=str(uuid4()),
                     conflict_type=ConflictType.BUDGET_EXCEEDED,
                     severity=0.9,
-                    description=(f"Budget exceeded: spent {itinerary.budget_spent} of {itinerary.total_budget}"),
+                    description=(
+                        f"Budget exceeded: spent {itinerary.budget_spent} of {itinerary.total_budget}"
+                    ),
                     affected_items=[],
                     suggestions=[
                         "Increase total budget",
@@ -1097,7 +1180,9 @@ class ItineraryService:
 
         return conflicts
 
-    async def _detect_travel_conflicts(self, itinerary: Itinerary) -> List[ItineraryConflict]:
+    async def _detect_travel_conflicts(
+        self, itinerary: Itinerary
+    ) -> List[ItineraryConflict]:
         """Detect impossible travel scenarios."""
         conflicts = []
         # Implementation for travel conflict detection
@@ -1115,14 +1200,18 @@ class ItineraryService:
         # Simple time-based optimization
         for day in itinerary.days:
             items_with_time = [
-                item for item in day.items if item.time_slot and (not preserve_confirmed or not item.is_confirmed)
+                item
+                for item in day.items
+                if item.time_slot and (not preserve_confirmed or not item.is_confirmed)
             ]
 
             if not items_with_time:
                 continue
 
             # Sort by priority (confirmed items first, then by start time)
-            items_with_time.sort(key=lambda x: (not x.is_confirmed, x.time_slot.start_time))
+            items_with_time.sort(
+                key=lambda x: (not x.is_confirmed, x.time_slot.start_time)
+            )
 
             # Redistribute times with breaks
             if settings.start_day_time and settings.end_day_time:
@@ -1164,7 +1253,9 @@ class ItineraryService:
 
         return {"itinerary": itinerary, "changes": changes, "score": optimization_score}
 
-    async def _calculate_savings(self, original: Itinerary, optimized: Itinerary) -> Dict[str, float]:
+    async def _calculate_savings(
+        self, original: Itinerary, optimized: Itinerary
+    ) -> Dict[str, float]:
         """Calculate estimated savings from optimization."""
         savings = {}
 
@@ -1220,7 +1311,9 @@ class ItineraryService:
         if cache_key in self._itinerary_cache:
             del self._itinerary_cache[cache_key]
 
-    def _get_cached_conflicts(self, cache_key: str) -> Optional[List[ItineraryConflict]]:
+    def _get_cached_conflicts(
+        self, cache_key: str
+    ) -> Optional[List[ItineraryConflict]]:
         """Get cached conflicts if still valid."""
         if cache_key in self._conflict_cache:
             result, timestamp = self._conflict_cache[cache_key]
@@ -1232,7 +1325,9 @@ class ItineraryService:
                 del self._conflict_cache[cache_key]
         return None
 
-    def _cache_conflicts(self, cache_key: str, conflicts: List[ItineraryConflict]) -> None:
+    def _cache_conflicts(
+        self, cache_key: str, conflicts: List[ItineraryConflict]
+    ) -> None:
         """Cache conflicts."""
         import time
 

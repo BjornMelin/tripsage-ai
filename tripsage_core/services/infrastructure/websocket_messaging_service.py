@@ -204,7 +204,9 @@ class WebSocketMessagingService:
 
         # Check message rate limit if rate limiter is provided
         if rate_limiter and connection.user_id:
-            rate_check = await rate_limiter.check_message_rate(connection.user_id, connection_id)
+            rate_check = await rate_limiter.check_message_rate(
+                connection.user_id, connection_id
+            )
             if not rate_check["allowed"]:
                 self.performance_metrics["rate_limit_hits"] += 1
 
@@ -246,7 +248,9 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in connection_ids.copy():
-            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
+            if await self.send_to_connection(
+                connection_id, event, rate_limiter, message_limits
+            ):
                 sent_count += 1
 
         return sent_count
@@ -266,7 +270,9 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in connection_ids.copy():
-            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
+            if await self.send_to_connection(
+                connection_id, event, rate_limiter, message_limits
+            ):
                 sent_count += 1
 
         return sent_count
@@ -286,12 +292,16 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in connection_ids.copy():
-            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
+            if await self.send_to_connection(
+                connection_id, event, rate_limiter, message_limits
+            ):
                 sent_count += 1
 
         return sent_count
 
-    async def broadcast_to_all(self, event: WebSocketEvent, rate_limiter=None, message_limits=None) -> int:
+    async def broadcast_to_all(
+        self, event: WebSocketEvent, rate_limiter=None, message_limits=None
+    ) -> int:
         """Broadcast event to all connections.
 
         Consolidated logic for broadcasting.
@@ -299,7 +309,9 @@ class WebSocketMessagingService:
         sent_count = 0
 
         for connection_id in list(self.connections.keys()):
-            if await self.send_to_connection(connection_id, event, rate_limiter, message_limits):
+            if await self.send_to_connection(
+                connection_id, event, rate_limiter, message_limits
+            ):
                 sent_count += 1
 
         return sent_count
@@ -317,14 +329,22 @@ class WebSocketMessagingService:
         Unified sending method that routes to appropriate send_to_* method.
         """
         if target_type == "connection" and target_id:
-            success = await self.send_to_connection(target_id, event, rate_limiter, message_limits)
+            success = await self.send_to_connection(
+                target_id, event, rate_limiter, message_limits
+            )
             return 1 if success else 0
         if target_type == "user" and target_id:
-            return await self.send_to_user(UUID(target_id), event, rate_limiter, message_limits)
+            return await self.send_to_user(
+                UUID(target_id), event, rate_limiter, message_limits
+            )
         if target_type == "session" and target_id:
-            return await self.send_to_session(UUID(target_id), event, rate_limiter, message_limits)
+            return await self.send_to_session(
+                UUID(target_id), event, rate_limiter, message_limits
+            )
         if target_type == "channel" and target_id:
-            return await self.send_to_channel(target_id, event, rate_limiter, message_limits)
+            return await self.send_to_channel(
+                target_id, event, rate_limiter, message_limits
+            )
         if target_type == "broadcast":
             return await self.broadcast_to_all(event, rate_limiter, message_limits)
         logger.warning(f"Unknown target type: {target_type}")

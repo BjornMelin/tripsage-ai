@@ -24,7 +24,9 @@ class TripComparison(TripSageModel):
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     timestamp: datetime = Field(..., description="When the comparison was created")
-    comparison_json: Dict[str, Any] = Field(..., description="The comparison data in JSON format")
+    comparison_json: Dict[str, Any] = Field(
+        ..., description="The comparison data in JSON format"
+    )
 
     @property
     def is_recent(self) -> bool:
@@ -94,14 +96,16 @@ class TripComparison(TripSageModel):
     def has_accommodations(self) -> bool:
         """Check if the comparison includes accommodation options."""
         return "accommodations" in self.comparison_json or any(
-            "accommodation" in option for option in self.comparison_json.get("options", [])
+            "accommodation" in option
+            for option in self.comparison_json.get("options", [])
         )
 
     @property
     def has_transportation(self) -> bool:
         """Check if the comparison includes transportation options."""
         return "transportation" in self.comparison_json or any(
-            "transportation" in option for option in self.comparison_json.get("options", [])
+            "transportation" in option
+            for option in self.comparison_json.get("options", [])
         )
 
     @property
@@ -113,7 +117,9 @@ class TripComparison(TripSageModel):
 
         # Check if each option has flight, accommodation, and transportation
         for option in options:
-            if not all(key in option for key in ["flight", "accommodation", "transportation"]):
+            if not all(
+                key in option for key in ["flight", "accommodation", "transportation"]
+            ):
                 return False
 
         return True

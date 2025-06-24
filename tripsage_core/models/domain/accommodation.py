@@ -72,6 +72,10 @@ class AccommodationListing(TripSageDomainModel):
     host_id: Optional[str] = Field(None, description="Host ID")
     host_name: Optional[str] = Field(None, description="Host name")
     host_rating: Optional[float] = Field(None, description="Host rating")
-    total_price: Optional[float] = Field(None, description="Total price for the stay (if dates provided)")
+    total_price: Optional[float] = Field(
+        None, description="Total price for the stay (if dates provided)"
+    )
     url: Optional[str] = Field(None, description="URL to the listing")
-    source: Optional[str] = Field(None, description="Source of the listing (e.g., 'airbnb', 'booking')")
+    source: Optional[str] = Field(
+        None, description="Source of the listing (e.g., 'airbnb', 'booking')"
+    )
