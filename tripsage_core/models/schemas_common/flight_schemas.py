@@ -217,7 +217,8 @@ class MultiCityFlightSearchRequest(BaseModel):
 
             if next_d < current:
                 raise ValueError(
-                    f"Segment {i + 2} departure date must be on or after segment {i + 1} departure date"
+                    f"Segment {i + 2} departure date must be on or after "
+                    f"segment {i + 1} departure date"
                 )
 
         return self

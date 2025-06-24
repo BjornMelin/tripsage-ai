@@ -150,7 +150,8 @@ class DatabaseMetrics:
         self.connection_duration.labels(service=service).observe(duration)
 
         logger.debug(
-            f"Recorded connection attempt: service={service}, success={success}, duration={duration:.3f}s"
+            f"Recorded connection attempt: service={service}, success={success}, "
+            f"duration={duration:.3f}s"
         )
 
     def set_active_connections(self, service: str, count: int):
