@@ -266,6 +266,27 @@ class TripService:
             )
             return []
 
+    async def count_user_trips(self, user_id: str) -> int:
+        """Count total trips for a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Total count of user's trips
+        """
+        try:
+            filters = {"user_id": user_id}
+            count = await self.db.count("trips", filters=filters)
+            return count
+
+        except Exception as e:
+            logger.error(
+                "Failed to count user trips",
+                extra={"user_id": user_id, "error": str(e)},
+            )
+            return 0
+
     async def update_trip(self, trip_id: str, user_id: str, update_data: TripUpdateRequest) -> Optional[TripResponse]:
         """Update a trip.
 
