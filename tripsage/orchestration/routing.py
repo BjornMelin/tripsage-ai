@@ -139,7 +139,8 @@ class RouterNode(BaseAgentNode):
             },
             "travel_agent": {
                 "description": (
-                    "General travel assistance, documentation, travel tips, multi-domain queries"
+                    "General travel assistance, documentation, travel tips, "
+                    "multi-domain queries"
                 ),
                 "keywords": [
                     "travel",
@@ -463,7 +464,8 @@ class RouterNode(BaseAgentNode):
                 "agent": best_agent,
                 "confidence": confidence,
                 "reasoning": (
-                    f"Keyword-based classification: {best_keyword_matches} keyword matches"
+                    f"Keyword-based classification: {best_keyword_matches} "
+                    f"keyword matches"
                 ),
             }
         else:

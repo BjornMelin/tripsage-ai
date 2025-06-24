@@ -278,7 +278,8 @@ class AgentHandoffCoordinator:
                 )
 
                 logger.info(
-                    f"Handoff determined: {current_agent} -> {rule.to_agent} ({trigger})"
+                    f"Handoff determined: {current_agent} -> {rule.to_agent} "
+                    f"({trigger})"
                 )
                 return rule.to_agent, handoff_context
 
@@ -451,7 +452,10 @@ class AgentHandoffCoordinator:
         elif trigger == HandoffTrigger.TASK_COMPLETION:
             return f"Task completed, transitioning to {rule.to_agent} for next phase"
         elif trigger == HandoffTrigger.MISSING_CAPABILITY:
-            return f"Current agent lacks required capability, transferring to {rule.to_agent}"
+            return (
+                f"Current agent lacks required capability, "
+                f"transferring to {rule.to_agent}"
+            )
         elif trigger == HandoffTrigger.ERROR_RECOVERY:
             return f"Error recovery required, transferring to {rule.to_agent}"
         elif trigger == HandoffTrigger.TIMEOUT:
@@ -473,7 +477,8 @@ class AgentHandoffCoordinator:
             Updated state with handoff information
         """
         logger.info(
-            f"Executing handoff: {handoff_context.from_agent} -> {handoff_context.to_agent}"
+            f"Executing handoff: {handoff_context.from_agent} -> "
+            f"{handoff_context.to_agent}"
         )
 
         # Update state with handoff information

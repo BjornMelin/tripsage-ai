@@ -64,7 +64,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(
-            f"Initialized destination research agent with {len(self.available_tools)} tools"
+            f"Initialized destination research agent with "
+            f"{len(self.available_tools)} tools"
         )
 
     async def _load_configuration(self) -> None:
@@ -217,7 +218,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
         try:
             messages = [
                 SystemMessage(
-                    content="You are a destination research parameter extraction assistant."
+                    content=(
+                        "You are a destination research parameter extraction assistant."
+                    )
                 ),
                 HumanMessage(content=extraction_prompt),
             ]
@@ -413,7 +416,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
             # Use web crawling for practical information
             webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
             if webcrawl_tool:
-                query = f"{destination} travel practical information currency transportation visa requirements"
+                query = (
+                    f"{destination} travel practical information currency "
+                    f"transportation visa requirements"
+                )
                 result = await webcrawl_tool._arun(query=query, max_results=3)
                 return {"practical_data": result, "sources": "web_research"}
             else:
@@ -434,7 +440,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
             # Use web crawling for cultural information
             webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
             if webcrawl_tool:
-                query = f"{destination} culture customs etiquette local traditions social norms"
+                query = (
+                    f"{destination} culture customs etiquette local traditions "
+                    f"social norms"
+                )
                 result = await webcrawl_tool._arun(query=query, max_results=3)
                 return {"cultural_data": result, "sources": "web_research"}
             else:
@@ -520,7 +529,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 content += "**Overview:**\n"
                 overview = research_results.get("overview", {})
                 if overview.get("overview_data"):
-                    content += f"Based on my research, {destination} offers a rich travel experience. "
+                    content += (
+                        f"Based on my research, {destination} offers a rich "
+                        f"travel experience. "
+                    )
                 content += "\n"
 
             if research_type == "attractions" or research_type == "all":
@@ -572,7 +584,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                         content += f"For your travel dates: {weather['travel_dates']}\n"
                     content += "Weather and seasonal recommendations.\n\n"
 
-            content += "Would you like me to provide more detailed information about any specific aspect of your trip?"
+            content += (
+                "Would you like me to provide more detailed information about "
+                "any specific aspect of your trip?"
+            )
 
         return self._create_response_message(
             content,

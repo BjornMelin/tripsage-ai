@@ -122,7 +122,10 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             await memory_service.connect()
 
             # Create memory for the travel plan
-            plan_memory = f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
+            plan_memory = (
+                f"Travel plan '{plan_input.title}' created for user "
+                f"{plan_input.user_id}"
+            )
             plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
             plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
             plan_memory += f" for {plan_input.travelers} travelers"

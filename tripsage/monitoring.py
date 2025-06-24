@@ -66,7 +66,8 @@ def configure_opentelemetry(
     trace.set_tracer_provider(provider)
 
     logger.info(
-        f"OpenTelemetry configured for service '{service_name}' version '{service_version}'"
+        f"OpenTelemetry configured for service '{service_name}' "
+        f"version '{service_version}'"
     )
 
 

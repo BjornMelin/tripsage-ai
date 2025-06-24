@@ -252,7 +252,10 @@ class AccommodationAgentNode(BaseAgentNode):
                     )
                     rating = property.get("rating", "No rating")
 
-                    content += f"{i}. {name} ({property_type})\n   Rating: {rating} | Price: {price}/night\n"
+                    content += (
+                        f"{i}. {name} ({property_type})\n"
+                        f"   Rating: {rating} | Price: {price}/night\n"
+                    )
 
                     amenities = property.get("amenities", [])
                     if amenities:
@@ -266,7 +269,10 @@ class AccommodationAgentNode(BaseAgentNode):
                         f"... and {len(accommodations) - 3} more options available.\n\n"
                     )
 
-                content += "Would you like details about any properties or search with different criteria?"
+                content += (
+                    "Would you like details about any properties or search with "
+                    "different criteria?"
+                )
             else:
                 location = search_params.get("location", "the specified location")
                 content = (

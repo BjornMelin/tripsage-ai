@@ -83,7 +83,8 @@ class BudgetAgentNode(BaseAgentNode):
             )
 
             logger.info(
-                f"Loaded budget agent configuration from database: temp={self.agent_config['temperature']}"
+                f"Loaded budget agent configuration from database: "
+                f"temp={self.agent_config['temperature']}"
             )
 
         except Exception as e:
@@ -581,7 +582,10 @@ class BudgetAgentNode(BaseAgentNode):
         allocations = analysis.get("allocations", {})
         daily_budget = analysis.get("daily_budget", {})
 
-        content = f"I've optimized your ${total_budget:,.0f} budget for {trip_length} days in {destination}:\n\n"
+        content = (
+            f"I've optimized your ${total_budget:,.0f} budget for {trip_length} "
+            f"days in {destination}:\n\n"
+        )
 
         content += "**Budget Allocation:**\n"
         for category, amount in allocations.items():
@@ -589,7 +593,10 @@ class BudgetAgentNode(BaseAgentNode):
             content += f"• {category.title()}: ${amount:,.0f} ({pct:.0f}%)\n"
 
         content += "\n**Daily Budget Breakdown:**\n"
-        content += f"• Accommodation: ${daily_budget.get('accommodation_per_night', 0):.0f}/night\n"
+        content += (
+            f"• Accommodation: "
+            f"${daily_budget.get('accommodation_per_night', 0):.0f}/night\n"
+        )
         content += (
             f"• Food: ${daily_budget.get('food_per_day', 0):.0f}/day "
             f"(${daily_budget.get('food_per_meal', 0):.0f}/meal)\n"
@@ -637,7 +644,10 @@ class BudgetAgentNode(BaseAgentNode):
         content = f"I've compared {options_count} {category} options:\n\n"
 
         if best_option:
-            content += f"**Best Value:** {best_option.get('name', 'Option')} - ${best_option.get('cost', 0):,.0f}\n"
+            content += (
+                f"**Best Value:** {best_option.get('name', 'Option')} - "
+                f"${best_option.get('cost', 0):,.0f}\n"
+            )
             content += f"Value Score: {best_option.get('value_score', 0):.1f}\n\n"
 
         if cheapest_option and cheapest_option != best_option:
@@ -669,7 +679,10 @@ class BudgetAgentNode(BaseAgentNode):
         content += "**Category Breakdown:**\n"
         for category, data in variance_analysis.items():
             status_emoji = "⚠️" if data["status"] == "over" else "✅"
-            content += f"{status_emoji} {category.title()}: ${data['actual']:,.2f} vs ${data['planned']:,.2f} "
+            content += (
+                f"{status_emoji} {category.title()}: ${data['actual']:,.2f} vs "
+                f"${data['planned']:,.2f} "
+            )
             content += (
                 f"({data['variance']:+,.2f}, {data['variance_percentage']:+.1f}%)\n"
             )

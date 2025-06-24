@@ -60,7 +60,8 @@ class MemoryUpdateNode(BaseAgentNode):
             await self._update_session_data(state)
 
             logger.info(
-                f"Updated memory with {len(insights)} insights for user {state['user_id']}"
+                f"Updated memory with {len(insights)} insights for user "
+                f"{state['user_id']}"
             )
 
         return state

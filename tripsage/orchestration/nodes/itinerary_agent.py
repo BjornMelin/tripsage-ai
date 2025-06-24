@@ -193,7 +193,9 @@ class ItineraryAgentNode(BaseAgentNode):
         try:
             messages = [
                 SystemMessage(
-                    content="You are an itinerary planning parameter extraction assistant."
+                    content=(
+                        "You are an itinerary planning parameter extraction assistant."
+                    )
                 ),
                 HumanMessage(content=extraction_prompt),
             ]
@@ -648,7 +650,10 @@ class ItineraryAgentNode(BaseAgentNode):
             Formatted response message
         """
         if result.get("error"):
-            content = f"I apologize, but I encountered an issue with your itinerary: {result['error']}"
+            content = (
+                f"I apologize, but I encountered an issue with your itinerary: "
+                f"{result['error']}"
+            )
         else:
             if operation_type == "create":
                 content = self._format_create_response(result, params)
@@ -678,7 +683,10 @@ class ItineraryAgentNode(BaseAgentNode):
         total_activities = result.get("total_activities", 0)
         daily_schedule = result.get("daily_schedule", [])
 
-        content = f"I've created a {duration}-day itinerary for {destination} with {total_activities} activities!\n\n"
+        content = (
+            f"I've created a {duration}-day itinerary for {destination} "
+            f"with {total_activities} activities!\n\n"
+        )
 
         for day in daily_schedule[:3]:  # Show first 3 days
             day_num = day.get("day", 1)
@@ -708,7 +716,10 @@ class ItineraryAgentNode(BaseAgentNode):
                 f"total (${estimated_cost['average_daily_cost']:.0f}/day)\n\n"
             )
 
-        content += "Would you like me to optimize this itinerary, add calendar events, or make any modifications?"
+        content += (
+            "Would you like me to optimize this itinerary, add calendar events, "
+            "or make any modifications?"
+        )
 
         return content
 
@@ -723,7 +734,10 @@ class ItineraryAgentNode(BaseAgentNode):
         content += "• Improved activity flow and timing\n"
         content += "• Reduced travel time between locations\n"
         content += "• Better grouped nearby activities\n\n"
-        content += "The optimized schedule maintains all your original activities while improving efficiency. "
+        content += (
+            "The optimized schedule maintains all your original activities "
+            "while improving efficiency. "
+        )
         content += (
             "Would you like to see the updated schedule or make any other changes?"
         )
@@ -738,14 +752,23 @@ class ItineraryAgentNode(BaseAgentNode):
         destination = result.get("destination", "")
 
         if modification_type == "add":
-            content = f"I've successfully added the new activity to your {destination} itinerary!\n\n"
+            content = (
+                f"I've successfully added the new activity to your {destination} "
+                f"itinerary!\n\n"
+            )
         elif modification_type == "remove":
-            content = f"I've successfully removed the activity from your {destination} itinerary!\n\n"
+            content = (
+                f"I've successfully removed the activity from your {destination} "
+                f"itinerary!\n\n"
+            )
         else:
             content = f"I've successfully modified your {destination} itinerary!\n\n"
 
         content += "Your itinerary has been updated with the changes. "
-        content += "Would you like to make any other modifications or see the full updated schedule?"
+        content += (
+            "Would you like to make any other modifications or see the full "
+            "updated schedule?"
+        )
 
         return content
 
@@ -763,7 +786,10 @@ class ItineraryAgentNode(BaseAgentNode):
         content += "• Location information\n"
         content += "• Activity descriptions\n"
         content += "• Estimated durations\n\n"
-        content += "You can now import these events into your calendar app for easy reference during your trip!"
+        content += (
+            "You can now import these events into your calendar app for easy "
+            "reference during your trip!"
+        )
 
         return content
 
