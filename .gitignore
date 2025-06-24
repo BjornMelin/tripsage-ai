@@ -317,3 +317,13 @@ scan-results/
 **/*.orig
 **/*.rej
 **/.git/COMMIT_EDITMSG.backup
+
+.env.local
+.env.production
+.env.development
+.env.test
+.env.staging
+.env.production.local
+.env.development.local
+.env.test.local
+.env.staging.local
