@@ -12,11 +12,17 @@ from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditSeverity,
+    audit_security_event,
+)
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
     FileSearchRequest,
     FileUploadRequest,
 )
+from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
 
 logger = logging.getLogger(__name__)
@@ -41,6 +47,7 @@ def get_file_processing_service() -> FileProcessingService:
 
 
 get_file_processing_service_dep = Depends(get_file_processing_service)
+get_trip_service_dep = Depends(get_trip_service)
 
 
 class FileUploadResponse(BaseModel):
@@ -98,12 +105,16 @@ async def upload_file(
         content = await file.read()
 
         # Create upload request
-        upload_request = FileUploadRequest(filename=file.filename, content=content, auto_analyze=True)
+        upload_request = FileUploadRequest(
+            filename=file.filename, content=content, auto_analyze=True
+        )
 
         # Process file
         result = await service.upload_file(user_id, upload_request)
 
-        logger.info(f"File uploaded successfully: {file.filename} ({result.file_size} bytes) for user {user_id}")
+        logger.info(
+            f"File uploaded successfully: {file.filename} ({result.file_size} bytes) for user {user_id}"
+        )
 
         return FileUploadResponse(
             file_id=result.id,
@@ -135,7 +146,9 @@ async def upload_files_batch(
     for better error handling and progress tracking.
     """
     if len(files) == 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No files provided"
+        )
 
     # Calculate total size for session limit validation
     # Note: UploadFile doesn't expose size directly, we'll validate during processing
@@ -168,7 +181,9 @@ async def upload_files_batch(
             content = await file.read()
 
             # Create upload request
-            upload_request = FileUploadRequest(filename=file.filename, content=content, auto_analyze=True)
+            upload_request = FileUploadRequest(
+                filename=file.filename, content=content, auto_analyze=True
+            )
 
             # Process file
             result = await service.upload_file(user_id, upload_request)
@@ -199,7 +214,9 @@ async def upload_files_batch(
         # Some files failed - log warnings but return successful ones
         logger.warning(f"Some files failed processing: {'; '.join(errors)}")
 
-    logger.info(f"Batch upload completed: {len(processed_files)}/{len(files)} files processed for user {user_id}")
+    logger.info(
+        f"Batch upload completed: {len(processed_files)}/{len(files)} files processed for user {user_id}"
+    )
 
     return BatchUploadResponse(
         files=processed_files,
@@ -336,7 +353,9 @@ async def download_file(
         _file_stream = io.BytesIO(file_content)
 
         headers = {
-            "Content-Disposition": (f'attachment; filename="{file_info.original_filename}"'),
+            "Content-Disposition": (
+                f'attachment; filename="{file_info.original_filename}"'
+            ),
             "Content-Type": file_info.mime_type,
         }
 
@@ -363,18 +382,57 @@ async def list_trip_attachments(
     trip_id: str,
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
+    trip_service: TripService = get_trip_service_dep,
     limit: int = 50,
     offset: int = 0,
 ):
     """List all attachments for a specific trip.
 
     Only returns attachments for trips the user has access to.
+
+    Security features:
+    - Trip access verification (owner or collaborator)
+    - Audit logging for access attempts
+    - Authorization error handling
     """
     try:
         user_id = get_principal_id(principal)
 
-        # TODO: Verify user has access to the trip
-        # For now, just search files by trip_id
+        # Verify user has access to the trip
+        trip = await trip_service.get_trip(trip_id=trip_id, user_id=user_id)
+        if not trip:
+            # Log unauthorized access attempt
+            await audit_security_event(
+                event_type=AuditEventType.ACCESS_DENIED,
+                severity=AuditSeverity.MEDIUM,
+                message=f"Trip access denied for user {user_id} to trip {trip_id}",
+                actor_id=user_id,
+                ip_address="unknown",  # Could be extracted from request
+                target_resource=f"trip_attachments:{trip_id}",
+                resource_type="trip_attachments",
+                resource_id=trip_id,
+                action="list_attachments",
+                reason="trip_not_found_or_access_denied",
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found or access denied",
+            )
+
+        # Log successful access
+        await audit_security_event(
+            event_type=AuditEventType.DATA_ACCESS,
+            severity=AuditSeverity.LOW,
+            message=f"Trip attachments accessed for trip {trip_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource=f"trip_attachments:{trip_id}",
+            resource_type="trip_attachments",
+            resource_id=trip_id,
+            action="list_attachments",
+            trip_title=trip.title,
+        )
 
         # Create search request filtered by trip
         search_request = FileSearchRequest(
@@ -385,6 +443,10 @@ async def list_trip_attachments(
 
         files = await service.search_files(user_id, search_request)
 
+        logger.info(
+            f"Listed {len(files)} attachments for trip {trip_id} by user {user_id}"
+        )
+
         return {
             "trip_id": trip_id,
             "files": files,
@@ -393,8 +455,25 @@ async def list_trip_attachments(
             "total": len(files),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to list trip attachments for trip {trip_id}: {str(e)}")
+
+        # Log system error
+        await audit_security_event(
+            event_type=AuditEventType.SYSTEM_ERROR,
+            severity=AuditSeverity.HIGH,
+            message=f"System error accessing trip attachments for trip {trip_id}",
+            actor_id=user_id,
+            ip_address="unknown",
+            target_resource=f"trip_attachments:{trip_id}",
+            resource_type="trip_attachments",
+            resource_id=trip_id,
+            action="list_attachments",
+            error=str(e),
+        )
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve trip attachments",

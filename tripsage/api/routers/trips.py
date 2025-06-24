@@ -14,12 +14,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 
-# Import audit logging
-from tripsage_core.services.business.audit_logging_service import (
-    AuditEventType,
-    AuditLoggingService,
-)
-
 # Import schemas
 from tripsage.api.schemas.trips import (
     CreateTripRequest,
@@ -38,6 +32,12 @@ from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
 from tripsage_core.models.schemas_common.travel import TripDestination
 from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
+
+# Import audit logging
+from tripsage_core.services.business.audit_logging_service import (
+    AuditEventType,
+    AuditLoggingService,
+)
 
 # Import core service and models
 from tripsage_core.services.business.trip_service import (
@@ -72,8 +72,12 @@ async def create_trip(
 
     try:
         # Convert date to datetime with timezone
-        start_datetime = datetime.combine(trip_request.start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-        end_datetime = datetime.combine(trip_request.end_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        start_datetime = datetime.combine(
+            trip_request.start_date, datetime.min.time()
+        ).replace(tzinfo=timezone.utc)
+        end_datetime = datetime.combine(
+            trip_request.end_date, datetime.min.time()
+        ).replace(tzinfo=timezone.utc)
 
         # Convert TripDestination to TripLocation
         trip_locations = []
@@ -95,13 +99,19 @@ async def create_trip(
             trip_locations.append(trip_location)
 
         # Extract primary destination from destinations list
-        primary_destination = trip_request.destinations[0].name if trip_request.destinations else "Unknown"
+        primary_destination = (
+            trip_request.destinations[0].name
+            if trip_request.destinations
+            else "Unknown"
+        )
 
         # Create default budget if preferences don't include one
         default_budget = EnhancedBudget(
             total=1000.0,  # Default $1000 budget
             currency="USD",
-            breakdown=BudgetBreakdown(accommodation=300.0, transportation=400.0, food=200.0, activities=100.0),
+            breakdown=BudgetBreakdown(
+                accommodation=300.0, transportation=400.0, food=200.0, activities=100.0
+            ),
         )
 
         # Extract budget from preferences if available
@@ -165,20 +175,28 @@ async def create_trip(
             # Map common preferences to core preferences
             if common_prefs.accommodation:
                 core_preferences.accommodation_preferences = {
-                    "type": common_prefs.accommodation.type.value if common_prefs.accommodation.type else None,
+                    "type": common_prefs.accommodation.type.value
+                    if common_prefs.accommodation.type
+                    else None,
                     "min_rating": common_prefs.accommodation.min_rating,
                     "amenities": common_prefs.accommodation.amenities or [],
-                    "location_preference": (common_prefs.accommodation.location_preference),
+                    "location_preference": (
+                        common_prefs.accommodation.location_preference
+                    ),
                 }
 
             if common_prefs.transportation:
-                core_preferences.transportation_preferences = common_prefs.transportation.flight_preferences or {}
+                core_preferences.transportation_preferences = (
+                    common_prefs.transportation.flight_preferences or {}
+                )
 
             if common_prefs.activities:
                 core_preferences.activity_preferences = common_prefs.activities
 
             if common_prefs.dietary_restrictions:
-                core_preferences.dietary_restrictions = common_prefs.dietary_restrictions
+                core_preferences.dietary_restrictions = (
+                    common_prefs.dietary_restrictions
+                )
 
             if common_prefs.accessibility_needs:
                 core_preferences.accessibility_needs = common_prefs.accessibility_needs
@@ -186,7 +204,9 @@ async def create_trip(
             core_request.preferences = core_preferences
 
         # Create trip via core service
-        core_response = await trip_service.create_trip(user_id=principal.user_id, trip_data=core_request)
+        core_response = await trip_service.create_trip(
+            user_id=principal.user_id, trip_data=core_request
+        )
 
         # Convert core response to API response
         trip_response = _adapt_trip_response(core_response)
@@ -221,10 +241,14 @@ async def get_trip(
     logger.info(f"Getting trip {trip_id} for user: {principal.user_id}")
 
     try:
-        trip_response = await trip_service.get_trip(trip_id=str(trip_id), user_id=principal.user_id)
+        trip_response = await trip_service.get_trip(
+            trip_id=str(trip_id), user_id=principal.user_id
+        )
 
         if not trip_response:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Convert core response to API response
         return _adapt_trip_response(trip_response)
@@ -242,7 +266,9 @@ async def get_trip(
 @router.get("/", response_model=TripListResponse)
 async def list_trips(
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
-    limit: int = Query(default=10, ge=1, le=100, description="Number of trips to return"),
+    limit: int = Query(
+        default=10, ge=1, le=100, description="Number of trips to return"
+    ),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
@@ -260,7 +286,9 @@ async def list_trips(
     logger.info(f"Listing trips for user: {principal.user_id}")
 
     try:
-        trips = await trip_service.get_user_trips(user_id=principal.user_id, limit=limit, offset=skip)
+        trips = await trip_service.get_user_trips(
+            user_id=principal.user_id, limit=limit, offset=skip
+        )
 
         # Get actual total count with user authorization
         total_count = await trip_service.count_user_trips(user_id=principal.user_id)
@@ -328,14 +356,14 @@ async def update_trip(
             updates["description"] = trip_request.description
         if trip_request.start_date is not None:
             # Convert date to datetime with timezone
-            updates["start_date"] = datetime.combine(trip_request.start_date, datetime.min.time()).replace(
-                tzinfo=timezone.utc
-            )
+            updates["start_date"] = datetime.combine(
+                trip_request.start_date, datetime.min.time()
+            ).replace(tzinfo=timezone.utc)
         if trip_request.end_date is not None:
             # Convert date to datetime with timezone
-            updates["end_date"] = datetime.combine(trip_request.end_date, datetime.min.time()).replace(
-                tzinfo=timezone.utc
-            )
+            updates["end_date"] = datetime.combine(
+                trip_request.end_date, datetime.min.time()
+            ).replace(tzinfo=timezone.utc)
         if trip_request.destinations is not None:
             # Convert destinations to TripLocation format
             trip_locations = []
@@ -357,10 +385,14 @@ async def update_trip(
                 trip_locations.append(trip_location)
             updates["destinations"] = trip_locations
 
-        trip_response = await trip_service.update_trip(user_id=principal.user_id, trip_id=str(trip_id), request=updates)
+        trip_response = await trip_service.update_trip(
+            user_id=principal.user_id, trip_id=str(trip_id), request=updates
+        )
 
         if not trip_response:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Convert core response to API response
         return _adapt_trip_response(trip_response)
@@ -391,10 +423,14 @@ async def delete_trip(
     logger.info(f"Deleting trip {trip_id} for user: {principal.user_id}")
 
     try:
-        success = await trip_service.delete_trip(user_id=principal.user_id, trip_id=str(trip_id))
+        success = await trip_service.delete_trip(
+            user_id=principal.user_id, trip_id=str(trip_id)
+        )
 
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Audit log the deletion
         try:
@@ -404,10 +440,12 @@ async def delete_trip(
                 user_id=principal.user_id,
                 resource_type="trip",
                 resource_id=str(trip_id),
-                details={"action": "trip_deleted"}
+                details={"action": "trip_deleted"},
             )
         except Exception as audit_e:
-            logger.warning(f"Failed to log audit event for trip deletion: {str(audit_e)}")
+            logger.warning(
+                f"Failed to log audit event for trip deletion: {str(audit_e)}"
+            )
 
     except HTTPException:
         raise
@@ -439,28 +477,35 @@ async def get_trip_summary(
 
     try:
         # Get trip first to ensure access
-        trip_response = await trip_service.get_trip(trip_id=str(trip_id), user_id=principal.user_id)
+        trip_response = await trip_service.get_trip(
+            trip_id=str(trip_id), user_id=principal.user_id
+        )
 
         if not trip_response:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Convert core response to API response
         adapted_trip = _adapt_trip_response(trip_response)
 
         # Build summary from trip data
         date_range = f"{adapted_trip.start_date.strftime('%b %d')}-{adapted_trip.end_date.strftime('%d, %Y')}"
-        
+
         # Get budget information from trip data (authorized access verified above)
-        budget = adapted_trip.budget if hasattr(adapted_trip, 'budget') else None
+        budget = adapted_trip.budget if hasattr(adapted_trip, "budget") else None
         budget_total = budget.total if budget else 0.0
         budget_currency = budget.currency if budget else "USD"
-        
+
         # Calculate budget breakdown from trip budget
         budget_breakdown = {}
-        if budget and hasattr(budget, 'breakdown'):
+        if budget and hasattr(budget, "breakdown"):
             budget_breakdown = {
                 "accommodation": {"budget": budget.breakdown.accommodation, "spent": 0},
-                "transportation": {"budget": budget.breakdown.transportation, "spent": 0}, 
+                "transportation": {
+                    "budget": budget.breakdown.transportation,
+                    "spent": 0,
+                },
                 "food": {"budget": budget.breakdown.food, "spent": 0},
                 "activities": {"budget": budget.breakdown.activities, "spent": 0},
             }
@@ -476,11 +521,11 @@ async def get_trip_summary(
         # Get accommodation and transportation summaries from preferences or defaults
         accommodation_summary = "Accommodation preferences not set"
         transportation_summary = "Transportation preferences not set"
-        
+
         if adapted_trip.preferences:
-            if hasattr(adapted_trip.preferences, 'accommodation_preferences'):
+            if hasattr(adapted_trip.preferences, "accommodation_preferences"):
                 accommodation_summary = "Custom accommodation preferences configured"
-            if hasattr(adapted_trip.preferences, 'transportation_preferences'):
+            if hasattr(adapted_trip.preferences, "transportation_preferences"):
                 transportation_summary = "Custom transportation preferences configured"
 
         summary = TripSummaryResponse(
@@ -538,10 +583,14 @@ async def update_trip_preferences(
         # Update preferences via the core service update_trip method
         updates = {"preferences": preferences_request.model_dump()}
 
-        trip_response = await trip_service.update_trip(user_id=principal.user_id, trip_id=str(trip_id), request=updates)
+        trip_response = await trip_service.update_trip(
+            user_id=principal.user_id, trip_id=str(trip_id), request=updates
+        )
 
         if not trip_response:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Convert core response to API response
         return _adapt_trip_response(trip_response)
@@ -580,10 +629,14 @@ async def duplicate_trip(
 
     try:
         # Get original trip
-        original_trip = await trip_service.get_trip(trip_id=str(trip_id), user_id=principal.user_id)
+        original_trip = await trip_service.get_trip(
+            trip_id=str(trip_id), user_id=principal.user_id
+        )
 
         if not original_trip:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Create new trip based on original using core TripCreateRequest
         from tripsage_core.services.business.trip_service import (
@@ -606,7 +659,9 @@ async def duplicate_trip(
             preferences=original_trip.preferences,
         )
 
-        duplicated_trip = await trip_service.create_trip(user_id=principal.user_id, trip_data=duplicate_request)
+        duplicated_trip = await trip_service.create_trip(
+            user_id=principal.user_id, trip_data=duplicate_request
+        )
 
         # Convert core response to API response
         return _adapt_trip_response(duplicated_trip)
@@ -624,9 +679,13 @@ async def duplicate_trip(
 @router.get("/search", response_model=TripListResponse)
 async def search_trips(
     q: Optional[str] = Query(default=None, description="Search query"),
-    status_filter: Optional[str] = Query(default=None, alias="status", description="Status filter"),
+    status_filter: Optional[str] = Query(
+        default=None, alias="status", description="Status filter"
+    ),
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
-    limit: int = Query(default=10, ge=1, le=100, description="Number of trips to return"),
+    limit: int = Query(
+        default=10, ge=1, le=100, description="Number of trips to return"
+    ),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
@@ -646,7 +705,9 @@ async def search_trips(
     logger.info(f"Searching trips for user: {principal.user_id}")
 
     try:
-        trips = await trip_service.search_trips(user_id=principal.user_id, query=q, limit=limit)
+        trips = await trip_service.search_trips(
+            user_id=principal.user_id, query=q, limit=limit
+        )
 
         # Convert to list items for response
         trip_items = []
@@ -701,7 +762,9 @@ async def get_trip_itinerary(
 
     try:
         # Get trip first to ensure access
-        trip_response = await trip_service.get_trip(trip_id=str(trip_id), user_id=principal.user_id)
+        trip_response = await trip_service.get_trip(
+            trip_id=str(trip_id), user_id=principal.user_id
+        )
 
         if not trip_response:
             raise HTTPException(
@@ -711,39 +774,45 @@ async def get_trip_itinerary(
 
         # Get actual itinerary data from itinerary service with authorization
         try:
-            from tripsage_core.services.business.itinerary_service import get_itinerary_service
-            
+            from tripsage_core.services.business.itinerary_service import (
+                get_itinerary_service,
+            )
+
             itinerary_service = await get_itinerary_service()
-            
+
             # Search for itinerary associated with this trip
-            from tripsage_core.services.business.itinerary_service import ItinerarySearchRequest
-            
-            search_request = ItinerarySearchRequest(
-                trip_id=str(trip_id),
-                limit=1
+            from tripsage_core.services.business.itinerary_service import (
+                ItinerarySearchRequest,
             )
-            
+
+            search_request = ItinerarySearchRequest(trip_id=str(trip_id), limit=1)
+
             itineraries = await itinerary_service.search_itineraries(
-                user_id=principal.user_id, 
-                search_request=search_request
+                user_id=principal.user_id, search_request=search_request
             )
-            
+
             if itineraries and len(itineraries) > 0:
                 itinerary_data = itineraries[0]
-                
+
                 # Convert itinerary items to API format
                 items = []
                 for day in itinerary_data.days:
                     for item in day.items:
-                        items.append({
-                            "id": item.id,
-                            "name": item.name,
-                            "description": item.description,
-                            "start_time": f"{day.date}T{item.start_time}:00Z" if item.start_time else None,
-                            "end_time": f"{day.date}T{item.end_time}:00Z" if item.end_time else None,
-                            "location": item.location,
-                        })
-                
+                        items.append(
+                            {
+                                "id": item.id,
+                                "name": item.name,
+                                "description": item.description,
+                                "start_time": f"{day.date}T{item.start_time}:00Z"
+                                if item.start_time
+                                else None,
+                                "end_time": f"{day.date}T{item.end_time}:00Z"
+                                if item.end_time
+                                else None,
+                                "location": item.location,
+                            }
+                        )
+
                 itinerary = {
                     "id": itinerary_data.id,
                     "trip_id": str(trip_id),
@@ -758,7 +827,7 @@ async def get_trip_itinerary(
                     "items": [],
                     "total_items": 0,
                 }
-                
+
         except Exception as e:
             logger.error(f"Failed to get itinerary data: {str(e)}")
             # Fallback to empty structure on error
@@ -803,27 +872,32 @@ async def export_trip(
 
     try:
         # Get trip first to ensure access
-        trip_response = await trip_service.get_trip(trip_id=str(trip_id), user_id=principal.user_id)
+        trip_response = await trip_service.get_trip(
+            trip_id=str(trip_id), user_id=principal.user_id
+        )
 
         if not trip_response:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
+            )
 
         # Implement actual export functionality with authorization
-        from datetime import datetime, timezone, timedelta
-        
+        from datetime import datetime, timedelta, timezone
+
         # Validate export format
         allowed_formats = ["pdf", "csv", "json"]
         if format not in allowed_formats:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported export format. Allowed formats: {allowed_formats}"
+                detail=f"Unsupported export format. Allowed formats: {allowed_formats}",
             )
-        
+
         # Generate a secure export token for the download
         import secrets
+
         export_token = secrets.token_urlsafe(32)
         expiry_time = datetime.now(timezone.utc) + timedelta(hours=24)
-        
+
         # Store export request in a temporary location (in production, this would be a proper queue/storage)
         # For now, we'll return a structured response indicating the export is being processed
         export_data = {
@@ -831,7 +905,9 @@ async def export_trip(
             "trip_id": str(trip_id),
             "export_token": export_token,
             "status": "processing",
-            "estimated_completion": (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat(),
+            "estimated_completion": (
+                datetime.now(timezone.utc) + timedelta(minutes=5)
+            ).isoformat(),
             "download_url": f"/api/trips/{trip_id}/export/{export_token}/download",
             "expires_at": expiry_time.isoformat(),
         }
@@ -847,8 +923,8 @@ async def export_trip(
                 details={
                     "action": "trip_export_requested",
                     "format": format,
-                    "export_token": export_token
-                }
+                    "export_token": export_token,
+                },
             )
         except Exception as audit_e:
             logger.warning(f"Failed to log audit event for trip export: {str(audit_e)}")
@@ -891,30 +967,37 @@ async def get_trip_suggestions(
     # Implement actual trip suggestions logic using memory service with user context validation
     try:
         from tripsage_core.services.business.memory_service import get_memory_service
-        
+
         memory_service = await get_memory_service()
-        
+
         # Get user preferences and travel history for personalized suggestions
         user_memories = await memory_service.search_memories(
             user_id=principal.user_id,
             query="travel preferences destinations budget",
-            limit=10
+            limit=10,
         )
-        
+
         # Default fallback suggestions that are dynamically filtered
         base_suggestions = [
             TripSuggestionResponse(
                 id="suggestion-1",
                 title="Tokyo Cherry Blossom Adventure",
                 destination="Tokyo, Japan",
-                description=("Experience the magic of cherry blossom season in Japan's vibrant capital city."),
+                description=(
+                    "Experience the magic of cherry blossom season in Japan's vibrant capital city."
+                ),
                 estimated_price=2800,
                 currency="USD",
                 duration=7,
                 rating=4.8,
                 category="culture",
                 best_time_to_visit="March - May",
-                highlights=["Cherry Blossoms", "Temples", "Street Food", "Modern Culture"],
+                highlights=[
+                    "Cherry Blossoms",
+                    "Temples",
+                    "Street Food",
+                    "Modern Culture",
+                ],
                 trending=True,
                 seasonal=True,
             ),
@@ -922,7 +1005,9 @@ async def get_trip_suggestions(
                 id="suggestion-2",
                 title="Bali Tropical Retreat",
                 destination="Bali, Indonesia",
-                description=("Relax on pristine beaches and explore ancient temples in this tropical paradise."),
+                description=(
+                    "Relax on pristine beaches and explore ancient temples in this tropical paradise."
+                ),
                 estimated_price=1500,
                 currency="USD",
                 duration=10,
@@ -936,7 +1021,9 @@ async def get_trip_suggestions(
                 id="suggestion-3",
                 title="Swiss Alps Hiking Experience",
                 destination="Interlaken, Switzerland",
-                description=("Challenge yourself with breathtaking alpine hikes and stunning mountain views."),
+                description=(
+                    "Challenge yourself with breathtaking alpine hikes and stunning mountain views."
+                ),
                 estimated_price=3200,
                 currency="USD",
                 duration=5,
@@ -955,7 +1042,9 @@ async def get_trip_suggestions(
                 id="suggestion-4",
                 title="Santorini Sunset Romance",
                 destination="Santorini, Greece",
-                description=("Watch spectacular sunsets from clifftop villages in this iconic Greek island."),
+                description=(
+                    "Watch spectacular sunsets from clifftop villages in this iconic Greek island."
+                ),
                 estimated_price=2100,
                 currency="USD",
                 duration=6,
@@ -974,7 +1063,9 @@ async def get_trip_suggestions(
                 id="suggestion-5",
                 title="Iceland Northern Lights",
                 destination="Reykjavik, Iceland",
-                description=("Chase the aurora borealis and explore dramatic landscapes of fire and ice."),
+                description=(
+                    "Chase the aurora borealis and explore dramatic landscapes of fire and ice."
+                ),
                 estimated_price=2500,
                 currency="USD",
                 duration=8,
@@ -986,16 +1077,18 @@ async def get_trip_suggestions(
                 difficulty="moderate",
             ),
         ]
-        
+
         # Personalize suggestions based on user memory/preferences
         suggestions = base_suggestions
         if user_memories:
             # Basic personalization based on user memory
             # In a full implementation, this would use AI/ML to analyze preferences
-            logger.info(f"Personalizing suggestions based on {len(user_memories)} user memories")
-        
+            logger.info(
+                f"Personalizing suggestions based on {len(user_memories)} user memories"
+            )
+
         # Apply user authentication is already verified via require_principal decorator
-        
+
     except Exception as e:
         logger.error(f"Failed to get personalized suggestions: {str(e)}")
         # Fallback to base suggestions on error
@@ -1005,10 +1098,14 @@ async def get_trip_suggestions(
     filtered_suggestions = suggestions
 
     if budget_max:
-        filtered_suggestions = [s for s in filtered_suggestions if s.estimated_price <= budget_max]
+        filtered_suggestions = [
+            s for s in filtered_suggestions if s.estimated_price <= budget_max
+        ]
 
     if category:
-        filtered_suggestions = [s for s in filtered_suggestions if s.category == category]
+        filtered_suggestions = [
+            s for s in filtered_suggestions if s.category == category
+        ]
 
     # Apply limit
     filtered_suggestions = filtered_suggestions[:limit]
@@ -1161,11 +1258,13 @@ async def share_trip(
                 details={
                     "action": "trip_shared",
                     "shared_with": share_request.user_emails,
-                    "permission_level": share_request.permission_level
-                }
+                    "permission_level": share_request.permission_level,
+                },
             )
         except Exception as audit_e:
-            logger.warning(f"Failed to log audit event for trip sharing: {str(audit_e)}")
+            logger.warning(
+                f"Failed to log audit event for trip sharing: {str(audit_e)}"
+            )
 
         return response_collaborators
 
@@ -1203,7 +1302,9 @@ async def list_trip_collaborators(
     Raises:
         HTTPException: If not authorized or trip not found
     """
-    logger.info(f"Listing collaborators for trip {trip_id} by user: {principal.user_id}")
+    logger.info(
+        f"Listing collaborators for trip {trip_id} by user: {principal.user_id}"
+    )
 
     try:
         # Get trip to verify access and get owner ID
@@ -1255,7 +1356,9 @@ async def list_trip_collaborators(
         ) from e
 
 
-@router.put("/{trip_id}/collaborators/{user_id}", response_model=TripCollaboratorResponse)
+@router.put(
+    "/{trip_id}/collaborators/{user_id}", response_model=TripCollaboratorResponse
+)
 async def update_collaborator_permissions(
     trip_id: UUID,
     user_id: UUID,
@@ -1280,7 +1383,9 @@ async def update_collaborator_permissions(
     Raises:
         HTTPException: If not authorized or collaborator not found
     """
-    logger.info(f"Updating collaborator {user_id} permissions for trip {trip_id} by user: {principal.user_id}")
+    logger.info(
+        f"Updating collaborator {user_id} permissions for trip {trip_id} by user: {principal.user_id}"
+    )
 
     try:
         # Verify ownership
@@ -1342,7 +1447,9 @@ async def update_collaborator_permissions(
         ) from e
 
 
-@router.delete("/{trip_id}/collaborators/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{trip_id}/collaborators/{user_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def remove_collaborator(
     trip_id: UUID,
     user_id: UUID,
@@ -1362,7 +1469,9 @@ async def remove_collaborator(
     Raises:
         HTTPException: If not authorized or collaborator not found
     """
-    logger.info(f"Removing collaborator {user_id} from trip {trip_id} by user: {principal.user_id}")
+    logger.info(
+        f"Removing collaborator {user_id} from trip {trip_id} by user: {principal.user_id}"
+    )
 
     try:
         # Verify ownership
@@ -1401,23 +1510,23 @@ async def remove_collaborator(
 
 async def _get_user_name_safely(user_id: str) -> Optional[str]:
     """Safely get user name with authorization check.
-    
+
     Args:
         user_id: User ID to lookup
-        
+
     Returns:
         User's full name or None if not found/error
     """
     try:
         from tripsage_core.services.business.user_service import get_user_service
-        
+
         user_service = await get_user_service()
         user = await user_service.get_user_by_id(user_id)
-        
-        if user and hasattr(user, 'full_name'):
+
+        if user and hasattr(user, "full_name"):
             return user.full_name
         return None
-        
+
     except Exception as e:
         logger.error(f"Failed to get user name for {user_id}: {str(e)}")
         return None
