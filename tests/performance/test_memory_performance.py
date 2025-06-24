@@ -258,7 +258,8 @@ class TestMemoryPerformance:
             print(f"Large conversation processing time: {processing_time:.3f}s")
             print(f"Messages processed: {len(large_messages)}")
             print(
-                f"Processing rate: {len(large_messages) / processing_time:.2f} messages/sec"
+                f"Processing rate: "
+                f"{len(large_messages) / processing_time:.2f} messages/sec"
             )
 
     @pytest.mark.asyncio

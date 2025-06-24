@@ -395,9 +395,11 @@ class TestWebSocketPerformanceIntegration:
         old_timestamp = time.time() - 7200  # 2 hours ago
 
         # Manually add old snapshots
-        from tripsage_core.services.infrastructure.websocket_performance_monitor import (
-            PerformanceSnapshot,
+        from tripsage_core.services.infrastructure import (
+            websocket_performance_monitor,
         )
+
+        PerformanceSnapshot = websocket_performance_monitor.PerformanceSnapshot
 
         old_snapshot = PerformanceSnapshot(
             timestamp=old_timestamp,

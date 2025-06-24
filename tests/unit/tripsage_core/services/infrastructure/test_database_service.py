@@ -1446,7 +1446,9 @@ class TestSQLAlchemyIntegration:
         mock_row._mapping = {"count": 5}
         mock_result.fetchall.return_value = [mock_row]
 
-        service._sqlalchemy_engine.connect.return_value.__enter__.return_value.execute.return_value = mock_result
+        (
+            service._sqlalchemy_engine.connect.return_value.__enter__.return_value.execute.return_value
+        ) = mock_result
 
         result = await service.execute_sql("SELECT COUNT(*) as count FROM users")
 
@@ -1463,7 +1465,9 @@ class TestSQLAlchemyIntegration:
         mock_result.returns_rows = False
         mock_result.rowcount = 3
 
-        service._sqlalchemy_engine.connect.return_value.__enter__.return_value.execute.return_value = mock_result
+        (
+            service._sqlalchemy_engine.connect.return_value.__enter__.return_value.execute.return_value
+        ) = mock_result
 
         result = await service.execute_sql("UPDATE users SET active = true")
 
@@ -1475,7 +1479,9 @@ class TestSQLAlchemyIntegration:
         service = database_service_with_sqlalchemy
 
         # Mock successful connection test
-        service._sqlalchemy_engine.connect.return_value.__enter__.return_value.execute.return_value.scalar.return_value = 1
+        (
+            service._sqlalchemy_engine.connect.return_value.__enter__.return_value.execute.return_value.scalar.return_value
+        ) = 1
 
         is_healthy = await service._validate_connection_health()
 
@@ -1504,9 +1510,9 @@ class TestSQLAlchemyIntegration:
         service = database_service_with_sqlalchemy
 
         # Mock successful connections
-        service._supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value = Mock(
-            data=[]
-        )
+        (
+            service._supabase_client.table.return_value.select.return_value.limit.return_value.execute.return_value
+        ) = Mock(data=[])
 
         # This should not raise an exception
         await service._test_connections()
@@ -1919,7 +1925,7 @@ class TestSQLAlchemyComprehensiveIntegration:
 
         await service._setup_pool_event_listeners()
 
-        # Verify event listeners were set up (this would be called during initialization)
+        # Verify event listeners were set up (this would be called during init)
         # In real implementation, we'd verify the listeners are registered
         assert service._sqlalchemy_engine is not None
 
@@ -2254,9 +2260,9 @@ class TestDatabaseTransactionContextComprehensive:
     @pytest.mark.asyncio
     async def test_transaction_execution_success(self, transaction_service):
         """Test successful transaction execution."""
-        transaction_service._supabase_client.table.return_value.insert.return_value.execute.return_value = Mock(
-            data=[{"id": "1"}]
-        )
+        (
+            transaction_service._supabase_client.table.return_value.insert.return_value.execute.return_value
+        ) = Mock(data=[{"id": "1"}])
 
         async with transaction_service.transaction() as tx:
             tx.insert("users", {"name": "Test User"})
@@ -2269,9 +2275,9 @@ class TestDatabaseTransactionContextComprehensive:
     async def test_transaction_rollback_on_exception(self, transaction_service):
         """Test transaction rollback when exception occurs."""
         # Mock a failing operation
-        transaction_service._supabase_client.table.return_value.insert.return_value.execute.side_effect = Exception(
-            "Insert failed"
-        )
+        (
+            transaction_service._supabase_client.table.return_value.insert.return_value.execute.side_effect
+        ) = Exception("Insert failed")
 
         with pytest.raises(CoreDatabaseError):
             async with transaction_service.transaction() as tx:
@@ -2348,7 +2354,9 @@ class TestDatabaseTransactionContextComprehensive:
                 raise Exception("Serialization failure")
             return [{"success": True}]
 
-        transaction_service._supabase_client.table.return_value.insert.return_value.execute.side_effect = failing_execute
+        (
+            transaction_service._supabase_client.table.return_value.insert.return_value.execute.side_effect
+        ) = failing_execute
 
         async with transaction_service.transaction(max_retries=3) as tx:
             tx.insert("users", {"name": "Test"})

@@ -435,7 +435,8 @@ class TestWebSocketIntegration:
                         # Verify authenticate_connection was called
                         mock_websocket_manager.authenticate_connection.assert_called_once()
 
-                        # Verify send_to_connection was called (for auth response and connection established)
+                        # Verify send_to_connection was called (for auth response
+                        # and connection established)
                         assert mock_websocket_manager.send_to_connection.call_count >= 1
 
     @pytest.mark.asyncio
@@ -683,13 +684,15 @@ class TestWebSocketIntegration:
                         heartbeat_msg = {"type": "heartbeat"}
                         websocket.send_text(json.dumps(heartbeat_msg))
 
-                        # Should receive heartbeat response (authentication + connection established + heartbeat handling)
+                        # Should receive heartbeat response (authentication +
+                        # connection established + heartbeat handling)
                         await asyncio.sleep(0.1)
 
                         # Verify authenticate_connection was called
                         mock_websocket_manager.authenticate_connection.assert_called_once()
 
-                        # Verify send_to_connection was called (for auth response and connection established)
+                        # Verify send_to_connection was called (for auth response
+                        # and connection established)
                         assert mock_websocket_manager.send_to_connection.call_count >= 1
 
                         # Verify heartbeat was handled
@@ -765,8 +768,8 @@ class TestWebSocketIntegration:
                         }
                         websocket.send_text(json.dumps(typing_msg))
 
-                        # Should handle typing indicator (since it's not explicitly handled,
-                        # it will be echoed back)
+                        # Should handle typing indicator (since it's not explicitly
+                        # handled, it will be echoed back)
                         await asyncio.sleep(0.1)
 
                         # Verify authenticate_connection was called

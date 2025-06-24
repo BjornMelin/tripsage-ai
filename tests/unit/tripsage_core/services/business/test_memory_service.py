@@ -74,7 +74,8 @@ class TestMemoryService:
                 {
                     "role": "assistant",
                     "content": (
-                        "I'll remember your preference for boutique hotels in historic areas."
+                        "I'll remember your preference for boutique hotels in "
+                        "historic areas."
                     ),
                 },
             ],

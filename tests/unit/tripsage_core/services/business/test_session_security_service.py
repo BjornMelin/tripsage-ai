@@ -650,7 +650,8 @@ class TestRiskAssessment:
             ip_address="127.0.0.1",  # Loopback IP
         )
 
-        # Should have higher risk for loopback IP (adjusted expected value based on actual implementation)
+        # Should have higher risk for loopback IP
+        # (adjusted expected value based on actual implementation)
         assert risk_score >= 5
 
     def test_validate_and_score_ip_malicious_patterns(self, session_service):

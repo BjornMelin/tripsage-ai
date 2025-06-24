@@ -621,7 +621,9 @@ class TestDatabaseSecurity:
 
         # Test 1: Owner can invite collaborators
         owner_invite = await db_service.execute_query(
-            "INSERT INTO trip_collaborators (trip_id, user_id, permission, invited_by) VALUES (%(trip_id)s, %(user_id)s, %(permission)s, %(invited_by)s)",
+            "INSERT INTO trip_collaborators (trip_id, user_id, permission, "
+            "invited_by) VALUES (%(trip_id)s, %(user_id)s, %(permission)s, "
+            "%(invited_by)s)",
             {
                 "trip_id": trip_id,
                 "user_id": users[1]["id"],
@@ -634,7 +636,9 @@ class TestDatabaseSecurity:
 
         # Test 2: Non-owner cannot invite collaborators
         unauthorized_invite = await db_service.execute_query(
-            "INSERT INTO trip_collaborators (trip_id, user_id, permission, invited_by) VALUES (%(trip_id)s, %(user_id)s, %(permission)s, %(invited_by)s)",
+            "INSERT INTO trip_collaborators (trip_id, user_id, permission, "
+            "invited_by) VALUES (%(trip_id)s, %(user_id)s, %(permission)s, "
+            "%(invited_by)s)",
             {
                 "trip_id": trip_id,
                 "user_id": users[1]["id"],
@@ -877,7 +881,8 @@ class TestDatabaseSecurity:
                     end_date = params.get("end_date")
                     if start_date and end_date and start_date >= end_date:
                         raise CoreDatabaseError(
-                            "CHECK constraint violation: end_date must be after start_date"
+                            "CHECK constraint violation: end_date must be after "
+                            "start_date"
                         )
 
                     # Check for valid budget
@@ -903,7 +908,8 @@ class TestDatabaseSecurity:
         }
 
         result = await db_service.execute_query(
-            "INSERT INTO trips (name, user_id, start_date, end_date, budget) VALUES (%(name)s, %(user_id)s, %(start_date)s, %(end_date)s, %(budget)s)",
+            "INSERT INTO trips (name, user_id, start_date, end_date, budget) "
+            "VALUES (%(name)s, %(user_id)s, %(start_date)s, %(end_date)s, %(budget)s)",
             valid_trip,
             user_context=user_id,
         )
@@ -912,7 +918,8 @@ class TestDatabaseSecurity:
         # Test 2: Missing required field should fail
         with pytest.raises(CoreDatabaseError, match="NOT NULL constraint violation"):
             await db_service.execute_query(
-                "INSERT INTO trips (user_id, start_date, end_date, budget) VALUES (%(user_id)s, %(start_date)s, %(end_date)s, %(budget)s)",
+                "INSERT INTO trips (user_id, start_date, end_date, budget) "
+                "VALUES (%(user_id)s, %(start_date)s, %(end_date)s, %(budget)s)",
                 {
                     "user_id": user_id,
                     "start_date": date(2024, 7, 1),
@@ -925,7 +932,9 @@ class TestDatabaseSecurity:
         # Test 3: Invalid date range should fail
         with pytest.raises(CoreDatabaseError, match="CHECK constraint violation"):
             await db_service.execute_query(
-                "INSERT INTO trips (name, user_id, start_date, end_date, budget) VALUES (%(name)s, %(user_id)s, %(start_date)s, %(end_date)s, %(budget)s)",
+                "INSERT INTO trips (name, user_id, start_date, end_date, budget) "
+                "VALUES (%(name)s, %(user_id)s, %(start_date)s, %(end_date)s, "
+                "%(budget)s)",
                 {
                     "name": "Invalid Date Trip",
                     "user_id": user_id,
@@ -939,7 +948,9 @@ class TestDatabaseSecurity:
         # Test 4: Negative budget should fail
         with pytest.raises(CoreDatabaseError, match="CHECK constraint violation"):
             await db_service.execute_query(
-                "INSERT INTO trips (name, user_id, start_date, end_date, budget) VALUES (%(name)s, %(user_id)s, %(start_date)s, %(end_date)s, %(budget)s)",
+                "INSERT INTO trips (name, user_id, start_date, end_date, budget) "
+                "VALUES (%(name)s, %(user_id)s, %(start_date)s, %(end_date)s, "
+                "%(budget)s)",
                 {
                     "name": "Negative Budget Trip",
                     "user_id": user_id,

@@ -1202,7 +1202,8 @@ class TestDatabaseFixtures:
 
         # Add collaborators
         await mock_db_service.execute_query(
-            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, "
+            "added_by) VALUES ($1, $2, $3, $4)",
             1,
             editor.id,
             "edit",
@@ -1210,7 +1211,8 @@ class TestDatabaseFixtures:
         )
 
         await mock_db_service.execute_query(
-            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, "
+            "added_by) VALUES ($1, $2, $3, $4)",
             1,
             viewer.id,
             "view",
@@ -1265,7 +1267,8 @@ class TestDatabaseFixtures:
         )
 
         collaborators = await mock_db_service.fetch_all(
-            "SELECT user_id, permission_level FROM trip_collaborators WHERE trip_id = $1",
+            "SELECT user_id, permission_level FROM trip_collaborators "
+            "WHERE trip_id = $1",
             data["trip_id"],
         )
 

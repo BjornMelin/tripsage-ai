@@ -64,11 +64,13 @@ class MockChatOpenAI:
                     # Check if it's asking about a specific budget amount
                     if "$2000" in content:
                         return MockLLMResponse(
-                            '{"operation": "optimize", "total_budget": 2000, "trip_length": 7}'
+                            '{"operation": "optimize", "total_budget": 2000, '
+                            '"trip_length": 7}'
                         )
                     else:
                         return MockLLMResponse(
-                            '{"operation": "optimize", "total_budget": 2000, "trip_length": 7}'
+                            '{"operation": "optimize", "total_budget": 2000, '
+                            '"trip_length": 7}'
                         )
                 elif "destination" in content.lower():
                     return MockLLMResponse(
@@ -95,11 +97,13 @@ class MockChatOpenAI:
                     )
                 elif "budget" in content.lower():
                     return MockLLMResponse(
-                        '{"agent": "budget_agent", "confidence": 0.9, "reasoning": "User mentioned budget"}'
+                        '{"agent": "budget_agent", "confidence": 0.9, '
+                        '"reasoning": "User mentioned budget"}'
                     )
                 else:
                     return MockLLMResponse(
-                        '{"agent": "general_agent", "confidence": 0.3, "reasoning": "Unclear intent"}'
+                        '{"agent": "general_agent", "confidence": 0.3, '
+                        '"reasoning": "Unclear intent"}'
                     )
 
             # Response generation for agents
@@ -274,7 +278,8 @@ AGENT_TEST_RESPONSES = {
             }
         },
         "response": (
-            "I've optimized your $2000 budget: Flights $600, Accommodation $700, Food $400, Activities $300."
+            "I've optimized your $2000 budget: Flights $600, Accommodation $700, "
+            "Food $400, Activities $300."
         ),
     },
     "destination_research_agent": {
@@ -286,7 +291,8 @@ AGENT_TEST_RESPONSES = {
             "attractions": ["Senso-ji Temple", "Tokyo Tower"],
         },
         "response": (
-            "Tokyo is an amazing destination! Top attractions include Senso-ji Temple and Tokyo Tower."
+            "Tokyo is an amazing destination! Top attractions include "
+            "Senso-ji Temple and Tokyo Tower."
         ),
     },
     "itinerary_agent": {
@@ -297,7 +303,8 @@ AGENT_TEST_RESPONSES = {
             "daily_schedule": [{"day": 1, "activities": ["Colosseum", "Roman Forum"]}]
         },
         "response": (
-            "I've created a 5-day itinerary for Rome. Day 1: Visit Colosseum and Roman Forum."
+            "I've created a 5-day itinerary for Rome. Day 1: Visit Colosseum "
+            "and Roman Forum."
         ),
     },
 }

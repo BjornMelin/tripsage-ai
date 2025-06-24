@@ -323,13 +323,15 @@ class TestDatabaseTransactionPerformance:
 
                     # Update
                     await database_service.execute_sql(
-                        "UPDATE test_transaction SET status = 'processed' WHERE data = $1",
+                        "UPDATE test_transaction SET status = 'processed' "
+                        "WHERE data = $1",
                         ("test_data",),
                     )
 
                     # Select
                     result = await database_service.execute_sql(
-                        "SELECT COUNT(*) FROM test_transaction WHERE status = 'processed'"
+                        "SELECT COUNT(*) FROM test_transaction "
+                        "WHERE status = 'processed'"
                     )
 
                 return len(result) if result else 0
@@ -695,7 +697,8 @@ class TestDatabaseIntegrationWorkflows:
 
                 # UPDATE
                 await database_service.execute_sql(
-                    "UPDATE test_crud_workflow SET email = $1, updated_at = NOW() WHERE id = $2",
+                    "UPDATE test_crud_workflow SET email = $1, updated_at = NOW() "
+                    "WHERE id = $2",
                     ("updated@example.com", user_id),
                 )
 

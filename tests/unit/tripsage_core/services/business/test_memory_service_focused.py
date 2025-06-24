@@ -322,7 +322,8 @@ class TestMemoryServiceOperations:
 
     async def test_memory_categorization(self, memory_service):
         """Test travel memory analysis (this would be internal logic)."""
-        # Since _categorize_memory doesn't exist, test that service handles travel content appropriately
+        # Since _categorize_memory doesn't exist, test that service handles
+        # travel content appropriately
         from tripsage_core.services.business.memory_service import (
             ConversationMemoryRequest,
         )
