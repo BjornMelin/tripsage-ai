@@ -484,7 +484,8 @@ class ApiKeyService:
             expires_at = datetime.fromisoformat(result["expires_at"])
             if datetime.now(UTC) > expires_at:
                 logger.info(
-                    f"API key expired for user {user_id}, service {self._get_service_value(service)}"
+                    f"API key expired for user {user_id}, service "
+                    f"{self._get_service_value(service)}"
                 )
                 return None
 
@@ -1355,7 +1356,8 @@ class ApiKeyService:
                 service=self._get_service_value(key_data.service),
                 ip_address="127.0.0.1",  # TODO: Extract from request context
                 message=(
-                    f"API key created for service {self._get_service_value(key_data.service)}"
+                    f"API key created for service "
+                    f"{self._get_service_value(key_data.service)}"
                 ),
                 key_name=key_data.name,
                 user_id=user_id,

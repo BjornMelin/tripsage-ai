@@ -150,7 +150,8 @@ class GoogleMapsService:
                 self.client.reverse_geocode, latlng, **kwargs
             )
             logger.debug(
-                f"Reverse geocoded coordinates ({lat}, {lng}) with {len(result)} results"
+                f"Reverse geocoded coordinates ({lat}, {lng}) with "
+                f"{len(result)} results"
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
@@ -194,7 +195,8 @@ class GoogleMapsService:
 
             result = await asyncio.to_thread(self.client.places, **search_kwargs)
             logger.debug(
-                f"Place search for '{query}' returned {len(result.get('results', []))} results"
+                f"Place search for '{query}' returned "
+                f"{len(result.get('results', []))} results"
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
@@ -310,7 +312,8 @@ class GoogleMapsService:
                 self.client.distance_matrix, **matrix_kwargs
             )
             logger.debug(
-                f"Calculated distance matrix for {len(origins)} origins to {len(destinations)} destinations"
+                f"Calculated distance matrix for {len(origins)} origins to "
+                f"{len(destinations)} destinations"
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:

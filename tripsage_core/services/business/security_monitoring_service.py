@@ -409,7 +409,8 @@ class SecurityMonitoringService:
                 threat_level=pattern.threat_level,
                 confidence=confidence,
                 description=(
-                    f"{pattern.name}: {len(relevant_events)} occurrences in {pattern.time_window_minutes} minutes"
+                    f"{pattern.name}: {len(relevant_events)} occurrences in "
+                    f"{pattern.time_window_minutes} minutes"
                 ),
                 affected_entities=[event.actor.actor_id, event.source.ip_address],
                 source_events=[
@@ -442,7 +443,8 @@ class SecurityMonitoringService:
                     threat_level=ThreatLevel.LOW,
                     confidence=0.4,
                     description=(
-                        f"Unusual activity time: {hour_of_day}:00 on {weekdays[day_of_week]}"
+                        f"Unusual activity time: {hour_of_day}:00 on "
+                        f"{weekdays[day_of_week]}"
                     ),
                     affected_entities=[event.actor.actor_id],
                     source_events=[event.event_id],

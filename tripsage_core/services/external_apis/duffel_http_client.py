@@ -324,7 +324,8 @@ class DuffelHTTPClient:
 
         # If we get here, we've exhausted retries
         raise DuffelAPIError(
-            f"Request failed after {self.max_retries + 1} attempts. Last error: {str(last_exception)}"
+            f"Request failed after {self.max_retries + 1} attempts. "
+            f"Last error: {str(last_exception)}"
         )
 
     async def search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:

@@ -1050,7 +1050,8 @@ class DatabaseService:
         if self._circuit_breaker_failures >= self.circuit_breaker_threshold:
             self._circuit_breaker_open = True
             logger.warning(
-                f"Circuit breaker opened after {self._circuit_breaker_failures} failures"
+                f"Circuit breaker opened after {self._circuit_breaker_failures} "
+                f"failures"
             )
 
     # Rate limiting implementation
@@ -1492,7 +1493,10 @@ class DatabaseService:
                         # Add similarity threshold if provided
                         if similarity_threshold:
                             distance_threshold = 1 - similarity_threshold
-                            sql += f" AND ({vector_column} <-> {vector_str}::vector) < {distance_threshold}"
+                            sql += (
+                                f" AND ({vector_column} <-> {vector_str}::vector) < "
+                                f"{distance_threshold}"
+                            )
 
                         # Add filters
                         params = {}
@@ -1502,7 +1506,10 @@ class DatabaseService:
                                 params[f"param_{i}"] = value
 
                         # Order by similarity and limit
-                        sql += f" ORDER BY {vector_column} <-> {vector_str}::vector LIMIT {limit}"
+                        sql += (
+                            f" ORDER BY {vector_column} <-> {vector_str}::vector "
+                            f"LIMIT {limit}"
+                        )
 
                         # Execute query
                         result = conn.execute(text(sql), params)
@@ -2176,7 +2183,8 @@ class DatabaseTransactionContext:
 
         except Exception as e:
             logger.error(
-                f"Failed to get trip collaborator for trip {trip_id}, user {user_id}: {e}"
+                f"Failed to get trip collaborator for trip {trip_id}, "
+                f"user {user_id}: {e}"
             )
             raise CoreDatabaseError(
                 message=(

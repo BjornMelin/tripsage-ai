@@ -328,7 +328,8 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error converting time from {source_timezone} to {target_timezone}: {str(e)}",
+                f"Error converting time from {source_timezone} to {target_timezone}: "
+                f"{str(e)}",
                 original_error=e,
             ) from e
 

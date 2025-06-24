@@ -53,7 +53,8 @@ def async_retry(
                     else:
                         raise CoreAPIError(
                             message=(
-                                f"Google Calendar API failed after {max_attempts} attempts: {e}"
+                                f"Google Calendar API failed after {max_attempts} "
+                                f"attempts: {e}"
                             ),
                             code="CALENDAR_API_ERROR",
                             service="GoogleCalendarService",
@@ -679,7 +680,8 @@ class GoogleCalendarService:
                 end=datetime.fromisoformat(flight["arrival"]),
                 location=f"{flight['from_airport']} to {flight['to_airport']}",
                 description=(
-                    f"Flight {flight['flight_number']}\nBooking: {flight.get('booking_reference', 'N/A')}"
+                    f"Flight {flight['flight_number']}\nBooking: "
+                    f"{flight.get('booking_reference', 'N/A')}"
                 ),
                 travel_type="flight",
                 booking_reference=flight.get("booking_reference"),

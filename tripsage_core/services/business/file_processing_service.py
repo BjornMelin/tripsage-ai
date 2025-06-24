@@ -537,7 +537,8 @@ class FileProcessingService:
             total_size = sum(len(file.content) for file in batch_request.files)
             if total_size > batch_request.max_total_size:
                 raise ValidationError(
-                    f"Batch size {total_size} exceeds limit {batch_request.max_total_size}"
+                    f"Batch size {total_size} exceeds limit "
+                    f"{batch_request.max_total_size}"
                 )
 
             # Process files concurrently

@@ -192,7 +192,8 @@ class WebSocketBroadcaster:
                 await self.redis_client.sadd(f"channel:{channel}", connection_id)
 
             logger.info(
-                f"Registered connection {connection_id} for user {user_id} with channels: {channels}"
+                f"Registered connection {connection_id} for user {user_id} "
+                f"with channels: {channels}"
             )
 
         except Exception as e:
@@ -346,7 +347,8 @@ class WebSocketBroadcaster:
             await self.redis_client.lpush(priority_key, message_data)
 
             logger.debug(
-                f"Queued broadcast message {message.id} for {message.target_type}:{message.target_id}"
+                f"Queued broadcast message {message.id} for "
+                f"{message.target_type}:{message.target_id}"
             )
 
         except Exception as e:

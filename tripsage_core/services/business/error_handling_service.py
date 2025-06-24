@@ -127,7 +127,9 @@ class ErrorRecoveryService:
         # Cached responses for graceful degradation
         self.degraded_responses = {
             "flights": {
-                "message": "Flight search is temporarily unavailable. Please try again later.",
+                "message": (
+                    "Flight search is temporarily unavailable. Please try again later."
+                ),
                 "suggestions": [
                     "Check airline websites directly",
                     "Try alternative dates",
@@ -135,7 +137,10 @@ class ErrorRecoveryService:
                 "fallback_data": {"status": "unavailable", "service": "flights"},
             },
             "accommodations": {
-                "message": "Accommodation search is temporarily unavailable. Please try again later.",
+                "message": (
+                    "Accommodation search is temporarily unavailable. "
+                    "Please try again later."
+                ),
                 "suggestions": [
                     "Check hotel websites directly",
                     "Try booking platforms",
@@ -308,7 +313,8 @@ class ErrorRecoveryService:
             async def protected_operation():
                 # MCP abstraction removed - direct service calls should be used
                 raise NotImplementedError(
-                    f"Direct service integration needed for {service}.{method} after MCP removal"
+                    f"Direct service integration needed for {service}.{method} "
+                    f"after MCP removal"
                 )
 
             result = await protected_operation()
@@ -343,7 +349,8 @@ class ErrorRecoveryService:
 
         except Exception as retry_error:
             logger.warning(
-                f"Circuit breaker retry failed for {service}.{method}: {str(retry_error)}"
+                f"Circuit breaker retry failed for {service}.{method}: "
+                f"{str(retry_error)}"
             )
             return FallbackResult(
                 success=False,
@@ -377,7 +384,8 @@ class ErrorRecoveryService:
                 # Retry the operation
                 # MCP abstraction removed - direct service calls should be used
                 raise NotImplementedError(
-                    f"Direct service integration needed for {service}.{method} after MCP removal"
+                    f"Direct service integration needed for {service}.{method} "
+                    f"after MCP removal"
                 )
 
             except Exception as retry_error:
@@ -418,7 +426,8 @@ class ErrorRecoveryService:
 
                     # MCP abstraction removed - direct service calls should be used
                     raise NotImplementedError(
-                        f"Direct service integration needed for {alt_service}.{method} after MCP removal"
+                        f"Direct service integration needed for {alt_service}.{method} "
+                        f"after MCP removal"
                     )
 
             except Exception as alt_error:
