@@ -171,7 +171,8 @@ class CollaborationPerformanceTestSuite:
 
             for i in range(memories_per_user):
                 await client.execute_sql(
-                    "INSERT INTO memories (id, user_id, content, embedding) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO memories (id, user_id, content, embedding) "
+                    "VALUES ($1, $2, $3, $4)",
                     (
                         uuid4(),
                         user.id,
@@ -553,7 +554,8 @@ class PerformanceRegressionTests:
         failure_rate = len(violations) / max(summary.get("total_queries", 1), 1)
 
         assert failure_rate <= baselines["acceptable_failure_rate"], (
-            f"Performance failure rate {failure_rate:.2%} exceeds baseline{baselines['acceptable_failure_rate']:.2%}"
+            f"Performance failure rate {failure_rate:.2%} exceeds baseline "
+            f"{baselines['acceptable_failure_rate']:.2%}"
         )
 
         # Log performance summary for monitoring

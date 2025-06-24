@@ -422,7 +422,8 @@ class TestWebSocketAgentStatus:
         # Mock authentication with different user ID
         mock_ws_manager.authenticate_connection = AsyncMock(return_value=auth_response)
 
-        # Mock the disconnect_connection method since it will be called due to user mismatch
+        # Mock the disconnect_connection method since it will be called due to
+        # user mismatch
         mock_ws_manager.disconnect_connection = AsyncMock()
 
         auth_data = {"token": valid_jwt_token, "channels": [f"agent_status:{user_id}"]}
@@ -555,7 +556,8 @@ class TestWebSocketPerformance:
         # Test with a message that will be chunked
         message_data = {
             "content": (
-                "This is a longer message that will be broken into chunks for streaming."
+                "This is a longer message that will be broken into chunks for "
+                "streaming."
             ),
         }
 
@@ -606,7 +608,8 @@ class TestWebSocketPerformance:
             call[0][1] for call in mock_ws_manager.send_to_session.call_args_list
         ]
 
-        # Look for typing events (both start and stop show as typing_stop due to mutation)
+        # Look for typing events (both start and stop show as typing_stop due to
+        # mutation)
         typing_events = [
             e
             for e in sent_events
@@ -627,10 +630,12 @@ class TestWebSocketPerformance:
 
         # Should have typing events (start/stop indicators) and chunk events (content)
         assert len(typing_events) >= 1, (
-            f"Expected typing events, got: {[getattr(e, 'type', 'no-type') for e in sent_events]}"
+            f"Expected typing events, got: "
+            f"{[getattr(e, 'type', 'no-type') for e in sent_events]}"
         )
         assert len(chunk_events) >= 1, (
-            f"Expected chunk events, got: {[getattr(e, 'type', 'no-type') for e in sent_events]}"
+            f"Expected chunk events, got: "
+            f"{[getattr(e, 'type', 'no-type') for e in sent_events]}"
         )
 
 

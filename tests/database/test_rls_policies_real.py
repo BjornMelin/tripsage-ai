@@ -825,7 +825,8 @@ async def test_real_rls_policies():
         failed_tests = [r for r in tester.test_results if not r.passed]
         if failed_tests:
             pytest.fail(
-                f"{len(failed_tests)} real RLS tests failed. Database has security vulnerabilities!"
+                f"{len(failed_tests)} real RLS tests failed. "
+                "Database has security vulnerabilities!"
             )
 
     finally:

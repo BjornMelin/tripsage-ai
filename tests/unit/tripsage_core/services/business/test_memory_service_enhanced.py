@@ -200,7 +200,8 @@ class TestMemoryService:
                 {
                     "role": "assistant",
                     "content": (
-                        "I'll remember your preference for boutique hotels in historic areas."
+                        "I'll remember your preference for boutique hotels in "
+                        "historic areas."
                     ),
                 },
             ],
@@ -773,7 +774,10 @@ class TestMemoryService:
             "results": [
                 {
                     "id": "mem0_travel_1",
-                    "memory": "Loves exploring destinations and local markets with good budget",
+                    "memory": (
+                        "Loves exploring destinations and local markets "
+                        "with good budget"
+                    ),
                     "metadata": {},
                     "categories": ["preferences"],
                     "score": 0.85,
@@ -1064,7 +1068,8 @@ class TestMemoryServicePropertyBased:
 
 
 class TestMemoryServiceIntegration:
-    """Integration-style tests for MemoryService (still using mocks but testing workflows)."""
+    """Integration-style tests for MemoryService (still using mocks but
+    testing workflows)."""
 
     @pytest.fixture
     def integration_memory_service(self, mock_settings):
@@ -1105,7 +1110,8 @@ class TestMemoryServiceIntegration:
 
     @pytest.mark.asyncio
     async def test_full_memory_workflow(self, integration_memory_service):
-        """Test complete memory workflow: connect -> add -> search -> update -> delete."""
+        """Test complete memory workflow: connect -> add -> search ->
+        update -> delete."""
         service, mock_mem0_client = integration_memory_service
         user_id = str(uuid4())
 

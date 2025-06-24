@@ -335,13 +335,15 @@ class SchemaTestRunner:
         # Performance recommendations
         if slow_tests:
             recommendations.append(
-                f"Consider optimizing {len(slow_tests)} slow test suites for better CI/CD performance"
+                f"Consider optimizing {len(slow_tests)} slow test suites for "
+                "better CI/CD performance"
             )
 
         # Failure recommendations
         if failed_suites:
             recommendations.append(
-                f"Address {len(failed_suites)} failing test suites before production deployment"
+                f"Address {len(failed_suites)} failing test suites before "
+                "production deployment"
             )
 
         # Schema-specific recommendations
@@ -354,7 +356,8 @@ class SchemaTestRunner:
 
         if schema_failures:
             recommendations.append(
-                "Critical schema validation failures detected - review database migration safety"
+                "Critical schema validation failures detected - "
+                "review database migration safety"
             )
 
         # Performance test recommendations
@@ -371,7 +374,8 @@ class SchemaTestRunner:
 
         if perf_issues:
             recommendations.append(
-                "Performance tests indicate potential scalability issues - review indexing strategy"
+                "Performance tests indicate potential scalability issues - "
+                "review indexing strategy"
             )
 
         # Security recommendations
@@ -384,7 +388,8 @@ class SchemaTestRunner:
 
         if security_failures:
             recommendations.append(
-                "Security test failures detected - review RLS policies and data isolation"
+                "Security test failures detected - review RLS policies and "
+                "data isolation"
             )
 
         if not recommendations:

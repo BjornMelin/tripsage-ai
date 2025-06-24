@@ -147,8 +147,8 @@ class TestDatabaseService:
                             placeholders = ", ".join(f":{key}" for key in data.keys())
                             result = await conn.execute(
                                 text(
-                                    f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) "
-                                    "RETURNING *"
+                                    f"INSERT INTO {table} ({columns}) "
+                                    f"VALUES ({placeholders}) RETURNING *"
                                 ),
                                 data,
                             )

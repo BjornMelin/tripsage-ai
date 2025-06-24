@@ -835,7 +835,8 @@ class TestTripSecurityIntegration:
             mock_audit.assert_called_with(
                 event_type=AuditEventType.ACCESS_DENIED,
                 severity=AuditSeverity.MEDIUM,
-                message="Trip access denied for operation: privilege_escalation_attempt",
+                message="Trip access denied for operation: "
+                "privilege_escalation_attempt",
                 actor_id=unauthorized_principal.id,
                 ip_address="192.168.1.666",
                 target_resource=trip_id,

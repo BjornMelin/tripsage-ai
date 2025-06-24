@@ -39,7 +39,9 @@ class TestMemoryServiceInit:
             mock_get_db.return_value = Mock()
 
             with patch("tripsage_core.config.get_settings") as mock_settings:
-                mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+                (
+                    mock_settings.return_value.openai_api_key.get_secret_value.return_value
+                ) = "test-key"
                 mock_settings.return_value.effective_postgres_url = (
                     "postgresql://test:test@localhost:5432/test"
                 )
@@ -112,7 +114,8 @@ class TestMemoryServiceInit:
                 "postgresql://test:test@localhost:5432/test"
             )
 
-            # The service should initialize with memory=None by default due to import issues
+            # The service should initialize with memory=None by default due to
+            # import issues
             service = MemoryService(database_service=mock_db)
 
             # Since we can't import mem0 in the test environment, memory should be None
@@ -364,7 +367,9 @@ class TestMemoryServiceConversationMemory:
                 {"role": "user", "content": "I love boutique hotels in Paris"},
                 {
                     "role": "assistant",
-                    "content": "I'll remember your preference for boutique hotels in Paris",
+                    "content": (
+                        "I'll remember your preference for boutique hotels in Paris"
+                    ),
                 },
             ],
             session_id=str(uuid4()),
@@ -792,13 +797,19 @@ class TestMemoryServiceUserContext:
             "results": [
                 {
                     "id": "mem_1",
-                    "memory": "I prefer staying in budget-friendly hostels, usually under $50 per night",
+                    "memory": (
+                        "I prefer staying in budget-friendly hostels, "
+                        "usually under $50 per night"
+                    ),
                     "categories": [],  # No explicit categories
                     "metadata": {},
                 },
                 {
                     "id": "mem_2",
-                    "memory": "My favorite travel destination is Barcelona, love the architecture",
+                    "memory": (
+                        "My favorite travel destination is Barcelona, "
+                        "love the architecture"
+                    ),
                     "categories": [],
                     "metadata": {},
                 },
@@ -1627,7 +1638,10 @@ class TestMemoryServiceEdgeCases:
                 {"role": "user", "content": "我喜欢在东京的传统酒店住宿"},  # Chinese
                 {
                     "role": "assistant",
-                    "content": "J'ai noté votre préférence pour les hôtels traditionnels à Tokyo",
+                    "content": (
+                        "J'ai noté votre préférence pour les hôtels "
+                        "traditionnels à Tokyo"
+                    ),
                 },  # French
             ]
         )

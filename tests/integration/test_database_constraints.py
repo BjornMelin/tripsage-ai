@@ -179,7 +179,8 @@ COMMIT;
         """Test that foreign key violations are properly raised."""
         # Mock a foreign key violation error
         fk_error = MockForeignKeyViolationError(
-            'insert or update on table "memories" violates foreign key constraint "memories_user_id_fkey"'
+            'insert or update on table "memories" violates foreign key '
+            'constraint "memories_user_id_fkey"'
         )
         mock_db_service.execute_query.side_effect = fk_error
 
@@ -411,7 +412,8 @@ COMMIT;
 
         # Verify RLS policies exist
         policies = await mock_db_service.fetch_all(
-            "SELECT * FROM pg_policies WHERE tablename IN ('memories', 'session_memories')"
+            "SELECT * FROM pg_policies WHERE tablename IN "
+            "('memories', 'session_memories')"
         )
 
         assert len(policies) == 2

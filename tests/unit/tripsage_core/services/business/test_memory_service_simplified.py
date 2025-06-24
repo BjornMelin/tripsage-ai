@@ -197,7 +197,8 @@ class TestMemoryServiceConfiguration:
         """Test that service has expected public methods."""
         from tripsage_core.services.business.memory_service import MemoryService
 
-        # Check methods are available (not testing implementation due to dependency issues)
+        # Check methods are available (not testing implementation due to
+        # dependency issues)
         expected_methods = [
             "connect",
             "close",
@@ -431,7 +432,8 @@ class TestMemoryServiceCaching:
 
             service = MemoryService(database_service=mock_db)
 
-            # Add some cache entries with proper format (first element should match user_id)
+            # Add some cache entries with proper format (first element should
+            # match user_id)
             service._cache["123:search:query"] = ([], time.time())
             service._cache["456:search:query"] = ([], time.time())
 
@@ -544,7 +546,10 @@ class TestMemoryServiceDataHandling:
         # Test with travel-specific data
         travel_memory = MemorySearchResult(
             id="memory-123",
-            memory="I loved staying at the boutique hotel in Paris, especially the rooftop view",
+            memory=(
+                "I loved staying at the boutique hotel in Paris, "
+                "especially the rooftop view"
+            ),
             metadata={
                 "location": "Paris",
                 "type": "accommodation",

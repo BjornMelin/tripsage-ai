@@ -1,7 +1,8 @@
 """
 Simple benchmark validation test to verify pytest-benchmark is working.
 
-This test validates that the performance monitoring infrastructure is functioning correctly.
+This test validates that the performance monitoring infrastructure is
+functioning correctly.
 """
 
 import time
