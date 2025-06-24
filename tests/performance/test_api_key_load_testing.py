@@ -15,12 +15,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from locust import HttpUser, between, task
-
-# Skip this file due to gevent monkey patching issues in pytest
-pytest.skip(
-    "Skipping locust tests due to gevent monkey patching issues",
-    allow_module_level=True,
-)
 from locust.env import Environment
 
 from tripsage_core.services.business.api_key_service import (
@@ -29,6 +23,12 @@ from tripsage_core.services.business.api_key_service import (
     ServiceType,
     ValidationResult,
     ValidationStatus,
+)
+
+# Skip this file due to gevent monkey patching issues in pytest
+pytest.skip(
+    "Skipping locust tests due to gevent monkey patching issues",
+    allow_module_level=True,
 )
 
 

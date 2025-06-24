@@ -21,7 +21,9 @@ class ChatSessionDB(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     ended_at: Optional[datetime] = Field(None, description="Session end timestamp")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Session metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Session metadata"
+    )
 
     @field_validator("metadata", mode="before")
     @classmethod
@@ -44,7 +46,9 @@ class ChatMessageDB(BaseModel):
     role: str = Field(..., description="Message role (user/assistant/system)")
     content: str = Field(..., description="Message content")
     created_at: datetime = Field(..., description="Creation timestamp")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Message metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Message metadata"
+    )
 
     @field_validator("role")
     @classmethod
@@ -81,9 +85,13 @@ class ChatToolCallDB(BaseModel):
 
     id: int = Field(..., description="Tool call database ID")
     message_id: int = Field(..., description="Message ID that triggered this tool call")
-    tool_id: str = Field(..., description="Unique identifier for this tool call instance")
+    tool_id: str = Field(
+        ..., description="Unique identifier for this tool call instance"
+    )
     tool_name: str = Field(..., description="Name of the tool")
-    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
+    arguments: dict[str, Any] = Field(
+        default_factory=dict, description="Tool arguments"
+    )
     result: Optional[dict[str, Any]] = Field(None, description="Tool result")
     status: str = Field("pending", description="Tool call status")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -114,7 +122,9 @@ class ChatSessionWithStats(ChatSessionDB):
     """Chat session with additional statistics."""
 
     message_count: int = Field(0, description="Total messages in session")
-    last_message_at: Optional[datetime] = Field(None, description="Timestamp of last message")
+    last_message_at: Optional[datetime] = Field(
+        None, description="Timestamp of last message"
+    )
 
 
 class MessageWithTokenEstimate(ChatMessageDB):
@@ -127,6 +137,10 @@ class MessageWithTokenEstimate(ChatMessageDB):
 class RecentMessagesResponse(BaseModel):
     """Response for recent messages query."""
 
-    messages: list[MessageWithTokenEstimate] = Field(..., description="Recent messages within token limit")
+    messages: list[MessageWithTokenEstimate] = Field(
+        ..., description="Recent messages within token limit"
+    )
     total_tokens: int = Field(..., description="Total estimated tokens")
-    truncated: bool = Field(False, description="Whether messages were truncated due to token limit")
+    truncated: bool = Field(
+        False, description="Whether messages were truncated due to token limit"
+    )

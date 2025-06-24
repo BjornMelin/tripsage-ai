@@ -346,7 +346,9 @@ class DatabaseConnectionMonitor:
                 alert = SecurityAlert(
                     event_type=SecurityEvent.CONNECTION_FAILURE,
                     severity="warning",
-                    message=(f"Multiple connection failures detected: {self._failed_connection_count}"),
+                    message=(
+                        f"Multiple connection failures detected: {self._failed_connection_count}"
+                    ),
                     details={
                         "failed_count": self._failed_connection_count,
                         "time_window": time_since_last,
@@ -398,7 +400,9 @@ class DatabaseConnectionMonitor:
 
         for attempt in range(self._max_recovery_attempts):
             try:
-                logger.info(f"Recovery attempt {attempt + 1}/{self._max_recovery_attempts}")
+                logger.info(
+                    f"Recovery attempt {attempt + 1}/{self._max_recovery_attempts}"
+                )
 
                 # Close existing connection
                 await self.database_service.close()
@@ -432,7 +436,9 @@ class DatabaseConnectionMonitor:
                     alert = SecurityAlert(
                         event_type=SecurityEvent.CONNECTION_FAILURE,
                         severity="critical",
-                        message=(f"Database connection recovery failed after {self._max_recovery_attempts} attempts"),
+                        message=(
+                            f"Database connection recovery failed after {self._max_recovery_attempts} attempts"
+                        ),
                         details={
                             "recovery_attempts": self._max_recovery_attempts,
                             "last_error": str(e),
@@ -491,7 +497,9 @@ class DatabaseConnectionMonitor:
         """Get current health status."""
         return self._last_health_check
 
-    def get_health_history(self, limit: Optional[int] = None) -> List[HealthCheckResult]:
+    def get_health_history(
+        self, limit: Optional[int] = None
+    ) -> List[HealthCheckResult]:
         """Get health check history.
 
         Args:

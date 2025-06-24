@@ -144,13 +144,17 @@ class KeyMonitoringService:
         if len(existing_logs) > 1000:
             existing_logs = existing_logs[-1000:]
         # Store back with TTL
-        await self.cache_service.set_json(log_key, existing_logs, ttl=2592000)  # 30 days
+        await self.cache_service.set_json(
+            log_key, existing_logs, ttl=2592000
+        )  # 30 days
 
         # If this is a suspicious pattern, send an alert
         if suspicious:
             await self._send_alert(operation, user_id, log_data)
 
-    async def _store_operation_for_pattern_detection(self, operation: KeyOperation, user_id: str) -> None:
+    async def _store_operation_for_pattern_detection(
+        self, operation: KeyOperation, user_id: str
+    ) -> None:
         """Store an operation in cache for pattern detection.
 
         Args:
@@ -164,12 +168,18 @@ class KeyMonitoringService:
         # Add new timestamp
         existing_ops.append(datetime.now(timezone.utc).isoformat())
         # Keep only recent operations within timeframe
-        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=self.pattern_timeframe)
-        existing_ops = [op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time]
+        cutoff_time = datetime.now(timezone.utc) - timedelta(
+            seconds=self.pattern_timeframe
+        )
+        existing_ops = [
+            op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time
+        ]
         # Store back
         await self.cache_service.set_json(key, existing_ops, ttl=self.pattern_timeframe)
 
-    async def _check_suspicious_patterns(self, operation: KeyOperation, user_id: str) -> bool:
+    async def _check_suspicious_patterns(
+        self, operation: KeyOperation, user_id: str
+    ) -> bool:
         """Check for suspicious patterns in API key operations.
 
         Args:
@@ -194,7 +204,9 @@ class KeyMonitoringService:
         threshold = self.alert_threshold.get(operation, 5)
         return count >= threshold
 
-    async def _send_alert(self, operation: KeyOperation, user_id: str, log_data: Dict[str, Any]) -> None:
+    async def _send_alert(
+        self, operation: KeyOperation, user_id: str, log_data: Dict[str, Any]
+    ) -> None:
         """Send an alert for suspicious key operations.
 
         Args:
@@ -231,9 +243,13 @@ class KeyMonitoringService:
         # Keep only last 1000 alerts
         if len(existing_alerts) > 1000:
             existing_alerts = existing_alerts[-1000:]
-        await self.cache_service.set_json(alert_key, existing_alerts, ttl=2592000)  # 30 days
+        await self.cache_service.set_json(
+            alert_key, existing_alerts, ttl=2592000
+        )  # 30 days
 
-    async def get_user_operations(self, user_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_user_operations(
+        self, user_id: str, limit: int = 100
+    ) -> List[Dict[str, Any]]:
         """Get recent key operations for a user.
 
         Args:
@@ -327,7 +343,9 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
         self.monitoring_service = monitoring_service
         self.settings = settings or get_settings()
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Response]) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Response]
+    ) -> Response:
         """Process the request/response and handle rate limiting.
 
         Args:
@@ -348,7 +366,9 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         # Check if rate limited
-        is_limited = await self.monitoring_service.is_rate_limited(user_id, key_operation)
+        is_limited = await self.monitoring_service.is_rate_limited(
+            user_id, key_operation
+        )
         if is_limited:
             # Log the rate limit
             await self.monitoring_service.log_operation(
@@ -555,7 +575,9 @@ def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any
     return result
 
 
-async def check_key_expiration(monitoring_service: KeyMonitoringService, days_before: int = 7) -> List[Dict[str, Any]]:
+async def check_key_expiration(
+    monitoring_service: KeyMonitoringService, days_before: int = 7
+) -> List[Dict[str, Any]]:
     """Check for API keys that are about to expire.
 
     Args:
@@ -607,7 +629,9 @@ async def get_key_health_metrics() -> Dict[str, Any]:
 
         # Get count of expired keys
         now = datetime.now(timezone.utc)
-        expired_count = await db_service.count("api_keys", {"expires_at": {"lte": now.isoformat()}})
+        expired_count = await db_service.count(
+            "api_keys", {"expires_at": {"lte": now.isoformat()}}
+        )
 
         # Get count of keys expiring in next 30 days
         future_date = now + timedelta(days=30)
@@ -633,7 +657,9 @@ async def get_key_health_metrics() -> Dict[str, Any]:
 
         return {
             "total_count": total_count,
-            "service_count": [{"service": k, "count": v} for k, v in service_count.items()],
+            "service_count": [
+                {"service": k, "count": v} for k, v in service_count.items()
+            ],
             "expired_count": expired_count,
             "expiring_count": expiring_count,
             "user_count": [{"user_id": k, "count": v} for k, v in user_count.items()],

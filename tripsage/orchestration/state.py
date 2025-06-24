@@ -42,7 +42,9 @@ class DestinationInfo(BaseModel):
     destination: Optional[str] = None
     intermediate_stops: List[str] = Field(default_factory=list)
     trip_type: Optional[Literal["one_way", "round_trip", "multi_city"]] = None
-    purpose: Optional[Literal["business", "leisure", "family", "honeymoon", "adventure"]] = None
+    purpose: Optional[
+        Literal["business", "leisure", "family", "honeymoon", "adventure"]
+    ] = None
 
 
 class SearchResult(BaseModel):
@@ -66,7 +68,9 @@ class BookingProgress(BaseModel):
     activity_bookings: List[Dict[str, Any]] = Field(default_factory=list)
     total_cost: Optional[float] = None
     currency: str = "USD"
-    status: Literal["planning", "comparing", "booking", "confirmed", "cancelled"] = "planning"
+    status: Literal["planning", "comparing", "booking", "confirmed", "cancelled"] = (
+        "planning"
+    )
 
 
 class HandoffContext(BaseModel):
@@ -161,7 +165,9 @@ class TravelPlanningState(TypedDict):
     is_active: bool
 
 
-def create_initial_state(user_id: str, message: str, session_id: Optional[str] = None) -> TravelPlanningState:
+def create_initial_state(
+    user_id: str, message: str, session_id: Optional[str] = None
+) -> TravelPlanningState:
     """
     Create an initial state for a new conversation.
 
@@ -179,7 +185,8 @@ def create_initial_state(user_id: str, message: str, session_id: Optional[str] =
         # Core conversation data
         messages=[{"role": "user", "content": message, "timestamp": now}],
         user_id=user_id,
-        session_id=session_id or f"session_{user_id}_{int(datetime.now(timezone.utc).timestamp())}",
+        session_id=session_id
+        or f"session_{user_id}_{int(datetime.now(timezone.utc).timestamp())}",
         # Structured user context (initialized as None, populated during conversation)
         user_preferences=None,
         travel_dates=None,

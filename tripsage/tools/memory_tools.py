@@ -98,9 +98,9 @@ async def add_conversation_memory(
 
         logger.info(
             (
-            f"Successfully extracted {len(result.get('results', []))} "
-            f"memories for user {user_id}"
-        )
+                f"Successfully extracted {len(result.get('results', []))} "
+                f"memories for user {user_id}"
+            )
         )
 
         return {
@@ -133,9 +133,9 @@ async def search_user_memories(
     try:
         logger.info(
             (
-            f"Searching memories for user {search_query.user_id} "
-            f"with query: {search_query.query}"
-        )
+                f"Searching memories for user {search_query.user_id} "
+                f"with query: {search_query.query}"
+            )
         )
 
         memory_service = service_registry.get_required_service("memory_service")
@@ -460,10 +460,8 @@ async def track_user_activity(
             ConversationMessage(
                 role="user",
                 content=(
-                    (
                     f"User performed {activity_type} activity: "
                     f"{json.dumps(activity_data)}"
-                )
                 ),
             ),
         ]

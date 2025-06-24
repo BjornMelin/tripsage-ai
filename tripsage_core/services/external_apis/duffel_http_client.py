@@ -114,8 +114,12 @@ class DuffelHTTPClient:
         self.retry_backoff = retry_backoff
 
         # Rate limiting configuration from settings
-        self._rate_limit_window = getattr(self.settings, "duffel_rate_limit_window", 60.0)
-        self._max_requests_per_minute = getattr(self.settings, "duffel_max_requests_per_minute", 100)
+        self._rate_limit_window = getattr(
+            self.settings, "duffel_rate_limit_window", 60.0
+        )
+        self._max_requests_per_minute = getattr(
+            self.settings, "duffel_max_requests_per_minute", 100
+        )
 
         # Rate limiting state
         self._last_request_time = 0.0
@@ -183,7 +187,9 @@ class DuffelHTTPClient:
 
         # Check if we've exceeded the rate limit
         if self._request_count >= self._max_requests_per_minute:
-            sleep_time = self._rate_limit_window - (current_time - self._last_request_time)
+            sleep_time = self._rate_limit_window - (
+                current_time - self._last_request_time
+            )
             if sleep_time > 0:
                 await asyncio.sleep(sleep_time)
                 self._request_count = 0
@@ -263,7 +269,9 @@ class DuffelHTTPClient:
                     except Exception:
                         pass
 
-                    error_message = error_data.get("message", f"HTTP {response.status_code}")
+                    error_message = error_data.get(
+                        "message", f"HTTP {response.status_code}"
+                    )
 
                     # Retry on server errors (5xx)
                     if response.status_code >= 500 and retry_count < self.max_retries:
@@ -282,7 +290,9 @@ class DuffelHTTPClient:
                     response_data = response.json()
                     return response_data
                 except Exception as e:
-                    raise DuffelAPIError(f"Failed to parse response JSON: {str(e)}") from e
+                    raise DuffelAPIError(
+                        f"Failed to parse response JSON: {str(e)}"
+                    ) from e
 
             except (
                 httpx.TimeoutException,
@@ -313,7 +323,9 @@ class DuffelHTTPClient:
                 break
 
         # If we get here, we've exhausted retries
-        raise DuffelAPIError(f"Request failed after {self.max_retries + 1} attempts. Last error: {str(last_exception)}")
+        raise DuffelAPIError(
+            f"Request failed after {self.max_retries + 1} attempts. Last error: {str(last_exception)}"
+        )
 
     async def search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -353,7 +365,9 @@ class DuffelHTTPClient:
             Aircraft information or None if not found
         """
         try:
-            response_data = await self._make_request(method="GET", endpoint=f"/air/aircraft/{aircraft_id}")
+            response_data = await self._make_request(
+                method="GET", endpoint=f"/air/aircraft/{aircraft_id}"
+            )
 
             return response_data.get("data")
 
@@ -372,7 +386,9 @@ class DuffelHTTPClient:
         Returns:
             List of aircraft information
         """
-        response_data = await self._make_request(method="GET", endpoint="/air/aircraft", params={"limit": limit})
+        response_data = await self._make_request(
+            method="GET", endpoint="/air/aircraft", params={"limit": limit}
+        )
 
         return response_data.get("data", [])
 

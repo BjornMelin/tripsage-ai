@@ -58,7 +58,9 @@ class WebSocketBaseMessage(BaseModel):
     """Base model for all WebSocket messages with security validation."""
 
     type: WebSocketMessageType = Field(..., description="Message type")
-    timestamp: Optional[datetime] = Field(default_factory=datetime.now, description="Message timestamp")
+    timestamp: Optional[datetime] = Field(
+        default_factory=datetime.now, description="Message timestamp"
+    )
     id: Optional[str] = Field(None, max_length=128, description="Optional message ID")
 
     @field_validator("type")
@@ -76,17 +78,25 @@ class WebSocketBaseMessage(BaseModel):
         if v is not None:
             # Allow alphanumeric, hyphens, and underscores only
             if not v.replace("-", "").replace("_", "").isalnum():
-                raise ValueError("Message ID must contain only alphanumeric characters, hyphens, and underscores")
+                raise ValueError(
+                    "Message ID must contain only alphanumeric characters, hyphens, and underscores"
+                )
         return v
 
 
 class WebSocketAuthMessage(WebSocketBaseMessage):
     """Authentication message validation."""
 
-    type: WebSocketMessageType = Field(default=WebSocketMessageType.AUTH, description="Message type")
-    token: str = Field(..., min_length=1, max_length=4096, description="JWT authentication token")
+    type: WebSocketMessageType = Field(
+        default=WebSocketMessageType.AUTH, description="Message type"
+    )
+    token: str = Field(
+        ..., min_length=1, max_length=4096, description="JWT authentication token"
+    )
     session_id: Optional[UUID] = Field(None, description="Optional session ID")
-    channels: List[str] = Field(default_factory=list, max_items=50, description="Channels to subscribe to")
+    channels: List[str] = Field(
+        default_factory=list, max_items=50, description="Channels to subscribe to"
+    )
 
     @field_validator("token")
     @classmethod
@@ -121,7 +131,9 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
 
     type: WebSocketMessageType = Field(..., description="Message type")
     ping_id: Optional[str] = Field(None, max_length=64, description="Ping identifier")
-    payload: Dict[str, Any] = Field(default_factory=dict, max_length=512, description="Heartbeat payload")
+    payload: Dict[str, Any] = Field(
+        default_factory=dict, max_length=512, description="Heartbeat payload"
+    )
 
     @field_validator("type")
     @classmethod
@@ -142,18 +154,26 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
         """Validate ping ID format."""
         if v is not None:
             if not v.replace("_", "").replace("-", "").isalnum():
-                raise ValueError("Ping ID must contain only alphanumeric characters, hyphens, and underscores")
+                raise ValueError(
+                    "Ping ID must contain only alphanumeric characters, hyphens, and underscores"
+                )
         return v
 
 
 class WebSocketChatMessage(WebSocketBaseMessage):
     """Chat message validation."""
 
-    type: WebSocketMessageType = Field(default=WebSocketMessageType.CHAT_MESSAGE, description="Message type")
-    content: str = Field(..., min_length=1, max_length=32768, description="Message content")  # 32KB max
+    type: WebSocketMessageType = Field(
+        default=WebSocketMessageType.CHAT_MESSAGE, description="Message type"
+    )
+    content: str = Field(
+        ..., min_length=1, max_length=32768, description="Message content"
+    )  # 32KB max
     session_id: UUID = Field(..., description="Chat session ID")
     user_id: Optional[UUID] = Field(None, description="User ID")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     @field_validator("content")
     @classmethod
@@ -173,7 +193,9 @@ class WebSocketChatMessage(WebSocketBaseMessage):
         content_lower = v.lower()
         for pattern in dangerous_patterns:
             if pattern in content_lower:
-                raise ValueError("Message content contains potentially dangerous content")
+                raise ValueError(
+                    "Message content contains potentially dangerous content"
+                )
 
         return v.strip()
 
@@ -191,8 +213,12 @@ class WebSocketChatMessage(WebSocketBaseMessage):
 class WebSocketSubscribeMessage(WebSocketBaseMessage):
     """Channel subscription message validation."""
 
-    type: WebSocketMessageType = Field(default=WebSocketMessageType.SUBSCRIBE, description="Message type")
-    channels: List[str] = Field(default_factory=list, max_items=20, description="Channels to subscribe to")
+    type: WebSocketMessageType = Field(
+        default=WebSocketMessageType.SUBSCRIBE, description="Message type"
+    )
+    channels: List[str] = Field(
+        default_factory=list, max_items=20, description="Channels to subscribe to"
+    )
     unsubscribe_channels: List[str] = Field(
         default_factory=list, max_items=20, description="Channels to unsubscribe from"
     )
@@ -219,7 +245,9 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
         unsubscribe_channels = getattr(self, "unsubscribe_channels", [])
 
         if not channels and not unsubscribe_channels:
-            raise ValueError("Must specify channels to subscribe to or unsubscribe from")
+            raise ValueError(
+                "Must specify channels to subscribe to or unsubscribe from"
+            )
 
         return self
 
@@ -227,17 +255,23 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
 class WebSocketErrorMessage(WebSocketBaseMessage):
     """Error message validation."""
 
-    type: WebSocketMessageType = Field(default=WebSocketMessageType.ERROR, description="Message type")
+    type: WebSocketMessageType = Field(
+        default=WebSocketMessageType.ERROR, description="Message type"
+    )
     error_code: str = Field(..., max_length=50, description="Error code")
     error_message: str = Field(..., max_length=1024, description="Error message")
-    details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
+    details: Optional[Dict[str, Any]] = Field(
+        None, description="Additional error details"
+    )
 
     @field_validator("error_code")
     @classmethod
     def validate_error_code(cls, v):
         """Validate error code format."""
         if not v.replace("_", "").replace("-", "").isalnum():
-            raise ValueError("Error code must contain only alphanumeric characters, hyphens, and underscores")
+            raise ValueError(
+                "Error code must contain only alphanumeric characters, hyphens, and underscores"
+            )
         return v.upper()
 
 

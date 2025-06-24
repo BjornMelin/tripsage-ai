@@ -30,7 +30,9 @@ class SearchHistoryService:
         """
         self.db_service = db_service
 
-    async def get_recent_searches(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_recent_searches(
+        self, user_id: str, limit: int = 10
+    ) -> List[Dict[str, Any]]:
         """Get recent searches for a user.
 
         Args:
@@ -72,7 +74,9 @@ class SearchHistoryService:
             logger.error(f"Error getting recent searches for user {user_id}: {e}")
             raise
 
-    async def save_search(self, user_id: str, search_request: UnifiedSearchRequest) -> Dict[str, Any]:
+    async def save_search(
+        self, user_id: str, search_request: UnifiedSearchRequest
+    ) -> Dict[str, Any]:
         """Save a search to the user's history.
 
         Args:
@@ -94,8 +98,16 @@ class SearchHistoryService:
                 "destination": search_request.destination,
                 "location": search_request.location,
                 "date_range": {
-                    "start": (search_request.start_date.isoformat() if search_request.start_date else None),
-                    "end": (search_request.end_date.isoformat() if search_request.end_date else None),
+                    "start": (
+                        search_request.start_date.isoformat()
+                        if search_request.start_date
+                        else None
+                    ),
+                    "end": (
+                        search_request.end_date.isoformat()
+                        if search_request.end_date
+                        else None
+                    ),
                 },
                 "guests": search_request.guests,
             }
@@ -145,7 +157,9 @@ class SearchHistoryService:
         """
         try:
             # Delete the search if it belongs to the user
-            result = await self.db_service.delete("search_parameters", {"id": search_id, "user_id": user_id})
+            result = await self.db_service.delete(
+                "search_parameters", {"id": search_id, "user_id": user_id}
+            )
 
             # Check if any rows were deleted
             return len(result) > 0

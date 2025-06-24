@@ -102,7 +102,9 @@ class TripSageOrchestrator:
                 self.checkpointer = await checkpoint_manager.get_async_checkpointer()
                 logger.info("Initialized PostgreSQL checkpointer")
             except Exception as e:
-                logger.warning(f"Failed to initialize PostgreSQL checkpointer, using MemorySaver: {e}")
+                logger.warning(
+                    f"Failed to initialize PostgreSQL checkpointer, using MemorySaver: {e}"
+                )
                 self.checkpointer = MemorySaver()
 
         # Compile graph with checkpointer
@@ -131,7 +133,9 @@ class TripSageOrchestrator:
         flight_agent_node = FlightAgentNode(self.service_registry)
         accommodation_agent_node = AccommodationAgentNode(self.service_registry)
         budget_agent_node = BudgetAgentNode(self.service_registry)
-        destination_research_agent_node = DestinationResearchAgentNode(self.service_registry)
+        destination_research_agent_node = DestinationResearchAgentNode(
+            self.service_registry
+        )
         itinerary_agent_node = ItineraryAgentNode(self.service_registry)
 
         graph.add_node("flight_agent", flight_agent_node)
@@ -190,7 +194,9 @@ class TripSageOrchestrator:
 
         # Utility node flows
         graph.add_edge("memory_update", "router")
-        graph.add_conditional_edges("error_recovery", self._handle_recovery, {"retry": "router", "end": END})
+        graph.add_conditional_edges(
+            "error_recovery", self._handle_recovery, {"retry": "router", "end": END}
+        )
 
         logger.info("Graph construction completed")
         return graph
@@ -256,7 +262,11 @@ class TripSageOrchestrator:
             return "continue"  # Continue to router for handoff
 
         # Check if we should update memory (e.g., learned something about user)
-        if state.get("user_preferences") or state.get("destination_info") or state.get("booking_progress"):
+        if (
+            state.get("user_preferences")
+            or state.get("destination_info")
+            or state.get("booking_progress")
+        ):
             return "memory"
 
         # Check conversation state for natural completion
@@ -264,7 +274,10 @@ class TripSageOrchestrator:
         if last_message.get("role") == "assistant":
             # If the response indicates completion or escalation, end conversation
             keywords = ["escalation", "human support", "technical difficulties"]
-            if any(keyword in last_message.get("content", "").lower() for keyword in keywords):
+            if any(
+                keyword in last_message.get("content", "").lower()
+                for keyword in keywords
+            ):
                 return "end"
 
             # Check if user needs to respond
@@ -369,7 +382,9 @@ class TripSageOrchestrator:
 
         return general_agent
 
-    async def process_message(self, user_id: str, message: str, session_id: Optional[str] = None) -> Dict[str, Any]:
+    async def process_message(
+        self, user_id: str, message: str, session_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Main entry point for processing user messages.
 
@@ -433,7 +448,9 @@ class TripSageOrchestrator:
         except Exception as e:
             logger.error(f"Error processing message: {str(e)}")
             return {
-                "response": ("I apologize, but I encountered an error processing your request. Please try again."),
+                "response": (
+                    "I apologize, but I encountered an error processing your request. Please try again."
+                ),
                 "session_id": session_id,
                 "error": str(e),
             }

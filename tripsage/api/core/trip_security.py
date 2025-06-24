@@ -93,10 +93,10 @@ class TripAccessContext(TripSageModel):
         # Support both UUID and string formats
         try:
             UUID(v)
-        except ValueError:
+        except ValueError as e:
             # Allow non-UUID string IDs for backward compatibility
             if len(v.strip()) == 0:
-                raise ValueError("Trip ID cannot be empty")
+                raise ValueError("Trip ID cannot be empty") from e
         return v.strip()
 
     @field_validator("principal_id")
@@ -354,7 +354,7 @@ async def verify_trip_access(
                 user_id=context.principal_id,
                 additional_context={"original_error": str(e)},
             ),
-        )
+        ) from e
 
 
 def create_trip_access_dependency(

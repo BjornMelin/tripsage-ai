@@ -41,7 +41,9 @@ class TripLocation(TripSageModel):
     name: str = Field(..., description="Location name")
     country: Optional[str] = Field(None, description="Country")
     city: Optional[str] = Field(None, description="City")
-    coordinates: Optional[Dict[str, float]] = Field(None, description="Lat/lng coordinates")
+    coordinates: Optional[Dict[str, float]] = Field(
+        None, description="Lat/lng coordinates"
+    )
     timezone: Optional[str] = Field(None, description="Location timezone")
 
 
@@ -49,15 +51,21 @@ class TripCreateRequest(TripSageModel):
     """Request model for trip creation."""
 
     title: str = Field(..., min_length=1, max_length=200, description="Trip title")
-    description: Optional[str] = Field(None, max_length=2000, description="Trip description")
+    description: Optional[str] = Field(
+        None, max_length=2000, description="Trip description"
+    )
     start_date: datetime = Field(..., description="Trip start date")
     end_date: datetime = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination")
-    destinations: List[TripLocation] = Field(default_factory=list, description="Trip destinations")
+    destinations: List[TripLocation] = Field(
+        default_factory=list, description="Trip destinations"
+    )
     budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
     travelers: int = Field(default=1, ge=1, description="Number of travelers")
     trip_type: TripType = Field(default=TripType.LEISURE, description="Type of trip")
-    visibility: TripVisibility = Field(default=TripVisibility.PRIVATE, description="Trip visibility")
+    visibility: TripVisibility = Field(
+        default=TripVisibility.PRIVATE, description="Trip visibility"
+    )
     tags: List[str] = Field(default_factory=list, description="Trip tags")
     preferences: Optional[TripPreferences] = Field(None, description="Trip preferences")
 
@@ -98,7 +106,9 @@ class TripResponse(TripSageModel):
     start_date: datetime = Field(..., description="Trip start date")
     end_date: datetime = Field(..., description="Trip end date")
     destination: str = Field(..., description="Primary destination")
-    destinations: List[TripLocation] = Field(default_factory=list, description="Trip destinations")
+    destinations: List[TripLocation] = Field(
+        default_factory=list, description="Trip destinations"
+    )
     budget: EnhancedBudget = Field(..., description="Trip budget with breakdown")
     travelers: int = Field(..., description="Number of travelers")
     trip_type: TripType = Field(..., description="Type of trip")
@@ -113,7 +123,9 @@ class TripResponse(TripSageModel):
     note_count: int = Field(default=0, description="Number of notes")
     attachment_count: int = Field(default=0, description="Number of attachments")
     collaborator_count: int = Field(default=0, description="Number of collaborators")
-    shared_with: List[str] = Field(default_factory=list, description="User IDs trip is shared with")
+    shared_with: List[str] = Field(
+        default_factory=list, description="User IDs trip is shared with"
+    )
 
 
 class TripService:
@@ -141,7 +153,9 @@ class TripService:
         self.db = database_service
         self.user_service = user_service
 
-    async def create_trip(self, user_id: str, trip_data: TripCreateRequest) -> TripResponse:
+    async def create_trip(
+        self, user_id: str, trip_data: TripCreateRequest
+    ) -> TripResponse:
         """Create a new trip.
 
         Args:
@@ -186,7 +200,9 @@ class TripService:
             return await self._build_trip_response(result)
 
         except Exception as e:
-            logger.error("Failed to create trip", extra={"user_id": user_id, "error": str(e)})
+            logger.error(
+                "Failed to create trip", extra={"user_id": user_id, "error": str(e)}
+            )
             raise
 
     async def get_trip(self, trip_id: str, user_id: str) -> Optional[TripResponse]:
@@ -250,7 +266,9 @@ class TripService:
             # Remove None values
             filters = {k: v for k, v in filters.items() if v is not None}
 
-            results = await self.db.get_trips(filters=filters, limit=limit, offset=offset)
+            results = await self.db.get_trips(
+                filters=filters, limit=limit, offset=offset
+            )
 
             trips = []
             for result in results:
@@ -287,7 +305,9 @@ class TripService:
             )
             return 0
 
-    async def update_trip(self, trip_id: str, user_id: str, update_data: TripUpdateRequest) -> Optional[TripResponse]:
+    async def update_trip(
+        self, trip_id: str, user_id: str, update_data: TripUpdateRequest
+    ) -> Optional[TripResponse]:
         """Update a trip.
 
         Args:
@@ -461,7 +481,9 @@ class TripService:
             )
             return False
 
-    async def unshare_trip(self, trip_id: str, owner_id: str, unshare_user_id: str) -> bool:
+    async def unshare_trip(
+        self, trip_id: str, owner_id: str, unshare_user_id: str
+    ) -> bool:
         """Remove trip sharing with a user.
 
         Args:
@@ -508,7 +530,9 @@ class TripService:
             )
             return False
 
-    async def get_shared_trips(self, user_id: str, limit: int = 50, offset: int = 0) -> List[TripResponse]:
+    async def get_shared_trips(
+        self, user_id: str, limit: int = 50, offset: int = 0
+    ) -> List[TripResponse]:
         """Get trips shared with a user.
 
         Args:
@@ -567,7 +591,9 @@ class TripService:
                 search_filters.update(filters)
 
             # Perform search
-            results = await self.db.search_trips(query=query, filters=search_filters, limit=limit, offset=offset)
+            results = await self.db.search_trips(
+                query=query, filters=search_filters, limit=limit, offset=offset
+            )
 
             trips = []
             for result in results:
@@ -585,7 +611,9 @@ class TripService:
             )
             return []
 
-    async def _check_trip_access(self, trip_id: str, user_id: str, require_owner: bool = False) -> bool:
+    async def _check_trip_access(
+        self, trip_id: str, user_id: str, require_owner: bool = False
+    ) -> bool:
         """Check if user has access to a trip.
 
         Args:

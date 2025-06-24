@@ -178,7 +178,7 @@ async def save_activity(
         }
 
         # Insert into database
-        result = await db_service.insert(
+        await db_service.insert(
             table="itinerary_items",
             data=itinerary_data,
             user_id=user_id,

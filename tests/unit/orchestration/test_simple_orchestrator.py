@@ -384,8 +384,10 @@ class TestIntegrationScenarios:
                 "messages": [
                     HumanMessage(content="I want to plan a trip to Tokyo"),
                     AIMessage(
-                        content=("I'd love to help you plan your trip to Tokyo! "
-                                "When are you planning to travel?")
+                        content=(
+                            "I'd love to help you plan your trip to Tokyo! "
+                            "When are you planning to travel?"
+                        )
                     ),
                 ]
             },

@@ -107,7 +107,9 @@ class RouterNode(BaseAgentNode):
                 "entities": ["budget_total", "currency", "price_range"],
             },
             "itinerary_agent": {
-                "description": ("Trip planning, scheduling, activities, day-by-day planning"),
+                "description": (
+                    "Trip planning, scheduling, activities, day-by-day planning"
+                ),
                 "keywords": [
                     "itinerary",
                     "plan",
@@ -120,7 +122,9 @@ class RouterNode(BaseAgentNode):
                 "entities": ["travel_dates", "duration", "activities", "preferences"],
             },
             "destination_research_agent": {
-                "description": ("Destination research, recommendations, local information"),
+                "description": (
+                    "Destination research, recommendations, local information"
+                ),
                 "keywords": [
                     "destination",
                     "place",
@@ -134,7 +138,9 @@ class RouterNode(BaseAgentNode):
                 "entities": ["destination", "interests", "season", "duration"],
             },
             "travel_agent": {
-                "description": ("General travel assistance, documentation, travel tips, multi-domain queries"),
+                "description": (
+                    "General travel assistance, documentation, travel tips, multi-domain queries"
+                ),
                 "keywords": [
                     "travel",
                     "trip",
@@ -169,7 +175,9 @@ class RouterNode(BaseAgentNode):
         conversation_context = self._build_conversation_context(state)
 
         # Perform enhanced semantic classification with fallback strategies
-        classification = await self._enhanced_classification_with_fallback(last_message, conversation_context)
+        classification = await self._enhanced_classification_with_fallback(
+            last_message, conversation_context
+        )
 
         # Update state with routing decision
         state["current_agent"] = classification["agent"]
@@ -177,7 +185,9 @@ class RouterNode(BaseAgentNode):
             "routing_confidence": classification["confidence"],
             "routing_reasoning": classification["reasoning"],
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "message_analyzed": last_message[:100] + "..." if len(last_message) > 100 else last_message,
+            "message_analyzed": last_message[:100] + "..."
+            if len(last_message) > 100
+            else last_message,
         }
 
         self.logger.info(
@@ -187,7 +197,9 @@ class RouterNode(BaseAgentNode):
 
         return state
 
-    async def _classify_intent(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _classify_intent(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Classify user intent using semantic analysis.
 
@@ -204,13 +216,17 @@ class RouterNode(BaseAgentNode):
         try:
             # Get classification from LLM
             messages = [
-                SystemMessage(content="You are an expert travel assistant intent classifier."),
+                SystemMessage(
+                    content="You are an expert travel assistant intent classifier."
+                ),
                 HumanMessage(content=classification_prompt),
             ]
 
             response = await self.classifier.ainvoke(messages)
             # Handle different response formats
-            content = response.content if hasattr(response, "content") else str(response)
+            content = (
+                response.content if hasattr(response, "content") else str(response)
+            )
             classification = json.loads(content)
 
             # Validate classification result
@@ -233,7 +249,9 @@ class RouterNode(BaseAgentNode):
                 "reasoning": f"Error in classification, using fallback: {str(e)}",
             }
 
-    def _build_classification_prompt(self, message: str, context: Dict[str, Any]) -> str:
+    def _build_classification_prompt(
+        self, message: str, context: Dict[str, Any]
+    ) -> str:
         """
         Build the classification prompt for intent detection.
 
@@ -344,11 +362,16 @@ class RouterNode(BaseAgentNode):
 
         # Check agent is valid
         if classification["agent"] not in valid_agents:
-            logger.warning(f"Invalid agent in classification: {classification['agent']}")
+            logger.warning(
+                f"Invalid agent in classification: {classification['agent']}"
+            )
             return False
 
         # Check confidence is reasonable
-        if not isinstance(classification["confidence"], (int, float)) or not 0 <= classification["confidence"] <= 1:
+        if (
+            not isinstance(classification["confidence"], (int, float))
+            or not 0 <= classification["confidence"] <= 1
+        ):
             logger.warning(f"Invalid confidence score: {classification['confidence']}")
             return False
 
@@ -359,7 +382,9 @@ class RouterNode(BaseAgentNode):
 
         return True
 
-    async def _enhanced_classification_with_fallback(self, message: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _enhanced_classification_with_fallback(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Enhanced classification with multiple fallback strategies.
 
@@ -437,7 +462,9 @@ class RouterNode(BaseAgentNode):
             return {
                 "agent": best_agent,
                 "confidence": confidence,
-                "reasoning": (f"Keyword-based classification: {best_keyword_matches} keyword matches"),
+                "reasoning": (
+                    f"Keyword-based classification: {best_keyword_matches} keyword matches"
+                ),
             }
         else:
             return self._get_safe_fallback_classification()

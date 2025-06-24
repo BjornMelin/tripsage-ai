@@ -93,8 +93,7 @@ class TestSecurityValidation(unittest.TestCase):
         mock_run.return_value = MagicMock(
             returncode=0,
             stdout=(
-                "file.py:password = 'fallback-secret'\n"
-                "other.py:key = 'test-password'"
+                "file.py:password = 'fallback-secret'\nother.py:key = 'test-password'"
             ),
         )
 

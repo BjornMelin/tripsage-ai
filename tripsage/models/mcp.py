@@ -42,9 +42,13 @@ class MCPResponseBase(TripSageModel):
 
     # Common response fields
     success: bool = Field(True, description="Whether the request was successful")
-    error: Optional[str] = Field(None, description="Error message if the request failed")
+    error: Optional[str] = Field(
+        None, description="Error message if the request failed"
+    )
     request_id: Optional[str] = Field(None, description="The request ID for tracing")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Response timestamp")
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow, description="Response timestamp"
+    )
 
 
 class ErrorResponse(MCPResponseBase):
@@ -53,7 +57,9 @@ class ErrorResponse(MCPResponseBase):
     success: bool = Field(False, description="Always false for error responses")
     error: str = Field(..., description="Error message")
     error_type: Optional[str] = Field(None, description="Type of error")
-    error_details: Optional[Dict[str, Any]] = Field(None, description="Additional error details")
+    error_details: Optional[Dict[str, Any]] = Field(
+        None, description="Additional error details"
+    )
 
 
 class PaginatedResponseBase(MCPResponseBase):
@@ -110,7 +116,9 @@ class SearchRequest(MCPRequestBase):
     """Base model for search requests."""
 
     query: str = Field(..., min_length=1, description="Search query")
-    limit: int = Field(10, ge=1, le=100, description="Maximum number of results to return")
+    limit: int = Field(
+        10, ge=1, le=100, description="Maximum number of results to return"
+    )
     offset: Optional[int] = Field(None, ge=0, description="Offset for pagination")
 
 
@@ -141,14 +149,18 @@ class CacheConfig(TripSageModel):
     """Configuration model for caching behavior."""
 
     use_cache: bool = Field(True, description="Whether to use cache")
-    ttl_seconds: int = Field(3600, ge=0, description="Time-to-live in seconds (0 = indefinite)")
+    ttl_seconds: int = Field(
+        3600, ge=0, description="Time-to-live in seconds (0 = indefinite)"
+    )
     cache_key_prefix: Optional[str] = Field(None, description="Prefix for cache keys")
 
 
 class TimeZoneRequest(MCPRequestBase):
     """Base model for timezone-related requests."""
 
-    timezone: str = Field(..., min_length=1, description="IANA timezone name (e.g. 'America/New_York')")
+    timezone: str = Field(
+        ..., min_length=1, description="IANA timezone name (e.g. 'America/New_York')"
+    )
 
 
 T = TypeVar("T")

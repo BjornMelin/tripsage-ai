@@ -36,11 +36,17 @@ class TripDestination(TripSageModel):
 class AccommodationPreferences(TripSageModel):
     """Accommodation preferences for trips."""
 
-    type: Optional[AccommodationType] = Field(None, description="Preferred accommodation type")
+    type: Optional[AccommodationType] = Field(
+        None, description="Preferred accommodation type"
+    )
     min_rating: Rating = Field(None, description="Minimum rating")
-    max_price_per_night: Optional[Price] = Field(None, description="Maximum price per night")
+    max_price_per_night: Optional[Price] = Field(
+        None, description="Maximum price per night"
+    )
     amenities: Optional[List[str]] = Field(None, description="Required amenities")
-    location_preference: Optional[str] = Field(None, description="Location preference (e.g., city_center, beach)")
+    location_preference: Optional[str] = Field(
+        None, description="Location preference (e.g., city_center, beach)"
+    )
 
 
 class TransportationPreferences(TripSageModel):
@@ -63,15 +69,21 @@ class TransportationPreferences(TripSageModel):
         description="Preferred local transportation methods",
         json_schema_extra={"example": ["public_transport", "walking"]},
     )
-    max_travel_time_hours: PositiveInt = Field(None, description="Maximum acceptable travel time in hours")
+    max_travel_time_hours: PositiveInt = Field(
+        None, description="Maximum acceptable travel time in hours"
+    )
 
 
 class TripPreferences(TripSageModel):
     """Enhanced trip preferences using shared financial and accommodation models."""
 
     budget: Optional[Budget] = Field(None, description="Trip budget")
-    accommodation: Optional[AccommodationPreferences] = Field(None, description="Accommodation preferences")
-    transportation: Optional[TransportationPreferences] = Field(None, description="Transportation preferences")
+    accommodation: Optional[AccommodationPreferences] = Field(
+        None, description="Accommodation preferences"
+    )
+    transportation: Optional[TransportationPreferences] = Field(
+        None, description="Transportation preferences"
+    )
     activities: Optional[List[str]] = Field(
         None,
         description="Preferred activities",

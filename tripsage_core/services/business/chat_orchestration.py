@@ -72,7 +72,9 @@ class ChatOrchestrationService:
             return f"'{escaped}'"
 
     @with_error_handling()
-    async def create_chat_session(self, user_id: int, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def create_chat_session(
+        self, user_id: int, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Create a new chat session using Supabase MCP.
 
         Args:
@@ -123,7 +125,9 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Failed to create chat session: {e}")
-            raise ChatOrchestrationError(f"Failed to create chat session: {str(e)}") from e
+            raise ChatOrchestrationError(
+                f"Failed to create chat session: {str(e)}"
+            ) from e
 
     @with_error_handling()
     async def save_message(
@@ -264,7 +268,9 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Accommodation search failed: {e}")
-            raise ChatOrchestrationError(f"Accommodation search failed: {str(e)}") from e
+            raise ChatOrchestrationError(
+                f"Accommodation search failed: {str(e)}"
+            ) from e
 
     @with_error_handling()
     async def get_location_info(self, location: str) -> Dict[str, Any]:
@@ -332,7 +338,9 @@ class ChatOrchestrationService:
                 requests.append(request)
 
             # Execute using structured tool calling service
-            responses = await self.tool_call_service.execute_parallel_tool_calls(requests)
+            responses = await self.tool_call_service.execute_parallel_tool_calls(
+                requests
+            )
 
             # Convert responses to legacy format for backward compatibility
             results = {}
@@ -346,20 +354,29 @@ class ChatOrchestrationService:
                         "execution_time": response.execution_time,
                     }
 
-            self.logger.info(f"Parallel tool execution completed: {len(results)} results")
+            self.logger.info(
+                f"Parallel tool execution completed: {len(results)} results"
+            )
             return {
                 "results": results,
                 "total_calls": len(tool_calls),
                 "success_count": sum(1 for r in responses if r.status == "success"),
                 "execution_summary": {
-                    "total_time": max(r.execution_time for r in responses) if responses else 0,
-                    "average_time": sum(r.execution_time for r in responses) / len(responses) if responses else 0,
+                    "total_time": max(r.execution_time for r in responses)
+                    if responses
+                    else 0,
+                    "average_time": sum(r.execution_time for r in responses)
+                    / len(responses)
+                    if responses
+                    else 0,
                 },
             }
 
         except Exception as e:
             self.logger.error(f"Parallel tool execution failed: {e}")
-            raise ChatOrchestrationError(f"Parallel tool execution failed: {str(e)}") from e
+            raise ChatOrchestrationError(
+                f"Parallel tool execution failed: {str(e)}"
+            ) from e
 
     @with_error_handling()
     async def execute_structured_tool_call(
@@ -396,10 +413,14 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Structured tool call failed: {e}")
-            raise ChatOrchestrationError(f"Structured tool call failed: {str(e)}") from e
+            raise ChatOrchestrationError(
+                f"Structured tool call failed: {str(e)}"
+            ) from e
 
     @with_error_handling()
-    async def format_tool_response_for_chat(self, response: ToolCallResponse) -> Dict[str, Any]:
+    async def format_tool_response_for_chat(
+        self, response: ToolCallResponse
+    ) -> Dict[str, Any]:
         """Format tool response for chat interface display.
 
         Args:
@@ -413,7 +434,9 @@ class ChatOrchestrationService:
         """
         try:
             # Use tool calling service to format the response
-            formatted = await self.tool_call_service.format_tool_result_for_chat(response)
+            formatted = await self.tool_call_service.format_tool_result_for_chat(
+                response
+            )
 
             # Add orchestration-specific metadata
             formatted["orchestration_metadata"] = {
@@ -427,7 +450,9 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Tool response formatting failed: {e}")
-            raise ChatOrchestrationError(f"Tool response formatting failed: {str(e)}") from e
+            raise ChatOrchestrationError(
+                f"Tool response formatting failed: {str(e)}"
+            ) from e
 
     async def _execute_single_tool_call(self, tool_call: Dict) -> Any:
         """Execute a single tool call.
@@ -449,7 +474,9 @@ class ChatOrchestrationService:
         )
 
     @with_error_handling()
-    async def _store_search_result(self, search_type: str, params: Dict[str, Any], results: Any) -> None:
+    async def _store_search_result(
+        self, search_type: str, params: Dict[str, Any], results: Any
+    ) -> None:
         """Store search results in memory graph for future reference.
 
         Args:
@@ -513,7 +540,9 @@ class ChatOrchestrationService:
             self.logger.warning(f"Failed to store location data in memory: {e}")
 
     @with_error_handling()
-    async def get_chat_history(self, session_id: str, limit: int = 10, offset: int = 0) -> List[Dict[str, Any]]:
+    async def get_chat_history(
+        self, session_id: str, limit: int = 10, offset: int = 0
+    ) -> List[Dict[str, Any]]:
         """Get chat history using Supabase MCP.
 
         Args:

@@ -81,7 +81,9 @@ class WebSocketBroadcaster:
         try:
             # Initialize Redis connection
             if self.redis_url:
-                self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+                self.redis_client = redis.from_url(
+                    self.redis_url, decode_responses=True
+                )
                 self.pubsub = self.redis_client.pubsub()
 
                 # Test connection
@@ -94,8 +96,12 @@ class WebSocketBroadcaster:
 
             # Start background tasks
             if self.redis_client:
-                self._broadcast_task = asyncio.create_task(self._process_broadcast_queue())
-                self._subscription_task = asyncio.create_task(self._handle_subscriptions())
+                self._broadcast_task = asyncio.create_task(
+                    self._process_broadcast_queue()
+                )
+                self._subscription_task = asyncio.create_task(
+                    self._handle_subscriptions()
+                )
 
             logger.info("WebSocket broadcaster started")
 
@@ -172,16 +178,22 @@ class WebSocketBroadcaster:
             )
 
             # Add to user and session mappings
-            await self.redis_client.sadd(f"{self.USER_CHANNELS_KEY}:{user_id}", connection_id)
+            await self.redis_client.sadd(
+                f"{self.USER_CHANNELS_KEY}:{user_id}", connection_id
+            )
 
             if session_id:
-                await self.redis_client.sadd(f"{self.SESSION_CHANNELS_KEY}:{session_id}", connection_id)
+                await self.redis_client.sadd(
+                    f"{self.SESSION_CHANNELS_KEY}:{session_id}", connection_id
+                )
 
             # Subscribe to channels
             for channel in channels or []:
                 await self.redis_client.sadd(f"channel:{channel}", connection_id)
 
-            logger.info(f"Registered connection {connection_id} for user {user_id} with channels: {channels}")
+            logger.info(
+                f"Registered connection {connection_id} for user {user_id} with channels: {channels}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to register connection {connection_id}: {e}")
@@ -200,7 +212,9 @@ class WebSocketBroadcaster:
 
         try:
             # Get connection info
-            connection_data = await self.redis_client.hgetall(f"{self.CONNECTION_INFO_KEY}:{connection_id}")
+            connection_data = await self.redis_client.hgetall(
+                f"{self.CONNECTION_INFO_KEY}:{connection_id}"
+            )
 
             if connection_data:
                 user_id = connection_data.get("user_id")
@@ -209,25 +223,33 @@ class WebSocketBroadcaster:
 
                 # Remove from user mapping
                 if user_id:
-                    await self.redis_client.srem(f"{self.USER_CHANNELS_KEY}:{user_id}", connection_id)
+                    await self.redis_client.srem(
+                        f"{self.USER_CHANNELS_KEY}:{user_id}", connection_id
+                    )
 
                 # Remove from session mapping
                 if session_id:
-                    await self.redis_client.srem(f"{self.SESSION_CHANNELS_KEY}:{session_id}", connection_id)
+                    await self.redis_client.srem(
+                        f"{self.SESSION_CHANNELS_KEY}:{session_id}", connection_id
+                    )
 
                 # Remove from channel subscriptions
                 for channel in channels:
                     await self.redis_client.srem(f"channel:{channel}", connection_id)
 
             # Remove connection info
-            await self.redis_client.delete(f"{self.CONNECTION_INFO_KEY}:{connection_id}")
+            await self.redis_client.delete(
+                f"{self.CONNECTION_INFO_KEY}:{connection_id}"
+            )
 
             logger.info(f"Unregistered connection {connection_id}")
 
         except Exception as e:
             logger.error(f"Failed to unregister connection {connection_id}: {e}")
 
-    async def broadcast_to_channel(self, channel: str, event: dict[str, Any], priority: int = 2) -> None:
+    async def broadcast_to_channel(
+        self, channel: str, event: dict[str, Any], priority: int = 2
+    ) -> None:
         """Broadcast message to all connections subscribed to a channel.
 
         Args:
@@ -246,7 +268,9 @@ class WebSocketBroadcaster:
 
         await self._queue_broadcast_message(message)
 
-    async def broadcast_to_user(self, user_id: UUID, event: dict[str, Any], priority: int = 2) -> None:
+    async def broadcast_to_user(
+        self, user_id: UUID, event: dict[str, Any], priority: int = 2
+    ) -> None:
         """Broadcast message to all connections for a user.
 
         Args:
@@ -265,7 +289,9 @@ class WebSocketBroadcaster:
 
         await self._queue_broadcast_message(message)
 
-    async def broadcast_to_session(self, session_id: UUID, event: dict[str, Any], priority: int = 2) -> None:
+    async def broadcast_to_session(
+        self, session_id: UUID, event: dict[str, Any], priority: int = 2
+    ) -> None:
         """Broadcast message to all connections for a session.
 
         Args:
@@ -307,7 +333,9 @@ class WebSocketBroadcaster:
         if self._message_id_cleanup_counter >= self._max_recent_messages // 2:
             # Keep only the most recent half
             recent_ids = list(self._recent_message_ids)
-            self._recent_message_ids = set(recent_ids[-self._max_recent_messages // 2 :])
+            self._recent_message_ids = set(
+                recent_ids[-self._max_recent_messages // 2 :]
+            )
             self._message_id_cleanup_counter = 0
 
         try:
@@ -317,7 +345,9 @@ class WebSocketBroadcaster:
 
             await self.redis_client.lpush(priority_key, message_data)
 
-            logger.debug(f"Queued broadcast message {message.id} for {message.target_type}:{message.target_id}")
+            logger.debug(
+                f"Queued broadcast message {message.id} for {message.target_type}:{message.target_id}"
+            )
 
         except Exception as e:
             logger.error(f"Failed to queue broadcast message: {e}")
@@ -355,13 +385,19 @@ class WebSocketBroadcaster:
         try:
             if message.target_type == "user" and message.target_id:
                 # Broadcast to all connections for user
-                connection_ids = await self.redis_client.smembers(f"{self.USER_CHANNELS_KEY}:{message.target_id}")
+                connection_ids = await self.redis_client.smembers(
+                    f"{self.USER_CHANNELS_KEY}:{message.target_id}"
+                )
             elif message.target_type == "session" and message.target_id:
                 # Broadcast to all connections for session
-                connection_ids = await self.redis_client.smembers(f"{self.SESSION_CHANNELS_KEY}:{message.target_id}")
+                connection_ids = await self.redis_client.smembers(
+                    f"{self.SESSION_CHANNELS_KEY}:{message.target_id}"
+                )
             elif message.target_type == "channel" and message.target_id:
                 # Broadcast to all connections subscribed to channel
-                connection_ids = await self.redis_client.smembers(f"channel:{message.target_id}")
+                connection_ids = await self.redis_client.smembers(
+                    f"channel:{message.target_id}"
+                )
             else:
                 logger.warning(f"Unknown broadcast target: {message.target_type}")
                 return
@@ -371,7 +407,9 @@ class WebSocketBroadcaster:
                 channel = f"tripsage:websocket:connection:{connection_id}"
                 await self.redis_client.publish(channel, message.event)
 
-            logger.debug(f"Delivered message {message.id} to {len(connection_ids)} connections")
+            logger.debug(
+                f"Delivered message {message.id} to {len(connection_ids)} connections"
+            )
 
         except Exception as e:
             logger.error(f"Failed to deliver broadcast message {message.id}: {e}")
@@ -394,7 +432,9 @@ class WebSocketBroadcaster:
 
                         # Forward message to local WebSocket manager
                         # This would be handled by the WebSocketManager
-                        logger.debug(f"Received broadcast for connection {connection_id}")
+                        logger.debug(
+                            f"Received broadcast for connection {connection_id}"
+                        )
 
                     except Exception as e:
                         logger.error(f"Error handling subscription message: {e}")

@@ -791,10 +791,13 @@ class EnhancedDatabaseBenchmark:
                         <td>{reg.operation_name}</td>
                         <td>{reg.current_p95:.2f}</td>
                         <td>{reg.baseline_p95:.2f if reg.baseline_p95 else 'N/A'}</td>
-                        <td>{(
-                            f"{reg.regression_percentage:.1f}%" 
-                            if reg.regression_percentage else "N/A"
-                        )}</td>
+                        <td>{
+                    (
+                        f"{reg.regression_percentage:.1f}%"
+                        if reg.regression_percentage
+                        else "N/A"
+                    )
+                }</td>
                         <td>{reg.severity.upper()}</td>
                     </tr>
                 """

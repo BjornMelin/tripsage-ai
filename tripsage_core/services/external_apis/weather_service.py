@@ -143,7 +143,9 @@ class WeatherService:
             ) from e
 
         except Exception as e:
-            raise WeatherServiceError(f"Request failed: {str(e)}", original_error=e) from e
+            raise WeatherServiceError(
+                f"Request failed: {str(e)}", original_error=e
+            ) from e
 
     async def get_current_weather(
         self,
@@ -311,13 +313,17 @@ class WeatherService:
         trip_duration = (departure_date - arrival_date).days + 1
 
         # Gather weather data
-        weather_data = await self._gather_travel_weather_data(latitude, longitude, trip_duration, units)
+        weather_data = await self._gather_travel_weather_data(
+            latitude, longitude, trip_duration, units
+        )
 
         # Analyze weather patterns
         weather_stats = self._analyze_weather_patterns(weather_data["forecast_data"])
 
         # Generate recommendations
-        activity_info = self._generate_activity_recommendations(activities, weather_stats, trip_duration)
+        activity_info = self._generate_activity_recommendations(
+            activities, weather_stats, trip_duration
+        )
 
         # Generate packing suggestions
         packing_suggestions = self._generate_packing_suggestions(weather_stats)
@@ -348,11 +354,15 @@ class WeatherService:
 
         return {
             "forecast_data": forecast_data,
-            "air_quality_aqi": (air_quality_data.get("list", [{}])[0].get("main", {}).get("aqi", 0)),
+            "air_quality_aqi": (
+                air_quality_data.get("list", [{}])[0].get("main", {}).get("aqi", 0)
+            ),
             "alerts": alerts,
         }
 
-    def _analyze_weather_patterns(self, forecast_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _analyze_weather_patterns(
+        self, forecast_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Analyze weather patterns from forecast data."""
         daily_forecasts = forecast_data.get("daily", [])
 
@@ -384,7 +394,9 @@ class WeatherService:
         temp_range = (min(temps), max(temps)) if temps else (0, 0)
 
         precipitation_chance = (
-            sum(f.get("pop", 0) for f in daily_forecasts) / len(daily_forecasts) * 100 if daily_forecasts else 0
+            sum(f.get("pop", 0) for f in daily_forecasts) / len(daily_forecasts) * 100
+            if daily_forecasts
+            else 0
         )
 
         return {
@@ -423,7 +435,9 @@ class WeatherService:
             # Beach activities
             if "beach" in activity_lower or "swimming" in activity_lower:
                 if avg_temp < 20:
-                    warnings.append(f"Cool temperatures for {activity} (avg {avg_temp:.1f}°)")
+                    warnings.append(
+                        f"Cool temperatures for {activity} (avg {avg_temp:.1f}°)"
+                    )
                 elif rain_days > trip_duration * 0.3:
                     warnings.append(f"Frequent rain may affect {activity}")
                 else:
@@ -434,7 +448,9 @@ class WeatherService:
                 if rain_days > trip_duration * 0.5:
                     warnings.append(f"Pack rain gear for {activity}")
                 elif avg_temp > 30:
-                    warnings.append(f"High temperatures - plan {activity} for early morning")
+                    warnings.append(
+                        f"High temperatures - plan {activity} for early morning"
+                    )
                 else:
                     recommendations.append(f"Pleasant conditions for {activity}")
 
@@ -539,7 +555,9 @@ class WeatherService:
             }
 
         # Get target forecast
-        target_forecast = await self._get_target_date_forecast(latitude, longitude, travel_date, days_ahead)
+        target_forecast = await self._get_target_date_forecast(
+            latitude, longitude, travel_date, days_ahead
+        )
 
         if not target_forecast:
             return {
@@ -571,10 +589,14 @@ class WeatherService:
 
         return None
 
-    def _evaluate_activity_suitability(self, target_forecast: Dict[str, Any], activity_type: str) -> Dict[str, Any]:
+    def _evaluate_activity_suitability(
+        self, target_forecast: Dict[str, Any], activity_type: str
+    ) -> Dict[str, Any]:
         """Evaluate weather suitability for specific activity."""
         weather_conditions = self._extract_weather_conditions(target_forecast)
-        score, recommendations, warnings = self._calculate_activity_score(weather_conditions, activity_type.lower())
+        score, recommendations, warnings = self._calculate_activity_score(
+            weather_conditions, activity_type.lower()
+        )
 
         max_score = 7
         suitability_percentage = (score / max_score) * 100
@@ -600,7 +622,9 @@ class WeatherService:
             "wind_speed": forecast.get("wind_speed", 0),
         }
 
-    def _calculate_activity_score(self, conditions: Dict[str, Any], activity: str) -> tuple[int, List[str], List[str]]:
+    def _calculate_activity_score(
+        self, conditions: Dict[str, Any], activity: str
+    ) -> tuple[int, List[str], List[str]]:
         """Calculate suitability score for activity based on conditions."""
         score = 0
         recommendations = []
@@ -613,11 +637,15 @@ class WeatherService:
         elif "hiking" in activity_lower or "outdoor" in activity_lower:
             score, recommendations, warnings = self._score_hiking_activity(conditions)
         elif "sightseeing" in activity_lower or "city" in activity_lower:
-            score, recommendations, warnings = self._score_sightseeing_activity(conditions)
+            score, recommendations, warnings = self._score_sightseeing_activity(
+                conditions
+            )
 
         return score, recommendations, warnings
 
-    def _score_beach_activity(self, conditions: Dict[str, Any]) -> tuple[int, List[str], List[str]]:
+    def _score_beach_activity(
+        self, conditions: Dict[str, Any]
+    ) -> tuple[int, List[str], List[str]]:
         """Score beach activity conditions."""
         score = 0
         recommendations = []
@@ -658,7 +686,9 @@ class WeatherService:
 
         return score, recommendations, warnings
 
-    def _score_hiking_activity(self, conditions: Dict[str, Any]) -> tuple[int, List[str], List[str]]:
+    def _score_hiking_activity(
+        self, conditions: Dict[str, Any]
+    ) -> tuple[int, List[str], List[str]]:
         """Score hiking activity conditions."""
         score = 0
         recommendations = []
@@ -697,7 +727,9 @@ class WeatherService:
 
         return score, recommendations, warnings
 
-    def _score_sightseeing_activity(self, conditions: Dict[str, Any]) -> tuple[int, List[str], List[str]]:
+    def _score_sightseeing_activity(
+        self, conditions: Dict[str, Any]
+    ) -> tuple[int, List[str], List[str]]:
         """Score sightseeing activity conditions."""
         score = 0
         recommendations = []

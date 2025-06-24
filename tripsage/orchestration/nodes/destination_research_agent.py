@@ -63,7 +63,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
         if self.llm:
             self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
-        logger.info(f"Initialized destination research agent with {len(self.available_tools)} tools")
+        logger.info(
+            f"Initialized destination research agent with {len(self.available_tools)} tools"
+        )
 
     async def _load_configuration(self) -> None:
         """Load agent configuration from database with fallback to settings."""
@@ -92,7 +94,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
             # Fallback to settings-based configuration
             settings = get_settings()
-            self.agent_config = settings.get_agent_config("destination_research_agent", **self.config_overrides)
+            self.agent_config = settings.get_agent_config(
+                "destination_research_agent", **self.config_overrides
+            )
 
             self.llm = ChatOpenAI(
                 model=self.agent_config["model"],
@@ -146,17 +150,23 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 state["destination_info"][destination] = research_results
 
             # Generate user-friendly response
-            response_message = await self._generate_research_response(research_results, research_params, state)
+            response_message = await self._generate_research_response(
+                research_results, research_params, state
+            )
         else:
             # Handle general destination inquiries
-            response_message = await self._handle_general_research_inquiry(user_message, state)
+            response_message = await self._handle_general_research_inquiry(
+                user_message, state
+            )
 
         # Add response to conversation
         state["messages"].append(response_message)
 
         return state
 
-    async def _extract_research_parameters(self, message: str, state: TravelPlanningState) -> Optional[Dict[str, Any]]:
+    async def _extract_research_parameters(
+        self, message: str, state: TravelPlanningState
+    ) -> Optional[Dict[str, Any]]:
         """
         Extract destination research parameters from user message and conversation
         context.
@@ -206,7 +216,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(content="You are a destination research parameter extraction assistant."),
+                SystemMessage(
+                    content="You are a destination research parameter extraction assistant."
+                ),
                 HumanMessage(content=extraction_prompt),
             ]
 
@@ -228,7 +240,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
             logger.error(f"Error extracting research parameters: {str(e)}")
             return None
 
-    async def _research_destination(self, params: Dict[str, Any], state: TravelPlanningState) -> Dict[str, Any]:
+    async def _research_destination(
+        self, params: Dict[str, Any], state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Perform comprehensive destination research using MCP tools.
 
@@ -261,11 +275,15 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 research_results["overview"] = overview_results
 
             if research_type in ["attractions", "all"]:
-                attractions_results = await self._research_attractions(destination, specific_interests)
+                attractions_results = await self._research_attractions(
+                    destination, specific_interests
+                )
                 research_results["attractions"] = attractions_results
 
             if research_type in ["activities", "all"]:
-                activities_results = await self._research_activities(destination, specific_interests)
+                activities_results = await self._research_activities(
+                    destination, specific_interests
+                )
                 research_results["activities"] = activities_results
 
             if research_type in ["practical", "all"]:
@@ -277,7 +295,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 research_results["cultural_info"] = cultural_results
 
             if research_type in ["weather", "all"]:
-                weather_results = await self._research_weather_info(destination, params.get("travel_dates"))
+                weather_results = await self._research_weather_info(
+                    destination, params.get("travel_dates")
+                )
                 research_results["weather_info"] = weather_results
 
             # Use Google Maps for location data
@@ -352,8 +372,12 @@ class DestinationResearchAgentNode(BaseAgentNode):
             # Use web crawling for activities research
             webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
             if webcrawl_tool:
-                interest_str = " ".join(interests) if interests else "activities experiences"
-                query = f"{destination} {interest_str} things to do activities experiences"
+                interest_str = (
+                    " ".join(interests) if interests else "activities experiences"
+                )
+                query = (
+                    f"{destination} {interest_str} things to do activities experiences"
+                )
                 result = await webcrawl_tool._arun(query=query, max_results=5)
 
                 # Parse activities from results
@@ -424,7 +448,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
             logger.error(f"Cultural info research failed: {str(e)}")
             return {"error": str(e)}
 
-    async def _research_weather_info(self, destination: str, travel_dates: Optional[str]) -> Dict[str, Any]:
+    async def _research_weather_info(
+        self, destination: str, travel_dates: Optional[str]
+    ) -> Dict[str, Any]:
         """Research weather and climate information for a destination."""
         try:
             # Use weather tools for climate information
@@ -557,7 +583,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
             },
         )
 
-    async def _handle_general_research_inquiry(self, message: str, state: TravelPlanningState) -> Dict[str, Any]:
+    async def _handle_general_research_inquiry(
+        self, message: str, state: TravelPlanningState
+    ) -> Dict[str, Any]:
         """
         Handle general destination research inquiries.
 
@@ -587,7 +615,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
         try:
             messages = [
-                SystemMessage(content="You are a helpful destination research assistant."),
+                SystemMessage(
+                    content="You are a helpful destination research assistant."
+                ),
                 HumanMessage(content=response_prompt),
             ]
 

@@ -638,7 +638,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                 from tripsage_core.services.infrastructure import (
                     key_monitoring_service,
                 )
-                
+
                 ApiKeyMonitoringService = key_monitoring_service.KeyMonitoringService
 
                 self.monitoring_service = ApiKeyMonitoringService()
