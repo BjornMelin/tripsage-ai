@@ -33,7 +33,9 @@ T = TypeVar("T")
 ResultT = TypeVar("ResultT")
 
 # Configure logging for demonstration
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +63,9 @@ class ModernAsyncProcessor[T]:
             "count": self.processed_count,
         }
 
-    async def process_batch_taskgroup(self, items: Sequence[T]) -> BatchResults[ProcessingResult[T]]:
+    async def process_batch_taskgroup(
+        self, items: Sequence[T]
+    ) -> BatchResults[ProcessingResult[T]]:
         """
         Process items using Python 3.13 TaskGroup for structured concurrency.
 
@@ -83,7 +87,9 @@ class ModernAsyncProcessor[T]:
 
         return results
 
-    async def process_batch_traditional(self, items: Sequence[T]) -> BatchResults[ProcessingResult[T]]:
+    async def process_batch_traditional(
+        self, items: Sequence[T]
+    ) -> BatchResults[ProcessingResult[T]]:
         """
         Process items using traditional asyncio.gather() for comparison.
 
@@ -117,7 +123,10 @@ async def demonstrate_taskgroup_benefits():
     taskgroup_results = await processor.process_batch_taskgroup(test_items)
     taskgroup_duration = time.time() - start_time
 
-    logger.info(f"✅ TaskGroup processed {len(taskgroup_results)} items in {taskgroup_duration:.3f}s")
+    logger.info(
+        f"✅ TaskGroup processed {len(taskgroup_results)} items in "
+        f"{taskgroup_duration:.3f}s"
+    )
 
     # Reset processor state
     processor.processed_count = 0
@@ -127,7 +136,10 @@ async def demonstrate_taskgroup_benefits():
     traditional_results = await processor.process_batch_traditional(test_items)
     traditional_duration = time.time() - start_time
 
-    logger.info(f"⚡ Traditional processed {len(traditional_results)} items in {traditional_duration:.3f}s")
+    logger.info(
+        f"⚡ Traditional processed {len(traditional_results)} items in "
+        f"{traditional_duration:.3f}s"
+    )
 
     # Compare results
     performance_diff = abs(taskgroup_duration - traditional_duration)
@@ -211,10 +223,18 @@ async def demonstrate_concurrent_database_operations():
 
     async with asyncio.TaskGroup() as tg:
         # Simulate multiple database operations
-        user_task = tg.create_task(simulate_db_query("SELECT_USERS", 0.15), name="fetch_users")
-        trips_task = tg.create_task(simulate_db_query("SELECT_TRIPS", 0.12), name="fetch_trips")
-        memories_task = tg.create_task(simulate_db_query("VECTOR_SEARCH", 0.08), name="search_memories")
-        health_task = tg.create_task(simulate_db_query("HEALTH_CHECK", 0.05), name="health_check")
+        user_task = tg.create_task(
+            simulate_db_query("SELECT_USERS", 0.15), name="fetch_users"
+        )
+        trips_task = tg.create_task(
+            simulate_db_query("SELECT_TRIPS", 0.12), name="fetch_trips"
+        )
+        memories_task = tg.create_task(
+            simulate_db_query("VECTOR_SEARCH", 0.08), name="search_memories"
+        )
+        health_task = tg.create_task(
+            simulate_db_query("HEALTH_CHECK", 0.05), name="health_check"
+        )
 
     total_duration = time.time() - start_time
 
@@ -226,7 +246,10 @@ async def demonstrate_concurrent_database_operations():
         "health": health_task.result(),
     }
 
-    logger.info(f"🎯 Completed {len(operations)} concurrent DB operations in {total_duration:.3f}s")
+    logger.info(
+        f"🎯 Completed {len(operations)} concurrent DB operations in "
+        f"{total_duration:.3f}s"
+    )
 
     # Calculate sequential time for comparison
     sequential_time = sum(op["execution_time_ms"] for op in operations.values()) / 1000
@@ -251,7 +274,9 @@ def demonstrate_type_safety():
         """Process user data with strict typing."""
         return f"User: {data.get('name', 'Unknown')} (ID: {data.get('id', 'N/A')})"
 
-    def create_search_filters(destinations: Sequence[str], budget_range: tuple[int, int]) -> SearchFilters:
+    def create_search_filters(
+        destinations: Sequence[str], budget_range: tuple[int, int]
+    ) -> SearchFilters:
         """Create search filters with modern type annotations."""
         return {
             "destinations": list(destinations),
@@ -262,7 +287,9 @@ def demonstrate_type_safety():
 
     # Example usage
     user: UserData = {"id": 12345, "name": "Alice", "age": 30}
-    filters: SearchFilters = create_search_filters(["Paris", "Tokyo", "New York"], (1000, 5000))
+    filters: SearchFilters = create_search_filters(
+        ["Paris", "Tokyo", "New York"], (1000, 5000)
+    )
 
     logger.info(f"👤 {process_user_data(user)}")
     logger.info(f"🔍 Search filters: {filters}")

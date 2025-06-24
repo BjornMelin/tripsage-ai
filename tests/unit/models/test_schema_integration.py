@@ -111,7 +111,9 @@ class TestCompletePurchaseFlow:
             spent=Price(amount=Decimal("1500"), currency=CurrencyCode.USD),
             categories={
                 "flights": Price(amount=Decimal("2000"), currency=CurrencyCode.USD),
-                "accommodation": Price(amount=Decimal("1500"), currency=CurrencyCode.USD),
+                "accommodation": Price(
+                    amount=Decimal("1500"), currency=CurrencyCode.USD
+                ),
                 "activities": Price(amount=Decimal("500"), currency=CurrencyCode.USD),
             },
         )
@@ -151,13 +153,19 @@ class TestCompletePurchaseFlow:
             ),
             fees=Price(amount=airport_fee, currency=CurrencyCode.USD),
             total=Price(
-                amount=(flight_deal.final_price.amount + (flight_deal.final_price.amount * tax_rate) + airport_fee),
+                amount=(
+                    flight_deal.final_price.amount
+                    + (flight_deal.final_price.amount * tax_rate)
+                    + airport_fee
+                ),
                 currency=CurrencyCode.USD,
             ),
         )
 
         # 6. Check against budget
-        remaining_flight_budget = user_budget.categories["flights"].amount - user_budget.spent.amount
+        remaining_flight_budget = (
+            user_budget.categories["flights"].amount - user_budget.spent.amount
+        )
         can_afford = price_breakdown.total.amount <= remaining_flight_budget
         assert can_afford, "User cannot afford this flight within budget"
 
@@ -181,7 +189,9 @@ class TestCompletePurchaseFlow:
 
         # Complete flow validation
         assert payment.amount == price_breakdown.total
-        assert price_breakdown.base_price.amount < selected_flight_price.amount  # Discount applied
+        assert (
+            price_breakdown.base_price.amount < selected_flight_price.amount
+        )  # Discount applied
         assert user_budget.utilization_percentage() < 100  # Not over budget
 
 
@@ -191,7 +201,9 @@ class TestMultiCurrencyScenarios:
     def test_currency_conversion_flow(self):
         """Test currency conversion in international purchases."""
         # 1. User budget in USD
-        usd_budget = Budget(total_budget=Price(amount=Decimal("3000"), currency=CurrencyCode.USD))
+        usd_budget = Budget(
+            total_budget=Price(amount=Decimal("3000"), currency=CurrencyCode.USD)
+        )
 
         # 2. Hotel price in EUR
         hotel_price_eur = Price(amount=Decimal("150"), currency=CurrencyCode.EUR)
@@ -206,7 +218,9 @@ class TestMultiCurrencyScenarios:
         )
 
         # 4. Convert to user's currency
-        hotel_price_usd = hotel_price_eur.convert_to(CurrencyCode.USD, exchange_rate.rate)
+        hotel_price_usd = hotel_price_eur.convert_to(
+            CurrencyCode.USD, exchange_rate.rate
+        )
 
         assert hotel_price_usd.currency == CurrencyCode.USD
         assert hotel_price_usd.amount == hotel_price_eur.amount * exchange_rate.rate
@@ -488,7 +502,9 @@ class TestAPIResponseIntegration:
             spent=Price(amount=Decimal("0"), currency=CurrencyCode.USD),
             categories={
                 "flights": Price(amount=Decimal("2500"), currency=CurrencyCode.USD),
-                "accommodation": Price(amount=Decimal("2000"), currency=CurrencyCode.USD),
+                "accommodation": Price(
+                    amount=Decimal("2000"), currency=CurrencyCode.USD
+                ),
                 "activities": Price(amount=Decimal("1000"), currency=CurrencyCode.USD),
                 "food": Price(amount=Decimal("500"), currency=CurrencyCode.USD),
             },
@@ -500,7 +516,9 @@ class TestAPIResponseIntegration:
             base_price = Decimal("400") + (i * Decimal("100"))
             deal = Deal(
                 title=f"Flight Option {i + 1}",
-                description=(f"Direct flight with {'Premium' if i == 2 else 'Standard'} airline"),
+                description=(
+                    f"Direct flight with {'Premium' if i == 2 else 'Standard'} airline"
+                ),
                 original_price=Price(amount=base_price, currency=CurrencyCode.USD),
                 discount_percentage=Decimal("10") if i == 0 else Decimal("0"),
                 final_price=Price(
@@ -549,7 +567,9 @@ class TestSchemaPropertyInvariants:
 
     @settings(max_examples=50, deadline=None)
     @given(
-        base_amount=st.decimals(min_value=Decimal("1"), max_value=Decimal("1000"), places=2),
+        base_amount=st.decimals(
+            min_value=Decimal("1"), max_value=Decimal("1000"), places=2
+        ),
         tax_rate=st.floats(min_value=0.0, max_value=0.3),
         fee_rate=st.floats(min_value=0.0, max_value=0.1),
         discount_rate=st.floats(min_value=0.0, max_value=0.5),
@@ -584,9 +604,15 @@ class TestSchemaPropertyInvariants:
         # Create breakdown
         breakdown = PriceBreakdown(
             base_price=base_price,
-            taxes=Price(amount=tax_amount, currency=currency) if tax_amount > 0 else None,
-            fees=Price(amount=fee_amount, currency=currency) if fee_amount > 0 else None,
-            discounts=Price(amount=discount_amount, currency=currency) if discount_amount > 0 else None,
+            taxes=Price(amount=tax_amount, currency=currency)
+            if tax_amount > 0
+            else None,
+            fees=Price(amount=fee_amount, currency=currency)
+            if fee_amount > 0
+            else None,
+            discounts=Price(amount=discount_amount, currency=currency)
+            if discount_amount > 0
+            else None,
             total=Price(amount=total_amount, currency=currency),
         )
 

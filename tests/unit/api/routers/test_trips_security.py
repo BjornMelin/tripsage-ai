@@ -195,7 +195,7 @@ class TestGetTripSummarySecurity:
     async def test_get_trip_summary_with_access_verification(
         self, mock_principal, mock_trip_service, sample_trip_data, mock_audit_service
     ):
-        """Test that get_trip_summary properly verifies trip access before returning data."""
+        """Test that get_trip_summary verifies trip access before returning data."""
         # Setup
         trip_id = sample_trip_data["id"]
         sample_trip_data["user_id"] = mock_principal.id
@@ -692,7 +692,7 @@ class TestSecurityErrorHandling:
     async def test_resource_not_found_vs_unauthorized(
         self, mock_different_principal, mock_trip_service, mock_audit_service
     ):
-        """Test that resource not found is properly distinguished from unauthorized access."""
+        """Test that resource not found is distinguished from unauthorized access."""
         trip_id = str(uuid4())
         mock_trip_service.get_trip.return_value = None
 

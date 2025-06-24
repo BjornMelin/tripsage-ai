@@ -89,7 +89,9 @@ def configure_logging(
 
     # Create console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
@@ -105,7 +107,9 @@ def configure_logging(
         log_path = Path(log_dir) / log_filename
 
         file_handler = logging.FileHandler(log_path)
-        file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        file_formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
 
@@ -184,7 +188,9 @@ def configure_root_logger(level: Optional[int] = None) -> None:
     console_handler.setLevel(level)
 
     # Create formatter
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     console_handler.setFormatter(formatter)
 
     # Add handler to root logger

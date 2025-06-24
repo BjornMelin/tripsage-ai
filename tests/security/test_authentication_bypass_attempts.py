@@ -56,11 +56,15 @@ class TestJWTBypassAttempts:
     def test_client_with_auth(self, test_app, valid_jwt_secret) -> TestClient:
         """Test client with authentication middleware."""
         with patch("tripsage.api.core.config.get_settings") as mock_settings:
-            mock_return = mock_settings.return_value.database_jwt_secret.get_secret_value
+            mock_return = (
+                mock_settings.return_value.database_jwt_secret.get_secret_value
+            )
             mock_return.return_value = valid_jwt_secret
 
             middleware = AuthenticationMiddleware(test_app)
-            test_app.add_middleware(type(middleware).__bases__[0], dispatch=middleware.dispatch)
+            test_app.add_middleware(
+                type(middleware).__bases__[0], dispatch=middleware.dispatch
+            )
 
             return TestClient(test_app)
 
@@ -90,17 +94,25 @@ class TestJWTBypassAttempts:
 
         # Manually create JWT with 'none' algorithm
         header = {"alg": "none", "typ": "JWT"}
-        header_encoded = base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
-        payload_encoded = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+        header_encoded = (
+            base64.urlsafe_b64encode(json.dumps(header).encode()).decode().rstrip("=")
+        )
+        payload_encoded = (
+            base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+        )
 
         malicious_token = f"{header_encoded}.{payload_encoded}."
 
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {malicious_token}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {malicious_token}"}
+        )
 
         # Should reject 'none' algorithm
         assert response.status_code == 401
 
-    def test_jwt_algorithm_confusion_attack(self, test_client_with_auth, valid_jwt_secret):
+    def test_jwt_algorithm_confusion_attack(
+        self, test_client_with_auth, valid_jwt_secret
+    ):
         """Test JWT algorithm confusion attack (HS256 vs RS256)."""
         # Try to use HMAC with public key as secret
         payload = {
@@ -121,7 +133,9 @@ class TestJWTBypassAttempts:
         # Try HS512 instead of HS256
         malicious_token = jwt.encode(payload, valid_jwt_secret, algorithm="HS512")
 
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {malicious_token}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {malicious_token}"}
+        )
 
         # Should reject different algorithm
         assert response.status_code == 401
@@ -134,20 +148,32 @@ class TestJWTBypassAttempts:
 
         # Test 1: Remove signature
         token_no_sig = f"{header}.{payload}."
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {token_no_sig}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {token_no_sig}"}
+        )
         assert response.status_code == 401
 
         # Test 2: Modify signature
-        malicious_signature = base64.urlsafe_b64encode(b"malicious").decode().rstrip("=")
+        malicious_signature = (
+            base64.urlsafe_b64encode(b"malicious").decode().rstrip("=")
+        )
         token_bad_sig = f"{header}.{payload}.{malicious_signature}"
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {token_bad_sig}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {token_bad_sig}"}
+        )
         assert response.status_code == 401
 
         # Test 3: Use signature from different token
         other_payload = {"sub": "other_user", "exp": int(time.time()) + 3600}
-        other_payload_encoded = base64.urlsafe_b64encode(json.dumps(other_payload).encode()).decode().rstrip("=")
+        other_payload_encoded = (
+            base64.urlsafe_b64encode(json.dumps(other_payload).encode())
+            .decode()
+            .rstrip("=")
+        )
         token_mixed_sig = f"{header}.{other_payload_encoded}.{signature}"
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {token_mixed_sig}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {token_mixed_sig}"}
+        )
         assert response.status_code == 401
 
     def test_jwt_payload_manipulation(self, test_client_with_auth, valid_jwt_secret):
@@ -172,7 +198,9 @@ class TestJWTBypassAttempts:
 
         for malicious_payload in malicious_payloads:
             token = jwt.encode(malicious_payload, valid_jwt_secret, algorithm="HS256")
-            response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {token}"})
+            response = test_client_with_auth.get(
+                "/protected", headers={"Authorization": f"Bearer {token}"}
+            )
 
             # Should accept valid signature but may reject based on payload validation
             # The key is that it shouldn't grant elevated privileges
@@ -181,7 +209,9 @@ class TestJWTBypassAttempts:
                 # Should not grant admin privileges based on manipulated payload
                 assert "admin" not in str(data).lower()
 
-    def test_jwt_timing_attack_resistance(self, test_client_with_auth, valid_jwt_secret):
+    def test_jwt_timing_attack_resistance(
+        self, test_client_with_auth, valid_jwt_secret
+    ):
         """Test JWT verification timing attack resistance."""
         valid_payload = {
             "sub": "user_123",
@@ -201,13 +231,17 @@ class TestJWTBypassAttempts:
         for _ in range(10):
             # Time valid token
             start = time.time()
-            test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {valid_token}"})
+            test_client_with_auth.get(
+                "/protected", headers={"Authorization": f"Bearer {valid_token}"}
+            )
             end = time.time()
             valid_times.append(end - start)
 
             # Time invalid token
             start = time.time()
-            test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {invalid_token}"})
+            test_client_with_auth.get(
+                "/protected", headers={"Authorization": f"Bearer {invalid_token}"}
+            )
             end = time.time()
             invalid_times.append(end - start)
 
@@ -217,7 +251,9 @@ class TestJWTBypassAttempts:
         time_ratio = max(avg_valid, avg_invalid) / min(avg_valid, avg_invalid)
 
         # Should not have timing attack vulnerability
-        assert time_ratio < 5.0, f"Potential timing attack vulnerability: {time_ratio:.2f}x difference"
+        assert time_ratio < 5.0, (
+            f"Potential timing attack vulnerability: {time_ratio:.2f}x difference"
+        )
 
     def test_jwt_expired_token_attacks(self, test_client_with_auth, valid_jwt_secret):
         """Test attacks with expired JWT tokens."""
@@ -233,7 +269,9 @@ class TestJWTBypassAttempts:
         expired_token = jwt.encode(expired_payload, valid_jwt_secret, algorithm="HS256")
 
         # Should reject expired token
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {expired_token}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {expired_token}"}
+        )
         assert response.status_code == 401
 
         # Test token with future iat (issued in future)
@@ -248,7 +286,9 @@ class TestJWTBypassAttempts:
         future_token = jwt.encode(future_payload, valid_jwt_secret, algorithm="HS256")
 
         # May or may not reject future iat depending on implementation
-        response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {future_token}"})
+        response = test_client_with_auth.get(
+            "/protected", headers={"Authorization": f"Bearer {future_token}"}
+        )
         # Behavior may vary - key is no crashes or unexpected access
 
     def test_jwt_malformed_token_attacks(self, test_client_with_auth):
@@ -272,7 +312,9 @@ class TestJWTBypassAttempts:
         ]
 
         for malformed_token in malformed_tokens:
-            response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {malformed_token}"})
+            response = test_client_with_auth.get(
+                "/protected", headers={"Authorization": f"Bearer {malformed_token}"}
+            )
 
             # Should reject malformed tokens without crashing
             assert response.status_code == 401
@@ -302,9 +344,13 @@ class TestAPIKeyBypassAttempts:
     @pytest.fixture
     def test_client_with_api_key_auth(self, test_app_with_api_key_auth) -> TestClient:
         """Test client with API key authentication."""
-        with patch("tripsage_core.services.business.key_management_service.get_key_management_service"):
+        with patch(
+            "tripsage_core.services.business.key_management_service.get_key_management_service"
+        ):
             middleware = AuthenticationMiddleware(test_app_with_api_key_auth)
-            test_app_with_api_key_auth.add_middleware(type(middleware).__bases__[0], dispatch=middleware.dispatch)
+            test_app_with_api_key_auth.add_middleware(
+                type(middleware).__bases__[0], dispatch=middleware.dispatch
+            )
 
             return TestClient(test_app_with_api_key_auth)
 
@@ -312,7 +358,9 @@ class TestAPIKeyBypassAttempts:
     def mock_key_service(self):
         """Mock key management service."""
         service = AsyncMock()
-        service.validate_api_key.return_value = Mock(is_valid=True, message="Valid key", details={"service": "openai"})
+        service.validate_api_key.return_value = Mock(
+            is_valid=True, message="Valid key", details={"service": "openai"}
+        )
         return service
 
     def test_api_key_format_bypass_attempts(self, test_client_with_api_key_auth):
@@ -347,7 +395,9 @@ class TestAPIKeyBypassAttempts:
         ]
 
         for malicious_key in malicious_api_keys:
-            response = test_client_with_api_key_auth.get("/api-protected", headers={"X-API-Key": malicious_key})
+            response = test_client_with_api_key_auth.get(
+                "/api-protected", headers={"X-API-Key": malicious_key}
+            )
 
             # Should reject malformed API keys
             assert response.status_code == 401
@@ -373,12 +423,16 @@ class TestAPIKeyBypassAttempts:
         ]
 
         for headers in injection_headers:
-            response = test_client_with_api_key_auth.get("/api-protected", headers=headers)
+            response = test_client_with_api_key_auth.get(
+                "/api-protected", headers=headers
+            )
 
             # Should handle header variations securely
             assert response.status_code == 401
 
-    def test_api_key_replay_attack_simulation(self, test_client_with_api_key_auth, mock_key_service):
+    def test_api_key_replay_attack_simulation(
+        self, test_client_with_api_key_auth, mock_key_service
+    ):
         """Test API key replay attack scenarios."""
         with patch(
             "tripsage_core.services.business.key_management_service.get_key_management_service",
@@ -387,11 +441,15 @@ class TestAPIKeyBypassAttempts:
             valid_api_key = "sk_openai_123_valid_secret"
 
             # Simulate successful request
-            response1 = test_client_with_api_key_auth.get("/api-protected", headers={"X-API-Key": valid_api_key})
+            response1 = test_client_with_api_key_auth.get(
+                "/api-protected", headers={"X-API-Key": valid_api_key}
+            )
 
             # Simulate replay attack (same key, different time)
             time.sleep(0.1)
-            _response2 = test_client_with_api_key_auth.get("/api-protected", headers={"X-API-Key": valid_api_key})
+            _response2 = test_client_with_api_key_auth.get(
+                "/api-protected", headers={"X-API-Key": valid_api_key}
+            )
 
             # Basic replay should work (API keys are stateless)
             # But implementation might have replay protection
@@ -408,7 +466,9 @@ class TestAPIKeyBypassAttempts:
         results = []
 
         def make_request():
-            response = test_client_with_api_key_auth.get("/api-protected", headers={"X-API-Key": valid_api_key})
+            response = test_client_with_api_key_auth.get(
+                "/api-protected", headers={"X-API-Key": valid_api_key}
+            )
             results.append(response.status_code)
 
         # Simulate concurrent requests with same API key
@@ -495,7 +555,9 @@ class TestAuthenticationHeaderManipulation:
         ]
 
         for malicious_auth in injection_attempts:
-            response = test_client_full_auth.get("/protected", headers={"Authorization": malicious_auth})
+            response = test_client_full_auth.get(
+                "/protected", headers={"Authorization": malicious_auth}
+            )
 
             # Should not be vulnerable to header injection
             assert response.status_code == 401
@@ -524,7 +586,9 @@ class TestAuthenticationHeaderManipulation:
         """Test protection against oversized headers."""
         # Very large header name
         large_header_name = "X-" + "A" * 1000
-        response = test_client_full_auth.get("/protected", headers={large_header_name: "value"})
+        response = test_client_full_auth.get(
+            "/protected", headers={large_header_name: "value"}
+        )
         assert response.status_code in [
             400,
             413,
@@ -533,7 +597,9 @@ class TestAuthenticationHeaderManipulation:
 
         # Very large header value
         large_header_value = "B" * 10000
-        response = test_client_full_auth.get("/protected", headers={"X-Large-Header": large_header_value})
+        response = test_client_full_auth.get(
+            "/protected", headers={"X-Large-Header": large_header_value}
+        )
         assert response.status_code in [400, 413, 431]
 
         # Many headers (header count DoS)
@@ -661,11 +727,15 @@ class TestPrivilegeEscalationAttempts:
         app = test_app_with_roles
 
         with patch("tripsage.api.core.config.get_settings") as mock_settings:
-            mock_return = mock_settings.return_value.database_jwt_secret.get_secret_value
+            mock_return = (
+                mock_settings.return_value.database_jwt_secret.get_secret_value
+            )
             mock_return.return_value = "test_secret"
 
             middleware = AuthenticationMiddleware(app)
-            app.add_middleware(type(middleware).__bases__[0], dispatch=middleware.dispatch)
+            app.add_middleware(
+                type(middleware).__bases__[0], dispatch=middleware.dispatch
+            )
 
             client = TestClient(app)
 
@@ -680,7 +750,9 @@ class TestPrivilegeEscalationAttempts:
 
             admin_token = jwt.encode(admin_payload, "test_secret", algorithm="HS256")
 
-            response = client.get("/admin/users", headers={"Authorization": f"Bearer {admin_token}"})
+            response = client.get(
+                "/admin/users", headers={"Authorization": f"Bearer {admin_token}"}
+            )
 
             # Should not grant admin access based on JWT role claim alone
             # Implementation should validate roles through proper authorization
@@ -735,7 +807,9 @@ class TestInformationDisclosureViaAuthentication:
             token = jwt.encode(payload, "wrong_secret", algorithm="HS256")
 
             start_time = time.time()
-            response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {token}"})
+            response = test_client_with_auth.get(
+                "/protected", headers={"Authorization": f"Bearer {token}"}
+            )
             end_time = time.time()
 
             error_messages.append(response.text)
@@ -760,7 +834,9 @@ class TestInformationDisclosureViaAuthentication:
         ]
 
         for token in malicious_tokens:
-            response = test_client_with_auth.get("/protected", headers={"Authorization": f"Bearer {token}"})
+            response = test_client_with_auth.get(
+                "/protected", headers={"Authorization": f"Bearer {token}"}
+            )
 
             error_text = response.text.lower()
 
@@ -779,7 +855,9 @@ class TestInformationDisclosureViaAuthentication:
             ]
 
             for term in sensitive_terms:
-                assert term not in error_text, f"Error response may leak sensitive info: {term}"
+                assert term not in error_text, (
+                    f"Error response may leak sensitive info: {term}"
+                )
 
     def test_authentication_state_information_leakage(self, test_client_with_auth):
         """Test for authentication state information leakage."""

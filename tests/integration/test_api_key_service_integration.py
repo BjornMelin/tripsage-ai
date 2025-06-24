@@ -162,7 +162,9 @@ async def api_service_integration(db_session, test_redis):
         }
 
     async def mock_get_api_key(key_id: str):
-        result = await db_session.execute(text("SELECT * FROM api_keys WHERE id = :id"), {"id": key_id})
+        result = await db_session.execute(
+            text("SELECT * FROM api_keys WHERE id = :id"), {"id": key_id}
+        )
         row = result.fetchone()
         if row:
             return dict(row._mapping)
@@ -176,7 +178,9 @@ async def api_service_integration(db_session, test_redis):
         return [dict(row._mapping) for row in result.fetchall()]
 
     async def mock_delete_api_key(key_id: str):
-        result = await db_session.execute(text("DELETE FROM api_keys WHERE id = :id"), {"id": key_id})
+        result = await db_session.execute(
+            text("DELETE FROM api_keys WHERE id = :id"), {"id": key_id}
+        )
         await db_session.commit()
         return result.rowcount > 0
 
@@ -303,12 +307,16 @@ class TestApiKeyServiceIntegration:
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
 
             # First validation - should hit external API
-            result1 = await api_service_integration.validate_api_key(ServiceType.OPENAI, test_key, user_id)
+            result1 = await api_service_integration.validate_api_key(
+                ServiceType.OPENAI, test_key, user_id
+            )
             assert result1.is_valid is True
             assert mock_get.call_count == 1
 
             # Second validation - should use cache
-            result2 = await api_service_integration.validate_api_key(ServiceType.OPENAI, test_key, user_id)
+            result2 = await api_service_integration.validate_api_key(
+                ServiceType.OPENAI, test_key, user_id
+            )
             assert result2.is_valid is True
             # Call count should still be 1 (cached result)
             assert mock_get.call_count == 1
@@ -388,7 +396,9 @@ class TestApiKeyServiceIntegration:
 
             # Rotate the key
             new_key_value = "sk-rotated_key_67890"
-            rotated_key = await api_service_integration.rotate_key(key_id, new_key_value, user_id)
+            rotated_key = await api_service_integration.rotate_key(
+                key_id, new_key_value, user_id
+            )
 
             # Verify rotation
             assert rotated_key.id == key_id  # Same ID
@@ -440,7 +450,9 @@ class TestApiKeyServiceIntegration:
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_get.side_effect = asyncio.TimeoutError("Network timeout")
 
-            result = await api_service_integration.validate_api_key(ServiceType.OPENAI, "sk-timeout_test", user_id)
+            result = await api_service_integration.validate_api_key(
+                ServiceType.OPENAI, "sk-timeout_test", user_id
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -452,7 +464,9 @@ class TestApiKeyServiceIntegration:
             mock_response.status_code = 401
             mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
 
-            result = await api_service_integration.validate_api_key(ServiceType.OPENAI, "sk-invalid_key", user_id)
+            result = await api_service_integration.validate_api_key(
+                ServiceType.OPENAI, "sk-invalid_key", user_id
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.INVALID

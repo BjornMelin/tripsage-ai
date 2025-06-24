@@ -194,7 +194,9 @@ class BaseAgent:
             logger.warning("Could not register tools from %s: %s", module_name, str(e))
             return 0
 
-    def _create_service_injected_tool(self, tool: Callable, service_registry: ServiceRegistry) -> Callable:
+    def _create_service_injected_tool(
+        self, tool: Callable, service_registry: ServiceRegistry
+    ) -> Callable:
         """Create a wrapper that injects the service registry into a tool.
 
         Args:
@@ -294,11 +296,15 @@ class BaseAgent:
         """
         from tripsage.agents.handoffs.helper import register_handoff_tools
 
-        return register_handoff_tools(self, target_agents, service_registry=self.service_registry)
+        return register_handoff_tools(
+            self, target_agents, service_registry=self.service_registry
+        )
 
     def register_multiple_delegations(
         self,
-        target_agents: Dict[str, Dict[str, Union[Type["BaseAgent"], str, List[str], str]]],
+        target_agents: Dict[
+            str, Dict[str, Union[Type["BaseAgent"], str, List[str], str]]
+        ],
     ) -> int:
         """Register multiple delegation tools at once.
 
@@ -314,9 +320,13 @@ class BaseAgent:
         """
         from tripsage.agents.handoffs.helper import register_delegation_tools
 
-        return register_delegation_tools(self, target_agents, service_registry=self.service_registry)
+        return register_delegation_tools(
+            self, target_agents, service_registry=self.service_registry
+        )
 
-    async def _initialize_session(self, user_id: Optional[str] = None) -> Dict[str, Any]:
+    async def _initialize_session(
+        self, user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Initialize a new session with memory data.
 
         Args:
@@ -330,7 +340,9 @@ class BaseAgent:
             session_data = {}
             if user_id and self.service_registry.memory_service:
                 # Get user context from memory service
-                context = await self.service_registry.memory_service.get_user_context(user_id)
+                context = await self.service_registry.memory_service.get_user_context(
+                    user_id
+                )
                 session_data = {
                     "user_id": user_id,
                     "preferences": context.get("preferences", {}),
@@ -377,7 +389,9 @@ class BaseAgent:
             logger.error("Error saving session summary: %s", str(e))
             log_exception(e)
 
-    async def run(self, user_input: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def run(
+        self, user_input: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Run the agent with user input.
 
         Args:
@@ -388,7 +402,9 @@ class BaseAgent:
             Dictionary with the agent's response and other information
         """
         # Add to message history
-        self.messages_history.append({"role": "user", "content": user_input, "timestamp": time.time()})
+        self.messages_history.append(
+            {"role": "user", "content": user_input, "timestamp": time.time()}
+        )
 
         # Set up context
         run_context = context or {}
@@ -416,7 +432,11 @@ class BaseAgent:
                     "from": handoff_source,
                     "to": self.name,
                     "timestamp": time.time(),
-                    "query": (user_input[:100] + "..." if len(user_input) > 100 else user_input),
+                    "query": (
+                        user_input[:100] + "..."
+                        if len(user_input) > 100
+                        else user_input
+                    ),
                 }
             )
 
@@ -447,7 +467,9 @@ class BaseAgent:
 
                     # Add handoff information to response
                     result.handoff_detected = True
-                    result.handoff_target = self._handoff_tools[tool_name]["target_agent"]
+                    result.handoff_target = self._handoff_tools[tool_name][
+                        "target_agent"
+                    ]
                     result.handoff_tool = tool_name
 
                     # Create handoff response with both content and handoff metadata
@@ -488,7 +510,9 @@ class BaseAgent:
             # Save session summary if needed and we have enough messages
             if len(self.messages_history) >= 10 and "user_id" in run_context:
                 # Generate session summary
-                summary = f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                summary = (
+                    f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                )
                 await self._save_session_summary(run_context["user_id"], summary)
 
             return response

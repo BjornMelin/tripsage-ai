@@ -235,7 +235,9 @@ class TestDashboardRouter:
         validator.check_all_services_health.return_value = health_checks
         return validator
 
-    def test_get_system_overview_success(self, client, mock_principal, mock_monitoring_service):
+    def test_get_system_overview_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful system overview retrieval."""
         with (
             patch(
@@ -278,7 +280,9 @@ class TestDashboardRouter:
         ):
             response = client.get("/api/dashboard/overview")
 
-            assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY  # Due to validation error
+            assert (
+                response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+            )  # Due to validation error
 
     def test_get_services_status_success(self, client, mock_principal, mock_validator):
         """Test successful services status retrieval."""
@@ -303,7 +307,9 @@ class TestDashboardRouter:
             assert data[1]["service"] == "weather"
             assert data[1]["status"] == "degraded"
 
-    def test_get_usage_metrics_success(self, client, mock_principal, mock_monitoring_service):
+    def test_get_usage_metrics_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful usage metrics retrieval."""
         with (
             patch(
@@ -315,7 +321,9 @@ class TestDashboardRouter:
                 return_value=mock_monitoring_service,
             ),
         ):
-            response = client.get("/api/dashboard/metrics?time_range_hours=24&service=openai")
+            response = client.get(
+                "/api/dashboard/metrics?time_range_hours=24&service=openai"
+            )
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()
@@ -334,11 +342,15 @@ class TestDashboardRouter:
             "tripsage.api.routers.dashboard.get_current_principal",
             return_value=mock_principal,
         ):
-            response = client.get("/api/dashboard/metrics?time_range_hours=200")  # Too large
+            response = client.get(
+                "/api/dashboard/metrics?time_range_hours=200"
+            )  # Too large
 
             assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_get_rate_limits_status_success(self, client, mock_principal, mock_monitoring_service):
+    def test_get_rate_limits_status_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful rate limits status retrieval."""
         with (
             patch(
@@ -386,10 +398,14 @@ class TestDashboardRouter:
             alert = data[0]
             assert alert["alert_id"] == "alert1"
             assert alert["severity"] == "high"
-            assert alert["type"] == "high_error_rate"  # Updated to use AlertType enum value
+            assert (
+                alert["type"] == "high_error_rate"
+            )  # Updated to use AlertType enum value
             assert alert["acknowledged"] is False
 
-    def test_get_alerts_with_filters(self, client, mock_principal, mock_monitoring_service):
+    def test_get_alerts_with_filters(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test alerts retrieval with filters."""
         with (
             patch(
@@ -401,7 +417,9 @@ class TestDashboardRouter:
                 return_value=mock_monitoring_service,
             ),
         ):
-            response = client.get("/api/dashboard/alerts?severity=high&acknowledged=false")
+            response = client.get(
+                "/api/dashboard/alerts?severity=high&acknowledged=false"
+            )
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()
@@ -412,7 +430,9 @@ class TestDashboardRouter:
                 assert alert["severity"] == "high"
                 assert alert["acknowledged"] is False
 
-    def test_acknowledge_alert_success(self, client, mock_principal, mock_monitoring_service):
+    def test_acknowledge_alert_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful alert acknowledgment."""
         with (
             patch(
@@ -434,7 +454,9 @@ class TestDashboardRouter:
             assert data["acknowledged_by"] == mock_principal.id
             assert "acknowledged_at" in data
 
-    def test_acknowledge_alert_not_found(self, client, mock_principal, mock_monitoring_service):
+    def test_acknowledge_alert_not_found(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test acknowledging non-existent alert."""
         with (
             patch(
@@ -450,7 +472,9 @@ class TestDashboardRouter:
 
             assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_dismiss_alert_success(self, client, mock_principal, mock_monitoring_service):
+    def test_dismiss_alert_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful alert dismissal."""
         with (
             patch(
@@ -471,7 +495,9 @@ class TestDashboardRouter:
             assert data["alert_id"] == "alert1"
             assert data["dismissed_by"] == mock_principal.id
 
-    def test_get_user_activity_success(self, client, mock_principal, mock_monitoring_service):
+    def test_get_user_activity_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful user activity retrieval."""
         with (
             patch(
@@ -497,7 +523,9 @@ class TestDashboardRouter:
                 assert "success_rate" in user_activity
                 assert "services_used" in user_activity
 
-    def test_get_trend_data_success(self, client, mock_principal, mock_monitoring_service):
+    def test_get_trend_data_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful trend data retrieval."""
         with (
             patch(
@@ -531,7 +559,9 @@ class TestDashboardRouter:
 
             assert response.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_get_analytics_summary_success(self, client, mock_principal, mock_monitoring_service):
+    def test_get_analytics_summary_success(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test successful analytics summary retrieval."""
         with (
             patch(
@@ -577,7 +607,9 @@ class TestDashboardRouter:
             data = response.json()
             assert "Failed to retrieve system overview" in data["detail"]
 
-    def test_rate_limits_query_parameters(self, client, mock_principal, mock_monitoring_service):
+    def test_rate_limits_query_parameters(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test rate limits endpoint with query parameters."""
         with (
             patch(
@@ -596,7 +628,9 @@ class TestDashboardRouter:
             assert isinstance(data, list)
             assert len(data) <= 10
 
-    def test_user_activity_query_parameters(self, client, mock_principal, mock_monitoring_service):
+    def test_user_activity_query_parameters(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test user activity endpoint with query parameters."""
         with (
             patch(
@@ -608,14 +642,18 @@ class TestDashboardRouter:
                 return_value=mock_monitoring_service,
             ),
         ):
-            response = client.get("/api/dashboard/users/activity?time_range_hours=12&limit=5")
+            response = client.get(
+                "/api/dashboard/users/activity?time_range_hours=12&limit=5"
+            )
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()
             assert isinstance(data, list)
             assert len(data) <= 5
 
-    def test_trend_data_query_parameters(self, client, mock_principal, mock_monitoring_service):
+    def test_trend_data_query_parameters(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test trend data endpoint with query parameters."""
         with (
             patch(
@@ -627,13 +665,17 @@ class TestDashboardRouter:
                 return_value=mock_monitoring_service,
             ),
         ):
-            response = client.get("/api/dashboard/trends/request_count?time_range_hours=48&interval_minutes=120")
+            response = client.get(
+                "/api/dashboard/trends/request_count?time_range_hours=48&interval_minutes=120"
+            )
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()
             assert isinstance(data, list)
 
-    def test_analytics_summary_query_parameters(self, client, mock_principal, mock_monitoring_service):
+    def test_analytics_summary_query_parameters(
+        self, client, mock_principal, mock_monitoring_service
+    ):
         """Test analytics summary endpoint with query parameters."""
         with (
             patch(
@@ -645,7 +687,9 @@ class TestDashboardRouter:
                 return_value=mock_monitoring_service,
             ),
         ):
-            response = client.get("/api/dashboard/analytics/summary?time_range_hours=72")
+            response = client.get(
+                "/api/dashboard/analytics/summary?time_range_hours=72"
+            )
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()

@@ -136,7 +136,9 @@ async def get_flight_offer(
     return offer
 
 
-@router.post("/saved", response_model=SavedFlightResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/saved", response_model=SavedFlightResponse, status_code=status.HTTP_201_CREATED
+)
 async def save_flight(
     request: SavedFlightRequest,
     principal: Principal = Depends(require_principal),
@@ -320,7 +322,9 @@ async def get_upcoming_flights(
                 # Enhanced fields with trip context
                 trip_id=f"trip-{i + 1}" if include_trip_context else None,
                 trip_title=random.choice(trip_names) if include_trip_context else None,
-                is_shared_trip=random.choice([True, False]) if include_trip_context else False,
+                is_shared_trip=random.choice([True, False])
+                if include_trip_context
+                else False,
                 collaborator_count=random.randint(0, 4) if include_trip_context else 0,
             )
 

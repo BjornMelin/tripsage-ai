@@ -80,7 +80,9 @@ def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
         )
 
 
-def safe_execute_with_logging(func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any) -> Union[T, R]:
+def safe_execute_with_logging(
+    func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any
+) -> Union[T, R]:
     """Execute a function with error handling and TripSage logging.
 
     Args:

@@ -90,7 +90,9 @@ class TestSearchHistoryEndpoints:
         """Test successful retrieval of recent searches."""
         # Setup mock
         mock_get_service.return_value = mock_search_history_service
-        mock_search_history_service.get_recent_searches.return_value = sample_search_history
+        mock_search_history_service.get_recent_searches.return_value = (
+            sample_search_history
+        )
 
         # Call endpoint
         result = await get_recent_searches(
@@ -108,7 +110,9 @@ class TestSearchHistoryEndpoints:
         assert call_args[0][0] == "user123"  # First positional arg is user_id
 
     @patch("tripsage.api.routers.search.get_search_history_service")
-    async def test_get_recent_searches_with_limit(self, mock_get_service, mock_user_id, mock_search_history_service):
+    async def test_get_recent_searches_with_limit(
+        self, mock_get_service, mock_user_id, mock_search_history_service
+    ):
         """Test retrieval of recent searches with custom limit."""
         # Setup mock
         mock_get_service.return_value = mock_search_history_service
@@ -123,10 +127,14 @@ class TestSearchHistoryEndpoints:
         # Verify
         assert isinstance(result, list)
         assert len(result) == 0
-        mock_search_history_service.get_recent_searches.assert_called_once_with("user123", limit=5)
+        mock_search_history_service.get_recent_searches.assert_called_once_with(
+            "user123", limit=5
+        )
 
     @patch("tripsage.api.routers.search.get_search_history_service")
-    async def test_get_recent_searches_empty(self, mock_get_service, mock_user_id, mock_search_history_service):
+    async def test_get_recent_searches_empty(
+        self, mock_get_service, mock_user_id, mock_search_history_service
+    ):
         """Test retrieval when no recent searches exist."""
         # Setup mock to return empty list
         mock_get_service.return_value = mock_search_history_service
@@ -184,7 +192,9 @@ class TestSearchHistoryEndpoints:
         """Test save search when service raises an error."""
         # Setup mock to raise error
         mock_get_service.return_value = mock_search_history_service
-        mock_search_history_service.save_search.side_effect = Exception("Database error")
+        mock_search_history_service.save_search.side_effect = Exception(
+            "Database error"
+        )
 
         # Call endpoint and expect 500
         with pytest.raises(HTTPException) as exc_info:
@@ -197,7 +207,9 @@ class TestSearchHistoryEndpoints:
         assert "Failed to save search" in exc_info.value.detail
 
     @patch("tripsage.api.routers.search.get_search_history_service")
-    async def test_delete_saved_search_success(self, mock_get_service, mock_user_id, mock_search_history_service):
+    async def test_delete_saved_search_success(
+        self, mock_get_service, mock_user_id, mock_search_history_service
+    ):
         """Test successful deletion of a saved search."""
         # Setup
         search_id = str(uuid4())
@@ -211,10 +223,14 @@ class TestSearchHistoryEndpoints:
         )
 
         # Verify - should return 204 No Content (no return value)
-        mock_search_history_service.delete_saved_search.assert_called_once_with("user123", search_id)
+        mock_search_history_service.delete_saved_search.assert_called_once_with(
+            "user123", search_id
+        )
 
     @patch("tripsage.api.routers.search.get_search_history_service")
-    async def test_delete_saved_search_not_found(self, mock_get_service, mock_user_id, mock_search_history_service):
+    async def test_delete_saved_search_not_found(
+        self, mock_get_service, mock_user_id, mock_search_history_service
+    ):
         """Test deletion when search is not found."""
         # Setup
         search_id = str(uuid4())
@@ -232,12 +248,16 @@ class TestSearchHistoryEndpoints:
         assert exc_info.value.detail == "Saved search not found"
 
     @patch("tripsage.api.routers.search.get_search_history_service")
-    async def test_delete_saved_search_service_error(self, mock_get_service, mock_user_id, mock_search_history_service):
+    async def test_delete_saved_search_service_error(
+        self, mock_get_service, mock_user_id, mock_search_history_service
+    ):
         """Test deletion when service raises an error."""
         # Setup
         search_id = str(uuid4())
         mock_get_service.return_value = mock_search_history_service
-        mock_search_history_service.delete_saved_search.side_effect = Exception("Database error")
+        mock_search_history_service.delete_saved_search.side_effect = Exception(
+            "Database error"
+        )
 
         # Call endpoint and expect 500
         with pytest.raises(HTTPException) as exc_info:

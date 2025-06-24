@@ -180,11 +180,23 @@ async def integration_db_engine():
         )
 
         # Indexes for performance
-        await conn.execute(text("CREATE INDEX idx_api_keys_user_id ON api_keys(user_id)"))
-        await conn.execute(text("CREATE INDEX idx_api_keys_service ON api_keys(service)"))
-        await conn.execute(text("CREATE INDEX idx_usage_logs_key_id ON api_key_usage_logs(key_id)"))
-        await conn.execute(text("CREATE INDEX idx_usage_logs_timestamp ON api_key_usage_logs(timestamp)"))
-        await conn.execute(text("CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp)"))
+        await conn.execute(
+            text("CREATE INDEX idx_api_keys_user_id ON api_keys(user_id)")
+        )
+        await conn.execute(
+            text("CREATE INDEX idx_api_keys_service ON api_keys(service)")
+        )
+        await conn.execute(
+            text("CREATE INDEX idx_usage_logs_key_id ON api_key_usage_logs(key_id)")
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX idx_usage_logs_timestamp ON api_key_usage_logs(timestamp)"
+            )
+        )
+        await conn.execute(
+            text("CREATE INDEX idx_audit_logs_timestamp ON audit_logs(timestamp)")
+        )
 
     yield engine
     await engine.dispose()
@@ -242,7 +254,9 @@ async def authenticated_test_client(test_user_factory):
     """Create TestClient with authenticated user."""
     user = await test_user_factory()
 
-    with patch("tripsage.api.core.dependencies.get_principal_id", return_value=user["id"]):
+    with patch(
+        "tripsage.api.core.dependencies.get_principal_id", return_value=user["id"]
+    ):
         with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
             mock_principal = MagicMock()
             mock_principal.user_id = user["id"]
@@ -259,7 +273,9 @@ def mock_external_apis():
     """Mock external API responses for testing."""
     with patch("httpx.AsyncClient.get") as mock_get:
 
-        def api_response_factory(service: str, status_code: int = 200, valid: bool = True):
+        def api_response_factory(
+            service: str, status_code: int = 200, valid: bool = True
+        ):
             response = MagicMock()
             response.status_code = status_code
 
@@ -290,7 +306,9 @@ def mock_external_apis():
                     "x-ratelimit-limit": "100",
                     "x-ratelimit-remaining": "0",
                 }
-                response.json.return_value = {"error": {"message": "Rate limit exceeded"}}
+                response.json.return_value = {
+                    "error": {"message": "Rate limit exceeded"}
+                }
 
             return response
 
@@ -304,8 +322,12 @@ def mock_external_apis():
 @pytest.fixture
 def mock_encryption():
     """Mock encryption for faster tests."""
-    with patch("tripsage_core.services.business.api_key_service.ApiKeyService._encrypt_api_key") as mock_encrypt:
-        with patch("tripsage_core.services.business.api_key_service.ApiKeyService._decrypt_api_key") as mock_decrypt:
+    with patch(
+        "tripsage_core.services.business.api_key_service.ApiKeyService._encrypt_api_key"
+    ) as mock_encrypt:
+        with patch(
+            "tripsage_core.services.business.api_key_service.ApiKeyService._decrypt_api_key"
+        ) as mock_decrypt:
             # Simple mock encryption/decryption
             def encrypt(key_value: str) -> str:
                 return f"encrypted_{key_value}"
@@ -337,10 +359,14 @@ pytest_plugins = ["pytest_asyncio"]
 
 def pytest_configure(config):
     """Configure pytest with custom markers for integration tests."""
-    config.addinivalue_line("markers", "integration: Integration tests with real dependencies")
+    config.addinivalue_line(
+        "markers", "integration: Integration tests with real dependencies"
+    )
     config.addinivalue_line("markers", "full_stack: Full stack integration tests")
     config.addinivalue_line("markers", "performance: Performance and load tests")
-    config.addinivalue_line("markers", "external_api: Tests requiring external API mocking")
+    config.addinivalue_line(
+        "markers", "external_api: Tests requiring external API mocking"
+    )
     config.addinivalue_line("markers", "database: Tests requiring database operations")
     config.addinivalue_line("markers", "cache: Tests requiring cache operations")
 

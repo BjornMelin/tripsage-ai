@@ -27,7 +27,9 @@ class TestEnhancedHealthEndpoints:
     @pytest.fixture
     async def async_client(self):
         """Create async test client."""
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
             yield ac
 
     @pytest.fixture
@@ -140,7 +142,9 @@ class TestEnhancedHealthEndpoints:
     ):
         """Test comprehensive health check with all services healthy."""
         with (
-            patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class,
+            patch(
+                "tripsage.api.routers.health.ApiKeyValidator"
+            ) as mock_validator_class,
             patch(
                 "tripsage.api.core.dependencies.get_database_service",
                 return_value=mock_db_service,
@@ -155,7 +159,9 @@ class TestEnhancedHealthEndpoints:
             ),
         ):
             # Configure the validator context manager
-            mock_validator_class.return_value.__aenter__.return_value = mock_validator_healthy
+            mock_validator_class.return_value.__aenter__.return_value = (
+                mock_validator_healthy
+            )
             mock_validator_class.return_value.__aexit__.return_value = None
 
             response = await async_client.get("/api/health")
@@ -172,18 +178,24 @@ class TestEnhancedHealthEndpoints:
             assert len(data["external_services"]) == 3
 
             # Verify application component
-            app_component = next(c for c in data["components"] if c["name"] == "application")
+            app_component = next(
+                c for c in data["components"] if c["name"] == "application"
+            )
             assert app_component["status"] == "healthy"
             assert app_component["message"] == "TripSage API is running"
 
             # Verify database component
-            db_component = next(c for c in data["components"] if c["name"] == "database")
+            db_component = next(
+                c for c in data["components"] if c["name"] == "database"
+            )
             assert db_component["status"] == "healthy"
             assert db_component["message"] == "Database is responsive"
             assert db_component["latency_ms"] is not None
 
             # Verify cache component
-            cache_component = next(c for c in data["components"] if c["name"] == "cache")
+            cache_component = next(
+                c for c in data["components"] if c["name"] == "cache"
+            )
             assert cache_component["status"] == "healthy"
             assert cache_component["message"] == "Cache is responsive"
 
@@ -202,7 +214,9 @@ class TestEnhancedHealthEndpoints:
     ):
         """Test comprehensive health check with degraded/unhealthy services."""
         with (
-            patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class,
+            patch(
+                "tripsage.api.routers.health.ApiKeyValidator"
+            ) as mock_validator_class,
             patch(
                 "tripsage.api.core.dependencies.get_database_service",
                 return_value=mock_db_service,
@@ -216,7 +230,9 @@ class TestEnhancedHealthEndpoints:
                 return_value=mock_settings,
             ),
         ):
-            mock_validator_class.return_value.__aenter__.return_value = mock_validator_degraded
+            mock_validator_class.return_value.__aenter__.return_value = (
+                mock_validator_degraded
+            )
             mock_validator_class.return_value.__aexit__.return_value = None
 
             response = await async_client.get("/api/health")
@@ -228,12 +244,16 @@ class TestEnhancedHealthEndpoints:
             assert data["status"] == "unhealthy"
 
             # Verify degraded service
-            weather_component = next(c for c in data["components"] if c["name"] == "external_weather")
+            weather_component = next(
+                c for c in data["components"] if c["name"] == "external_weather"
+            )
             assert weather_component["status"] == "degraded"
             assert weather_component["latency_ms"] == 800.0
 
             # Verify unhealthy service
-            maps_component = next(c for c in data["components"] if c["name"] == "external_googlemaps")
+            maps_component = next(
+                c for c in data["components"] if c["name"] == "external_googlemaps"
+            )
             assert maps_component["status"] == "unhealthy"
             assert maps_component["latency_ms"] == 5000.0
 
@@ -246,7 +266,9 @@ class TestEnhancedHealthEndpoints:
         failing_db.execute_query.side_effect = Exception("Database connection failed")
 
         with (
-            patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class,
+            patch(
+                "tripsage.api.routers.health.ApiKeyValidator"
+            ) as mock_validator_class,
             patch(
                 "tripsage.api.core.dependencies.get_database_service",
                 return_value=failing_db,
@@ -260,7 +282,9 @@ class TestEnhancedHealthEndpoints:
                 return_value=mock_settings,
             ),
         ):
-            mock_validator_class.return_value.__aenter__.return_value = mock_validator_healthy
+            mock_validator_class.return_value.__aenter__.return_value = (
+                mock_validator_healthy
+            )
             mock_validator_class.return_value.__aexit__.return_value = None
 
             response = await async_client.get("/api/health")
@@ -272,7 +296,9 @@ class TestEnhancedHealthEndpoints:
             assert data["status"] == "degraded"
 
             # Verify database component shows failure
-            db_component = next(c for c in data["components"] if c["name"] == "database")
+            db_component = next(
+                c for c in data["components"] if c["name"] == "database"
+            )
             assert db_component["status"] == "unhealthy"
             assert "Database connection failed" in db_component["message"]
 
@@ -286,7 +312,9 @@ class TestEnhancedHealthEndpoints:
         assert data["status"] == "alive"
         assert "timestamp" in data
 
-    async def test_readiness_check_ready(self, async_client, mock_db_service, mock_cache_service):
+    async def test_readiness_check_ready(
+        self, async_client, mock_db_service, mock_cache_service
+    ):
         """Test readiness check when all dependencies are ready."""
         with (
             patch(
@@ -364,10 +392,16 @@ class TestEnhancedHealthEndpoints:
             assert data["checks"]["database"] is False
             assert "Database check timed out" in data["details"]["database"]
 
-    async def test_specific_service_health_check_healthy(self, async_client, mock_validator_healthy):
+    async def test_specific_service_health_check_healthy(
+        self, async_client, mock_validator_healthy
+    ):
         """Test checking health of a specific external service."""
-        with patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class:
-            mock_validator_class.return_value.__aenter__.return_value = mock_validator_healthy
+        with patch(
+            "tripsage.api.routers.health.ApiKeyValidator"
+        ) as mock_validator_class:
+            mock_validator_class.return_value.__aenter__.return_value = (
+                mock_validator_healthy
+            )
             mock_validator_class.return_value.__aexit__.return_value = None
 
             response = await async_client.get("/api/health/services/openai")
@@ -390,8 +424,12 @@ class TestEnhancedHealthEndpoints:
             message="OpenAI API is down",
         )
 
-        with patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class:
-            mock_validator_class.return_value.__aenter__.return_value = unhealthy_validator
+        with patch(
+            "tripsage.api.routers.health.ApiKeyValidator"
+        ) as mock_validator_class:
+            mock_validator_class.return_value.__aenter__.return_value = (
+                unhealthy_validator
+            )
             mock_validator_class.return_value.__aexit__.return_value = None
 
             response = await async_client.get("/api/health/services/openai")
@@ -407,9 +445,13 @@ class TestEnhancedHealthEndpoints:
     async def test_specific_service_health_check_error(self, async_client):
         """Test service health check with error."""
         error_validator = AsyncMock()
-        error_validator.check_service_health.side_effect = Exception("Service check failed")
+        error_validator.check_service_health.side_effect = Exception(
+            "Service check failed"
+        )
 
-        with patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class:
+        with patch(
+            "tripsage.api.routers.health.ApiKeyValidator"
+        ) as mock_validator_class:
             mock_validator_class.return_value.__aenter__.return_value = error_validator
             mock_validator_class.return_value.__aexit__.return_value = None
 
@@ -458,7 +500,9 @@ class TestEnhancedHealthEndpoints:
 
     async def test_cache_health_check_no_cache(self, async_client):
         """Test cache health check when cache is not configured."""
-        with patch("tripsage.api.core.dependencies.get_cache_service", return_value=None):
+        with patch(
+            "tripsage.api.core.dependencies.get_cache_service", return_value=None
+        ):
             response = await async_client.get("/api/health/cache")
 
             assert response.status_code == status.HTTP_200_OK
@@ -486,7 +530,9 @@ class TestEnhancedHealthEndpoints:
     ):
         """Test comprehensive health check when external services check fails."""
         with (
-            patch("tripsage.api.routers.health.ApiKeyValidator") as mock_validator_class,
+            patch(
+                "tripsage.api.routers.health.ApiKeyValidator"
+            ) as mock_validator_class,
             patch(
                 "tripsage.api.core.dependencies.get_database_service",
                 return_value=mock_db_service,
@@ -501,7 +547,9 @@ class TestEnhancedHealthEndpoints:
             ),
         ):
             # Make the validator constructor raise an exception
-            mock_validator_class.side_effect = Exception("Validator initialization failed")
+            mock_validator_class.side_effect = Exception(
+                "Validator initialization failed"
+            )
 
             response = await async_client.get("/api/health")
 
@@ -535,7 +583,9 @@ class TestEnhancedHealthEndpoints:
 
         # Act
         start_time = time.time()
-        response = await async_client.get("/api/health/liveness")  # Use liveness for perf test
+        response = await async_client.get(
+            "/api/health/liveness"
+        )  # Use liveness for perf test
         end_time = time.time()
 
         # Assert

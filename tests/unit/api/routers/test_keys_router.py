@@ -37,7 +37,9 @@ class TestKeysRouter:
     @pytest.fixture
     def mock_principal(self):
         """Mock authenticated principal."""
-        return Principal(id="user123", type="user", email="test@example.com", auth_method="jwt")
+        return Principal(
+            id="user123", type="user", email="test@example.com", auth_method="jwt"
+        )
 
     @pytest.fixture
     def mock_key_service(self):
@@ -62,7 +64,9 @@ class TestKeysRouter:
     @pytest.fixture
     def sample_key_data(self):
         """Sample API key creation data."""
-        return ApiKeyCreate(service="openai", key="sk-test123456789", name="Test OpenAI Key")
+        return ApiKeyCreate(
+            service="openai", key="sk-test123456789", name="Test OpenAI Key"
+        )
 
     async def test_list_keys_success(self, mock_principal, mock_key_service):
         """Test successful API key listing."""
@@ -92,7 +96,9 @@ class TestKeysRouter:
         assert result == []
         mock_key_service.list_user_keys.assert_called_once_with("user123")
 
-    async def test_create_key_success(self, mock_principal, mock_key_service, sample_key_data):
+    async def test_create_key_success(
+        self, mock_principal, mock_key_service, sample_key_data
+    ):
         """Test successful API key creation."""
         # Mock validation success
         mock_validation = MagicMock()
@@ -112,14 +118,18 @@ class TestKeysRouter:
         result = await create_key(sample_key_data, mock_principal, mock_key_service)
 
         # Verify validation was called
-        mock_key_service.validate_key.assert_called_once_with("sk-test123456789", "openai")
+        mock_key_service.validate_key.assert_called_once_with(
+            "sk-test123456789", "openai"
+        )
 
         # Verify creation was called
         mock_key_service.create_key.assert_called_once_with("user123", sample_key_data)
 
         assert result == expected_key
 
-    async def test_create_key_invalid_validation(self, mock_principal, mock_key_service, sample_key_data):
+    async def test_create_key_invalid_validation(
+        self, mock_principal, mock_key_service, sample_key_data
+    ):
         """Test API key creation with invalid key."""
         # Mock validation failure
         mock_validation = MagicMock()
@@ -187,7 +197,9 @@ class TestKeysRouter:
 
         result = await validate_key(key_data, mock_principal, mock_key_service)
 
-        mock_key_service.validate_key.assert_called_once_with("sk-test123", "openai", "user123")
+        mock_key_service.validate_key.assert_called_once_with(
+            "sk-test123", "openai", "user123"
+        )
         assert result == expected_validation
 
     async def test_rotate_key_success(self, mock_principal, mock_key_service):
@@ -210,8 +222,12 @@ class TestKeysRouter:
 
         # Verify all calls
         mock_key_service.get_key.assert_called_once_with("key123")
-        mock_key_service.validate_key.assert_called_once_with("sk-newkey123", "openai", "user123")
-        mock_key_service.rotate_key.assert_called_once_with("key123", "sk-newkey123", "user123")
+        mock_key_service.validate_key.assert_called_once_with(
+            "sk-newkey123", "openai", "user123"
+        )
+        mock_key_service.rotate_key.assert_called_once_with(
+            "key123", "sk-newkey123", "user123"
+        )
 
         assert result == expected_rotated_key
 
@@ -268,7 +284,9 @@ class TestKeysRouter:
         # Since the function has no implementation, it returns None
         assert result is None
 
-    async def test_get_audit_log_custom_limit(self, mock_principal, mock_monitoring_service):
+    async def test_get_audit_log_custom_limit(
+        self, mock_principal, mock_monitoring_service
+    ):
         """Test getting audit log with custom limit."""
         mock_monitoring_service.get_audit_log.return_value = []
 

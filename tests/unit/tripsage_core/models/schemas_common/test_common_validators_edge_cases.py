@@ -367,7 +367,9 @@ class TestValidatorEdgeCases:
         max_len=st.integers(min_value=0, max_value=100),
     )
     @settings(max_examples=100, deadline=None)
-    def test_string_length_range_property_based(self, text_value: str, min_len: int, max_len: int):
+    def test_string_length_range_property_based(
+        self, text_value: str, min_len: int, max_len: int
+    ):
         """Test string length range validator with property-based testing."""
         if min_len <= max_len:  # Only test valid range configurations
             validator = validate_string_length_range(min_len, max_len)
@@ -387,7 +389,9 @@ class TestValidatorEdgeCases:
     @given(
         rating=st.one_of(
             st.none(),
-            st.floats(min_value=-10, max_value=10, allow_nan=False, allow_infinity=False),
+            st.floats(
+                min_value=-10, max_value=10, allow_nan=False, allow_infinity=False
+            ),
             st.integers(min_value=-10, max_value=10),
         )
     )
@@ -402,7 +406,9 @@ class TestValidatorEdgeCases:
         except ValueError:
             # Should fail if not a number or outside range
             if rating is not None:
-                assert not isinstance(rating, (int, float)) or rating < 0.0 or rating > 5.0
+                assert (
+                    not isinstance(rating, (int, float)) or rating < 0.0 or rating > 5.0
+                )
 
     def test_annotated_type_combinations(self):
         """Test combinations of annotated types in complex models."""
@@ -507,9 +513,13 @@ class TestValidatorEdgeCases:
                         "DFW",
                         "DEN",
                     ]
-                    airport = CommonValidators.airport_code(airport_codes[i % len(airport_codes)])
+                    airport = CommonValidators.airport_code(
+                        airport_codes[i % len(airport_codes)]
+                    )
                     email = CommonValidators.email_lowercase(f"user{i}@EXAMPLE.COM")
-                    rating = CommonValidators.rating_range(min(i * 0.5, 5.0))  # Cap at 5.0
+                    rating = CommonValidators.rating_range(
+                        min(i * 0.5, 5.0)
+                    )  # Cap at 5.0
                     results.append((airport, email, rating))
                     time.sleep(0.001)  # Small delay
             except Exception as e:

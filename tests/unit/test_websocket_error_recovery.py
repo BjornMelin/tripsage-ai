@@ -255,7 +255,9 @@ class TestExponentialBackoff:
             backoff.next_attempt()
 
         # Next attempt should raise custom exception
-        with pytest.raises(ExponentialBackoffException, match="Max reconnection attempts"):
+        with pytest.raises(
+            ExponentialBackoffException, match="Max reconnection attempts"
+        ):
             backoff.get_delay()
 
     def test_backoff_reset(self):
@@ -352,7 +354,9 @@ class TestRateLimiting:
         assert result["reason"] == "user_limit_exceeded"
 
     @pytest.mark.asyncio
-    async def test_message_rate_connection_limit_exceeded(self, rate_limiter, mock_redis):
+    async def test_message_rate_connection_limit_exceeded(
+        self, rate_limiter, mock_redis
+    ):
         """Test connection message rate limit exceeded."""
         mock_redis.eval.return_value = [0, "connection_limit_exceeded", 50, 601]
 
@@ -459,7 +463,9 @@ class TestWebSocketConnectionAdvanced:
         assert connection.is_stale(timeout_seconds=60) is False
 
         # Simulate old heartbeat
-        connection.last_heartbeat = connection.last_heartbeat.replace(year=connection.last_heartbeat.year - 1)
+        connection.last_heartbeat = connection.last_heartbeat.replace(
+            year=connection.last_heartbeat.year - 1
+        )
         assert connection.is_stale(timeout_seconds=60) is True
 
     def test_ping_timeout_detection(self, connection):
@@ -587,14 +593,18 @@ class TestWebSocketManagerIntegration:
         # Create authenticated connection
         connection_id = str(uuid4())
         user_id = uuid4()
-        connection = WebSocketConnection(websocket=MagicMock(), connection_id=connection_id, user_id=user_id)
+        connection = WebSocketConnection(
+            websocket=MagicMock(), connection_id=connection_id, user_id=user_id
+        )
         manager.connection_service.connections[connection_id] = connection
 
         # Register with messaging service (normally done during authentication)
         manager.messaging_service.register_connection(connection)
 
         # Subscribe to channels
-        request = WebSocketSubscribeRequest(channels=["general", "notifications"], unsubscribe_channels=[])
+        request = WebSocketSubscribeRequest(
+            channels=["general", "notifications"], unsubscribe_channels=[]
+        )
 
         response = await manager.subscribe_connection(connection_id, request)
         assert response.success is True
@@ -617,7 +627,9 @@ class TestWebSocketManagerIntegration:
         # Create connection with existing subscriptions
         connection_id = str(uuid4())
         user_id = uuid4()
-        connection = WebSocketConnection(websocket=MagicMock(), connection_id=connection_id, user_id=user_id)
+        connection = WebSocketConnection(
+            websocket=MagicMock(), connection_id=connection_id, user_id=user_id
+        )
         connection.subscribe_to_channel("general")
         connection.subscribe_to_channel("notifications")
 
@@ -631,7 +643,9 @@ class TestWebSocketManagerIntegration:
         manager.messaging_service.channel_connections["notifications"] = {connection_id}
 
         # Unsubscribe from one, subscribe to another
-        request = WebSocketSubscribeRequest(channels=[f"user:{user_id}"], unsubscribe_channels=["general"])
+        request = WebSocketSubscribeRequest(
+            channels=[f"user:{user_id}"], unsubscribe_channels=["general"]
+        )
 
         response = await manager.subscribe_connection(connection_id, request)
         assert response.success is True
@@ -644,7 +658,9 @@ class TestWebSocketManagerIntegration:
         """Test subscription to unauthorized channel."""
         connection_id = str(uuid4())
         user_id = uuid4()
-        connection = WebSocketConnection(websocket=MagicMock(), connection_id=connection_id, user_id=user_id)
+        connection = WebSocketConnection(
+            websocket=MagicMock(), connection_id=connection_id, user_id=user_id
+        )
         manager.connection_service.connections[connection_id] = connection
 
         # Register with messaging service (normally done during authentication)
@@ -665,7 +681,9 @@ class TestWebSocketManagerIntegration:
         user_id = uuid4()
         mock_ws = MagicMock()
         mock_ws.send_text = AsyncMock()
-        conn1 = WebSocketConnection(websocket=mock_ws, connection_id="conn1", user_id=user_id)
+        conn1 = WebSocketConnection(
+            websocket=mock_ws, connection_id="conn1", user_id=user_id
+        )
         conn1.subscribe_to_channel("test-channel")
 
         manager.connection_service.connections["conn1"] = conn1
@@ -688,8 +706,12 @@ class TestWebSocketManagerIntegration:
         # Add some connections
         from uuid import uuid4
 
-        conn1 = WebSocketConnection(websocket=MagicMock(), connection_id="conn1", user_id=uuid4())
-        conn2 = WebSocketConnection(websocket=MagicMock(), connection_id="conn2", user_id=uuid4())
+        conn1 = WebSocketConnection(
+            websocket=MagicMock(), connection_id="conn1", user_id=uuid4()
+        )
+        conn2 = WebSocketConnection(
+            websocket=MagicMock(), connection_id="conn2", user_id=uuid4()
+        )
 
         manager.connection_service.connections["conn1"] = conn1
         manager.connection_service.connections["conn2"] = conn2
@@ -713,7 +735,9 @@ class TestErrorRecoveryScenarios:
         ws = MagicMock()
         ws.send_text = AsyncMock()
 
-        connection = WebSocketConnection(websocket=ws, connection_id=str(uuid4()), user_id=uuid4())
+        connection = WebSocketConnection(
+            websocket=ws, connection_id=str(uuid4()), user_id=uuid4()
+        )
 
         # Simulate network failures
         ws.send_text.side_effect = [
@@ -771,7 +795,9 @@ class TestErrorRecoveryScenarios:
         for i in range(5):
             mock_ws = MagicMock()
             mock_ws.send_text = AsyncMock()
-            conn = WebSocketConnection(websocket=mock_ws, connection_id=f"conn{i}", user_id=uuid4())
+            conn = WebSocketConnection(
+                websocket=mock_ws, connection_id=f"conn{i}", user_id=uuid4()
+            )
             connections.append(conn)
             manager.connection_service.connections[conn.connection_id] = conn
             # Also register with messaging service
@@ -833,7 +859,9 @@ class TestMonitoredDeque:
 
     def test_monitored_deque_creation(self):
         """Test MonitoredDeque initialization."""
-        queue = MonitoredDeque(maxlen=5, priority_name="high", connection_id="test-conn-123")
+        queue = MonitoredDeque(
+            maxlen=5, priority_name="high", connection_id="test-conn-123"
+        )
 
         assert queue.maxlen == 5
         assert queue.priority_name == "high"
@@ -842,7 +870,9 @@ class TestMonitoredDeque:
 
     def test_normal_append_operations(self):
         """Test normal append operations without dropping."""
-        queue = MonitoredDeque(maxlen=3, priority_name="medium", connection_id="test-conn-456")
+        queue = MonitoredDeque(
+            maxlen=3, priority_name="medium", connection_id="test-conn-456"
+        )
 
         # Add items within capacity
         queue.append("item1")
@@ -910,7 +940,9 @@ class TestMonitoredDeque:
         """Test dropped message counter increments correctly."""
         import logging
 
-        queue = MonitoredDeque(maxlen=1, priority_name="critical", connection_id="conn-xyz")
+        queue = MonitoredDeque(
+            maxlen=1, priority_name="critical", connection_id="conn-xyz"
+        )
 
         # Fill queue
         queue.append("item1")
@@ -935,7 +967,9 @@ class TestMonitoredDeque:
         """Test no logging occurs when queue is under capacity."""
         import logging
 
-        queue = MonitoredDeque(maxlen=5, priority_name="test", connection_id="conn-test")
+        queue = MonitoredDeque(
+            maxlen=5, priority_name="test", connection_id="conn-test"
+        )
 
         with caplog.at_level(logging.WARNING):
             queue.append("item1")
@@ -950,7 +984,9 @@ class TestMonitoredDeque:
         """Test that unlimited queue (maxlen=None) never drops."""
         import logging
 
-        queue = MonitoredDeque(priority_name="unlimited", connection_id="conn-unlimited")
+        queue = MonitoredDeque(
+            priority_name="unlimited", connection_id="conn-unlimited"
+        )
 
         with caplog.at_level(logging.WARNING):
             for i in range(100):

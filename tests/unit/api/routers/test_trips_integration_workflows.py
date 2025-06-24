@@ -97,7 +97,11 @@ class TestTripsIntegrationWorkflows:
                 )
             ],
             "preferences": TripPreferences(
-                budget=Budget(total_budget=Price(amount=Decimal("8000"), currency=CurrencyCode.USD))
+                budget=Budget(
+                    total_budget=Price(
+                        amount=Decimal("8000"), currency=CurrencyCode.USD
+                    )
+                )
             ),
         }
 
@@ -130,7 +134,11 @@ class TestTripsIntegrationWorkflows:
                 ),
             ],
             "preferences": TripPreferences(
-                budget=Budget(total_budget=Price(amount=Decimal("15000"), currency=CurrencyCode.USD))
+                budget=Budget(
+                    total_budget=Price(
+                        amount=Decimal("15000"), currency=CurrencyCode.USD
+                    )
+                )
             ),
         }
 
@@ -161,12 +169,12 @@ class TestTripsIntegrationWorkflows:
         created_trip.status = TripStatus.PLANNING.value
         created_trip.visibility = TripVisibility.PRIVATE.value
         created_trip.destinations = tokyo_business_trip_data["destinations"]
-        created_trip.start_date = datetime.combine(tokyo_business_trip_data["start_date"], datetime.min.time()).replace(
-            tzinfo=timezone.utc
-        )
-        created_trip.end_date = datetime.combine(tokyo_business_trip_data["end_date"], datetime.min.time()).replace(
-            tzinfo=timezone.utc
-        )
+        created_trip.start_date = datetime.combine(
+            tokyo_business_trip_data["start_date"], datetime.min.time()
+        ).replace(tzinfo=timezone.utc)
+        created_trip.end_date = datetime.combine(
+            tokyo_business_trip_data["end_date"], datetime.min.time()
+        ).replace(tzinfo=timezone.utc)
         created_trip.preferences = {}
         created_trip.created_at = datetime.now(timezone.utc)
         created_trip.updated_at = datetime.now(timezone.utc)
@@ -174,7 +182,9 @@ class TestTripsIntegrationWorkflows:
         comprehensive_trip_service.create_trip.return_value = created_trip
 
         # Create the trip
-        result = await create_trip(trip_request, business_traveler_principal, comprehensive_trip_service)
+        result = await create_trip(
+            trip_request, business_traveler_principal, comprehensive_trip_service
+        )
 
         assert result.title == "Tokyo Q4 Sales Meeting"
         assert result.user_id == "business_user_001"
@@ -183,7 +193,10 @@ class TestTripsIntegrationWorkflows:
 
         # Step 2: Update trip with accommodation preferences
         update_request = UpdateTripRequest(
-            description=("Updated: Quarterly business review and client meetings in Tokyo, including hotel bookings")
+            description=(
+                "Updated: Quarterly business review and client meetings in Tokyo, "
+                "including hotel bookings"
+            )
         )
 
         comprehensive_trip_service.update_trip.return_value = created_trip
@@ -200,7 +213,9 @@ class TestTripsIntegrationWorkflows:
         # Step 3: Get trip summary for review
         comprehensive_trip_service.get_trip.return_value = created_trip
 
-        trip_summary = await get_trip_summary(trip_id, business_traveler_principal, comprehensive_trip_service)
+        trip_summary = await get_trip_summary(
+            trip_id, business_traveler_principal, comprehensive_trip_service
+        )
 
         assert trip_summary.title == "Tokyo Q4 Sales Meeting"
         assert trip_summary.duration_days > 0
@@ -243,7 +258,9 @@ class TestTripsIntegrationWorkflows:
         created_trip.id = str(uuid4())
         created_trip.user_id = "business_user_001"
         created_trip.title = "Asia Pacific Business Tour"
-        created_trip.destinations = [MagicMock(name="Tokyo, Japan", country="Japan", city="Tokyo")]
+        created_trip.destinations = [
+            MagicMock(name="Tokyo, Japan", country="Japan", city="Tokyo")
+        ]
         created_trip.start_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
         created_trip.end_date = datetime(2024, 11, 15, tzinfo=timezone.utc)
         created_trip.preferences = {}
@@ -253,16 +270,22 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = created_trip
 
-        _result = await create_trip(initial_trip_data, business_traveler_principal, comprehensive_trip_service)
+        _result = await create_trip(
+            initial_trip_data, business_traveler_principal, comprehensive_trip_service
+        )
 
         trip_id = UUID(created_trip.id)
 
         # Add more cities to the business trip
         expanded_destinations = [
             TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo"),
-            TripDestination(name="Seoul, South Korea", country="South Korea", city="Seoul"),
+            TripDestination(
+                name="Seoul, South Korea", country="South Korea", city="Seoul"
+            ),
             TripDestination(name="Singapore", country="Singapore", city="Singapore"),
-            TripDestination(name="Sydney, Australia", country="Australia", city="Sydney"),
+            TripDestination(
+                name="Sydney, Australia", country="Australia", city="Sydney"
+            ),
         ]
 
         update_request = UpdateTripRequest(
@@ -272,7 +295,8 @@ class TestTripsIntegrationWorkflows:
 
         # Update mock to reflect changes
         created_trip.destinations = [
-            MagicMock(name=dest.name, country=dest.country, city=dest.city) for dest in expanded_destinations
+            MagicMock(name=dest.name, country=dest.country, city=dest.city)
+            for dest in expanded_destinations
         ]
         created_trip.end_date = datetime(2024, 11, 20, tzinfo=timezone.utc)
 
@@ -322,7 +346,9 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = family_trip
 
-        created_trip = await create_trip(family_trip_request, family_organizer_principal, comprehensive_trip_service)
+        created_trip = await create_trip(
+            family_trip_request, family_organizer_principal, comprehensive_trip_service
+        )
 
         assert created_trip.title == "European Family Adventure"
 
@@ -408,7 +434,11 @@ class TestTripsIntegrationWorkflows:
                 ),
             ],
             preferences=TripPreferences(
-                budget=Budget(total_budget=Price(amount=Decimal("2500"), currency=CurrencyCode.USD))
+                budget=Budget(
+                    total_budget=Price(
+                        amount=Decimal("2500"), currency=CurrencyCode.USD
+                    )
+                )
             ),
         )
 
@@ -426,7 +456,9 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = budget_trip
 
-        created_trip = await create_trip(budget_trip_data, leisure_traveler_principal, comprehensive_trip_service)
+        created_trip = await create_trip(
+            budget_trip_data, leisure_traveler_principal, comprehensive_trip_service
+        )
 
         assert created_trip.title == "Budget Southeast Asia Adventure"
 
@@ -440,11 +472,15 @@ class TestTripsIntegrationWorkflows:
         )
 
         # Should return suggestions within budget
-        budget_appropriate_suggestions = [s for s in suggestions if s.estimated_price <= 3000.0]
+        budget_appropriate_suggestions = [
+            s for s in suggestions if s.estimated_price <= 3000.0
+        ]
         assert len(budget_appropriate_suggestions) > 0
 
         # Step 3: Update budget preferences based on suggestions
-        updated_budget = Budget(total_budget=Price(amount=Decimal("3200"), currency=CurrencyCode.USD))
+        updated_budget = Budget(
+            total_budget=Price(amount=Decimal("3200"), currency=CurrencyCode.USD)
+        )
         preferences_update = TripPreferencesRequest(budget=updated_budget)
 
         comprehensive_trip_service.update_trip.return_value = budget_trip
@@ -486,7 +522,9 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = trip
 
-        _created_trip = await create_trip(trip_request, business_traveler_principal, comprehensive_trip_service)
+        _created_trip = await create_trip(
+            trip_request, business_traveler_principal, comprehensive_trip_service
+        )
 
         trip_id = UUID(trip.id)
 
@@ -506,7 +544,9 @@ class TestTripsIntegrationWorkflows:
             comprehensive_trip_service.get_trip.return_value = trip
 
             # Get trip to verify status
-            current_trip = await get_trip(trip_id, business_traveler_principal, comprehensive_trip_service)
+            current_trip = await get_trip(
+                trip_id, business_traveler_principal, comprehensive_trip_service
+            )
 
             assert current_trip.status == status.value
 
@@ -540,18 +580,24 @@ class TestTripsIntegrationWorkflows:
         # Owner can access
         comprehensive_trip_service.get_trip.return_value = shared_trip
 
-        owner_access = await get_trip(trip_id, family_organizer_principal, comprehensive_trip_service)
+        owner_access = await get_trip(
+            trip_id, family_organizer_principal, comprehensive_trip_service
+        )
         assert owner_access.title == "Shared Family Trip"
 
         # Shared user can access
-        collaborator_access = await get_trip(trip_id, leisure_traveler_principal, comprehensive_trip_service)
+        collaborator_access = await get_trip(
+            trip_id, leisure_traveler_principal, comprehensive_trip_service
+        )
         assert collaborator_access.title == "Shared Family Trip"
 
         # Non-shared user cannot access
         comprehensive_trip_service.get_trip.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await get_trip(trip_id, business_traveler_principal, comprehensive_trip_service)
+            await get_trip(
+                trip_id, business_traveler_principal, comprehensive_trip_service
+            )
 
         assert exc_info.value.status_code == 404
 
@@ -595,7 +641,11 @@ class TestTripsIntegrationWorkflows:
                 )
             ],
             preferences=TripPreferences(
-                budget=Budget(total_budget=Price(amount=Decimal("3000"), currency=CurrencyCode.USD))
+                budget=Budget(
+                    total_budget=Price(
+                        amount=Decimal("3000"), currency=CurrencyCode.USD
+                    )
+                )
             ),
         )
 
@@ -613,12 +663,16 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = trip
 
-        _created_trip = await create_trip(initial_trip, leisure_traveler_principal, comprehensive_trip_service)
+        _created_trip = await create_trip(
+            initial_trip, leisure_traveler_principal, comprehensive_trip_service
+        )
 
         trip_id = UUID(trip.id)
 
         # Evolution 1: Increase budget after research
-        updated_budget_1 = Budget(total_budget=Price(amount=Decimal("4000"), currency=CurrencyCode.USD))
+        updated_budget_1 = Budget(
+            total_budget=Price(amount=Decimal("4000"), currency=CurrencyCode.USD)
+        )
         preferences_update_1 = TripPreferencesRequest(budget=updated_budget_1)
 
         trip.preferences = {"budget": {"total": 4000, "currency": "USD"}}
@@ -632,7 +686,9 @@ class TestTripsIntegrationWorkflows:
         )
 
         # Evolution 2: Further refinement based on accommodation options
-        updated_budget_2 = Budget(total_budget=Price(amount=Decimal("4500"), currency=CurrencyCode.USD))
+        updated_budget_2 = Budget(
+            total_budget=Price(amount=Decimal("4500"), currency=CurrencyCode.USD)
+        )
         preferences_update_2 = TripPreferencesRequest(budget=updated_budget_2)
 
         trip.preferences = {"budget": {"total": 4500, "currency": "USD"}}
@@ -647,7 +703,9 @@ class TestTripsIntegrationWorkflows:
         )
 
         # Verify final state
-        final_trip = await get_trip(trip_id, leisure_traveler_principal, comprehensive_trip_service)
+        final_trip = await get_trip(
+            trip_id, leisure_traveler_principal, comprehensive_trip_service
+        )
 
         assert final_trip.title == "Evolving Preferences Trip"
 
@@ -735,7 +793,9 @@ class TestTripsIntegrationWorkflows:
         comprehensive_trip_service.update_trip.return_value = shared_trip
         comprehensive_trip_service.get_trip.return_value = shared_trip
 
-        result_1 = await update_trip(trip_id, update_1, family_organizer_principal, comprehensive_trip_service)
+        result_1 = await update_trip(
+            trip_id, update_1, family_organizer_principal, comprehensive_trip_service
+        )
 
         assert result_1.description == "Updated by family organizer"
 
@@ -746,7 +806,9 @@ class TestTripsIntegrationWorkflows:
         shared_trip.updated_at = datetime.now(timezone.utc)
         comprehensive_trip_service.update_trip.return_value = shared_trip
 
-        result_2 = await update_trip(trip_id, update_2, leisure_traveler_principal, comprehensive_trip_service)
+        result_2 = await update_trip(
+            trip_id, update_2, leisure_traveler_principal, comprehensive_trip_service
+        )
 
         # Should reflect both changes
         assert result_2.title == "Concurrently Modified Trip - Edited"
@@ -839,7 +901,8 @@ class TestTripsIntegrationWorkflows:
         complex_trip.user_id = "leisure_user_002"
         complex_trip.title = "Around the World in 80 Days"
         complex_trip.destinations = [
-            MagicMock(name=dest.name, country=dest.country, city=dest.city) for dest in complex_destinations
+            MagicMock(name=dest.name, country=dest.country, city=dest.city)
+            for dest in complex_destinations
         ]
         complex_trip.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
         complex_trip.end_date = datetime(2024, 8, 20, tzinfo=timezone.utc)
@@ -850,7 +913,9 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = complex_trip
 
-        created_trip = await create_trip(complex_trip_data, leisure_traveler_principal, comprehensive_trip_service)
+        created_trip = await create_trip(
+            complex_trip_data, leisure_traveler_principal, comprehensive_trip_service
+        )
 
         assert created_trip.title == "Around the World in 80 Days"
         assert len(created_trip.destinations) == 15
@@ -864,7 +929,8 @@ class TestTripsIntegrationWorkflows:
         )
 
         complex_trip.destinations = [
-            MagicMock(name=dest.name, country=dest.country, city=dest.city) for dest in simplified_destinations
+            MagicMock(name=dest.name, country=dest.country, city=dest.city)
+            for dest in simplified_destinations
         ]
         comprehensive_trip_service.update_trip.return_value = complex_trip
 
@@ -893,7 +959,9 @@ class TestTripsIntegrationWorkflows:
             title="Emergency Business Travel",
             description="Urgent client meeting",
             start_date=date.today(),  # Today
-            end_date=date(2024, 12, 31),  # Tomorrow (assuming test runs before 2024-12-30)
+            end_date=date(
+                2024, 12, 31
+            ),  # Tomorrow (assuming test runs before 2024-12-30)
             destinations=[
                 TripDestination(
                     name="Emergency Location",
@@ -908,7 +976,9 @@ class TestTripsIntegrationWorkflows:
         urgent_trip.user_id = "business_user_001"
         urgent_trip.title = "Emergency Business Travel"
         urgent_trip.destinations = urgent_trip_data.destinations
-        urgent_trip.start_date = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        urgent_trip.start_date = datetime.combine(
+            date.today(), datetime.min.time()
+        ).replace(tzinfo=timezone.utc)
         urgent_trip.end_date = datetime(2024, 12, 31, tzinfo=timezone.utc)
         urgent_trip.preferences = {}
         urgent_trip.status = "planning"
@@ -917,7 +987,9 @@ class TestTripsIntegrationWorkflows:
 
         comprehensive_trip_service.create_trip.return_value = urgent_trip
 
-        created_trip = await create_trip(urgent_trip_data, business_traveler_principal, comprehensive_trip_service)
+        created_trip = await create_trip(
+            urgent_trip_data, business_traveler_principal, comprehensive_trip_service
+        )
 
         assert created_trip.title == "Emergency Business Travel"
 
@@ -978,7 +1050,11 @@ class TestTripsIntegrationWorkflows:
                 )
             ],
             preferences=TripPreferences(
-                budget=Budget(total_budget=Price(amount=Decimal("5500"), currency=CurrencyCode.USD))
+                budget=Budget(
+                    total_budget=Price(
+                        amount=Decimal("5500"), currency=CurrencyCode.USD
+                    )
+                )
             ),
         )
 
@@ -1000,21 +1076,29 @@ class TestTripsIntegrationWorkflows:
         comprehensive_trip_service.update_trip.return_value = consistent_trip
 
         # Create trip
-        created_trip = await create_trip(consistent_trip_data, family_organizer_principal, comprehensive_trip_service)
+        created_trip = await create_trip(
+            consistent_trip_data, family_organizer_principal, comprehensive_trip_service
+        )
 
         trip_id = UUID(consistent_trip.id)
 
         # Get trip and verify consistency
-        retrieved_trip = await get_trip(trip_id, family_organizer_principal, comprehensive_trip_service)
+        retrieved_trip = await get_trip(
+            trip_id, family_organizer_principal, comprehensive_trip_service
+        )
 
         assert retrieved_trip.id == created_trip.id
         assert retrieved_trip.title == created_trip.title
         assert retrieved_trip.user_id == created_trip.user_id
 
         # Update trip and verify consistency
-        update_request = UpdateTripRequest(description="Updated: Testing data consistency across operations")
+        update_request = UpdateTripRequest(
+            description="Updated: Testing data consistency across operations"
+        )
 
-        consistent_trip.description = "Updated: Testing data consistency across operations"
+        consistent_trip.description = (
+            "Updated: Testing data consistency across operations"
+        )
 
         updated_trip = await update_trip(
             trip_id,
@@ -1027,7 +1111,9 @@ class TestTripsIntegrationWorkflows:
         assert updated_trip.title == created_trip.title  # Should remain the same
 
         # Get summary and verify consistency
-        trip_summary = await get_trip_summary(trip_id, family_organizer_principal, comprehensive_trip_service)
+        trip_summary = await get_trip_summary(
+            trip_id, family_organizer_principal, comprehensive_trip_service
+        )
 
         assert trip_summary.id == UUID(created_trip.id)
         assert trip_summary.title == created_trip.title

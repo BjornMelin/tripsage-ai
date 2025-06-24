@@ -17,7 +17,9 @@ from typing import Any, Dict, Optional
 from tripsage_core.config import Settings, get_settings, validate_configuration
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +63,9 @@ class ConfigManager:
             logger.error(f"❌ Validation error: {e}")
             return False
 
-    def generate_template(self, output_file: str, include_secrets: bool = False) -> bool:
+    def generate_template(
+        self, output_file: str, include_secrets: bool = False
+    ) -> bool:
         """Generate environment template file."""
         logger.info("📄 Generating configuration template...")
 
@@ -94,7 +98,9 @@ class ConfigManager:
                 logger.info(f"Secret {i + 1}: {secret}")
 
             logger.info("✅ Secrets generated successfully")
-            logger.warning("⚠️ Store these secrets securely and never commit to version control!")
+            logger.warning(
+                "⚠️ Store these secrets securely and never commit to version control!"
+            )
 
             return True
 
@@ -158,10 +164,14 @@ class ConfigManager:
                 recommendations.append("Restrict CORS origins in production")
 
         else:
-            recommendations.append("Ensure proper secrets are configured for production deployment")
+            recommendations.append(
+                "Ensure proper secrets are configured for production deployment"
+            )
 
         if not settings.redis_url:
-            recommendations.append("Configure Redis for improved performance and caching")
+            recommendations.append(
+                "Configure Redis for improved performance and caching"
+            )
 
         return recommendations
 
@@ -210,7 +220,10 @@ class ConfigManager:
             settings = self.load_settings()
 
             if settings.environment != target_env:
-                logger.warning(f"⚠️ Current environment ({settings.environment}) != target ({target_env})")
+                logger.warning(
+                    f"⚠️ Current environment ({settings.environment}) != "
+                    f"target ({target_env})"
+                )
 
             issues = []
 
@@ -237,7 +250,9 @@ class ConfigManager:
 
     def export_config(self, output_file: str, format_type: str = "env") -> bool:
         """Export configuration in various formats."""
-        logger.info(f"📤 Exporting configuration to {output_file} (format: {format_type})...")
+        logger.info(
+            f"📤 Exporting configuration to {output_file} (format: {format_type})..."
+        )
 
         try:
             settings = self.load_settings()
@@ -292,7 +307,9 @@ Examples:
     subparsers.add_parser("validate", help="Validate configuration")
 
     # Template command
-    template_parser = subparsers.add_parser("template", help="Generate environment template")
+    template_parser = subparsers.add_parser(
+        "template", help="Generate environment template"
+    )
     template_parser.add_argument("output", help="Output file path")
     template_parser.add_argument(
         "--include-secrets",
@@ -302,15 +319,23 @@ Examples:
 
     # Secrets command
     secrets_parser = subparsers.add_parser("secrets", help="Generate secure secrets")
-    secrets_parser.add_argument("--count", type=int, default=1, help="Number of secrets to generate")
+    secrets_parser.add_argument(
+        "--count", type=int, default=1, help="Number of secrets to generate"
+    )
     secrets_parser.add_argument("--length", type=int, default=32, help="Secret length")
 
     # Security report command
-    security_parser = subparsers.add_parser("security-report", help="Generate security report")
-    security_parser.add_argument("--format", choices=["json", "human"], default="human", help="Output format")
+    security_parser = subparsers.add_parser(
+        "security-report", help="Generate security report"
+    )
+    security_parser.add_argument(
+        "--format", choices=["json", "human"], default="human", help="Output format"
+    )
 
     # Check environment command
-    check_env_parser = subparsers.add_parser("check-env", help="Check configuration for environment")
+    check_env_parser = subparsers.add_parser(
+        "check-env", help="Check configuration for environment"
+    )
     check_env_parser.add_argument(
         "environment",
         choices=["development", "production", "test"],
@@ -320,7 +345,9 @@ Examples:
     # Export command
     export_parser = subparsers.add_parser("export", help="Export configuration")
     export_parser.add_argument("output", help="Output file path")
-    export_parser.add_argument("--format", choices=["env", "json"], default="env", help="Export format")
+    export_parser.add_argument(
+        "--format", choices=["env", "json"], default="env", help="Export format"
+    )
 
     args = parser.parse_args()
 

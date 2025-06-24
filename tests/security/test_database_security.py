@@ -27,7 +27,9 @@ class TestDatabaseSecurity:
         parser = DatabaseURLParser()
 
         with caplog.at_level(logging.DEBUG):
-            credentials = parser.parse_url("postgresql://user:supersecret123@host:5432/db?sslmode=require")
+            credentials = parser.parse_url(
+                "postgresql://user:supersecret123@host:5432/db?sslmode=require"
+            )
 
             # Get sanitized version
             sanitized = credentials.sanitized_for_logging()
@@ -229,13 +231,17 @@ class TestDatabaseSecurity:
 
         # Test with malicious URL
         with pytest.raises(DatabaseURLParsingError):
-            await manager.parse_and_validate_url("postgresql://user:pass@host/db'; DROP TABLE users; --")
+            await manager.parse_and_validate_url(
+                "postgresql://user:pass@host/db'; DROP TABLE users; --"
+            )
 
         # Test credential masking in parsed URLs
         with patch.object(manager.validator, "validate_connection") as mock_validate:
             mock_validate.return_value = True
 
-            credentials = await manager.parse_and_validate_url("postgresql://user:secret123@host:5432/db")
+            credentials = await manager.parse_and_validate_url(
+                "postgresql://user:secret123@host:5432/db"
+            )
 
             sanitized = credentials.sanitized_for_logging()
             assert "secret123" not in sanitized
@@ -246,7 +252,9 @@ class TestDatabaseSecurity:
         converter = DatabaseURLConverter()
 
         # Convert Supabase URL
-        postgres_url = converter.supabase_to_postgres("https://test.supabase.co", "test-password", sslmode="require")
+        postgres_url = converter.supabase_to_postgres(
+            "https://test.supabase.co", "test-password", sslmode="require"
+        )
 
         assert "sslmode=require" in postgres_url
 

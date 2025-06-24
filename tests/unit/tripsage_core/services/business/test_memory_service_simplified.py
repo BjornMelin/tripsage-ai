@@ -66,7 +66,9 @@ class TestMemoryServiceModels:
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
         # Valid request
-        request = MemorySearchRequest(query="test query", limit=10, similarity_threshold=0.8)
+        request = MemorySearchRequest(
+            query="test query", limit=10, similarity_threshold=0.8
+        )
         assert request.query == "test query"
         assert request.limit == 10
         assert request.similarity_threshold == 0.8
@@ -78,7 +80,9 @@ class TestMemoryServiceModels:
         )
 
         # Valid request
-        request = PreferencesUpdateRequest(preferences={"hotel_type": "boutique"}, category="accommodation")
+        request = PreferencesUpdateRequest(
+            preferences={"hotel_type": "boutique"}, category="accommodation"
+        )
         assert request.preferences == {"hotel_type": "boutique"}
         assert request.category == "accommodation"
 
@@ -107,7 +111,9 @@ class TestMemoryServiceModels:
         """Property-based test for MemorySearchRequest."""
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-        request = MemorySearchRequest(query=query, limit=limit, similarity_threshold=threshold)
+        request = MemorySearchRequest(
+            query=query, limit=limit, similarity_threshold=threshold
+        )
         assert request.query == query
         assert request.limit == limit
         assert request.similarity_threshold == threshold
@@ -126,7 +132,9 @@ class TestMemoryServiceModels:
             PreferencesUpdateRequest,
         )
 
-        request = PreferencesUpdateRequest(preferences=preferences, category="test_category")
+        request = PreferencesUpdateRequest(
+            preferences=preferences, category="test_category"
+        )
         assert request.preferences == preferences
         assert request.category == "test_category"
 
@@ -149,8 +157,12 @@ class TestMemoryServiceConfiguration:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -169,8 +181,12 @@ class TestMemoryServiceConfiguration:
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
             # Setup complete mock settings
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://user:pass@localhost:5432/testdb"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://user:pass@localhost:5432/testdb"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -206,8 +222,12 @@ class TestMemoryServiceUtilities:
         from tripsage_core.services.business.memory_service import get_memory_service
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = await get_memory_service()
             assert service is not None
@@ -222,8 +242,12 @@ class TestMemoryServiceUtilities:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -243,8 +267,12 @@ class TestMemoryServiceUtilities:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -294,8 +322,12 @@ class TestMemoryServiceErrorHandling:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             # Should not raise during initialization even if mem0 unavailable
             service = MemoryService(database_service=mock_db)
@@ -309,8 +341,12 @@ class TestMemoryServiceErrorHandling:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -329,8 +365,12 @@ class TestMemoryServiceCaching:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db, cache_ttl=600)
 
@@ -348,8 +388,12 @@ class TestMemoryServiceCaching:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -378,8 +422,12 @@ class TestMemoryServiceCaching:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -395,7 +443,9 @@ class TestMemoryServiceCaching:
             assert len(remaining_keys) == 0
 
             # User 456 should still be there
-            remaining_456_keys = [k for k in service._cache.keys() if k.startswith("456:")]
+            remaining_456_keys = [
+                k for k in service._cache.keys() if k.startswith("456:")
+            ]
             assert len(remaining_456_keys) == 1
 
 
@@ -409,8 +459,12 @@ class TestMemoryServicePerformance:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             start_time = time.time()
 
@@ -435,8 +489,12 @@ class TestMemoryServicePerformance:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -466,8 +524,12 @@ class TestMemoryServiceDataHandling:
         mock_db = Mock()
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service = MemoryService(database_service=mock_db)
 
@@ -504,7 +566,9 @@ class TestMemoryServiceDataHandling:
         similarity=st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
         categories=st.lists(st.text(min_size=1, max_size=20), min_size=0, max_size=5),
     )
-    def test_memory_search_result_property_based(self, memory_text, similarity, categories):
+    def test_memory_search_result_property_based(
+        self, memory_text, similarity, categories
+    ):
         """Property-based test for memory search results."""
         from tripsage_core.services.business.memory_service import MemorySearchResult
 
@@ -552,7 +616,9 @@ class TestMemoryServiceIntegration:
         assert conv_request is not None
 
         # 2. Create search request
-        search_request = MemorySearchRequest(query="Japan travel recommendations", limit=10)
+        search_request = MemorySearchRequest(
+            query="Japan travel recommendations", limit=10
+        )
         assert search_request is not None
 
         # 3. Create preferences request

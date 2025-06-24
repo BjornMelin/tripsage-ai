@@ -105,7 +105,9 @@ class TestApiKeyService:
     @pytest.fixture
     def api_key_service(self, mock_db_service, mock_cache_service, mock_settings):
         """Create ApiKeyService instance with mocked dependencies."""
-        return ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=mock_settings)
+        return ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=mock_settings
+        )
 
     @pytest.fixture
     def sample_create_request(self):
@@ -145,7 +147,9 @@ class TestApiKeyService:
             "is_valid": True,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": (datetime.now(timezone.utc) + timedelta(days=365)).isoformat(),
+            "expires_at": (
+                datetime.now(timezone.utc) + timedelta(days=365)
+            ).isoformat(),
             "last_used": None,
             "last_validated": datetime.now(timezone.utc).isoformat(),
             "usage_count": 0,
@@ -169,7 +173,9 @@ class TestApiKeyService:
 
             # Database operations handled by transaction mock
 
-            result = await api_key_service.create_api_key(user_id, sample_create_request)
+            result = await api_key_service.create_api_key(
+                user_id, sample_create_request
+            )
 
             # Assertions
             assert result.name == sample_create_request.name
@@ -181,7 +187,9 @@ class TestApiKeyService:
             mock_validate.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_api_key_validation_failed(self, api_key_service, sample_create_request):
+    async def test_create_api_key_validation_failed(
+        self, api_key_service, sample_create_request
+    ):
         """Test API key creation with validation failure."""
         user_id = str(uuid4())
 
@@ -195,7 +203,9 @@ class TestApiKeyService:
             )
 
             # The service should still create the key but mark it as invalid
-            result = await api_key_service.create_api_key(user_id, sample_create_request)
+            result = await api_key_service.create_api_key(
+                user_id, sample_create_request
+            )
             assert result.is_valid is False
 
     @pytest.mark.asyncio
@@ -208,7 +218,9 @@ class TestApiKeyService:
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-test_key", str(uuid4()))
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", str(uuid4())
+            )
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -224,7 +236,9 @@ class TestApiKeyService:
             mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
             mock_get.return_value = mock_response
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-invalid_key", str(uuid4()))
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-invalid_key", str(uuid4())
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.INVALID
@@ -232,7 +246,9 @@ class TestApiKeyService:
     @pytest.mark.asyncio
     async def test_validate_api_key_format_error(self, api_key_service):
         """Test API key validation with format error."""
-        result = await api_key_service.validate_api_key(ServiceType.OPENAI, "invalid_format", str(uuid4()))
+        result = await api_key_service.validate_api_key(
+            ServiceType.OPENAI, "invalid_format", str(uuid4())
+        )
 
         assert result.is_valid is False
         assert result.status == ValidationStatus.FORMAT_ERROR
@@ -246,7 +262,9 @@ class TestApiKeyService:
             mock_response.status_code = 429
             mock_get.return_value = mock_response
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-test_key", str(uuid4()))
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", str(uuid4())
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.RATE_LIMITED
@@ -260,14 +278,18 @@ class TestApiKeyService:
             mock_response.status_code = 500
             mock_get.return_value = mock_response
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-test_key", str(uuid4()))
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", str(uuid4())
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
             assert "Unexpected response: 500" in result.message
 
     @pytest.mark.asyncio
-    async def test_get_api_key_success(self, api_key_service, mock_db_service, sample_db_result):
+    async def test_get_api_key_success(
+        self, api_key_service, mock_db_service, sample_db_result
+    ):
         """Test successful API key retrieval."""
         key_id = str(uuid4())
         mock_db_service.get_api_key_by_id.return_value = sample_db_result
@@ -292,7 +314,9 @@ class TestApiKeyService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_list_user_keys_success(self, api_key_service, mock_db_service, sample_db_result):
+    async def test_list_user_keys_success(
+        self, api_key_service, mock_db_service, sample_db_result
+    ):
         """Test successful user keys listing."""
         user_id = str(uuid4())
         mock_db_service.get_user_api_keys.return_value = [sample_db_result]
@@ -363,7 +387,9 @@ class TestApiKeyService:
         )
 
         # Test cache set
-        await api_key_service._cache_validation_result(ServiceType.OPENAI, key_value, validation_result)
+        await api_key_service._cache_validation_result(
+            ServiceType.OPENAI, key_value, validation_result
+        )
         mock_cache_service.set.assert_called_once()
 
         # Test cache get
@@ -385,7 +411,9 @@ class TestApiKeyService:
             }
         )
 
-        result = await api_key_service._get_cached_validation(ServiceType.OPENAI, key_value)
+        result = await api_key_service._get_cached_validation(
+            ServiceType.OPENAI, key_value
+        )
         assert result is not None
         assert result.is_valid is True
 
@@ -405,7 +433,9 @@ class TestApiKeyService:
             # Mock network failure
             mock_get.side_effect = Exception("Network error")
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-test_key", str(uuid4()))
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", str(uuid4())
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -433,7 +463,9 @@ class TestApiKeyService:
         """Test Google Maps service specific validation."""
         with (
             patch("httpx.AsyncClient.get") as mock_get,
-            patch.object(api_key_service, "_check_googlemaps_capabilities") as mock_capabilities,
+            patch.object(
+                api_key_service, "_check_googlemaps_capabilities"
+            ) as mock_capabilities,
         ):
             # Mock successful Google Maps API response
             mock_response = Mock()
@@ -461,7 +493,9 @@ class TestApiKeyService:
         assert ServiceType.GOOGLEMAPS in results
 
     @pytest.mark.asyncio
-    async def test_get_api_key_service_dependency(self, mock_db_service, mock_cache_service):
+    async def test_get_api_key_service_dependency(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test the dependency injection function."""
         # Test with direct parameters as per the actual function signature
         service = await get_api_key_service(mock_db_service, mock_cache_service)
@@ -476,7 +510,9 @@ class TestApiKeyService:
         # Note: audit service is used via decorator, not as instance variable
 
     @pytest.mark.asyncio
-    async def test_validation_caching_behavior(self, api_key_service, mock_cache_service):
+    async def test_validation_caching_behavior(
+        self, api_key_service, mock_cache_service
+    ):
         """Test that validation results are properly cached."""
         # Mock cache miss first
         mock_cache_service.get.return_value = None
@@ -488,7 +524,9 @@ class TestApiKeyService:
             mock_get.return_value = mock_response
 
             # First validation should hit the API
-            result1 = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-test_key", str(uuid4()))
+            result1 = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", str(uuid4())
+            )
 
             # Verify cache was called to store result
             mock_cache_service.set.assert_called()
@@ -513,7 +551,9 @@ class TestApiKeyService:
             )
 
             # Second validation should use cache
-            result2 = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-test_key", str(uuid4()))
+            result2 = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", str(uuid4())
+            )
 
             assert result1.is_valid is True
             assert result2.is_valid is True

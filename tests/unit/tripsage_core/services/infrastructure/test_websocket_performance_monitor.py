@@ -1,7 +1,8 @@
 """
 Comprehensive tests for TripSage Core WebSocket Performance Monitor.
 
-This module provides comprehensive test coverage for WebSocket performance monitoring functionality
+This module provides comprehensive test coverage for WebSocket performance
+monitoring functionality
 including metrics collection, alert generation, threshold monitoring, aggregation,
 circuit breaker tracking, and historical data management.
 """
@@ -160,7 +161,9 @@ class TestWebSocketPerformanceMonitor:
     @pytest.fixture
     def performance_monitor(self):
         """Create WebSocketPerformanceMonitor instance."""
-        return WebSocketPerformanceMonitor(collection_interval=0.1, aggregation_interval=1.0, retention_hours=1)
+        return WebSocketPerformanceMonitor(
+            collection_interval=0.1, aggregation_interval=1.0, retention_hours=1
+        )
 
     @pytest.fixture
     def custom_performance_monitor(self):
@@ -265,7 +268,9 @@ class TestWebSocketPerformanceMonitor:
         await performance_monitor.stop()
         assert performance_monitor._running is False
 
-    def test_collect_connection_metrics_healthy(self, performance_monitor, mock_connection):
+    def test_collect_connection_metrics_healthy(
+        self, performance_monitor, mock_connection
+    ):
         """Test collecting metrics from healthy connection."""
         initial_snapshot_count = len(performance_monitor.snapshots)
 
@@ -292,7 +297,9 @@ class TestWebSocketPerformanceMonitor:
         assert conn_metrics["current_queue_size"] == 20
         assert conn_metrics["state"] == "connected"
 
-    def test_collect_connection_metrics_unhealthy(self, custom_performance_monitor, mock_unhealthy_connection):
+    def test_collect_connection_metrics_unhealthy(
+        self, custom_performance_monitor, mock_unhealthy_connection
+    ):
         """Test collecting metrics from unhealthy connection."""
         initial_alert_count = len(custom_performance_monitor.active_alerts)
 
@@ -313,10 +320,15 @@ class TestWebSocketPerformanceMonitor:
         assert len(custom_performance_monitor.active_alerts) > initial_alert_count
 
         # Check circuit breaker event was tracked
-        assert "unhealthy_connection_456" in custom_performance_monitor.circuit_breaker_events
+        assert (
+            "unhealthy_connection_456"
+            in custom_performance_monitor.circuit_breaker_events
+        )
 
         # Check backpressure event was tracked
-        assert "unhealthy_connection_456" in custom_performance_monitor.backpressure_events
+        assert (
+            "unhealthy_connection_456" in custom_performance_monitor.backpressure_events
+        )
 
     def test_collect_connection_metrics_error_handling(self, performance_monitor):
         """Test error handling during metrics collection."""
@@ -331,7 +343,9 @@ class TestWebSocketPerformanceMonitor:
         # No snapshot should be added
         assert len(performance_monitor.snapshots) == 0
 
-    def test_latency_alert_generation(self, custom_performance_monitor, mock_connection):
+    def test_latency_alert_generation(
+        self, custom_performance_monitor, mock_connection
+    ):
         """Test latency alert generation."""
         # Set latency above warning threshold
         mock_connection.get_health.return_value.latency = 750.0
@@ -348,7 +362,9 @@ class TestWebSocketPerformanceMonitor:
         assert latency_alerts[0].current_value == 750.0
         assert latency_alerts[0].threshold == 500.0
 
-    def test_critical_latency_alert_generation(self, custom_performance_monitor, mock_connection):
+    def test_critical_latency_alert_generation(
+        self, custom_performance_monitor, mock_connection
+    ):
         """Test critical latency alert generation."""
         # Set latency above critical threshold
         mock_connection.get_health.return_value.latency = 1500.0
@@ -365,7 +381,9 @@ class TestWebSocketPerformanceMonitor:
         assert latency_alerts[0].current_value == 1500.0
         assert latency_alerts[0].threshold == 1000.0
 
-    def test_queue_size_alert_generation(self, custom_performance_monitor, mock_connection):
+    def test_queue_size_alert_generation(
+        self, custom_performance_monitor, mock_connection
+    ):
         """Test queue size alert generation."""
         # Set queue size above warning threshold
         mock_connection.get_health.return_value.queue_size = 75
@@ -382,7 +400,9 @@ class TestWebSocketPerformanceMonitor:
         assert queue_alerts[0].current_value == 75
         assert queue_alerts[0].threshold == 50
 
-    def test_error_rate_alert_generation(self, custom_performance_monitor, mock_connection):
+    def test_error_rate_alert_generation(
+        self, custom_performance_monitor, mock_connection
+    ):
         """Test error rate alert generation."""
         # Set high error count
         mock_connection.message_count = 100
@@ -392,13 +412,17 @@ class TestWebSocketPerformanceMonitor:
 
         # Check error rate alert was generated
         error_alerts = [
-            alert for alert in custom_performance_monitor.active_alerts.values() if alert.type == "error_rate"
+            alert
+            for alert in custom_performance_monitor.active_alerts.values()
+            if alert.type == "error_rate"
         ]
         assert len(error_alerts) > 0
         assert error_alerts[0].current_value == 0.08
         assert error_alerts[0].threshold == 0.05
 
-    def test_circuit_breaker_alert_generation(self, performance_monitor, mock_connection):
+    def test_circuit_breaker_alert_generation(
+        self, performance_monitor, mock_connection
+    ):
         """Test circuit breaker alert generation."""
         # Set circuit breaker to open state
         mock_connection.circuit_breaker.state.value = "open"
@@ -406,7 +430,11 @@ class TestWebSocketPerformanceMonitor:
         performance_monitor.collect_connection_metrics(mock_connection)
 
         # Check circuit breaker alert was generated
-        cb_alerts = [alert for alert in performance_monitor.active_alerts.values() if alert.type == "circuit_breaker"]
+        cb_alerts = [
+            alert
+            for alert in performance_monitor.active_alerts.values()
+            if alert.type == "circuit_breaker"
+        ]
         assert len(cb_alerts) > 0
         assert cb_alerts[0].severity == "high"
         assert cb_alerts[0].message == "Circuit breaker opened"
@@ -424,7 +452,11 @@ class TestWebSocketPerformanceMonitor:
         performance_monitor.collect_connection_metrics(mock_connection)
 
         # Check backpressure alert was generated
-        bp_alerts = [alert for alert in performance_monitor.active_alerts.values() if alert.type == "backpressure"]
+        bp_alerts = [
+            alert
+            for alert in performance_monitor.active_alerts.values()
+            if alert.type == "backpressure"
+        ]
         assert len(bp_alerts) > 0
         assert bp_alerts[0].severity == "medium"
         assert "Prolonged backpressure" in bp_alerts[0].message
@@ -516,7 +548,9 @@ class TestWebSocketPerformanceMonitor:
         # Should not exceed max length
         assert len(performance_monitor.snapshots) == original_maxlen
 
-    def test_metrics_data_structure_consistency(self, performance_monitor, mock_connection):
+    def test_metrics_data_structure_consistency(
+        self, performance_monitor, mock_connection
+    ):
         """Test that metrics data structures remain consistent."""
         # Collect metrics multiple times
         for i in range(10):
@@ -525,8 +559,14 @@ class TestWebSocketPerformanceMonitor:
 
         # Check data consistency
         assert len(performance_monitor.connection_metrics) <= 10
-        assert all(isinstance(metrics, dict) for metrics in performance_monitor.connection_metrics.values())
-        assert all(isinstance(snapshot, PerformanceSnapshot) for snapshot in performance_monitor.snapshots)
+        assert all(
+            isinstance(metrics, dict)
+            for metrics in performance_monitor.connection_metrics.values()
+        )
+        assert all(
+            isinstance(snapshot, PerformanceSnapshot)
+            for snapshot in performance_monitor.snapshots
+        )
 
     def test_performance_under_load(self, performance_monitor):
         """Test performance monitor behavior under high load."""
@@ -574,7 +614,9 @@ class TestWebSocketPerformanceMonitorIntegration:
     @pytest.mark.asyncio
     async def test_monitor_lifecycle_integration(self):
         """Test complete monitor lifecycle."""
-        monitor = WebSocketPerformanceMonitor(collection_interval=0.05, aggregation_interval=0.1, retention_hours=1)
+        monitor = WebSocketPerformanceMonitor(
+            collection_interval=0.05, aggregation_interval=0.1, retention_hours=1
+        )
 
         try:
             # Start monitoring
@@ -623,7 +665,9 @@ class TestWebSocketPerformanceMonitorIntegration:
         # Collect metrics concurrently
         tasks = []
         for conn in connections:
-            task = asyncio.create_task(asyncio.to_thread(monitor.collect_connection_metrics, conn))
+            task = asyncio.create_task(
+                asyncio.to_thread(monitor.collect_connection_metrics, conn)
+            )
             tasks.append(task)
 
         # Wait for all tasks to complete
@@ -636,7 +680,9 @@ class TestWebSocketPerformanceMonitorIntegration:
     @pytest.mark.asyncio
     async def test_alert_lifecycle_integration(self):
         """Test complete alert lifecycle."""
-        monitor = WebSocketPerformanceMonitor(thresholds=PerformanceThresholds(latency_warning_ms=100.0))
+        monitor = WebSocketPerformanceMonitor(
+            thresholds=PerformanceThresholds(latency_warning_ms=100.0)
+        )
 
         # Create connection that will trigger alert
         conn = Mock()

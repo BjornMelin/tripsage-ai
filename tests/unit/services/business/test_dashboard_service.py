@@ -58,7 +58,9 @@ class TestDashboardService:
     @pytest.fixture
     def dashboard_service(self, mock_cache_service, mock_database_service):
         """Create dashboard service with mocked dependencies."""
-        with patch("tripsage_core.services.business.dashboard_service.ApiKeyService") as mock_api_service:
+        with patch(
+            "tripsage_core.services.business.dashboard_service.ApiKeyService"
+        ) as mock_api_service:
             service = DashboardService(
                 cache_service=mock_cache_service,
                 database_service=mock_database_service,
@@ -173,7 +175,9 @@ class TestDashboardService:
         assert result.overall_success_rate == result.metrics.success_rate
         assert result.active_keys == result.metrics.active_keys_count
 
-    async def test_get_real_time_metrics_calculation(self, dashboard_service, sample_usage_logs):
+    async def test_get_real_time_metrics_calculation(
+        self, dashboard_service, sample_usage_logs
+    ):
         """Test real-time metrics calculation from usage logs."""
         # Mock database query
         dashboard_service.db.select.return_value = sample_usage_logs
@@ -226,7 +230,9 @@ class TestDashboardService:
         # Verify cache was checked
         dashboard_service.cache.get_json.assert_called_once()
 
-    async def test_get_service_analytics(self, dashboard_service, sample_health_checks, sample_usage_logs):
+    async def test_get_service_analytics(
+        self, dashboard_service, sample_health_checks, sample_usage_logs
+    ):
         """Test per-service analytics generation - tests fallback behavior."""
         # The service analytics method has robust error handling
         # When health checks fail, it returns default service analytics
@@ -249,7 +255,9 @@ class TestDashboardService:
         dashboard_service.db.select.return_value = sample_usage_logs
 
         # Get user activity
-        users = await dashboard_service._get_user_activity_data(time_range_hours=24, limit=10)
+        users = await dashboard_service._get_user_activity_data(
+            time_range_hours=24, limit=10
+        )
 
         # Verify structure
         assert len(users) == 3  # Three unique users in sample data
@@ -282,12 +290,16 @@ class TestDashboardService:
         cached_data = {
             "count": 250,
             "limit": 1000,
-            "reset_at": (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat(),
+            "reset_at": (
+                datetime.now(timezone.utc) + timedelta(minutes=30)
+            ).isoformat(),
         }
         dashboard_service.cache.get_json.return_value = cached_data
 
         # Get rate limit status
-        result = await dashboard_service.get_rate_limit_status("sk_test_001", window_minutes=60)
+        result = await dashboard_service.get_rate_limit_status(
+            "sk_test_001", window_minutes=60
+        )
 
         # Verify data
         assert result["requests_in_window"] == 250
@@ -302,7 +314,9 @@ class TestDashboardService:
         dashboard_service.cache = None
 
         # Get rate limit status
-        result = await dashboard_service.get_rate_limit_status("sk_test_001", window_minutes=60)
+        result = await dashboard_service.get_rate_limit_status(
+            "sk_test_001", window_minutes=60
+        )
 
         # Verify fallback data structure
         assert "requests_in_window" in result
@@ -404,7 +418,11 @@ class TestDashboardService:
         # Mock database to return specific logs for different time periods
         async def mock_query_logs(start_time, end_time):
             # Return logs that fall within the time range
-            return [log for log in sample_usage_logs if start_time <= log["timestamp"] <= end_time]
+            return [
+                log
+                for log in sample_usage_logs
+                if start_time <= log["timestamp"] <= end_time
+            ]
 
         dashboard_service._query_usage_logs = mock_query_logs
 
@@ -463,11 +481,15 @@ class TestDashboardService:
         assert len(result.services) > 0  # Should have default services
         assert result.top_users == []  # No real user data
 
-    async def test_parallel_data_gathering(self, dashboard_service, sample_usage_logs, sample_health_checks):
+    async def test_parallel_data_gathering(
+        self, dashboard_service, sample_usage_logs, sample_health_checks
+    ):
         """Test parallel data gathering for performance."""
         # Mock all dependencies
         dashboard_service.db.select.return_value = sample_usage_logs
-        dashboard_service.api_key_service.check_all_services_health.return_value = sample_health_checks
+        dashboard_service.api_key_service.check_all_services_health.return_value = (
+            sample_health_checks
+        )
         dashboard_service.cache.get_json.return_value = None  # No cached data
 
         # Patch asyncio.gather to verify parallel execution
@@ -497,7 +519,9 @@ class TestDashboardService:
             period_end=datetime.now(timezone.utc),
         )
 
-        assert abs(metrics.error_rate - 0.05) < 0.001  # 1 - 0.95 (allow for floating point precision)
+        assert (
+            abs(metrics.error_rate - 0.05) < 0.001
+        )  # 1 - 0.95 (allow for floating point precision)
         assert metrics.uptime_percentage == 95.0  # 0.95 * 100
 
         # Test UserActivityData computed fields
@@ -636,11 +660,15 @@ class TestDashboardService:
         duration = (end_time - start_time).total_seconds()
         assert duration < 1.0
 
-    async def test_legacy_compatibility(self, dashboard_service, sample_usage_logs, sample_health_checks):
+    async def test_legacy_compatibility(
+        self, dashboard_service, sample_usage_logs, sample_health_checks
+    ):
         """Test legacy compatibility fields and aliases."""
         # Mock dependencies
         dashboard_service.db.select.return_value = sample_usage_logs
-        dashboard_service.api_key_service.check_all_services_health.return_value = sample_health_checks
+        dashboard_service.api_key_service.check_all_services_health.return_value = (
+            sample_health_checks
+        )
         dashboard_service.cache.get_json.return_value = None
 
         # Get dashboard data
@@ -683,7 +711,9 @@ class TestApiKeyValidator:
             assert validator.api_key_service is not None
 
             # Mock health check
-            validator.api_key_service.check_all_services_health = AsyncMock(return_value={})
+            validator.api_key_service.check_all_services_health = AsyncMock(
+                return_value={}
+            )
             health_checks = await validator.check_all_services_health()
             assert isinstance(health_checks, dict)
 

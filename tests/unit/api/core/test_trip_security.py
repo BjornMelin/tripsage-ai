@@ -202,7 +202,7 @@ class TestVerifyTripAccess:
             trip_id=sample_trip_data["id"],
             principal_id=collaborator_id,
             required_level=TripAccessLevel.COLLABORATOR,
-            required_permission=TripAccessPermission.EDIT,  # Requires edit but only has view
+            required_permission=TripAccessPermission.EDIT,  # Requires edit but has view
             operation="test_insufficient_permission",
         )
 
@@ -491,7 +491,7 @@ class TestSecurityDecoratorIntegration:
     async def test_dependency_extracts_trip_id_from_request(
         self, mock_principal, mock_trip_service, sample_trip_data
     ):
-        """Test that dependency correctly extracts trip_id from request path parameters."""
+        """Test that dependency correctly extracts trip_id from path parameters."""
         from unittest.mock import Mock
 
         from fastapi import Request
@@ -530,7 +530,7 @@ class TestPreConfiguredDependencies:
     """Test pre-configured dependency types."""
 
     def test_predefined_dependencies_exist(self):
-        """Test that all predefined dependency types exist and are properly configured."""
+        """Test that all predefined dependency types exist and are configured."""
         from tripsage.api.core.trip_security import (
             TripCollaboratorAccessDep,
             TripEditPermissionDep,
@@ -609,7 +609,7 @@ class TestAdvancedSecurityScenarios:
             trip_id=sample_trip_data["id"],
             principal_id=collaborator_id,
             required_level=TripAccessLevel.COLLABORATOR,
-            required_permission=TripAccessPermission.EDIT,  # Requires edit but only has view
+            required_permission=TripAccessPermission.EDIT,  # Requires edit but has view
             operation="edit_attempt_with_view_permission",
         )
 
@@ -704,7 +704,7 @@ class TestAdvancedSecurityScenarios:
 
     @pytest.mark.asyncio
     async def test_security_context_ip_and_user_agent_logging(self, mock_trip_service):
-        """Test that IP address and user agent are properly captured for security logging."""
+        """Test that IP address and user agent are captured for security logging."""
         mock_trip_service._check_trip_access.return_value = False
 
         context = TripAccessContext(

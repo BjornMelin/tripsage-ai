@@ -32,7 +32,10 @@ class TestExampleService:
         assert settings.environment == "testing"
         assert settings.debug is True
         assert settings.database_url == "https://test-project.supabase.co"
-        assert settings.openai_api_key.get_secret_value() == "sk-test-openai-key-1234567890abcdef"
+        assert (
+            settings.openai_api_key.get_secret_value()
+            == "sk-test-openai-key-1234567890abcdef"
+        )
 
     @pytest.mark.asyncio
     async def test_service_with_mocked_dependencies(self):

@@ -67,7 +67,9 @@ class TestFlightService:
         )
 
     @pytest.fixture
-    def sample_flight_search_request(self, sample_flight_passenger: FlightPassenger) -> FlightSearchRequest:
+    def sample_flight_search_request(
+        self, sample_flight_passenger: FlightPassenger
+    ) -> FlightSearchRequest:
         """Sample flight search request."""
         return FlightSearchRequest(
             origin="JFK",
@@ -199,7 +201,9 @@ class TestFlightService:
     ):
         """Test flight search with cached results."""
         # Arrange - Populate cache
-        cache_key = flight_service._generate_search_cache_key(sample_flight_search_request)
+        cache_key = flight_service._generate_search_cache_key(
+            sample_flight_search_request
+        )
         flight_service._cache_search_results(cache_key, [sample_flight_offer])
 
         # Act
@@ -211,15 +215,21 @@ class TestFlightService:
         assert flight_service.external_service.search_flights.called is False
 
     @pytest.mark.asyncio
-    async def test_search_flights_invalid_dates_raises_validation_error(self, sample_flight_passenger: FlightPassenger):
+    async def test_search_flights_invalid_dates_raises_validation_error(
+        self, sample_flight_passenger: FlightPassenger
+    ):
         """Test flight search with validation errors."""
         # Act & Assert
-        with pytest.raises(ValueError, match="Return date must be after departure date"):
+        with pytest.raises(
+            ValueError, match="Return date must be after departure date"
+        ):
             FlightSearchRequest(
                 origin="JFK",
                 destination="CDG",
                 departure_date=datetime.now(timezone.utc) + timedelta(days=30),
-                return_date=(datetime.now(timezone.utc) + timedelta(days=25)),  # Before departure
+                return_date=(
+                    datetime.now(timezone.utc) + timedelta(days=25)
+                ),  # Before departure
                 passengers=[sample_flight_passenger],
             )
 
@@ -253,16 +263,22 @@ class TestFlightService:
     ):
         """Test successful flight offer retrieval."""
         # Arrange
-        mock_database_service.get_flight_offer.return_value = sample_flight_offer.model_dump()
+        mock_database_service.get_flight_offer.return_value = (
+            sample_flight_offer.model_dump()
+        )
 
         # Act
-        result = await flight_service.get_offer_details(sample_flight_offer.id, sample_user_id)
+        result = await flight_service.get_offer_details(
+            sample_flight_offer.id, sample_user_id
+        )
 
         # Assert
         assert result is not None
         assert result.id == sample_flight_offer.id
         assert result.total_price == sample_flight_offer.total_price
-        mock_database_service.get_flight_offer.assert_called_once_with(sample_flight_offer.id, sample_user_id)
+        mock_database_service.get_flight_offer.assert_called_once_with(
+            sample_flight_offer.id, sample_user_id
+        )
 
     @pytest.mark.asyncio
     async def test_get_offer_details_returns_none_when_not_found(
@@ -300,7 +316,9 @@ class TestFlightService:
             trip_id=str(uuid4()),
         )
 
-        mock_database_service.get_flight_offer.return_value = sample_flight_offer.model_dump()
+        mock_database_service.get_flight_offer.return_value = (
+            sample_flight_offer.model_dump()
+        )
         external_booking = {
             "booking_reference": "ABC123",
             "cancellable": True,
@@ -334,8 +352,12 @@ class TestFlightService:
         """Test flight booking with expired offer."""
         # Arrange
         sample_flight_offer.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
-        booking_request = FlightBookingRequest(offer_id=sample_flight_offer.id, passengers=[sample_flight_passenger])
-        mock_database_service.get_flight_offer.return_value = sample_flight_offer.model_dump()
+        booking_request = FlightBookingRequest(
+            offer_id=sample_flight_offer.id, passengers=[sample_flight_passenger]
+        )
+        mock_database_service.get_flight_offer.return_value = (
+            sample_flight_offer.model_dump()
+        )
 
         # Act & Assert
         with pytest.raises(ValidationError, match="Flight offer has expired"):
@@ -357,7 +379,9 @@ class TestFlightService:
             passengers=[sample_flight_passenger],
             hold_only=True,
         )
-        mock_database_service.get_flight_offer.return_value = sample_flight_offer.model_dump()
+        mock_database_service.get_flight_offer.return_value = (
+            sample_flight_offer.model_dump()
+        )
         mock_database_service.store_flight_booking.return_value = None
 
         # Act
@@ -379,7 +403,9 @@ class TestFlightService:
         """Test successful user bookings retrieval."""
         # Arrange
         user_id = sample_flight_booking.user_id
-        mock_database_service.get_flight_bookings.return_value = [sample_flight_booking.model_dump()]
+        mock_database_service.get_flight_bookings.return_value = [
+            sample_flight_booking.model_dump()
+        ]
 
         # Act
         results = await flight_service.get_user_bookings(user_id)
@@ -401,11 +427,15 @@ class TestFlightService:
     ):
         """Test successful booking cancellation."""
         # Arrange
-        mock_database_service.get_flight_booking.return_value = sample_flight_booking.model_dump()
+        mock_database_service.get_flight_booking.return_value = (
+            sample_flight_booking.model_dump()
+        )
         mock_database_service.update_flight_booking.return_value = True
 
         # Act
-        result = await flight_service.cancel_booking(sample_flight_booking.id, sample_flight_booking.user_id)
+        result = await flight_service.cancel_booking(
+            sample_flight_booking.id, sample_flight_booking.user_id
+        )
 
         # Assert
         assert result is True
@@ -423,11 +453,17 @@ class TestFlightService:
         """Test booking cancellation when already cancelled."""
         # Arrange
         sample_flight_booking.status = BookingStatus.CANCELLED
-        mock_database_service.get_flight_booking.return_value = sample_flight_booking.model_dump()
+        mock_database_service.get_flight_booking.return_value = (
+            sample_flight_booking.model_dump()
+        )
 
         # Act & Assert
-        with pytest.raises(ValidationError, match="Booking is already cancelled or expired"):
-            await flight_service.cancel_booking(sample_flight_booking.id, sample_flight_booking.user_id)
+        with pytest.raises(
+            ValidationError, match="Booking is already cancelled or expired"
+        ):
+            await flight_service.cancel_booking(
+                sample_flight_booking.id, sample_flight_booking.user_id
+            )
 
     # Test Mock Offers
 
@@ -489,7 +525,9 @@ class TestFlightService:
         ]
 
         # Act
-        scored_offers = await flight_service._score_offers(offers, sample_flight_search_request)
+        scored_offers = await flight_service._score_offers(
+            offers, sample_flight_search_request
+        )
 
         # Assert
         assert all(hasattr(offer, "score") for offer in scored_offers)
@@ -549,7 +587,9 @@ class TestFlightService:
     def test_booking_request_requires_complete_passenger_info(self):
         """Test booking request validation."""
         # Arrange - Complete passenger info
-        passenger = FlightPassenger(type=PassengerType.ADULT, given_name="John", family_name="Doe")
+        passenger = FlightPassenger(
+            type=PassengerType.ADULT, given_name="John", family_name="Doe"
+        )
         request = FlightBookingRequest(offer_id=str(uuid4()), passengers=[passenger])
 
         # Assert
@@ -562,8 +602,12 @@ class TestFlightService:
         )
 
         # Act & Assert
-        with pytest.raises(ValueError, match="Given name and family name are required for booking"):
-            FlightBookingRequest(offer_id=str(uuid4()), passengers=[incomplete_passenger])
+        with pytest.raises(
+            ValueError, match="Given name and family name are required for booking"
+        ):
+            FlightBookingRequest(
+                offer_id=str(uuid4()), passengers=[incomplete_passenger]
+            )
 
     # Test Error Handling
 
@@ -576,7 +620,9 @@ class TestFlightService:
     ):
         """Test service error handling."""
         # Arrange
-        mock_external_flight_service.search_flights.side_effect = Exception("External API error")
+        mock_external_flight_service.search_flights.side_effect = Exception(
+            "External API error"
+        )
 
         # Act
         result = await flight_service.search_flights(sample_flight_search_request)
@@ -626,7 +672,9 @@ class TestFlightService:
     # Test External API Conversion
 
     @pytest.mark.asyncio
-    async def test_external_api_conversion_preserves_data(self, flight_service: FlightService):
+    async def test_external_api_conversion_preserves_data(
+        self, flight_service: FlightService
+    ):
         """Test external API response conversion."""
         # Arrange
         external_offer = {
@@ -698,7 +746,9 @@ class TestFlightService:
             origin="JFK",
             destination="CDG",
             departure_date=datetime.now(timezone.utc) + timedelta(days=30),
-            return_date=(datetime.now(timezone.utc) + timedelta(days=365)),  # One year later
+            return_date=(
+                datetime.now(timezone.utc) + timedelta(days=365)
+            ),  # One year later
             passengers=[sample_flight_passenger],
         )
 

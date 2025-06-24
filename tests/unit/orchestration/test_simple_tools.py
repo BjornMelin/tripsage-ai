@@ -34,7 +34,11 @@ class TestSimpleTools:
     async def test_search_flights_tool(self, mock_mcp_manager):
         """Test the search_flights tool function."""
         # Mock MCP manager response
-        mock_result = {"flights": [{"airline": "Delta", "price": 299, "departure": "2024-03-15 10:00"}]}
+        mock_result = {
+            "flights": [
+                {"airline": "Delta", "price": 299, "departure": "2024-03-15 10:00"}
+            ]
+        }
         mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
 
         # Test the tool
@@ -58,7 +62,11 @@ class TestSimpleTools:
     @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
     async def test_search_accommodations_tool(self, mock_mcp_manager):
         """Test the search_accommodations tool function."""
-        mock_result = {"accommodations": [{"name": "Hotel California", "price": 150, "rating": 4.5}]}
+        mock_result = {
+            "accommodations": [
+                {"name": "Hotel California", "price": 150, "rating": 4.5}
+            ]
+        }
         mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
 
         result = await search_accommodations.ainvoke(
@@ -108,10 +116,14 @@ class TestSimpleTools:
     @patch("tripsage.orchestration.tools.simple_tools.mcp_manager")
     async def test_web_search_tool(self, mock_mcp_manager):
         """Test the web_search tool function."""
-        mock_result = {"results": [{"title": "Best time to visit Paris", "url": "example.com"}]}
+        mock_result = {
+            "results": [{"title": "Best time to visit Paris", "url": "example.com"}]
+        }
         mock_mcp_manager.invoke = AsyncMock(return_value=mock_result)
 
-        result = await web_search.ainvoke({"query": "best time to visit Paris", "location": "Paris"})
+        result = await web_search.ainvoke(
+            {"query": "best time to visit Paris", "location": "Paris"}
+        )
 
         parsed_result = json.loads(result)
         assert "results" in parsed_result
@@ -122,16 +134,24 @@ class TestSimpleTools:
     async def test_memory_tools(self, mock_mcp_manager):
         """Test the memory add and search tools."""
         # Test add_memory
-        mock_mcp_manager.invoke = AsyncMock(return_value={"success": True, "id": "mem_123"})
+        mock_mcp_manager.invoke = AsyncMock(
+            return_value={"success": True, "id": "mem_123"}
+        )
 
-        result = await add_memory.ainvoke({"content": "User prefers window seats", "category": "preferences"})
+        result = await add_memory.ainvoke(
+            {"content": "User prefers window seats", "category": "preferences"}
+        )
 
         parsed_result = json.loads(result)
         assert parsed_result["success"] is True
 
         # Test search_memories
         mock_mcp_manager.invoke = AsyncMock(
-            return_value={"memories": [{"content": "User prefers window seats", "category": "preferences"}]}
+            return_value={
+                "memories": [
+                    {"content": "User prefers window seats", "category": "preferences"}
+                ]
+            }
         )
 
         result = await search_memories.ainvoke({"content": "seat preferences"})
@@ -145,9 +165,13 @@ class TestSimpleTools:
     async def test_tool_error_handling(self, mock_mcp_manager):
         """Test tool error handling."""
         # Mock MCP manager to raise an exception
-        mock_mcp_manager.invoke = AsyncMock(side_effect=Exception("Service unavailable"))
+        mock_mcp_manager.invoke = AsyncMock(
+            side_effect=Exception("Service unavailable")
+        )
 
-        result = await search_flights.ainvoke({"origin": "NYC", "destination": "LAX", "departure_date": "2024-03-15"})
+        result = await search_flights.ainvoke(
+            {"origin": "NYC", "destination": "LAX", "departure_date": "2024-03-15"}
+        )
 
         parsed_result = json.loads(result)
         assert "error" in parsed_result
@@ -238,7 +262,9 @@ class TestToolSchemaValidation:
         from tripsage.orchestration.tools.simple_tools import FlightSearchParams
 
         # Valid params
-        valid_params = FlightSearchParams(origin="NYC", destination="LAX", departure_date="2024-03-15", passengers=2)
+        valid_params = FlightSearchParams(
+            origin="NYC", destination="LAX", departure_date="2024-03-15", passengers=2
+        )
         assert valid_params.origin == "NYC"
         assert valid_params.passengers == 2
 
@@ -264,7 +290,9 @@ class TestToolSchemaValidation:
         """Test MemoryParams schema validation."""
         from tripsage.orchestration.tools.simple_tools import MemoryParams
 
-        valid_params = MemoryParams(content="User prefers aisle seats", category="preferences")
+        valid_params = MemoryParams(
+            content="User prefers aisle seats", category="preferences"
+        )
         assert valid_params.content == "User prefers aisle seats"
         assert valid_params.category == "preferences"
 
@@ -320,7 +348,9 @@ class TestToolIntegration:
         """Test that all tools have meaningful descriptions."""
         for tool in ALL_TOOLS:
             assert tool.description is not None
-            assert len(tool.description) > 10, f"Tool {tool.name} needs a better description"
+            assert len(tool.description) > 10, (
+                f"Tool {tool.name} needs a better description"
+            )
             # Memory tools should mention memory, other tools should mention
             # travel or location
             if "memory" in tool.name:

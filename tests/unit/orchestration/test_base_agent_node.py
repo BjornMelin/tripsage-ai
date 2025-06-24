@@ -166,7 +166,9 @@ class TestBaseAgentNode:
         assert error_msg["agent"] == "test_agent"
 
     @pytest.mark.asyncio
-    async def test_multiple_errors_increment_count(self, mock_service_registry, sample_state):
+    async def test_multiple_errors_increment_count(
+        self, mock_service_registry, sample_state
+    ):
         """Test that multiple errors increment the error count correctly."""
 
         async def failing_process(state):
@@ -224,7 +226,9 @@ class TestBaseAgentNode:
         service = test_node.get_service("test_service")
 
         assert service == mock_service
-        mock_service_registry.get_required_service.assert_called_once_with("test_service")
+        mock_service_registry.get_required_service.assert_called_once_with(
+            "test_service"
+        )
 
     def test_get_service_optional(self, test_node, mock_service_registry):
         """Test getting an optional service."""
@@ -234,7 +238,9 @@ class TestBaseAgentNode:
         service = test_node.get_optional_service("optional_service")
 
         assert service == mock_service
-        mock_service_registry.get_optional_service.assert_called_once_with("optional_service")
+        mock_service_registry.get_optional_service.assert_called_once_with(
+            "optional_service"
+        )
 
     def test_get_service_optional_none(self, test_node, mock_service_registry):
         """Test getting an optional service that doesn't exist."""
@@ -281,7 +287,9 @@ class TestBaseAgentNode:
 
         # Timestamp should be updated
         assert result["updated_at"] != original_timestamp
-        assert datetime.fromisoformat(result["updated_at"]) > datetime.fromisoformat(original_timestamp)
+        assert datetime.fromisoformat(result["updated_at"]) > datetime.fromisoformat(
+            original_timestamp
+        )
 
     @pytest.mark.asyncio
     async def test_inheritance_pattern(self, mock_service_registry):

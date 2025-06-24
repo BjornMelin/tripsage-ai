@@ -70,7 +70,9 @@ async def add_conversation_memory(
             messages=request.messages,
             session_id=request.session_id,
             # context_type is not in the core model, add to metadata if needed
-            metadata=({"context_type": request.context_type} if request.context_type else None),
+            metadata=(
+                {"context_type": request.context_type} if request.context_type else None
+            ),
         )
 
         result = await memory_service.add_conversation_memory(user_id, core_request)
@@ -162,7 +164,9 @@ async def update_preferences(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.update_user_preferences(user_id, request.preferences)
+        result = await memory_service.update_user_preferences(
+            user_id, request.preferences
+        )
         return result
 
     except Exception as e:
@@ -227,7 +231,9 @@ async def delete_memory(
         success = await memory_service.delete_memory(user_id, memory_id)
 
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found"
+            )
 
         return {"message": "Memory deleted successfully"}
 

@@ -101,7 +101,9 @@ class TestWebSocketPerformanceMonitor:
         await performance_monitor.stop()
         assert not performance_monitor._running
 
-    def test_collect_connection_metrics(self, performance_monitor, mock_websocket_connection, mock_connection_health):
+    def test_collect_connection_metrics(
+        self, performance_monitor, mock_websocket_connection, mock_connection_health
+    ):
         """Test metrics collection from WebSocket connections."""
         # Mock the get_health method
         mock_websocket_connection.get_health.return_value = mock_connection_health
@@ -127,7 +129,9 @@ class TestWebSocketPerformanceMonitor:
         assert metrics["total_errors"] == 2
         assert metrics["current_latency"] == 50.0
 
-    def test_latency_alert_generation(self, performance_monitor, mock_websocket_connection):
+    def test_latency_alert_generation(
+        self, performance_monitor, mock_websocket_connection
+    ):
         """Test alert generation for high latency."""
         # Create high latency health metrics
         high_latency_health = ConnectionHealth(
@@ -158,7 +162,9 @@ class TestWebSocketPerformanceMonitor:
         assert alert.current_value == 150.0
         assert alert.threshold == 100.0
 
-    def test_critical_latency_alert_generation(self, performance_monitor, mock_websocket_connection):
+    def test_critical_latency_alert_generation(
+        self, performance_monitor, mock_websocket_connection
+    ):
         """Test critical alert generation for very high latency."""
         # Create critical latency health metrics
         critical_latency_health = ConnectionHealth(
@@ -185,7 +191,9 @@ class TestWebSocketPerformanceMonitor:
         assert alert.severity == "critical"
         assert alert.current_value == 250.0
 
-    def test_queue_size_alert_generation(self, performance_monitor, mock_websocket_connection):
+    def test_queue_size_alert_generation(
+        self, performance_monitor, mock_websocket_connection
+    ):
         """Test alert generation for high queue size."""
         # Create high queue size health metrics
         high_queue_health = ConnectionHealth(
@@ -214,7 +222,9 @@ class TestWebSocketPerformanceMonitor:
         assert alert.severity == "medium"
         assert alert.current_value == 75
 
-    def test_error_rate_alert_generation(self, performance_monitor, mock_websocket_connection):
+    def test_error_rate_alert_generation(
+        self, performance_monitor, mock_websocket_connection
+    ):
         """Test alert generation for high error rate."""
         # Set up connection with high error rate
         mock_websocket_connection.message_count = 100
@@ -266,7 +276,9 @@ class TestWebSocketPerformanceMonitor:
         assert alert.severity == "high"
         assert alert.current_value == 1
 
-    def test_backpressure_alert_generation(self, performance_monitor, mock_websocket_connection):
+    def test_backpressure_alert_generation(
+        self, performance_monitor, mock_websocket_connection
+    ):
         """Test alert generation for prolonged backpressure."""
         # Create backpressure health metrics
         backpressure_health = ConnectionHealth(
@@ -304,7 +316,9 @@ class TestWebSocketPerformanceMonitor:
         assert alert.type == "backpressure"
         assert alert.severity == "medium"
 
-    def test_alert_cooldown_mechanism(self, performance_monitor, mock_websocket_connection, mock_connection_health):
+    def test_alert_cooldown_mechanism(
+        self, performance_monitor, mock_websocket_connection, mock_connection_health
+    ):
         """Test that alerts have cooldown to prevent spam."""
         # Create high latency health
         high_latency_health = ConnectionHealth(
@@ -331,7 +345,9 @@ class TestWebSocketPerformanceMonitor:
         # Should only have one alert due to cooldown
         assert initial_alert_count == final_alert_count == 1
 
-    async def test_metrics_aggregation(self, performance_monitor, mock_websocket_connection):
+    async def test_metrics_aggregation(
+        self, performance_monitor, mock_websocket_connection
+    ):
         """Test periodic metrics aggregation."""
         # Create multiple snapshots with different latencies
         latencies = [25.0, 50.0, 75.0, 100.0, 125.0]
@@ -365,7 +381,9 @@ class TestWebSocketPerformanceMonitor:
         assert aggregated.connection_count == 1
         assert aggregated.avg_latency_ms == 75.0  # Average of latencies
         assert aggregated.p95_latency_ms == 125.0  # 95th percentile
-        assert aggregated.p99_latency_ms == 125.0  # 99th percentile (same as p95 for small dataset)
+        assert (
+            aggregated.p99_latency_ms == 125.0
+        )  # 99th percentile (same as p95 for small dataset)
 
     def test_performance_summary(self, performance_monitor):
         """Test performance summary generation."""
@@ -374,7 +392,7 @@ class TestWebSocketPerformanceMonitor:
         assert summary["status"] == "no_data"
 
         # Add some aggregated metrics
-        from tripsage_core.services.infrastructure.websocket_performance_monitor import (
+        from tripsage_core.services.infrastructure.websocket_performance_monitor import (  # noqa: E501
             AggregatedMetrics,
         )
 
@@ -437,7 +455,7 @@ class TestWebSocketPerformanceMonitor:
     def test_metrics_export(self, performance_monitor):
         """Test metrics export functionality."""
         # Add some test data
-        from tripsage_core.services.infrastructure.websocket_performance_monitor import (
+        from tripsage_core.services.infrastructure.websocket_performance_monitor import (  # noqa: E501
             AggregatedMetrics,
         )
 

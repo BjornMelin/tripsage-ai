@@ -1,9 +1,9 @@
 """
 Comprehensive tests for TripSage Core WebSocket Authentication Service.
 
-This module provides comprehensive test coverage for WebSocket authentication functionality
-including JWT token validation, channel access control, rate limiting, session management,
-security features, and error handling.
+This module provides comprehensive test coverage for WebSocket authentication
+functionality including JWT token validation, channel access control, rate limiting,
+session management, security features, and error handling.
 """
 
 import time
@@ -72,7 +72,9 @@ class TestWebSocketAuthModels:
 
     def test_websocket_auth_response_failure(self):
         """Test failed WebSocketAuthResponse."""
-        response = WebSocketAuthResponse(success=False, connection_id="conn_123", error="Invalid token")
+        response = WebSocketAuthResponse(
+            success=False, connection_id="conn_123", error="Invalid token"
+        )
 
         assert response.success is False
         assert response.connection_id == "conn_123"
@@ -89,7 +91,9 @@ class TestWebSocketAuthService:
     def mock_settings(self):
         """Create mock settings."""
         settings = Mock()
-        settings.database_jwt_secret.get_secret_value.return_value = "test-jwt-secret-for-testing-only"
+        settings.database_jwt_secret.get_secret_value.return_value = (
+            "test-jwt-secret-for-testing-only"
+        )
         settings.max_connections_per_user = 5
         settings.max_sessions_per_user = 3
         return settings
@@ -162,7 +166,9 @@ class TestWebSocketAuthService:
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "iat": datetime.now(timezone.utc),
         }
-        token = jwt.encode(payload, "test-jwt-secret-for-testing-only", algorithm="HS256")
+        token = jwt.encode(
+            payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
+        )
 
         with pytest.raises(CoreAuthenticationError, match="Token missing user ID"):
             await auth_service.verify_jwt_token(token)
@@ -192,7 +198,9 @@ class TestWebSocketAuthService:
             "system_messages",
         ]
 
-        allowed, denied = auth_service.validate_channel_access(user_id, requested_channels)
+        allowed, denied = auth_service.validate_channel_access(
+            user_id, requested_channels
+        )
 
         assert f"user:{user_id}" in allowed
         assert "notifications" in allowed
@@ -221,14 +229,19 @@ class TestWebSocketAuthService:
         user_id = uuid4()
 
         # User should have access to their own channel
-        assert auth_service.is_authorized_for_channel(user_id, f"user:{user_id}") is True
+        assert (
+            auth_service.is_authorized_for_channel(user_id, f"user:{user_id}") is True
+        )
 
         # User should have access to notifications
         assert auth_service.is_authorized_for_channel(user_id, "notifications") is True
 
         # User should not have access to other user's channel
         other_user_id = uuid4()
-        assert auth_service.is_authorized_for_channel(user_id, f"user:{other_user_id}") is False
+        assert (
+            auth_service.is_authorized_for_channel(user_id, f"user:{other_user_id}")
+            is False
+        )
 
     def test_get_user_channels(self, auth_service):
         """Test getting user-specific channels."""
@@ -291,7 +304,9 @@ class TestWebSocketAuthService:
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "iat": datetime.now(timezone.utc),
         }
-        token = jwt.encode(payload, "test-jwt-secret-for-testing-only", algorithm="HS256")
+        token = jwt.encode(
+            payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
+        )
 
         result = await auth_service.authenticate_token(token)
 
@@ -308,7 +323,9 @@ class TestWebSocketAuthService:
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
             "iat": datetime.now(timezone.utc),
         }
-        token = jwt.encode(payload, "test-jwt-secret-for-testing-only", algorithm="HS256")
+        token = jwt.encode(
+            payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
+        )
 
         result = await auth_service.authenticate_token(token)
 
@@ -396,7 +413,9 @@ class TestWebSocketAuthService:
 
         # Mock connection count exceeding limit
         with patch.object(auth_service, "_get_user_connection_count", return_value=10):
-            with pytest.raises(CoreAuthorizationError, match="Connection limit exceeded"):
+            with pytest.raises(
+                CoreAuthorizationError, match="Connection limit exceeded"
+            ):
                 await auth_service.check_connection_limit(user_id)
 
     @pytest.mark.asyncio
@@ -484,7 +503,9 @@ class TestWebSocketAuthService:
             "sub": str(uuid4()),
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
         }
-        token = jwt.encode(payload, "test-jwt-secret-for-testing-only", algorithm="HS256")
+        token = jwt.encode(
+            payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
+        )
 
         result_user_id = await auth_service.verify_jwt_token(token)
         assert result_user_id == UUID(payload["sub"])
@@ -495,7 +516,8 @@ class TestWebSocketAuthService:
         user_id = "test-user-123"
 
         # Test various channel patterns based on actual implementation
-        # Looking at _verify_channel_access, channels like "admin:system" don't match specific patterns
+        # Looking at _verify_channel_access, channels like "admin:system"
+        # don't match specific patterns
         # but don't start with "user:" either, so they return True by default
         test_cases = [
             ("session:123", True),
@@ -584,7 +606,9 @@ class TestWebSocketAuthService:
 
         # Mock high connection count
         with patch.object(auth_service, "_get_user_connection_count", return_value=6):
-            with pytest.raises(CoreAuthorizationError, match="Connection limit exceeded"):
+            with pytest.raises(
+                CoreAuthorizationError, match="Connection limit exceeded"
+            ):
                 await auth_service.check_connection_limit(user_id)
 
         # Mock high session count
@@ -708,12 +732,16 @@ class TestWebSocketAuthServiceIntegration:
         assert auth_result["user_id"] == str(user_id)
 
         # Verify user has access to their channels
-        user_channels = auth_service_real.get_user_channels(UUID(auth_result["user_id"]))
+        user_channels = auth_service_real.get_user_channels(
+            UUID(auth_result["user_id"])
+        )
         assert f"user:{user_id}" in user_channels
 
         # Test session access - expect denial for non-test-user-123
         if str(user_id) == "test-user-123":
-            session_access = await auth_service_real.verify_session_access(user_id, session_id)
+            session_access = await auth_service_real.verify_session_access(
+                user_id, session_id
+            )
             assert session_access is True
         else:
             # For other user IDs, expect access denial
@@ -776,7 +804,9 @@ class TestWebSocketAuthServiceIntegration:
         for _ in range(50):
             await auth_service_real.authenticate_token(token)
             auth_service_real.get_available_channels(user_id)
-            auth_service_real.validate_channel_access(user_id, ["general", "notifications"])
+            auth_service_real.validate_channel_access(
+                user_id, ["general", "notifications"]
+            )
             await auth_service_real.check_connection_limit(user_id)
             await auth_service_real.check_session_limit(user_id)
 
@@ -801,11 +831,15 @@ class TestWebSocketAuthServiceRateLimiting:
         # Mock the settings to have lower limits
         mock_settings = Mock()
         mock_settings.max_connections_per_user = 2
-        mock_settings.database_jwt_secret.get_secret_value.return_value = "test-jwt-secret-for-testing-only"
+        mock_settings.database_jwt_secret.get_secret_value.return_value = (
+            "test-jwt-secret-for-testing-only"
+        )
 
         # Mock high connection count to trigger limit and patch get_settings
         with (
-            patch.object(auth_service_with_limits, "_get_user_connection_count", return_value=3),
+            patch.object(
+                auth_service_with_limits, "_get_user_connection_count", return_value=3
+            ),
             patch(
                 "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
                 return_value=mock_settings,
@@ -825,11 +859,15 @@ class TestWebSocketAuthServiceRateLimiting:
         # Mock the settings to have lower limits
         mock_settings = Mock()
         mock_settings.max_sessions_per_user = 1
-        mock_settings.database_jwt_secret.get_secret_value.return_value = "test-jwt-secret-for-testing-only"
+        mock_settings.database_jwt_secret.get_secret_value.return_value = (
+            "test-jwt-secret-for-testing-only"
+        )
 
         # Mock high session count to trigger limit and patch get_settings
         with (
-            patch.object(auth_service_with_limits, "_get_user_session_count", return_value=2),
+            patch.object(
+                auth_service_with_limits, "_get_user_session_count", return_value=2
+            ),
             patch(
                 "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
                 return_value=mock_settings,
@@ -849,7 +887,9 @@ class TestWebSocketAuthServiceRateLimiting:
 
         # Test connection tracking with different ID types
         auth_service_with_limits._track_connection_attempt(user_id, "192.168.1.1")
-        auth_service_with_limits._track_connection_attempt(string_user_id, "192.168.1.2")
+        auth_service_with_limits._track_connection_attempt(
+            string_user_id, "192.168.1.2"
+        )
 
         # Test count methods with different ID types
         count1 = auth_service_with_limits._get_user_connection_count(user_id)
@@ -868,7 +908,9 @@ class TestWebSocketAuthServiceSecurity:
     def auth_service(self):
         """Create auth service for security tests."""
         mock_settings = Mock()
-        mock_settings.database_jwt_secret.get_secret_value.return_value = "test-jwt-secret-for-testing-only"
+        mock_settings.database_jwt_secret.get_secret_value.return_value = (
+            "test-jwt-secret-for-testing-only"
+        )
         mock_settings.max_connections_per_user = 5
         mock_settings.max_sessions_per_user = 3
 
@@ -970,7 +1012,9 @@ class TestWebSocketAuthServiceSecurity:
             "iat": datetime.now(timezone.utc),
             "role": "admin",  # Malicious role claim
         }
-        token_no_sub = jwt.encode(payload_no_sub, "test-jwt-secret-for-testing-only", algorithm="HS256")
+        token_no_sub = jwt.encode(
+            payload_no_sub, "test-jwt-secret-for-testing-only", algorithm="HS256"
+        )
 
         with pytest.raises(CoreAuthenticationError, match="Token missing user ID"):
             await auth_service.verify_jwt_token(token_no_sub)
@@ -1005,7 +1049,9 @@ class TestWebSocketAuthServiceSecurity:
         user_id = uuid4()
 
         # Create token with correct secret and algorithm
-        token_valid = self.create_test_token(user_id, secret="test-jwt-secret-for-testing-only")
+        token_valid = self.create_test_token(
+            user_id, secret="test-jwt-secret-for-testing-only"
+        )
 
         # Should work with correct algorithm and secret
         result = await auth_service.verify_jwt_token(token_valid)

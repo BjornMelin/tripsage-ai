@@ -58,7 +58,9 @@ async def unified_search(
                 if cached_result:
                     logger.info(f"Cache hit for search query: {request.query}")
                     # Track cache hit analytics
-                    await _track_search_analytics(user_id, request.query, "cache_hit", cache_service)
+                    await _track_search_analytics(
+                        user_id, request.query, "cache_hit", cache_service
+                    )
                     return cached_result
             except Exception as e:
                 logger.warning(f"Cache retrieval failed: {e}")
@@ -101,7 +103,9 @@ async def unified_search(
         ) from e
 
 
-async def _track_search_analytics(user_id: Optional[str], query: str, cache_status: str, cache_service):
+async def _track_search_analytics(
+    user_id: Optional[str], query: str, cache_status: str, cache_service
+):
     """Track search analytics for monitoring and optimization."""
     try:
         from datetime import datetime
@@ -130,7 +134,9 @@ async def _track_search_analytics(user_id: Optional[str], query: str, cache_stat
 
 @router.get("/suggest", response_model=List[str])
 async def search_suggestions(
-    query: str = Query(..., min_length=1, max_length=100, description="Partial search query"),
+    query: str = Query(
+        ..., min_length=1, max_length=100, description="Partial search query"
+    ),
     limit: int = Query(10, ge=1, le=20, description="Maximum number of suggestions"),
 ):
     """
@@ -165,7 +171,9 @@ async def search_suggestions(
 
 @router.get("/recent", response_model=List[Dict[str, Any]])
 async def get_recent_searches(
-    limit: int = Query(10, ge=1, le=50, description="Maximum number of searches to return"),
+    limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of searches to return"
+    ),
     principal=Depends(require_principal),
 ):
     """
@@ -178,7 +186,9 @@ async def get_recent_searches(
 
     try:
         search_history_service = await get_search_history_service()
-        searches = await search_history_service.get_recent_searches(user_id, limit=limit)
+        searches = await search_history_service.get_recent_searches(
+            user_id, limit=limit
+        )
 
         logger.info(f"Retrieved {len(searches)} recent searches for user: {user_id}")
         return searches
@@ -295,7 +305,9 @@ async def bulk_search(
                 try:
                     cached_result = await cache_service.get(cache_key)
                     if cached_result:
-                        await _track_search_analytics(user_id, request.query, "cache_hit", cache_service)
+                        await _track_search_analytics(
+                            user_id, request.query, "cache_hit", cache_service
+                        )
                         return cached_result
                 except Exception:
                     pass
@@ -320,7 +332,9 @@ async def bulk_search(
             return result
 
         # Process all searches in parallel
-        results = await asyncio.gather(*[process_single_search(req) for req in requests], return_exceptions=True)
+        results = await asyncio.gather(
+            *[process_single_search(req) for req in requests], return_exceptions=True
+        )
 
         # Filter out exceptions and return successful results
         successful_results = []
@@ -335,7 +349,9 @@ async def bulk_search(
         # Remove None values
         valid_results = [r for r in successful_results if r is not None]
 
-        logger.info(f"Bulk search completed: {len(valid_results)}/{len(requests)} successful")
+        logger.info(
+            f"Bulk search completed: {len(valid_results)}/{len(requests)} successful"
+        )
         return valid_results
 
     except Exception as e:
@@ -366,12 +382,18 @@ async def get_search_analytics(
         analytics_data = await cache_service.get(analytics_key) or []
 
         # Filter to user's own analytics
-        user_analytics = [data for data in analytics_data if data.get("user_id") == user_id]
+        user_analytics = [
+            data for data in analytics_data if data.get("user_id") == user_id
+        ]
 
         # Aggregate statistics
         total_searches = len(user_analytics)
-        cache_hits = len([d for d in user_analytics if d.get("cache_status") == "cache_hit"])
-        cache_misses = len([d for d in user_analytics if d.get("cache_status") == "cache_miss"])
+        cache_hits = len(
+            [d for d in user_analytics if d.get("cache_status") == "cache_hit"]
+        )
+        cache_misses = len(
+            [d for d in user_analytics if d.get("cache_status") == "cache_miss"]
+        )
 
         # Most common queries
         query_counts = {}
@@ -379,7 +401,9 @@ async def get_search_analytics(
             query = data.get("query", "")
             query_counts[query] = query_counts.get(query, 0) + 1
 
-        popular_queries = sorted(query_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+        popular_queries = sorted(
+            query_counts.items(), key=lambda x: x[1], reverse=True
+        )[:10]
 
         return {
             "date": date,

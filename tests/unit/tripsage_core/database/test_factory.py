@@ -135,7 +135,9 @@ class TestDatabaseConnectionFactory:
         mock_pool = MagicMock()
         mock_pool.acquire.return_value = mock_acquire_context
 
-        with patch("asyncpg.create_pool", new_callable=AsyncMock, return_value=mock_pool) as mock_create:
+        with patch(
+            "asyncpg.create_pool", new_callable=AsyncMock, return_value=mock_pool
+        ) as mock_create:
             pool = await factory.create_pool()
 
             assert pool == mock_pool
@@ -179,7 +181,9 @@ class TestDatabaseConnectionFactory:
         # Test with URL that needs conversion
         factory.settings.postgres_url = "postgresql+asyncpg://user:pass@host/db"
 
-        with patch("asyncpg.create_pool", new_callable=AsyncMock, return_value=mock_pool) as mock_create:
+        with patch(
+            "asyncpg.create_pool", new_callable=AsyncMock, return_value=mock_pool
+        ) as mock_create:
             await factory.create_pool()
 
             # Should convert to plain postgres:// for asyncpg
@@ -189,7 +193,9 @@ class TestDatabaseConnectionFactory:
     @pytest.mark.asyncio
     async def test_create_pool_validation_failure(self, factory):
         """Test pool creation fails on URL validation."""
-        factory.settings.postgres_url = "postgresql://user:pass@host/db;DROP TABLE users"
+        factory.settings.postgres_url = (
+            "postgresql://user:pass@host/db;DROP TABLE users"
+        )
 
         with pytest.raises(ValueError, match="dangerous pattern"):
             await factory.create_pool()
@@ -228,7 +234,9 @@ class TestDatabaseConnectionFactory:
             factory._pool = mock_pool
             return mock_pool
 
-        with patch.object(factory, "create_pool", side_effect=mock_create_pool) as mock_create:
+        with patch.object(
+            factory, "create_pool", side_effect=mock_create_pool
+        ) as mock_create:
             conn = await factory.get_connection()
 
             assert conn == mock_connection
@@ -276,7 +284,9 @@ class TestDatabaseConnectionFactory:
     @pytest.mark.asyncio
     async def test_test_connection_failure(self, factory):
         """Test failed connection test."""
-        with patch.object(factory, "create_pool", side_effect=Exception("Connection failed")):
+        with patch.object(
+            factory, "create_pool", side_effect=Exception("Connection failed")
+        ):
             result = await factory.test_connection()
 
             assert result is False
@@ -301,7 +311,9 @@ class TestDatabaseConnectionFactory:
         result = await factory.execute_query("SELECT * FROM users WHERE id = $1", 1)
 
         assert str(mock_result) in result
-        mock_connection.fetch.assert_called_once_with("SELECT * FROM users WHERE id = $1", 1, timeout=None)
+        mock_connection.fetch.assert_called_once_with(
+            "SELECT * FROM users WHERE id = $1", 1, timeout=None
+        )
 
     @pytest.mark.asyncio
     async def test_execute_query_with_timeout(self, factory):
@@ -342,7 +354,9 @@ class TestDatabaseConnectionFactory:
             factory._pool = mock_pool
             return mock_pool
 
-        with patch.object(factory, "create_pool", side_effect=mock_create_pool) as mock_create:
+        with patch.object(
+            factory, "create_pool", side_effect=mock_create_pool
+        ) as mock_create:
             await factory.execute_query("SELECT 1")
 
             mock_create.assert_called_once()

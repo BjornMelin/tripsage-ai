@@ -82,7 +82,9 @@ class CircuitBreakerMetrics:
         """Record a failed call."""
         self.failure_calls += 1
         self.last_failure_time = time.time()
-        self.failure_types[exception_type] = self.failure_types.get(exception_type, 0) + 1
+        self.failure_types[exception_type] = (
+            self.failure_types.get(exception_type, 0) + 1
+        )
 
     def record_circuit_open(self) -> None:
         """Record circuit opening."""
@@ -140,7 +142,9 @@ class SimpleCircuitBreaker:
         self.exceptions = exceptions or [Exception]
         self.metrics = CircuitBreakerMetrics(name)
 
-        logger.info(f"Initialized simple circuit breaker '{name}' with {max_retries} retries")
+        logger.info(
+            f"Initialized simple circuit breaker '{name}' with {max_retries} retries"
+        )
 
     def __call__(self, func: Callable) -> Callable:
         """Decorator to apply simple circuit breaker."""
@@ -170,7 +174,10 @@ class SimpleCircuitBreaker:
                 return result
             except Exception as e:
                 self.metrics.record_failure(type(e).__name__)
-                logger.warning(f"Simple circuit breaker '{self.name}' failed after {self.max_retries} retries: {e}")
+                logger.warning(
+                    f"Simple circuit breaker '{self.name}' failed after "
+                    f"{self.max_retries} retries: {e}"
+                )
                 raise
 
         return wrapper
@@ -197,7 +204,10 @@ class SimpleCircuitBreaker:
                 return result
             except Exception as e:
                 self.metrics.record_failure(type(e).__name__)
-                logger.warning(f"Simple circuit breaker '{self.name}' failed after {self.max_retries} retries: {e}")
+                logger.warning(
+                    f"Simple circuit breaker '{self.name}' failed after "
+                    f"{self.max_retries} retries: {e}"
+                )
                 raise
 
         return wrapper
@@ -242,9 +252,14 @@ class EnterpriseCircuitBreaker:
         self.metrics = CircuitBreakerMetrics(name)
 
         # Enterprise features - using settings for now
-        self.enterprise_config = type("obj", (object,), {"enable_circuit_breaker_analytics": True})()
+        self.enterprise_config = type(
+            "obj", (object,), {"enable_circuit_breaker_analytics": True}
+        )()
 
-        logger.info(f"Initialized enterprise circuit breaker '{name}' with failure_threshold={failure_threshold}")
+        logger.info(
+            f"Initialized enterprise circuit breaker '{name}' with "
+            f"failure_threshold={failure_threshold}"
+        )
 
     def __call__(self, func: Callable) -> Callable:
         """Decorator to apply enterprise circuit breaker."""
@@ -259,7 +274,10 @@ class EnterpriseCircuitBreaker:
 
         if self.state == CircuitState.OPEN:
             # Check if timeout has elapsed
-            if self.last_failure_time and (time.time() - self.last_failure_time) > self.timeout:
+            if (
+                self.last_failure_time
+                and (time.time() - self.last_failure_time) > self.timeout
+            ):
                 self._transition_to_half_open()
                 return True
             return False
@@ -280,7 +298,10 @@ class EnterpriseCircuitBreaker:
         elif self.state == CircuitState.CLOSED:
             # Reset failure count on success
             if self.failure_count > 0:
-                logger.debug(f"Circuit breaker '{self.name}' resetting failure count after success")
+                logger.debug(
+                    f"Circuit breaker '{self.name}' resetting failure count "
+                    f"after success"
+                )
                 self.failure_count = 0
 
     def _record_failure(self, exception: Exception) -> None:
@@ -297,7 +318,9 @@ class EnterpriseCircuitBreaker:
 
     def _transition_to_open(self) -> None:
         """Transition circuit to OPEN state."""
-        logger.warning(f"Circuit breaker '{self.name}' opening after {self.failure_count} failures")
+        logger.warning(
+            f"Circuit breaker '{self.name}' opening after {self.failure_count} failures"
+        )
         self.state = CircuitState.OPEN
         self.state_change_time = time.time()
         self.metrics.record_circuit_open()
@@ -307,7 +330,10 @@ class EnterpriseCircuitBreaker:
 
     def _transition_to_half_open(self) -> None:
         """Transition circuit to HALF_OPEN state."""
-        logger.info(f"Circuit breaker '{self.name}' transitioning to half-open for recovery testing")
+        logger.info(
+            f"Circuit breaker '{self.name}' transitioning to half-open "
+            f"for recovery testing"
+        )
         self.state = CircuitState.HALF_OPEN
         self.success_count = 0
         self.state_change_time = time.time()
@@ -317,7 +343,10 @@ class EnterpriseCircuitBreaker:
 
     def _transition_to_closed(self) -> None:
         """Transition circuit to CLOSED state."""
-        logger.info(f"Circuit breaker '{self.name}' closing after {self.success_count} successful recoveries")
+        logger.info(
+            f"Circuit breaker '{self.name}' closing after "
+            f"{self.success_count} successful recoveries"
+        )
         self.state = CircuitState.CLOSED
         self.failure_count = 0
         self.success_count = 0
@@ -485,10 +514,14 @@ def circuit_breaker(
 
 
 # Global circuit breaker registry for enterprise monitoring
-_circuit_breaker_registry: Dict[str, Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]] = {}
+_circuit_breaker_registry: Dict[
+    str, Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]
+] = {}
 
 
-def get_circuit_breaker_registry() -> Dict[str, Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]]:
+def get_circuit_breaker_registry() -> Dict[
+    str, Union[SimpleCircuitBreaker, EnterpriseCircuitBreaker]
+]:
     """Get the global circuit breaker registry."""
     return _circuit_breaker_registry
 

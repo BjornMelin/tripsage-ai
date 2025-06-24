@@ -123,7 +123,9 @@ class UserActivityQueryParams(DashboardQueryParams):
 
     user_type: Optional[str] = Field(default=None, regex="^(user|agent|admin)$")
     limit: Optional[int] = Field(default=20, ge=1, le=100)
-    sort_by: Optional[str] = Field(default="request_count", regex="^(request_count|error_count|last_activity)$")
+    sort_by: Optional[str] = Field(
+        default="request_count", regex="^(request_count|error_count|last_activity)$"
+    )
     sort_order: Optional[str] = Field(default="desc", regex="^(asc|desc)$")
 
 
@@ -144,10 +146,14 @@ class ComponentHealth(BaseModel):
 
     name: str = Field(..., description="Component name")
     status: ServiceHealthStatus = Field(..., description="Component health status")
-    latency_ms: Optional[float] = Field(default=None, description="Response latency in milliseconds")
+    latency_ms: Optional[float] = Field(
+        default=None, description="Response latency in milliseconds"
+    )
     message: Optional[str] = Field(default=None, description="Status message")
     last_check: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: Dict[str, Any] = Field(default_factory=dict, description="Additional details")
+    details: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional details"
+    )
 
 
 class SystemOverviewResponse(BaseModel):
@@ -162,7 +168,9 @@ class SystemOverviewResponse(BaseModel):
     # Performance metrics
     total_requests_24h: int = Field(..., description="Total requests in last 24 hours")
     total_errors_24h: int = Field(..., description="Total errors in last 24 hours")
-    success_rate_24h: float = Field(..., ge=0.0, le=1.0, description="Success rate in last 24 hours")
+    success_rate_24h: float = Field(
+        ..., ge=0.0, le=1.0, description="Success rate in last 24 hours"
+    )
     avg_latency_ms: float = Field(default=0.0, description="Average response latency")
 
     # Activity metrics
@@ -170,7 +178,9 @@ class SystemOverviewResponse(BaseModel):
     active_api_keys: int = Field(..., description="Active API keys")
 
     # Component health
-    components: List[ComponentHealth] = Field(default_factory=list, description="Component health status")
+    components: List[ComponentHealth] = Field(
+        default_factory=list, description="Component health status"
+    )
 
 
 class ServiceStatusResponse(BaseModel):
@@ -178,10 +188,14 @@ class ServiceStatusResponse(BaseModel):
 
     service: str = Field(..., description="Service name")
     status: ServiceHealthStatus = Field(..., description="Service health status")
-    latency_ms: Optional[float] = Field(default=None, description="Response latency in milliseconds")
+    latency_ms: Optional[float] = Field(
+        default=None, description="Response latency in milliseconds"
+    )
     last_check: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     error_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="Error rate")
-    uptime_percentage: float = Field(default=100.0, ge=0.0, le=100.0, description="Uptime percentage")
+    uptime_percentage: float = Field(
+        default=100.0, ge=0.0, le=100.0, description="Uptime percentage"
+    )
     message: Optional[str] = Field(default=None, description="Status message")
     endpoint_health: Dict[str, ServiceHealthStatus] = Field(default_factory=dict)
 
@@ -205,12 +219,20 @@ class UsageMetricsResponse(BaseModel):
 
     # Usage breakdown
     unique_users: int = Field(..., description="Number of unique users")
-    unique_endpoints: int = Field(..., description="Number of unique endpoints accessed")
-    top_endpoints: List[Dict[str, Any]] = Field(default_factory=list, description="Top accessed endpoints")
-    error_breakdown: Dict[str, int] = Field(default_factory=dict, description="Error count by type")
+    unique_endpoints: int = Field(
+        ..., description="Number of unique endpoints accessed"
+    )
+    top_endpoints: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Top accessed endpoints"
+    )
+    error_breakdown: Dict[str, int] = Field(
+        default_factory=dict, description="Error count by type"
+    )
 
     # Service usage
-    usage_by_service: Dict[str, int] = Field(default_factory=dict, description="Request count by service")
+    usage_by_service: Dict[str, int] = Field(
+        default_factory=dict, description="Request count by service"
+    )
 
 
 class RateLimitInfoResponse(BaseModel):
@@ -223,7 +245,9 @@ class RateLimitInfoResponse(BaseModel):
     remaining: int = Field(..., description="Remaining quota")
     window_minutes: int = Field(..., description="Rate limit window in minutes")
     reset_at: datetime = Field(..., description="Rate limit reset time")
-    percentage_used: float = Field(..., ge=0.0, le=100.0, description="Percentage of quota used")
+    percentage_used: float = Field(
+        ..., ge=0.0, le=100.0, description="Percentage of quota used"
+    )
     is_approaching_limit: bool = Field(..., description="Whether approaching the limit")
 
     @validator("is_approaching_limit", always=True)
@@ -241,7 +265,9 @@ class AlertInfoResponse(BaseModel):
     alert_type: AlertType = Field(..., description="Type of alert")
     message: str = Field(..., description="Alert message")
     created_at: datetime = Field(..., description="Alert creation time")
-    updated_at: Optional[datetime] = Field(default=None, description="Alert last update time")
+    updated_at: Optional[datetime] = Field(
+        default=None, description="Alert last update time"
+    )
 
     # Context information
     key_id: Optional[str] = Field(default=None, description="Related API key ID")
@@ -250,13 +276,23 @@ class AlertInfoResponse(BaseModel):
     endpoint: Optional[str] = Field(default=None, description="Related endpoint")
 
     # Status
-    acknowledged: bool = Field(default=False, description="Whether alert is acknowledged")
-    acknowledged_by: Optional[str] = Field(default=None, description="User who acknowledged")
-    acknowledged_at: Optional[datetime] = Field(default=None, description="Acknowledgment time")
+    acknowledged: bool = Field(
+        default=False, description="Whether alert is acknowledged"
+    )
+    acknowledged_by: Optional[str] = Field(
+        default=None, description="User who acknowledged"
+    )
+    acknowledged_at: Optional[datetime] = Field(
+        default=None, description="Acknowledgment time"
+    )
 
     # Additional data
-    details: Dict[str, Any] = Field(default_factory=dict, description="Additional alert details")
-    resolution_steps: List[str] = Field(default_factory=list, description="Suggested resolution steps")
+    details: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional alert details"
+    )
+    resolution_steps: List[str] = Field(
+        default_factory=list, description="Suggested resolution steps"
+    )
 
 
 class UserActivityResponse(BaseModel):
@@ -272,13 +308,21 @@ class UserActivityResponse(BaseModel):
     last_activity: datetime = Field(..., description="Last activity timestamp")
 
     # Usage patterns
-    services_used: List[str] = Field(default_factory=list, description="Services accessed")
-    top_endpoints: List[Dict[str, Any]] = Field(default_factory=list, description="Most used endpoints")
+    services_used: List[str] = Field(
+        default_factory=list, description="Services accessed"
+    )
+    top_endpoints: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Most used endpoints"
+    )
     avg_latency_ms: float = Field(default=0.0, description="Average response latency")
 
     # Time-based analysis
-    activity_hours: Dict[str, int] = Field(default_factory=dict, description="Activity by hour")
-    peak_activity_hour: Optional[str] = Field(default=None, description="Hour with most activity")
+    activity_hours: Dict[str, int] = Field(
+        default_factory=dict, description="Activity by hour"
+    )
+    peak_activity_hour: Optional[str] = Field(
+        default=None, description="Hour with most activity"
+    )
 
 
 class TrendDataPoint(BaseModel):
@@ -286,7 +330,9 @@ class TrendDataPoint(BaseModel):
 
     timestamp: datetime = Field(..., description="Data point timestamp")
     value: float = Field(..., description="Metric value")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional context")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional context"
+    )
 
 
 class TrendDataResponse(BaseModel):
@@ -302,7 +348,9 @@ class TrendDataResponse(BaseModel):
     min_value: float = Field(..., description="Minimum value in period")
     max_value: float = Field(..., description="Maximum value in period")
     avg_value: float = Field(..., description="Average value in period")
-    trend_direction: str = Field(..., description="Overall trend direction (up, down, stable)")
+    trend_direction: str = Field(
+        ..., description="Overall trend direction (up, down, stable)"
+    )
 
     @validator("trend_direction", always=True)
     def calculate_trend_direction(cls, v, values):
@@ -351,7 +399,9 @@ class AnalyticsSummaryResponse(BaseModel):
 
     # Insights and recommendations
     insights: List[str] = Field(default_factory=list, description="Key insights")
-    recommendations: List[str] = Field(default_factory=list, description="Improvement recommendations")
+    recommendations: List[str] = Field(
+        default_factory=list, description="Improvement recommendations"
+    )
 
 
 # Action request schemas
@@ -360,14 +410,18 @@ class AnalyticsSummaryResponse(BaseModel):
 class AcknowledgeAlertRequest(BaseModel):
     """Request to acknowledge an alert."""
 
-    note: Optional[str] = Field(default=None, max_length=500, description="Acknowledgment note")
+    note: Optional[str] = Field(
+        default=None, max_length=500, description="Acknowledgment note"
+    )
 
 
 class DismissAlertRequest(BaseModel):
     """Request to dismiss an alert."""
 
     reason: str = Field(..., max_length=200, description="Dismissal reason")
-    note: Optional[str] = Field(default=None, max_length=500, description="Additional notes")
+    note: Optional[str] = Field(
+        default=None, max_length=500, description="Additional notes"
+    )
 
 
 class ConfigureAlertRequest(BaseModel):
@@ -376,7 +430,9 @@ class ConfigureAlertRequest(BaseModel):
     alert_type: AlertType = Field(..., description="Type of alert to configure")
     threshold: float = Field(..., description="Alert threshold value")
     enabled: bool = Field(default=True, description="Whether alert is enabled")
-    notification_channels: List[str] = Field(default_factory=list, description="Notification channels")
+    notification_channels: List[str] = Field(
+        default_factory=list, description="Notification channels"
+    )
 
 
 # Bulk operation schemas
@@ -385,8 +441,12 @@ class ConfigureAlertRequest(BaseModel):
 class BulkAlertActionRequest(BaseModel):
     """Request for bulk alert actions."""
 
-    alert_ids: List[str] = Field(..., min_items=1, max_items=100, description="Alert IDs to process")
-    action: str = Field(..., regex="^(acknowledge|dismiss)$", description="Action to perform")
+    alert_ids: List[str] = Field(
+        ..., min_items=1, max_items=100, description="Alert IDs to process"
+    )
+    action: str = Field(
+        ..., regex="^(acknowledge|dismiss)$", description="Action to perform"
+    )
     note: Optional[str] = Field(default=None, max_length=500, description="Action note")
 
 
@@ -396,7 +456,9 @@ class BulkAlertActionResponse(BaseModel):
     processed: int = Field(..., description="Number of alerts processed")
     successful: int = Field(..., description="Number of successful operations")
     failed: int = Field(..., description="Number of failed operations")
-    errors: List[Dict[str, str]] = Field(default_factory=list, description="Error details")
+    errors: List[Dict[str, str]] = Field(
+        default_factory=list, description="Error details"
+    )
 
 
 # Export monitoring data schemas
@@ -410,9 +472,15 @@ class ExportRequest(BaseModel):
         regex="^(metrics|alerts|usage|trends)$",
         description="Type of data to export",
     )
-    format: str = Field(default="json", regex="^(json|csv|excel)$", description="Export format")
-    time_range_hours: int = Field(default=24, ge=1, le=8760, description="Time range in hours")
-    filters: Dict[str, Any] = Field(default_factory=dict, description="Additional filters")
+    format: str = Field(
+        default="json", regex="^(json|csv|excel)$", description="Export format"
+    )
+    time_range_hours: int = Field(
+        default=24, ge=1, le=8760, description="Time range in hours"
+    )
+    filters: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional filters"
+    )
 
 
 class ExportResponse(BaseModel):
@@ -420,7 +488,11 @@ class ExportResponse(BaseModel):
 
     export_id: str = Field(..., description="Unique export ID")
     status: str = Field(..., description="Export status")
-    download_url: Optional[str] = Field(default=None, description="Download URL when ready")
+    download_url: Optional[str] = Field(
+        default=None, description="Download URL when ready"
+    )
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime = Field(..., description="Export expiration time")
-    file_size_bytes: Optional[int] = Field(default=None, description="File size in bytes")
+    file_size_bytes: Optional[int] = Field(
+        default=None, description="File size in bytes"
+    )

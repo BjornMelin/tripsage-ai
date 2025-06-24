@@ -41,7 +41,9 @@ class TestApiKeyIntegrationDemo:
         from tripsage_core.services.business.api_key_service import ApiKeyService
 
         settings = get_settings()
-        api_service = ApiKeyService(db=test_db_service, cache=test_cache_service, settings=settings)
+        api_service = ApiKeyService(
+            db=test_db_service, cache=test_cache_service, settings=settings
+        )
 
         # Mock external API validation
         with patch("httpx.AsyncClient.get") as mock_get:
@@ -72,7 +74,9 @@ class TestApiKeyIntegrationDemo:
             assert keys[0].id == created_key.id
 
     @pytest.mark.asyncio
-    async def test_validation_with_cache_demo(self, test_db_service, test_cache_service):
+    async def test_validation_with_cache_demo(
+        self, test_db_service, test_cache_service
+    ):
         """Demo test showing validation with cache integration."""
         user_id = str(uuid.uuid4())
 
@@ -81,7 +85,9 @@ class TestApiKeyIntegrationDemo:
         from tripsage_core.services.business.api_key_service import ApiKeyService
 
         settings = get_settings()
-        api_service = ApiKeyService(db=test_db_service, cache=test_cache_service, settings=settings)
+        api_service = ApiKeyService(
+            db=test_db_service, cache=test_cache_service, settings=settings
+        )
 
         # Mock external API
         with patch("httpx.AsyncClient.get") as mock_get:
@@ -91,14 +97,18 @@ class TestApiKeyIntegrationDemo:
             mock_get.return_value = mock_response
 
             # First validation - should hit external API
-            result1 = await api_service.validate_api_key(ServiceType.OPENAI, "sk-demo_validation", user_id)
+            result1 = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-demo_validation", user_id
+            )
 
             assert result1.is_valid is True
             assert result1.status == ValidationStatus.VALID
             assert mock_get.call_count == 1
 
             # Second validation - should use cache (if available)
-            result2 = await api_service.validate_api_key(ServiceType.OPENAI, "sk-demo_validation", user_id)
+            result2 = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-demo_validation", user_id
+            )
 
             assert result2.is_valid is True
             # Call count may or may not increase depending on cache implementation
@@ -113,7 +123,9 @@ class TestApiKeyIntegrationDemo:
         from tripsage_core.services.business.api_key_service import ApiKeyService
 
         settings = get_settings()
-        api_service = ApiKeyService(db=test_db_service, cache=test_cache_service, settings=settings)
+        api_service = ApiKeyService(
+            db=test_db_service, cache=test_cache_service, settings=settings
+        )
 
         # Test invalid API key
         with patch("httpx.AsyncClient.get") as mock_get:
@@ -121,7 +133,9 @@ class TestApiKeyIntegrationDemo:
             mock_response.status_code = 401
             mock_get.return_value = mock_response
 
-            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-invalid_key", user_id)
+            result = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-invalid_key", user_id
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.INVALID

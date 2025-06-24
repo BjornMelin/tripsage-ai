@@ -134,7 +134,9 @@ async def get_session(
         session = await chat_service.get_session(user_id, session_id)
 
         if session is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+            )
 
         return session
 
@@ -206,7 +208,9 @@ async def create_message(
 
         message_request = CreateMessageRequest(content=content, role=role)
 
-        message = await chat_service.create_message(user_id, session_id, message_request)
+        message = await chat_service.create_message(
+            user_id, session_id, message_request
+        )
         return message
 
     except Exception as e:
@@ -238,7 +242,9 @@ async def delete_session(
         success = await chat_service.delete_session(user_id, session_id)
 
         if not success:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
+            )
 
         return {"message": "Session deleted successfully"}
 

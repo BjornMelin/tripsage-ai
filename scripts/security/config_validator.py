@@ -71,11 +71,16 @@ class SecurityValidator:
                 self.issues.append("Debug mode is enabled in production environment")
 
             if settings.log_level.upper() == "DEBUG":
-                self.warnings.append("Debug logging enabled in production (potential information disclosure)")
+                self.warnings.append(
+                    "Debug logging enabled in production "
+                    "(potential information disclosure)"
+                )
 
         elif settings.environment == "development":
             if not settings.debug:
-                self.warnings.append("Debug mode disabled in development (may hinder debugging)")
+                self.warnings.append(
+                    "Debug mode disabled in development (may hinder debugging)"
+                )
 
     def _validate_secrets_security(self, settings: Settings) -> None:
         """Validate secret security and strength."""
@@ -87,10 +92,13 @@ class SecurityValidator:
         for field_name, is_secure in secret_validation.items():
             if not is_secure:
                 if settings.environment == "production":
-                    self.issues.append(f"Insecure secret detected for {field_name} in production")
+                    self.issues.append(
+                        f"Insecure secret detected for {field_name} in production"
+                    )
                 else:
                     self.warnings.append(
-                        f"Weak secret detected for {field_name} (acceptable in {settings.environment})"
+                        f"Weak secret detected for {field_name} "
+                        f"(acceptable in {settings.environment})"
                     )
 
         # Check for fallback patterns in production
@@ -104,7 +112,10 @@ class SecurityValidator:
                 ]:
                     secret_value = getattr(settings, field_name).get_secret_value()
                     if secret_value.startswith(pattern):
-                        self.issues.append(f"Production secret for {field_name} appears to be a fallback/test value")
+                        self.issues.append(
+                            f"Production secret for {field_name} "
+                            f"appears to be a fallback/test value"
+                        )
 
     def _validate_database_security(self, settings: Settings) -> None:
         """Validate database security configuration."""
@@ -115,7 +126,9 @@ class SecurityValidator:
         # Check for test/development URLs in production
         if settings.environment == "production":
             if "test" in database_url.lower() or "dev" in database_url.lower():
-                self.issues.append("Production environment using test/development database URL")
+                self.issues.append(
+                    "Production environment using test/development database URL"
+                )
 
             if not database_url.startswith("https://"):
                 self.issues.append("Database URL should use HTTPS in production")
@@ -135,11 +148,15 @@ class SecurityValidator:
             if origin == "*" and settings.environment == "production":
                 self.issues.append("CORS origins set to wildcard (*) in production")
             elif "localhost" in origin and settings.environment == "production":
-                self.warnings.append(f"CORS origin {origin} includes localhost in production")
+                self.warnings.append(
+                    f"CORS origin {origin} includes localhost in production"
+                )
 
         # Check credentials setting
         if not settings.cors_credentials and settings.environment == "production":
-            self.warnings.append("CORS credentials disabled in production (may break authentication)")
+            self.warnings.append(
+                "CORS credentials disabled in production (may break authentication)"
+            )
 
     def _validate_production_requirements(self, settings: Settings) -> None:
         """Validate production-specific security requirements."""
@@ -150,8 +167,12 @@ class SecurityValidator:
 
         # Required security features for production
         required_features = {
-            "enable_security_monitoring": ("Security monitoring should be enabled in production"),
-            "enable_prometheus_metrics": ("Metrics collection should be enabled in production"),
+            "enable_security_monitoring": (
+                "Security monitoring should be enabled in production"
+            ),
+            "enable_prometheus_metrics": (
+                "Metrics collection should be enabled in production"
+            ),
         }
 
         for feature, message in required_features.items():
@@ -160,7 +181,9 @@ class SecurityValidator:
 
         # Validate Redis security
         if settings.redis_url and settings.redis_password is None:
-            self.warnings.append("Redis connection without authentication in production")
+            self.warnings.append(
+                "Redis connection without authentication in production"
+            )
 
     def _report_results(self, settings: Settings) -> None:
         """Report validation results."""

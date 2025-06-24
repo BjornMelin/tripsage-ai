@@ -59,7 +59,11 @@ class MockMemory:
 
     async def get_all(self, user_id=None):
         """Mock get_all method."""
-        return [memory for memory in self.memories.values() if not user_id or memory.get("user_id") == user_id]
+        return [
+            memory
+            for memory in self.memories.values()
+            if not user_id or memory.get("user_id") == user_id
+        ]
 
     async def delete(self, memory_id):
         """Mock delete method."""
@@ -142,7 +146,9 @@ class TestMemoryServiceModels:
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
         # Valid request
-        request = MemorySearchRequest(query="test query", limit=10, similarity_threshold=0.8)
+        request = MemorySearchRequest(
+            query="test query", limit=10, similarity_threshold=0.8
+        )
         assert request.query == "test query"
         assert request.limit == 10
         assert request.similarity_threshold == 0.8
@@ -154,7 +160,9 @@ class TestMemoryServiceModels:
         )
 
         # Valid request
-        request = PreferencesUpdateRequest(preferences={"hotel_type": "boutique"}, category="accommodation")
+        request = PreferencesUpdateRequest(
+            preferences={"hotel_type": "boutique"}, category="accommodation"
+        )
         assert request.preferences == {"hotel_type": "boutique"}
         assert request.category == "accommodation"
 
@@ -167,7 +175,9 @@ class TestMemoryServiceModels:
         """Property-based test for MemorySearchRequest."""
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-        request = MemorySearchRequest(query=query, limit=limit, similarity_threshold=threshold)
+        request = MemorySearchRequest(
+            query=query, limit=limit, similarity_threshold=threshold
+        )
         assert request.query == query
         assert request.limit == limit
         assert request.similarity_threshold == threshold
@@ -205,7 +215,9 @@ class TestMemoryServiceOperations:
         return db
 
     @pytest.fixture
-    async def memory_service(self, mock_settings, mock_cache_service, mock_database_service):
+    async def memory_service(
+        self, mock_settings, mock_cache_service, mock_database_service
+    ):
         """Create MemoryService instance with mocked dependencies."""
         with (
             patch("tripsage_core.config.get_settings", return_value=mock_settings),
@@ -342,7 +354,9 @@ class TestMemoryServiceOperations:
         """Test memory search with various filters."""
         from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-        request = MemorySearchRequest(query="hotels", filters={"categories": ["accommodation"]}, limit=10)
+        request = MemorySearchRequest(
+            query="hotels", filters={"categories": ["accommodation"]}, limit=10
+        )
 
         results = await memory_service.search_memories(request)
         assert isinstance(results, list)
@@ -418,7 +432,9 @@ class TestMemoryServiceOperations:
             ConversationMemoryRequest,
         )
 
-        request = ConversationMemoryRequest(messages=messages, session_id=f"session-{uuid4()}")
+        request = ConversationMemoryRequest(
+            messages=messages, session_id=f"session-{uuid4()}"
+        )
 
         result = await memory_service.add_conversation_memory(request)
         assert "success" in result
@@ -504,7 +520,9 @@ class TestMemoryServiceIntegration:
             trip_id="trip-789",
         )
 
-        add_result = await integrated_memory_service.add_conversation_memory(conv_request)
+        add_result = await integrated_memory_service.add_conversation_memory(
+            conv_request
+        )
         assert add_result["success"] is True
 
         # Step 2: Update user preferences
@@ -513,7 +531,9 @@ class TestMemoryServiceIntegration:
             category="travel_style",
         )
 
-        pref_result = await integrated_memory_service.update_user_preferences(pref_request)
+        pref_result = await integrated_memory_service.update_user_preferences(
+            pref_request
+        )
         assert pref_result["success"] is True
 
         # Step 3: Search memories
@@ -533,7 +553,9 @@ class TestMemoryServiceIntegration:
 
         # Simulate temporary service failure
         original_search = integrated_memory_service.memory.search
-        integrated_memory_service.memory.search = AsyncMock(side_effect=Exception("Temporary failure"))
+        integrated_memory_service.memory.search = AsyncMock(
+            side_effect=Exception("Temporary failure")
+        )
 
         request = MemorySearchRequest(query="test query")
 
@@ -611,9 +633,13 @@ class TestMemoryServiceUtilities:
         from tripsage_core.services.business.memory_service import get_memory_service
 
         with patch("tripsage_core.config.get_settings") as mock_settings:
-            mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+            mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+                "test-key"
+            )
             mock_settings.return_value.database_url = "https://test.supabase.com"
-            mock_settings.return_value.effective_postgres_url = "postgresql://test:test@localhost:5432/test"
+            mock_settings.return_value.effective_postgres_url = (
+                "postgresql://test:test@localhost:5432/test"
+            )
 
             service1 = await get_memory_service()
             service2 = await get_memory_service()

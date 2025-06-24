@@ -73,7 +73,9 @@ class TestMemoryService:
                 },
                 {
                     "role": "assistant",
-                    "content": ("I'll remember your preference for boutique hotels in historic areas."),
+                    "content": (
+                        "I'll remember your preference for boutique hotels in historic areas."
+                    ),
                 },
             ],
             session_id=str(uuid4()),
@@ -110,7 +112,9 @@ class TestMemoryService:
             "usage": {"total_tokens": 150},
         }
 
-        result = await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        result = await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         # Assertions
         assert "results" in result
@@ -223,7 +227,9 @@ class TestMemoryService:
         mock_mem0_client.update.return_value = {"success": True}
 
         # Mock add for new preference
-        mock_mem0_client.add.return_value = {"results": [{"id": "mem0_new_pref", "memory": "Updated preferences"}]}
+        mock_mem0_client.add.return_value = {
+            "results": [{"id": "mem0_new_pref", "memory": "Updated preferences"}]
+        }
 
         result = await memory_service.update_preferences(user_id, update_request)
 
@@ -244,20 +250,26 @@ class TestMemoryService:
         assert not memory_service._connected
 
     @pytest.mark.asyncio
-    async def test_cache_invalidation(self, memory_service, mock_mem0_client, sample_conversation_request):
+    async def test_cache_invalidation(
+        self, memory_service, mock_mem0_client, sample_conversation_request
+    ):
         """Test cache invalidation after memory updates."""
         user_id = str(uuid4())
 
         # First search (should cache)
         search_request = MemorySearchRequest(query="hotels", limit=5)
-        mock_mem0_client.search.return_value = [{"id": "mem0_1", "memory": "Old hotel preference"}]
+        mock_mem0_client.search.return_value = [
+            {"id": "mem0_1", "memory": "Old hotel preference"}
+        ]
 
         results1 = await memory_service.search_memories(user_id, search_request)
         assert len(results1) == 1
 
         # Add new memory (should invalidate cache)
         mock_mem0_client.add.return_value = {"results": [{"id": "mem0_2"}]}
-        await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         # Second search (should not use cache)
         mock_mem0_client.search.return_value = [
@@ -281,7 +293,9 @@ class TestMemoryService:
         # Mock extraction failure
         mock_mem0_client.add.side_effect = Exception("Extraction failed")
 
-        result = await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        result = await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         assert "error" in result
         assert result["results"] == []
@@ -290,7 +304,9 @@ class TestMemoryService:
     @pytest.mark.asyncio
     async def test_get_memory_service_dependency(self):
         """Test the dependency injection function."""
-        with patch("tripsage_core.services.business.memory_service.MemoryService") as MockMemoryService:
+        with patch(
+            "tripsage_core.services.business.memory_service.MemoryService"
+        ) as MockMemoryService:
             mock_instance = MagicMock()
             MockMemoryService.return_value = mock_instance
 
@@ -308,7 +324,9 @@ class TestMemoryService:
             filters={
                 "categories": ["preferences", "travel"],
                 "date_range": {
-                    "start": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
+                    "start": (
+                        datetime.now(timezone.utc) - timedelta(days=30)
+                    ).isoformat(),
                     "end": datetime.now(timezone.utc).isoformat(),
                 },
             },
@@ -340,7 +358,9 @@ class TestMemoryService:
 
         # Should return error in conversation memory
         conversation_request = ConversationMemoryRequest(messages=[])
-        result = await memory_service.add_conversation_memory(user_id, conversation_request)
+        result = await memory_service.add_conversation_memory(
+            user_id, conversation_request
+        )
         assert result["error"] == "Memory service not available"
 
     @pytest.mark.asyncio
@@ -363,7 +383,9 @@ class TestMemoryService:
             }
         ]
 
-        results = await memory_service.search_memories(user_id, MemorySearchRequest(query="market experiences"))
+        results = await memory_service.search_memories(
+            user_id, MemorySearchRequest(query="market experiences")
+        )
 
         assert len(results) == 1
         assert "travel_context" in results[0].metadata

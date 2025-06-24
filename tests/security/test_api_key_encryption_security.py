@@ -116,13 +116,17 @@ class TestApiKeyEncryptionSecurity:
             encrypted_keys.append(encrypted)
 
             # Verify each encryption is unique (due to random data keys)
-            assert encrypted not in encrypted_keys[:-1], "Each encryption should be unique"
+            assert encrypted not in encrypted_keys[:-1], (
+                "Each encryption should be unique"
+            )
 
             # Verify decryption works
             decrypted = api_key_service._decrypt_api_key(encrypted)
             assert decrypted == test_key, "All encryptions should decrypt correctly"
 
-    def test_encryption_with_different_key_types(self, api_key_service, secure_api_keys):
+    def test_encryption_with_different_key_types(
+        self, api_key_service, secure_api_keys
+    ):
         """Test encryption with various key types and edge cases."""
         for key_name, test_key in secure_api_keys.items():
             # Test encryption/decryption cycle
@@ -289,7 +293,9 @@ class TestApiKeyEncryptionSecurity:
             salt=corrupted_salt,
             iterations=300000,
         )
-        corrupted_key = base64.urlsafe_b64encode(kdf.derive("corrupted-master-key".encode()))
+        corrupted_key = base64.urlsafe_b64encode(
+            kdf.derive("corrupted-master-key".encode())
+        )
         service.master_key = corrupted_key
         service.master_cipher = Fernet(corrupted_key)
 

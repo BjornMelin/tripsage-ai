@@ -234,7 +234,9 @@ class TestTripService:
     # Test Trip Retrieval
 
     @pytest.mark.asyncio
-    async def test_get_trip_success(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_get_trip_success(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test successful trip retrieval."""
         user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -267,7 +269,9 @@ class TestTripService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_trip_access_denied(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_get_trip_access_denied(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test trip retrieval with access denied."""
         different_user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -283,7 +287,9 @@ class TestTripService:
     # Test Trip Updates
 
     @pytest.mark.asyncio
-    async def test_update_trip_success(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_update_trip_success(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test successful trip update."""
         user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -335,7 +341,9 @@ class TestTripService:
         assert "You don't have permission to update this trip" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_update_trip_no_permission(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_update_trip_no_permission(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test trip update without permission."""
         different_user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -353,7 +361,9 @@ class TestTripService:
     # Test Trip Deletion
 
     @pytest.mark.asyncio
-    async def test_delete_trip_success(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_delete_trip_success(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test successful trip deletion."""
         user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -368,7 +378,9 @@ class TestTripService:
         mock_database_service.delete_trip.assert_called_once_with(trip_id)
 
     @pytest.mark.asyncio
-    async def test_delete_trip_not_owner(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_delete_trip_not_owner(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test trip deletion by non-owner."""
         different_user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -384,7 +396,9 @@ class TestTripService:
     # Test User Trips Listing
 
     @pytest.mark.asyncio
-    async def test_get_user_trips_success(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_get_user_trips_success(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test successful user trips listing."""
         user_id = str(uuid4())
 
@@ -397,10 +411,14 @@ class TestTripService:
         assert str(results[0].id) == sample_trip_data["id"]
         assert results[0].title == "Summer Europe Trip"
 
-        mock_database_service.get_trips.assert_called_once_with(filters={"user_id": user_id}, limit=50, offset=0)
+        mock_database_service.get_trips.assert_called_once_with(
+            filters={"user_id": user_id}, limit=50, offset=0
+        )
 
     @pytest.mark.asyncio
-    async def test_get_user_trips_with_status_filter(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_get_user_trips_with_status_filter(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test user trips listing with status filter."""
         user_id = str(uuid4())
 
@@ -417,7 +435,9 @@ class TestTripService:
     # Test Trip Sharing
 
     @pytest.mark.asyncio
-    async def test_share_trip_success(self, trip_service, mock_database_service, mock_user_service, sample_trip_data):
+    async def test_share_trip_success(
+        self, trip_service, mock_database_service, mock_user_service, sample_trip_data
+    ):
         """Test successful trip sharing."""
         user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -434,7 +454,9 @@ class TestTripService:
         # Mock successful sharing
         mock_database_service.add_trip_collaborator.return_value = True
 
-        result = await trip_service.share_trip(trip_id, user_id, mock_collaborator.id, "view")
+        result = await trip_service.share_trip(
+            trip_id, user_id, mock_collaborator.id, "view"
+        )
 
         assert result is True
         mock_database_service.add_trip_collaborator.assert_called_once()
@@ -453,12 +475,16 @@ class TestTripService:
 
         # The service will raise NotFoundError for non-existent user
         with pytest.raises(CoreResourceNotFoundError):
-            await trip_service.share_trip(trip_id, user_id, "nonexistent_user_id", "view")
+            await trip_service.share_trip(
+                trip_id, user_id, "nonexistent_user_id", "view"
+            )
 
     # Test Search Functionality
 
     @pytest.mark.asyncio
-    async def test_search_trips_success(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_search_trips_success(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test successful trip search."""
         user_id = str(uuid4())
         sample_trip_data["user_id"] = user_id  # Make sure user owns the trip
@@ -480,7 +506,9 @@ class TestTripService:
     # Test Access Control
 
     @pytest.mark.asyncio
-    async def test_check_trip_access_owner(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_check_trip_access_owner(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test trip access check for owner."""
         user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -493,20 +521,26 @@ class TestTripService:
         assert has_access is True
 
     @pytest.mark.asyncio
-    async def test_check_trip_access_collaborator(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_check_trip_access_collaborator(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test trip access check for collaborator."""
         collaborator_id = str(uuid4())
         trip_id = sample_trip_data["id"]
 
         mock_database_service.get_trip_by_id.return_value = sample_trip_data
-        mock_database_service.get_trip_collaborators.return_value = [{"user_id": collaborator_id, "permission": "view"}]
+        mock_database_service.get_trip_collaborators.return_value = [
+            {"user_id": collaborator_id, "permission": "view"}
+        ]
 
         has_access = await trip_service._check_trip_access(trip_id, collaborator_id)
 
         assert has_access is True
 
     @pytest.mark.asyncio
-    async def test_check_trip_access_public(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_check_trip_access_public(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test trip access check for public trip."""
         random_user_id = str(uuid4())
         trip_id = sample_trip_data["id"]
@@ -522,7 +556,9 @@ class TestTripService:
     # Test Response Building
 
     @pytest.mark.asyncio
-    async def test_build_trip_response(self, trip_service, mock_database_service, sample_trip_data):
+    async def test_build_trip_response(
+        self, trip_service, mock_database_service, sample_trip_data
+    ):
         """Test building trip response from database data."""
         trip_response = await trip_service._build_trip_response(sample_trip_data)
 
@@ -539,7 +575,9 @@ class TestTripService:
     @pytest.mark.asyncio
     @patch("tripsage_core.services.infrastructure.database_service.DatabaseService")
     @patch("tripsage_core.services.business.user_service.UserService")
-    async def test_get_trip_service_dependency(self, mock_user_service_class, mock_database_service_class):
+    async def test_get_trip_service_dependency(
+        self, mock_user_service_class, mock_database_service_class
+    ):
         """Test the dependency injection function."""
         # Mock the service classes
         mock_db_service = AsyncMock()
@@ -557,7 +595,9 @@ class TestTripService:
     # Test Error Handling
 
     @pytest.mark.asyncio
-    async def test_service_error_handling(self, trip_service, mock_database_service, sample_trip_create_request):
+    async def test_service_error_handling(
+        self, trip_service, mock_database_service, sample_trip_create_request
+    ):
         """Test service error handling."""
         user_id = str(uuid4())
 

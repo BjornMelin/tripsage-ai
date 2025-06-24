@@ -114,7 +114,9 @@ async def login_user(client: httpx.AsyncClient, user: UserModel) -> bool:
         return False
 
 
-async def create_trip(client: httpx.AsyncClient, user: UserModel, trip: TripModel) -> bool:
+async def create_trip(
+    client: httpx.AsyncClient, user: UserModel, trip: TripModel
+) -> bool:
     """Create a test trip."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -159,7 +161,9 @@ async def get_trips(client: httpx.AsyncClient, user: UserModel) -> List[Dict]:
         return []
 
 
-async def create_flight(client: httpx.AsyncClient, user: UserModel, flight: FlightModel) -> bool:
+async def create_flight(
+    client: httpx.AsyncClient, user: UserModel, flight: FlightModel
+) -> bool:
     """Create a test flight."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -180,14 +184,19 @@ async def create_flight(client: httpx.AsyncClient, user: UserModel, flight: Flig
     if response.status_code == 201:
         flight_data = response.json()
         flight.id = flight_data["id"]
-        print(f"Flight from {flight.origin} to {flight.destination} created successfully with ID {flight.id}")
+        print(
+            f"Flight from {flight.origin} to {flight.destination} created "
+            f"successfully with ID {flight.id}"
+        )
         return True
     else:
         print(f"Failed to create flight: {response.status_code} - {response.text}")
         return False
 
 
-async def get_flights_for_trip(client: httpx.AsyncClient, user: UserModel, trip_id: str) -> List[Dict]:
+async def get_flights_for_trip(
+    client: httpx.AsyncClient, user: UserModel, trip_id: str
+) -> List[Dict]:
     """Get all flights for a trip."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -246,7 +255,9 @@ async def run_tests():
                 return
 
             # Create a test flight
-            departure_time = datetime.combine(test_trip.start_date, datetime.min.time()) + timedelta(hours=10)
+            departure_time = datetime.combine(
+                test_trip.start_date, datetime.min.time()
+            ) + timedelta(hours=10)
             arrival_time = departure_time + timedelta(hours=6)
 
             test_flight = FlightModel(

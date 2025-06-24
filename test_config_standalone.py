@@ -183,7 +183,9 @@ def test_environment_properties():
 
 def test_effective_postgres_url_explicit():
     """Test effective_postgres_url with explicit postgres_url."""
-    settings = Settings(postgres_url="postgresql://user:pass@localhost:5432/db", _env_file=None)
+    settings = Settings(
+        postgres_url="postgresql://user:pass@localhost:5432/db", _env_file=None
+    )
 
     assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/db"
     print("✓ Effective postgres URL explicit")
@@ -191,7 +193,9 @@ def test_effective_postgres_url_explicit():
 
 def test_effective_postgres_url_scheme_conversion():
     """Test postgres:// to postgresql:// conversion."""
-    settings = Settings(postgres_url="postgres://user:pass@localhost:5432/db", _env_file=None)
+    settings = Settings(
+        postgres_url="postgres://user:pass@localhost:5432/db", _env_file=None
+    )
 
     assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/db"
     print("✓ Effective postgres URL scheme conversion")
@@ -357,11 +361,15 @@ def test_websocket_uppercase_setters():
 def test_postgres_url_conversion_scenarios():
     """Test additional PostgreSQL URL conversion scenarios."""
     # Test postgresql:// URL passthrough
-    settings1 = Settings(database_url="postgresql://user:pass@host:5432/db", _env_file=None)
+    settings1 = Settings(
+        database_url="postgresql://user:pass@host:5432/db", _env_file=None
+    )
     assert settings1.effective_postgres_url == "postgresql://user:pass@host:5432/db"
 
     # Test real Supabase URL conversion
-    settings2 = Settings(database_url="https://myproject123.supabase.co", _env_file=None)
+    settings2 = Settings(
+        database_url="https://myproject123.supabase.co", _env_file=None
+    )
     url = settings2.effective_postgres_url
     assert "postgresql://postgres.myproject123" in url
     assert "pooler.supabase.com" in url

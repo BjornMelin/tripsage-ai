@@ -104,7 +104,9 @@ class PerformanceMetrics:
             self.services[service_name] = ServiceMetrics(service_name=service_name)
         return self.services[service_name]
 
-    def record_request(self, service_name: str, duration_ms: float, success: bool) -> None:
+    def record_request(
+        self, service_name: str, duration_ms: float, success: bool
+    ) -> None:
         """Record a request for a service.
 
         Args:
@@ -115,7 +117,9 @@ class PerformanceMetrics:
         metrics = self.get_service_metrics(service_name)
         metrics.add_request_result(duration_ms, success)
 
-    def record_custom_metric(self, service_name: str, metric_name: str, value: float) -> None:
+    def record_custom_metric(
+        self, service_name: str, metric_name: str, value: float
+    ) -> None:
         """Record a custom metric for a service.
 
         Args:
@@ -128,7 +132,10 @@ class PerformanceMetrics:
 
     def get_all_summaries(self) -> Dict[str, dict]:
         """Get summaries for all services."""
-        return {service_name: metrics.get_summary() for service_name, metrics in self.services.items()}
+        return {
+            service_name: metrics.get_summary()
+            for service_name, metrics in self.services.items()
+        }
 
     def get_summary(self, service_name: str) -> Optional[dict]:
         """Get summary for a specific service.

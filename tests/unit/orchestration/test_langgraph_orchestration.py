@@ -283,7 +283,9 @@ class TestTripSageOrchestrator:
                 }
             )
 
-            result = await orchestrator.process_message("test_user", "Find flights", "test_session")
+            result = await orchestrator.process_message(
+                "test_user", "Find flights", "test_session"
+            )
 
             assert result["response"] == "I found flights for you"
             assert result["session_id"] == "test_session"
@@ -296,7 +298,9 @@ class TestTripSageOrchestrator:
             patch.object(orchestrator, "initialize", new_callable=AsyncMock),
             patch.object(orchestrator, "memory_bridge") as mock_memory,
         ):
-            mock_memory.hydrate_state = AsyncMock(side_effect=Exception("Database error"))
+            mock_memory.hydrate_state = AsyncMock(
+                side_effect=Exception("Database error")
+            )
 
             result = await orchestrator.process_message("test_user", "Find flights")
 
@@ -397,11 +401,15 @@ class TestStateIntegration:
         state = create_initial_state("user_789", "Plan a family vacation")
 
         # Add user preferences
-        preferences = UserPreferences(budget_total=3000.0, accommodation_type="hotel", travel_style="comfort")
+        preferences = UserPreferences(
+            budget_total=3000.0, accommodation_type="hotel", travel_style="comfort"
+        )
         state["user_preferences"] = preferences.model_dump()
 
         # Add travel dates
-        dates = TravelDates(departure_date="2024-07-15", return_date="2024-07-29", flexible_dates=False)
+        dates = TravelDates(
+            departure_date="2024-07-15", return_date="2024-07-29", flexible_dates=False
+        )
         state["travel_dates"] = dates.model_dump()
 
         # Add destination info

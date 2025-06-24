@@ -141,7 +141,9 @@ class TestKeysRouterModern:
 
     @given(key_ids=uuids)
     @pytest.mark.asyncio
-    async def test_delete_key_property_based(self, mock_principal, mock_key_service, key_ids):
+    async def test_delete_key_property_based(
+        self, mock_principal, mock_key_service, key_ids
+    ):
         """Property-based test for key deletion with various IDs."""
         # Mock key exists and belongs to user
         mock_key = {
@@ -160,7 +162,9 @@ class TestKeysRouterModern:
 
     # Comprehensive error handling tests
     @pytest.mark.asyncio
-    async def test_create_key_validation_failure_scenarios(self, mock_principal, mock_key_service):
+    async def test_create_key_validation_failure_scenarios(
+        self, mock_principal, mock_key_service
+    ):
         """Test various validation failure scenarios."""
         key_data = ApiKeyCreate(
             service="openai",
@@ -195,7 +199,9 @@ class TestKeysRouterModern:
                 assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
-    async def test_delete_key_authorization_scenarios(self, mock_principal, mock_key_service):
+    async def test_delete_key_authorization_scenarios(
+        self, mock_principal, mock_key_service
+    ):
         """Test authorization scenarios for key deletion."""
         key_id = str(uuid.uuid4())
 
@@ -230,7 +236,9 @@ class TestKeysRouterModern:
                 assert error_content.lower() in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
-    async def test_validate_key_comprehensive_scenarios(self, mock_principal, mock_key_service):
+    async def test_validate_key_comprehensive_scenarios(
+        self, mock_principal, mock_key_service
+    ):
         """Test comprehensive validation scenarios."""
         validation_scenarios = [
             # Valid key
@@ -272,10 +280,14 @@ class TestKeysRouterModern:
             result = await validate_key(key_data, mock_principal, mock_key_service)
 
             assert result == mock_validation
-            mock_key_service.validate_key.assert_called_with("sk-test123", "openai", mock_principal.id)
+            mock_key_service.validate_key.assert_called_with(
+                "sk-test123", "openai", mock_principal.id
+            )
 
     @pytest.mark.asyncio
-    async def test_rotate_key_comprehensive_scenarios(self, mock_principal, mock_key_service, sample_api_key_response):
+    async def test_rotate_key_comprehensive_scenarios(
+        self, mock_principal, mock_key_service, sample_api_key_response
+    ):
         """Test comprehensive key rotation scenarios."""
         key_id = str(uuid.uuid4())
 
@@ -295,12 +307,18 @@ class TestKeysRouterModern:
         mock_key_service.rotate_key.return_value = sample_api_key_response
 
         rotate_request = ApiKeyRotateRequest(new_key="sk-new_key_12345")
-        result = await rotate_key(rotate_request, key_id, mock_principal, mock_key_service)
+        result = await rotate_key(
+            rotate_request, key_id, mock_principal, mock_key_service
+        )
 
         assert result == sample_api_key_response
         mock_key_service.get_key.assert_called_once_with(key_id)
-        mock_key_service.validate_key.assert_called_once_with("sk-new_key_12345", "openai", mock_principal.id)
-        mock_key_service.rotate_key.assert_called_once_with(key_id, "sk-new_key_12345", mock_principal.id)
+        mock_key_service.validate_key.assert_called_once_with(
+            "sk-new_key_12345", "openai", mock_principal.id
+        )
+        mock_key_service.rotate_key.assert_called_once_with(
+            key_id, "sk-new_key_12345", mock_principal.id
+        )
 
     @pytest.mark.asyncio
     async def test_rotate_key_failure_scenarios(self, mock_principal, mock_key_service):
@@ -345,14 +363,21 @@ class TestKeysRouterModern:
             rotate_request = ApiKeyRotateRequest(new_key="sk-new_key")
 
             with pytest.raises(HTTPException) as exc_info:
-                await rotate_key(rotate_request, key_id, mock_principal, mock_key_service)
+                await rotate_key(
+                    rotate_request, key_id, mock_principal, mock_key_service
+                )
 
             assert exc_info.value.status_code == scenario["expected_status"]
-            assert scenario["expected_message"].lower() in str(exc_info.value.detail).lower()
+            assert (
+                scenario["expected_message"].lower()
+                in str(exc_info.value.detail).lower()
+            )
 
     # Performance and concurrency tests
     @pytest.mark.asyncio
-    async def test_concurrent_key_operations(self, mock_principal, mock_key_service, sample_api_key_response):
+    async def test_concurrent_key_operations(
+        self, mock_principal, mock_key_service, sample_api_key_response
+    ):
         """Test concurrent operations on keys."""
         import asyncio
 
@@ -415,7 +440,9 @@ class TestKeysRouterModern:
             assert result is not None or result == {}
 
     @pytest.mark.asyncio
-    async def test_audit_log_comprehensive(self, mock_principal, mock_monitoring_service):
+    async def test_audit_log_comprehensive(
+        self, mock_principal, mock_monitoring_service
+    ):
         """Test audit log endpoint with various parameters."""
         # Test with different limits
         limits = [10, 50, 100, 1000]

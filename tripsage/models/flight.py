@@ -47,7 +47,9 @@ class FlightBookingRequest(MCPRequestBase):
     """Parameters for flight booking."""
 
     offer_id: str = Field(..., description="Flight offer ID")
-    passengers: List[Dict[str, Any]] = Field(..., min_length=1, description="List of passengers")
+    passengers: List[Dict[str, Any]] = Field(
+        ..., min_length=1, description="List of passengers"
+    )
     contact_email: str = Field(..., description="Contact email address")
     contact_phone: str = Field(..., description="Contact phone number")
 

@@ -25,7 +25,9 @@ class MockSearchRequest(BaseModel):
     """Mock search request model for testing."""
 
     query: str = Field(..., description="Search query")
-    filters: Optional[Dict[str, Any]] = Field(default=None, description="Search filters")
+    filters: Optional[Dict[str, Any]] = Field(
+        default=None, description="Search filters"
+    )
     page: int = Field(default=1, description="Page number")
     page_size: int = Field(default=20, description="Page size")
 
@@ -136,7 +138,9 @@ class TestSearchCacheMixin:
         assert "filters" in fields
         assert json.loads(fields["filters"]) == {"category": "books", "price_max": 50}
 
-    async def test_get_cached_search_hit(self, test_service, test_request, test_response, mock_cache_service):
+    async def test_get_cached_search_hit(
+        self, test_service, test_request, test_response, mock_cache_service
+    ):
         """Test getting cached search results (cache hit)."""
         # Setup mock to return cached data
         cached_data = test_response.model_dump()
@@ -156,7 +160,9 @@ class TestSearchCacheMixin:
         cache_key = test_service.generate_cache_key(test_request)
         mock_cache_service.get_json.assert_called_once_with(cache_key)
 
-    async def test_get_cached_search_miss(self, test_service, test_request, mock_cache_service):
+    async def test_get_cached_search_miss(
+        self, test_service, test_request, mock_cache_service
+    ):
         """Test getting cached search results (cache miss)."""
         # Setup mock to return None
         mock_cache_service.get_json.return_value = None
@@ -176,7 +182,9 @@ class TestSearchCacheMixin:
         result = await service.get_cached_search(test_request)
         assert result is None
 
-    async def test_cache_search_results(self, test_service, test_request, test_response, mock_cache_service):
+    async def test_cache_search_results(
+        self, test_service, test_request, test_response, mock_cache_service
+    ):
         """Test caching search results."""
         # Setup mock
         mock_cache_service.set_json.return_value = True
@@ -198,19 +206,25 @@ class TestSearchCacheMixin:
         assert "_cache_version" in call_args[0][1]
         assert call_args[1]["ttl"] == 300
 
-    async def test_cache_search_results_custom_ttl(self, test_service, test_request, test_response, mock_cache_service):
+    async def test_cache_search_results_custom_ttl(
+        self, test_service, test_request, test_response, mock_cache_service
+    ):
         """Test caching with custom TTL."""
         mock_cache_service.set_json.return_value = True
 
         # Cache with custom TTL
-        success = await test_service.cache_search_results(test_request, test_response, ttl=600)
+        success = await test_service.cache_search_results(
+            test_request, test_response, ttl=600
+        )
 
         # Verify TTL was used
         assert success is True
         call_args = mock_cache_service.set_json.call_args
         assert call_args[1]["ttl"] == 600
 
-    async def test_cache_search_results_failure(self, test_service, test_request, test_response, mock_cache_service):
+    async def test_cache_search_results_failure(
+        self, test_service, test_request, test_response, mock_cache_service
+    ):
         """Test caching failure handling."""
         # Setup mock to fail
         mock_cache_service.set_json.side_effect = Exception("Cache error")
@@ -221,7 +235,9 @@ class TestSearchCacheMixin:
         # Should return False on error
         assert success is False
 
-    async def test_invalidate_cache(self, test_service, test_request, mock_cache_service):
+    async def test_invalidate_cache(
+        self, test_service, test_request, mock_cache_service
+    ):
         """Test cache invalidation."""
         # Setup mock
         mock_cache_service.delete.return_value = 1
@@ -248,7 +264,9 @@ class TestSearchCacheMixin:
         assert deleted == 5
 
         # Verify cache was called with full pattern
-        mock_cache_service.delete_pattern.assert_called_once_with("test_search:search:*")
+        mock_cache_service.delete_pattern.assert_called_once_with(
+            "test_search:search:*"
+        )
 
     async def test_get_cache_stats(self, test_service, mock_cache_service):
         """Test getting cache statistics."""
@@ -296,7 +314,9 @@ class TestSimpleCacheMixin:
         assert result == {"data": "test"}
 
         # Verify cache was called
-        mock_cache_service.get_json.assert_called_once_with("test_simple:test_key", None)
+        mock_cache_service.get_json.assert_called_once_with(
+            "test_simple:test_key", None
+        )
 
     async def test_cache_get_with_default(self, test_service, mock_cache_service):
         """Test getting value with default."""
@@ -310,7 +330,9 @@ class TestSimpleCacheMixin:
         assert result is None
 
         # Verify cache was called with default
-        mock_cache_service.get_json.assert_called_once_with("test_simple:test_key", "default_value")
+        mock_cache_service.get_json.assert_called_once_with(
+            "test_simple:test_key", "default_value"
+        )
 
     async def test_cache_set(self, test_service, mock_cache_service):
         """Test setting value in cache."""

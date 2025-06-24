@@ -187,7 +187,9 @@ async def dashboard_websocket_endpoint(
         )
 
         # Start background task for sending periodic metrics
-        metrics_task = asyncio.create_task(_send_periodic_metrics(websocket, monitoring_service))
+        metrics_task = asyncio.create_task(
+            _send_periodic_metrics(websocket, monitoring_service)
+        )
 
         # Listen for client messages (e.g., subscription preferences)
         while True:
@@ -260,11 +262,15 @@ async def dashboard_events_stream(
                         )
 
                         metrics = RealtimeMetrics(
-                            requests_per_second=(dashboard_data.total_requests / 3600.0),  # Simplified
+                            requests_per_second=(
+                                dashboard_data.total_requests / 3600.0
+                            ),  # Simplified
                             errors_per_second=dashboard_data.total_errors / 3600.0,
                             success_rate=dashboard_data.overall_success_rate,
                             avg_latency_ms=150.0,  # Simplified
-                            active_connections=len(dashboard_manager.active_connections),
+                            active_connections=len(
+                                dashboard_manager.active_connections
+                            ),
                             cache_hit_rate=0.85,  # Simplified
                             memory_usage_percentage=65.0,  # Simplified
                         )
@@ -414,7 +420,9 @@ async def get_active_connections() -> dict[str, Any]:
     }
 
 
-async def _send_periodic_metrics(websocket: WebSocket, monitoring_service: ApiKeyMonitoringService) -> None:
+async def _send_periodic_metrics(
+    websocket: WebSocket, monitoring_service: ApiKeyMonitoringService
+) -> None:
     """Send periodic metrics updates to a WebSocket connection."""
     try:
         while True:
@@ -427,7 +435,9 @@ async def _send_periodic_metrics(websocket: WebSocket, monitoring_service: ApiKe
 
                 # Create real-time metrics
                 metrics = RealtimeMetrics(
-                    requests_per_second=(dashboard_data.total_requests / 3600.0),  # Simplified
+                    requests_per_second=(
+                        dashboard_data.total_requests / 3600.0
+                    ),  # Simplified
                     errors_per_second=dashboard_data.total_errors / 3600.0,
                     success_rate=dashboard_data.overall_success_rate,
                     avg_latency_ms=150.0,  # Would be calculated from actual data

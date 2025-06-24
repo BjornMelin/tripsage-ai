@@ -37,7 +37,9 @@ class TestDatabaseService:
         """Create mock settings."""
         settings = Mock(spec=Settings)
         settings.database_url = "https://test.supabase.co"
-        settings.database_public_key = Mock(get_secret_value=Mock(return_value="test_key_1234567890123456789012"))
+        settings.database_public_key = Mock(
+            get_secret_value=Mock(return_value="test_key_1234567890123456789012")
+        )
         settings.database_auto_refresh_token = True
         settings.database_persist_session = True
         settings.database_timeout = 10
@@ -92,7 +94,9 @@ class TestDatabaseService:
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(asyncio.coroutine(lambda: func())()),
+                side_effect=lambda func: asyncio.create_task(
+                    asyncio.coroutine(lambda: func())()
+                ),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -117,7 +121,9 @@ class TestDatabaseService:
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(asyncio.coroutine(lambda: func())()),
+                side_effect=lambda func: asyncio.create_task(
+                    asyncio.coroutine(lambda: func())()
+                ),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -168,7 +174,9 @@ class TestDatabaseService:
         """Test ensure_connected when not connected."""
         database_service._connected = False
 
-        with patch.object(database_service, "connect", new_callable=AsyncMock) as mock_connect:
+        with patch.object(
+            database_service, "connect", new_callable=AsyncMock
+        ) as mock_connect:
             await database_service.ensure_connected()
             mock_connect.assert_called_once()
 
@@ -196,7 +204,9 @@ class TestDatabaseService:
         mock_supabase_client.insert.assert_called_with(test_data)
 
     @pytest.mark.asyncio
-    async def test_insert_multiple_records(self, database_service, mock_supabase_client):
+    async def test_insert_multiple_records(
+        self, database_service, mock_supabase_client
+    ):
         """Test inserting multiple records."""
         test_data = [
             {"name": "Item 1", "value": 123},
@@ -243,19 +253,25 @@ class TestDatabaseService:
         mock_supabase_client.execute.return_value = Mock(data=expected_data)
 
         # Test simple equality filter
-        result = await database_service.select("test_table", filters={"status": "active"})
+        result = await database_service.select(
+            "test_table", filters={"status": "active"}
+        )
 
         assert result == expected_data
         mock_supabase_client.eq.assert_called_with("status", "active")
 
     @pytest.mark.asyncio
-    async def test_select_with_complex_filters(self, database_service, mock_supabase_client):
+    async def test_select_with_complex_filters(
+        self, database_service, mock_supabase_client
+    ):
         """Test select with complex filters."""
         expected_data = [{"id": "1", "age": 25}]
         mock_supabase_client.execute.return_value = Mock(data=expected_data)
 
         # Test complex filters
-        result = await database_service.select("test_table", filters={"age": {"gte": 18, "lt": 65}, "status": "active"})
+        result = await database_service.select(
+            "test_table", filters={"age": {"gte": 18, "lt": 65}, "status": "active"}
+        )
 
         assert result == expected_data
         # Check that complex operators were called
@@ -296,7 +312,9 @@ class TestDatabaseService:
         expected_result = [{"id": "test-id", **updates}]
         mock_supabase_client.execute.return_value = Mock(data=expected_result)
 
-        result = await database_service.update("test_table", updates, filters={"id": "test-id"})
+        result = await database_service.update(
+            "test_table", updates, filters={"id": "test-id"}
+        )
 
         assert result == expected_result
         mock_supabase_client.update.assert_called_with(updates)
@@ -332,7 +350,9 @@ class TestDatabaseService:
         """Test successful count operation."""
         mock_supabase_client.execute.return_value = Mock(count=5)
 
-        result = await database_service.count("test_table", filters={"status": "active"})
+        result = await database_service.count(
+            "test_table", filters={"status": "active"}
+        )
 
         assert result == 5
         mock_supabase_client.select.assert_called_with("*", count="exact")
@@ -440,7 +460,9 @@ class TestDatabaseService:
         mock_supabase_client.table.assert_called_with("users")
 
     @pytest.mark.asyncio
-    async def test_get_user_by_email_success(self, database_service, mock_supabase_client):
+    async def test_get_user_by_email_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful user retrieval by email."""
         email = "test@example.com"
         expected_user = {"id": str(uuid4()), "email": email}
@@ -452,7 +474,9 @@ class TestDatabaseService:
         mock_supabase_client.eq.assert_called_with("email", email)
 
     @pytest.mark.asyncio
-    async def test_get_user_by_email_not_found(self, database_service, mock_supabase_client):
+    async def test_get_user_by_email_not_found(
+        self, database_service, mock_supabase_client
+    ):
         """Test user retrieval by email when user doesn't exist."""
         email = "nonexistent@example.com"
         mock_supabase_client.execute.return_value = Mock(data=[])
@@ -464,7 +488,9 @@ class TestDatabaseService:
     # Chat Operations Tests
 
     @pytest.mark.asyncio
-    async def test_create_chat_session_success(self, database_service, mock_supabase_client):
+    async def test_create_chat_session_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful chat session creation."""
         session_data = {
             "user_id": str(uuid4()),
@@ -480,7 +506,9 @@ class TestDatabaseService:
         mock_supabase_client.table.assert_called_with("chat_sessions")
 
     @pytest.mark.asyncio
-    async def test_save_chat_message_success(self, database_service, mock_supabase_client):
+    async def test_save_chat_message_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful chat message save."""
         message_data = {
             "session_id": str(uuid4()),
@@ -497,7 +525,9 @@ class TestDatabaseService:
         mock_supabase_client.table.assert_called_with("chat_messages")
 
     @pytest.mark.asyncio
-    async def test_get_chat_history_success(self, database_service, mock_supabase_client):
+    async def test_get_chat_history_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful chat history retrieval."""
         session_id = str(uuid4())
         expected_messages = [
@@ -533,7 +563,9 @@ class TestDatabaseService:
         mock_supabase_client.on_conflict.assert_called_with("user_id,service_name")
 
     @pytest.mark.asyncio
-    async def test_get_user_api_keys_success(self, database_service, mock_supabase_client):
+    async def test_get_user_api_keys_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful user API keys retrieval."""
         user_id = str(uuid4())
         expected_keys = [
@@ -583,25 +615,33 @@ class TestDatabaseService:
         mock_supabase_client.table.assert_called_with("documents")
 
     @pytest.mark.asyncio
-    async def test_vector_search_destinations(self, database_service, mock_supabase_client):
+    async def test_vector_search_destinations(
+        self, database_service, mock_supabase_client
+    ):
         """Test vector search for destinations."""
         query_vector = [0.1, 0.2, 0.3]
         expected_results = [{"id": "1", "name": "Paris", "distance": 0.1}]
         mock_supabase_client.execute.return_value = Mock(data=expected_results)
 
-        result = await database_service.vector_search_destinations(query_vector, limit=10, similarity_threshold=0.7)
+        result = await database_service.vector_search_destinations(
+            query_vector, limit=10, similarity_threshold=0.7
+        )
 
         assert result == expected_results
 
     @pytest.mark.asyncio
-    async def test_save_destination_embedding(self, database_service, mock_supabase_client):
+    async def test_save_destination_embedding(
+        self, database_service, mock_supabase_client
+    ):
         """Test saving destination with embedding."""
         destination_data = {"name": "Paris", "country": "France"}
         embedding = [0.1, 0.2, 0.3]
         expected_result = [{"id": "dest-1", **destination_data, "embedding": embedding}]
         mock_supabase_client.execute.return_value = Mock(data=expected_result)
 
-        result = await database_service.save_destination_embedding(destination_data, embedding)
+        result = await database_service.save_destination_embedding(
+            destination_data, embedding
+        )
 
         assert result == expected_result[0]
         expected_data = {**destination_data, "embedding": embedding}
@@ -620,7 +660,9 @@ class TestDatabaseService:
         result = await database_service.execute_sql(sql, params)
 
         assert result == expected_result
-        mock_supabase_client.rpc.assert_called_with("execute_sql", {"sql": sql, "params": params})
+        mock_supabase_client.rpc.assert_called_with(
+            "execute_sql", {"sql": sql, "params": params}
+        )
 
     @pytest.mark.asyncio
     async def test_call_function_success(self, database_service, mock_supabase_client):
@@ -674,7 +716,9 @@ class TestDatabaseService:
         assert result["total_searches"] == 18
 
     @pytest.mark.asyncio
-    async def test_get_popular_destinations(self, database_service, mock_supabase_client):
+    async def test_get_popular_destinations(
+        self, database_service, mock_supabase_client
+    ):
         """Test popular destinations retrieval."""
         expected_destinations = [
             {"destination": "Paris", "search_count": 50},
@@ -730,7 +774,9 @@ class TestDatabaseService:
         assert result["columns"] == expected_columns
 
     @pytest.mark.asyncio
-    async def test_get_database_stats_success(self, database_service, mock_supabase_client):
+    async def test_get_database_stats_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful database statistics retrieval."""
         table_stats = [
             {"tablename": "users", "n_tup_ins": 100, "n_tup_upd": 50, "n_tup_del": 5},
@@ -751,9 +797,13 @@ class TestDatabaseService:
     # Error Handling Tests
 
     @pytest.mark.asyncio
-    async def test_database_error_handling(self, database_service, mock_supabase_client):
+    async def test_database_error_handling(
+        self, database_service, mock_supabase_client
+    ):
         """Test database error handling."""
-        mock_supabase_client.execute.side_effect = Exception("Database connection failed")
+        mock_supabase_client.execute.side_effect = Exception(
+            "Database connection failed"
+        )
 
         with pytest.raises(CoreDatabaseError, match="Failed to select from table"):
             await database_service.select("test_table")
@@ -783,15 +833,21 @@ class TestDatabaseService:
             await database_service.delete("test_table", {"id": "1"})
 
     @pytest.mark.asyncio
-    async def test_vector_search_error_handling(self, database_service, mock_supabase_client):
+    async def test_vector_search_error_handling(
+        self, database_service, mock_supabase_client
+    ):
         """Test vector search error handling."""
         mock_supabase_client.execute.side_effect = Exception("Vector search failed")
 
         with pytest.raises(CoreDatabaseError, match="Failed to perform vector search"):
-            await database_service.vector_search("documents", "embedding", [0.1, 0.2, 0.3])
+            await database_service.vector_search(
+                "documents", "embedding", [0.1, 0.2, 0.3]
+            )
 
     @pytest.mark.asyncio
-    async def test_sql_execution_error_handling(self, database_service, mock_supabase_client):
+    async def test_sql_execution_error_handling(
+        self, database_service, mock_supabase_client
+    ):
         """Test SQL execution error handling."""
         mock_supabase_client.execute.side_effect = Exception("SQL error")
 
@@ -799,7 +855,9 @@ class TestDatabaseService:
             await database_service.execute_sql("SELECT * FROM invalid_table")
 
     @pytest.mark.asyncio
-    async def test_function_call_error_handling(self, database_service, mock_supabase_client):
+    async def test_function_call_error_handling(
+        self, database_service, mock_supabase_client
+    ):
         """Test function call error handling."""
         mock_supabase_client.execute.side_effect = Exception("Function error")
 
@@ -811,7 +869,9 @@ class TestDatabaseService:
     @pytest.mark.asyncio
     async def test_get_database_service_function(self):
         """Test the get_database_service dependency function."""
-        with patch("tripsage_core.services.infrastructure.database_service.get_settings"):
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.get_settings"
+        ):
             service = await get_database_service()
             assert isinstance(service, DatabaseService)
 
@@ -819,7 +879,9 @@ class TestDatabaseService:
     async def test_get_database_service_singleton(self):
         """Test that get_database_service returns singleton instance."""
         with (
-            patch("tripsage_core.services.infrastructure.database_service.get_settings"),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.get_settings"
+            ),
             patch(
                 "tripsage_core.services.infrastructure.database_service._database_service",
                 None,
@@ -852,7 +914,9 @@ class TestDatabaseService:
     async def test_large_batch_insert(self, database_service, mock_supabase_client):
         """Test inserting large batch of records."""
         large_data = [{"name": f"Item {i}", "value": i} for i in range(1000)]
-        expected_result = [{"id": f"id{i}", **item} for i, item in enumerate(large_data)]
+        expected_result = [
+            {"id": f"id{i}", **item} for i, item in enumerate(large_data)
+        ]
         mock_supabase_client.execute.return_value = Mock(data=expected_result)
 
         result = await database_service.insert("test_table", large_data)
@@ -883,7 +947,9 @@ class TestDatabaseService:
         assert result[0]["optional_field"] is None
 
     @pytest.mark.asyncio
-    async def test_special_characters_handling(self, database_service, mock_supabase_client):
+    async def test_special_characters_handling(
+        self, database_service, mock_supabase_client
+    ):
         """Test handling of special characters in data."""
         special_data = {
             "name": "Test with 'quotes' and \"double quotes\"",
@@ -913,7 +979,9 @@ class TestDatabaseService:
         assert result == expected_trip
 
     @pytest.mark.asyncio
-    async def test_get_trip_by_id_not_found(self, database_service, mock_supabase_client):
+    async def test_get_trip_by_id_not_found(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip retrieval when trip doesn't exist."""
         trip_id = str(uuid4())
         mock_supabase_client.execute.return_value = Mock(data=[])
@@ -923,7 +991,9 @@ class TestDatabaseService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_trip_by_id_database_error(self, database_service, mock_supabase_client):
+    async def test_get_trip_by_id_database_error(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip retrieval with database error (should return None)."""
         trip_id = str(uuid4())
         mock_supabase_client.execute.side_effect = Exception("Database error")
@@ -935,7 +1005,9 @@ class TestDatabaseService:
     # Tests for search_trips
 
     @pytest.mark.asyncio
-    async def test_search_trips_basic_success(self, database_service, mock_supabase_client):
+    async def test_search_trips_basic_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test basic trip search functionality."""
         user_id = str(uuid4())
         search_filters = {"user_id": user_id}
@@ -947,7 +1019,9 @@ class TestDatabaseService:
         assert result == expected_trips
 
     @pytest.mark.asyncio
-    async def test_search_trips_with_query_text(self, database_service, mock_supabase_client):
+    async def test_search_trips_with_query_text(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip search with text query."""
         search_filters = {"query": "Paris"}
         expected_trips = [{"id": str(uuid4()), "destination": "Paris"}]
@@ -969,7 +1043,9 @@ class TestDatabaseService:
         mock_supabase_client.table.return_value.select.assert_called_with("*")
 
     @pytest.mark.asyncio
-    async def test_search_trips_with_status_filter(self, database_service, mock_supabase_client):
+    async def test_search_trips_with_status_filter(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip search with status filter."""
         search_filters = {"status": "planning"}
         expected_trips = [{"id": str(uuid4()), "status": "planning"}]
@@ -980,11 +1056,15 @@ class TestDatabaseService:
         assert result == expected_trips
 
     @pytest.mark.asyncio
-    async def test_search_trips_with_date_range(self, database_service, mock_supabase_client):
+    async def test_search_trips_with_date_range(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip search with date range filter."""
         start_date = datetime(2024, 7, 1)
         end_date = datetime(2024, 7, 31)
-        search_filters = {"date_range": {"start_date": start_date, "end_date": end_date}}
+        search_filters = {
+            "date_range": {"start_date": start_date, "end_date": end_date}
+        }
         expected_trips = [{"id": str(uuid4())}]
         mock_supabase_client.execute.return_value = Mock(data=expected_trips)
 
@@ -993,7 +1073,9 @@ class TestDatabaseService:
         assert result == expected_trips
 
     @pytest.mark.asyncio
-    async def test_search_trips_database_error(self, database_service, mock_supabase_client):
+    async def test_search_trips_database_error(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip search with database error."""
         search_filters = {"user_id": str(uuid4())}
         mock_supabase_client.execute.side_effect = Exception("Database error")
@@ -1004,10 +1086,14 @@ class TestDatabaseService:
     # Tests for get_trip_collaborators
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborators_success(self, database_service, mock_supabase_client):
+    async def test_get_trip_collaborators_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful trip collaborators retrieval."""
         trip_id = str(uuid4())
-        expected_collaborators = [{"trip_id": trip_id, "user_id": str(uuid4()), "permission_level": "edit"}]
+        expected_collaborators = [
+            {"trip_id": trip_id, "user_id": str(uuid4()), "permission_level": "edit"}
+        ]
         mock_supabase_client.execute.return_value = Mock(data=expected_collaborators)
 
         result = await database_service.get_trip_collaborators(trip_id)
@@ -1015,7 +1101,9 @@ class TestDatabaseService:
         assert result == expected_collaborators
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborators_empty_result(self, database_service, mock_supabase_client):
+    async def test_get_trip_collaborators_empty_result(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip collaborators retrieval with no collaborators."""
         trip_id = str(uuid4())
         mock_supabase_client.execute.return_value = Mock(data=[])
@@ -1025,7 +1113,9 @@ class TestDatabaseService:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborators_database_error(self, database_service, mock_supabase_client):
+    async def test_get_trip_collaborators_database_error(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip collaborators retrieval with database error."""
         trip_id = str(uuid4())
         mock_supabase_client.execute.side_effect = Exception("Database error")
@@ -1036,7 +1126,9 @@ class TestDatabaseService:
     # Tests for get_trip_related_counts
 
     @pytest.mark.asyncio
-    async def test_get_trip_related_counts_success(self, database_service, mock_supabase_client):
+    async def test_get_trip_related_counts_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful trip related counts retrieval."""
         trip_id = str(uuid4())
 
@@ -1061,7 +1153,9 @@ class TestDatabaseService:
         assert result == expected_result
 
     @pytest.mark.asyncio
-    async def test_get_trip_related_counts_zero_counts(self, database_service, mock_supabase_client):
+    async def test_get_trip_related_counts_zero_counts(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip related counts with all zero counts."""
         trip_id = str(uuid4())
 
@@ -1086,7 +1180,9 @@ class TestDatabaseService:
         assert result == expected_result
 
     @pytest.mark.asyncio
-    async def test_get_trip_related_counts_database_error(self, database_service, mock_supabase_client):
+    async def test_get_trip_related_counts_database_error(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip related counts with database error."""
         trip_id = str(uuid4())
         mock_supabase_client.execute.side_effect = Exception("Database error")
@@ -1097,7 +1193,9 @@ class TestDatabaseService:
     # Tests for add_trip_collaborator
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_success(self, database_service, mock_supabase_client):
+    async def test_add_trip_collaborator_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful trip collaborator addition."""
         collaborator_data = {
             "trip_id": str(uuid4()),
@@ -1125,7 +1223,9 @@ class TestDatabaseService:
             await database_service.add_trip_collaborator(incomplete_data)
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_database_error(self, database_service, mock_supabase_client):
+    async def test_add_trip_collaborator_database_error(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip collaborator addition with database error."""
         collaborator_data = {
             "trip_id": str(uuid4()),
@@ -1141,7 +1241,9 @@ class TestDatabaseService:
     # Tests for get_trip_collaborator
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborator_success(self, database_service, mock_supabase_client):
+    async def test_get_trip_collaborator_success(
+        self, database_service, mock_supabase_client
+    ):
         """Test successful specific trip collaborator retrieval."""
         trip_id = str(uuid4())
         user_id = str(uuid4())
@@ -1157,7 +1259,9 @@ class TestDatabaseService:
         assert result == expected_collaborator
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborator_not_found(self, database_service, mock_supabase_client):
+    async def test_get_trip_collaborator_not_found(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip collaborator retrieval when collaborator doesn't exist."""
         trip_id = str(uuid4())
         user_id = str(uuid4())
@@ -1168,7 +1272,9 @@ class TestDatabaseService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborator_database_error(self, database_service, mock_supabase_client):
+    async def test_get_trip_collaborator_database_error(
+        self, database_service, mock_supabase_client
+    ):
         """Test trip collaborator retrieval with database error."""
         trip_id = str(uuid4())
         user_id = str(uuid4())
@@ -1212,22 +1318,30 @@ class TestSQLAlchemyIntegration:
         return engine
 
     @pytest.fixture
-    def database_service_with_sqlalchemy(self, mock_settings, mock_supabase_client, mock_sqlalchemy_engine):
+    def database_service_with_sqlalchemy(
+        self, mock_settings, mock_supabase_client, mock_sqlalchemy_engine
+    ):
         """Create database service with SQLAlchemy integration."""
         with (
             patch(
                 "tripsage_core.services.infrastructure.database_service.create_engine",
                 return_value=mock_sqlalchemy_engine,
             ),
-            patch("tripsage_core.services.infrastructure.database_service.event.listens_for"),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.event.listens_for"
+            ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.create_client",
                 return_value=mock_supabase_client,
             ),
-            patch("tripsage_core.services.infrastructure.database_service.ClientOptions"),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.ClientOptions"
+            ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(asyncio.coroutine(lambda: func())()),
+                side_effect=lambda func: asyncio.create_task(
+                    asyncio.coroutine(lambda: func())()
+                ),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -1246,8 +1360,12 @@ class TestSQLAlchemyIntegration:
                 "tripsage_core.services.infrastructure.database_service.create_engine",
                 return_value=mock_engine,
             ) as mock_create_engine,
-            patch("tripsage_core.services.infrastructure.database_service.event.listens_for"),
-            patch("tripsage_core.services.infrastructure.database_service.urlparse") as mock_urlparse,
+            patch(
+                "tripsage_core.services.infrastructure.database_service.event.listens_for"
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.urlparse"
+            ) as mock_urlparse,
         ):
             # Mock URL parsing
             mock_parsed = MagicMock()
@@ -1270,12 +1388,16 @@ class TestSQLAlchemyIntegration:
             assert "postgresql://" in call_args[0]
 
     @pytest.mark.asyncio
-    async def test_connection_pool_event_listeners(self, database_service_with_sqlalchemy):
+    async def test_connection_pool_event_listeners(
+        self, database_service_with_sqlalchemy
+    ):
         """Test connection pool event listeners for monitoring."""
         service = database_service_with_sqlalchemy
 
         # Test setup of event listeners
-        with patch("tripsage_core.services.infrastructure.database_service.event.listens_for") as mock_listens_for:
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.event.listens_for"
+        ) as mock_listens_for:
             service._setup_pool_event_listeners()
 
             # Verify event listeners were set up
@@ -1295,7 +1417,9 @@ class TestSQLAlchemyIntegration:
         assert stats.idle_connections >= 0
 
     @pytest.mark.asyncio
-    async def test_lifo_pool_utilization_calculation(self, database_service_with_sqlalchemy):
+    async def test_lifo_pool_utilization_calculation(
+        self, database_service_with_sqlalchemy
+    ):
         """Test LIFO pool utilization calculation."""
         service = database_service_with_sqlalchemy
 
@@ -1359,7 +1483,9 @@ class TestSQLAlchemyIntegration:
         service._sqlalchemy_engine.connect.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connection_health_validation_failure(self, database_service_with_sqlalchemy):
+    async def test_connection_health_validation_failure(
+        self, database_service_with_sqlalchemy
+    ):
         """Test connection health validation failure."""
         service = database_service_with_sqlalchemy
 
@@ -1371,7 +1497,9 @@ class TestSQLAlchemyIntegration:
         assert is_healthy is False
 
     @pytest.mark.asyncio
-    async def test_concurrent_connection_testing(self, database_service_with_sqlalchemy):
+    async def test_concurrent_connection_testing(
+        self, database_service_with_sqlalchemy
+    ):
         """Test concurrent connection testing using TaskGroup."""
         service = database_service_with_sqlalchemy
 
@@ -1384,7 +1512,9 @@ class TestSQLAlchemyIntegration:
         await service._test_connections()
 
     @pytest.mark.asyncio
-    async def test_sqlalchemy_connection_failure_handling(self, database_service_with_sqlalchemy):
+    async def test_sqlalchemy_connection_failure_handling(
+        self, database_service_with_sqlalchemy
+    ):
         """Test SQLAlchemy connection failure handling."""
         service = database_service_with_sqlalchemy
 
@@ -1394,7 +1524,9 @@ class TestSQLAlchemyIntegration:
 
         service._test_sqlalchemy_connection = failing_connection
 
-        with pytest.raises(CoreDatabaseError, match="SQLAlchemy connection test failed"):
+        with pytest.raises(
+            CoreDatabaseError, match="SQLAlchemy connection test failed"
+        ):
             await service._test_connections()
 
     @pytest.mark.asyncio
@@ -1440,8 +1572,12 @@ class TestSQLAlchemyIntegration:
         production_config = DatabaseConfig.create_production()
 
         with (
-            patch("tripsage_core.services.infrastructure.database_service.create_engine"),
-            patch("tripsage_core.services.infrastructure.database_service.event.listens_for"),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.create_engine"
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.event.listens_for"
+            ),
         ):
             service = DatabaseService(settings=mock_settings, config=production_config)
 
@@ -1506,14 +1642,18 @@ class TestDatabaseTransactionContext:
     def transaction_service(self, mock_settings, mock_supabase_client):
         """Create database service for transaction tests."""
         with (
-            patch("tripsage_core.services.infrastructure.database_service.ClientOptions"),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.ClientOptions"
+            ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.create_client",
                 return_value=mock_supabase_client,
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(asyncio.coroutine(lambda: func())()),
+                side_effect=lambda func: asyncio.create_task(
+                    asyncio.coroutine(lambda: func())()
+                ),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -1564,7 +1704,9 @@ class TestDatabaseTransactionContext:
             assert tx.operations[2] == ("delete", "logs", {"old": True})
 
     @pytest.mark.asyncio
-    async def test_transaction_execution(self, transaction_service, mock_supabase_client):
+    async def test_transaction_execution(
+        self, transaction_service, mock_supabase_client
+    ):
         """Test transaction execution."""
         # Mock responses for each operation
         mock_supabase_client.execute.side_effect = [
@@ -1603,7 +1745,9 @@ class TestDatabaseTransactionContext:
             assert len(transaction_service._query_metrics) >= initial_metrics_count
 
     @pytest.mark.asyncio
-    async def test_transaction_error_handling(self, transaction_service, mock_supabase_client):
+    async def test_transaction_error_handling(
+        self, transaction_service, mock_supabase_client
+    ):
         """Test transaction error handling."""
         # Mock an error during execution
         mock_supabase_client.execute.side_effect = Exception("Database error")
@@ -1614,19 +1758,25 @@ class TestDatabaseTransactionContext:
                 await tx.execute()
 
     @pytest.mark.asyncio
-    async def test_transaction_with_monitoring_disabled(self, mock_settings, mock_supabase_client):
+    async def test_transaction_with_monitoring_disabled(
+        self, mock_settings, mock_supabase_client
+    ):
         """Test transaction with monitoring disabled."""
         mock_settings.enable_database_monitoring = False
 
         with (
-            patch("tripsage_core.services.infrastructure.database_service.ClientOptions"),
+            patch(
+                "tripsage_core.services.infrastructure.database_service.ClientOptions"
+            ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.create_client",
                 return_value=mock_supabase_client,
             ),
             patch(
                 "tripsage_core.services.infrastructure.database_service.asyncio.to_thread",
-                side_effect=lambda func: asyncio.create_task(asyncio.coroutine(lambda: func())()),
+                side_effect=lambda func: asyncio.create_task(
+                    asyncio.coroutine(lambda: func())()
+                ),
             ),
         ):
             service = DatabaseService(settings=mock_settings)
@@ -1638,7 +1788,9 @@ class TestDatabaseTransactionContext:
                 # Should work even with monitoring disabled
 
     @pytest.mark.asyncio
-    async def test_nested_transaction_operations(self, transaction_service, mock_supabase_client):
+    async def test_nested_transaction_operations(
+        self, transaction_service, mock_supabase_client
+    ):
         """Test complex nested transaction operations."""
         mock_supabase_client.execute.side_effect = [
             Mock(data=[{"id": "trip-1"}]),
@@ -1759,7 +1911,9 @@ class TestSQLAlchemyIntegration:
             assert kwargs["pool_recycle"] == 3600
 
     @pytest.mark.asyncio
-    async def test_connection_pool_event_listeners(self, database_service_with_sqlalchemy):
+    async def test_connection_pool_event_listeners(
+        self, database_service_with_sqlalchemy
+    ):
         """Test connection pool event listeners are properly registered."""
         service = database_service_with_sqlalchemy
 
@@ -1791,7 +1945,9 @@ class TestSQLAlchemyIntegration:
         assert stats.pool_utilization == 0.75  # 75/100
 
     @pytest.mark.asyncio
-    async def test_sql_execution_with_returning_clause(self, database_service_with_sqlalchemy):
+    async def test_sql_execution_with_returning_clause(
+        self, database_service_with_sqlalchemy
+    ):
         """Test SQL execution with RETURNING clause."""
         service = database_service_with_sqlalchemy
 
@@ -1818,7 +1974,9 @@ class TestSQLAlchemyIntegration:
         mock_conn.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_sql_execution_without_returning(self, database_service_with_sqlalchemy):
+    async def test_sql_execution_without_returning(
+        self, database_service_with_sqlalchemy
+    ):
         """Test SQL execution without RETURNING clause."""
         service = database_service_with_sqlalchemy
 
@@ -1862,7 +2020,9 @@ class TestSQLAlchemyIntegration:
         mock_conn.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_connection_health_validation_failure(self, database_service_with_sqlalchemy):
+    async def test_connection_health_validation_failure(
+        self, database_service_with_sqlalchemy
+    ):
         """Test connection health validation failure."""
         service = database_service_with_sqlalchemy
 
@@ -1874,7 +2034,9 @@ class TestSQLAlchemyIntegration:
         assert is_healthy is False
 
     @pytest.mark.asyncio
-    async def test_concurrent_connection_acquisition(self, database_service_with_sqlalchemy):
+    async def test_concurrent_connection_acquisition(
+        self, database_service_with_sqlalchemy
+    ):
         """Test concurrent connection acquisition from pool."""
         service = database_service_with_sqlalchemy
 
@@ -1960,12 +2122,16 @@ class TestSQLAlchemyIntegration:
         assert service._sqlalchemy_engine is None
 
     @pytest.mark.asyncio
-    async def test_connection_pool_overflow_handling(self, database_service_with_sqlalchemy):
+    async def test_connection_pool_overflow_handling(
+        self, database_service_with_sqlalchemy
+    ):
         """Test connection pool behavior when overflow is reached."""
         service = database_service_with_sqlalchemy
 
         # Simulate pool overflow condition
-        service._sqlalchemy_engine.pool.checked_out.return_value = 600  # Beyond pool_size + max_overflow
+        service._sqlalchemy_engine.pool.checked_out.return_value = (
+            600  # Beyond pool_size + max_overflow
+        )
 
         stats = service._get_pool_statistics()
 
@@ -1973,7 +2139,9 @@ class TestSQLAlchemyIntegration:
         assert stats.active_connections == 600
         assert stats.pool_utilization > 1.0  # Over 100% utilization
 
-    def test_lifo_connection_strategy_verification(self, database_service_with_sqlalchemy):
+    def test_lifo_connection_strategy_verification(
+        self, database_service_with_sqlalchemy
+    ):
         """Test that LIFO connection strategy is properly configured."""
         service = database_service_with_sqlalchemy
 
@@ -2039,7 +2207,9 @@ class TestSQLAlchemyIntegration:
         # Mock SQLAlchemy exception
         from sqlalchemy.exc import SQLAlchemyError
 
-        service._sqlalchemy_engine.connect.side_effect = SQLAlchemyError("Database error")
+        service._sqlalchemy_engine.connect.side_effect = SQLAlchemyError(
+            "Database error"
+        )
 
         with pytest.raises(CoreDatabaseError, match="SQLAlchemy operation failed"):
             await service._execute_sql_with_sqlalchemy("SELECT 1", {})
@@ -2178,9 +2348,7 @@ class TestDatabaseTransactionContext:
                 raise Exception("Serialization failure")
             return [{"success": True}]
 
-        transaction_service._supabase_client.table.return_value.insert.return_value.execute.side_effect = (
-            failing_execute
-        )
+        transaction_service._supabase_client.table.return_value.insert.return_value.execute.side_effect = failing_execute
 
         async with transaction_service.transaction(max_retries=3) as tx:
             tx.insert("users", {"name": "Test"})

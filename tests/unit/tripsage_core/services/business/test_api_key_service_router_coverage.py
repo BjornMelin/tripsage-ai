@@ -59,7 +59,9 @@ class TestApiKeyRouterCoverage:
         """Test router handling of unexpected service exceptions - targets
         lines 101-106."""
         # Configure service to raise unexpected exception
-        mock_api_key_service.create_api_key.side_effect = RuntimeError("Unexpected database connection error")
+        mock_api_key_service.create_api_key.side_effect = RuntimeError(
+            "Unexpected database connection error"
+        )
 
         with patch("tripsage.api.routers.keys.get_api_key_service") as mock_get_service:
             mock_get_service.return_value = mock_api_key_service
@@ -68,7 +70,9 @@ class TestApiKeyRouterCoverage:
             # but we're focusing on the exception handling path
             with pytest.raises(RuntimeError):
                 # Simulate the router's exception handling
-                mock_api_key_service.create_api_key.side_effect(RuntimeError("Unexpected database connection error"))
+                mock_api_key_service.create_api_key.side_effect(
+                    RuntimeError("Unexpected database connection error")
+                )
 
     def test_delete_key_authorization_edge_cases(self, mock_api_key_service):
         """Test edge cases in key ownership validation - targets lines 143-146."""
@@ -133,7 +137,9 @@ class TestApiKeyRouterCoverage:
         mock_api_key_service.update_api_key.return_value = None
 
         # Simulate the rotation failure path
-        validation_result = mock_api_key_service.validate_api_key(ServiceType.OPENAI, new_key_value)
+        validation_result = mock_api_key_service.validate_api_key(
+            ServiceType.OPENAI, new_key_value
+        )
         assert validation_result.is_valid is False
 
     def test_metrics_endpoint_authorization(self, mock_api_key_service):
@@ -164,11 +170,15 @@ class TestApiKeyRouterCoverage:
         }
 
         # Test with negative page number
-        result = mock_api_key_service.get_audit_logs(user_id=user_id, page=-1, per_page=10)
+        result = mock_api_key_service.get_audit_logs(
+            user_id=user_id, page=-1, per_page=10
+        )
         assert result["logs"] == []
 
         # Test with excessive per_page
-        result = mock_api_key_service.get_audit_logs(user_id=user_id, page=1, per_page=1000)
+        result = mock_api_key_service.get_audit_logs(
+            user_id=user_id, page=1, per_page=1000
+        )
         assert isinstance(result["logs"], list)
 
     @pytest.mark.asyncio
@@ -224,7 +234,10 @@ class TestApiKeyRouterCoverage:
         ]
 
         # Run concurrent operations
-        tasks = [mock_api_key_service.create_api_key(user_id, request) for request in requests]
+        tasks = [
+            mock_api_key_service.create_api_key(user_id, request)
+            for request in requests
+        ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -248,7 +261,10 @@ class TestApiKeyRouterCoverage:
             with pytest.raises((ValueError, TypeError)):
                 if "key_id" in invalid_input and not invalid_input["key_id"]:
                     raise ValueError("Key ID cannot be empty")
-                if "key_id" in invalid_input and invalid_input["key_id"] == "not-a-uuid":
+                if (
+                    "key_id" in invalid_input
+                    and invalid_input["key_id"] == "not-a-uuid"
+                ):
                     uuid.UUID(invalid_input["key_id"])  # Will raise ValueError
                 if "user_id" in invalid_input and invalid_input["user_id"] is None:
                     raise TypeError("User ID cannot be None")

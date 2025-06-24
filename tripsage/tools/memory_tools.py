@@ -96,7 +96,12 @@ async def add_conversation_memory(
             metadata=enhanced_metadata,
         )
 
-        logger.info(f"Successfully extracted {len(result.get('results', []))} memories for user {user_id}")
+        logger.info(
+            (
+            f"Successfully extracted {len(result.get('results', []))} "
+            f"memories for user {user_id}"
+        )
+        )
 
         return {
             "status": "success",
@@ -126,7 +131,12 @@ async def search_user_memories(
         List of memory search results
     """
     try:
-        logger.info(f"Searching memories for user {search_query.user_id} with query: {search_query.query}")
+        logger.info(
+            (
+            f"Searching memories for user {search_query.user_id} "
+            f"with query: {search_query.query}"
+        )
+        )
 
         memory_service = service_registry.get_required_service("memory_service")
 
@@ -198,9 +208,13 @@ async def update_user_preferences(
         memory_service = service_registry.get_required_service("memory_service")
 
         # Convert preferences to dictionary
-        preferences_dict = preferences.model_dump(exclude_none=True, exclude={"user_id"}, by_alias=True)
+        preferences_dict = preferences.model_dump(
+            exclude_none=True, exclude={"user_id"}, by_alias=True
+        )
 
-        await memory_service.update_user_preferences(user_id=user_id, preferences=preferences_dict)
+        await memory_service.update_user_preferences(
+            user_id=user_id, preferences=preferences_dict
+        )
 
         return {
             "status": "success",
@@ -237,7 +251,9 @@ async def save_session_summary(
         summary_messages = [
             {
                 "role": "system",
-                "content": ("Extract key insights and decisions from this session summary."),
+                "content": (
+                    "Extract key insights and decisions from this session summary."
+                ),
             },
             {"role": "user", "content": f"Session Summary: {session_summary.summary}"},
         ]
@@ -246,7 +262,9 @@ async def save_session_summary(
             summary_messages.append(
                 {
                     "role": "user",
-                    "content": (f"Key Insights: {', '.join(session_summary.key_insights)}"),
+                    "content": (
+                        f"Key Insights: {', '.join(session_summary.key_insights)}"
+                    ),
                 }
             )
 
@@ -254,7 +272,9 @@ async def save_session_summary(
             summary_messages.append(
                 {
                     "role": "user",
-                    "content": (f"Decisions Made: {', '.join(session_summary.decisions_made)}"),
+                    "content": (
+                        f"Decisions Made: {', '.join(session_summary.decisions_made)}"
+                    ),
                 }
             )
 
@@ -434,10 +454,17 @@ async def track_user_activity(
 
         # Create activity memory
         activity_messages = [
-            ConversationMessage(role="system", content="Track user activity for behavior analysis."),
+            ConversationMessage(
+                role="system", content="Track user activity for behavior analysis."
+            ),
             ConversationMessage(
                 role="user",
-                content=(f"User performed {activity_type} activity: {json.dumps(activity_data)}"),
+                content=(
+                    (
+                    f"User performed {activity_type} activity: "
+                    f"{json.dumps(activity_data)}"
+                )
+                ),
             ),
         ]
 

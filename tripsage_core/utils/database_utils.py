@@ -24,9 +24,15 @@ def get_supabase_settings() -> Dict[str, str]:
     logger.info("Using Supabase database (consolidated architecture)")
     return {
         "supabase_url": settings.database_url,
-        "supabase_anon_key": (settings.database_public_key.get_secret_value() if settings.database_public_key else ""),
+        "supabase_anon_key": (
+            settings.database_public_key.get_secret_value()
+            if settings.database_public_key
+            else ""
+        ),
         "supabase_service_role_key": (
-            settings.database_service_key.get_secret_value() if settings.database_service_key else ""
+            settings.database_service_key.get_secret_value()
+            if settings.database_service_key
+            else ""
         ),
         "supabase_timeout": "60.0",  # Default timeout
         "pgvector_enabled": "true",  # Default enabled

@@ -28,7 +28,9 @@ class DatabaseURLConverter:
     """
 
     # Supabase URL patterns (allow optional trailing path)
-    SUPABASE_URL_PATTERN = re.compile(r"^https://([a-zA-Z0-9\-]+)\.supabase\.(co|com)(?:/.*)?$")
+    SUPABASE_URL_PATTERN = re.compile(
+        r"^https://([a-zA-Z0-9\-]+)\.supabase\.(co|com)(?:/.*)?$"
+    )
 
     # Known Supabase regions and their database hosts
     SUPABASE_REGIONS = {
@@ -82,7 +84,9 @@ class DatabaseURLConverter:
 
         match = self.SUPABASE_URL_PATTERN.match(supabase_url)
         if not match:
-            raise DatabaseURLParsingError(f"Invalid Supabase URL format: {supabase_url}")
+            raise DatabaseURLParsingError(
+                f"Invalid Supabase URL format: {supabase_url}"
+            )
 
         project_ref = match.group(1)
         domain = f"supabase.{match.group(2)}"
@@ -162,7 +166,9 @@ class DatabaseURLConverter:
             self.logger.error(error_msg)
             raise DatabaseURLParsingError(error_msg) from e
 
-    def postgres_to_supabase(self, postgres_url: str, *, domain: str = "supabase.co") -> Tuple[str, str]:
+    def postgres_to_supabase(
+        self, postgres_url: str, *, domain: str = "supabase.co"
+    ) -> Tuple[str, str]:
         """
         Extract Supabase project reference from PostgreSQL URL.
 
@@ -184,7 +190,9 @@ class DatabaseURLConverter:
             # Format: [project-ref].db.supabase.co
             hostname_parts = credentials.hostname.split(".")
             if len(hostname_parts) < 3 or "supabase" not in credentials.hostname:
-                raise DatabaseURLParsingError(f"Hostname {credentials.hostname} is not a Supabase database host")
+                raise DatabaseURLParsingError(
+                    f"Hostname {credentials.hostname} is not a Supabase database host"
+                )
 
             project_ref = hostname_parts[0]
 
@@ -311,7 +319,10 @@ class DatabaseURLDetector:
         url_info = self.detect_url_type(url)
 
         if url_info["type"] == "supabase":
-            return "Use Supabase client for API operations or convert to PostgreSQL URL for direct database access"
+            return (
+                "Use Supabase client for API operations or convert to PostgreSQL "
+                "URL for direct database access"
+            )
         elif url_info["type"] == "postgresql":
             if url_info["metadata"].get("is_supabase_postgres"):
                 return (

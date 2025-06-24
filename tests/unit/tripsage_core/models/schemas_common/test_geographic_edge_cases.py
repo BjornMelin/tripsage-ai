@@ -98,7 +98,9 @@ class TestCoordinatesEdgeCases:
         point_east = Coordinates(latitude=0.0, longitude=179.9)
         point_west = Coordinates(latitude=0.0, longitude=-179.9)
         dateline_distance = point_east.distance_to(point_west)
-        assert dateline_distance < 50  # Should be small distance, not halfway around world
+        assert (
+            dateline_distance < 50
+        )  # Should be small distance, not halfway around world
 
     def test_distance_calculation_precision(self):
         """Test distance calculation precision with known distances."""
@@ -113,11 +115,15 @@ class TestCoordinatesEdgeCases:
         # Test with longitude distance at equator
         point3 = Coordinates(latitude=0.0, longitude=1.0)
         lon_distance = point1.distance_to(point3)
-        assert 110 < lon_distance < 112  # At equator, longitude distance ≈ latitude distance
+        assert (
+            110 < lon_distance < 112
+        )  # At equator, longitude distance ≈ latitude distance
 
     def test_coordinates_serialization_precision(self):
         """Test that coordinate precision is preserved through serialization."""
-        precise_coords = Coordinates(latitude=45.123456789, longitude=-120.987654321, altitude=1234.5678)
+        precise_coords = Coordinates(
+            latitude=45.123456789, longitude=-120.987654321, altitude=1234.5678
+        )
 
         # Test JSON serialization
         json_data = precise_coords.model_dump_json()
@@ -263,7 +269,9 @@ class TestPlaceEdgeCases:
 
     def test_place_with_emoji_and_unicode(self):
         """Test place names with emoji and Unicode characters."""
-        unicode_place = Place(name="🗽 Statue of Liberty 自由女神像", place_type="monument")
+        unicode_place = Place(
+            name="🗽 Statue of Liberty 自由女神像", place_type="monument"
+        )
 
         assert "🗽" in unicode_place.name
         assert "自由女神像" in unicode_place.name
@@ -321,7 +329,9 @@ class TestBoundingBoxEdgeCases:
 
     def test_bounding_box_zero_area(self):
         """Test bounding box with zero area (single point)."""
-        point_bbox = BoundingBox(north=40.7128, south=40.7128, east=-74.0060, west=-74.0060)
+        point_bbox = BoundingBox(
+            north=40.7128, south=40.7128, east=-74.0060, west=-74.0060
+        )
 
         # Center should be the point itself
         center = point_bbox.center()
@@ -456,8 +466,12 @@ class TestRouteEdgeCases:
 
     def test_route_distance_calculation_edge_cases(self):
         """Test route distance calculations with edge cases."""
-        origin = Place(name="Start", coordinates=Coordinates(latitude=40.7128, longitude=-74.0060))
-        destination = Place(name="End", coordinates=Coordinates(latitude=34.0522, longitude=-118.2437))
+        origin = Place(
+            name="Start", coordinates=Coordinates(latitude=40.7128, longitude=-74.0060)
+        )
+        destination = Place(
+            name="End", coordinates=Coordinates(latitude=34.0522, longitude=-118.2437)
+        )
 
         # Route without waypoints
         direct_route = Route(origin=origin, destination=destination)
@@ -472,7 +486,9 @@ class TestRouteEdgeCases:
             coordinates=Coordinates(latitude=41.8781, longitude=-87.6298),
         )
 
-        route_with_waypoint = Route(origin=origin, destination=destination, waypoints=[waypoint])
+        route_with_waypoint = Route(
+            origin=origin, destination=destination, waypoints=[waypoint]
+        )
 
         waypoint_distance = route_with_waypoint.total_distance()
         assert waypoint_distance is not None
@@ -495,12 +511,18 @@ class TestRouteEdgeCases:
 
     def test_route_with_missing_waypoint_coordinates(self):
         """Test route where some waypoints lack coordinates."""
-        origin = Place(name="Start", coordinates=Coordinates(latitude=0.0, longitude=0.0))
-        destination = Place(name="End", coordinates=Coordinates(latitude=10.0, longitude=10.0))
+        origin = Place(
+            name="Start", coordinates=Coordinates(latitude=0.0, longitude=0.0)
+        )
+        destination = Place(
+            name="End", coordinates=Coordinates(latitude=10.0, longitude=10.0)
+        )
 
         # Waypoint without coordinates
         waypoint_no_coords = Place(name="Middle Stop")
-        waypoint_with_coords = Place(name="Known Stop", coordinates=Coordinates(latitude=5.0, longitude=5.0))
+        waypoint_with_coords = Place(
+            name="Known Stop", coordinates=Coordinates(latitude=5.0, longitude=5.0)
+        )
 
         route = Route(
             origin=origin,
@@ -527,14 +549,20 @@ class TestRouteEdgeCases:
     def test_route_extreme_distances(self):
         """Test route with extreme global distances."""
         # Antipodal points (maximum distance)
-        point1 = Place(name="Point 1", coordinates=Coordinates(latitude=45.0, longitude=0.0))
-        point2 = Place(name="Point 2", coordinates=Coordinates(latitude=-45.0, longitude=180.0))
+        point1 = Place(
+            name="Point 1", coordinates=Coordinates(latitude=45.0, longitude=0.0)
+        )
+        point2 = Place(
+            name="Point 2", coordinates=Coordinates(latitude=-45.0, longitude=180.0)
+        )
 
         max_distance_route = Route(origin=point1, destination=point2)
 
         distance = max_distance_route.total_distance()
         assert distance is not None
-        assert distance > 15000  # Should be substantial portion of Earth's circumference
+        assert (
+            distance > 15000
+        )  # Should be substantial portion of Earth's circumference
 
 
 class TestRegionEdgeCases:
@@ -591,7 +619,9 @@ class TestRegionEdgeCases:
 @given(
     lat=st.floats(min_value=-90, max_value=90, allow_nan=False, allow_infinity=False),
     lon=st.floats(min_value=-180, max_value=180, allow_nan=False, allow_infinity=False),
-    altitude=st.one_of(st.none(), st.floats(min_value=-1000, max_value=10000, allow_nan=False)),
+    altitude=st.one_of(
+        st.none(), st.floats(min_value=-1000, max_value=10000, allow_nan=False)
+    ),
 )
 @settings(max_examples=100, deadline=None)
 def test_coordinates_property_based(lat: float, lon: float, altitude: Optional[float]):
@@ -629,7 +659,9 @@ def test_coordinates_property_based(lat: float, lon: float, altitude: Optional[f
     country=st.one_of(st.none(), st.text(max_size=100)),
 )
 @settings(max_examples=50, deadline=None)
-def test_place_property_based(name: str, street: Optional[str], city: Optional[str], country: Optional[str]):
+def test_place_property_based(
+    name: str, street: Optional[str], city: Optional[str], country: Optional[str]
+):
     """Test Place with property-based testing."""
     try:
         address = None

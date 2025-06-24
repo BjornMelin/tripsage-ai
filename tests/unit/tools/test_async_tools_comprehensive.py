@@ -72,7 +72,9 @@ class TestAsyncToolsPattern:
         mock_registry.get_service.return_value = mock_service
 
         # Test async execution
-        result = await search_memory_tool(query="hotel preferences", service_registry=mock_registry)
+        result = await search_memory_tool(
+            query="hotel preferences", service_registry=mock_registry
+        )
 
         # Verify async call was made
         mock_service.search_memories.assert_called_once()
@@ -96,7 +98,9 @@ class TestAsyncToolsPattern:
         mock_registry.get_service.return_value = mock_service
 
         # Test async execution
-        result = await crawl_website_content_tool(url="https://example.com/paris-guide", service_registry=mock_registry)
+        result = await crawl_website_content_tool(
+            url="https://example.com/paris-guide", service_registry=mock_registry
+        )
 
         # Verify async call was made
         mock_service.crawl_url.assert_called_once()
@@ -165,7 +169,9 @@ class TestAsyncToolsPattern:
                 guests=2,
                 service_registry=accommodation_registry,
             ),
-            search_memory_tool(query="travel preferences", service_registry=memory_registry),
+            search_memory_tool(
+                query="travel preferences", service_registry=memory_registry
+            ),
         )
         end_time = asyncio.get_event_loop().time()
 
@@ -190,7 +196,9 @@ class TestToolErrorHandling:
         # Mock service that raises an error
         mock_registry = MagicMock()
         mock_service = AsyncMock()
-        mock_service.search_accommodations = AsyncMock(side_effect=Exception("Service unavailable"))
+        mock_service.search_accommodations = AsyncMock(
+            side_effect=Exception("Service unavailable")
+        )
         mock_registry.get_service.return_value = mock_service
 
         # Test error handling
@@ -448,13 +456,18 @@ class TestToolPerformanceCharacteristics:
 
         async def simulated_search(*args, **kwargs):
             await asyncio.sleep(0.1)  # Simulate processing time
-            return {"memories": [{"id": f"memory_{hash(str(args) + str(kwargs)) % 1000}"}]}
+            return {
+                "memories": [{"id": f"memory_{hash(str(args) + str(kwargs)) % 1000}"}]
+            }
 
         mock_service.search_memories = simulated_search
         mock_registry.get_service.return_value = mock_service
 
         # Execute multiple concurrent searches
-        search_tasks = [search_memory_tool(query=f"query_{i}", service_registry=mock_registry) for i in range(10)]
+        search_tasks = [
+            search_memory_tool(query=f"query_{i}", service_registry=mock_registry)
+            for i in range(10)
+        ]
 
         start_time = asyncio.get_event_loop().time()
         results = await asyncio.gather(*search_tasks)

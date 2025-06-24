@@ -73,7 +73,9 @@ class TestEnhancedBudget:
             activities=700.0,
             miscellaneous=500.0,
         )
-        budget = EnhancedBudget(total=5000.0, currency="EUR", spent=1500.0, breakdown=breakdown)
+        budget = EnhancedBudget(
+            total=5000.0, currency="EUR", spent=1500.0, breakdown=breakdown
+        )
         assert budget.total == 5000.0
         assert budget.currency == "EUR"
         assert budget.spent == 1500.0
@@ -546,7 +548,9 @@ class TestTripIntegration:
 
         # Verify complex setup
         assert trip.preferences_extended.accommodation_preferences["rating"] == 4
-        assert "wifi" in trip.preferences_extended.accommodation_preferences["amenities"]
+        assert (
+            "wifi" in trip.preferences_extended.accommodation_preferences["amenities"]
+        )
         assert trip.budget_utilization == 35.0
         assert trip.remaining_budget == 6500.0
         assert len(trip.notes) == 2

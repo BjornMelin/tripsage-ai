@@ -140,7 +140,10 @@ async def save_activity(
                 await audit_security_event(
                     event_type=AuditEventType.ACCESS_DENIED,
                     severity=AuditSeverity.MEDIUM,
-                    message=f"Trip access denied for user {user_id} to trip {request.trip_id}",
+                    message=(
+                        f"Trip access denied for user {user_id} to trip "
+                        f"{request.trip_id}"
+                    ),
                     actor_id=user_id,
                     ip_address="unknown",
                     target_resource=f"trip:{request.trip_id}",
@@ -387,7 +390,9 @@ async def delete_saved_activity(
             await audit_security_event(
                 event_type=AuditEventType.ACCESS_DENIED,
                 severity=AuditSeverity.MEDIUM,
-                message=f"Access denied deleting activity {activity_id} for user {user_id}",
+                message=(
+                    f"Access denied deleting activity {activity_id} for user {user_id}"
+                ),
                 actor_id=user_id,
                 ip_address="unknown",
                 target_resource=f"saved_activity:{activity_id}",
@@ -438,7 +443,8 @@ async def delete_saved_activity(
         )
 
         logger.info(
-            f"Deleted {deleted_count} saved activity entries for activity {activity_id} by user {user_id}"
+            f"Deleted {deleted_count} saved activity entries for activity "
+            f"{activity_id} by user {user_id}"
         )
 
     except HTTPException:

@@ -25,7 +25,9 @@ class TestChatRouter:
     @pytest.fixture
     def mock_principal(self):
         """Mock authenticated principal."""
-        return Principal(id="test-user-id", type="user", email="test@example.com", auth_method="jwt")
+        return Principal(
+            id="test-user-id", type="user", email="test@example.com", auth_method="jwt"
+        )
 
     @pytest.fixture
     def mock_chat_service(self):
@@ -46,7 +48,9 @@ class TestChatRouter:
         return {
             "id": str(uuid4()),
             "session_id": str(uuid4()),
-            "content": ("I'd be happy to help you plan your trip! Where would you like to go?"),
+            "content": (
+                "I'd be happy to help you plan your trip! Where would you like to go?"
+            ),
             "tool_calls": None,
             "finish_reason": "stop",
             "usage": {
@@ -64,13 +68,17 @@ class TestChatRouter:
         app.dependency_overrides[require_principal] = lambda: mock_principal
         app.dependency_overrides[get_chat_service] = lambda: mock_chat_service
 
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
             yield ac
 
         # Clean up overrides
         app.dependency_overrides.clear()
 
-    async def test_chat_success(self, async_client, mock_chat_service, sample_chat_response):
+    async def test_chat_success(
+        self, async_client, mock_chat_service, sample_chat_response
+    ):
         """Test successful chat interaction."""
         # Arrange
         session_id = uuid4()
@@ -131,7 +139,9 @@ class TestChatRouter:
     async def test_chat_service_error(self, async_client, mock_chat_service):
         """Test chat with service error."""
         # Arrange
-        mock_chat_service.chat_completion.side_effect = Exception("AI service unavailable")
+        mock_chat_service.chat_completion.side_effect = Exception(
+            "AI service unavailable"
+        )
 
         chat_request = {
             "messages": [
@@ -156,7 +166,9 @@ class TestChatRouter:
     async def test_chat_unauthorized(self):
         """Test chat without authentication."""
         # Create client without authentication override
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
             chat_request = {
                 "messages": [
                     {
@@ -170,7 +182,9 @@ class TestChatRouter:
             response = await client.post("/api/chat/", json=chat_request)
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    async def test_chat_with_tool_calls(self, async_client, mock_chat_service, sample_chat_response):
+    async def test_chat_with_tool_calls(
+        self, async_client, mock_chat_service, sample_chat_response
+    ):
         """Test chat response with tool calls."""
         # Arrange
         response_with_tools = {
@@ -210,7 +224,9 @@ class TestChatRouter:
         assert len(data["tool_calls"]) == 1
         assert data["tool_calls"][0]["name"] == "search_flights"
 
-    @pytest.mark.parametrize("message_length", [40000, 50000])  # ChatMessage max_length is 32768
+    @pytest.mark.parametrize(
+        "message_length", [40000, 50000]
+    )  # ChatMessage max_length is 32768
     async def test_chat_message_too_long(self, async_client, message_length):
         """Test chat with excessively long message."""
         chat_request = {
@@ -231,7 +247,9 @@ class TestChatRouter:
 
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    async def test_chat_with_memory_context(self, async_client, mock_chat_service, sample_chat_response):
+    async def test_chat_with_memory_context(
+        self, async_client, mock_chat_service, sample_chat_response
+    ):
         """Test chat with memory context retrieval."""
         # Arrange - memory context would be handled by the chat service internally
         mock_chat_service.chat_completion.return_value = sample_chat_response
@@ -260,7 +278,9 @@ class TestChatRouter:
         assert "content" in data
         # Memory context is handled internally by the chat service
 
-    async def test_chat_streaming_response(self, async_client, mock_chat_service, sample_chat_response):
+    async def test_chat_streaming_response(
+        self, async_client, mock_chat_service, sample_chat_response
+    ):
         """Test chat with streaming response."""
         # Arrange
         mock_chat_service.chat_completion.return_value = sample_chat_response

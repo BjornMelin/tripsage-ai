@@ -165,7 +165,9 @@ async def update_agent_config(
 
 
 @router.get("/agents/{agent_type}/versions", response_model=List[ConfigurationVersion])
-async def get_agent_config_versions(agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)):
+async def get_agent_config_versions(
+    agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
+):
     """Get configuration version history for an agent type."""
     # Validate agent type
     valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]
@@ -188,7 +190,9 @@ async def get_agent_config_versions(agent_type: str, limit: int = 10, current_us
 
 
 @router.post("/agents/{agent_type}/rollback/{version_id}")
-async def rollback_agent_config(agent_type: str, version_id: str, current_user: str = Depends(get_current_user_id)):
+async def rollback_agent_config(
+    agent_type: str, version_id: str, current_user: str = Depends(get_current_user_id)
+):
     """Rollback agent configuration to a specific version."""
     # Validate agent type
     valid_agents = ["budget_agent", "destination_research_agent", "itinerary_agent"]

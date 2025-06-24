@@ -115,7 +115,9 @@ class Temperature(BaseModel):
     temp_min: Optional[float] = Field(None, description="Minimum temperature")
     temp_max: Optional[float] = Field(None, description="Maximum temperature")
     pressure: Optional[int] = Field(None, description="Atmospheric pressure in hPa")
-    humidity: Optional[int] = Field(None, description="Humidity percentage", ge=0, le=100)
+    humidity: Optional[int] = Field(
+        None, description="Humidity percentage", ge=0, le=100
+    )
     sea_level: Optional[int] = Field(None, description="Sea level pressure in hPa")
     grnd_level: Optional[int] = Field(None, description="Ground level pressure in hPa")
 
