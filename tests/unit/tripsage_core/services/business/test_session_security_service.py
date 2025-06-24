@@ -62,7 +62,9 @@ class TestSessionSecurityModels:
         expires_at = now + timedelta(hours=24)
 
         # Invalid session ID - too short
-        with pytest.raises(ValidationError, match="Session ID must be at least 8 characters"):
+        with pytest.raises(
+            ValidationError, match="Session ID must be at least 8 characters"
+        ):
             UserSession(
                 id="short",
                 user_id="user-456",
@@ -80,7 +82,9 @@ class TestSessionSecurityModels:
             )
 
         # Invalid IP address with malicious pattern
-        with pytest.raises(ValidationError, match="IP address contains suspicious pattern"):
+        with pytest.raises(
+            ValidationError, match="IP address contains suspicious pattern"
+        ):
             UserSession(
                 id="session-123",
                 user_id="user-456",
@@ -121,7 +125,9 @@ class TestSessionSecurityModels:
             SecurityEvent(event_type="login_success", severity="invalid")
 
         # Invalid risk score
-        with pytest.raises(ValidationError, match="Risk score must be between 0 and 100"):
+        with pytest.raises(
+            ValidationError, match="Risk score must be between 0 and 100"
+        ):
             SecurityEvent(event_type="login_success", risk_score=150)
 
     def test_session_security_metrics_creation(self):
@@ -169,7 +175,9 @@ class TestSessionSecurityModels:
     )
     def test_security_event_property_based(self, event_type, risk_score, severity):
         """Property-based test for SecurityEvent."""
-        event = SecurityEvent(event_type=event_type, risk_score=risk_score, severity=severity)
+        event = SecurityEvent(
+            event_type=event_type, risk_score=risk_score, severity=severity
+        )
 
         assert event.event_type == event_type
         assert event.risk_score == risk_score
@@ -245,7 +253,9 @@ class TestSessionSecurityServiceConfiguration:
 
     def test_service_without_database_service(self):
         """Test service initialization without database service."""
-        with patch("tripsage_core.services.infrastructure.get_database_service") as mock_get_db:
+        with patch(
+            "tripsage_core.services.infrastructure.get_database_service"
+        ) as mock_get_db:
             mock_db = AsyncMock()
             mock_get_db.return_value = mock_db
 
@@ -262,7 +272,9 @@ class TestSessionSecurityServiceConfiguration:
             get_session_security_service,
         )
 
-        with patch("tripsage_core.services.infrastructure.get_database_service") as mock_get_db:
+        with patch(
+            "tripsage_core.services.infrastructure.get_database_service"
+        ) as mock_get_db:
             mock_db = AsyncMock()
             mock_get_db.return_value = mock_db
 
@@ -323,11 +335,15 @@ class TestSessionLifecycleManagement:
         assert mock_database_service.insert.call_count >= 1
         # Check all insert calls to find user_sessions
         insert_calls = mock_database_service.insert.call_args_list
-        user_sessions_calls = [call for call in insert_calls if call[0][0] == "user_sessions"]
+        user_sessions_calls = [
+            call for call in insert_calls if call[0][0] == "user_sessions"
+        ]
         assert len(user_sessions_calls) >= 1
 
     @pytest.mark.asyncio
-    async def test_create_session_max_sessions_exceeded(self, session_service, mock_database_service):
+    async def test_create_session_max_sessions_exceeded(
+        self, session_service, mock_database_service
+    ):
         """Test session creation when max sessions exceeded."""
         user_id = "user-123"
 
@@ -339,8 +355,12 @@ class TestSessionLifecycleManagement:
                 "user_id": user_id,
                 "session_token": "abcd1234" * 8,
                 "is_active": True,
-                "created_at": (datetime.now(timezone.utc) - timedelta(hours=i)).isoformat(),
-                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
+                "created_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=i)
+                ).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) + timedelta(hours=24)
+                ).isoformat(),
                 "last_activity_at": datetime.now(timezone.utc).isoformat(),
             }
             existing_sessions.append(session_data)
@@ -354,7 +374,9 @@ class TestSessionLifecycleManagement:
         mock_database_service.update.assert_called()  # For terminating old session
 
     @pytest.mark.asyncio
-    async def test_create_session_database_error(self, session_service, mock_database_service):
+    async def test_create_session_database_error(
+        self, session_service, mock_database_service
+    ):
         """Test session creation with database error."""
         mock_database_service.insert.side_effect = Exception("Database error")
 
@@ -362,7 +384,9 @@ class TestSessionLifecycleManagement:
             await session_service.create_session(user_id="user-123")
 
     @pytest.mark.asyncio
-    async def test_validate_session_success(self, session_service, mock_database_service):
+    async def test_validate_session_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful session validation."""
         session_token = secrets.token_urlsafe(32)
         session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
@@ -399,7 +423,9 @@ class TestSessionLifecycleManagement:
         mock_database_service.update.assert_called()
 
     @pytest.mark.asyncio
-    async def test_validate_session_expired(self, session_service, mock_database_service):
+    async def test_validate_session_expired(
+        self, session_service, mock_database_service
+    ):
         """Test validation of expired session."""
         session_token = secrets.token_urlsafe(32)
         session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
@@ -415,7 +441,9 @@ class TestSessionLifecycleManagement:
             "device_info": {},
             "location_info": {},
             "created_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),  # Expired
+            "expires_at": (
+                datetime.now(timezone.utc) - timedelta(hours=1)
+            ).isoformat(),  # Expired
             "last_activity_at": datetime.now(timezone.utc).isoformat(),
             "ended_at": None,
         }
@@ -429,7 +457,9 @@ class TestSessionLifecycleManagement:
         mock_database_service.update.assert_called()
 
     @pytest.mark.asyncio
-    async def test_validate_session_not_found(self, session_service, mock_database_service):
+    async def test_validate_session_not_found(
+        self, session_service, mock_database_service
+    ):
         """Test validation of non-existent session."""
         mock_database_service.select.return_value = []
 
@@ -438,14 +468,18 @@ class TestSessionLifecycleManagement:
         assert session is None
 
     @pytest.mark.asyncio
-    async def test_terminate_session_success(self, session_service, mock_database_service):
+    async def test_terminate_session_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful session termination."""
         session_id = "session-123"
         user_id = "user-456"
 
         mock_database_service.update.return_value = True
 
-        result = await session_service.terminate_session(session_id=session_id, reason="user_logout", user_id=user_id)
+        result = await session_service.terminate_session(
+            session_id=session_id, reason="user_logout", user_id=user_id
+        )
 
         assert result is True
 
@@ -458,7 +492,9 @@ class TestSessionLifecycleManagement:
         assert call_args[0][2]["is_active"] is False
 
     @pytest.mark.asyncio
-    async def test_terminate_session_database_error(self, session_service, mock_database_service):
+    async def test_terminate_session_database_error(
+        self, session_service, mock_database_service
+    ):
         """Test session termination with database error."""
         mock_database_service.update.side_effect = Exception("Database error")
 
@@ -483,7 +519,9 @@ class TestSessionLifecycleManagement:
                 "device_info": {},
                 "location_info": {},
                 "created_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) + timedelta(hours=1)
+                ).isoformat(),
                 "last_activity_at": datetime.now(timezone.utc).isoformat(),
                 "ended_at": None,
             }
@@ -515,7 +553,9 @@ class TestSecurityEventLogging:
         return SessionSecurityService(database_service=mock_database_service)
 
     @pytest.mark.asyncio
-    async def test_log_security_event_success(self, session_service, mock_database_service):
+    async def test_log_security_event_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful security event logging."""
         event = await session_service.log_security_event(
             event_type="login_success",
@@ -542,12 +582,16 @@ class TestSecurityEventLogging:
         assert call_args[0] == "security_events"
 
     @pytest.mark.asyncio
-    async def test_log_security_event_database_error(self, session_service, mock_database_service):
+    async def test_log_security_event_database_error(
+        self, session_service, mock_database_service
+    ):
         """Test security event logging with database error."""
         mock_database_service.insert.side_effect = Exception("Database error")
 
         # Should not raise exception, just log error
-        event = await session_service.log_security_event(event_type="login_failure", user_id="user-123")
+        event = await session_service.log_security_event(
+            event_type="login_failure", user_id="user-123"
+        )
 
         assert event.event_type == "login_failure"
         assert event.user_id == "user-123"
@@ -555,9 +599,13 @@ class TestSecurityEventLogging:
         assert event.id is None
 
     @pytest.mark.asyncio
-    async def test_log_security_event_minimal_data(self, session_service, mock_database_service):
+    async def test_log_security_event_minimal_data(
+        self, session_service, mock_database_service
+    ):
         """Test logging security event with minimal data."""
-        event = await session_service.log_security_event(event_type="suspicious_activity")
+        event = await session_service.log_security_event(
+            event_type="suspicious_activity"
+        )
 
         assert event.event_type == "suspicious_activity"
         assert event.user_id is None
@@ -615,7 +663,9 @@ class TestRiskAssessment:
         ]
 
         for malicious_ip in malicious_ips:
-            risk_score = session_service._validate_and_score_ip(malicious_ip, "user-123")
+            risk_score = session_service._validate_and_score_ip(
+                malicious_ip, "user-123"
+            )
             assert risk_score == 50  # Maximum risk for malicious patterns
 
     def test_validate_and_score_ip_valid_addresses(self, session_service):
@@ -665,19 +715,27 @@ class TestRiskAssessment:
         )
 
         # Same IP and user agent - low risk
-        risk_score = session_service._calculate_activity_risk_score(session, "192.168.1.1", "Mozilla/5.0 Original")
+        risk_score = session_service._calculate_activity_risk_score(
+            session, "192.168.1.1", "Mozilla/5.0 Original"
+        )
         assert risk_score == 0
 
         # Different IP - medium risk
-        risk_score = session_service._calculate_activity_risk_score(session, "192.168.1.2", "Mozilla/5.0 Original")
+        risk_score = session_service._calculate_activity_risk_score(
+            session, "192.168.1.2", "Mozilla/5.0 Original"
+        )
         assert risk_score == 30
 
         # Different user agent - low-medium risk
-        risk_score = session_service._calculate_activity_risk_score(session, "192.168.1.1", "Mozilla/5.0 Updated")
+        risk_score = session_service._calculate_activity_risk_score(
+            session, "192.168.1.1", "Mozilla/5.0 Updated"
+        )
         assert risk_score == 20
 
         # Both different - high risk
-        risk_score = session_service._calculate_activity_risk_score(session, "192.168.1.2", "Mozilla/5.0 Updated")
+        risk_score = session_service._calculate_activity_risk_score(
+            session, "192.168.1.2", "Mozilla/5.0 Updated"
+        )
         assert risk_score == 50
 
     def test_calculate_user_risk_score(self, session_service):
@@ -735,7 +793,9 @@ class TestSecurityMetrics:
         return SessionSecurityService(database_service=mock_database_service)
 
     @pytest.mark.asyncio
-    async def test_get_security_metrics_success(self, session_service, mock_database_service):
+    async def test_get_security_metrics_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful security metrics retrieval."""
         user_id = "user-123"
 
@@ -750,7 +810,9 @@ class TestSecurityMetrics:
         assert 0 <= metrics.risk_score <= 100
 
     @pytest.mark.asyncio
-    async def test_get_security_metrics_database_error(self, session_service, mock_database_service):
+    async def test_get_security_metrics_database_error(
+        self, session_service, mock_database_service
+    ):
         """Test security metrics with database error."""
         mock_database_service.select.side_effect = Exception("Database error")
 
@@ -779,7 +841,9 @@ class TestSessionCleanup:
         return SessionSecurityService(database_service=mock_database_service)
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_sessions_success(self, session_service, mock_database_service):
+    async def test_cleanup_expired_sessions_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful cleanup of expired sessions."""
         # Mock expired sessions
         expired_sessions = [
@@ -787,13 +851,17 @@ class TestSessionCleanup:
                 "id": "session-1",
                 "user_id": "user-123",
                 "is_active": True,
-                "expires_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=1)
+                ).isoformat(),
             },
             {
                 "id": "session-2",
                 "user_id": "user-456",
                 "is_active": True,
-                "expires_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=2)
+                ).isoformat(),
             },
         ]
 
@@ -806,7 +874,9 @@ class TestSessionCleanup:
         assert mock_database_service.update.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_sessions_no_expired(self, session_service, mock_database_service):
+    async def test_cleanup_expired_sessions_no_expired(
+        self, session_service, mock_database_service
+    ):
         """Test cleanup when no sessions are expired."""
         mock_database_service.select.return_value = []
 
@@ -815,7 +885,9 @@ class TestSessionCleanup:
         assert cleanup_count == 0
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_sessions_database_error(self, session_service, mock_database_service):
+    async def test_cleanup_expired_sessions_database_error(
+        self, session_service, mock_database_service
+    ):
         """Test cleanup with database error."""
         mock_database_service.select.side_effect = Exception("Database error")
 
@@ -842,14 +914,18 @@ class TestSessionSecurityIntegration:
         return SessionSecurityService(database_service=mock_database_service)
 
     @pytest.mark.asyncio
-    async def test_complete_session_workflow(self, session_service, mock_database_service):
+    async def test_complete_session_workflow(
+        self, session_service, mock_database_service
+    ):
         """Test complete session lifecycle workflow."""
         user_id = "user-123"
         ip_address = "192.168.1.100"
         user_agent = "Mozilla/5.0 Test"
 
         # 1. Create session
-        session = await session_service.create_session(user_id=user_id, ip_address=ip_address, user_agent=user_agent)
+        session = await session_service.create_session(
+            user_id=user_id, ip_address=ip_address, user_agent=user_agent
+        )
 
         assert session is not None
         assert session.user_id == user_id
@@ -870,7 +946,9 @@ class TestSessionSecurityIntegration:
                 "device_info": {},
                 "location_info": {},
                 "created_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) + timedelta(hours=1)
+                ).isoformat(),
                 "last_activity_at": datetime.now(timezone.utc).isoformat(),
                 "ended_at": None,
             }
@@ -884,13 +962,17 @@ class TestSessionSecurityIntegration:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_concurrent_session_operations(self, session_service, mock_database_service):
+    async def test_concurrent_session_operations(
+        self, session_service, mock_database_service
+    ):
         """Test concurrent session operations."""
         user_id = "user-123"
 
         # Create multiple sessions concurrently
         tasks = [
-            session_service.create_session(user_id=user_id, ip_address=f"192.168.1.{i}", user_agent=f"Browser-{i}")
+            session_service.create_session(
+                user_id=user_id, ip_address=f"192.168.1.{i}", user_agent=f"Browser-{i}"
+            )
             for i in range(3)
         ]
 
@@ -901,7 +983,9 @@ class TestSessionSecurityIntegration:
         assert all(session.user_id == user_id for session in sessions)
 
     @pytest.mark.asyncio
-    async def test_security_event_correlation(self, session_service, mock_database_service):
+    async def test_security_event_correlation(
+        self, session_service, mock_database_service
+    ):
         """Test security event correlation and analysis."""
         user_id = "user-123"
 
@@ -933,7 +1017,9 @@ class TestSessionSecurityIntegration:
 
         # Simulate multiple risk calculations
         for i in range(100):
-            risk_score = session_service._calculate_login_risk_score(f"user-{i}", f"192.168.1.{i % 255}")
+            risk_score = session_service._calculate_login_risk_score(
+                f"user-{i}", f"192.168.1.{i % 255}"
+            )
             assert 0 <= risk_score <= 100
 
         end_time = time.time()
@@ -956,7 +1042,9 @@ class TestSessionSecurityIntegration:
 
         for malicious_input in malicious_inputs:
             # IP validation should handle malicious input safely
-            risk_score = session_service._validate_and_score_ip(malicious_input, "user-123")
+            risk_score = session_service._validate_and_score_ip(
+                malicious_input, "user-123"
+            )
             assert isinstance(risk_score, int)
             assert 0 <= risk_score <= 50
 

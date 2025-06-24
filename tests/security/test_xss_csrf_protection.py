@@ -97,7 +97,9 @@ class TestXSSProtection:
             metadata={},
         )
 
-    def test_api_key_name_xss_protection(self, test_client, xss_payloads, mock_principal):
+    def test_api_key_name_xss_protection(
+        self, test_client, xss_payloads, mock_principal
+    ):
         """Test XSS protection in API key name field."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -107,7 +109,9 @@ class TestXSSProtection:
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
             ):
-                with patch("tripsage_core.services.business.api_key_service.get_api_key_service") as mock_service:
+                with patch(
+                    "tripsage_core.services.business.api_key_service.get_api_key_service"
+                ) as mock_service:
                     mock_key_service = AsyncMock()
                     mock_service.return_value = mock_key_service
 
@@ -137,9 +141,13 @@ class TestXSSProtection:
 
                         # Should not execute JavaScript in name validation
                         if "alert" in payload:
-                            assert "alert" not in response_text or "alert" in str(response.status_code)
+                            assert "alert" not in response_text or "alert" in str(
+                                response.status_code
+                            )
 
-    def test_api_key_description_xss_protection(self, test_client, xss_payloads, mock_principal):
+    def test_api_key_description_xss_protection(
+        self, test_client, xss_payloads, mock_principal
+    ):
         """Test XSS protection in API key description field."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -149,7 +157,9 @@ class TestXSSProtection:
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
             ):
-                with patch("tripsage_core.services.business.api_key_service.get_api_key_service") as mock_service:
+                with patch(
+                    "tripsage_core.services.business.api_key_service.get_api_key_service"
+                ) as mock_service:
                     mock_key_service = AsyncMock()
                     mock_service.return_value = mock_key_service
 
@@ -173,9 +183,13 @@ class TestXSSProtection:
                         response_text = response.text
                         assert "<script>" not in response_text
                         assert "javascript:" not in response_text
-                        assert payload not in response_text or response.status_code >= 400
+                        assert (
+                            payload not in response_text or response.status_code >= 400
+                        )
 
-    def test_html_injection_in_error_messages(self, test_client, html_injection_payloads, mock_principal):
+    def test_html_injection_in_error_messages(
+        self, test_client, html_injection_payloads, mock_principal
+    ):
         """Test HTML injection protection in error messages."""
         with patch(
             "tripsage.api.core.dependencies.require_principal",
@@ -185,7 +199,9 @@ class TestXSSProtection:
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
             ):
-                with patch("tripsage_core.services.business.api_key_service.get_api_key_service") as mock_service:
+                with patch(
+                    "tripsage_core.services.business.api_key_service.get_api_key_service"
+                ) as mock_service:
                     mock_key_service = AsyncMock()
                     mock_service.return_value = mock_key_service
 
@@ -223,18 +239,24 @@ class TestXSSProtection:
                 "tripsage.api.core.dependencies.get_principal_id",
                 return_value="test-user-123",
             ):
-                with patch("tripsage_core.services.business.api_key_service.get_api_key_service") as mock_service:
+                with patch(
+                    "tripsage_core.services.business.api_key_service.get_api_key_service"
+                ) as mock_service:
                     mock_key_service = AsyncMock()
                     mock_service.return_value = mock_key_service
 
                     for payload in xss_payloads:
                         validation_data = {"key": payload, "service": "openai"}
 
-                        response = test_client.post("/api/keys/validate", json=validation_data)
+                        response = test_client.post(
+                            "/api/keys/validate", json=validation_data
+                        )
 
                         # Response should not contain unescaped XSS payload
                         response_text = response.text
-                        assert payload not in response_text or response.status_code >= 400
+                        assert (
+                            payload not in response_text or response.status_code >= 400
+                        )
                         assert "<script>" not in response_text
                         assert "javascript:" not in response_text
 
@@ -373,7 +395,9 @@ class TestCSRFProtection:
             # Attempt CSRF with text/plain content type
             malicious_json = '{"name":"hacked","service":"openai","key":"sk-hacked"}'
 
-            response = test_client.post("/api/keys", data=malicious_json, headers={"Content-Type": "text/plain"})
+            response = test_client.post(
+                "/api/keys", data=malicious_json, headers={"Content-Type": "text/plain"}
+            )
 
             # Should reject text/plain for JSON endpoints
             assert response.status_code in [400, 415, 422]
@@ -400,7 +424,8 @@ class TestCSRFProtection:
                     # If allowed, check for proper CORS configuration
                     assert (
                         "Access-Control-Allow-Origin" not in response.headers
-                        or response.headers.get("Access-Control-Allow-Origin") != "http://malicious-site.com"
+                        or response.headers.get("Access-Control-Allow-Origin")
+                        != "http://malicious-site.com"
                     )
 
     def test_csrf_token_validation_if_implemented(self, test_client):
@@ -555,7 +580,9 @@ class TestHTTPSecurityHeaders:
             server = response.headers["Server"]
             # Should not reveal detailed version information
             sensitive_info = ["uvicorn", "fastapi", "python", "version"]
-            disclosed_info = [info for info in sensitive_info if info.lower() in server.lower()]
+            disclosed_info = [
+                info for info in sensitive_info if info.lower() in server.lower()
+            ]
             # Minimal disclosure is acceptable, but detailed versions should be hidden
             assert len(disclosed_info) <= 1
 
@@ -611,7 +638,10 @@ class TestInputValidationSecurity:
             # Test malformed JSON that could bypass validation
             malformed_payloads = [
                 # Prototype pollution attempt
-                ('{"name": "Test", "extra": {"constructor": {"prototype": {"polluted": true}}}}'),
+                (
+                    '{"name": "Test", "extra": {"constructor": '
+                    '{"prototype": {"polluted": true}}}}'
+                ),
                 '{"__proto__": {"polluted": true}, "name": "Test"}',
                 '{"name": "Test\\u0000Null"}',
                 '{"name": "Test\\"", "service": "openai"}',
@@ -690,7 +720,9 @@ class TestInputValidationSecurity:
                 # Should handle Unicode safely
                 if response.status_code == 200:
                     # Should normalize or reject problematic Unicode
-                    assert payload not in response.text or len(response.text) < len(payload)
+                    assert payload not in response.text or len(response.text) < len(
+                        payload
+                    )
 
     def test_control_character_filtering(self, test_client, mock_principal):
         """Test filtering of control characters in input."""

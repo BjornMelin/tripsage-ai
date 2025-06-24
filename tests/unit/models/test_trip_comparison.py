@@ -157,5 +157,7 @@ def test_trip_comparison_model_dump(sample_trip_comparison_dict):
     comparison_dict = trip_comparison.model_dump()
 
     assert comparison_dict["trip_id"] == 1
-    assert comparison_dict["comparison_json"]["options"][0]["airline"] == "Japan Airlines"
+    assert (
+        comparison_dict["comparison_json"]["options"][0]["airline"] == "Japan Airlines"
+    )
     assert comparison_dict["comparison_json"]["selected_option_id"] == 1

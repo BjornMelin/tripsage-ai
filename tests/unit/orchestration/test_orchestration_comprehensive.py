@@ -173,8 +173,12 @@ def comprehensive_service_registry():
     )
 
     # Configure service registry methods
-    registry.get_required_service = MagicMock(side_effect=lambda name: services.get(name, MagicMock()))
-    registry.get_optional_service = MagicMock(side_effect=lambda name: services.get(name))
+    registry.get_required_service = MagicMock(
+        side_effect=lambda name: services.get(name, MagicMock())
+    )
+    registry.get_optional_service = MagicMock(
+        side_effect=lambda name: services.get(name)
+    )
 
     return registry
 
@@ -188,7 +192,9 @@ def mock_memory_bridge():
     """
     bridge = AsyncMock()
     bridge.hydrate_state = AsyncMock(side_effect=lambda state: state)
-    bridge.extract_and_persist_insights = AsyncMock(return_value={"insights_count": 3, "entities_extracted": 5})
+    bridge.extract_and_persist_insights = AsyncMock(
+        return_value={"insights_count": 3, "entities_extracted": 5}
+    )
     return bridge
 
 
@@ -205,7 +211,9 @@ def mock_handoff_coordinator():
 
 
 @pytest.fixture
-def optimized_orchestrator(comprehensive_service_registry, mock_memory_bridge, mock_handoff_coordinator):
+def optimized_orchestrator(
+    comprehensive_service_registry, mock_memory_bridge, mock_handoff_coordinator
+):
     """Create optimized orchestrator with comprehensive mocking.
 
     Args:
@@ -305,7 +313,12 @@ class TestBaseAgentNodeComprehensive:
         Args:
             comprehensive_service_registry: Mock service registry
         """
-        nodes = [MockAgentNode(comprehensive_service_registry, f"node_{i}", process_delay=0.01) for i in range(3)]
+        nodes = [
+            MockAgentNode(
+                comprehensive_service_registry, f"node_{i}", process_delay=0.01
+            )
+            for i in range(3)
+        ]
 
         states = [create_initial_state(f"user-{i}", f"Message {i}") for i in range(3)]
 
@@ -329,12 +342,16 @@ class TestBaseAgentNodeComprehensive:
         # Test required service access
         service = node.get_service("accommodation_service")
         assert service is not None
-        comprehensive_service_registry.get_required_service.assert_called_with("accommodation_service")
+        comprehensive_service_registry.get_required_service.assert_called_with(
+            "accommodation_service"
+        )
 
         # Test optional service access
         optional_service = node.get_optional_service("memory_service")
         assert optional_service is not None
-        comprehensive_service_registry.get_optional_service.assert_called_with("memory_service")
+        comprehensive_service_registry.get_optional_service.assert_called_with(
+            "memory_service"
+        )
 
         # Test non-existent optional service
         comprehensive_service_registry.get_optional_service.return_value = None
@@ -377,7 +394,9 @@ class TestTravelPlanningStateModels:
             ("budget_total", -1000, "validation_error"),
         ],
     )
-    def test_user_preferences_validation_errors(self, invalid_field, invalid_value, error_type):
+    def test_user_preferences_validation_errors(
+        self, invalid_field, invalid_value, error_type
+    ):
         """Test UserPreferences validation error handling.
 
         Args:
@@ -515,13 +534,21 @@ class TestTripSageOrchestratorOptimized:
                 with patch("tripsage.orchestration.graph.get_default_config"):
                     # Test with minimal configuration - provide service registry
                     # to avoid initialization errors
-                    orchestrator1 = TripSageOrchestrator(service_registry=comprehensive_service_registry)
+                    orchestrator1 = TripSageOrchestrator(
+                        service_registry=comprehensive_service_registry
+                    )
                     assert orchestrator1 is not None
-                    assert orchestrator1.service_registry == comprehensive_service_registry
+                    assert (
+                        orchestrator1.service_registry == comprehensive_service_registry
+                    )
 
                     # Test with service registry explicitly
-                    orchestrator2 = TripSageOrchestrator(service_registry=comprehensive_service_registry)
-                    assert orchestrator2.service_registry == comprehensive_service_registry
+                    orchestrator2 = TripSageOrchestrator(
+                        service_registry=comprehensive_service_registry
+                    )
+                    assert (
+                        orchestrator2.service_registry == comprehensive_service_registry
+                    )
 
                     # Test with custom checkpointer
                     custom_checkpointer = MemorySaver()
@@ -561,7 +588,9 @@ class TestTripSageOrchestratorOptimized:
         # Test successful PostgreSQL initialization
         with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
             mock_checkpointer = AsyncMock()
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(return_value=mock_checkpointer)
+            mock_cm.return_value.get_async_checkpointer = AsyncMock(
+                return_value=mock_checkpointer
+            )
 
             await optimized_orchestrator.initialize()
 
@@ -574,7 +603,9 @@ class TestTripSageOrchestratorOptimized:
 
         # Test fallback to MemorySaver
         with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(side_effect=Exception("PostgreSQL unavailable"))
+            mock_cm.return_value.get_async_checkpointer = AsyncMock(
+                side_effect=Exception("PostgreSQL unavailable")
+            )
 
             await optimized_orchestrator.initialize()
 
@@ -623,7 +654,9 @@ class TestTripSageOrchestratorOptimized:
             optimized_orchestrator: Test orchestrator instance
         """
         # Configure handoff coordinator for tests
-        optimized_orchestrator.handoff_coordinator.determine_next_agent.return_value = None
+        optimized_orchestrator.handoff_coordinator.determine_next_agent.return_value = (
+            None
+        )
 
         test_cases = [
             # Error scenarios
@@ -712,10 +745,14 @@ class TestTripSageOrchestratorOptimized:
             },
         ]
 
-        optimized_orchestrator.compiled_graph.ainvoke = AsyncMock(side_effect=mock_results)
+        optimized_orchestrator.compiled_graph.ainvoke = AsyncMock(
+            side_effect=mock_results
+        )
 
         # Test new conversation
-        result1 = await optimized_orchestrator.process_message("user-123", "Plan a trip to Tokyo")
+        result1 = await optimized_orchestrator.process_message(
+            "user-123", "Plan a trip to Tokyo"
+        )
 
         assert result1["response"] == "I'll help you plan your Tokyo trip!"
         assert result1["agent_used"] == "general_agent"
@@ -740,9 +777,13 @@ class TestTripSageOrchestratorOptimized:
         await optimized_orchestrator.initialize()
 
         # Test graph execution error
-        optimized_orchestrator.compiled_graph.ainvoke = AsyncMock(side_effect=Exception("Graph execution failed"))
+        optimized_orchestrator.compiled_graph.ainvoke = AsyncMock(
+            side_effect=Exception("Graph execution failed")
+        )
 
-        result = await optimized_orchestrator.process_message("user-123", "Test message")
+        result = await optimized_orchestrator.process_message(
+            "user-123", "Test message"
+        )
 
         assert "encountered an error" in result["response"]
         assert result["error"] == "Graph execution failed"
@@ -750,14 +791,20 @@ class TestTripSageOrchestratorOptimized:
         # Test memory service errors (should be graceful)
         optimized_orchestrator.compiled_graph.ainvoke = AsyncMock(
             return_value={
-                "messages": [{"role": "assistant", "content": "Success despite memory error"}],
+                "messages": [
+                    {"role": "assistant", "content": "Success despite memory error"}
+                ],
                 "current_agent": "general_agent",
             }
         )
 
-        optimized_orchestrator.memory_bridge.hydrate_state = AsyncMock(side_effect=Exception("Memory service down"))
+        optimized_orchestrator.memory_bridge.hydrate_state = AsyncMock(
+            side_effect=Exception("Memory service down")
+        )
 
-        result = await optimized_orchestrator.process_message("user-123", "Test message")
+        result = await optimized_orchestrator.process_message(
+            "user-123", "Test message"
+        )
 
         # Should still succeed
         assert result["response"] == "Success despite memory error"
@@ -786,7 +833,9 @@ class TestTripSageOrchestratorOptimized:
 
         mock_state_obj = MagicMock()
         mock_state_obj.values = complex_state
-        optimized_orchestrator.compiled_graph.get_state = MagicMock(return_value=mock_state_obj)
+        optimized_orchestrator.compiled_graph.get_state = MagicMock(
+            return_value=mock_state_obj
+        )
 
         result = await optimized_orchestrator.get_session_state("test-session")
         assert result == complex_state
@@ -798,7 +847,9 @@ class TestTripSageOrchestratorOptimized:
         assert result is None
 
         # Test error handling
-        optimized_orchestrator.compiled_graph.get_state = MagicMock(side_effect=Exception("State retrieval failed"))
+        optimized_orchestrator.compiled_graph.get_state = MagicMock(
+            side_effect=Exception("State retrieval failed")
+        )
 
         result = await optimized_orchestrator.get_session_state("error-session")
         assert result is None

@@ -65,7 +65,9 @@ class SchemaTestRunner:
 
         if not logger.handlers:
             handler = logging.StreamHandler(sys.stdout)
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             logger.addHandler(handler)
 
@@ -138,7 +140,9 @@ class SchemaTestRunner:
         for filename in migration_files:
             file_path = migration_path / filename
             if not file_path.exists():
-                raise FileNotFoundError(f"Required migration file not found: {filename}")
+                raise FileNotFoundError(
+                    f"Required migration file not found: {filename}"
+                )
 
         self.logger.info("Pre-test validation completed successfully")
 
@@ -154,7 +158,9 @@ class SchemaTestRunner:
             },
             {
                 "name": "foreign_key_constraints",
-                "module": ("test_supabase_collaboration_schema::TestForeignKeyConstraints"),
+                "module": (
+                    "test_supabase_collaboration_schema::TestForeignKeyConstraints"
+                ),
                 "description": "Foreign key constraint tests",
             },
             {
@@ -169,7 +175,9 @@ class SchemaTestRunner:
             },
             {
                 "name": "collaboration_workflows",
-                "module": ("test_supabase_collaboration_schema::TestCollaborationWorkflows"),
+                "module": (
+                    "test_supabase_collaboration_schema::TestCollaborationWorkflows"
+                ),
                 "description": "End-to-end collaboration workflow tests",
             },
             {
@@ -184,17 +192,23 @@ class SchemaTestRunner:
             },
             {
                 "name": "performance_optimization",
-                "module": ("test_supabase_collaboration_schema::TestPerformanceOptimization"),
+                "module": (
+                    "test_supabase_collaboration_schema::TestPerformanceOptimization"
+                ),
                 "description": "Performance optimization tests",
             },
             {
                 "name": "migration_compatibility",
-                "module": ("test_supabase_collaboration_schema::TestMigrationCompatibility"),
+                "module": (
+                    "test_supabase_collaboration_schema::TestMigrationCompatibility"
+                ),
                 "description": "Migration safety and compatibility tests",
             },
             {
                 "name": "collaboration_performance",
-                "module": ("test_collaboration_performance::CollaborationPerformanceTestSuite"),
+                "module": (
+                    "test_collaboration_performance::CollaborationPerformanceTestSuite"
+                ),
                 "description": "Collaboration feature performance tests",
             },
         ]
@@ -292,13 +306,19 @@ class SchemaTestRunner:
             },
             "performance": {
                 "slow_tests": slow_tests,
-                "average_test_duration": total_duration / len(results) if results else 0,
+                "average_test_duration": total_duration / len(results)
+                if results
+                else 0,
             },
             "failures": {
                 "failed_suites": failed_suites,
-                "failure_rate": (len(failed_suites) / len(results)) * 100 if results else 0,
+                "failure_rate": (len(failed_suites) / len(results)) * 100
+                if results
+                else 0,
             },
-            "recommendations": self._generate_recommendations(results, slow_tests, failed_suites),
+            "recommendations": self._generate_recommendations(
+                results, slow_tests, failed_suites
+            ),
         }
 
         return analysis
@@ -320,16 +340,22 @@ class SchemaTestRunner:
 
         # Failure recommendations
         if failed_suites:
-            recommendations.append(f"Address {len(failed_suites)} failing test suites before production deployment")
+            recommendations.append(
+                f"Address {len(failed_suites)} failing test suites before production deployment"
+            )
 
         # Schema-specific recommendations
         schema_tests = ["schema_validation", "rls_policies", "foreign_key_constraints"]
         schema_failures = [
-            suite for suite in failed_suites if any(schema_test in suite["suite"] for schema_test in schema_tests)
+            suite
+            for suite in failed_suites
+            if any(schema_test in suite["suite"] for schema_test in schema_tests)
         ]
 
         if schema_failures:
-            recommendations.append("Critical schema validation failures detected - review database migration safety")
+            recommendations.append(
+                "Critical schema validation failures detected - review database migration safety"
+            )
 
         # Performance test recommendations
         perf_tests = [
@@ -337,33 +363,49 @@ class SchemaTestRunner:
             "collaboration_performance",
             "performance_optimization",
         ]
-        perf_issues = [test for test in slow_tests if any(perf_test in test["suite"] for perf_test in perf_tests)]
+        perf_issues = [
+            test
+            for test in slow_tests
+            if any(perf_test in test["suite"] for perf_test in perf_tests)
+        ]
 
         if perf_issues:
-            recommendations.append("Performance tests indicate potential scalability issues - review indexing strategy")
+            recommendations.append(
+                "Performance tests indicate potential scalability issues - review indexing strategy"
+            )
 
         # Security recommendations
         security_tests = ["security_isolation", "rls_policies"]
         security_failures = [
-            suite for suite in failed_suites if any(sec_test in suite["suite"] for sec_test in security_tests)
+            suite
+            for suite in failed_suites
+            if any(sec_test in suite["suite"] for sec_test in security_tests)
         ]
 
         if security_failures:
-            recommendations.append("Security test failures detected - review RLS policies and data isolation")
+            recommendations.append(
+                "Security test failures detected - review RLS policies and data isolation"
+            )
 
         if not recommendations:
-            recommendations.append("All tests passing - schema is ready for production deployment")
+            recommendations.append(
+                "All tests passing - schema is ready for production deployment"
+            )
 
         return recommendations
 
-    async def _generate_test_report(self, results: Dict[str, Any], analysis: Dict[str, Any]):
+    async def _generate_test_report(
+        self, results: Dict[str, Any], analysis: Dict[str, Any]
+    ):
         """Generate comprehensive test report."""
         self.logger.info("Generating test report...")
 
         report = {
             "metadata": {
                 "timestamp": datetime.utcnow().isoformat(),
-                "duration": (self.end_time - self.start_time).total_seconds() if self.end_time else None,
+                "duration": (self.end_time - self.start_time).total_seconds()
+                if self.end_time
+                else None,
                 "config": self.config,
             },
             "results": results,
@@ -406,7 +448,9 @@ class SchemaTestRunner:
         if analysis["failures"]["failed_suites"]:
             print("FAILED TEST SUITES:")
             for failure in analysis["failures"]["failed_suites"]:
-                print(f"  ❌ {failure['suite']}: {failure.get('error', 'Unknown error')}")
+                print(
+                    f"  ❌ {failure['suite']}: {failure.get('error', 'Unknown error')}"
+                )
             print()
 
         if analysis["performance"]["slow_tests"]:
@@ -434,11 +478,17 @@ async def main():
     """Main entry point for test runner."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run Supabase schema integration tests")
+    parser = argparse.ArgumentParser(
+        description="Run Supabase schema integration tests"
+    )
     parser.add_argument("--config", help="Path to test configuration file")
     parser.add_argument("--test-types", nargs="+", help="Specific test types to run")
-    parser.add_argument("--performance-only", action="store_true", help="Run only performance tests")
-    parser.add_argument("--quick", action="store_true", help="Run quick test suite only")
+    parser.add_argument(
+        "--performance-only", action="store_true", help="Run only performance tests"
+    )
+    parser.add_argument(
+        "--quick", action="store_true", help="Run quick test suite only"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     args = parser.parse_args()

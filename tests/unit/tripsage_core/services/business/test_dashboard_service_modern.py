@@ -77,7 +77,9 @@ class TestDashboardServiceModern:
                 return {
                     "count": 45,
                     "limit": 100,
-                    "reset_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+                    "reset_at": (
+                        datetime.now(timezone.utc) + timedelta(hours=1)
+                    ).isoformat(),
                 }
             elif "dashboard:metrics:" in key:
                 return None  # Force fresh computation
@@ -131,7 +133,9 @@ class TestDashboardServiceModern:
         return settings
 
     @pytest_asyncio.fixture
-    async def dashboard_service(self, mock_cache_service, mock_database_service, mock_settings) -> DashboardService:
+    async def dashboard_service(
+        self, mock_cache_service, mock_database_service, mock_settings
+    ) -> DashboardService:
         """Create DashboardService instance with mocked dependencies."""
         return DashboardService(
             cache_service=mock_cache_service,
@@ -167,10 +171,14 @@ class TestDashboardServiceModern:
         assert dashboard_service._cache_prefix == "dashboard:metrics:"
         assert dashboard_service._cache_ttl == 300
 
-    async def test_get_dashboard_data_success(self, dashboard_service, mock_database_service, sample_usage_logs):
+    async def test_get_dashboard_data_success(
+        self, dashboard_service, mock_database_service, sample_usage_logs
+    ):
         """Test successful dashboard data retrieval."""
         # Mock the _query_usage_logs method directly to ensure sample data
-        with patch.object(dashboard_service, "_query_usage_logs", return_value=sample_usage_logs):
+        with patch.object(
+            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+        ):
             # Mock health checks
             with patch.object(
                 dashboard_service.api_key_service,
@@ -188,7 +196,9 @@ class TestDashboardServiceModern:
                     ),
                 },
             ):
-                dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=24, top_users_limit=10)
+                dashboard_data = await dashboard_service.get_dashboard_data(
+                    time_range_hours=24, top_users_limit=10
+                )
 
         # Verify dashboard data structure
         assert isinstance(dashboard_data, DashboardData)
@@ -206,7 +216,9 @@ class TestDashboardServiceModern:
         assert dashboard_data.metrics.unique_users_count > 0
         assert dashboard_data.metrics.active_keys_count > 0
 
-    async def test_get_dashboard_data_with_cache(self, dashboard_service, mock_cache_service):
+    async def test_get_dashboard_data_with_cache(
+        self, dashboard_service, mock_cache_service
+    ):
         """Test dashboard data retrieval with cache hit."""
         # Mock cached metrics
         cached_metrics = {
@@ -237,7 +249,9 @@ class TestDashboardServiceModern:
         assert dashboard_data.metrics.total_requests == 1000
         assert dashboard_data.metrics.success_rate == 0.95
 
-    async def test_get_dashboard_data_error_fallback(self, dashboard_service, mock_database_service):
+    async def test_get_dashboard_data_error_fallback(
+        self, dashboard_service, mock_database_service
+    ):
         """Test dashboard data error handling with fallback."""
         # Mock database to raise exception
         mock_database_service.select.side_effect = Exception("Database error")
@@ -251,7 +265,9 @@ class TestDashboardServiceModern:
 
     # Rate limiting tests
 
-    async def test_get_rate_limit_status_with_cache(self, dashboard_service, mock_cache_service):
+    async def test_get_rate_limit_status_with_cache(
+        self, dashboard_service, mock_cache_service
+    ):
         """Test rate limit status retrieval with cache data."""
         # Mock cache data
         cache_data = {
@@ -281,7 +297,9 @@ class TestDashboardServiceModern:
         assert "remaining" in status
         assert status["is_throttled"] is False
 
-    async def test_get_rate_limit_status_throttled(self, dashboard_service, mock_cache_service):
+    async def test_get_rate_limit_status_throttled(
+        self, dashboard_service, mock_cache_service
+    ):
         """Test rate limit status when throttled."""
         # Mock cache data showing limit exceeded
         cache_data = {
@@ -334,7 +352,9 @@ class TestDashboardServiceModern:
         )
 
         # Acknowledge the alert
-        success = await dashboard_service.acknowledge_alert(alert.alert_id, "admin_user")
+        success = await dashboard_service.acknowledge_alert(
+            alert.alert_id, "admin_user"
+        )
 
         assert success is True
         stored_alert = dashboard_service._active_alerts[alert.alert_id]
@@ -367,7 +387,9 @@ class TestDashboardServiceModern:
 
     # Performance and edge case tests
 
-    async def test_large_usage_logs_performance(self, dashboard_service, mock_database_service):
+    async def test_large_usage_logs_performance(
+        self, dashboard_service, mock_database_service
+    ):
         """Test performance with large amounts of usage data."""
         # Generate large dataset
         now = datetime.now(timezone.utc)
@@ -394,7 +416,9 @@ class TestDashboardServiceModern:
             import time
 
             start_time = time.time()
-            dashboard_data = await dashboard_service.get_dashboard_data(time_range_hours=24, top_users_limit=20)
+            dashboard_data = await dashboard_service.get_dashboard_data(
+                time_range_hours=24, top_users_limit=20
+            )
             end_time = time.time()
 
         # Verify performance (should complete in reasonable time)
@@ -466,7 +490,9 @@ class TestDashboardServiceModern:
         time_range_hours=st.integers(min_value=1, max_value=168),
         top_users_limit=st.integers(min_value=1, max_value=100),
     )
-    async def test_get_dashboard_data_property_based(self, dashboard_service, time_range_hours, top_users_limit):
+    async def test_get_dashboard_data_property_based(
+        self, dashboard_service, time_range_hours, top_users_limit
+    ):
         """Property-based test for dashboard data retrieval."""
         # Mock minimal dependencies
         with patch.object(
@@ -484,7 +510,9 @@ class TestDashboardServiceModern:
         assert dashboard_data.metrics.success_rate <= 1.0
         assert dashboard_data.metrics.total_requests >= 0
         assert dashboard_data.metrics.total_errors >= 0
-        assert dashboard_data.metrics.total_errors <= dashboard_data.metrics.total_requests
+        assert (
+            dashboard_data.metrics.total_errors <= dashboard_data.metrics.total_requests
+        )
         assert len(dashboard_data.top_users) <= top_users_limit
 
     @given(
@@ -493,7 +521,9 @@ class TestDashboardServiceModern:
         title=st.text(min_size=1, max_size=100),
         message=st.text(min_size=1, max_size=500),
     )
-    async def test_create_alert_property_based(self, dashboard_service, alert_type, severity, title, message):
+    async def test_create_alert_property_based(
+        self, dashboard_service, alert_type, severity, title, message
+    ):
         """Property-based test for alert creation."""
         alert = await dashboard_service.create_alert(
             alert_type=alert_type,
@@ -514,9 +544,13 @@ class TestDashboardServiceModern:
 
     # Error handling tests
 
-    async def test_database_connection_failure(self, dashboard_service, mock_database_service):
+    async def test_database_connection_failure(
+        self, dashboard_service, mock_database_service
+    ):
         """Test behavior when database connection fails."""
-        mock_database_service.select.side_effect = ConnectionError("Database unreachable")
+        mock_database_service.select.side_effect = ConnectionError(
+            "Database unreachable"
+        )
 
         # Should handle gracefully with fallback data
         dashboard_data = await dashboard_service.get_dashboard_data()
@@ -524,7 +558,9 @@ class TestDashboardServiceModern:
         assert isinstance(dashboard_data, DashboardData)
         assert dashboard_data.metrics.total_requests > 0  # Fallback values
 
-    async def test_cache_connection_failure(self, dashboard_service, mock_cache_service):
+    async def test_cache_connection_failure(
+        self, dashboard_service, mock_cache_service
+    ):
         """Test behavior when cache connection fails."""
         mock_cache_service.get_json.side_effect = ConnectionError("Cache unreachable")
         mock_cache_service.is_connected = False
@@ -580,7 +616,9 @@ class TestDashboardServiceModern:
     async def test_full_dashboard_workflow(self, dashboard_service, sample_usage_logs):
         """Test complete dashboard workflow integration."""
         # 1. Get initial dashboard data
-        with patch.object(dashboard_service, "_query_usage_logs", return_value=sample_usage_logs):
+        with patch.object(
+            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+        ):
             with patch.object(
                 dashboard_service.api_key_service,
                 "check_all_services_health",
@@ -615,7 +653,9 @@ class TestDashboardServiceModern:
             assert "percentage_used" in rate_status
 
         # 4. Get updated dashboard data
-        with patch.object(dashboard_service, "_query_usage_logs", return_value=sample_usage_logs):
+        with patch.object(
+            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+        ):
             with patch.object(
                 dashboard_service.api_key_service,
                 "check_all_services_health",
@@ -682,7 +722,9 @@ class TestDashboardServiceModern:
         empty_stats = await dashboard_service._get_cache_statistics()
         assert empty_stats == {}
 
-    async def test_query_usage_logs_filtering(self, dashboard_service, mock_database_service):
+    async def test_query_usage_logs_filtering(
+        self, dashboard_service, mock_database_service
+    ):
         """Test usage logs querying with time filtering."""
         start_time = datetime.now(timezone.utc) - timedelta(hours=1)
         end_time = datetime.now(timezone.utc)

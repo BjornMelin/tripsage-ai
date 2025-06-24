@@ -50,7 +50,9 @@ def test_trip_note_content_snippet(sample_trip_note_dict):
     assert trip_note.content_snippet == "Remember to exchange currency before departure"
 
     # Test with long content
-    long_content = "This is a very long note that should be truncated for the snippet. " * 5
+    long_content = (
+        "This is a very long note that should be truncated for the snippet. " * 5
+    )
     trip_note.content = long_content
     assert len(trip_note.content_snippet) <= 100
     assert trip_note.content_snippet.endswith("...")

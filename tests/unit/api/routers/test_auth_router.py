@@ -76,7 +76,9 @@ class TestAuthSchemas:
             pytest.skip("RegisterRequest schema not available")
         except Exception as e:
             # Schema might have different required fields than expected
-            pytest.skip(f"RegisterRequest schema structure different than expected: {e}")
+            pytest.skip(
+                f"RegisterRequest schema structure different than expected: {e}"
+            )
 
     def test_user_response_schema_basic(self):
         """Test basic UserResponse schema functionality."""

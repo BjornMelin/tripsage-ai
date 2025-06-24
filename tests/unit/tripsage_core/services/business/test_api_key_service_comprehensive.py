@@ -81,7 +81,9 @@ class TestApiKeyServiceComprehensive:
         )
 
     @pytest.mark.skip(reason="Create API key test has implementation issues")
-    async def test_create_api_key_success(self, api_service, mock_db, sample_create_request):
+    async def test_create_api_key_success(
+        self, api_service, mock_db, sample_create_request
+    ):
         """Test successful API key creation."""
         pass
 
@@ -166,7 +168,9 @@ class TestApiKeyServiceComprehensive:
             mock_response.json.return_value = {"data": [{"id": "model-1"}]}
             mock_get.return_value = mock_response
 
-            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test_key_12345")
+            result = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key_12345"
+            )
 
             assert result.is_valid is True
             assert result.status == ValidationStatus.VALID
@@ -181,7 +185,9 @@ class TestApiKeyServiceComprehensive:
             mock_response.json.return_value = {"error": {"message": "Invalid API key"}}
             mock_get.return_value = mock_response
 
-            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-invalid_key")
+            result = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-invalid_key"
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.INVALID
@@ -192,10 +198,14 @@ class TestApiKeyServiceComprehensive:
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 429
-            mock_response.json.return_value = {"error": {"message": "Rate limit exceeded"}}
+            mock_response.json.return_value = {
+                "error": {"message": "Rate limit exceeded"}
+            }
             mock_get.return_value = mock_response
 
-            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test_key")
+            result = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key"
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.RATE_LIMITED
@@ -206,7 +216,9 @@ class TestApiKeyServiceComprehensive:
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_get.side_effect = asyncio.TimeoutError("Network timeout")
 
-            result = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test_key")
+            result = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key"
+            )
 
             assert result.is_valid is False
             assert result.status == ValidationStatus.SERVICE_ERROR
@@ -305,7 +317,9 @@ class TestApiKeyServiceComprehensive:
             mock_get.return_value = mock_response
 
             # First validation should hit the API
-            result1 = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test_key")
+            result1 = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key"
+            )
 
             # Cache should be set
             mock_cache.set.assert_called()
@@ -315,7 +329,9 @@ class TestApiKeyServiceComprehensive:
             mock_cache.get.return_value = cache_response
 
             # Second validation should use cache
-            result2 = await api_service.validate_api_key(ServiceType.OPENAI, "sk-test_key")
+            result2 = await api_service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key"
+            )
 
             assert result1.is_valid is True
             assert result2.is_valid is True
@@ -327,7 +343,9 @@ class TestApiKeyServiceComprehensive:
         key_name=key_names,
     )
     @pytest.mark.asyncio
-    async def test_create_key_property_based(self, api_service, mock_db, service, key_name):
+    async def test_create_key_property_based(
+        self, api_service, mock_db, service, key_name
+    ):
         """Property-based test for key creation."""
         pass
 
@@ -355,7 +373,9 @@ class TestApiKeyServiceComprehensive:
             mock_get.return_value = mock_response
 
             # Run concurrent validations
-            tasks = [api_service.validate_api_key(ServiceType.OPENAI, key) for key in keys]
+            tasks = [
+                api_service.validate_api_key(ServiceType.OPENAI, key) for key in keys
+            ]
             results = await asyncio.gather(*tasks)
 
             # All should complete successfully
@@ -396,4 +416,7 @@ class TestApiKeyServiceComprehensive:
             assert isinstance(result, ValidationResult)
             assert result.is_valid is False
             if test_key:  # Non-empty keys should get proper status
-                assert result.status == expected_status or result.status == ValidationStatus.SERVICE_ERROR
+                assert (
+                    result.status == expected_status
+                    or result.status == ValidationStatus.SERVICE_ERROR
+                )

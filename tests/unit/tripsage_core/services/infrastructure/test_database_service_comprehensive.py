@@ -121,7 +121,9 @@ class TestDatabaseConfigurationClasses:
         assert config.rate_limit_burst == 1000
 
         # Test rate limit burst validation
-        with pytest.raises(ValueError, match="Rate limit burst must be >= rate_limit_requests"):
+        with pytest.raises(
+            ValueError, match="Rate limit burst must be >= rate_limit_requests"
+        ):
             DatabaseSecurityConfig(rate_limit_requests=1000, rate_limit_burst=500)
 
         # Test range validation
@@ -144,14 +146,18 @@ class TestDatabaseConfigurationClasses:
         assert config.circuit_breaker_timeout == 120.0
 
         # Test circuit breaker threshold validation
-        with pytest.raises(ValueError, match="Circuit breaker threshold must be positive"):
+        with pytest.raises(
+            ValueError, match="Circuit breaker threshold must be positive"
+        ):
             DatabasePerformanceConfig(circuit_breaker_threshold=0)
 
         with pytest.raises(ValueError):
             DatabasePerformanceConfig(circuit_breaker_threshold=-1)
 
         # Test circuit breaker timeout validation
-        with pytest.raises(ValueError, match="Circuit breaker timeout must be positive"):
+        with pytest.raises(
+            ValueError, match="Circuit breaker timeout must be positive"
+        ):
             DatabasePerformanceConfig(circuit_breaker_timeout=0)
 
         with pytest.raises(ValueError):
@@ -200,7 +206,9 @@ class TestDatabaseServiceConfiguration:
         settings = Mock(spec=Settings)
         settings.effective_postgres_url = "postgresql://user:pass@localhost:5432/testdb"
         settings.database_url = "https://test.supabase.co"
-        settings.database_public_key = Mock(get_secret_value=Mock(return_value="test_key_1234567890123456789012"))
+        settings.database_public_key = Mock(
+            get_secret_value=Mock(return_value="test_key_1234567890123456789012")
+        )
         return settings
 
     def test_service_initialization_with_config_object(self, mock_settings):
@@ -254,7 +262,9 @@ class TestDatabaseServiceConfiguration:
 
     def test_service_metrics_initialization(self, mock_settings):
         """Test metrics initialization when enabled."""
-        with patch("tripsage_core.services.infrastructure.database_service.prometheus_client"):
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.prometheus_client"
+        ):
             service = DatabaseService(
                 settings=mock_settings,
                 enable_metrics=True,
@@ -394,7 +404,9 @@ class TestVectorOperations:
             {"id": "1", "content": "Similar content", "similarity": 0.95},
             {"id": "2", "content": "Another match", "similarity": 0.87},
         ]
-        service._supabase_client.table.return_value.select.return_value.execute.return_value = mock_response
+        (
+            service._supabase_client.table.return_value.select.return_value.execute.return_value
+        ) = mock_response
 
         query_vector = [0.1, 0.2, 0.3, 0.4, 0.5]
 
@@ -417,7 +429,9 @@ class TestVectorOperations:
         # Mock embedding save response
         mock_response = Mock()
         mock_response.data = [{"id": "doc_123", "content": "Test content"}]
-        service._supabase_client.table.return_value.upsert.return_value.execute.return_value = mock_response
+        (
+            service._supabase_client.table.return_value.upsert.return_value.execute.return_value
+        ) = mock_response
 
         document_data = {"content": "Test document content", "title": "Test Doc"}
         embedding_vector = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -441,7 +455,9 @@ class TestVectorOperations:
         vector1 = [0.1, 0.2, 0.3]
         vector2 = [0.15, 0.25, 0.35]
 
-        result = await service.calculate_vector_similarity(vector1, vector2, metric="cosine")
+        result = await service.calculate_vector_similarity(
+            vector1, vector2, metric="cosine"
+        )
 
         assert "cosine_similarity" in result
         assert result["cosine_similarity"] == 0.92
@@ -453,7 +469,9 @@ class TestVectorOperations:
 
         # Mock index creation
         service._supabase_client.rpc = Mock()
-        service._supabase_client.rpc.return_value.execute.return_value = Mock(data=[{"index_created": True}])
+        service._supabase_client.rpc.return_value.execute.return_value = Mock(
+            data=[{"index_created": True}]
+        )
 
         result = await service.create_vector_index(
             table="documents",
@@ -474,7 +492,9 @@ class TestVectorOperations:
         mock_response.data = [
             {"id": "1", "content": "Fast result", "similarity": 0.95},
         ]
-        service._supabase_client.table.return_value.select.return_value.execute.return_value = mock_response
+        (
+            service._supabase_client.table.return_value.select.return_value.execute.return_value
+        ) = mock_response
 
         # Test with performance settings
         result = await service.vector_search(
@@ -669,7 +689,9 @@ class TestSecurityFeatures:
         service._record_security_alert(alert)
 
         assert len(service._security_alerts) == 1
-        assert service._security_alerts[0].event_type == SecurityEvent.RATE_LIMIT_EXCEEDED
+        assert (
+            service._security_alerts[0].event_type == SecurityEvent.RATE_LIMIT_EXCEEDED
+        )
 
     def test_audit_logging(self, secure_database_service):
         """Test audit logging functionality."""
@@ -956,7 +978,9 @@ class TestErrorHandlingAndRecovery:
             mock_execute.side_effect = asyncio.TimeoutError("Query timeout")
 
             with pytest.raises(CoreDatabaseError, match="Query timeout"):
-                await service._execute_with_timeout(service.execute_sql, "SELECT * FROM large_table", timeout=1.0)
+                await service._execute_with_timeout(
+                    service.execute_sql, "SELECT * FROM large_table", timeout=1.0
+                )
 
     @pytest.mark.asyncio
     async def test_retry_mechanism(self, error_handling_service):
@@ -973,7 +997,9 @@ class TestErrorHandlingAndRecovery:
             return "success"
 
         # Should succeed on 3rd attempt
-        result = await service._execute_with_retry(failing_operation, max_retries=3, backoff_factor=0.1)
+        result = await service._execute_with_retry(
+            failing_operation, max_retries=3, backoff_factor=0.1
+        )
 
         assert result == "success"
         assert call_count == 3
@@ -1033,7 +1059,9 @@ class TestPerformanceOptimization:
         ]
 
         for query in queries:
-            service._track_query_performance(query["sql"], query["duration"], query["rows"])
+            service._track_query_performance(
+                query["sql"], query["duration"], query["rows"]
+            )
 
         # Get performance summary
         summary = service._get_performance_summary()

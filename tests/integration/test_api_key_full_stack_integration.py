@@ -55,7 +55,10 @@ class TestDatabaseService:
             placeholders = ", ".join(f":{key}" for key in data.keys())
 
             result = await conn.execute(
-                text(f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) RETURNING *"),
+                text(
+                    f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) "
+                    "RETURNING *"
+                ),
                 data,
             )
             return [dict(row._mapping) for row in result.fetchall()]
@@ -78,7 +81,9 @@ class TestDatabaseService:
             result = await conn.execute(text(query), params)
             return [dict(row._mapping) for row in result.fetchall()]
 
-    async def update(self, table: str, data: Dict[str, Any], filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def update(
+        self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Update data in table."""
         async with self.engine.begin() as conn:
             set_clauses = []
@@ -93,7 +98,10 @@ class TestDatabaseService:
                 conditions.append(f"{key} = :where_{key}")
                 params[f"where_{key}"] = value
 
-            query = f"UPDATE {table} SET {', '.join(set_clauses)} WHERE {' AND '.join(conditions)} RETURNING *"
+            query = (
+                f"UPDATE {table} SET {', '.join(set_clauses)} "
+                f"WHERE {' AND '.join(conditions)} RETURNING *"
+            )
             result = await conn.execute(text(query), params)
             return [dict(row._mapping) for row in result.fetchall()]
 
@@ -138,10 +146,15 @@ class TestDatabaseService:
                             columns = ", ".join(data.keys())
                             placeholders = ", ".join(f":{key}" for key in data.keys())
                             result = await conn.execute(
-                                text(f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) RETURNING *"),
+                                text(
+                                    f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) "
+                                    "RETURNING *"
+                                ),
                                 data,
                             )
-                            results.append([dict(row._mapping) for row in result.fetchall()])
+                            results.append(
+                                [dict(row._mapping) for row in result.fetchall()]
+                            )
                         elif op[0] == "update":
                             _, table, data, filters = op
                             set_clauses = []
@@ -161,7 +174,9 @@ class TestDatabaseService:
                                 f"WHERE {' AND '.join(conditions)} RETURNING *"
                             )
                             result = await conn.execute(text(query), params)
-                            results.append([dict(row._mapping) for row in result.fetchall()])
+                            results.append(
+                                [dict(row._mapping) for row in result.fetchall()]
+                            )
                         elif op[0] == "delete":
                             _, table, filters = op
                             conditions = []
@@ -171,7 +186,9 @@ class TestDatabaseService:
                                 conditions.append(f"{key} = :{key}")
                                 params[key] = value
 
-                            query = f"DELETE FROM {table} WHERE {' AND '.join(conditions)}"
+                            query = (
+                                f"DELETE FROM {table} WHERE {' AND '.join(conditions)}"
+                            )
                             result = await conn.execute(text(query), params)
                             results.append(result.rowcount)
 
@@ -186,12 +203,18 @@ class TestDatabaseService:
         """Get all API keys for a user."""
         return await self.select("api_keys", {"user_id": user_id})
 
-    async def get_api_key_for_service(self, user_id: str, service: str) -> Optional[Dict[str, Any]]:
+    async def get_api_key_for_service(
+        self, user_id: str, service: str
+    ) -> Optional[Dict[str, Any]]:
         """Get API key for specific service."""
-        results = await self.select("api_keys", {"user_id": user_id, "service": service})
+        results = await self.select(
+            "api_keys", {"user_id": user_id, "service": service}
+        )
         return results[0] if results else None
 
-    async def get_api_key_by_id(self, key_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_api_key_by_id(
+        self, key_id: str, user_id: str
+    ) -> Optional[Dict[str, Any]]:
         """Get API key by ID and user."""
         results = await self.select("api_keys", {"id": key_id, "user_id": user_id})
         return results[0] if results else None
@@ -382,7 +405,9 @@ class TestApiKeyFullStackIntegration:
         user_id = test_user["id"]
 
         # Mock authentication to return our test user
-        with patch("tripsage.api.core.dependencies.get_principal_id", return_value=user_id):
+        with patch(
+            "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+        ):
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_principal = MagicMock()
                 mock_principal.user_id = user_id
@@ -426,7 +451,9 @@ class TestApiKeyFullStackIntegration:
                         "key": "sk-test_validation_key",
                     }
 
-                    response = test_client.post("/api/keys/validate", json=validate_data)
+                    response = test_client.post(
+                        "/api/keys/validate", json=validate_data
+                    )
                     assert response.status_code == 200
 
                     validation_result = response.json()
@@ -436,7 +463,9 @@ class TestApiKeyFullStackIntegration:
                     # 4. Rotate API key
                     rotate_data = {"new_key": "sk-rotated_integration_key_67890"}
 
-                    response = test_client.post(f"/api/keys/{key_id}/rotate", json=rotate_data)
+                    response = test_client.post(
+                        f"/api/keys/{key_id}/rotate", json=rotate_data
+                    )
                     assert response.status_code == 200
 
                     rotated_key = response.json()
@@ -514,12 +543,16 @@ class TestApiKeyFullStackIntegration:
             mock_get.return_value = mock_response
 
             # First validation - should hit external API and cache result
-            result1 = await api_key_service.validate_api_key(ServiceType.OPENAI, test_key, user_id)
+            result1 = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, test_key, user_id
+            )
             assert result1.is_valid is True
             assert mock_get.call_count == 1
 
             # Second validation - should use cache
-            result2 = await api_key_service.validate_api_key(ServiceType.OPENAI, test_key, user_id)
+            result2 = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, test_key, user_id
+            )
             assert result2.is_valid is True
             assert mock_get.call_count == 1  # No additional API call
 
@@ -528,7 +561,9 @@ class TestApiKeyFullStackIntegration:
             api_key_service.cache.get = AsyncMock(side_effect=Exception("Cache error"))
 
             # Should fallback to external API
-            result3 = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-fallback_test", user_id)
+            result3 = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-fallback_test", user_id
+            )
             assert result3.is_valid is True
             assert mock_get.call_count == 2  # Additional API call due to cache failure
 
@@ -574,7 +609,9 @@ class TestApiKeyFullStackIntegration:
         assert len(user_keys) == 10
 
         # Test concurrent deletion
-        delete_tasks = [api_key_service.delete_api_key(key.id, user_id) for key in successful_keys]
+        delete_tasks = [
+            api_key_service.delete_api_key(key.id, user_id) for key in successful_keys
+        ]
         delete_results = await asyncio.gather(*delete_tasks)
 
         # Verify all deletions succeeded
@@ -589,7 +626,9 @@ class TestApiKeyFullStackIntegration:
         """Test error propagation from service layer to API responses."""
         user_id = test_user["id"]
 
-        with patch("tripsage.api.core.dependencies.get_principal_id", return_value=user_id):
+        with patch(
+            "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+        ):
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_principal = MagicMock()
                 mock_principal.user_id = user_id
@@ -621,7 +660,9 @@ class TestApiKeyFullStackIntegration:
                         "key": "sk-service_error_test",
                     }
 
-                    response = test_client.post("/api/keys/validate", json=validate_data)
+                    response = test_client.post(
+                        "/api/keys/validate", json=validate_data
+                    )
                     assert response.status_code == 200  # Service handles gracefully
 
                     result = response.json()
@@ -642,7 +683,9 @@ class TestApiKeyFullStackIntegration:
                 MagicMock(status_code=200, json=lambda: {"data": [{"id": "gpt-4"}]}),
             ]
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-retry_test", user_id)
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-retry_test", user_id
+            )
 
             # Should succeed after retries
             assert result.is_valid is True
@@ -674,10 +717,14 @@ class TestApiKeyFullStackIntegration:
             mock_get.side_effect = mock_health_response
 
             # Test individual service health
-            openai_health = await api_key_service.check_service_health(ServiceType.OPENAI)
+            openai_health = await api_key_service.check_service_health(
+                ServiceType.OPENAI
+            )
             assert openai_health.is_healthy is True
 
-            weather_health = await api_key_service.check_service_health(ServiceType.WEATHER)
+            weather_health = await api_key_service.check_service_health(
+                ServiceType.WEATHER
+            )
             assert weather_health.is_healthy is True  # 401 is expected for health check
 
             # Test all services health check
@@ -716,7 +763,9 @@ class TestApiKeyFullStackIntegration:
             assert db_key["encrypted_key"] != original_key  # Should be encrypted
 
             # Test decryption through service method
-            decrypted_key = await api_key_service.get_key_for_service(user_id, ServiceType.OPENAI)
+            decrypted_key = await api_key_service.get_key_for_service(
+                user_id, ServiceType.OPENAI
+            )
             assert decrypted_key == original_key  # Should match original
 
     @pytest.mark.asyncio
@@ -734,7 +783,9 @@ class TestApiKeyFullStackIntegration:
             )
 
             # Mock audit logging
-            with patch("tripsage_core.services.business.monitoring_service.log_api_key_event") as mock_audit:
+            with patch(
+                "tripsage_core.services.business.monitoring_service.log_api_key_event"
+            ) as mock_audit:
                 mock_audit.return_value = None
 
                 # Create key
@@ -771,7 +822,9 @@ class TestApiKeyValidationEdgeCases:
         """Test handling of malformed requests."""
         user_id = test_user["id"]
 
-        with patch("tripsage.api.core.dependencies.get_principal_id", return_value=user_id):
+        with patch(
+            "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+        ):
             with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_principal = MagicMock()
                 mock_principal.user_id = user_id
@@ -839,12 +892,16 @@ class TestApiKeyValidationEdgeCases:
             await test_db_service.insert("api_keys", key_data)
 
     @pytest.mark.asyncio
-    async def test_cache_corruption_recovery(self, api_key_service, test_user, test_cache_service):
+    async def test_cache_corruption_recovery(
+        self, api_key_service, test_user, test_cache_service
+    ):
         """Test recovery from cache corruption."""
         user_id = test_user["id"]
 
         # Set corrupted data in cache
-        await test_cache_service.set("api_validation:v2:test_hash", "corrupted_json_data")
+        await test_cache_service.set(
+            "api_validation:v2:test_hash", "corrupted_json_data"
+        )
 
         # Validation should still work (fallback to external API)
         with patch("httpx.AsyncClient.get") as mock_get:
@@ -853,7 +910,9 @@ class TestApiKeyValidationEdgeCases:
             mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
             mock_get.return_value = mock_response
 
-            result = await api_key_service.validate_api_key(ServiceType.OPENAI, "sk-corruption_test", user_id)
+            result = await api_key_service.validate_api_key(
+                ServiceType.OPENAI, "sk-corruption_test", user_id
+            )
 
             assert result.is_valid is True
             assert mock_get.call_count == 1  # Should have hit external API
@@ -922,13 +981,18 @@ class TestApiKeyPerformance:
 
             # 20 concurrent validations
             tasks = [
-                api_key_service.validate_api_key(ServiceType.OPENAI, f"sk-load_test_{i}", user_id) for i in range(20)
+                api_key_service.validate_api_key(
+                    ServiceType.OPENAI, f"sk-load_test_{i}", user_id
+                )
+                for i in range(20)
             ]
 
             results = await asyncio.gather(*tasks)
 
             total_time = (datetime.now() - start_time).total_seconds()
-            logger.info(f"Completed 20 concurrent validations in {total_time:.2f} seconds")
+            logger.info(
+                f"Completed 20 concurrent validations in {total_time:.2f} seconds"
+            )
 
             # Should complete concurrently (not sequentially)
             assert total_time < 1.0  # Much faster than 20 * 0.1 = 2 seconds

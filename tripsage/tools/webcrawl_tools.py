@@ -92,7 +92,9 @@ async def crawl_website_content(
             direct_result.success,
         )
 
-        logger.info(f"Direct Crawl4AI completed for {url} - Success: {direct_result.success}")
+        logger.info(
+            f"Direct Crawl4AI completed for {url} - Success: {direct_result.success}"
+        )
         return result
 
     except Exception as e:
@@ -116,7 +118,9 @@ async def crawl_website_content(
                 return fallback_result
 
             except Exception as fallback_error:
-                logger.error(f"Playwright fallback also failed for {url}: {str(fallback_error)}")
+                logger.error(
+                    f"Playwright fallback also failed for {url}: {str(fallback_error)}"
+                )
 
                 # Record fallback failure in metrics
                 metrics = get_performance_metrics()
@@ -135,7 +139,9 @@ async def crawl_website_content(
 
 
 @with_error_handling()
-async def crawl_travel_blog(url: str, extract_insights: bool = True, use_cache: bool = True) -> UnifiedCrawlResult:
+async def crawl_travel_blog(
+    url: str, extract_insights: bool = True, use_cache: bool = True
+) -> UnifiedCrawlResult:
     """Crawl a travel blog with optimized settings for blog content.
 
     This is a convenience function that uses content_type="travel_blog"
@@ -159,7 +165,9 @@ async def crawl_travel_blog(url: str, extract_insights: bool = True, use_cache: 
 
 
 @with_error_handling()
-async def crawl_booking_site(url: str, extract_prices: bool = True, use_cache: bool = True) -> UnifiedCrawlResult:
+async def crawl_booking_site(
+    url: str, extract_prices: bool = True, use_cache: bool = True
+) -> UnifiedCrawlResult:
     """Crawl a booking site with optimized settings for price/availability data.
 
     This is a convenience function that uses content_type="booking"
@@ -183,7 +191,9 @@ async def crawl_booking_site(url: str, extract_prices: bool = True, use_cache: b
 
 
 @with_error_handling()
-async def crawl_event_listing(url: str, extract_dates: bool = True, use_cache: bool = True) -> UnifiedCrawlResult:
+async def crawl_event_listing(
+    url: str, extract_dates: bool = True, use_cache: bool = True
+) -> UnifiedCrawlResult:
     """Crawl an event listing with optimized settings for event data.
 
     This is a convenience function that uses content_type="events"
@@ -246,7 +256,9 @@ async def _crawl_with_playwright_fallback(
                 extra_http_headers={
                     "Accept-Language": "en-US,en;q=0.9",
                     "Accept-Encoding": "gzip, deflate, br",
-                    "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"),
+                    "Accept": (
+                        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                    ),
                 },
                 ignore_https_errors=True,
             )
@@ -275,7 +287,9 @@ async def _crawl_with_playwright_fallback(
                 html_content = await page.content()
 
                 # Extract JSON-LD structured data
-                json_ld_scripts = await page.query_selector_all('script[type="application/ld+json"]')
+                json_ld_scripts = await page.query_selector_all(
+                    'script[type="application/ld+json"]'
+                )
                 json_ld_data = []
 
                 for script in json_ld_scripts:
@@ -295,7 +309,9 @@ async def _crawl_with_playwright_fallback(
                 meta_data = {}
 
                 for meta in meta_tags:
-                    name = await meta.get_attribute("name") or await meta.get_attribute("property")
+                    name = await meta.get_attribute("name") or await meta.get_attribute(
+                        "property"
+                    )
                     content = await meta.get_attribute("content")
                     if name and content:
                         meta_data[name] = content

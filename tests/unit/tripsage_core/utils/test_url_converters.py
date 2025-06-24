@@ -102,14 +102,18 @@ class TestDatabaseURLConverter:
 
     def test_supabase_to_postgres_basic(self, converter):
         """Test basic Supabase to PostgreSQL conversion."""
-        result = converter.supabase_to_postgres("https://myproject.supabase.co", "test-service-key")
+        result = converter.supabase_to_postgres(
+            "https://myproject.supabase.co", "test-service-key"
+        )
 
         expected = "postgresql://postgres:test-service-key@myproject.db.supabase.co:5432/postgres?sslmode=require"
         assert result == expected
 
     def test_supabase_to_postgres_with_pooler(self, converter):
         """Test conversion with connection pooler."""
-        result = converter.supabase_to_postgres("https://myproject.supabase.co", "test-service-key", use_pooler=True)
+        result = converter.supabase_to_postgres(
+            "https://myproject.supabase.co", "test-service-key", use_pooler=True
+        )
 
         expected = "postgresql://postgres:test-service-key@myproject.db.supabase.co:6543/postgres?sslmode=require"
         assert result == expected
@@ -129,14 +133,18 @@ class TestDatabaseURLConverter:
 
     def test_supabase_to_postgres_special_chars(self, converter):
         """Test conversion with special characters in password."""
-        result = converter.supabase_to_postgres("https://myproject.supabase.co", "p@ss!word#123")
+        result = converter.supabase_to_postgres(
+            "https://myproject.supabase.co", "p@ss!word#123"
+        )
 
         # Password should be URL encoded
         assert "p%40ss%21word%23123" in result
 
     def test_postgres_to_supabase_valid(self, converter):
         """Test extracting Supabase info from PostgreSQL URL."""
-        postgres_url = "postgresql://postgres:key@myproject.db.supabase.co:5432/postgres"
+        postgres_url = (
+            "postgresql://postgres:key@myproject.db.supabase.co:5432/postgres"
+        )
 
         supabase_url, project_ref = converter.postgres_to_supabase(postgres_url)
 
@@ -145,9 +153,13 @@ class TestDatabaseURLConverter:
 
     def test_postgres_to_supabase_com_domain(self, converter):
         """Test extraction with .com domain."""
-        postgres_url = "postgresql://postgres:key@test-123.db.supabase.com:5432/postgres"
+        postgres_url = (
+            "postgresql://postgres:key@test-123.db.supabase.com:5432/postgres"
+        )
 
-        supabase_url, project_ref = converter.postgres_to_supabase(postgres_url, domain="supabase.com")
+        supabase_url, project_ref = converter.postgres_to_supabase(
+            postgres_url, domain="supabase.com"
+        )
 
         assert supabase_url == "https://test-123.supabase.com"
         assert project_ref == "test-123"
@@ -176,7 +188,12 @@ class TestDatabaseURLConverter:
     def test_validate_conversion_invalid(self, converter):
         """Test validation with invalid conversions."""
         # Wrong conversion direction
-        assert converter.validate_conversion("https://myproject.supabase.co", "https://different.supabase.co") is False
+        assert (
+            converter.validate_conversion(
+                "https://myproject.supabase.co", "https://different.supabase.co"
+            )
+            is False
+        )
 
         # Non-Supabase PostgreSQL URL
         assert (
@@ -207,7 +224,9 @@ class TestDatabaseURLDetector:
 
     def test_detect_postgres_url(self, detector):
         """Test detection of PostgreSQL URLs."""
-        result = detector.detect_url_type("postgresql://user:pass@host.example.com:5432/mydb?sslmode=require")
+        result = detector.detect_url_type(
+            "postgresql://user:pass@host.example.com:5432/mydb?sslmode=require"
+        )
 
         assert result["type"] == "postgresql"
         assert result["valid"] is True
@@ -219,7 +238,9 @@ class TestDatabaseURLDetector:
 
     def test_detect_supabase_postgres_url(self, detector):
         """Test detection of Supabase PostgreSQL URLs."""
-        result = detector.detect_url_type("postgresql://postgres:key@myproject.db.supabase.co:5432/postgres")
+        result = detector.detect_url_type(
+            "postgresql://postgres:key@myproject.db.supabase.co:5432/postgres"
+        )
 
         assert result["type"] == "postgresql"
         assert result["valid"] is True
@@ -241,14 +262,18 @@ class TestDatabaseURLDetector:
 
     def test_suggest_handler_postgres(self, detector):
         """Test handler suggestions for PostgreSQL URLs."""
-        suggestion = detector.suggest_handler("postgresql://user:pass@localhost:5432/db")
+        suggestion = detector.suggest_handler(
+            "postgresql://user:pass@localhost:5432/db"
+        )
 
         assert "PostgreSQL client" in suggestion
         assert "Supabase" not in suggestion
 
     def test_suggest_handler_supabase_postgres(self, detector):
         """Test handler suggestions for Supabase PostgreSQL URLs."""
-        suggestion = detector.suggest_handler("postgresql://postgres:key@myproject.db.supabase.co:5432/postgres")
+        suggestion = detector.suggest_handler(
+            "postgresql://postgres:key@myproject.db.supabase.co:5432/postgres"
+        )
 
         assert "PostgreSQL client" in suggestion
         assert "extract Supabase project" in suggestion
@@ -259,7 +284,9 @@ class TestConvenienceFunctions:
 
     def test_convert_supabase_to_postgres(self):
         """Test convenience function for conversion."""
-        result = convert_supabase_to_postgres("https://myproject.supabase.co", "test-key", use_pooler=True)
+        result = convert_supabase_to_postgres(
+            "https://myproject.supabase.co", "test-key", use_pooler=True
+        )
 
         assert "myproject.db.supabase.co:6543" in result
         assert "postgresql://" in result
@@ -306,11 +333,15 @@ class TestEdgeCases:
     def test_special_project_names(self, converter):
         """Test conversion with special characters in project names."""
         # Hyphens are allowed in project names
-        result = converter.supabase_to_postgres("https://my-test-project-123.supabase.co", "password")
+        result = converter.supabase_to_postgres(
+            "https://my-test-project-123.supabase.co", "password"
+        )
         assert "my-test-project-123.db.supabase.co" in result
 
     def test_url_with_path_ignored(self, converter):
         """Test that paths in Supabase URLs are ignored."""
-        result = converter.supabase_to_postgres("https://myproject.supabase.co/some/path", "password")
+        result = converter.supabase_to_postgres(
+            "https://myproject.supabase.co/some/path", "password"
+        )
         # Path should not affect the conversion
         assert "myproject.db.supabase.co:5432/postgres" in result

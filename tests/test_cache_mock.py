@@ -118,14 +118,18 @@ class MockCacheService:
         """Mock mget_json."""
         return [await self.get_json(key) for key in keys]
 
-    async def mset_json(self, mapping: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def mset_json(
+        self, mapping: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """Mock mset_json."""
         for key, value in mapping.items():
             await self.set_json(key, value, ttl)
         return True
 
     # Additional methods for compatibility
-    async def set(self, key: str, value: Union[str, bytes], ttl: Optional[int] = None) -> bool:
+    async def set(
+        self, key: str, value: Union[str, bytes], ttl: Optional[int] = None
+    ) -> bool:
         """Mock set method."""
         self._storage[key] = value if isinstance(value, str) else value.decode("utf-8")
         if ttl:

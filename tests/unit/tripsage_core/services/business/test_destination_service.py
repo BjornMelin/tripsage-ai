@@ -184,7 +184,9 @@ class TestDestinationService:
         )
 
     @pytest.fixture
-    def sample_destination_details(self, sample_destination_image, sample_poi, sample_destination_weather):
+    def sample_destination_details(
+        self, sample_destination_image, sample_poi, sample_destination_weather
+    ):
         """Sample destination details."""
         destination_id = str(uuid4())
 
@@ -193,7 +195,9 @@ class TestDestinationService:
             name="Paris",
             country="France",
             region="Île-de-France",
-            description=("The City of Light, known for its art, fashion, gastronomy, and culture"),
+            description=(
+                "The City of Light, known for its art, fashion, gastronomy, and culture"
+            ),
             categories=[DestinationCategory.CITY, DestinationCategory.CULTURAL],
             latitude=48.8566,
             longitude=2.3522,
@@ -238,7 +242,9 @@ class TestDestinationService:
             "total": 1,
         }
 
-        result = await destination_service.search_destinations(user_id, sample_destination_search_request)
+        result = await destination_service.search_destinations(
+            user_id, sample_destination_search_request
+        )
 
         # Assertions
         assert isinstance(result, DestinationSearchResponse)
@@ -268,19 +274,27 @@ class TestDestinationService:
     ):
         """Test successful destination details retrieval."""
         # Mock database response
-        mock_database_service.get_destination_by_id.return_value = sample_destination_details.model_dump()
+        mock_database_service.get_destination_by_id.return_value = (
+            sample_destination_details.model_dump()
+        )
 
-        result = await destination_service.get_destination_details(sample_destination_details.id)
+        result = await destination_service.get_destination_details(
+            sample_destination_details.id
+        )
 
         assert result is not None
         assert result.id == sample_destination_details.id
         assert result.name == sample_destination_details.name
         assert len(result.points_of_interest) == 1
 
-        mock_database_service.get_destination_by_id.assert_called_once_with(sample_destination_details.id)
+        mock_database_service.get_destination_by_id.assert_called_once_with(
+            sample_destination_details.id
+        )
 
     @pytest.mark.asyncio
-    async def test_get_destination_details_not_found(self, destination_service, mock_database_service):
+    async def test_get_destination_details_not_found(
+        self, destination_service, mock_database_service
+    ):
         """Test destination details retrieval when not found."""
         destination_id = str(uuid4())
 
@@ -297,23 +311,33 @@ class TestDestinationService:
         destination_id = str(uuid4())
 
         # Mock weather API response
-        mock_external_api_service.get_destination_weather.return_value = sample_destination_weather.model_dump()
+        mock_external_api_service.get_destination_weather.return_value = (
+            sample_destination_weather.model_dump()
+        )
 
-        result = await destination_service.get_destination_weather(destination_id, date.today() + timedelta(days=7))
+        result = await destination_service.get_destination_weather(
+            destination_id, date.today() + timedelta(days=7)
+        )
 
         assert result is not None
-        assert result.temperature_high_c == sample_destination_weather.temperature_high_c
+        assert (
+            result.temperature_high_c == sample_destination_weather.temperature_high_c
+        )
         assert result.conditions == sample_destination_weather.conditions
 
         mock_external_api_service.get_destination_weather.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_points_of_interest_success(self, destination_service, mock_external_api_service, sample_poi):
+    async def test_get_points_of_interest_success(
+        self, destination_service, mock_external_api_service, sample_poi
+    ):
         """Test successful POI retrieval."""
         destination_id = str(uuid4())
 
         # Mock POI API response
-        mock_external_api_service.get_points_of_interest.return_value = [sample_poi.model_dump()]
+        mock_external_api_service.get_points_of_interest.return_value = [
+            sample_poi.model_dump()
+        ]
 
         results = await destination_service.get_points_of_interest(
             destination_id, categories=["landmark", "museum"], limit=10
@@ -326,7 +350,9 @@ class TestDestinationService:
         mock_external_api_service.get_points_of_interest.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_travel_alerts_success(self, destination_service, mock_external_api_service):
+    async def test_get_travel_alerts_success(
+        self, destination_service, mock_external_api_service
+    ):
         """Test successful travel alerts retrieval."""
         destination_id = str(uuid4())
 
@@ -351,15 +377,23 @@ class TestDestinationService:
         assert results[0]["title"] == "Public Transport Strike"
         assert results[0]["severity"] == "moderate"
 
-        mock_external_api_service.get_travel_alerts.assert_called_once_with(destination_id)
+        mock_external_api_service.get_travel_alerts.assert_called_once_with(
+            destination_id
+        )
 
     @pytest.mark.asyncio
-    async def test_get_popular_times_success(self, destination_service, mock_external_api_service, sample_poi):
+    async def test_get_popular_times_success(
+        self, destination_service, mock_external_api_service, sample_poi
+    ):
         """Test successful popular times retrieval."""
         # Mock popular times response
-        mock_external_api_service.get_popular_times.return_value = sample_poi.popular_times
+        mock_external_api_service.get_popular_times.return_value = (
+            sample_poi.popular_times
+        )
 
-        result = await destination_service.get_popular_times(sample_poi.id, day_of_week="Monday")
+        result = await destination_service.get_popular_times(
+            sample_poi.id, day_of_week="Monday"
+        )
 
         assert result is not None
         assert len(result) == 24  # 24 hours
@@ -386,14 +420,18 @@ class TestDestinationService:
         # Mock database calls
         mock_database_service.get_destination_by_id.side_effect = destinations
 
-        result = await destination_service.compare_destinations(destination_ids, criteria=["cost", "weather", "safety"])
+        result = await destination_service.compare_destinations(
+            destination_ids, criteria=["cost", "weather", "safety"]
+        )
 
         assert "destinations" in result
         assert "comparison_matrix" in result
         assert len(result["destinations"]) == 3
 
         # Verify comparison logic
-        assert result["comparison_matrix"]["cost"]["best"] == destination_ids[0]  # Lowest cost
+        assert (
+            result["comparison_matrix"]["cost"]["best"] == destination_ids[0]
+        )  # Lowest cost
         assert "recommendations" in result
 
     @pytest.mark.asyncio
@@ -414,7 +452,9 @@ class TestDestinationService:
             "past_destinations": ["Thailand", "Bali"],
         }
 
-        mock_database_service.get_user_travel_preferences.return_value = user_preferences
+        mock_database_service.get_user_travel_preferences.return_value = (
+            user_preferences
+        )
 
         # Mock recommendation results
         recommendations = [
@@ -430,19 +470,27 @@ class TestDestinationService:
             }
         ]
 
-        mock_external_api_service.get_destination_recommendations.return_value = recommendations
+        mock_external_api_service.get_destination_recommendations.return_value = (
+            recommendations
+        )
 
-        result = await destination_service.get_destination_recommendations(user_id, limit=5)
+        result = await destination_service.get_destination_recommendations(
+            user_id, limit=5
+        )
 
         assert len(result) == 1
         assert result[0]["name"] == "Maldives"
         assert result[0]["score"] == 0.95
 
-        mock_database_service.get_user_travel_preferences.assert_called_once_with(user_id)
+        mock_database_service.get_user_travel_preferences.assert_called_once_with(
+            user_id
+        )
         mock_external_api_service.get_destination_recommendations.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_calculate_destination_budget_success(self, destination_service, mock_database_service):
+    async def test_calculate_destination_budget_success(
+        self, destination_service, mock_database_service
+    ):
         """Test successful destination budget calculation."""
         destination_id = str(uuid4())
 
@@ -464,7 +512,9 @@ class TestDestinationService:
         assert "daily_average" in result
         assert "breakdown" in result
         assert result["daily_average"] == (100 + 30 + 20 + 25)  # Mid-range costs
-        assert result["total_cost"] == result["daily_average"] * 5 * 2  # 5 days, 2 travelers
+        assert (
+            result["total_cost"] == result["daily_average"] * 5 * 2
+        )  # 5 days, 2 travelers
 
     @pytest.mark.asyncio
     async def test_get_destination_service_dependency(self):
@@ -473,12 +523,16 @@ class TestDestinationService:
         assert isinstance(service, DestinationService)
 
     @pytest.mark.asyncio
-    async def test_service_error_handling(self, destination_service, mock_external_api_service):
+    async def test_service_error_handling(
+        self, destination_service, mock_external_api_service
+    ):
         """Test service error handling."""
         user_id = str(uuid4())
 
         # Mock external API to raise an exception
-        mock_external_api_service.search_destinations.side_effect = Exception("API error")
+        mock_external_api_service.search_destinations.side_effect = Exception(
+            "API error"
+        )
 
         search_request = DestinationSearchRequest(query="Paris", travelers=2)
 
@@ -507,7 +561,10 @@ class TestDestinationService:
 
         # If the service has a scoring method, test it
         if hasattr(destination_service, "_calculate_destination_score"):
-            scores = [destination_service._calculate_destination_score(dest) for dest in destinations]
+            scores = [
+                destination_service._calculate_destination_score(dest)
+                for dest in destinations
+            ]
 
             assert all(0 <= score <= 1 for score in scores)
             # Paris should have higher score due to better safety and rating

@@ -108,7 +108,9 @@ class TestTripSageBaseResponse:
             message: str
 
         # Extra fields should be allowed for API compatibility
-        response = TestResponse(message="success", extra_field="this should be allowed", api_version="2.0")
+        response = TestResponse(
+            message="success", extra_field="this should be allowed", api_version="2.0"
+        )
 
         assert response.message == "success"
         # Extra fields should be accessible

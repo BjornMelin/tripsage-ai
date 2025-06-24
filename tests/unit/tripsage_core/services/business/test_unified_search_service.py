@@ -182,9 +182,15 @@ class TestUnifiedSearchService:
         service = UnifiedSearchService()
 
         with (
-            patch("tripsage_core.services.business.unified_search_service.get_cache_service") as mock_get_cache,
-            patch("tripsage_core.services.business.unified_search_service.get_destination_service") as mock_get_dest,
-            patch("tripsage_core.services.business.unified_search_service.get_activity_service") as mock_get_act,
+            patch(
+                "tripsage_core.services.business.unified_search_service.get_cache_service"
+            ) as mock_get_cache,
+            patch(
+                "tripsage_core.services.business.unified_search_service.get_destination_service"
+            ) as mock_get_dest,
+            patch(
+                "tripsage_core.services.business.unified_search_service.get_activity_service"
+            ) as mock_get_act,
         ):
             mock_cache = AsyncMock()
             mock_dest = AsyncMock()
@@ -207,9 +213,15 @@ class TestUnifiedSearchService:
         original_cache = unified_search_service._cache_service
 
         with (
-            patch("tripsage_core.services.business.unified_search_service.get_cache_service") as mock_get_cache,
-            patch("tripsage_core.services.business.unified_search_service.get_destination_service") as mock_get_dest,
-            patch("tripsage_core.services.business.unified_search_service.get_activity_service") as mock_get_act,
+            patch(
+                "tripsage_core.services.business.unified_search_service.get_cache_service"
+            ) as mock_get_cache,
+            patch(
+                "tripsage_core.services.business.unified_search_service.get_destination_service"
+            ) as mock_get_dest,
+            patch(
+                "tripsage_core.services.business.unified_search_service.get_activity_service"
+            ) as mock_get_act,
         ):
             await unified_search_service.ensure_services()
 
@@ -220,7 +232,9 @@ class TestUnifiedSearchService:
             mock_get_dest.assert_called_once()
             mock_get_act.assert_called_once()
 
-    def test_get_cache_fields_basic(self, unified_search_service, sample_search_request):
+    def test_get_cache_fields_basic(
+        self, unified_search_service, sample_search_request
+    ):
         """Test get_cache_fields with basic request."""
         cache_fields = unified_search_service.get_cache_fields(sample_search_request)
 
@@ -240,9 +254,13 @@ class TestUnifiedSearchService:
 
         assert cache_fields == expected_fields
 
-    def test_get_cache_fields_with_filters(self, unified_search_service, sample_search_filters):
+    def test_get_cache_fields_with_filters(
+        self, unified_search_service, sample_search_filters
+    ):
         """Test get_cache_fields with filters included."""
-        request = UnifiedSearchRequest(query="test query", destination="Test City", filters=sample_search_filters)
+        request = UnifiedSearchRequest(
+            query="test query", destination="Test City", filters=sample_search_filters
+        )
 
         cache_fields = unified_search_service.get_cache_fields(request)
 
@@ -283,14 +301,20 @@ class TestUnifiedSearchService:
         response_class = unified_search_service._get_response_class()
         assert response_class == UnifiedSearchResponse
 
-    async def test_unified_search_success(self, unified_search_service, sample_search_request, mock_activity_service):
+    async def test_unified_search_success(
+        self, unified_search_service, sample_search_request, mock_activity_service
+    ):
         """Test successful unified search."""
         unified_search_service._activity_service = mock_activity_service
 
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             result = await unified_search_service.unified_search(sample_search_request)
 
@@ -306,7 +330,9 @@ class TestUnifiedSearchService:
             assert "destination" in result_types
             assert "activity" in result_types
 
-    async def test_unified_search_cached_result(self, unified_search_service, sample_search_request):
+    async def test_unified_search_cached_result(
+        self, unified_search_service, sample_search_request
+    ):
         """Test unified search with cached result."""
         cached_response = UnifiedSearchResponse(
             results=[],
@@ -327,7 +353,9 @@ class TestUnifiedSearchService:
                 "get_cached_search",
                 return_value=cached_response,
             ),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             result = await unified_search_service.unified_search(sample_search_request)
 
@@ -342,9 +370,13 @@ class TestUnifiedSearchService:
         )
 
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             result = await unified_search_service.unified_search(request)
 
@@ -352,7 +384,9 @@ class TestUnifiedSearchService:
             assert len(result.results) == 0
             assert result.metadata.total_results == 0
 
-    async def test_unified_search_service_error(self, unified_search_service, sample_search_request):
+    async def test_unified_search_service_error(
+        self, unified_search_service, sample_search_request
+    ):
         """Test unified search with service error."""
         with (
             patch.object(
@@ -360,7 +394,9 @@ class TestUnifiedSearchService:
                 "ensure_services",
                 side_effect=Exception("Service error"),
             ),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             with raises(UnifiedSearchServiceError) as exc_info:
                 await unified_search_service.unified_search(sample_search_request)
@@ -369,7 +405,9 @@ class TestUnifiedSearchService:
 
     async def test_search_destinations_success(self, unified_search_service):
         """Test _search_destinations method."""
-        request = UnifiedSearchRequest(query="paris tourism", destination="Paris, France")
+        request = UnifiedSearchRequest(
+            query="paris tourism", destination="Paris, France"
+        )
 
         results = await unified_search_service._search_destinations(request)
 
@@ -416,7 +454,9 @@ class TestUnifiedSearchService:
         results = await unified_search_service._search_destinations(request)
         assert isinstance(results, list)
 
-    async def test_search_activities_success(self, unified_search_service, mock_activity_service):
+    async def test_search_activities_success(
+        self, unified_search_service, mock_activity_service
+    ):
         """Test _search_activities method."""
         unified_search_service._activity_service = mock_activity_service
 
@@ -707,7 +747,9 @@ class TestUnifiedSearchService:
             ),
         ]
 
-        request = UnifiedSearchRequest(query="test", sort_by="rating", sort_order="desc")
+        request = UnifiedSearchRequest(
+            query="test", sort_by="rating", sort_order="desc"
+        )
 
         sorted_results = unified_search_service._sort_unified_results(results, request)
 
@@ -835,18 +877,28 @@ class TestUnifiedSearchService:
         assert len(facets) == 1  # Only type facet
         assert facets[0].field == "type"
 
-    async def test_get_search_suggestions_destination_match(self, unified_search_service):
+    async def test_get_search_suggestions_destination_match(
+        self, unified_search_service
+    ):
         """Test get_search_suggestions with destination match."""
-        with patch("tripsage_core.services.business.unified_search_service.with_error_handling"):
-            suggestions = await unified_search_service.get_search_suggestions("par", limit=5)
+        with patch(
+            "tripsage_core.services.business.unified_search_service.with_error_handling"
+        ):
+            suggestions = await unified_search_service.get_search_suggestions(
+                "par", limit=5
+            )
 
             assert isinstance(suggestions, list)
             assert any("Paris" in s for s in suggestions)
 
     async def test_get_search_suggestions_activity_types(self, unified_search_service):
         """Test get_search_suggestions with activity type suggestions."""
-        with patch("tripsage_core.services.business.unified_search_service.with_error_handling"):
-            suggestions = await unified_search_service.get_search_suggestions("tokyo", limit=10)
+        with patch(
+            "tripsage_core.services.business.unified_search_service.with_error_handling"
+        ):
+            suggestions = await unified_search_service.get_search_suggestions(
+                "tokyo", limit=10
+            )
 
             assert isinstance(suggestions, list)
             # Should include activity suggestions for tokyo
@@ -854,23 +906,33 @@ class TestUnifiedSearchService:
 
     async def test_get_search_suggestions_short_query(self, unified_search_service):
         """Test get_search_suggestions with short query."""
-        with patch("tripsage_core.services.business.unified_search_service.with_error_handling"):
-            suggestions = await unified_search_service.get_search_suggestions("ny", limit=5)
+        with patch(
+            "tripsage_core.services.business.unified_search_service.with_error_handling"
+        ):
+            suggestions = await unified_search_service.get_search_suggestions(
+                "ny", limit=5
+            )
 
             assert isinstance(suggestions, list)
             # Should still return some destination suggestions
 
     async def test_get_search_suggestions_limit(self, unified_search_service):
         """Test get_search_suggestions respects limit."""
-        with patch("tripsage_core.services.business.unified_search_service.with_error_handling"):
-            suggestions = await unified_search_service.get_search_suggestions("new", limit=3)
+        with patch(
+            "tripsage_core.services.business.unified_search_service.with_error_handling"
+        ):
+            suggestions = await unified_search_service.get_search_suggestions(
+                "new", limit=3
+            )
 
             assert isinstance(suggestions, list)
             assert len(suggestions) <= 3
 
     async def test_get_search_suggestions_error(self, unified_search_service):
         """Test get_search_suggestions with error."""
-        with patch("tripsage_core.services.business.unified_search_service.with_error_handling"):
+        with patch(
+            "tripsage_core.services.business.unified_search_service.with_error_handling"
+        ):
             with patch.object(
                 unified_search_service,
                 "get_search_suggestions",
@@ -888,7 +950,9 @@ class TestGlobalServiceFunctions:
         # Ensure no existing instance
         await close_unified_search_service()
 
-        with patch("tripsage_core.services.business.unified_search_service.UnifiedSearchService") as MockService:
+        with patch(
+            "tripsage_core.services.business.unified_search_service.UnifiedSearchService"
+        ) as MockService:
             mock_instance = AsyncMock()
             MockService.return_value = mock_instance
 
@@ -903,7 +967,9 @@ class TestGlobalServiceFunctions:
         # First call to create instance
         await close_unified_search_service()
 
-        with patch("tripsage_core.services.business.unified_search_service.UnifiedSearchService") as MockService:
+        with patch(
+            "tripsage_core.services.business.unified_search_service.UnifiedSearchService"
+        ) as MockService:
             mock_instance = AsyncMock()
             MockService.return_value = mock_instance
 
@@ -923,7 +989,9 @@ class TestGlobalServiceFunctions:
         await close_unified_search_service()
 
         # Next call should create a new instance
-        with patch("tripsage_core.services.business.unified_search_service.UnifiedSearchService") as MockService:
+        with patch(
+            "tripsage_core.services.business.unified_search_service.UnifiedSearchService"
+        ) as MockService:
             mock_instance = AsyncMock()
             MockService.return_value = mock_instance
 
@@ -955,7 +1023,9 @@ class TestConstants:
 class TestSearchCacheMixin:
     """Test SearchCacheMixin functionality."""
 
-    async def test_cache_integration(self, unified_search_service, sample_search_request):
+    async def test_cache_integration(
+        self, unified_search_service, sample_search_request
+    ):
         """Test cache integration through SearchCacheMixin."""
         # Test that cache methods are available
         assert hasattr(unified_search_service, "get_cached_search")
@@ -974,18 +1044,27 @@ class TestSearchCacheMixin:
 class TestConcurrency:
     """Test concurrent operations."""
 
-    async def test_concurrent_searches(self, unified_search_service, mock_activity_service):
+    async def test_concurrent_searches(
+        self, unified_search_service, mock_activity_service
+    ):
         """Test concurrent unified searches."""
         unified_search_service._activity_service = mock_activity_service
 
         requests = [
-            UnifiedSearchRequest(query=f"test {i}", destination=f"City {i}", types=["activity"]) for i in range(3)
+            UnifiedSearchRequest(
+                query=f"test {i}", destination=f"City {i}", types=["activity"]
+            )
+            for i in range(3)
         ]
 
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             # Execute searches concurrently
             tasks = [unified_search_service.unified_search(req) for req in requests]
@@ -995,18 +1074,26 @@ class TestConcurrency:
             for result in results:
                 assert isinstance(result, UnifiedSearchResponse)
 
-    async def test_parallel_service_calls(self, unified_search_service, mock_activity_service):
+    async def test_parallel_service_calls(
+        self, unified_search_service, mock_activity_service
+    ):
         """Test that search services are called in parallel."""
         unified_search_service._activity_service = mock_activity_service
 
-        request = UnifiedSearchRequest(query="test", destination="Test City", types=["destination", "activity"])
+        request = UnifiedSearchRequest(
+            query="test", destination="Test City", types=["destination", "activity"]
+        )
 
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
             patch.object(unified_search_service, "_search_destinations") as mock_dest,
             patch.object(unified_search_service, "_search_activities") as mock_act,
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             mock_dest.return_value = []
             mock_act.return_value = []
@@ -1024,7 +1111,9 @@ class TestEdgeCases:
     async def test_partial_service_failures(self, unified_search_service):
         """Test handling partial service failures."""
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
             patch.object(
                 unified_search_service,
@@ -1032,9 +1121,13 @@ class TestEdgeCases:
                 side_effect=Exception("Dest error"),
             ),
             patch.object(unified_search_service, "_search_activities", return_value=[]),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
-            request = UnifiedSearchRequest(query="test", destination="Test City", types=["destination", "activity"])
+            request = UnifiedSearchRequest(
+                query="test", destination="Test City", types=["destination", "activity"]
+            )
 
             result = await unified_search_service.unified_search(request)
 
@@ -1048,9 +1141,13 @@ class TestEdgeCases:
         request = UnifiedSearchRequest(query="", destination="Test City")
 
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             result = await unified_search_service.unified_search(request)
 
@@ -1065,9 +1162,13 @@ class TestEdgeCases:
         )
 
         with (
-            patch.object(unified_search_service, "get_cached_search", return_value=None),
+            patch.object(
+                unified_search_service, "get_cached_search", return_value=None
+            ),
             patch.object(unified_search_service, "cache_search_results"),
-            patch("tripsage_core.services.business.unified_search_service.with_error_handling"),
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
         ):
             result = await unified_search_service.unified_search(request)
 
@@ -1077,8 +1178,12 @@ class TestEdgeCases:
     def test_sort_with_none_values(self, unified_search_service):
         """Test sorting with None values in scores."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Valid", relevance_score=0.8),
-            SearchResultItem(id="2", type="activity", title="None Score", relevance_score=None),
+            SearchResultItem(
+                id="1", type="activity", title="Valid", relevance_score=0.8
+            ),
+            SearchResultItem(
+                id="2", type="activity", title="None Score", relevance_score=None
+            ),
         ]
 
         request = UnifiedSearchRequest(query="test", sort_by="relevance")

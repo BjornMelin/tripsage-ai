@@ -110,7 +110,9 @@ class TestChatService:
         )
 
     @pytest.mark.asyncio
-    async def test_create_session_success(self, chat_service, mock_database_service, sample_session_create_request):
+    async def test_create_session_success(
+        self, chat_service, mock_database_service, sample_session_create_request
+    ):
         """Test successful chat session creation."""
         user_id = str(uuid4())
 
@@ -126,7 +128,9 @@ class TestChatService:
             "message_count": 0,
         }
 
-        result = await chat_service.create_session(user_id, sample_session_create_request)
+        result = await chat_service.create_session(
+            user_id, sample_session_create_request
+        )
 
         # Assertions
         assert isinstance(result, ChatSessionResponse)
@@ -139,7 +143,9 @@ class TestChatService:
         mock_database_service.create_chat_session.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_session_success(self, chat_service, mock_database_service, sample_chat_session):
+    async def test_get_session_success(
+        self, chat_service, mock_database_service, sample_chat_session
+    ):
         """Test successful session retrieval."""
         # Mock database response
         mock_database_service.get_chat_session.return_value = {
@@ -158,7 +164,9 @@ class TestChatService:
             "last_message_at": sample_chat_session.updated_at.isoformat(),
         }
 
-        result = await chat_service.get_session(sample_chat_session.id, sample_chat_session.user_id)
+        result = await chat_service.get_session(
+            sample_chat_session.id, sample_chat_session.user_id
+        )
 
         assert result is not None
         assert result["id"] == sample_chat_session.id
@@ -233,7 +241,9 @@ class TestChatService:
         # Verify database calls
         mock_database_service.get_chat_session.assert_called()
         mock_database_service.create_chat_message.assert_called_once()
-        mock_database_service.update_session_timestamp.assert_called_once_with(sample_chat_session.id)
+        mock_database_service.update_session_timestamp.assert_called_once_with(
+            sample_chat_session.id
+        )
 
     @pytest.mark.asyncio
     async def test_add_message_rate_limited(
@@ -310,7 +320,9 @@ class TestChatService:
         mock_database_service.get_message_tool_calls.return_value = []
 
         request = RecentMessagesRequest(limit=10, max_tokens=8000)
-        result = await chat_service.get_recent_messages(sample_chat_session.id, sample_chat_session.user_id, request)
+        result = await chat_service.get_recent_messages(
+            sample_chat_session.id, sample_chat_session.user_id, request
+        )
 
         assert isinstance(result, RecentMessagesResponse)
         assert len(result.messages) == 1
@@ -321,7 +333,9 @@ class TestChatService:
         mock_database_service.get_recent_messages_with_tokens.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_recent_messages_token_limit(self, chat_service, mock_database_service, sample_chat_session):
+    async def test_get_recent_messages_token_limit(
+        self, chat_service, mock_database_service, sample_chat_session
+    ):
         """Test recent messages with token limit."""
         # Mock session exists for get_session call
         mock_database_service.get_chat_session.return_value = {
@@ -361,7 +375,9 @@ class TestChatService:
         mock_database_service.get_message_tool_calls.return_value = []
 
         request = RecentMessagesRequest(limit=10, max_tokens=1000)
-        result = await chat_service.get_recent_messages(sample_chat_session.id, sample_chat_session.user_id, request)
+        result = await chat_service.get_recent_messages(
+            sample_chat_session.id, sample_chat_session.user_id, request
+        )
 
         # Should only include messages that fit within token limit
         assert len(result.messages) == 2  # 2 messages = 1000 tokens
@@ -369,7 +385,9 @@ class TestChatService:
         assert result.truncated
 
     @pytest.mark.asyncio
-    async def test_add_tool_call_success(self, chat_service, mock_database_service, sample_message_response):
+    async def test_add_tool_call_success(
+        self, chat_service, mock_database_service, sample_message_response
+    ):
         """Test successful tool call addition."""
         tool_call_data = {
             "tool_id": "search_flights",
@@ -393,7 +411,9 @@ class TestChatService:
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        result = await chat_service.add_tool_call(sample_message_response.id, tool_call_data)
+        result = await chat_service.add_tool_call(
+            sample_message_response.id, tool_call_data
+        )
 
         assert isinstance(result, ToolCallResponse)
         assert result.message_id == sample_message_response.id
@@ -403,7 +423,9 @@ class TestChatService:
         mock_database_service.create_tool_call.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_tool_call_status_success(self, chat_service, mock_database_service):
+    async def test_update_tool_call_status_success(
+        self, chat_service, mock_database_service
+    ):
         """Test successful tool call status update."""
         tool_call_id = str(uuid4())
         result_data = {"flights": [{"flight_number": "AF123", "price": 450.00}]}
@@ -416,7 +438,9 @@ class TestChatService:
             "completed_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        result = await chat_service.update_tool_call_status(tool_call_id, ToolCallStatus.COMPLETED, result=result_data)
+        result = await chat_service.update_tool_call_status(
+            tool_call_id, ToolCallStatus.COMPLETED, result=result_data
+        )
 
         assert result["status"] == ToolCallStatus.COMPLETED
         assert result["result"] == result_data
@@ -425,7 +449,9 @@ class TestChatService:
         mock_database_service.update_tool_call.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_end_session_success(self, chat_service, mock_database_service, sample_chat_session):
+    async def test_end_session_success(
+        self, chat_service, mock_database_service, sample_chat_session
+    ):
         """Test successful session ending."""
         # Mock session exists for get_session call
         mock_database_service.get_chat_session.return_value = {
@@ -447,14 +473,20 @@ class TestChatService:
         # Mock end_chat_session (correct method name)
         mock_database_service.end_chat_session.return_value = True
 
-        result = await chat_service.end_session(sample_chat_session.id, sample_chat_session.user_id)
+        result = await chat_service.end_session(
+            sample_chat_session.id, sample_chat_session.user_id
+        )
 
         assert result is True
 
-        mock_database_service.end_chat_session.assert_called_once_with(sample_chat_session.id)
+        mock_database_service.end_chat_session.assert_called_once_with(
+            sample_chat_session.id
+        )
 
     @pytest.mark.asyncio
-    async def test_end_session_already_ended(self, chat_service, mock_database_service, sample_chat_session):
+    async def test_end_session_already_ended(
+        self, chat_service, mock_database_service, sample_chat_session
+    ):
         """Test ending an already ended session."""
         # Mock session already ended for get_session call
         mock_database_service.get_chat_session.return_value = {
@@ -475,10 +507,14 @@ class TestChatService:
 
         # Service should detect session already ended and raise ValidationError
         with pytest.raises(ValidationError, match="Session already ended"):
-            await chat_service.end_session(sample_chat_session.id, sample_chat_session.user_id)
+            await chat_service.end_session(
+                sample_chat_session.id, sample_chat_session.user_id
+            )
 
     @pytest.mark.asyncio
-    async def test_get_user_sessions_success(self, chat_service, mock_database_service, sample_chat_session):
+    async def test_get_user_sessions_success(
+        self, chat_service, mock_database_service, sample_chat_session
+    ):
         """Test successful user sessions retrieval."""
         user_id = sample_chat_session.user_id
 
@@ -500,7 +536,9 @@ class TestChatService:
         assert results[0].id == sample_chat_session.id
         assert results[0].user_id == user_id
 
-        mock_database_service.get_user_chat_sessions.assert_called_once_with(user_id, 10, False)
+        mock_database_service.get_user_chat_sessions.assert_called_once_with(
+            user_id, 10, False
+        )
 
     def test_estimate_tokens(self, chat_service):
         """Test token estimation."""
@@ -559,7 +597,9 @@ class TestChatService:
         assert isinstance(service, ChatService)
 
     @pytest.mark.asyncio
-    async def test_concurrent_message_creation(self, chat_service, mock_database_service, sample_chat_session):
+    async def test_concurrent_message_creation(
+        self, chat_service, mock_database_service, sample_chat_session
+    ):
         """Test concurrent message creation."""
         # Mock session exists for get_session calls
         mock_database_service.get_chat_session.return_value = {
@@ -591,15 +631,21 @@ class TestChatService:
                 "metadata": data.get("metadata", {}),
             }
 
-        mock_database_service.create_chat_message.side_effect = create_message_side_effect
+        mock_database_service.create_chat_message.side_effect = (
+            create_message_side_effect
+        )
 
         # Create multiple messages concurrently
         import asyncio
 
         tasks = []
         for i in range(3):
-            request = MessageCreateRequest(role=MessageRole.USER, content=f"Message {i}")
-            task = chat_service.add_message(sample_chat_session.id, sample_chat_session.user_id, request)
+            request = MessageCreateRequest(
+                role=MessageRole.USER, content=f"Message {i}"
+            )
+            task = chat_service.add_message(
+                sample_chat_session.id, sample_chat_session.user_id, request
+            )
             tasks.append(task)
 
         results = await asyncio.gather(*tasks)

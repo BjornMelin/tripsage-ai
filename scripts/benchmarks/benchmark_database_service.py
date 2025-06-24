@@ -46,7 +46,9 @@ def simple_table(data, headers):
 
     # Data rows
     for row in data:
-        row_line = " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row))
+        row_line = " | ".join(
+            str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)
+        )
         lines.append(row_line)
 
     return "\n".join(lines)
@@ -159,7 +161,9 @@ class DatabaseBenchmark:
         """Benchmark connection establishment."""
         result = BenchmarkResult(name)
 
-        for _ in range(min(10, self.iterations)):  # Connection test doesn't need many iterations
+        for _ in range(
+            min(10, self.iterations)
+        ):  # Connection test doesn't need many iterations
             # Close existing connections
             await service.close()
 
@@ -308,7 +312,9 @@ class DatabaseBenchmark:
         """Benchmark concurrent operations."""
         # Service is already connected
 
-        result = BenchmarkResult(f"Database - Concurrent SELECT ({self.concurrent_users} users)")
+        result = BenchmarkResult(
+            f"Database - Concurrent SELECT ({self.concurrent_users} users)"
+        )
 
         async def concurrent_select(user_id: int):
             """Simulate a user making queries."""
@@ -316,7 +322,9 @@ class DatabaseBenchmark:
             for _ in range(10):  # Each user makes 10 queries
                 start = time.time()
                 try:
-                    await service.execute_sql("SELECT $1 as user_id, NOW() as timestamp", (user_id,))
+                    await service.execute_sql(
+                        "SELECT $1 as user_id, NOW() as timestamp", (user_id,)
+                    )
                     duration = (time.time() - start) * 1000
                     durations.append(duration)
                 except Exception:
@@ -335,7 +343,9 @@ class DatabaseBenchmark:
                 result.add_result(duration)
 
         result.metadata["total_time_ms"] = f"{total_time:.2f}"
-        result.metadata["queries_per_second"] = f"{len(result.durations) / (total_time / 1000):.2f}"
+        result.metadata["queries_per_second"] = (
+            f"{len(result.durations) / (total_time / 1000):.2f}"
+        )
 
         self.results[result.name] = result
 
@@ -347,7 +357,9 @@ class DatabaseBenchmark:
 
         # Check if pgvector extension is available
         try:
-            await service.execute_sql("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+            await service.execute_sql(
+                "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
+            )
 
             # Generate random vectors for testing
             vector_dim = 384  # Common embedding dimension
@@ -399,7 +411,9 @@ class DatabaseBenchmark:
 
             # Add metadata if available
             if result.metadata:
-                metadata_str = ", ".join(f"{k}: {v}" for k, v in result.metadata.items())
+                metadata_str = ", ".join(
+                    f"{k}: {v}" for k, v in result.metadata.items()
+                )
                 row.append(metadata_str)
             else:
                 row.append("")
@@ -458,12 +472,18 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Benchmark database services")
-    parser.add_argument("--iterations", type=int, default=100, help="Number of iterations per test")
-    parser.add_argument("--concurrent", type=int, default=10, help="Number of concurrent users")
+    parser.add_argument(
+        "--iterations", type=int, default=100, help="Number of iterations per test"
+    )
+    parser.add_argument(
+        "--concurrent", type=int, default=10, help="Number of concurrent users"
+    )
 
     args = parser.parse_args()
 
-    benchmark = DatabaseBenchmark(iterations=args.iterations, concurrent_users=args.concurrent)
+    benchmark = DatabaseBenchmark(
+        iterations=args.iterations, concurrent_users=args.concurrent
+    )
 
     await benchmark.run_all_benchmarks()
 

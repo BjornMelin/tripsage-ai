@@ -36,8 +36,12 @@ class HealthCheckResult(BaseModel):
     """Result of a health check during deployment."""
 
     healthy: bool = Field(..., description="Whether the health check passed")
-    response_time: float = Field(..., description="Health check response time in seconds")
-    checks: Dict[str, bool] = Field(default_factory=dict, description="Individual check results")
+    response_time: float = Field(
+        ..., description="Health check response time in seconds"
+    )
+    checks: Dict[str, bool] = Field(
+        default_factory=dict, description="Individual check results"
+    )
     message: str = Field(default="", description="Health check message")
     timestamp: float = Field(default_factory=time.time, description="Check timestamp")
 
@@ -47,19 +51,31 @@ class DeploymentMetrics(BaseModel):
 
     deployment_id: str = Field(..., description="Unique deployment identifier")
     strategy: str = Field(..., description="Deployment strategy used")
-    start_time: float = Field(default_factory=time.time, description="Deployment start time")
+    start_time: float = Field(
+        default_factory=time.time, description="Deployment start time"
+    )
     end_time: Optional[float] = Field(default=None, description="Deployment end time")
-    phase: DeploymentPhase = Field(default=DeploymentPhase.PREPARING, description="Current phase")
+    phase: DeploymentPhase = Field(
+        default=DeploymentPhase.PREPARING, description="Current phase"
+    )
 
     # Health and performance metrics
-    health_checks: List[HealthCheckResult] = Field(default_factory=list, description="Health check history")
+    health_checks: List[HealthCheckResult] = Field(
+        default_factory=list, description="Health check history"
+    )
     error_rate: float = Field(default=0.0, description="Current error rate")
-    response_time_p95: float = Field(default=0.0, description="95th percentile response time")
+    response_time_p95: float = Field(
+        default=0.0, description="95th percentile response time"
+    )
 
     # Deployment progress
-    instances_deployed: int = Field(default=0, description="Number of instances deployed")
+    instances_deployed: int = Field(
+        default=0, description="Number of instances deployed"
+    )
     instances_healthy: int = Field(default=0, description="Number of healthy instances")
-    traffic_percentage: float = Field(default=0.0, description="Percentage of traffic routed")
+    traffic_percentage: float = Field(
+        default=0.0, description="Percentage of traffic routed"
+    )
 
     def get_duration(self) -> float:
         """Get deployment duration in seconds."""
@@ -137,7 +153,9 @@ class BaseDeploymentStrategy(ABC):
                 healthy=all_healthy,
                 response_time=response_time,
                 checks=checks,
-                message="All systems operational" if all_healthy else "Some checks failed",
+                message="All systems operational"
+                if all_healthy
+                else "Some checks failed",
             )
 
         except Exception as e:
@@ -312,7 +330,10 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
 
                 if not health_result.healthy:
                     metrics.phase = DeploymentPhase.FAILED
-                    logger.error(f"Blue-green deployment {deployment_id} failed health check {i + 1}")
+                    logger.error(
+                        f"Blue-green deployment {deployment_id} failed health check "
+                        f"{i + 1}"
+                    )
                     metrics.end_time = time.time()
                     return metrics
 
@@ -333,11 +354,18 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
                 health_result = await self.health_check(environment)
                 metrics.health_checks.append(health_result)
 
-                if not health_result.healthy and self.enterprise_config.enable_auto_rollback:
-                    logger.warning(f"Auto-rollback triggered for deployment {deployment_id}")
+                if (
+                    not health_result.healthy
+                    and self.enterprise_config.enable_auto_rollback
+                ):
+                    logger.warning(
+                        f"Auto-rollback triggered for deployment {deployment_id}"
+                    )
                     return await self.rollback(deployment_id, "previous", environment)
 
-                logger.info(f"Traffic switched to {percentage}% for deployment {deployment_id}")
+                logger.info(
+                    f"Traffic switched to {percentage}% for deployment {deployment_id}"
+                )
 
             # Phase 5: Monitoring
             metrics.phase = DeploymentPhase.MONITORING
@@ -350,10 +378,14 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
 
             if final_health.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Blue-green deployment {deployment_id} completed successfully")
+                logger.info(
+                    f"Blue-green deployment {deployment_id} completed successfully"
+                )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Blue-green deployment {deployment_id} failed final check")
+                logger.error(
+                    f"Blue-green deployment {deployment_id} failed final check"
+                )
 
             metrics.end_time = time.time()
             return metrics
@@ -416,9 +448,15 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__("canary", config)
-        self.canary_steps = config.get("canary_steps", [5, 10, 25, 50, 100]) if config else [5, 10, 25, 50, 100]
+        self.canary_steps = (
+            config.get("canary_steps", [5, 10, 25, 50, 100])
+            if config
+            else [5, 10, 25, 50, 100]
+        )
         self.step_duration = config.get("step_duration", 3.0) if config else 3.0
-        logger.info(f"Initialized canary deployment strategy with steps: {self.canary_steps}")
+        logger.info(
+            f"Initialized canary deployment strategy with steps: {self.canary_steps}"
+        )
 
     async def deploy(
         self,
@@ -453,7 +491,9 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
             metrics.phase = DeploymentPhase.TESTING
 
             for step_percentage in self.canary_steps:
-                logger.info(f"Canary step: {step_percentage}% traffic for {deployment_id}")
+                logger.info(
+                    f"Canary step: {step_percentage}% traffic for {deployment_id}"
+                )
                 metrics.traffic_percentage = step_percentage
 
                 # Monitor for this step duration
@@ -464,30 +504,44 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
                 metrics.health_checks.append(health_result)
 
                 if not health_result.healthy:
-                    logger.error(f"Canary deployment {deployment_id} failed at {step_percentage}%")
+                    logger.error(
+                        f"Canary deployment {deployment_id} failed at "
+                        f"{step_percentage}%"
+                    )
                     metrics.phase = DeploymentPhase.FAILED
 
                     if self.enterprise_config.enable_auto_rollback:
-                        return await self.rollback(deployment_id, "previous", environment)
+                        return await self.rollback(
+                            deployment_id, "previous", environment
+                        )
 
                     metrics.end_time = time.time()
                     return metrics
 
                 # Canary analysis if enabled
                 if self.enterprise_config.enable_canary_analysis:
-                    analysis_result = await self._analyze_canary_performance(environment, step_percentage)
+                    analysis_result = await self._analyze_canary_performance(
+                        environment, step_percentage
+                    )
 
                     if not analysis_result["continue"]:
-                        logger.warning(f"Canary analysis recommends stopping deployment {deployment_id}")
+                        logger.warning(
+                            f"Canary analysis recommends stopping deployment "
+                            f"{deployment_id}"
+                        )
                         metrics.phase = DeploymentPhase.FAILED
 
                         if self.enterprise_config.enable_auto_rollback:
-                            return await self.rollback(deployment_id, "previous", environment)
+                            return await self.rollback(
+                                deployment_id, "previous", environment
+                            )
 
                         metrics.end_time = time.time()
                         return metrics
 
-                logger.info(f"Canary step {step_percentage}% successful for {deployment_id}")
+                logger.info(
+                    f"Canary step {step_percentage}% successful for {deployment_id}"
+                )
 
             # All steps completed successfully
             metrics.instances_healthy = metrics.instances_deployed
@@ -588,7 +642,10 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         super().__init__("rolling", config)
         self.instance_count = config.get("instance_count", 3) if config else 3
         self.update_delay = config.get("update_delay", 2.0) if config else 2.0
-        logger.info(f"Initialized rolling deployment strategy with {self.instance_count} instances")
+        logger.info(
+            f"Initialized rolling deployment strategy with "
+            f"{self.instance_count} instances"
+        )
 
     async def deploy(
         self,
@@ -616,7 +673,10 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
             metrics.phase = DeploymentPhase.DEPLOYING
 
             for instance_num in range(1, self.instance_count + 1):
-                logger.info(f"Updating instance {instance_num}/{self.instance_count} for {deployment_id}")
+                logger.info(
+                    f"Updating instance {instance_num}/{self.instance_count} "
+                    f"for {deployment_id}"
+                )
 
                 # Update this instance
                 await asyncio.sleep(self.update_delay)
@@ -628,14 +688,24 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
                 if health_result.healthy:
                     metrics.instances_healthy = instance_num
-                    metrics.traffic_percentage = (instance_num / self.instance_count) * 100
-                    logger.info(f"Instance {instance_num} healthy for deployment {deployment_id}")
+                    metrics.traffic_percentage = (
+                        instance_num / self.instance_count
+                    ) * 100
+                    logger.info(
+                        f"Instance {instance_num} healthy for deployment "
+                        f"{deployment_id}"
+                    )
                 else:
-                    logger.error(f"Instance {instance_num} failed health check for deployment {deployment_id}")
+                    logger.error(
+                        f"Instance {instance_num} failed health check for "
+                        f"deployment {deployment_id}"
+                    )
                     metrics.phase = DeploymentPhase.FAILED
 
                     if self.enterprise_config.enable_auto_rollback:
-                        return await self.rollback(deployment_id, "previous", environment)
+                        return await self.rollback(
+                            deployment_id, "previous", environment
+                        )
 
                     metrics.end_time = time.time()
                     return metrics
@@ -649,10 +719,14 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
             if final_health.healthy:
                 metrics.phase = DeploymentPhase.COMPLETED
-                logger.info(f"Rolling deployment {deployment_id} completed successfully")
+                logger.info(
+                    f"Rolling deployment {deployment_id} completed successfully"
+                )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.error(f"Rolling deployment {deployment_id} failed final verification")
+                logger.error(
+                    f"Rolling deployment {deployment_id} failed final verification"
+                )
 
             metrics.end_time = time.time()
             return metrics
@@ -681,7 +755,9 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         try:
             # Roll back instances one by one
             for instance_num in range(1, self.instance_count + 1):
-                logger.info(f"Rolling back instance {instance_num}/{self.instance_count}")
+                logger.info(
+                    f"Rolling back instance {instance_num}/{self.instance_count}"
+                )
                 await asyncio.sleep(self.update_delay / 2)  # Faster rollback
 
                 metrics.instances_healthy = instance_num
@@ -736,5 +812,7 @@ def get_deployment_strategy(
     elif target_strategy == DeploymentStrategy.ROLLING:
         return RollingDeploymentStrategy(config)
     else:
-        logger.warning(f"Unknown deployment strategy {target_strategy}, falling back to simple")
+        logger.warning(
+            f"Unknown deployment strategy {target_strategy}, falling back to simple"
+        )
         return SimpleDeploymentStrategy(config)

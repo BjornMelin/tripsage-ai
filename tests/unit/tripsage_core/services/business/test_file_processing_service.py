@@ -91,7 +91,9 @@ class TestFileProcessingService:
     ):
         """Test file validation accepts valid text content."""
         # Act
-        result = await file_processing_service._validate_file_content("test.txt", valid_text_content)
+        result = await file_processing_service._validate_file_content(
+            "test.txt", valid_text_content
+        )
 
         # Assert
         assert isinstance(result, FileValidationResult)
@@ -109,7 +111,9 @@ class TestFileProcessingService:
         oversized_content = b"x" * (15 * 1024 * 1024)  # 15MB > 10MB limit
 
         # Act
-        result = await file_processing_service._validate_file_content("large.txt", oversized_content)
+        result = await file_processing_service._validate_file_content(
+            "large.txt", oversized_content
+        )
 
         # Assert
         assert result.is_valid is False
@@ -136,7 +140,9 @@ class TestFileProcessingService:
     ):
         """Test file validation rejects disallowed file extensions."""
         # Act
-        result = await file_processing_service._validate_file_content("script.exe", valid_text_content)
+        result = await file_processing_service._validate_file_content(
+            "script.exe", valid_text_content
+        )
 
         # Assert
         assert result.is_valid is False
@@ -241,7 +247,9 @@ class TestFileProcessingService:
         mock_database_service.fetch_all.return_value = []
 
         # Act
-        results = await file_processing_service.search_files(sample_user_id, search_request)
+        results = await file_processing_service.search_files(
+            sample_user_id, search_request
+        )
 
         # Assert
         assert isinstance(results, list)
@@ -300,7 +308,9 @@ class TestFileProcessingService:
     ):
         """Test service handles empty filename validation."""
         # Act
-        result = await file_processing_service._validate_file_content("", valid_text_content)
+        result = await file_processing_service._validate_file_content(
+            "", valid_text_content
+        )
 
         # Assert
         assert result.is_valid is False
@@ -321,7 +331,10 @@ class TestFileProcessingService:
         mock_database_service.fetch_one.return_value = None
 
         # Act - Attempt to get multiple files concurrently
-        tasks = [file_processing_service.get_file(file_id, sample_user_id) for file_id in file_ids]
+        tasks = [
+            file_processing_service.get_file(file_id, sample_user_id)
+            for file_id in file_ids
+        ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Assert - All should return None (not found)
@@ -357,12 +370,16 @@ class TestFileProcessingService:
     ):
         """Test file format validation for different file types."""
         # Test valid text file
-        is_valid, error = file_processing_service._validate_file_format(b"Simple text content", "text/plain")
+        is_valid, error = file_processing_service._validate_file_format(
+            b"Simple text content", "text/plain"
+        )
         assert is_valid is True
         assert error is None
 
         # Test invalid format (empty content for PDF)
-        is_valid, error = file_processing_service._validate_file_format(b"not a pdf", "application/pdf")
+        is_valid, error = file_processing_service._validate_file_format(
+            b"not a pdf", "application/pdf"
+        )
         assert is_valid is False
         assert "Invalid PDF header" in error
 
@@ -390,7 +407,9 @@ class TestFileProcessingService:
     ):
         """Test realistic file service workflow without upload."""
         # Test file validation (the core functionality we can test)
-        validation_result = await file_processing_service._validate_file_content("test.txt", valid_text_content)
+        validation_result = await file_processing_service._validate_file_content(
+            "test.txt", valid_text_content
+        )
         assert validation_result.is_valid is True
 
         # Test file retrieval (not found)

@@ -194,7 +194,10 @@ async def verify_trip_access(
 
             return TripAccessResult(
                 is_authorized=False,
-                denial_reason=f"Insufficient permissions for {context.required_level.value} access",
+                denial_reason=(
+                    f"Insufficient permissions for {context.required_level.value} "
+                    f"access"
+                ),
             )
 
         # Get trip details for enhanced verification
@@ -260,7 +263,10 @@ async def verify_trip_access(
                 await audit_security_event(
                     event_type=AuditEventType.ACCESS_DENIED,
                     severity=AuditSeverity.MEDIUM,
-                    message=f"Insufficient permission level for operation: {context.operation}",
+                    message=(
+                        f"Insufficient permission level for operation: "
+                        f"{context.operation}"
+                    ),
                     actor_id=context.principal_id,
                     ip_address=context.ip_address or "unknown",
                     target_resource=context.trip_id,
@@ -279,7 +285,10 @@ async def verify_trip_access(
                     permission_granted=granted_permission,
                     is_owner=is_owner,
                     is_collaborator=is_collaborator,
-                    denial_reason=f"Operation requires {context.required_permission.value} permission",
+                    denial_reason=(
+                        f"Operation requires {context.required_permission.value} "
+                        f"permission"
+                    ),
                 )
 
         # Log successful access for audit trail

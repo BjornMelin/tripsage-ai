@@ -323,7 +323,10 @@ class TestWebSocketConnection:
         for i in range(websocket_connection.max_latency_samples + 10):
             websocket_connection._add_latency_sample(float(i))
 
-        assert len(websocket_connection._latency_samples) <= websocket_connection.max_latency_samples
+        assert (
+            len(websocket_connection._latency_samples)
+            <= websocket_connection.max_latency_samples
+        )
 
     def test_rate_limiting_check(self, websocket_connection):
         """Test rate limiting functionality."""
@@ -470,7 +473,9 @@ class TestWebSocketConnectionService:
         """Test retrieving connection by ID."""
         user_id = uuid4()
 
-        connection = await connection_service.create_connection(websocket=mock_websocket, user_id=user_id)
+        connection = await connection_service.create_connection(
+            websocket=mock_websocket, user_id=user_id
+        )
 
         retrieved = connection_service.get_connection(connection.connection_id)
         assert retrieved == connection
@@ -485,7 +490,9 @@ class TestWebSocketConnectionService:
         """Test removing connection."""
         user_id = uuid4()
 
-        connection = await connection_service.create_connection(websocket=mock_websocket, user_id=user_id)
+        connection = await connection_service.create_connection(
+            websocket=mock_websocket, user_id=user_id
+        )
 
         connection_id = connection.connection_id
         removed = await connection_service.remove_connection(connection_id)

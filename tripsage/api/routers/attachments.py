@@ -113,7 +113,8 @@ async def upload_file(
         result = await service.upload_file(user_id, upload_request)
 
         logger.info(
-            f"File uploaded successfully: {file.filename} ({result.file_size} bytes) for user {user_id}"
+            f"File uploaded successfully: {file.filename} ({result.file_size} bytes) "
+            f"for user {user_id}"
         )
 
         return FileUploadResponse(
@@ -161,7 +162,10 @@ async def upload_files_batch(
     if total_size > MAX_SESSION_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"Total file size ({total_size} bytes) exceeds session limit ({MAX_SESSION_SIZE} bytes)",
+            detail=(
+                f"Total file size ({total_size} bytes) exceeds session limit "
+                f"({MAX_SESSION_SIZE} bytes)"
+            ),
         )
 
     processed_files = []
@@ -215,7 +219,8 @@ async def upload_files_batch(
         logger.warning(f"Some files failed processing: {'; '.join(errors)}")
 
     logger.info(
-        f"Batch upload completed: {len(processed_files)}/{len(files)} files processed for user {user_id}"
+        f"Batch upload completed: {len(processed_files)}/{len(files)} files processed "
+        f"for user {user_id}"
     )
 
     return BatchUploadResponse(

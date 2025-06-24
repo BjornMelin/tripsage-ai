@@ -90,7 +90,8 @@ class CoreTripSageError(Exception):
     def __repr__(self) -> str:
         """Detailed representation of the exception."""
         return (
-            f"{self.__class__.__name__}(message='{self.message}', code='{self.code}', status_code={self.status_code})"
+            f"{self.__class__.__name__}(message='{self.message}', "
+            f"code='{self.code}', status_code={self.status_code})"
         )
 
 
@@ -575,7 +576,9 @@ def format_exception(exc: Exception) -> Dict[str, Any]:
         }
 
 
-def create_error_response(exc: Exception, include_traceback: bool = False) -> Dict[str, Any]:
+def create_error_response(
+    exc: Exception, include_traceback: bool = False
+) -> Dict[str, Any]:
     """Create a standardized error response for API endpoints.
 
     Args:
@@ -593,7 +596,9 @@ def create_error_response(exc: Exception, include_traceback: bool = False) -> Di
     return error_data
 
 
-def safe_execute(func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any) -> Union[T, R]:
+def safe_execute(
+    func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any
+) -> Union[T, R]:
     """Execute a function with error handling and optional fallback.
 
     Args:

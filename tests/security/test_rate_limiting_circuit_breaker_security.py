@@ -107,11 +107,15 @@ class TestRateLimitingSecurity:
             # Override config for testing
             middleware.configs["unauthenticated"] = rate_limit_config
 
-            test_app.add_middleware(type(middleware).__bases__[0], dispatch=middleware.dispatch)
+            test_app.add_middleware(
+                type(middleware).__bases__[0], dispatch=middleware.dispatch
+            )
 
             return TestClient(test_app)
 
-    async def test_basic_rate_limiting_enforcement(self, in_memory_limiter, rate_limit_config):
+    async def test_basic_rate_limiting_enforcement(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test basic rate limiting enforcement."""
         key = "test_user_123"
 
@@ -127,7 +131,9 @@ class TestRateLimitingSecurity:
         assert result.limit_type == "minute"
         assert result.retry_after_seconds > 0
 
-    async def test_rate_limiting_bypass_attempts(self, in_memory_limiter, rate_limit_config):
+    async def test_rate_limiting_bypass_attempts(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test attempts to bypass rate limiting."""
         base_key = "attacker_user"
 
@@ -143,7 +149,9 @@ class TestRateLimitingSecurity:
         for key in similar_keys:
             # Fill up rate limit for each key separately
             for _i in range(rate_limit_config.requests_per_minute):
-                result = await in_memory_limiter.check_rate_limit(key, rate_limit_config)
+                result = await in_memory_limiter.check_rate_limit(
+                    key, rate_limit_config
+                )
                 if result.is_limited:
                     break
 
@@ -151,7 +159,9 @@ class TestRateLimitingSecurity:
             result = await in_memory_limiter.check_rate_limit(key, rate_limit_config)
             assert result.is_limited
 
-    async def test_rate_limiting_key_injection_attacks(self, in_memory_limiter, rate_limit_config):
+    async def test_rate_limiting_key_injection_attacks(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test protection against key injection attacks."""
         malicious_keys = [
             "user_123'; DROP TABLE rate_limits; --",
@@ -168,12 +178,18 @@ class TestRateLimitingSecurity:
         for malicious_key in malicious_keys:
             # Should not crash or cause errors
             try:
-                result = await in_memory_limiter.check_rate_limit(malicious_key, rate_limit_config)
+                result = await in_memory_limiter.check_rate_limit(
+                    malicious_key, rate_limit_config
+                )
                 assert isinstance(result, RateLimitResult)
             except Exception as e:
-                pytest.fail(f"Rate limiter crashed with malicious key '{malicious_key}': {e}")
+                pytest.fail(
+                    f"Rate limiter crashed with malicious key '{malicious_key}': {e}"
+                )
 
-    async def test_rate_limiting_cost_manipulation(self, in_memory_limiter, rate_limit_config):
+    async def test_rate_limiting_cost_manipulation(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test protection against cost manipulation attacks."""
         key = "cost_attacker"
 
@@ -189,7 +205,9 @@ class TestRateLimitingSecurity:
 
         for cost in test_costs:
             try:
-                _result = await in_memory_limiter.check_rate_limit(key, rate_limit_config, cost=cost)
+                _result = await in_memory_limiter.check_rate_limit(
+                    key, rate_limit_config, cost=cost
+                )
 
                 # Should handle invalid costs gracefully
                 if cost <= 0 or not isinstance(cost, int):
@@ -203,7 +221,9 @@ class TestRateLimitingSecurity:
                 # Should not crash with invalid costs
                 assert "cost" in str(e).lower() or "invalid" in str(e).lower()
 
-    async def test_distributed_rate_limiting_security(self, dragonfly_limiter, rate_limit_config):
+    async def test_distributed_rate_limiting_security(
+        self, dragonfly_limiter, rate_limit_config
+    ):
         """Test security of distributed rate limiting."""
         key = "distributed_user_123"
 
@@ -216,7 +236,9 @@ class TestRateLimitingSecurity:
         result = await dragonfly_limiter.check_rate_limit(key, rate_limit_config)
         assert isinstance(result, RateLimitResult)  # Should fallback gracefully
 
-    async def test_rate_limiting_timing_attacks(self, in_memory_limiter, rate_limit_config):
+    async def test_rate_limiting_timing_attacks(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test protection against timing attacks on rate limiting."""
         key = "timing_attacker"
 
@@ -248,9 +270,13 @@ class TestRateLimitingSecurity:
         avg_limited = sum(limited_times) / len(limited_times)
 
         # Allow some variation but not orders of magnitude
-        assert avg_limited < avg_normal * 10, "Rate limiting timing attack vulnerability"
+        assert avg_limited < avg_normal * 10, (
+            "Rate limiting timing attack vulnerability"
+        )
 
-    async def test_rate_limiting_concurrent_attacks(self, in_memory_limiter, rate_limit_config):
+    async def test_rate_limiting_concurrent_attacks(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test rate limiting under concurrent attack scenarios."""
         key = "concurrent_attacker"
 
@@ -258,7 +284,9 @@ class TestRateLimitingSecurity:
             """Single attack task."""
             results = []
             for _ in range(20):  # Try to exceed rate limit
-                result = await in_memory_limiter.check_rate_limit(key, rate_limit_config)
+                result = await in_memory_limiter.check_rate_limit(
+                    key, rate_limit_config
+                )
                 results.append(result.is_limited)
                 await asyncio.sleep(0.01)  # Small delay
             return results
@@ -275,9 +303,13 @@ class TestRateLimitingSecurity:
         # Should not significantly exceed rate limit due to race conditions
         # Allow some margin for timing variations
         max_allowed = rate_limit_config.requests_per_minute * 1.2
-        assert total_allowed <= max_allowed, f"Rate limiting failed under concurrency: {total_allowed} > {max_allowed}"
+        assert total_allowed <= max_allowed, (
+            f"Rate limiting failed under concurrency: {total_allowed} > {max_allowed}"
+        )
 
-    async def test_rate_limiting_memory_exhaustion_protection(self, in_memory_limiter, rate_limit_config):
+    async def test_rate_limiting_memory_exhaustion_protection(
+        self, in_memory_limiter, rate_limit_config
+    ):
         """Test protection against memory exhaustion attacks."""
         # Create many unique keys to test memory usage
         num_keys = 10000
@@ -309,7 +341,9 @@ class TestRateLimitingSecurity:
             # Should not crash or cause errors
             assert response.status_code in [200, 429]
 
-    def test_rate_limiting_response_headers_security(self, test_client_with_rate_limiting):
+    def test_rate_limiting_response_headers_security(
+        self, test_client_with_rate_limiting
+    ):
         """Test security of rate limiting response headers."""
         response = test_client_with_rate_limiting.get("/test")
 
@@ -328,7 +362,9 @@ class TestRateLimitingSecurity:
                 assert "secret" not in value.lower()
                 assert "key" not in value.lower()
 
-    def test_rate_limiting_bypass_via_method_override(self, test_client_with_rate_limiting):
+    def test_rate_limiting_bypass_via_method_override(
+        self, test_client_with_rate_limiting
+    ):
         """Test rate limiting bypass attempts via HTTP method override."""
         # Some frameworks allow method override via headers
         override_headers = [
@@ -446,7 +482,9 @@ class TestCircuitBreakerSecurity:
             # Expected if state was actually changed
             pass
 
-    async def test_circuit_breaker_concurrent_state_corruption(self, enterprise_breaker):
+    async def test_circuit_breaker_concurrent_state_corruption(
+        self, enterprise_breaker
+    ):
         """Test circuit breaker state consistency under concurrent access."""
 
         @enterprise_breaker
@@ -485,7 +523,9 @@ class TestCircuitBreakerSecurity:
         """Test attempts to bypass circuit breaker with different exception types."""
 
         # Configure breaker to only trigger on specific exceptions
-        breaker_with_filter = SimpleCircuitBreaker(name="filtered_breaker", exceptions=[ValueError, TypeError])
+        breaker_with_filter = SimpleCircuitBreaker(
+            name="filtered_breaker", exceptions=[ValueError, TypeError]
+        )
 
         @breaker_with_filter
         def service_with_different_exceptions(exception_type):
@@ -541,7 +581,9 @@ class TestCircuitBreakerSecurity:
 
         # Should take much less time than if all requests were processed
         total_time = end_time - start_time
-        assert total_time < 0.5, f"Circuit breaker not protecting resources: {total_time}s"
+        assert total_time < 0.5, (
+            f"Circuit breaker not protecting resources: {total_time}s"
+        )
 
     def test_circuit_breaker_metrics_information_disclosure(self, enterprise_breaker):
         """Test circuit breaker metrics for information disclosure."""
@@ -666,7 +708,9 @@ class TestRateLimitingCircuitBreakerIntegration:
         from tripsage.api.middlewares.rate_limiting import RateLimitConfig
 
         # Create circuit breaker
-        service_breaker = circuit_breaker(name="integrated_service", failure_threshold=3, timeout=5.0)
+        service_breaker = circuit_breaker(
+            name="integrated_service", failure_threshold=3, timeout=5.0
+        )
 
         # Create rate limiter
         rate_limiter = InMemoryRateLimiter()
@@ -762,7 +806,9 @@ class TestRateLimitingCircuitBreakerIntegration:
 
         # Should not take excessive time due to proper rate limiting
         total_time = end_time - start_time
-        assert total_time < 30, f"Combined systems vulnerable to resource exhaustion: {total_time}s"
+        assert total_time < 30, (
+            f"Combined systems vulnerable to resource exhaustion: {total_time}s"
+        )
 
     async def test_state_consistency_under_attack(self, integrated_service):
         """Test state consistency when both systems are under attack."""

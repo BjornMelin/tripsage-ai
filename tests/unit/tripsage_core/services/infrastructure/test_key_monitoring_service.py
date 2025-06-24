@@ -74,7 +74,9 @@ class TestKeyMonitoringService:
         return db
 
     @pytest.fixture
-    def key_monitoring_service(self, mock_settings, mock_cache_service, mock_database_service):
+    def key_monitoring_service(
+        self, mock_settings, mock_cache_service, mock_database_service
+    ):
         """Create a KeyMonitoringService instance with mocked dependencies."""
         service = KeyMonitoringService(settings=mock_settings)
         service.cache_service = mock_cache_service
@@ -85,8 +87,12 @@ class TestKeyMonitoringService:
     async def test_initialize_services(self, mock_settings):
         """Test service initialization."""
         with (
-            patch("tripsage_core.services.infrastructure.key_monitoring_service.get_cache_service") as mock_get_cache,
-            patch("tripsage_core.services.infrastructure.key_monitoring_service.get_database_service") as mock_get_db,
+            patch(
+                "tripsage_core.services.infrastructure.key_monitoring_service.get_cache_service"
+            ) as mock_get_cache,
+            patch(
+                "tripsage_core.services.infrastructure.key_monitoring_service.get_database_service"
+            ) as mock_get_db,
         ):
             mock_cache = AsyncMock()
             mock_db = AsyncMock()
@@ -100,7 +106,9 @@ class TestKeyMonitoringService:
             assert service.database_service is mock_db
 
     @pytest.mark.asyncio
-    async def test_log_operation_success(self, key_monitoring_service, mock_cache_service):
+    async def test_log_operation_success(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test successful operation logging."""
         user_id = str(uuid4())
         key_id = str(uuid4())
@@ -143,7 +151,9 @@ class TestKeyMonitoringService:
         assert log_entry["metadata"] == metadata
 
     @pytest.mark.asyncio
-    async def test_log_operation_failure(self, key_monitoring_service, mock_cache_service):
+    async def test_log_operation_failure(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test operation logging for failures."""
         user_id = str(uuid4())
 
@@ -171,25 +181,37 @@ class TestKeyMonitoringService:
         assert log_entry["metadata"]["error"] == "Key not found"
 
     @pytest.mark.asyncio
-    async def test_log_operation_suspicious_pattern(self, key_monitoring_service, mock_cache_service):
+    async def test_log_operation_suspicious_pattern(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test logging operation that triggers suspicious pattern detection."""
         user_id = str(uuid4())
 
         # Mock pattern detection to return True
-        with patch.object(key_monitoring_service, "_check_suspicious_patterns", return_value=True):
+        with patch.object(
+            key_monitoring_service, "_check_suspicious_patterns", return_value=True
+        ):
             mock_cache_service.get_json.return_value = []
 
-            await key_monitoring_service.log_operation(operation=KeyOperation.CREATE, user_id=user_id, success=True)
+            await key_monitoring_service.log_operation(
+                operation=KeyOperation.CREATE, user_id=user_id, success=True
+            )
 
             # Verify suspicious pattern was flagged
             assert f"{user_id}:create" in key_monitoring_service.suspicious_patterns
 
             # Verify alert was sent (should store alert in cache)
-            alert_calls = [call for call in mock_cache_service.set_json.call_args_list if call[0][0] == "key_alerts"]
+            alert_calls = [
+                call
+                for call in mock_cache_service.set_json.call_args_list
+                if call[0][0] == "key_alerts"
+            ]
             assert len(alert_calls) > 0
 
     @pytest.mark.asyncio
-    async def test_log_operation_with_existing_logs(self, key_monitoring_service, mock_cache_service):
+    async def test_log_operation_with_existing_logs(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test logging operation with existing logs."""
         user_id = str(uuid4())
 
@@ -203,7 +225,9 @@ class TestKeyMonitoringService:
         ]
         mock_cache_service.get_json.return_value = existing_logs
 
-        await key_monitoring_service.log_operation(operation=KeyOperation.VALIDATE, user_id=user_id, success=True)
+        await key_monitoring_service.log_operation(
+            operation=KeyOperation.VALIDATE, user_id=user_id, success=True
+        )
 
         # Verify new log was appended to existing logs
         set_json_calls = mock_cache_service.set_json.call_args_list
@@ -218,7 +242,9 @@ class TestKeyMonitoringService:
         assert len(stored_logs) == 2  # Existing + new log
 
     @pytest.mark.asyncio
-    async def test_log_operation_max_logs_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_log_operation_max_logs_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test log storage respects maximum log limit."""
         user_id = str(uuid4())
 
@@ -233,7 +259,9 @@ class TestKeyMonitoringService:
         ]
         mock_cache_service.get_json.return_value = existing_logs
 
-        await key_monitoring_service.log_operation(operation=KeyOperation.CREATE, user_id=user_id, success=True)
+        await key_monitoring_service.log_operation(
+            operation=KeyOperation.CREATE, user_id=user_id, success=True
+        )
 
         # Verify logs were trimmed to 1000
         set_json_calls = mock_cache_service.set_json.call_args_list
@@ -248,14 +276,18 @@ class TestKeyMonitoringService:
         assert len(stored_logs) == 1000
 
     @pytest.mark.asyncio
-    async def test_store_operation_for_pattern_detection(self, key_monitoring_service, mock_cache_service):
+    async def test_store_operation_for_pattern_detection(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test storing operation for pattern detection."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
 
         mock_cache_service.get_json.return_value = []
 
-        await key_monitoring_service._store_operation_for_pattern_detection(operation, user_id)
+        await key_monitoring_service._store_operation_for_pattern_detection(
+            operation, user_id
+        )
 
         # Verify operation was stored with correct key
         expected_key = f"key_ops:{user_id}:{operation.value}"
@@ -267,20 +299,28 @@ class TestKeyMonitoringService:
         assert set_call[1]["ttl"] == key_monitoring_service.pattern_timeframe
 
     @pytest.mark.asyncio
-    async def test_store_operation_filters_old_operations(self, key_monitoring_service, mock_cache_service):
+    async def test_store_operation_filters_old_operations(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test that old operations are filtered out during storage."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
 
         # Mock existing operations - some old, some recent
         now = datetime.now(timezone.utc)
-        old_timestamp = (now - timedelta(seconds=700)).isoformat()  # Older than timeframe
-        recent_timestamp = (now - timedelta(seconds=300)).isoformat()  # Within timeframe
+        old_timestamp = (
+            now - timedelta(seconds=700)
+        ).isoformat()  # Older than timeframe
+        recent_timestamp = (
+            now - timedelta(seconds=300)
+        ).isoformat()  # Within timeframe
 
         existing_ops = [old_timestamp, recent_timestamp]
         mock_cache_service.get_json.return_value = existing_ops
 
-        await key_monitoring_service._store_operation_for_pattern_detection(operation, user_id)
+        await key_monitoring_service._store_operation_for_pattern_detection(
+            operation, user_id
+        )
 
         # Verify only recent operations were kept
         set_call = mock_cache_service.set_json.call_args
@@ -290,7 +330,9 @@ class TestKeyMonitoringService:
         assert recent_timestamp in stored_ops
 
     @pytest.mark.asyncio
-    async def test_check_suspicious_patterns_below_threshold(self, key_monitoring_service, mock_cache_service):
+    async def test_check_suspicious_patterns_below_threshold(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test suspicious pattern detection below threshold."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
@@ -298,12 +340,16 @@ class TestKeyMonitoringService:
         # Mock 3 operations (below threshold of 5)
         mock_cache_service.get_json.return_value = ["op1", "op2", "op3"]
 
-        result = await key_monitoring_service._check_suspicious_patterns(operation, user_id)
+        result = await key_monitoring_service._check_suspicious_patterns(
+            operation, user_id
+        )
 
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_check_suspicious_patterns_above_threshold(self, key_monitoring_service, mock_cache_service):
+    async def test_check_suspicious_patterns_above_threshold(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test suspicious pattern detection above threshold."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
@@ -318,16 +364,22 @@ class TestKeyMonitoringService:
             "op6",
         ]
 
-        result = await key_monitoring_service._check_suspicious_patterns(operation, user_id)
+        result = await key_monitoring_service._check_suspicious_patterns(
+            operation, user_id
+        )
 
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_check_suspicious_patterns_list_operation_exempt(self, key_monitoring_service):
+    async def test_check_suspicious_patterns_list_operation_exempt(
+        self, key_monitoring_service
+    ):
         """Test that LIST operations are exempt from suspicious pattern detection."""
         user_id = str(uuid4())
 
-        result = await key_monitoring_service._check_suspicious_patterns(KeyOperation.LIST, user_id)
+        result = await key_monitoring_service._check_suspicious_patterns(
+            KeyOperation.LIST, user_id
+        )
 
         assert result is False
 
@@ -358,14 +410,19 @@ class TestKeyMonitoringService:
         assert "ALERT: Suspicious API key" in alert["message"]
 
     @pytest.mark.asyncio
-    async def test_send_alert_max_alerts_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_send_alert_max_alerts_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test alert storage respects maximum alert limit."""
         user_id = str(uuid4())
         operation = KeyOperation.DELETE
         log_data = {}
 
         # Mock 1000 existing alerts (at the limit)
-        existing_alerts = [{"message": f"Alert {i}", "timestamp": f"2024-01-{i:02d}T00:00:00"} for i in range(1, 1001)]
+        existing_alerts = [
+            {"message": f"Alert {i}", "timestamp": f"2024-01-{i:02d}T00:00:00"}
+            for i in range(1, 1001)
+        ]
         mock_cache_service.get_json.return_value = existing_alerts
 
         await key_monitoring_service._send_alert(operation, user_id, log_data)
@@ -376,7 +433,9 @@ class TestKeyMonitoringService:
         assert len(stored_alerts) == 1000
 
     @pytest.mark.asyncio
-    async def test_get_user_operations(self, key_monitoring_service, mock_cache_service):
+    async def test_get_user_operations(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test retrieving user operations."""
         user_id = str(uuid4())
 
@@ -395,12 +454,17 @@ class TestKeyMonitoringService:
         mock_cache_service.get_json.assert_called_with(expected_key)
 
     @pytest.mark.asyncio
-    async def test_get_user_operations_with_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_get_user_operations_with_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test retrieving user operations with limit."""
         user_id = str(uuid4())
 
         # Mock more operations than limit
-        stored_ops = [{"operation": f"op{i}", "timestamp": f"2024-01-{i:02d}T00:00:00"} for i in range(1, 11)]
+        stored_ops = [
+            {"operation": f"op{i}", "timestamp": f"2024-01-{i:02d}T00:00:00"}
+            for i in range(1, 11)
+        ]
         mock_cache_service.get_json.return_value = stored_ops
 
         result = await key_monitoring_service.get_user_operations(user_id, limit=5)
@@ -410,7 +474,9 @@ class TestKeyMonitoringService:
         assert result == stored_ops[-5:]
 
     @pytest.mark.asyncio
-    async def test_get_user_operations_no_logs(self, key_monitoring_service, mock_cache_service):
+    async def test_get_user_operations_no_logs(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test retrieving user operations when no logs exist."""
         user_id = str(uuid4())
 
@@ -435,9 +501,14 @@ class TestKeyMonitoringService:
         mock_cache_service.get_json.assert_called_with("key_alerts")
 
     @pytest.mark.asyncio
-    async def test_get_alerts_with_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_get_alerts_with_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test retrieving alerts with limit."""
-        stored_alerts = [{"message": f"Alert {i}", "timestamp": f"2024-01-{i:02d}T00:00:00"} for i in range(1, 11)]
+        stored_alerts = [
+            {"message": f"Alert {i}", "timestamp": f"2024-01-{i:02d}T00:00:00"}
+            for i in range(1, 11)
+        ]
         mock_cache_service.get_json.return_value = stored_alerts
 
         result = await key_monitoring_service.get_alerts(limit=3)
@@ -446,7 +517,9 @@ class TestKeyMonitoringService:
         assert result == stored_alerts[-3:]
 
     @pytest.mark.asyncio
-    async def test_get_alerts_no_alerts(self, key_monitoring_service, mock_cache_service):
+    async def test_get_alerts_no_alerts(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test retrieving alerts when none exist."""
         mock_cache_service.get_json.return_value = None
 
@@ -455,7 +528,9 @@ class TestKeyMonitoringService:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_is_rate_limited_first_operation(self, key_monitoring_service, mock_cache_service):
+    async def test_is_rate_limited_first_operation(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test rate limiting for first operation."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
@@ -470,7 +545,9 @@ class TestKeyMonitoringService:
         mock_cache_service.set.assert_called_with(expected_key, "1", ttl=60)
 
     @pytest.mark.asyncio
-    async def test_is_rate_limited_below_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_is_rate_limited_below_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test rate limiting below limit."""
         user_id = str(uuid4())
         operation = KeyOperation.VALIDATE
@@ -485,7 +562,9 @@ class TestKeyMonitoringService:
         mock_cache_service.incr.assert_called_with(expected_key)
 
     @pytest.mark.asyncio
-    async def test_is_rate_limited_at_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_is_rate_limited_at_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test rate limiting at limit."""
         user_id = str(uuid4())
         operation = KeyOperation.DELETE
@@ -499,7 +578,9 @@ class TestKeyMonitoringService:
         mock_cache_service.incr.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_is_rate_limited_above_limit(self, key_monitoring_service, mock_cache_service):
+    async def test_is_rate_limited_above_limit(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test rate limiting above limit."""
         user_id = str(uuid4())
         operation = KeyOperation.ROTATE
@@ -542,7 +623,9 @@ class TestKeyOperationRateLimitMiddleware:
     def middleware(self, mock_monitoring_service, mock_settings):
         """Create middleware instance."""
         app = Mock()
-        return KeyOperationRateLimitMiddleware(app, mock_monitoring_service, mock_settings)
+        return KeyOperationRateLimitMiddleware(
+            app, mock_monitoring_service, mock_settings
+        )
 
     @pytest.mark.asyncio
     async def test_dispatch_non_key_operation(self, middleware):
@@ -577,7 +660,9 @@ class TestKeyOperationRateLimitMiddleware:
         call_next.assert_called_once_with(request)
 
     @pytest.mark.asyncio
-    async def test_dispatch_key_operation_not_rate_limited(self, middleware, mock_monitoring_service):
+    async def test_dispatch_key_operation_not_rate_limited(
+        self, middleware, mock_monitoring_service
+    ):
         """Test middleware dispatch for key operation not rate limited."""
         request = Mock()
         request.url.path = "/api/user/keys"
@@ -594,10 +679,14 @@ class TestKeyOperationRateLimitMiddleware:
 
         assert result is response
         call_next.assert_called_once_with(request)
-        mock_monitoring_service.is_rate_limited.assert_called_once_with(request.state.user_id, KeyOperation.CREATE)
+        mock_monitoring_service.is_rate_limited.assert_called_once_with(
+            request.state.user_id, KeyOperation.CREATE
+        )
 
     @pytest.mark.asyncio
-    async def test_dispatch_key_operation_rate_limited(self, middleware, mock_monitoring_service):
+    async def test_dispatch_key_operation_rate_limited(
+        self, middleware, mock_monitoring_service
+    ):
         """Test middleware dispatch for rate limited key operation."""
         request = Mock()
         request.url.path = "/api/user/keys"
@@ -741,7 +830,9 @@ class TestMonitorKeyOperationDecorator:
     @pytest.mark.asyncio
     async def test_decorator_creates_new_service_if_not_found(self):
         """Test decorator creates new monitoring service if not found."""
-        with patch("tripsage_core.services.infrastructure.key_monitoring_service.KeyMonitoringService") as mock_class:
+        with patch(
+            "tripsage_core.services.infrastructure.key_monitoring_service.KeyMonitoringService"
+        ) as mock_class:
             mock_service = AsyncMock()
             mock_service.log_operation = AsyncMock()
             mock_class.return_value = mock_service
@@ -1012,7 +1103,9 @@ class TestHealthAndExpirationFunctions:
         assert len(result["user_count"]) == 2
 
         # Check service counts
-        service_counts = {item["service"]: item["count"] for item in result["service_count"]}
+        service_counts = {
+            item["service"]: item["count"] for item in result["service_count"]
+        }
         assert service_counts["openai"] == 2
         assert service_counts["google"] == 1
 
@@ -1064,7 +1157,9 @@ class TestEdgeCasesAndErrorHandling:
     """Test suite for edge cases and error handling."""
 
     @pytest.mark.asyncio
-    async def test_log_operation_cache_error(self, key_monitoring_service, mock_cache_service):
+    async def test_log_operation_cache_error(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test operation logging with cache errors."""
         user_id = str(uuid4())
 
@@ -1072,32 +1167,46 @@ class TestEdgeCasesAndErrorHandling:
         mock_cache_service.get_json.side_effect = Exception("Cache error")
 
         # Should not raise exception, just handle gracefully
-        await key_monitoring_service.log_operation(operation=KeyOperation.LIST, user_id=user_id, success=True)
+        await key_monitoring_service.log_operation(
+            operation=KeyOperation.LIST, user_id=user_id, success=True
+        )
 
     @pytest.mark.asyncio
-    async def test_rate_limiting_cache_error(self, key_monitoring_service, mock_cache_service):
+    async def test_rate_limiting_cache_error(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test rate limiting with cache errors."""
         user_id = str(uuid4())
 
         mock_cache_service.get.side_effect = Exception("Cache connection lost")
 
         # Should handle error gracefully
-        result = await key_monitoring_service.is_rate_limited(user_id, KeyOperation.CREATE)
+        result = await key_monitoring_service.is_rate_limited(
+            user_id, KeyOperation.CREATE
+        )
 
         # Should default to not rate limited on error
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_concurrent_operations_logging(self, key_monitoring_service, mock_cache_service):
+    async def test_concurrent_operations_logging(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test concurrent operation logging."""
         user_id = str(uuid4())
         mock_cache_service.get_json.return_value = []
 
         # Log multiple operations concurrently
         tasks = [
-            key_monitoring_service.log_operation(KeyOperation.CREATE, user_id, success=True),
-            key_monitoring_service.log_operation(KeyOperation.LIST, user_id, success=True),
-            key_monitoring_service.log_operation(KeyOperation.VALIDATE, user_id, success=True),
+            key_monitoring_service.log_operation(
+                KeyOperation.CREATE, user_id, success=True
+            ),
+            key_monitoring_service.log_operation(
+                KeyOperation.LIST, user_id, success=True
+            ),
+            key_monitoring_service.log_operation(
+                KeyOperation.VALIDATE, user_id, success=True
+            ),
         ]
 
         await asyncio.gather(*tasks)
@@ -1106,7 +1215,9 @@ class TestEdgeCasesAndErrorHandling:
         assert mock_cache_service.set_json.call_count >= 3
 
     @pytest.mark.asyncio
-    async def test_suspicious_pattern_with_custom_threshold(self, key_monitoring_service, mock_cache_service):
+    async def test_suspicious_pattern_with_custom_threshold(
+        self, key_monitoring_service, mock_cache_service
+    ):
         """Test suspicious pattern detection with custom thresholds."""
         user_id = str(uuid4())
         operation = KeyOperation.ACCESS  # Not in default thresholds
@@ -1121,7 +1232,9 @@ class TestEdgeCasesAndErrorHandling:
             "op6",
         ]
 
-        result = await key_monitoring_service._check_suspicious_patterns(operation, user_id)
+        result = await key_monitoring_service._check_suspicious_patterns(
+            operation, user_id
+        )
 
         # Should use default threshold of 5
         assert result is True
@@ -1135,7 +1248,9 @@ class TestEdgeCasesAndErrorHandling:
 
     def test_initialization_without_settings(self):
         """Test service initialization without settings."""
-        with patch("tripsage_core.services.infrastructure.key_monitoring_service.get_settings") as mock_get_settings:
+        with patch(
+            "tripsage_core.services.infrastructure.key_monitoring_service.get_settings"
+        ) as mock_get_settings:
             mock_settings = Mock()
             mock_get_settings.return_value = mock_settings
 
@@ -1145,11 +1260,15 @@ class TestEdgeCasesAndErrorHandling:
             mock_get_settings.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_middleware_initialization_without_settings(self, mock_monitoring_service):
+    async def test_middleware_initialization_without_settings(
+        self, mock_monitoring_service
+    ):
         """Test middleware initialization without settings."""
         app = Mock()
 
-        with patch("tripsage_core.services.infrastructure.key_monitoring_service.get_settings") as mock_get_settings:
+        with patch(
+            "tripsage_core.services.infrastructure.key_monitoring_service.get_settings"
+        ) as mock_get_settings:
             mock_settings = Mock()
             mock_get_settings.return_value = mock_settings
 

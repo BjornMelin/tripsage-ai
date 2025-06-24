@@ -65,7 +65,10 @@ class ChatAgent(BaseAgent):
             logger.error("Chat agent orchestrator not initialized")
             return {
                 "error": "Chat system not available",
-                "message": ("I apologize, but the chat system is currently unavailable. Please try again later."),
+                "message": (
+                    "I apologize, but the chat system is currently unavailable. "
+                    "Please try again later."
+                ),
             }
 
         try:
@@ -84,7 +87,10 @@ class ChatAgent(BaseAgent):
             logger.error(f"Error processing chat message: {e}")
             return {
                 "error": str(e),
-                "message": ("I encountered an error while processing your request. Please try again."),
+                "message": (
+                    "I encountered an error while processing your request. "
+                    "Please try again."
+                ),
             }
 
     async def stream_message(
@@ -111,7 +117,9 @@ class ChatAgent(BaseAgent):
                 "type": "error",
                 "data": {
                     "error": "Chat system not available",
-                    "message": ("I apologize, but the chat system is currently unavailable."),
+                    "message": (
+                        "I apologize, but the chat system is currently unavailable."
+                    ),
                 },
             }
             return
@@ -147,7 +155,9 @@ class ChatAgent(BaseAgent):
                 },
             }
 
-    async def get_conversation_history(self, user_id: str, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+    async def get_conversation_history(
+        self, user_id: str, session_id: str, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """
         Get conversation history for a session.
 
@@ -163,7 +173,9 @@ class ChatAgent(BaseAgent):
             # Use the chat service to get conversation history
             chat_service = self.service_registry.get_optional_service("chat_service")
             if chat_service:
-                return await chat_service.get_conversation_history(user_id, session_id, limit)
+                return await chat_service.get_conversation_history(
+                    user_id, session_id, limit
+                )
             else:
                 logger.warning("Chat service not available for history retrieval")
                 return []

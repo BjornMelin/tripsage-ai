@@ -101,7 +101,9 @@ async def create_secure_async_engine(
     elif url_info["type"] == "postgresql":
         postgres_url = database_url
     else:
-        raise DatabaseURLParsingError(f"Unsupported database URL type: {url_info.get('type', 'unknown')}")
+        raise DatabaseURLParsingError(
+            f"Unsupported database URL type: {url_info.get('type', 'unknown')}"
+        )
 
     # Parse and validate with security checks
     manager = get_connection_manager()
@@ -110,9 +112,13 @@ async def create_secure_async_engine(
     # Convert to SQLAlchemy async format
     sqlalchemy_url = credentials.to_connection_string()
     if sqlalchemy_url.startswith("postgresql://"):
-        sqlalchemy_url = sqlalchemy_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        sqlalchemy_url = sqlalchemy_url.replace(
+            "postgresql://", "postgresql+asyncpg://", 1
+        )
     elif sqlalchemy_url.startswith("postgres://"):
-        sqlalchemy_url = sqlalchemy_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        sqlalchemy_url = sqlalchemy_url.replace(
+            "postgres://", "postgresql+asyncpg://", 1
+        )
 
     # Create engine with security settings
     engine = create_async_engine(
@@ -151,7 +157,9 @@ async def create_secure_async_engine(
         )
     except Exception as e:
         await engine.dispose()
-        raise DatabaseValidationError(f"Failed to validate engine connection: {e}") from e
+        raise DatabaseValidationError(
+            f"Failed to validate engine connection: {e}"
+        ) from e
 
     return engine
 
@@ -294,7 +302,9 @@ async def test_connection() -> bool:
             logger.info(f"Installed extensions: {installed_extensions}")
 
             if "vector" not in installed_extensions:
-                logger.warning("pgvector extension not installed - vector operations may fail")
+                logger.warning(
+                    "pgvector extension not installed - vector operations may fail"
+                )
 
             return True
 

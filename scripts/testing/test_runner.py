@@ -133,7 +133,9 @@ def test_cors_validation():
             assert "Wildcard CORS origin not allowed in production" in str(e)
 
         # Test production allows specific origins
-        prod_settings = Settings(environment="production", cors_origins=["https://example.com"])
+        prod_settings = Settings(
+            environment="production", cors_origins=["https://example.com"]
+        )
         assert prod_settings.cors_origins == ["https://example.com"]
 
         print("✓ CORS validation test passed")

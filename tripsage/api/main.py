@@ -148,7 +148,9 @@ def create_app() -> FastAPI:
 
     # Enhanced rate limiting middleware with principal-based limits
     use_dragonfly = bool(settings.redis_url)
-    app.add_middleware(EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly)
+    app.add_middleware(
+        EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
+    )
 
     # Enhanced authentication middleware supporting JWT and API keys
     # Temporarily disabled - awaiting Supabase Auth
@@ -163,18 +165,26 @@ def create_app() -> FastAPI:
 
     # Simplified exception handlers
     @app.exception_handler(CoreAuthenticationError)
-    async def authentication_error_handler(request: Request, exc: CoreAuthenticationError):
+    async def authentication_error_handler(
+        request: Request, exc: CoreAuthenticationError
+    ):
         """Handle authentication errors."""
-        logger.error(f"Authentication error: {exc.message}", extra={"path": request.url.path})
+        logger.error(
+            f"Authentication error: {exc.message}", extra={"path": request.url.path}
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
         )
 
     @app.exception_handler(CoreKeyValidationError)
-    async def key_validation_error_handler(request: Request, exc: CoreKeyValidationError):
+    async def key_validation_error_handler(
+        request: Request, exc: CoreKeyValidationError
+    ):
         """Handle API key validation errors."""
-        logger.error(f"Key validation error: {exc.message}", extra={"path": request.url.path})
+        logger.error(
+            f"Key validation error: {exc.message}", extra={"path": request.url.path}
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -183,7 +193,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreRateLimitError)
     async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):
         """Handle rate limit errors."""
-        logger.warning(f"Rate limit exceeded: {exc.message}", extra={"path": request.url.path})
+        logger.warning(
+            f"Rate limit exceeded: {exc.message}", extra={"path": request.url.path}
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -202,7 +214,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
         """Handle external API errors."""
-        logger.error(f"External API error: {exc.message}", extra={"path": request.url.path})
+        logger.error(
+            f"External API error: {exc.message}", extra={"path": request.url.path}
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -211,7 +225,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreValidationError)
     async def validation_error_handler(request: Request, exc: CoreValidationError):
         """Handle validation errors."""
-        logger.warning(f"Validation error: {exc.message}", extra={"path": request.url.path})
+        logger.warning(
+            f"Validation error: {exc.message}", extra={"path": request.url.path}
+        )
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content=format_error_response(exc, request),
@@ -227,7 +243,9 @@ def create_app() -> FastAPI:
         )
 
     @app.exception_handler(RequestValidationError)
-    async def request_validation_error_handler(request: Request, exc: RequestValidationError):
+    async def request_validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ):
         """Handle FastAPI request validation errors."""
         errors = [
             {
@@ -238,7 +256,9 @@ def create_app() -> FastAPI:
             for error in exc.errors()
         ]
 
-        logger.warning(f"Validation errors: {len(errors)}", extra={"path": request.url.path})
+        logger.warning(
+            f"Validation errors: {len(errors)}", extra={"path": request.url.path}
+        )
 
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -254,7 +274,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """Handle HTTP exceptions."""
-        logger.warning(f"HTTP {exc.status_code}: {exc.detail}", extra={"path": request.url.path})
+        logger.warning(
+            f"HTTP {exc.status_code}: {exc.detail}", extra={"path": request.url.path}
+        )
         return JSONResponse(
             status_code=exc.status_code,
             content={
@@ -268,7 +290,9 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle all other unhandled exceptions."""
-        logger.exception(f"Unhandled exception: {exc}", extra={"path": request.url.path})
+        logger.exception(
+            f"Unhandled exception: {exc}", extra={"path": request.url.path}
+        )
 
         content = {
             "error": True,
@@ -292,11 +316,15 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
-    app.include_router(dashboard_realtime.router, prefix="/api", tags=["dashboard_realtime"])
+    app.include_router(
+        dashboard_realtime.router, prefix="/api", tags=["dashboard_realtime"]
+    )
     app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
     app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
-    app.include_router(attachments.router, prefix="/api/attachments", tags=["attachments"])
+    app.include_router(
+        attachments.router, prefix="/api/attachments", tags=["attachments"]
+    )
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(flights.router, prefix="/api/flights", tags=["flights"])
     app.include_router(
@@ -309,7 +337,9 @@ def create_app() -> FastAPI:
         prefix="/api/destinations",
         tags=["destinations"],
     )
-    app.include_router(itineraries.router, prefix="/api/itineraries", tags=["itineraries"])
+    app.include_router(
+        itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
+    )
     app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
     app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])

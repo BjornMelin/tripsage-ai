@@ -146,7 +146,9 @@ class TestEnvironmentVariableHandling:
             "DEBUG": "true",  # string -> bool
             "REDIS_MAX_CONNECTIONS": "75",  # string -> int
             "DB_HEALTH_CHECK_INTERVAL": "45.5",  # string -> float
-            "CORS_ORIGINS": '["http://localhost:3000", "http://localhost:3001"]',  # JSON string -> list
+            "CORS_ORIGINS": (
+                '["http://localhost:3000", "http://localhost:3001"]'
+            ),  # JSON string -> list
             "RATE_LIMIT_ENABLED": "false",  # string -> bool
             "ENABLE_WEBSOCKETS": "1",  # string -> bool (truthy)
         }
@@ -300,13 +302,21 @@ class TestSecretHandling:
         """Test secret comparison functionality."""
         settings1 = Settings(openai_api_key=SecretStr("same-secret"), _env_file=None)
         settings2 = Settings(openai_api_key=SecretStr("same-secret"), _env_file=None)
-        settings3 = Settings(openai_api_key=SecretStr("different-secret"), _env_file=None)
+        settings3 = Settings(
+            openai_api_key=SecretStr("different-secret"), _env_file=None
+        )
 
         # Same secret values should be equal
-        assert settings1.openai_api_key.get_secret_value() == settings2.openai_api_key.get_secret_value()
+        assert (
+            settings1.openai_api_key.get_secret_value()
+            == settings2.openai_api_key.get_secret_value()
+        )
 
         # Different secret values should not be equal
-        assert settings1.openai_api_key.get_secret_value() != settings3.openai_api_key.get_secret_value()
+        assert (
+            settings1.openai_api_key.get_secret_value()
+            != settings3.openai_api_key.get_secret_value()
+        )
 
     def test_production_secret_validation(self):
         """Test production-specific secret validation."""
@@ -364,7 +374,9 @@ OPENAI_MODEL=gpt-3.5-turbo
                     assert settings.database_url == "https://envfile.supabase.co"
                     assert settings.api_title == "EnvFile API"
                     assert settings.api_version == "3.0.0"
-                    assert settings.openai_api_key.get_secret_value() == "sk-envfile-key"
+                    assert (
+                        settings.openai_api_key.get_secret_value() == "sk-envfile-key"
+                    )
                     assert settings.openai_model == "gpt-3.5-turbo"
             finally:
                 os.unlink(f.name)
@@ -405,18 +417,24 @@ ENVIRONMENT=staging
 API_TITLE=Override API
 """
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as base_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".env", delete=False
+        ) as base_file:
             base_file.write(base_content)
             base_file.flush()
 
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as override_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".env", delete=False
+            ) as override_file:
                 override_file.write(override_content)
                 override_file.flush()
 
                 try:
                     with patch.dict(os.environ, {}, clear=True):
                         # Load base configuration first
-                        settings = Settings(_env_file=[base_file.name, override_file.name])
+                        settings = Settings(
+                            _env_file=[base_file.name, override_file.name]
+                        )
 
                         # Override file should take precedence
                         assert settings.environment == "staging"
@@ -529,15 +547,25 @@ class TestPostgresURLHandling:
 
     def test_effective_postgres_url_with_explicit_postgres_url(self):
         """Test effective_postgres_url returns postgres_url when explicitly set."""
-        settings = Settings(postgres_url="postgresql://user:pass@localhost:5432/mydb", _env_file=None)
+        settings = Settings(
+            postgres_url="postgresql://user:pass@localhost:5432/mydb", _env_file=None
+        )
 
-        assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/mydb"
+        assert (
+            settings.effective_postgres_url
+            == "postgresql://user:pass@localhost:5432/mydb"
+        )
 
     def test_effective_postgres_url_converts_postgres_scheme(self):
         """Test effective_postgres_url converts postgres:// to postgresql://."""
-        settings = Settings(postgres_url="postgres://user:pass@localhost:5432/mydb", _env_file=None)
+        settings = Settings(
+            postgres_url="postgres://user:pass@localhost:5432/mydb", _env_file=None
+        )
 
-        assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/mydb"
+        assert (
+            settings.effective_postgres_url
+            == "postgresql://user:pass@localhost:5432/mydb"
+        )
 
     def test_effective_postgres_url_with_test_supabase_url(self):
         """Test effective_postgres_url handles test Supabase URL."""
@@ -548,7 +576,9 @@ class TestPostgresURLHandling:
 
     def test_effective_postgres_url_with_real_supabase_url(self):
         """Test effective_postgres_url converts real Supabase URL."""
-        settings = Settings(database_url="https://xyzcompanyabc.supabase.co", _env_file=None)
+        settings = Settings(
+            database_url="https://xyzcompanyabc.supabase.co", _env_file=None
+        )
 
         url = settings.effective_postgres_url
         assert "postgresql://postgres.xyzcompanyabc" in url
@@ -557,9 +587,14 @@ class TestPostgresURLHandling:
 
     def test_effective_postgres_url_with_existing_postgresql_url(self):
         """Test effective_postgres_url with already postgresql:// URL."""
-        settings = Settings(database_url="postgresql://user:pass@custom-host:5432/db", _env_file=None)
+        settings = Settings(
+            database_url="postgresql://user:pass@custom-host:5432/db", _env_file=None
+        )
 
-        assert settings.effective_postgres_url == "postgresql://user:pass@custom-host:5432/db"
+        assert (
+            settings.effective_postgres_url
+            == "postgresql://user:pass@custom-host:5432/db"
+        )
 
     def test_effective_postgres_url_fallback_for_unknown_format(self):
         """Test effective_postgres_url fallback for unknown URL format."""

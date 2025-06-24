@@ -53,7 +53,9 @@ class ConnectionCredentials(BaseModel):
     hostname: str = Field(..., description="Database hostname")
     port: int = Field(default=5432, ge=1, le=65535, description="Database port")
     database: str = Field(default="postgres", description="Database name")
-    query_params: Dict[str, str] = Field(default_factory=dict, description="Query parameters")
+    query_params: Dict[str, str] = Field(
+        default_factory=dict, description="Query parameters"
+    )
 
     class Config:
         """Pydantic configuration."""
@@ -76,7 +78,12 @@ class ConnectionCredentials(BaseModel):
         url = f"{self.scheme}://{encoded_username}:{password}@{self.hostname}:{self.port}/{self.database}"
 
         if self.query_params:
-            query_string = "&".join([f"{quote_plus(k)}={quote_plus(v)}" for k, v in self.query_params.items()])
+            query_string = "&".join(
+                [
+                    f"{quote_plus(k)}={quote_plus(v)}"
+                    for k, v in self.query_params.items()
+                ]
+            )
             url += f"?{query_string}"
 
         return url
@@ -123,7 +130,9 @@ class DatabaseURLParser:
             # Create validated credentials object
             credentials = ConnectionCredentials(**components)
 
-            self.logger.debug(f"Successfully parsed database URL for hostname: {credentials.hostname}")
+            self.logger.debug(
+                f"Successfully parsed database URL for hostname: {credentials.hostname}"
+            )
 
             return credentials
 
@@ -179,7 +188,9 @@ class DatabaseURLParser:
         # Validate scheme
         if not parsed.scheme or parsed.scheme.lower() not in self.VALID_SCHEMES:
             schemes_list = ", ".join(self.VALID_SCHEMES)
-            raise DatabaseURLParsingError(f"Invalid scheme '{parsed.scheme}'. Must be one of: {schemes_list}")
+            raise DatabaseURLParsingError(
+                f"Invalid scheme '{parsed.scheme}'. Must be one of: {schemes_list}"
+            )
 
         # Validate hostname
         if not parsed.hostname:
@@ -263,7 +274,9 @@ class ConnectionCircuitBreaker:
                 self.logger.info("Circuit breaker transitioning to HALF_OPEN")
             else:
                 failure_time = time.time() - self.last_failure_time
-                raise DatabaseConnectionError(f"Circuit breaker is OPEN - last failure {failure_time:.1f}s ago")
+                raise DatabaseConnectionError(
+                    f"Circuit breaker is OPEN - last failure {failure_time:.1f}s ago"
+                )
 
         try:
             result = await operation(*args, **kwargs)
@@ -288,7 +301,9 @@ class ConnectionCircuitBreaker:
 
         if self.failure_count >= self.failure_threshold:
             self.state = ConnectionState.OPEN
-            self.logger.error(f"Circuit breaker opening after {self.failure_count} failures")
+            self.logger.error(
+                f"Circuit breaker opening after {self.failure_count} failures"
+            )
 
 
 class ExponentialBackoffRetry:
@@ -373,10 +388,14 @@ class ExponentialBackoffRetry:
 
                 if attempt < self.max_retries:
                     delay = self.calculate_delay(attempt)
-                    self.logger.warning(f"Attempt {attempt + 1} failed, retrying in {delay:.2f}s: {e}")
+                    self.logger.warning(
+                        f"Attempt {attempt + 1} failed, retrying in {delay:.2f}s: {e}"
+                    )
                     await asyncio.sleep(delay)
                 else:
-                    self.logger.error(f"All {self.max_retries + 1} attempts failed. Last error: {e}")
+                    self.logger.error(
+                        f"All {self.max_retries + 1} attempts failed. Last error: {e}"
+                    )
 
         raise last_exception
 
@@ -417,7 +436,11 @@ class DatabaseConnectionValidator:
             import asyncpg
 
             # Determine SSL mode
-            ssl_mode = "require" if credentials.query_params.get("sslmode") == "require" else "prefer"
+            ssl_mode = (
+                "require"
+                if credentials.query_params.get("sslmode") == "require"
+                else "prefer"
+            )
 
             # Create connection with timeout
             conn = await asyncio.wait_for(
@@ -441,12 +464,16 @@ class DatabaseConnectionValidator:
                 self.logger.debug(f"Connected to: {version}")
 
                 # Check for pgvector extension (if needed for Mem0)
-                has_vector = await conn.fetchval("SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')")
+                has_vector = await conn.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'vector')"
+                )
 
                 if has_vector:
                     self.logger.debug("pgvector extension is available")
                 else:
-                    self.logger.warning("pgvector extension not found - may impact vector operations")
+                    self.logger.warning(
+                        "pgvector extension not found - may impact vector operations"
+                    )
 
                 return True
 
@@ -517,7 +544,9 @@ class SecureDatabaseConnectionManager:
         async def validation_operation():
             return await self.validator.validate_connection(credentials)
 
-        await self.circuit_breaker.call(self.retry_handler.execute_with_retry, validation_operation)
+        await self.circuit_breaker.call(
+            self.retry_handler.execute_with_retry, validation_operation
+        )
 
         self.logger.info(
             "Database URL parsed and validated successfully",
@@ -549,7 +578,11 @@ class SecureDatabaseConnectionManager:
 
         async def connect_operation():
             # Determine SSL mode
-            ssl_mode = "require" if credentials.query_params.get("sslmode") == "require" else "prefer"
+            ssl_mode = (
+                "require"
+                if credentials.query_params.get("sslmode") == "require"
+                else "prefer"
+            )
 
             return await asyncpg.connect(
                 host=credentials.hostname,
@@ -560,7 +593,9 @@ class SecureDatabaseConnectionManager:
                 ssl=ssl_mode,
             )
 
-        conn = await self.circuit_breaker.call(self.retry_handler.execute_with_retry, connect_operation)
+        conn = await self.circuit_breaker.call(
+            self.retry_handler.execute_with_retry, connect_operation
+        )
 
         try:
             yield conn

@@ -96,7 +96,9 @@ async def save_destination(
     """
     try:
         user_id = get_principal_id(principal)
-        return await destination_service.save_destination(user_id, destination_id, notes)
+        return await destination_service.save_destination(
+            user_id, destination_id, notes
+        )
     except ResourceNotFoundError as e:
         logger.warning(f"Destination not found: {destination_id}")
         raise HTTPException(

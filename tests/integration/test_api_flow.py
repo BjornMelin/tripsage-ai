@@ -102,15 +102,21 @@ class TestApiDatabaseFlow:
     def mock_database_service(self, mock_db_session):
         """Mock database service."""
         service = AsyncMock(spec=DatabaseService)
-        service.get_session.return_value.__aenter__ = AsyncMock(return_value=mock_db_session)
+        service.get_session.return_value.__aenter__ = AsyncMock(
+            return_value=mock_db_session
+        )
         service.get_session.return_value.__aexit__ = AsyncMock(return_value=None)
         service.execute_query.return_value = {"results": []}
         return service
 
     @pytest.mark.asyncio
-    async def test_user_registration_flow(self, client, mock_user_service, mock_database_service, mock_user):
+    async def test_user_registration_flow(
+        self, client, mock_user_service, mock_database_service, mock_user
+    ):
         """Test complete user registration flow: API → User Service → Database."""
-        with patch("tripsage_core.services.business.user_service.UserService") as mock_service_class:
+        with patch(
+            "tripsage_core.services.business.user_service.UserService"
+        ) as mock_service_class:
             mock_service_class.return_value = mock_user_service
 
             with patch(
@@ -149,7 +155,9 @@ class TestApiDatabaseFlow:
         mock_principal,
     ):
         """Test complete trip creation flow: API → Trip Service → Database."""
-        with patch("tripsage_core.services.business.trip_service.get_trip_service") as mock_service_dep:
+        with patch(
+            "tripsage_core.services.business.trip_service.get_trip_service"
+        ) as mock_service_dep:
             mock_service_dep.return_value = mock_trip_service
 
             with patch(
@@ -157,7 +165,9 @@ class TestApiDatabaseFlow:
             ) as mock_db_service:
                 mock_db_service.return_value = mock_database_service
 
-                with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
+                with patch(
+                    "tripsage.api.core.dependencies.require_principal"
+                ) as mock_auth:
                     mock_auth.return_value = mock_principal
 
                     # Test trip creation
@@ -193,7 +203,9 @@ class TestApiDatabaseFlow:
         mock_principal,
     ):
         """Test complete trip retrieval flow: API → Trip Service → Database."""
-        with patch("tripsage_core.services.business.trip_service.get_trip_service") as mock_service_dep:
+        with patch(
+            "tripsage_core.services.business.trip_service.get_trip_service"
+        ) as mock_service_dep:
             mock_service_dep.return_value = mock_trip_service
 
             with patch(
@@ -201,7 +213,9 @@ class TestApiDatabaseFlow:
             ) as mock_db_service:
                 mock_db_service.return_value = mock_database_service
 
-                with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
+                with patch(
+                    "tripsage.api.core.dependencies.require_principal"
+                ) as mock_auth:
                     mock_auth.return_value = mock_principal
 
                     trip_id = str(mock_trip.id)
@@ -221,9 +235,13 @@ class TestApiDatabaseFlow:
                     mock_trip_service.get_trip.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_error_handling_flow(self, client, mock_trip_service, mock_database_service, mock_principal):
+    async def test_error_handling_flow(
+        self, client, mock_trip_service, mock_database_service, mock_principal
+    ):
         """Test error handling in API flow."""
-        with patch("tripsage_core.services.business.trip_service.get_trip_service") as mock_service_dep:
+        with patch(
+            "tripsage_core.services.business.trip_service.get_trip_service"
+        ) as mock_service_dep:
             mock_service_dep.return_value = mock_trip_service
 
             with patch(
@@ -231,11 +249,15 @@ class TestApiDatabaseFlow:
             ) as mock_db_service:
                 mock_db_service.return_value = mock_database_service
 
-                with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
+                with patch(
+                    "tripsage.api.core.dependencies.require_principal"
+                ) as mock_auth:
                     mock_auth.return_value = mock_principal
 
                     # Configure service to raise exception
-                    mock_trip_service.create_trip.side_effect = Exception("Database error")
+                    mock_trip_service.create_trip.side_effect = Exception(
+                        "Database error"
+                    )
 
                     # Test trip creation with database error
                     response = client.post(
@@ -265,15 +287,21 @@ class TestApiDatabaseFlow:
             mock_auth.side_effect = CoreAuthenticationError("Invalid token")
 
             # Test API call with invalid authentication
-            response = client.get("/api/trips", headers={"Authorization": "Bearer invalid-token"})
+            response = client.get(
+                "/api/trips", headers={"Authorization": "Bearer invalid-token"}
+            )
 
             # Verify authentication error response
             assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_concurrent_operations_flow(self, client, mock_trip_service, mock_database_service, mock_principal):
+    async def test_concurrent_operations_flow(
+        self, client, mock_trip_service, mock_database_service, mock_principal
+    ):
         """Test concurrent operations in API flow."""
-        with patch("tripsage_core.services.business.trip_service.get_trip_service") as mock_service_dep:
+        with patch(
+            "tripsage_core.services.business.trip_service.get_trip_service"
+        ) as mock_service_dep:
             mock_service_dep.return_value = mock_trip_service
 
             with patch(
@@ -281,7 +309,9 @@ class TestApiDatabaseFlow:
             ) as mock_db_service:
                 mock_db_service.return_value = mock_database_service
 
-                with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
+                with patch(
+                    "tripsage.api.core.dependencies.require_principal"
+                ) as mock_auth:
                     mock_auth.return_value = mock_principal
 
                     # Test multiple concurrent requests

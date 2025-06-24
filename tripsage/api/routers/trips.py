@@ -490,7 +490,10 @@ async def get_trip_summary(
         adapted_trip = _adapt_trip_response(trip_response)
 
         # Build summary from trip data
-        date_range = f"{adapted_trip.start_date.strftime('%b %d')}-{adapted_trip.end_date.strftime('%d, %Y')}"
+        date_range = (
+            f"{adapted_trip.start_date.strftime('%b %d')}-"
+            f"{adapted_trip.end_date.strftime('%d, %Y')}"
+        )
 
         # Get budget information from trip data (authorized access verified above)
         budget = adapted_trip.budget if hasattr(adapted_trip, "budget") else None
@@ -544,7 +547,7 @@ async def get_trip_summary(
                 "breakdown": budget_breakdown,
             },
             has_itinerary=False,  # TODO: Check actual itinerary existence
-            completion_percentage=25,  # TODO: Calculate actual percentage based on bookings
+            completion_percentage=25,  # TODO: Calculate actual percentage
         )
 
         return summary
@@ -898,8 +901,8 @@ async def export_trip(
         export_token = secrets.token_urlsafe(32)
         expiry_time = datetime.now(timezone.utc) + timedelta(hours=24)
 
-        # Store export request in a temporary location (in production, this would be a proper queue/storage)
-        # For now, we'll return a structured response indicating the export is being processed
+        # Store export request in a temporary location (in production, proper queue)
+        # For now, return a response indicating export is being processed
         export_data = {
             "format": format,
             "trip_id": str(trip_id),
@@ -964,7 +967,7 @@ async def get_trip_suggestions(
     """
     _user_id = get_principal_id(principal)
 
-    # Implement actual trip suggestions logic using memory service with user context validation
+    # Implement trip suggestions logic using memory service
     try:
         from tripsage_core.services.business.memory_service import get_memory_service
 
@@ -984,7 +987,7 @@ async def get_trip_suggestions(
                 title="Tokyo Cherry Blossom Adventure",
                 destination="Tokyo, Japan",
                 description=(
-                    "Experience the magic of cherry blossom season in Japan's vibrant capital city."
+                    "Experience cherry blossom season in Japan's vibrant capital city."
                 ),
                 estimated_price=2800,
                 currency="USD",
@@ -1006,7 +1009,8 @@ async def get_trip_suggestions(
                 title="Bali Tropical Retreat",
                 destination="Bali, Indonesia",
                 description=(
-                    "Relax on pristine beaches and explore ancient temples in this tropical paradise."
+                    "Relax on beaches and explore ancient temples in this "
+                    "tropical paradise."
                 ),
                 estimated_price=1500,
                 currency="USD",
@@ -1022,7 +1026,8 @@ async def get_trip_suggestions(
                 title="Swiss Alps Hiking Experience",
                 destination="Interlaken, Switzerland",
                 description=(
-                    "Challenge yourself with breathtaking alpine hikes and stunning mountain views."
+                    "Challenge yourself with breathtaking alpine hikes and stunning "
+                    "mountain views."
                 ),
                 estimated_price=3200,
                 currency="USD",
@@ -1043,7 +1048,8 @@ async def get_trip_suggestions(
                 title="Santorini Sunset Romance",
                 destination="Santorini, Greece",
                 description=(
-                    "Watch spectacular sunsets from clifftop villages in this iconic Greek island."
+                    "Watch spectacular sunsets from clifftop villages in this iconic "
+                    "Greek island."
                 ),
                 estimated_price=2100,
                 currency="USD",
@@ -1064,7 +1070,8 @@ async def get_trip_suggestions(
                 title="Iceland Northern Lights",
                 destination="Reykjavik, Iceland",
                 description=(
-                    "Chase the aurora borealis and explore dramatic landscapes of fire and ice."
+                    "Chase the aurora borealis and explore dramatic landscapes of "
+                    "fire and ice."
                 ),
                 estimated_price=2500,
                 currency="USD",
@@ -1384,7 +1391,10 @@ async def update_collaborator_permissions(
         HTTPException: If not authorized or collaborator not found
     """
     logger.info(
-        f"Updating collaborator {user_id} permissions for trip {trip_id} by user: {principal.user_id}"
+        (
+            f"Updating collaborator {user_id} permissions for trip {trip_id} "
+            f"by user: {principal.user_id}"
+        )
     )
 
     try:
@@ -1470,7 +1480,10 @@ async def remove_collaborator(
         HTTPException: If not authorized or collaborator not found
     """
     logger.info(
-        f"Removing collaborator {user_id} from trip {trip_id} by user: {principal.user_id}"
+        (
+            f"Removing collaborator {user_id} from trip {trip_id} "
+            f"by user: {principal.user_id}"
+        )
     )
 
     try:

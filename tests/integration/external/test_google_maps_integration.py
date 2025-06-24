@@ -75,7 +75,9 @@ class TestGoogleMapsIntegration:
                 {
                     "place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
                     "name": "Eiffel Tower",
-                    "formatted_address": ("Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"),
+                    "formatted_address": (
+                        "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"
+                    ),
                     "geometry": {"location": {"lat": 48.8583701, "lng": 2.2944813}},
                     "rating": 4.6,
                     "types": [
@@ -98,7 +100,9 @@ class TestGoogleMapsIntegration:
             "result": {
                 "place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
                 "name": "Eiffel Tower",
-                "formatted_address": ("Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"),
+                "formatted_address": (
+                    "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"
+                ),
                 "geometry": {"location": {"lat": 48.8583701, "lng": 2.2944813}},
                 "rating": 4.6,
                 "user_ratings_total": 142045,
@@ -116,7 +120,9 @@ class TestGoogleMapsIntegration:
                         "Tuesday: 9:30 AM – 11:45 PM",
                     ],
                 },
-                "photos": [{"height": 3024, "width": 4032, "photo_reference": "CmRaAAAA..."}],
+                "photos": [
+                    {"height": 3024, "width": 4032, "photo_reference": "CmRaAAAA..."}
+                ],
                 "website": "https://www.toureiffel.paris/",
                 "international_phone_number": "+33 892 70 12 39",
             }
@@ -135,7 +141,10 @@ class TestGoogleMapsIntegration:
                     {
                         "distance": {"text": "1.2 km", "value": 1200},
                         "duration": {"text": "15 mins", "value": 900},
-                        "end_address": ("Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"),
+                        "end_address": (
+                            "Champ de Mars, 5 Avenue Anatole France, "
+                            "75007 Paris, France"
+                        ),
                         "end_location": {"lat": 48.8583701, "lng": 2.2944813},
                         "start_address": "Place Vendôme, 75001 Paris, France",
                         "start_location": {"lat": 48.8566969, "lng": 2.3286616},
@@ -143,7 +152,9 @@ class TestGoogleMapsIntegration:
                             {
                                 "distance": {"text": "0.5 km", "value": 500},
                                 "duration": {"text": "6 mins", "value": 360},
-                                "html_instructions": ("Head <b>southwest</b> on <b>Rue de la Paix</b>"),
+                                "html_instructions": (
+                                    "Head <b>southwest</b> on <b>Rue de la Paix</b>"
+                                ),
                                 "travel_mode": "WALKING",
                             }
                         ],
@@ -187,10 +198,14 @@ class TestGoogleMapsIntegration:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_reverse_geocode_success(self, google_maps_service, sample_geocode_response):
+    async def test_reverse_geocode_success(
+        self, google_maps_service, sample_geocode_response
+    ):
         """Test successful reverse geocoding."""
         # Mock Google Maps client
-        google_maps_service._client.reverse_geocode.return_value = sample_geocode_response
+        google_maps_service._client.reverse_geocode.return_value = (
+            sample_geocode_response
+        )
 
         result = await google_maps_service.reverse_geocode(48.8566969, 2.3514616)
 
@@ -201,10 +216,14 @@ class TestGoogleMapsIntegration:
         assert result[0]["formatted_address"] == "Paris, France"
 
         # Verify client was called
-        google_maps_service._client.reverse_geocode.assert_called_once_with((48.8566969, 2.3514616))
+        google_maps_service._client.reverse_geocode.assert_called_once_with(
+            (48.8566969, 2.3514616)
+        )
 
     @pytest.mark.asyncio
-    async def test_search_places_success(self, google_maps_service, sample_places_response):
+    async def test_search_places_success(
+        self, google_maps_service, sample_places_response
+    ):
         """Test successful place search."""
         # Mock Google Maps client
         google_maps_service._client.places.return_value = sample_places_response
@@ -224,11 +243,15 @@ class TestGoogleMapsIntegration:
         assert place["rating"] == 4.6
 
     @pytest.mark.asyncio
-    async def test_get_place_details_success(self, google_maps_service, sample_place_details_response):
+    async def test_get_place_details_success(
+        self, google_maps_service, sample_place_details_response
+    ):
         """Test getting detailed place information."""
         google_maps_service._client.place.return_value = sample_place_details_response
 
-        result = await google_maps_service.get_place_details("ChIJN1t_tDeuEmsRUsoyG83frY4")
+        result = await google_maps_service.get_place_details(
+            "ChIJN1t_tDeuEmsRUsoyG83frY4"
+        )
 
         # Assertions
         assert result is not None
@@ -238,7 +261,9 @@ class TestGoogleMapsIntegration:
         assert result["result"]["website"] == "https://www.toureiffel.paris/"
 
     @pytest.mark.asyncio
-    async def test_get_directions_success(self, google_maps_service, sample_directions_response):
+    async def test_get_directions_success(
+        self, google_maps_service, sample_directions_response
+    ):
         """Test getting directions between two points."""
         # Mock Google Maps client
         google_maps_service._client.directions.return_value = sample_directions_response
@@ -302,7 +327,9 @@ class TestGoogleMapsIntegration:
         # Mock API error
         import googlemaps.exceptions
 
-        google_maps_service._client.geocode.side_effect = googlemaps.exceptions.ApiError("OVER_QUERY_LIMIT")
+        google_maps_service._client.geocode.side_effect = (
+            googlemaps.exceptions.ApiError("OVER_QUERY_LIMIT")
+        )
 
         with pytest.raises(GoogleMapsServiceError) as exc_info:
             await google_maps_service.geocode("Paris, France")
@@ -315,7 +342,9 @@ class TestGoogleMapsIntegration:
         import googlemaps.exceptions
 
         # Mock timeout error
-        google_maps_service._client.geocode.side_effect = googlemaps.exceptions.Timeout()
+        google_maps_service._client.geocode.side_effect = (
+            googlemaps.exceptions.Timeout()
+        )
 
         with pytest.raises(GoogleMapsServiceError):
             await google_maps_service.geocode("Paris, France")
@@ -336,7 +365,9 @@ class TestGoogleMapsIntegration:
         # Mock API error
         import googlemaps.exceptions
 
-        google_maps_service._client.geocode.side_effect = googlemaps.exceptions.ApiError("API_KEY_INVALID")
+        google_maps_service._client.geocode.side_effect = (
+            googlemaps.exceptions.ApiError("API_KEY_INVALID")
+        )
 
         result = await google_maps_service.health_check()
 
@@ -355,7 +386,9 @@ class TestGoogleMapsIntegration:
 
         google_maps_service._client.timezone.return_value = timezone_response
 
-        result = await google_maps_service.get_timezone(location=(48.8566969, 2.3514616))
+        result = await google_maps_service.get_timezone(
+            location=(48.8566969, 2.3514616)
+        )
 
         assert result is not None
         assert result["timeZoneId"] == "Europe/Paris"
@@ -374,7 +407,9 @@ class TestGoogleMapsIntegration:
 
         google_maps_service._client.elevation.return_value = elevation_response
 
-        result = await google_maps_service.get_elevation(locations=[(48.8566969, 2.3514616)])
+        result = await google_maps_service.get_elevation(
+            locations=[(48.8566969, 2.3514616)]
+        )
 
         assert result is not None
         assert isinstance(result, list)

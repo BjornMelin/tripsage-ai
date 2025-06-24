@@ -42,7 +42,9 @@ def sample_weather_response():
     """Sample weather API response data."""
     return {
         "coord": {"lon": -73.9857, "lat": 40.7484},
-        "weather": [{"id": 800, "main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "weather": [
+            {"id": 800, "main": "Clear", "description": "clear sky", "icon": "01d"}
+        ],
         "main": {
             "temp": 22.5,
             "feels_like": 23.1,
@@ -118,7 +120,9 @@ class TestWeatherServiceIntegration:
     """Integration tests for weather service operations."""
 
     @pytest.mark.asyncio
-    async def test_get_current_weather_success(self, weather_service, sample_weather_response):
+    async def test_get_current_weather_success(
+        self, weather_service, sample_weather_response
+    ):
         """Test successful current weather retrieval by coordinates."""
         # Arrange
         lat, lon = 40.7484, -73.9857
@@ -136,7 +140,9 @@ class TestWeatherServiceIntegration:
         weather_service._make_request.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_weather_with_units(self, weather_service, sample_weather_response):
+    async def test_get_weather_with_units(
+        self, weather_service, sample_weather_response
+    ):
         """Test weather retrieval with different units."""
         # Arrange
         lat, lon = 40.7484, -73.9857
@@ -153,7 +159,9 @@ class TestWeatherServiceIntegration:
         assert "imperial" in str(call_args) or "units" in str(call_args)
 
     @pytest.mark.asyncio
-    async def test_get_weather_with_language(self, weather_service, sample_weather_response):
+    async def test_get_weather_with_language(
+        self, weather_service, sample_weather_response
+    ):
         """Test weather retrieval with different language."""
         # Arrange
         lat, lon = 48.8566, 2.3522  # Paris
@@ -183,7 +191,9 @@ class TestWeatherServiceIntegration:
         weather_service._make_request.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_forecast_with_days(self, weather_service, sample_forecast_response):
+    async def test_get_forecast_with_days(
+        self, weather_service, sample_forecast_response
+    ):
         """Test weather forecast with specific number of days."""
         # Arrange
         lat, lon = 40.7484, -73.9857
@@ -306,7 +316,10 @@ class TestWeatherServiceIntegration:
             # If we get here without exception, that's acceptable for integration test
         except Exception as e:
             # Should raise some kind of error related to API key or settings
-            assert any(word in str(e).lower() for word in ["api", "key", "settings", "configuration", "auth"])
+            assert any(
+                word in str(e).lower()
+                for word in ["api", "key", "settings", "configuration", "auth"]
+            )
 
     @pytest.mark.asyncio
     async def test_ensure_connected_workflow(self, weather_service):
@@ -320,10 +333,15 @@ class TestWeatherServiceIntegration:
             pass
         except Exception as e:
             # Any other exception should be configuration-related
-            assert any(word in str(e).lower() for word in ["api", "key", "connection", "settings"])
+            assert any(
+                word in str(e).lower()
+                for word in ["api", "key", "connection", "settings"]
+            )
 
     @pytest.mark.asyncio
-    async def test_multiple_coordinate_formats(self, weather_service, sample_weather_response):
+    async def test_multiple_coordinate_formats(
+        self, weather_service, sample_weather_response
+    ):
         """Test weather retrieval with different coordinate formats."""
         # Arrange
         coordinates = [

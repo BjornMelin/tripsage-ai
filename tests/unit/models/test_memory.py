@@ -65,7 +65,9 @@ class TestMemoryModel:
             ("   ", "Memory content cannot be empty"),
         ],
     )
-    def test_memory_validation_empty_content(self, base_memory_data, invalid_memory, expected_error):
+    def test_memory_validation_empty_content(
+        self, base_memory_data, invalid_memory, expected_error
+    ):
         """Test validation for empty memory content."""
         with pytest.raises(ValidationError, match=expected_error):
             Memory(**{**base_memory_data, "memory": invalid_memory})
@@ -82,9 +84,13 @@ class TestMemoryModel:
         "invalid_score",
         [1.5, -0.1, 2.0, -1.0],
     )
-    def test_memory_validation_relevance_score_bounds(self, base_memory_data, invalid_score):
+    def test_memory_validation_relevance_score_bounds(
+        self, base_memory_data, invalid_score
+    ):
         """Test validation for relevance score bounds."""
-        with pytest.raises(ValidationError, match="Relevance score must be between 0.0 and 1.0"):
+        with pytest.raises(
+            ValidationError, match="Relevance score must be between 0.0 and 1.0"
+        ):
             Memory(**{**base_memory_data, "relevance_score": invalid_score})
 
     def test_memory_categories_validation_and_cleaning(self, base_memory_data):
@@ -103,7 +109,9 @@ class TestMemoryModel:
             ("invalid", {}),  # Non-dict should default to empty dict
         ],
     )
-    def test_memory_metadata_validation(self, base_memory_data, metadata_input, expected_output):
+    def test_memory_metadata_validation(
+        self, base_memory_data, metadata_input, expected_output
+    ):
         """Test metadata validation and defaults."""
         memory = Memory(**{**base_memory_data, "metadata": metadata_input})
         assert memory.metadata == expected_output
@@ -211,7 +219,9 @@ class TestSessionMemoryModel:
             ("   ", "Content cannot be empty"),
         ],
     )
-    def test_session_memory_content_validation(self, base_session_data, content_input, expected_error):
+    def test_session_memory_content_validation(
+        self, base_session_data, content_input, expected_error
+    ):
         """Test content validation for SessionMemory."""
         with pytest.raises(ValidationError, match=expected_error):
             SessionMemory(**{**base_session_data, "content": content_input})
@@ -266,9 +276,13 @@ class TestMemorySearchResult:
         "invalid_similarity",
         [1.5, -0.1, 2.0, -1.0],
     )
-    def test_memory_search_result_similarity_validation(self, sample_memory, invalid_similarity):
+    def test_memory_search_result_similarity_validation(
+        self, sample_memory, invalid_similarity
+    ):
         """Test similarity score validation."""
-        with pytest.raises(ValidationError, match="Similarity score must be between 0.0 and 1.0"):
+        with pytest.raises(
+            ValidationError, match="Similarity score must be between 0.0 and 1.0"
+        ):
             MemorySearchResult(
                 memory=sample_memory,
                 similarity=invalid_similarity,
@@ -390,7 +404,9 @@ class TestMemoryCreateUpdate:
             ),
         ],
     )
-    def test_memory_create_update_validation(self, model_class, field, invalid_value, expected_error):
+    def test_memory_create_update_validation(
+        self, model_class, field, invalid_value, expected_error
+    ):
         """Test validation in MemoryCreate and MemoryUpdate models."""
         base_data = {}
         if model_class == MemoryCreate:

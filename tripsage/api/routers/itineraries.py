@@ -158,7 +158,9 @@ async def add_item_to_itinerary(
     """
     try:
         user_id = get_principal_id(principal)
-        return await itinerary_service.add_item_to_itinerary(user_id, itinerary_id, request)
+        return await itinerary_service.add_item_to_itinerary(
+            user_id, itinerary_id, request
+        )
     except ResourceNotFoundError as e:
         logger.warning(f"Itinerary not found: {itinerary_id}")
         raise HTTPException(
@@ -207,7 +209,9 @@ async def update_itinerary_item(
     """
     try:
         user_id = get_principal_id(principal)
-        return await itinerary_service.update_item(user_id, itinerary_id, item_id, request)
+        return await itinerary_service.update_item(
+            user_id, itinerary_id, item_id, request
+        )
     except ResourceNotFoundError as e:
         logger.warning(f"Item not found: {item_id} in itinerary {itinerary_id}")
         raise HTTPException(
@@ -222,7 +226,9 @@ async def update_itinerary_item(
         ) from e
 
 
-@router.delete("/{itinerary_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{itinerary_id}/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_itinerary_item(
     itinerary_id: str,
     item_id: str,

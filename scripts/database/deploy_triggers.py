@@ -13,7 +13,9 @@ from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +24,9 @@ class TriggerDeploymentService:
 
     def __init__(self, database_service: DatabaseService):
         self.db_service = database_service
-        self.migrations_dir = Path(__file__).parent.parent.parent / "supabase" / "migrations"
+        self.migrations_dir = (
+            Path(__file__).parent.parent.parent / "supabase" / "migrations"
+        )
 
     async def check_prerequisites(self) -> bool:
         """Check if database is ready for trigger deployment."""
@@ -124,7 +128,9 @@ class TriggerDeploymentService:
     async def deploy_trigger_migration(self) -> bool:
         """Deploy the trigger migration file."""
         try:
-            migration_file = self.migrations_dir / "20250611_02_add_business_logic_triggers.sql"
+            migration_file = (
+                self.migrations_dir / "20250611_02_add_business_logic_triggers.sql"
+            )
 
             if not migration_file.exists():
                 logger.error(f"Migration file not found: {migration_file}")
@@ -294,7 +300,9 @@ class TriggerDeploymentService:
                     user_id,
                     trip_id,
                 )
-                logger.warning("Permission validation trigger did not prevent invalid operation")
+                logger.warning(
+                    "Permission validation trigger did not prevent invalid operation"
+                )
             except Exception as e:
                 if "Cannot modify your own permission level" in str(e):
                     logger.info("Permission validation trigger working correctly")
@@ -303,8 +311,12 @@ class TriggerDeploymentService:
                     return False
 
             # Cleanup test data
-            await self.db_service.execute_query("DELETE FROM trip_collaborators WHERE trip_id = $1", trip_id)
-            await self.db_service.execute_query("DELETE FROM trips WHERE id = $1", trip_id)
+            await self.db_service.execute_query(
+                "DELETE FROM trip_collaborators WHERE trip_id = $1", trip_id
+            )
+            await self.db_service.execute_query(
+                "DELETE FROM trips WHERE id = $1", trip_id
+            )
 
             logger.info("Trigger functionality tests passed")
             return True
@@ -326,7 +338,10 @@ class TriggerDeploymentService:
             )
 
             if not result[0]["exists"]:
-                logger.warning("pg_cron extension not available - scheduled jobs will not be configured")
+                logger.warning(
+                    "pg_cron extension not available - "
+                    "scheduled jobs will not be configured"
+                )
                 return True
 
             logger.info("Setting up pg_cron scheduled jobs...")
@@ -360,9 +375,13 @@ class TriggerDeploymentService:
                         continue
 
                     # Schedule the job
-                    await self.db_service.execute_query("SELECT cron.schedule($1, $2, $3)", job_name, schedule, command)
+                    await self.db_service.execute_query(
+                        "SELECT cron.schedule($1, $2, $3)", job_name, schedule, command
+                    )
 
-                    logger.info(f"Scheduled job '{job_name}' with schedule '{schedule}'")
+                    logger.info(
+                        f"Scheduled job '{job_name}' with schedule '{schedule}'"
+                    )
 
                 except Exception as e:
                     logger.error(f"Error scheduling job '{job_name}': {e}")
@@ -475,7 +494,8 @@ async def main():
         report = await deployment_service.generate_deployment_report()
 
         logger.info("=== DEPLOYMENT REPORT ===")
-        logger.info(f"Total triggers deployed: {sum(len(t) for t in report['triggers'].values())}")
+        total_triggers = sum(len(t) for t in report["triggers"].values())
+        logger.info(f"Total triggers deployed: {total_triggers}")
         logger.info(f"Total functions deployed: {len(report['functions'])}")
         logger.info(f"Scheduled jobs: {report['scheduled_jobs']}")
 

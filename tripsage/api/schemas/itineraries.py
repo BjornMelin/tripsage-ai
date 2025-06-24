@@ -382,7 +382,9 @@ class ItineraryResponse(BaseModel):
     total_budget: Optional[float] = Field(None, description="Total budget for the trip")
     currency: Optional[str] = Field(None, description="Currency code for budget")
     tags: List[str] = Field(default_factory=list, description="Associated tags")
-    items: List[ItineraryItemResponse] = Field(default_factory=list, description="Itinerary items")
+    items: List[ItineraryItemResponse] = Field(
+        default_factory=list, description="Itinerary items"
+    )
     created_at: Optional[str] = Field(None, description="Creation timestamp")
     updated_at: Optional[str] = Field(None, description="Last update timestamp")
 

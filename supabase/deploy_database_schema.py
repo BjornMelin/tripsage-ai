@@ -45,8 +45,12 @@ class DatabaseDeployer:
 
         # Check if Supabase CLI is available
         try:
-            result = subprocess.run(["supabase", "--version"], capture_output=True, text=True, check=True)
-            self.log_step("Supabase CLI Found", True, f"Version: {result.stdout.strip()}")
+            result = subprocess.run(
+                ["supabase", "--version"], capture_output=True, text=True, check=True
+            )
+            self.log_step(
+                "Supabase CLI Found", True, f"Version: {result.stdout.strip()}"
+            )
         except (subprocess.CalledProcessError, FileNotFoundError):
             self.log_step(
                 "Supabase CLI Check",
@@ -66,12 +70,16 @@ class DatabaseDeployer:
             "06_views.sql",
         ]
 
-        missing_files = [f for f in required_files if not (self.schema_dir / f).exists()]
+        missing_files = [
+            f for f in required_files if not (self.schema_dir / f).exists()
+        ]
         if missing_files:
             self.log_step("Schema Files Check", False, f"Missing: {missing_files}")
             return False
         else:
-            self.log_step("Schema Files Check", True, f"All {len(required_files)} files found")
+            self.log_step(
+                "Schema Files Check", True, f"All {len(required_files)} files found"
+            )
 
         # Check environment variables
         required_env = ["SUPABASE_URL", "SUPABASE_ANON_KEY"]
@@ -107,7 +115,9 @@ class DatabaseDeployer:
         print("\n📝 Creating Consolidated Migration...")
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        migration_file = self.migration_dir / f"{timestamp}_production_schema_deployment.sql"
+        migration_file = (
+            self.migration_dir / f"{timestamp}_production_schema_deployment.sql"
+        )
 
         try:
             with open(migration_file, "w") as f:
@@ -199,7 +209,9 @@ $$;
     def deploy_to_production(self) -> bool:
         """Deploy schema to production Supabase instance."""
         if not self.project_ref:
-            self.log_step("Production Deployment", False, "No project reference provided")
+            self.log_step(
+                "Production Deployment", False, "No project reference provided"
+            )
             return False
 
         print(f"\n🌐 Deploying to Production (Project: {self.project_ref})...")
@@ -244,7 +256,9 @@ $$;
 
     def save_deployment_log(self) -> None:
         """Save deployment log to file."""
-        log_file = Path(f"deployment_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+        log_file = Path(
+            f"deployment_log_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
 
         with open(log_file, "w") as f:
             json.dump(
@@ -253,8 +267,12 @@ $$;
                         "timestamp": datetime.datetime.now().isoformat(),
                         "project_ref": self.project_ref,
                         "total_steps": len(self.deployment_log),
-                        "successful_steps": sum(1 for log in self.deployment_log if log["success"]),
-                        "failed_steps": sum(1 for log in self.deployment_log if not log["success"]),
+                        "successful_steps": sum(
+                            1 for log in self.deployment_log if log["success"]
+                        ),
+                        "failed_steps": sum(
+                            1 for log in self.deployment_log if not log["success"]
+                        ),
                     },
                     "deployment_log": self.deployment_log,
                 },
@@ -320,9 +338,15 @@ def main():
     """Main deployment function."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Deploy TripSage database schema to Supabase")
-    parser.add_argument("target", choices=["local", "production"], help="Deployment target")
-    parser.add_argument("--project-ref", help="Supabase project reference for production deployment")
+    parser = argparse.ArgumentParser(
+        description="Deploy TripSage database schema to Supabase"
+    )
+    parser.add_argument(
+        "target", choices=["local", "production"], help="Deployment target"
+    )
+    parser.add_argument(
+        "--project-ref", help="Supabase project reference for production deployment"
+    )
 
     args = parser.parse_args()
 

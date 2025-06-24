@@ -43,11 +43,21 @@ class TravelPlanUpdate(BaseModel):
 class SearchResultInput(BaseModel):
     """Input model for combining search results."""
 
-    flight_results: Optional[Dict[str, Any]] = Field(None, description="Flight search results")
-    accommodation_results: Optional[Dict[str, Any]] = Field(None, description="Accommodation search results")
-    activity_results: Optional[Dict[str, Any]] = Field(None, description="Activity search results")
-    destination_info: Optional[Dict[str, Any]] = Field(None, description="Destination information")
-    user_preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
+    flight_results: Optional[Dict[str, Any]] = Field(
+        None, description="Flight search results"
+    )
+    accommodation_results: Optional[Dict[str, Any]] = Field(
+        None, description="Accommodation search results"
+    )
+    activity_results: Optional[Dict[str, Any]] = Field(
+        None, description="Activity search results"
+    )
+    destination_info: Optional[Dict[str, Any]] = Field(
+        None, description="Destination information"
+    )
+    user_preferences: Optional[Dict[str, Any]] = Field(
+        None, description="User preferences"
+    )
 
 
 @with_error_handling()
@@ -112,7 +122,9 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             await memory_service.connect()
 
             # Create memory for the travel plan
-            plan_memory = f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
+            plan_memory = (
+            f"Travel plan '{plan_input.title}' created for user {plan_input.user_id}"
+        )
             plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
             plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
             plan_memory += f" for {plan_input.travelers} travelers"
@@ -208,7 +220,9 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             await memory_service.connect()
 
             # Create update memory
-            update_memory = f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+            update_memory = (
+                f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+            )
             update_details = []
 
             for key, value in update_input.updates.items():
@@ -294,23 +308,31 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
             flight_offers = search_input.flight_results.get("offers", [])
             if flight_offers:
                 # Sort by price (assuming flight offers have total_amount field)
-                sorted_flights = sorted(flight_offers, key=lambda x: x.get("total_amount", float("inf")))
+                sorted_flights = sorted(
+                    flight_offers, key=lambda x: x.get("total_amount", float("inf"))
+                )
                 # Take top 3 flights
                 combined_results["recommendations"]["flights"] = sorted_flights[:3]
                 # Add to total cost estimate (using lowest price)
                 if sorted_flights:
-                    combined_results["total_estimated_cost"] += sorted_flights[0].get("total_amount", 0)
+                    combined_results["total_estimated_cost"] += sorted_flights[0].get(
+                        "total_amount", 0
+                    )
 
         # Process accommodation results
         if search_input.accommodation_results:
-            accommodations = search_input.accommodation_results.get("accommodations", [])
+            accommodations = search_input.accommodation_results.get(
+                "accommodations", []
+            )
             if accommodations:
                 # Sort by a combination of price and rating
                 for accommodation in accommodations:
                     # Normalize price by nights
                     accommodation["_score"] = (
-                        accommodation.get("price_per_night", 0) * -0.7  # Lower price is better
-                        + accommodation.get("rating", 0) * 0.3  # Higher rating is better
+                        accommodation.get("price_per_night", 0)
+                        * -0.7  # Lower price is better
+                        + accommodation.get("rating", 0)
+                        * 0.3  # Higher rating is better
                     )
                 sorted_accommodations = sorted(
                     accommodations,
@@ -318,11 +340,15 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                     reverse=True,
                 )
                 # Take top 3 accommodations
-                combined_results["recommendations"]["accommodations"] = sorted_accommodations[:3]
+                combined_results["recommendations"]["accommodations"] = (
+                    sorted_accommodations[:3]
+                )
                 # Add to total cost estimate (using first accommodation's
                 # nightly rate * 3 nights)
                 if sorted_accommodations:
-                    combined_results["total_estimated_cost"] += sorted_accommodations[0].get("price_per_night", 0) * 3
+                    combined_results["total_estimated_cost"] += (
+                        sorted_accommodations[0].get("price_per_night", 0) * 3
+                    )
 
         # Process activity results
         if search_input.activity_results:
@@ -335,10 +361,14 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                     reverse=True,
                 )
                 # Take top 5 activities
-                combined_results["recommendations"]["activities"] = sorted_activities[:5]
+                combined_results["recommendations"]["activities"] = sorted_activities[
+                    :5
+                ]
                 # Add to total cost estimate (using top 3 activities)
                 for _, activity in enumerate(sorted_activities[:3]):
-                    combined_results["total_estimated_cost"] += activity.get("price_per_person", 0)
+                    combined_results["total_estimated_cost"] += activity.get(
+                        "price_per_person", 0
+                    )
 
         # Process destination information
         if search_input.destination_info:
@@ -472,8 +502,13 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
             summary += f"### {accommodation.get('name', f'Accommodation {i}')}\n\n"
             summary += f"* **Location**: {accommodation.get('location', 'N/A')}\n"
             summary += f"* **Check-in**: {accommodation.get('check_in_date', 'N/A')}\n"
-            summary += f"* **Check-out**: {accommodation.get('check_out_date', 'N/A')}\n"
-            summary += f"* **Price**: ${accommodation.get('price_per_night', 'N/A')} per night\n\n"
+            summary += (
+                f"* **Check-out**: {accommodation.get('check_out_date', 'N/A')}\n"
+            )
+            summary += (
+                f"* **Price**: ${accommodation.get('price_per_night', 'N/A')} "
+                f"per night\n\n"
+            )
 
     # Add activities if available
     activities = components.get("activities", [])
@@ -483,7 +518,10 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
             summary += f"### {activity.get('name', f'Activity {i}')}\n\n"
             summary += f"* **Location**: {activity.get('location', 'N/A')}\n"
             summary += f"* **Date**: {activity.get('date', 'N/A')}\n"
-            summary += f"* **Price**: ${activity.get('price_per_person', 'N/A')} per person\n\n"
+            summary += (
+                f"* **Price**: ${activity.get('price_per_person', 'N/A')} "
+                f"per person\n\n"
+            )
 
     # Add notes if available
     notes = components.get("notes", [])
@@ -525,7 +563,9 @@ def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
     # For simplicity, we're just using a basic implementation
     markdown = _generate_markdown_summary(travel_plan)
     html = markdown.replace("# ", "<h1>").replace("## ", "<h2>").replace("### ", "<h3>")
-    html = html.replace("\n\n", "</p><p>").replace("**", "<strong>").replace("*", "<em>")
+    html = (
+        html.replace("\n\n", "</p><p>").replace("**", "<strong>").replace("*", "<em>")
+    )
     return f"<html><body><p>{html}</p></body></html>"
 
 
@@ -588,8 +628,9 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             if finalize:
                 finalization_time = datetime.now(timezone.utc).isoformat()
                 finalize_memory = (
-                    f"Travel plan '{travel_plan.get('title', 'Untitled')}' finalized on {finalization_time}"
-                )
+                f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
+                f"finalized on {finalization_time}"
+            )
 
                 await memory_service.add_conversation_memory(
                     messages=[
@@ -617,7 +658,9 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                     component_memories.append(f"{component_count} {component_type}")
 
                 if component_memories:
-                    components_memory = f"Travel plan includes: {', '.join(component_memories)}"
+                    components_memory = (
+                        f"Travel plan includes: {', '.join(component_memories)}"
+                    )
 
                     await memory_service.add_conversation_memory(
                         messages=[
@@ -642,7 +685,10 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
             "plan_id": plan_id,
-            "message": (f"Travel plan {'' if not finalize else 'finalized and '}saved successfully"),
+            "message": (
+                f"Travel plan {'' if not finalize else 'finalized and '}"
+                f"saved successfully"
+            ),
             "status": travel_plan.get("status", "draft"),
         }
 

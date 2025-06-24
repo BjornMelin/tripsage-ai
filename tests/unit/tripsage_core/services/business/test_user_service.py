@@ -118,8 +118,12 @@ class TestUserService:
         assert result.username == sample_user_create_request.username
         assert result.is_active is True
         assert result.is_verified is False
-        mock_database_service.get_user_by_email.assert_called_once_with(sample_user_create_request.email)
-        mock_database_service.get_user_by_username.assert_called_once_with(sample_user_create_request.username)
+        mock_database_service.get_user_by_email.assert_called_once_with(
+            sample_user_create_request.email
+        )
+        mock_database_service.get_user_by_username.assert_called_once_with(
+            sample_user_create_request.username
+        )
         mock_database_service.create_user.assert_called_once()
 
     @pytest.mark.asyncio
@@ -184,7 +188,9 @@ class TestUserService:
         # Assert
         assert result.id == sample_db_user_data["id"]
         assert result.email == sample_db_user_data["email"]
-        mock_database_service.get_user_by_id.assert_called_once_with(sample_db_user_data["id"])
+        mock_database_service.get_user_by_id.assert_called_once_with(
+            sample_db_user_data["id"]
+        )
 
     @pytest.mark.asyncio
     async def test_get_user_by_id_returns_none_when_not_found(
@@ -218,7 +224,9 @@ class TestUserService:
 
         # Assert
         assert result.email == sample_db_user_data["email"]
-        mock_database_service.get_user_by_email.assert_called_once_with(sample_db_user_data["email"])
+        mock_database_service.get_user_by_email.assert_called_once_with(
+            sample_db_user_data["email"]
+        )
 
     @pytest.mark.asyncio
     async def test_get_user_by_username_returns_user_when_found(
@@ -232,11 +240,15 @@ class TestUserService:
         mock_database_service.get_user_by_username.return_value = sample_db_user_data
 
         # Act
-        result = await user_service.get_user_by_username(sample_db_user_data["username"])
+        result = await user_service.get_user_by_username(
+            sample_db_user_data["username"]
+        )
 
         # Assert
         assert result.username == sample_db_user_data["username"]
-        mock_database_service.get_user_by_username.assert_called_once_with(sample_db_user_data["username"])
+        mock_database_service.get_user_by_username.assert_called_once_with(
+            sample_db_user_data["username"]
+        )
 
     # Test User Update
 
@@ -260,14 +272,18 @@ class TestUserService:
         update_request = UserUpdateRequest(full_name="Updated Name")
 
         # Act
-        result = await user_service.update_user(sample_db_user_data["id"], update_request)
+        result = await user_service.update_user(
+            sample_db_user_data["id"], update_request
+        )
 
         # Assert
         assert result.full_name == "Updated Name"
         mock_database_service.update_user.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_user_fails_when_not_found(self, user_service: UserService, mock_database_service: AsyncMock):
+    async def test_update_user_fails_when_not_found(
+        self, user_service: UserService, mock_database_service: AsyncMock
+    ):
         """Test user update when user doesn't exist."""
         # Arrange
         user_id = str(uuid4())
@@ -295,11 +311,15 @@ class TestUserService:
         mock_database_service.get_user_with_password.return_value = user_with_password
         mock_database_service.update_user_password.return_value = True
 
-        password_data = PasswordChangeRequest(current_password="currentpass123", new_password="newpassword456")
+        password_data = PasswordChangeRequest(
+            current_password="currentpass123", new_password="newpassword456"
+        )
 
         # Act
         with patch.object(user_service, "_verify_password", return_value=True):
-            result = await user_service.change_password(sample_db_user_data["id"], password_data)
+            result = await user_service.change_password(
+                sample_db_user_data["id"], password_data
+            )
 
         # Assert
         assert result is True
@@ -319,12 +339,16 @@ class TestUserService:
 
         mock_database_service.get_user_with_password.return_value = user_with_password
 
-        password_data = PasswordChangeRequest(current_password="wrongpassword", new_password="newpassword456")
+        password_data = PasswordChangeRequest(
+            current_password="wrongpassword", new_password="newpassword456"
+        )
 
         # Act & Assert
         with patch.object(user_service, "_verify_password", return_value=False):
             with pytest.raises(AuthenticationError, match="incorrect"):
-                await user_service.change_password(sample_db_user_data["id"], password_data)
+                await user_service.change_password(
+                    sample_db_user_data["id"], password_data
+                )
 
     @pytest.mark.asyncio
     async def test_change_password_fails_when_user_not_found(
@@ -335,7 +359,9 @@ class TestUserService:
         user_id = str(uuid4())
         mock_database_service.get_user_with_password.return_value = None
 
-        password_data = PasswordChangeRequest(current_password="currentpass123", new_password="newpassword456")
+        password_data = PasswordChangeRequest(
+            current_password="currentpass123", new_password="newpassword456"
+        )
 
         # Act & Assert
         with pytest.raises(NotFoundError, match="not found"):
@@ -355,11 +381,15 @@ class TestUserService:
         user_with_password = sample_db_user_data.copy()
         user_with_password["hashed_password"] = "$2b$12$hashed_password"
 
-        mock_database_service.get_user_with_password_by_email.return_value = user_with_password
+        mock_database_service.get_user_with_password_by_email.return_value = (
+            user_with_password
+        )
 
         # Act
         with patch.object(user_service, "_verify_password", return_value=True):
-            result = await user_service.verify_user_credentials("test@example.com", "password123")
+            result = await user_service.verify_user_credentials(
+                "test@example.com", "password123"
+            )
 
         # Assert
         assert result is not None
@@ -377,11 +407,15 @@ class TestUserService:
         user_with_password = sample_db_user_data.copy()
         user_with_password["hashed_password"] = "$2b$12$hashed_password"
 
-        mock_database_service.get_user_with_password_by_email.return_value = user_with_password
+        mock_database_service.get_user_with_password_by_email.return_value = (
+            user_with_password
+        )
 
         # Act
         with patch.object(user_service, "_verify_password", return_value=False):
-            result = await user_service.verify_user_credentials("test@example.com", "wrongpassword")
+            result = await user_service.verify_user_credentials(
+                "test@example.com", "wrongpassword"
+            )
 
         # Assert
         assert result is None
@@ -395,7 +429,9 @@ class TestUserService:
         mock_database_service.get_user_with_password_by_email.return_value = None
 
         # Act
-        result = await user_service.verify_user_credentials("nonexistent@example.com", "password123")
+        result = await user_service.verify_user_credentials(
+            "nonexistent@example.com", "password123"
+        )
 
         # Assert
         assert result is None
@@ -413,11 +449,15 @@ class TestUserService:
         user_with_password["hashed_password"] = "$2b$12$hashed_password"
         user_with_password["is_active"] = False
 
-        mock_database_service.get_user_with_password_by_email.return_value = user_with_password
+        mock_database_service.get_user_with_password_by_email.return_value = (
+            user_with_password
+        )
 
         # Act
         with patch.object(user_service, "_verify_password", return_value=True):
-            result = await user_service.verify_user_credentials("test@example.com", "password123")
+            result = await user_service.verify_user_credentials(
+                "test@example.com", "password123"
+            )
 
         # Assert
         assert result is None
@@ -493,7 +533,9 @@ class TestUserService:
     # Test Dependency Injection
 
     @pytest.mark.asyncio
-    async def test_get_user_service_returns_instance(self, mock_database_service: AsyncMock):
+    async def test_get_user_service_returns_instance(
+        self, mock_database_service: AsyncMock
+    ):
         """Test the dependency injection function."""
         # Act
         service = await get_user_service(database_service=mock_database_service)
@@ -601,7 +643,9 @@ class TestUserService:
         update_request = UserUpdateRequest()  # Empty update
 
         # Act
-        result = await user_service.update_user(sample_db_user_data["id"], update_request)
+        result = await user_service.update_user(
+            sample_db_user_data["id"], update_request
+        )
 
         # Assert
         assert result.id == sample_db_user_data["id"]

@@ -240,7 +240,9 @@ def multiple_db_results():
             "created_at": (base_time + timedelta(hours=i)).isoformat(),
             "updated_at": (base_time + timedelta(hours=i)).isoformat(),
             "expires_at": (base_time + timedelta(days=365)).isoformat(),
-            "last_used": None if i % 3 == 0 else (base_time + timedelta(hours=i)).isoformat(),
+            "last_used": None
+            if i % 3 == 0
+            else (base_time + timedelta(hours=i)).isoformat(),
             "last_validated": (base_time + timedelta(hours=i)).isoformat(),
             "usage_count": i * 10,
         }

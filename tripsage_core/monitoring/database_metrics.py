@@ -149,7 +149,9 @@ class DatabaseMetrics:
         self.connection_attempts.labels(service=service, status=status).inc()
         self.connection_duration.labels(service=service).observe(duration)
 
-        logger.debug(f"Recorded connection attempt: service={service}, success={success}, duration={duration:.3f}s")
+        logger.debug(
+            f"Recorded connection attempt: service={service}, success={success}, duration={duration:.3f}s"
+        )
 
     def set_active_connections(self, service: str, count: int):
         """Set the number of active connections.
@@ -181,12 +183,18 @@ class DatabaseMetrics:
         """
         status = "success" if success else "error"
 
-        self.query_duration.labels(service=service, operation=operation, table=table).observe(duration)
+        self.query_duration.labels(
+            service=service, operation=operation, table=table
+        ).observe(duration)
 
-        self.query_total.labels(service=service, operation=operation, table=table, status=status).inc()
+        self.query_total.labels(
+            service=service, operation=operation, table=table, status=status
+        ).inc()
 
         if not success and error_type:
-            self.query_errors.labels(service=service, operation=operation, table=table, error_type=error_type).inc()
+            self.query_errors.labels(
+                service=service, operation=operation, table=table, error_type=error_type
+            ).inc()
 
         logger.debug(
             f"Recorded query: service={service}, operation={operation}, "
@@ -286,7 +294,9 @@ class DatabaseMetrics:
         finally:
             duration = time.time() - start_time
             self.transaction_duration.labels(service=service).observe(duration)
-            logger.debug(f"Recorded transaction: service={service}, duration={duration:.3f}s")
+            logger.debug(
+                f"Recorded transaction: service={service}, duration={duration:.3f}s"
+            )
 
     def get_metrics_summary(self) -> Dict[str, any]:
         """Get a summary of current metrics.
@@ -305,14 +315,20 @@ class DatabaseMetrics:
     def _get_counter_value(self, counter: Counter) -> Dict[str, float]:
         """Get counter values by labels."""
         try:
-            return {str(sample.labels): sample.value for sample in counter.collect()[0].samples}
+            return {
+                str(sample.labels): sample.value
+                for sample in counter.collect()[0].samples
+            }
         except (IndexError, AttributeError):
             return {}
 
     def _get_gauge_value(self, gauge: Gauge) -> Dict[str, float]:
         """Get gauge values by labels."""
         try:
-            return {str(sample.labels): sample.value for sample in gauge.collect()[0].samples}
+            return {
+                str(sample.labels): sample.value
+                for sample in gauge.collect()[0].samples
+            }
         except (IndexError, AttributeError):
             return {}
 

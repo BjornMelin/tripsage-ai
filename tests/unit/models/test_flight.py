@@ -72,7 +72,9 @@ class TestFlightModel:
             (-0.01, False),  # Small negative should fail
         ],
     )
-    def test_flight_price_validation(self, sample_flight_dict, price, should_pass, validation_helper):
+    def test_flight_price_validation(
+        self, sample_flight_dict, price, should_pass, validation_helper
+    ):
         """Test price validation with boundary values."""
         sample_flight_dict["price"] = price
 
@@ -80,7 +82,9 @@ class TestFlightModel:
             flight = Flight(**sample_flight_dict)
             assert flight.price == price
         else:
-            validation_helper.assert_validation_error(Flight, sample_flight_dict, error_field="price")
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, error_field="price"
+            )
 
     def test_flight_datetime_validation(self, sample_flight_dict):
         """Test departure and arrival time validation."""
@@ -134,7 +138,9 @@ class TestFlightModel:
         flight = Flight(**sample_flight_dict)
         assert flight.duration_minutes == 510  # 8.5 hours = 510 minutes
 
-    def test_flight_airport_codes_validation(self, sample_flight_dict, validation_helper):
+    def test_flight_airport_codes_validation(
+        self, sample_flight_dict, validation_helper
+    ):
         """Test airport code validation."""
         # Test invalid origin codes
         invalid_codes = ["", "A", "AB", "ABCD", "123", "ab1"]
@@ -142,7 +148,9 @@ class TestFlightModel:
         for invalid_code in invalid_codes:
             test_data = sample_flight_dict.copy()
             test_data["origin"] = invalid_code
-            validation_helper.assert_validation_error(Flight, test_data, error_field="origin")
+            validation_helper.assert_validation_error(
+                Flight, test_data, error_field="origin"
+            )
 
         # Test valid codes (make sure origin and destination are different)
         valid_codes = ["LAX", "JFK", "LHR", "CDG", "SFO"]
@@ -167,7 +175,9 @@ class TestFlightModel:
         flight = Flight(**sample_flight_dict)
         assert flight.data_source == data_source
 
-    def test_flight_serialization_round_trip(self, sample_flight_dict, serialization_helper):
+    def test_flight_serialization_round_trip(
+        self, sample_flight_dict, serialization_helper
+    ):
         """Test JSON serialization and deserialization."""
         flight = Flight(**sample_flight_dict)
 
@@ -216,14 +226,18 @@ class TestFlightModel:
         assert domestic.destination == "SFO"
         assert domestic.airline == AirlineProvider.AMERICAN
 
-    def test_flight_segment_number_validation(self, sample_flight_dict, validation_helper):
+    def test_flight_segment_number_validation(
+        self, sample_flight_dict, validation_helper
+    ):
         """Test segment number validation."""
         # Test invalid segment numbers
         invalid_segments = [0, -1, -10]
 
         for invalid_segment in invalid_segments:
             sample_flight_dict["segment_number"] = invalid_segment
-            validation_helper.assert_validation_error(Flight, sample_flight_dict, error_field="segment_number")
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, error_field="segment_number"
+            )
 
         # Test valid segment numbers
         valid_segments = [1, 2, 3, 10]
@@ -350,4 +364,6 @@ class TestFlightModel:
     ):
         """Test individual field validation rules."""
         sample_flight_dict[field_name] = invalid_value
-        validation_helper.assert_validation_error(Flight, sample_flight_dict, error_field=field_name)
+        validation_helper.assert_validation_error(
+            Flight, sample_flight_dict, error_field=field_name
+        )

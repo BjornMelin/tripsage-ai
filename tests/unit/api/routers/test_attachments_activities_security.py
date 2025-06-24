@@ -259,7 +259,7 @@ class TestAttachmentUserDataIsolation:
         sample_attachment_data,
         mock_audit_service,
     ):
-        """Test that users cannot access attachments from trips they don't have access to."""
+        """Test that users cannot access attachments from inaccessible trips."""
         attachment_id = sample_attachment_data["id"]
         trip_id = sample_attachment_data["trip_id"]
 
@@ -287,7 +287,7 @@ class TestAttachmentUserDataIsolation:
         sample_attachment_data,
         mock_audit_service,
     ):
-        """Test that users cannot delete attachments from trips they don't own or have manage access to."""
+        """Test that users cannot delete attachments without manage access."""
         attachment_id = sample_attachment_data["id"]
 
         mock_file_service.get_attachment.return_value = sample_attachment_data
@@ -313,7 +313,7 @@ class TestAttachmentUserDataIsolation:
         sample_attachment_data,
         mock_audit_service,
     ):
-        """Test that collaborators can access attachments based on their permission level."""
+        """Test that collaborators can access attachments based on permission level."""
         attachment_id = sample_attachment_data["id"]
 
         # User is a collaborator with read access
@@ -380,7 +380,7 @@ class TestActivityAuthenticationImplementation:
         )
 
         with pytest.raises(CoreAuthorizationError):
-            # In real implementation, this would check trip access before activity access
+            # Implementation would check trip access before activity access
             await mock_activity_service.get_activity(
                 activity_id, mock_unauthorized_principal.id
             )
@@ -501,7 +501,7 @@ class TestSecurityErrorHandling:
         mock_file_service,
         mock_audit_service,
     ):
-        """Test that attachment not found is properly distinguished from unauthorized access."""
+        """Test that attachment not found is distinguished from unauthorized access."""
         attachment_id = str(uuid4())
 
         # Simulate attachment exists but user has no access
@@ -527,7 +527,7 @@ class TestCrossTripAccessPrevention:
     async def test_attachment_cross_trip_access_prevention(
         self, mock_principal, mock_trip_service, mock_file_service, mock_audit_service
     ):
-        """Test that users cannot access attachments from other trips via URL manipulation."""
+        """Test that users cannot access attachments from other trips via URL."""
         # User has access to trip A
         trip_a_id = str(uuid4())
         trip_b_id = str(uuid4())

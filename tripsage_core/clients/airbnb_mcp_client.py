@@ -30,7 +30,9 @@ class AirbnbSearchParams(BaseModel):
     minPrice: Optional[int] = Field(None, description="Minimum price per night")
     maxPrice: Optional[int] = Field(None, description="Maximum price per night")
     cursor: Optional[str] = Field(None, description="Pagination cursor")
-    ignoreRobotsText: Optional[bool] = Field(False, description="Ignore robots.txt (development only)")
+    ignoreRobotsText: Optional[bool] = Field(
+        False, description="Ignore robots.txt (development only)"
+    )
 
 
 class AirbnbListingDetailsParams(BaseModel):
@@ -82,7 +84,9 @@ class AirbnbMCPClient:
     async def connect(self):
         """Connect to the MCP server."""
         if self._client is None:
-            self._client = httpx.AsyncClient(base_url=self.endpoint, timeout=self.timeout)
+            self._client = httpx.AsyncClient(
+                base_url=self.endpoint, timeout=self.timeout
+            )
             logger.info(f"Connected to Airbnb MCP server at {self.endpoint}")
 
     async def disconnect(self):
@@ -92,7 +96,9 @@ class AirbnbMCPClient:
             self._client = None
             logger.info("Disconnected from Airbnb MCP server")
 
-    async def _invoke_tool(self, tool_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _invoke_tool(
+        self, tool_name: str, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Invoke a tool on the MCP server.
 
@@ -176,7 +182,9 @@ class AirbnbMCPClient:
         )
 
         logger.info(f"Searching Airbnb accommodations in {location}")
-        result = await self._invoke_tool("airbnb_search", params.model_dump(exclude_none=True))
+        result = await self._invoke_tool(
+            "airbnb_search", params.model_dump(exclude_none=True)
+        )
 
         listings = result.get("listings", [])
         logger.info(f"Found {len(listings)} Airbnb listings")
@@ -219,11 +227,15 @@ class AirbnbMCPClient:
         )
 
         logger.info(f"Fetching details for Airbnb listing {listing_id}")
-        result = await self._invoke_tool("airbnb_listing_details", params.model_dump(exclude_none=True))
+        result = await self._invoke_tool(
+            "airbnb_listing_details", params.model_dump(exclude_none=True)
+        )
 
         return result
 
-    async def batch_search(self, search_requests: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+    async def batch_search(
+        self, search_requests: List[Dict[str, Any]]
+    ) -> List[List[Dict[str, Any]]]:
         """
         Perform multiple searches in parallel.
 
@@ -236,7 +248,9 @@ class AirbnbMCPClient:
         tasks = [self.search_accommodations(**request) for request in search_requests]
         return await asyncio.gather(*tasks)
 
-    async def batch_get_details(self, detail_requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    async def batch_get_details(
+        self, detail_requests: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """
         Get details for multiple listings in parallel.
 

@@ -27,12 +27,18 @@ from typing_extensions import Self
 # Type aliases for better type safety
 ModelName = Annotated[
     str,
-    StringConstraints(pattern=r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-3.5-turbo|claude-3-sonnet|claude-3-haiku)$"),
+    StringConstraints(
+        pattern=r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-3.5-turbo|claude-3-sonnet|claude-3-haiku)$"
+    ),
 ]
 
-VersionId = Annotated[str, StringConstraints(pattern=r"^v\d+_[a-f0-9]{8}$", min_length=10, max_length=20)]
+VersionId = Annotated[
+    str, StringConstraints(pattern=r"^v\d+_[a-f0-9]{8}$", min_length=10, max_length=20)
+]
 
-DescriptionText = Annotated[str, StringConstraints(max_length=500, strip_whitespace=True)]
+DescriptionText = Annotated[
+    str, StringConstraints(max_length=500, strip_whitespace=True)
+]
 
 
 class AgentType(str, Enum):
@@ -93,7 +99,10 @@ class AgentConfigRequest(BaseConfigModel):
             Field(
                 ge=0.0,
                 le=2.0,
-                description="Controls randomness in responses (0.0=deterministic, 2.0=very creative)",
+                description=(
+                    "Controls randomness in responses (0.0=deterministic, "
+                    "2.0=very creative)"
+                ),
             ),
         ]
     ] = None
@@ -104,7 +113,9 @@ class AgentConfigRequest(BaseConfigModel):
             Field(
                 ge=1,
                 le=8000,
-                description="Maximum tokens in response (affects cost and response length)",
+                description=(
+                "Maximum tokens in response (affects cost and response length)"
+            ),
             ),
         ]
     ] = None
@@ -120,11 +131,17 @@ class AgentConfigRequest(BaseConfigModel):
         ]
     ] = None
 
-    timeout_seconds: Optional[Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")]] = None
+    timeout_seconds: Optional[
+        Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")]
+    ] = None
 
-    model: Optional[ModelName] = Field(None, description="AI model to use for this agent")
+    model: Optional[ModelName] = Field(
+        None, description="AI model to use for this agent"
+    )
 
-    description: Optional[DescriptionText] = Field(None, description="Description of configuration changes")
+    description: Optional[DescriptionText] = Field(
+        None, description="Description of configuration changes"
+    )
 
     @field_validator("temperature")
     @classmethod
@@ -141,7 +158,12 @@ class AgentConfigRequest(BaseConfigModel):
         if self.model and self.temperature is not None:
             # GPT-3.5 models work best with lower temperature
             if "gpt-3.5" in self.model and self.temperature > 1.5:
-                raise ValueError("GPT-3.5 models work best with temperature ≤ 1.5 for optimal performance")
+                raise ValueError(
+                    (
+                    "GPT-3.5 models work best with temperature ≤ 1.5 "
+                    "for optimal performance"
+                )
+                )
 
             # Claude models have different optimal ranges
             if "claude" in self.model and self.temperature > 1.0:
@@ -160,7 +182,9 @@ class AgentConfigRequest(BaseConfigModel):
 
             max_limit = model_limits.get(self.model, 8000)
             if self.max_tokens > max_limit:
-                raise ValueError(f"Model {self.model} supports maximum {max_limit} tokens")
+                raise ValueError(
+                    f"Model {self.model} supports maximum {max_limit} tokens"
+                )
 
         return self
 
@@ -168,7 +192,10 @@ class AgentConfigRequest(BaseConfigModel):
     @property
     def configuration_hash(self) -> str:
         """Generate a hash of the configuration for change detection."""
-        config_str = f"{self.temperature}_{self.max_tokens}_{self.top_p}_{self.timeout_seconds}_{self.model}"
+        config_str = (
+            f"{self.temperature}_{self.max_tokens}_{self.top_p}_"
+            f"{self.timeout_seconds}_{self.model}"
+        )
         # Using MD5 for non-security purpose (configuration change detection)
         # Python 3.9+ usedforsecurity=False parameter indicates this is not for security
         return hashlib.md5(config_str.encode(), usedforsecurity=False).hexdigest()[:8]
@@ -273,15 +300,26 @@ class AgentConfigResponse(BaseConfigModel):
         recommended_temp = self.agent_type.recommended_temperature
         if abs(self.temperature - recommended_temp) > 0.2:
             suggestions.append(
-                f"Consider temperature {recommended_temp} for optimal {self.agent_type.display_name} performance"
+                (
+                f"Consider temperature {recommended_temp} for optimal "
+                f"{self.agent_type.display_name} performance"
+            )
             )
 
         if self.agent_type == AgentType.BUDGET_AGENT and self.temperature > 0.5:
-            suggestions.append("Budget agents work best with lower temperature (≤0.3) for consistent calculations")
+            suggestions.append(
+                (
+                "Budget agents work best with lower temperature (≤0.3) "
+                "for consistent calculations"
+            )
+            )
 
         if self.max_tokens > 2000 and self.agent_type == AgentType.BUDGET_AGENT:
             suggestions.append(
-                "Budget responses are typically concise; consider reducing max_tokens for cost efficiency"
+                (
+                "Budget responses are typically concise; consider reducing "
+                "max_tokens for cost efficiency"
+            )
             )
 
         return suggestions
@@ -342,9 +380,15 @@ class PerformanceMetrics(BaseConfigModel):
     """Schema for configuration performance metrics with trends."""
 
     agent_type: AgentType
-    average_response_time: Annotated[float, Field(ge=0.0, description="Average response time in seconds")]
-    success_rate: Annotated[float, Field(ge=0.0, le=1.0, description="Success rate (0.0-1.0)")]
-    error_rate: Annotated[float, Field(ge=0.0, le=1.0, description="Error rate (0.0-1.0)")]
+    average_response_time: Annotated[
+        float, Field(ge=0.0, description="Average response time in seconds")
+    ]
+    success_rate: Annotated[
+        float, Field(ge=0.0, le=1.0, description="Success rate (0.0-1.0)")
+    ]
+    error_rate: Annotated[
+        float, Field(ge=0.0, le=1.0, description="Error rate (0.0-1.0)")
+    ]
     token_usage: Dict[str, int] = Field(description="Token usage statistics")
     cost_estimate: Annotated[Decimal, Field(ge=0, description="Estimated cost in USD")]
     measured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -407,7 +451,12 @@ class ConfigurationRecommendation(BaseConfigModel):
         # Ensure temperature recommendations are within reasonable bounds
         if abs(recommended_temp - current_temp) > 0.5:
             if self.confidence_score > 0.9:
-                raise ValueError("High confidence recommendations should not suggest dramatic temperature changes")
+                raise ValueError(
+                    (
+                    "High confidence recommendations should not suggest "
+                    "dramatic temperature changes"
+                )
+                )
 
         return self
 
@@ -519,7 +568,10 @@ class ConfigurationValidationResponse(BaseConfigModel):
         if self.is_valid:
             return f"✅ Valid configuration ({len(self.warnings)} warnings)"
         else:
-            return f"❌ Invalid configuration ({len(self.errors)} errors, {len(self.warnings)} warnings)"
+            return (
+            f"❌ Invalid configuration ({len(self.errors)} errors, "
+            f"{len(self.warnings)} warnings)"
+        )
 
 
 class ConfigurationImportResult(BaseConfigModel):
@@ -548,4 +600,7 @@ class ConfigurationImportResult(BaseConfigModel):
         """Generate import operation summary."""
         total = len(self.imported_configurations) + len(self.failed_configurations)
         success_count = len(self.imported_configurations)
-        return f"Imported {success_count}/{total} configurations ({self.success_rate:.1%} success rate)"
+        return (
+            f"Imported {success_count}/{total} configurations "
+            f"({self.success_rate:.1%} success rate)"
+        )

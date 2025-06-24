@@ -47,7 +47,9 @@ class DatabaseConnectionFactory:
         # Check for dangerous SQL patterns in the URL
         for pattern in self.DANGEROUS_PATTERNS:
             if re.search(pattern, url, re.IGNORECASE):
-                raise ValueError(f"Connection URL contains dangerous pattern: {pattern}")
+                raise ValueError(
+                    f"Connection URL contains dangerous pattern: {pattern}"
+                )
 
         # Parse URL to validate structure
         try:
@@ -152,7 +154,9 @@ class DatabaseConnectionFactory:
         except Exception:
             return False
 
-    async def execute_query(self, query: str, *args, timeout: Optional[float] = None) -> str:
+    async def execute_query(
+        self, query: str, *args, timeout: Optional[float] = None
+    ) -> str:
         """Execute a query and return the result.
 
         Args:

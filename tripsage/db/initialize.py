@@ -54,7 +54,9 @@ async def initialize_databases(
             # Test connection with a simple query
             result = supabase.rpc("version").execute()
             if result.data:
-                logger.info(f"SQL database connection verified: PostgreSQL {result.data}")
+                logger.info(
+                    f"SQL database connection verified: PostgreSQL {result.data}"
+                )
             else:
                 logger.error("SQL connection verification failed")
                 return False
@@ -65,7 +67,9 @@ async def initialize_databases(
 
             # Run SQL migrations
             sql_succeeded, sql_failed = await run_migrations()
-            logger.info(f"SQL migrations: {sql_succeeded} succeeded, {sql_failed} failed")
+            logger.info(
+                f"SQL migrations: {sql_succeeded} succeeded, {sql_failed} failed"
+            )
 
             if sql_failed > 0:
                 logger.warning("Some migrations failed")
@@ -106,7 +110,9 @@ async def verify_database_schema() -> Dict[str, Any]:
         if result.data:
             existing_tables = [row["tablename"] for row in result.data]
             results["sql"]["tables"] = existing_tables
-            results["sql"]["missing_tables"] = [t for t in ["users", "trips", "migrations"] if t not in existing_tables]
+            results["sql"]["missing_tables"] = [
+                t for t in ["users", "trips", "migrations"] if t not in existing_tables
+            ]
             results["sql"]["initialized"] = len(existing_tables) > 0
 
         logger.info(f"Database schema verification completed: {results}")
@@ -199,9 +205,15 @@ if __name__ == "__main__":
 
     async def main():
         parser = argparse.ArgumentParser(description="Initialize TripSage databases")
-        parser.add_argument("--verify", action="store_true", help="Verify database connections")
-        parser.add_argument("--migrate", action="store_true", help="Run database migrations")
-        parser.add_argument("--sample-data", action="store_true", help="Create sample data")
+        parser.add_argument(
+            "--verify", action="store_true", help="Verify database connections"
+        )
+        parser.add_argument(
+            "--migrate", action="store_true", help="Run database migrations"
+        )
+        parser.add_argument(
+            "--sample-data", action="store_true", help="Create sample data"
+        )
 
         args = parser.parse_args()
 

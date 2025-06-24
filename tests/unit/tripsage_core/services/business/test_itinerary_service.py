@@ -230,12 +230,16 @@ class TestItineraryService:
                 "priority": 2,
             },
         ]
-        mock_activity_service.get_destination_activities.return_value = suggested_activities
+        mock_activity_service.get_destination_activities.return_value = (
+            suggested_activities
+        )
 
         # Mock database operations
         mock_database_service.store_itinerary.return_value = None
 
-        result = await itinerary_service.create_itinerary(user_id, sample_itinerary_create_request)
+        result = await itinerary_service.create_itinerary(
+            user_id, sample_itinerary_create_request
+        )
 
         # Assertions
         assert result.user_id == user_id
@@ -250,22 +254,32 @@ class TestItineraryService:
         mock_database_service.store_itinerary.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_itinerary_invalid_dates(self, itinerary_service, sample_itinerary_create_request):
+    async def test_create_itinerary_invalid_dates(
+        self, itinerary_service, sample_itinerary_create_request
+    ):
         """Test itinerary creation with invalid dates."""
         user_id = str(uuid4())
 
         # Set end date before start date
-        sample_itinerary_create_request.end_date = sample_itinerary_create_request.start_date - timedelta(days=1)
+        sample_itinerary_create_request.end_date = (
+            sample_itinerary_create_request.start_date - timedelta(days=1)
+        )
 
         with pytest.raises(ValidationError, match="End date must be after start date"):
-            await itinerary_service.create_itinerary(user_id, sample_itinerary_create_request)
+            await itinerary_service.create_itinerary(
+                user_id, sample_itinerary_create_request
+            )
 
     @pytest.mark.asyncio
-    async def test_get_itinerary_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_get_itinerary_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful itinerary retrieval."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
 
-        result = await itinerary_service.get_itinerary(sample_itinerary.id, sample_itinerary.user_id)
+        result = await itinerary_service.get_itinerary(
+            sample_itinerary.id, sample_itinerary.user_id
+        )
 
         assert result is not None
         assert result.id == sample_itinerary.id
@@ -273,18 +287,24 @@ class TestItineraryService:
         mock_database_service.get_itinerary.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_itinerary_access_denied(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_get_itinerary_access_denied(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test itinerary retrieval with access denied."""
         different_user_id = str(uuid4())
 
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
 
-        result = await itinerary_service.get_itinerary(sample_itinerary.id, different_user_id)
+        result = await itinerary_service.get_itinerary(
+            sample_itinerary.id, different_user_id
+        )
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_update_itinerary_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_update_itinerary_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful itinerary update."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
         mock_database_service.update_itinerary.return_value = None
@@ -295,7 +315,9 @@ class TestItineraryService:
             budget=Decimal("2500.00"),
         )
 
-        result = await itinerary_service.update_itinerary(sample_itinerary.id, sample_itinerary.user_id, update_request)
+        result = await itinerary_service.update_itinerary(
+            sample_itinerary.id, sample_itinerary.user_id, update_request
+        )
 
         assert result.title == "Updated Paris Adventure"
         assert result.description == "Updated description for my Paris trip"
@@ -340,7 +362,9 @@ class TestItineraryService:
         mock_maps_service.calculate_travel_time.assert_called()
 
     @pytest.mark.asyncio
-    async def test_remove_item_from_itinerary_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_remove_item_from_itinerary_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful item removal from itinerary."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
         mock_database_service.update_itinerary.return_value = None
@@ -404,7 +428,9 @@ class TestItineraryService:
         mock_database_service.update_itinerary.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_detect_conflicts_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_detect_conflicts_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful conflict detection."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
 
@@ -420,7 +446,9 @@ class TestItineraryService:
 
         sample_itinerary.days[0].items.append(overlapping_item)
 
-        conflicts = await itinerary_service.detect_conflicts(sample_itinerary.id, sample_itinerary.user_id)
+        conflicts = await itinerary_service.detect_conflicts(
+            sample_itinerary.id, sample_itinerary.user_id
+        )
 
         assert len(conflicts) >= 1
         assert any(conflict.type == ConflictType.TIME_OVERLAP for conflict in conflicts)
@@ -465,7 +493,9 @@ class TestItineraryService:
         }
         mock_optimization_service.suggest_improvements.return_value = suggestions
 
-        result = await itinerary_service.suggest_improvements(sample_itinerary.id, sample_itinerary.user_id)
+        result = await itinerary_service.suggest_improvements(
+            sample_itinerary.id, sample_itinerary.user_id
+        )
 
         assert "efficiency_improvements" in result
         assert "cost_optimizations" in result
@@ -497,7 +527,9 @@ class TestItineraryService:
         share_link = "https://tripsage.com/shared/itinerary/abc123"
         mock_collaboration_service.create_share_link.return_value = share_link
 
-        result = await itinerary_service.share_itinerary(sample_itinerary.id, sample_itinerary.user_id, share_options)
+        result = await itinerary_service.share_itinerary(
+            sample_itinerary.id, sample_itinerary.user_id, share_options
+        )
 
         assert result["share_url"] == share_link
         assert result["share_type"] == "view_only"
@@ -540,7 +572,9 @@ class TestItineraryService:
         mock_database_service.update_itinerary.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_export_itinerary_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_export_itinerary_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful itinerary export."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
 
@@ -571,7 +605,9 @@ class TestItineraryService:
             mock_export.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_clone_itinerary_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_clone_itinerary_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful itinerary cloning."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
         mock_database_service.store_itinerary.return_value = None
@@ -585,7 +621,9 @@ class TestItineraryService:
             "new_title": "Paris Adventure - Spring Edition",
         }
 
-        result = await itinerary_service.clone_itinerary(sample_itinerary.id, sample_itinerary.user_id, clone_options)
+        result = await itinerary_service.clone_itinerary(
+            sample_itinerary.id, sample_itinerary.user_id, clone_options
+        )
 
         assert result.id != sample_itinerary.id  # Different ID
         assert result.title == "Paris Adventure - Spring Edition"
@@ -595,11 +633,15 @@ class TestItineraryService:
         mock_database_service.store_itinerary.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_user_itineraries_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_get_user_itineraries_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful user itineraries retrieval."""
         user_id = str(uuid4())
 
-        mock_database_service.get_user_itineraries.return_value = [sample_itinerary.model_dump()]
+        mock_database_service.get_user_itineraries.return_value = [
+            sample_itinerary.model_dump()
+        ]
 
         results = await itinerary_service.get_user_itineraries(user_id)
 
@@ -608,7 +650,9 @@ class TestItineraryService:
         mock_database_service.get_user_itineraries.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_itinerary_analytics_success(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_get_itinerary_analytics_success(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test successful itinerary analytics retrieval."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
 
@@ -642,7 +686,9 @@ class TestItineraryService:
             }
             mock_analytics.return_value = analytics_data
 
-            result = await itinerary_service.get_itinerary_analytics(sample_itinerary.id, sample_itinerary.user_id)
+            result = await itinerary_service.get_itinerary_analytics(
+                sample_itinerary.id, sample_itinerary.user_id
+            )
 
             assert result["overview"]["total_items"] == 15
             assert result["overview"]["efficiency_score"] == 0.82
@@ -667,7 +713,9 @@ class TestItineraryService:
             "bottlenecks": [],
         }
 
-        validation_result = await itinerary_service.validate_feasibility(sample_itinerary.id, sample_itinerary.user_id)
+        validation_result = await itinerary_service.validate_feasibility(
+            sample_itinerary.id, sample_itinerary.user_id
+        )
 
         assert validation_result["is_feasible"] is True
         assert "travel_analysis" in validation_result
@@ -704,7 +752,9 @@ class TestItineraryService:
         ]
         mock_optimization_service.generate_alternatives.return_value = alternatives
 
-        result = await itinerary_service.generate_alternative_itineraries(sample_itinerary.id, sample_itinerary.user_id)
+        result = await itinerary_service.generate_alternative_itineraries(
+            sample_itinerary.id, sample_itinerary.user_id
+        )
 
         assert len(result) == 2
         assert result[0]["variant"] == "budget_optimized"
@@ -723,7 +773,9 @@ class TestItineraryService:
         mock_database_service.store_itinerary.side_effect = Exception("Database error")
 
         with pytest.raises(ServiceError, match="Failed to create itinerary"):
-            await itinerary_service.create_itinerary(user_id, sample_itinerary_create_request)
+            await itinerary_service.create_itinerary(
+                user_id, sample_itinerary_create_request
+            )
 
     def test_get_itinerary_service_dependency(self):
         """Test the dependency injection function."""
@@ -765,7 +817,9 @@ class TestItineraryService:
                 "taxi": timedelta(minutes=15),
             }
 
-            travel_times = itinerary_service._calculate_travel_time(location1, location2)
+            travel_times = itinerary_service._calculate_travel_time(
+                location1, location2
+            )
 
             assert travel_times["walking"] == timedelta(minutes=45)
             assert travel_times["public_transport"] == timedelta(minutes=20)
@@ -773,16 +827,23 @@ class TestItineraryService:
 
     def test_budget_tracking(self, itinerary_service, sample_itinerary):
         """Test budget tracking and analysis."""
-        budget_analysis = itinerary_service._analyze_budget_utilization(sample_itinerary)
+        budget_analysis = itinerary_service._analyze_budget_utilization(
+            sample_itinerary
+        )
 
         assert "total_spent" in budget_analysis
         assert "remaining_budget" in budget_analysis
         assert "utilization_percentage" in budget_analysis
         assert budget_analysis["total_spent"] == sample_itinerary.total_cost
-        assert budget_analysis["remaining_budget"] == sample_itinerary.budget - sample_itinerary.total_cost
+        assert (
+            budget_analysis["remaining_budget"]
+            == sample_itinerary.budget - sample_itinerary.total_cost
+        )
 
     @pytest.mark.asyncio
-    async def test_real_time_updates(self, itinerary_service, mock_collaboration_service, sample_itinerary):
+    async def test_real_time_updates(
+        self, itinerary_service, mock_collaboration_service, sample_itinerary
+    ):
         """Test real-time collaborative updates."""
         update_data = {
             "type": "item_added",
@@ -797,12 +858,16 @@ class TestItineraryService:
         # Mock real-time notification
         mock_collaboration_service.broadcast_update.return_value = None
 
-        await itinerary_service.broadcast_itinerary_update(sample_itinerary.id, update_data)
+        await itinerary_service.broadcast_itinerary_update(
+            sample_itinerary.id, update_data
+        )
 
         mock_collaboration_service.broadcast_update.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_version_control(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_version_control(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test itinerary version control."""
         mock_database_service.get_itinerary.return_value = sample_itinerary.model_dump()
         mock_database_service.get_itinerary_versions.return_value = [
@@ -816,14 +881,18 @@ class TestItineraryService:
             },
         ]
 
-        versions = await itinerary_service.get_itinerary_versions(sample_itinerary.id, sample_itinerary.user_id)
+        versions = await itinerary_service.get_itinerary_versions(
+            sample_itinerary.id, sample_itinerary.user_id
+        )
 
         assert len(versions) == 2
         assert versions[0]["version"] == 1
         assert versions[1]["version"] == 2
 
     @pytest.mark.asyncio
-    async def test_smart_scheduling(self, itinerary_service, mock_optimization_service, sample_itinerary):
+    async def test_smart_scheduling(
+        self, itinerary_service, mock_optimization_service, sample_itinerary
+    ):
         """Test smart scheduling optimization."""
         scheduling_constraints = {
             "opening_hours": {
@@ -853,7 +922,9 @@ class TestItineraryService:
         assert len(result["schedule_changes"]) == 2
 
     @pytest.mark.asyncio
-    async def test_personalization_engine(self, itinerary_service, mock_database_service, sample_itinerary):
+    async def test_personalization_engine(
+        self, itinerary_service, mock_database_service, sample_itinerary
+    ):
         """Test personalization engine."""
         user_id = str(uuid4())
 
@@ -870,8 +941,10 @@ class TestItineraryService:
         }
         mock_database_service.get_user_travel_profile.return_value = user_profile
 
-        personalization_suggestions = await itinerary_service.get_personalization_suggestions(
-            sample_itinerary.id, user_id
+        personalization_suggestions = (
+            await itinerary_service.get_personalization_suggestions(
+                sample_itinerary.id, user_id
+            )
         )
 
         assert "recommended_additions" in personalization_suggestions

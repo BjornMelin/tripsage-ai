@@ -48,7 +48,9 @@ def run_tests():
         "--co",  # Just collect tests
     ]
 
-    summary_result = subprocess.run(summary_cmd, env=env, capture_output=True, text=True)
+    summary_result = subprocess.run(
+        summary_cmd, env=env, capture_output=True, text=True
+    )
 
     if summary_result.returncode == 0:
         lines = summary_result.stdout.strip().split("\n")

@@ -27,7 +27,9 @@ class MCPRequestBase(TripSageModel):
     )
 
     # Add common request tracing/logging fields
-    request_id: Optional[str] = Field(None, description="Optional unique request ID for tracing")
+    request_id: Optional[str] = Field(
+        None, description="Optional unique request ID for tracing"
+    )
     timestamp: Optional[datetime] = Field(None, description="Request timestamp")
 
 

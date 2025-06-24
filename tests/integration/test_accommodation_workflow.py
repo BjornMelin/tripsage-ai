@@ -96,7 +96,9 @@ class TestAccommodationWorkflow:
         accommodation_service._generate_mock_listings.return_value = mock_results
 
         # Act
-        response = await accommodation_service.search_accommodations(sample_search_request)
+        response = await accommodation_service.search_accommodations(
+            sample_search_request
+        )
 
         # Assert
         assert isinstance(response, AccommodationSearchResponse)
@@ -105,7 +107,9 @@ class TestAccommodationWorkflow:
         accommodation_service._generate_mock_listings.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_accommodations_with_filters(self, accommodation_service, sample_accommodation_listing):
+    async def test_search_accommodations_with_filters(
+        self, accommodation_service, sample_accommodation_listing
+    ):
         """Test accommodation search with advanced filters."""
         # Arrange
         search_request = AccommodationSearchRequest(
@@ -156,15 +160,21 @@ class TestAccommodationWorkflow:
         # Assert
         assert isinstance(response, AccommodationSearchResponse)
         # Since external service is not available, mock listings should be generated
-        accommodation_service._generate_mock_listings.assert_called_once_with(search_request)
+        accommodation_service._generate_mock_listings.assert_called_once_with(
+            search_request
+        )
 
     @pytest.mark.asyncio
-    async def test_get_listing_details(self, accommodation_service, sample_accommodation_listing):
+    async def test_get_listing_details(
+        self, accommodation_service, sample_accommodation_listing
+    ):
         """Test getting detailed accommodation information."""
         # Arrange
         listing_id = "hotel_123"
         user_id = "user_456"
-        accommodation_service._search_external_api.return_value = [sample_accommodation_listing]
+        accommodation_service._search_external_api.return_value = [
+            sample_accommodation_listing
+        ]
 
         # Act & Assert - Method exists and can be called
         await accommodation_service.get_listing_details(listing_id, user_id)
@@ -172,18 +182,26 @@ class TestAccommodationWorkflow:
         # which is acceptable for this integration test
 
     @pytest.mark.asyncio
-    async def test_search_error_handling(self, accommodation_service, sample_search_request):
+    async def test_search_error_handling(
+        self, accommodation_service, sample_search_request
+    ):
         """Test accommodation search error handling."""
         # Arrange
-        accommodation_service._search_external_api.side_effect = Exception("External API error")
-        accommodation_service._generate_mock_listings.side_effect = Exception("Mock generation failed")
+        accommodation_service._search_external_api.side_effect = Exception(
+            "External API error"
+        )
+        accommodation_service._generate_mock_listings.side_effect = Exception(
+            "Mock generation failed"
+        )
 
         # Act & Assert
         with pytest.raises(Exception, match="Accommodation search failed"):
             await accommodation_service.search_accommodations(sample_search_request)
 
     @pytest.mark.asyncio
-    async def test_booking_workflow(self, accommodation_service, sample_accommodation_listing):
+    async def test_booking_workflow(
+        self, accommodation_service, sample_accommodation_listing
+    ):
         """Test accommodation booking workflow."""
         # Arrange
         from tripsage_core.services.business.accommodation_service import (
@@ -208,14 +226,20 @@ class TestAccommodationWorkflow:
 
         # Act - Test the public API using correct method signature
         try:
-            result = await accommodation_service.book_accommodation(user_id, booking_request)
+            result = await accommodation_service.book_accommodation(
+                user_id, booking_request
+            )
             # If booking succeeds, verify the response structure
             if result:
                 assert hasattr(result, "id") or hasattr(result, "status")
         except Exception as e:
             # If method signature is different or dependencies missing,
             # that's acceptable for integration test - we're testing the API exists
-            assert "booking" in str(e).lower() or "user" in str(e).lower() or "listing" in str(e).lower()
+            assert (
+                "booking" in str(e).lower()
+                or "user" in str(e).lower()
+                or "listing" in str(e).lower()
+            )
 
     @pytest.mark.asyncio
     async def test_search_with_date_validation(self, accommodation_service):
@@ -283,4 +307,7 @@ class TestAccommodationWorkflow:
             assert isinstance(result, bool)
         except Exception as e:
             # If dependencies are missing, that's acceptable for integration test
-            assert any(word in str(e).lower() for word in ["booking", "user", "database", "not found"])
+            assert any(
+                word in str(e).lower()
+                for word in ["booking", "user", "database", "not found"]
+            )

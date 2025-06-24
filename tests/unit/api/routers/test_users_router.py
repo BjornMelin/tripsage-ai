@@ -52,7 +52,9 @@ class TestUsersRouter:
             },
         }
 
-    async def test_get_user_preferences_success(self, mock_user_service, sample_preferences):
+    async def test_get_user_preferences_success(
+        self, mock_user_service, sample_preferences
+    ):
         """Test successful retrieval of user preferences."""
         from tripsage.api.middlewares.authentication import Principal
 
@@ -139,7 +141,9 @@ class TestUsersRouter:
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "User not found"
 
-    async def test_update_user_preferences_success(self, mock_user_service, sample_preferences):
+    async def test_update_user_preferences_success(
+        self, mock_user_service, sample_preferences
+    ):
         """Test successful update of user preferences."""
         from tripsage.api.middlewares.authentication import Principal
 
@@ -179,7 +183,9 @@ class TestUsersRouter:
 
         # Verify
         assert result == UserPreferencesResponse(preferences=sample_preferences)
-        mock_user_service.update_user_preferences.assert_called_once_with("user123", sample_preferences)
+        mock_user_service.update_user_preferences.assert_called_once_with(
+            "user123", sample_preferences
+        )
 
     async def test_update_user_preferences_partial_update(self, mock_user_service):
         """Test partial update of user preferences."""
@@ -237,9 +243,13 @@ class TestUsersRouter:
 
         # Verify
         assert result == UserPreferencesResponse(preferences=merged_preferences)
-        mock_user_service.update_user_preferences.assert_called_once_with("user123", partial_preferences)
+        mock_user_service.update_user_preferences.assert_called_once_with(
+            "user123", partial_preferences
+        )
 
-    async def test_update_user_preferences_empty_update(self, mock_user_service, sample_preferences):
+    async def test_update_user_preferences_empty_update(
+        self, mock_user_service, sample_preferences
+    ):
         """Test update with empty preferences object."""
         # Setup request with empty preferences
         preferences_request = UserPreferencesRequest(preferences={})
@@ -286,7 +296,9 @@ class TestUsersRouter:
         preferences_request = UserPreferencesRequest(preferences={"theme": "dark"})
 
         # Setup mock to raise error
-        mock_user_service.update_user_preferences.side_effect = Exception("Database error")
+        mock_user_service.update_user_preferences.side_effect = Exception(
+            "Database error"
+        )
 
         # Call endpoint and expect 500
         from tripsage.api.middlewares.authentication import Principal

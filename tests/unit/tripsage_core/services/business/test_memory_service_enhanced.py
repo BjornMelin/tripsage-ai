@@ -69,7 +69,9 @@ class TestMemoryServiceModels:
     def test_memory_search_request_validation(self):
         """Test MemorySearchRequest validation."""
         # Valid request
-        request = MemorySearchRequest(query="test query", limit=10, similarity_threshold=0.8)
+        request = MemorySearchRequest(
+            query="test query", limit=10, similarity_threshold=0.8
+        )
         assert request.query == "test query"
         assert request.limit == 10
         assert request.similarity_threshold == 0.8
@@ -82,12 +84,16 @@ class TestMemoryServiceModels:
             MemorySearchRequest(query="test", limit=100)  # Limit too high
 
         with pytest.raises(ValidationError):
-            MemorySearchRequest(query="test", similarity_threshold=1.5)  # Invalid threshold
+            MemorySearchRequest(
+                query="test", similarity_threshold=1.5
+            )  # Invalid threshold
 
     def test_preferences_update_request_validation(self):
         """Test PreferencesUpdateRequest validation."""
         # Valid request
-        request = PreferencesUpdateRequest(preferences={"hotel_type": "boutique"}, category="accommodation")
+        request = PreferencesUpdateRequest(
+            preferences={"hotel_type": "boutique"}, category="accommodation"
+        )
         assert request.preferences == {"hotel_type": "boutique"}
         assert request.category == "accommodation"
 
@@ -103,7 +109,9 @@ class TestMemoryServiceModels:
     )
     def test_memory_search_request_property_based(self, query, limit, threshold):
         """Property-based test for MemorySearchRequest."""
-        request = MemorySearchRequest(query=query, limit=limit, similarity_threshold=threshold)
+        request = MemorySearchRequest(
+            query=query, limit=limit, similarity_threshold=threshold
+        )
         assert len(request.query) >= 1
         assert 1 <= request.limit <= 50
         assert 0.0 <= request.similarity_threshold <= 1.0
@@ -150,8 +158,12 @@ class TestMemoryService:
                 "tripsage_core.services.infrastructure.get_database_service",
                 return_value=AsyncMock(),
             ),
-            patch("tripsage_core.utils.connection_utils.DatabaseURLParser") as mock_parser,
-            patch("tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager") as mock_conn_mgr,
+            patch(
+                "tripsage_core.utils.connection_utils.DatabaseURLParser"
+            ) as mock_parser,
+            patch(
+                "tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"
+            ) as mock_conn_mgr,
             patch("mem0.Memory") as mock_memory_class,
         ):
             # Mock URL parser
@@ -187,7 +199,9 @@ class TestMemoryService:
                 },
                 {
                     "role": "assistant",
-                    "content": ("I'll remember your preference for boutique hotels in historic areas."),
+                    "content": (
+                        "I'll remember your preference for boutique hotels in historic areas."
+                    ),
                 },
             ],
             session_id=str(uuid4()),
@@ -208,8 +222,12 @@ class TestMemoryService:
                 "tripsage_core.services.infrastructure.get_database_service",
                 return_value=AsyncMock(),
             ),
-            patch("tripsage_core.utils.connection_utils.DatabaseURLParser") as mock_parser,
-            patch("tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"),
+            patch(
+                "tripsage_core.utils.connection_utils.DatabaseURLParser"
+            ) as mock_parser,
+            patch(
+                "tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"
+            ),
             patch("mem0.Memory") as mock_memory_class,
         ):
             # Mock successful URL parsing
@@ -240,8 +258,12 @@ class TestMemoryService:
                 "tripsage_core.services.infrastructure.get_database_service",
                 return_value=AsyncMock(),
             ),
-            patch("tripsage_core.utils.connection_utils.DatabaseURLParser") as mock_parser,
-            patch("tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"),
+            patch(
+                "tripsage_core.utils.connection_utils.DatabaseURLParser"
+            ) as mock_parser,
+            patch(
+                "tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"
+            ),
             patch("mem0.Memory", side_effect=ImportError("Mem0 not available")),
         ):
             # Mock URL parsing
@@ -318,7 +340,9 @@ class TestMemoryService:
             "usage": {"total_tokens": 150},
         }
 
-        result = await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        result = await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         # Assertions
         assert "results" in result
@@ -333,14 +357,18 @@ class TestMemoryService:
         assert call_args[1]["messages"] == sample_conversation_request.messages
 
     @pytest.mark.asyncio
-    async def test_add_conversation_memory_service_unavailable(self, sample_conversation_request):
+    async def test_add_conversation_memory_service_unavailable(
+        self, sample_conversation_request
+    ):
         """Test memory addition when service is unavailable."""
         # Create service without Mem0 backend
         service = MemoryService()
         service.memory = None
 
         user_id = str(uuid4())
-        result = await service.add_conversation_memory(user_id, sample_conversation_request)
+        result = await service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         assert result["error"] == "Memory service not available"
         assert result["results"] == []
@@ -380,7 +408,9 @@ class TestMemoryService:
         mock_mem0_client.search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_search_memories_with_similarity_threshold(self, memory_service, mock_mem0_client):
+    async def test_search_memories_with_similarity_threshold(
+        self, memory_service, mock_mem0_client
+    ):
         """Test memory search with similarity threshold filtering."""
         user_id = str(uuid4())
 
@@ -505,7 +535,9 @@ class TestMemoryService:
         assert "New user with limited travel history" in result.summary
 
     @pytest.mark.asyncio
-    async def test_update_user_preferences_success(self, memory_service, mock_mem0_client):
+    async def test_update_user_preferences_success(
+        self, memory_service, mock_mem0_client
+    ):
         """Test successful preferences update."""
         user_id = str(uuid4())
 
@@ -537,7 +569,9 @@ class TestMemoryService:
         assert len(call_args[1]["messages"]) == 2
 
     @pytest.mark.asyncio
-    async def test_delete_user_memories_specific(self, memory_service, mock_mem0_client):
+    async def test_delete_user_memories_specific(
+        self, memory_service, mock_mem0_client
+    ):
         """Test deletion of specific user memories."""
         user_id = str(uuid4())
         memory_ids = ["mem0_1", "mem0_2"]
@@ -586,7 +620,9 @@ class TestMemoryService:
         # Mock extraction failure
         mock_mem0_client.add.side_effect = Exception("Extraction failed")
 
-        result = await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        result = await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         assert "error" in result
         assert result["results"] == []
@@ -606,7 +642,9 @@ class TestMemoryService:
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_cache_invalidation(self, memory_service, mock_mem0_client, sample_conversation_request):
+    async def test_cache_invalidation(
+        self, memory_service, mock_mem0_client, sample_conversation_request
+    ):
         """Test cache invalidation after memory updates."""
         user_id = str(uuid4())
 
@@ -630,7 +668,9 @@ class TestMemoryService:
 
         # Add new memory (should invalidate cache)
         mock_mem0_client.add.return_value = {"results": [{"id": "mem0_2"}]}
-        await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         # Second search (should not use cache)
         mock_mem0_client.search.return_value = {
@@ -663,7 +703,9 @@ class TestMemoryService:
     @pytest.mark.asyncio
     async def test_get_memory_service_dependency(self):
         """Test the dependency injection function."""
-        with patch("tripsage_core.services.business.memory_service.MemoryService") as MockMemoryService:
+        with patch(
+            "tripsage_core.services.business.memory_service.MemoryService"
+        ) as MockMemoryService:
             mock_instance = MagicMock()
             MockMemoryService.return_value = mock_instance
 
@@ -681,7 +723,9 @@ class TestMemoryService:
             filters={
                 "categories": ["preferences", "travel"],
                 "date_range": {
-                    "start": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
+                    "start": (
+                        datetime.now(timezone.utc) - timedelta(days=30)
+                    ).isoformat(),
                     "end": datetime.now(timezone.utc).isoformat(),
                 },
             },
@@ -738,12 +782,16 @@ class TestMemoryService:
             ]
         }
 
-        results = await memory_service.search_memories(user_id, MemorySearchRequest(query="market experiences"))
+        results = await memory_service.search_memories(
+            user_id, MemorySearchRequest(query="market experiences")
+        )
 
         assert len(results) == 1
         # Check that enrichment added travel context flags
         result = results[0]
-        assert result.metadata.get("has_location") is True  # "destinations" keyword found
+        assert (
+            result.metadata.get("has_location") is True
+        )  # "destinations" keyword found
         assert result.metadata.get("has_budget") is True  # "budget" keyword found
         assert result.categories == ["preferences"]
 
@@ -763,7 +811,9 @@ class TestMemoryService:
     def test_cache_key_generation(self, memory_service):
         """Test cache key generation."""
         user_id = "test_user"
-        search_request = MemorySearchRequest(query="test query", limit=10, filters={"category": "test"})
+        search_request = MemorySearchRequest(
+            query="test query", limit=10, filters={"category": "test"}
+        )
 
         key1 = memory_service._generate_cache_key(user_id, search_request)
         key2 = memory_service._generate_cache_key(user_id, search_request)
@@ -885,7 +935,9 @@ class TestMemoryService:
             "preferred_activities": {"preferred_activities": []},
         }
 
-        empty_summary = memory_service._generate_context_summary(context, empty_insights)
+        empty_summary = memory_service._generate_context_summary(
+            context, empty_insights
+        )
         assert "New user with limited travel history" in empty_summary
 
 
@@ -901,8 +953,12 @@ class TestMemoryServicePropertyBased:
                 "tripsage_core.services.infrastructure.get_database_service",
                 return_value=AsyncMock(),
             ),
-            patch("tripsage_core.utils.connection_utils.DatabaseURLParser") as mock_parser,
-            patch("tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"),
+            patch(
+                "tripsage_core.utils.connection_utils.DatabaseURLParser"
+            ) as mock_parser,
+            patch(
+                "tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"
+            ),
             patch("mem0.Memory") as mock_memory_class,
         ):
             mock_credentials = MagicMock()
@@ -928,12 +984,18 @@ class TestMemoryServicePropertyBased:
         st.floats(min_value=0.0, max_value=1.0, allow_nan=False),
     )
     @pytest.mark.asyncio
-    async def test_search_with_random_inputs(self, memory_service_for_property_tests, query, limit, threshold):
+    async def test_search_with_random_inputs(
+        self, memory_service_for_property_tests, query, limit, threshold
+    ):
         """Property-based test for memory search with random valid inputs."""
         user_id = str(uuid4())
-        search_request = MemorySearchRequest(query=query, limit=limit, similarity_threshold=threshold)
+        search_request = MemorySearchRequest(
+            query=query, limit=limit, similarity_threshold=threshold
+        )
 
-        results = await memory_service_for_property_tests.search_memories(user_id, search_request)
+        results = await memory_service_for_property_tests.search_memories(
+            user_id, search_request
+        )
 
         # Results should always be a list
         assert isinstance(results, list)
@@ -949,12 +1011,16 @@ class TestMemoryServicePropertyBased:
         )
     )
     @pytest.mark.asyncio
-    async def test_preferences_update_with_random_data(self, memory_service_for_property_tests, preferences_data):
+    async def test_preferences_update_with_random_data(
+        self, memory_service_for_property_tests, preferences_data
+    ):
         """Property-based test for preferences update with random data."""
         user_id = str(uuid4())
 
         try:
-            update_request = PreferencesUpdateRequest(preferences=preferences_data, category="test_category")
+            update_request = PreferencesUpdateRequest(
+                preferences=preferences_data, category="test_category"
+            )
 
             # Mock successful add
             memory_service_for_property_tests.memory.add.return_value = {
@@ -962,7 +1028,9 @@ class TestMemoryServicePropertyBased:
                 "usage": {"total_tokens": 10},
             }
 
-            result = await memory_service_for_property_tests.update_user_preferences(user_id, update_request)
+            result = await memory_service_for_property_tests.update_user_preferences(
+                user_id, update_request
+            )
 
             # Should always return a dict with results
             assert isinstance(result, dict)
@@ -974,7 +1042,9 @@ class TestMemoryServicePropertyBased:
 
     @given(st.lists(st.text(min_size=1, max_size=100), min_size=0, max_size=10))
     @pytest.mark.asyncio
-    async def test_delete_memories_with_random_ids(self, memory_service_for_property_tests, memory_ids):
+    async def test_delete_memories_with_random_ids(
+        self, memory_service_for_property_tests, memory_ids
+    ):
         """Property-based test for memory deletion with random IDs."""
         user_id = str(uuid4())
 
@@ -1005,8 +1075,12 @@ class TestMemoryServiceIntegration:
                 "tripsage_core.services.infrastructure.get_database_service",
                 return_value=AsyncMock(),
             ),
-            patch("tripsage_core.utils.connection_utils.DatabaseURLParser") as mock_parser,
-            patch("tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager") as mock_conn_mgr,
+            patch(
+                "tripsage_core.utils.connection_utils.DatabaseURLParser"
+            ) as mock_parser,
+            patch(
+                "tripsage_core.utils.connection_utils.SecureDatabaseConnectionManager"
+            ) as mock_conn_mgr,
             patch("mem0.Memory") as mock_memory_class,
         ):
             # Set up comprehensive mocking
@@ -1057,7 +1131,9 @@ class TestMemoryServiceIntegration:
             "usage": {"total_tokens": 50},
         }
 
-        add_result = await service.add_conversation_memory(user_id, conversation_request)
+        add_result = await service.add_conversation_memory(
+            user_id, conversation_request
+        )
         assert add_result["results"][0]["id"] == "mem_beach"
 
         # 3. Search for the memory
@@ -1085,11 +1161,15 @@ class TestMemoryServiceIntegration:
         )
 
         mock_mem0_client.add.return_value = {
-            "results": [{"id": "mem_updated", "memory": "Updated beach resort preferences"}],
+            "results": [
+                {"id": "mem_updated", "memory": "Updated beach resort preferences"}
+            ],
             "usage": {"total_tokens": 30},
         }
 
-        update_result = await service.update_user_preferences(user_id, preferences_request)
+        update_result = await service.update_user_preferences(
+            user_id, preferences_request
+        )
         assert "results" in update_result
 
         # 5. Get user context
@@ -1113,7 +1193,9 @@ class TestMemoryServiceIntegration:
 
         # 6. Delete memories
         mock_mem0_client.delete.return_value = True
-        delete_result = await service.delete_user_memories(user_id, ["mem_beach", "mem_updated"])
+        delete_result = await service.delete_user_memories(
+            user_id, ["mem_beach", "mem_updated"]
+        )
         assert delete_result["success"] is True
         assert delete_result["deleted_count"] == 2
 
@@ -1189,10 +1271,15 @@ class TestMemoryServiceIntegration:
         tasks = [
             service.add_conversation_memory(
                 user_id,
-                ConversationMemoryRequest(messages=[{"role": "user", "content": f"Message {i}"}]),
+                ConversationMemoryRequest(
+                    messages=[{"role": "user", "content": f"Message {i}"}]
+                ),
             )
             for i in range(3)
-        ] + [service.search_memories(user_id, MemorySearchRequest(query=f"query {i}")) for i in range(3)]
+        ] + [
+            service.search_memories(user_id, MemorySearchRequest(query=f"query {i}"))
+            for i in range(3)
+        ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 

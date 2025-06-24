@@ -65,7 +65,9 @@ def configure_opentelemetry(
     # Set the global tracer provider
     trace.set_tracer_provider(provider)
 
-    logger.info(f"OpenTelemetry configured for service '{service_name}' version '{service_version}'")
+    logger.info(
+        f"OpenTelemetry configured for service '{service_name}' version '{service_version}'"
+    )
 
 
 def get_tracer(component_name: str) -> trace.Tracer:

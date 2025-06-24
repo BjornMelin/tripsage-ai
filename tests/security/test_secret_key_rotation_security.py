@@ -66,7 +66,9 @@ class TestSecretKeyRotationSecurity:
     @pytest.fixture
     async def api_key_service(self, mock_db_service, mock_cache_service, mock_settings):
         """API key service instance for testing."""
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=mock_settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=mock_settings
+        )
         yield service
         await service.client.aclose()
 
@@ -80,13 +82,17 @@ class TestSecretKeyRotationSecurity:
             description="Test key for rotation testing",
         )
 
-    async def test_master_key_rotation_graceful_transition(self, mock_db_service, mock_cache_service):
+    async def test_master_key_rotation_graceful_transition(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test graceful transition during master key rotation."""
         # Create service with original master key
         original_settings = Mock()
         original_settings.secret_key = "original_master_secret_key_v1"
 
-        service_v1 = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=original_settings)
+        service_v1 = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=original_settings
+        )
 
         # Encrypt API key with original master key
         test_api_key = "sk-test123456789abcdef"
@@ -96,7 +102,9 @@ class TestSecretKeyRotationSecurity:
         new_settings = Mock()
         new_settings.secret_key = "new_master_secret_key_v2"
 
-        service_v2 = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=new_settings)
+        service_v2 = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=new_settings
+        )
 
         # Should not be able to decrypt with new master key
         with pytest.raises(ServiceError, match="Decryption failed"):
@@ -109,13 +117,17 @@ class TestSecretKeyRotationSecurity:
         await service_v1.client.aclose()
         await service_v2.client.aclose()
 
-    async def test_master_key_rotation_attack_prevention(self, mock_db_service, mock_cache_service):
+    async def test_master_key_rotation_attack_prevention(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test protection against attacks during key rotation."""
         # Simulate attacker trying to exploit rotation window
         settings = Mock()
         settings.secret_key = "current_master_key"
 
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=settings
+        )
 
         test_api_key = "sk-test123456789abcdef"
         encrypted_key = service._encrypt_api_key(test_api_key)
@@ -156,12 +168,16 @@ class TestSecretKeyRotationSecurity:
 
         await service.client.aclose()
 
-    async def test_key_derivation_security_edge_cases(self, mock_db_service, mock_cache_service):
+    async def test_key_derivation_security_edge_cases(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test security of key derivation process under edge cases."""
         base_settings = Mock()
         base_settings.secret_key = "test_secret_key"
 
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=base_settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=base_settings
+        )
 
         # Test encryption/decryption with various data patterns
         edge_case_keys = [
@@ -191,12 +207,16 @@ class TestSecretKeyRotationSecurity:
 
         await service.client.aclose()
 
-    async def test_envelope_encryption_key_isolation(self, mock_db_service, mock_cache_service):
+    async def test_envelope_encryption_key_isolation(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test isolation of envelope encryption data keys."""
         settings = Mock()
         settings.secret_key = "test_master_secret_for_isolation"
 
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=settings
+        )
 
         # Encrypt multiple keys to ensure unique data keys
         test_keys = ["sk-key1_test123", "sk-key2_test456", "sk-key3_test789"]
@@ -238,12 +258,16 @@ class TestSecretKeyRotationSecurity:
 
         await service.client.aclose()
 
-    async def test_cryptographic_timing_attack_resistance(self, mock_db_service, mock_cache_service):
+    async def test_cryptographic_timing_attack_resistance(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test resistance to timing attacks in cryptographic operations."""
         settings = Mock()
         settings.secret_key = "timing_attack_test_secret"
 
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=settings
+        )
 
         # Create valid encrypted key
         valid_key = "sk-valid123456789"
@@ -289,11 +313,15 @@ class TestSecretKeyRotationSecurity:
 
         # Timing difference should not reveal significant information
         max_ratio = max(avg_valid, avg_invalid) / min(avg_valid, avg_invalid)
-        assert max_ratio < 10, f"Potential timing attack vulnerability: {max_ratio:.2f}x difference"
+        assert max_ratio < 10, (
+            f"Potential timing attack vulnerability: {max_ratio:.2f}x difference"
+        )
 
         await service.client.aclose()
 
-    async def test_key_rotation_concurrency_safety(self, mock_db_service, mock_cache_service):
+    async def test_key_rotation_concurrency_safety(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test concurrent safety during key rotation operations."""
         settings = Mock()
         settings.secret_key = "concurrent_rotation_test_secret"
@@ -301,7 +329,9 @@ class TestSecretKeyRotationSecurity:
         # Create multiple service instances to simulate concurrent access
         services = []
         for _i in range(5):
-            service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+            service = ApiKeyService(
+                db=mock_db_service, cache=mock_cache_service, settings=settings
+            )
             services.append(service)
 
         test_key = "sk-concurrent123456789"
@@ -332,13 +362,17 @@ class TestSecretKeyRotationSecurity:
         successful_operations = sum(sum(results) for results in all_results)
 
         success_rate = successful_operations / total_operations
-        assert success_rate > 0.95, f"Concurrent operations failed: {success_rate:.2%} success rate"
+        assert success_rate > 0.95, (
+            f"Concurrent operations failed: {success_rate:.2%} success rate"
+        )
 
         # Cleanup
         for service in services:
             await service.client.aclose()
 
-    async def test_master_key_derivation_salt_manipulation(self, mock_db_service, mock_cache_service):
+    async def test_master_key_derivation_salt_manipulation(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test security against salt manipulation attacks."""
         # Test with various salt manipulation attempts
         original_salt = b"tripsage_api_key_salt_v3"
@@ -356,7 +390,9 @@ class TestSecretKeyRotationSecurity:
         settings.secret_key = "salt_manipulation_test_secret"
 
         # Create service with original implementation
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=settings
+        )
 
         test_key = "sk-salt_test123456"
         original_encrypted = service._encrypt_api_key(test_key)
@@ -373,7 +409,9 @@ class TestSecretKeyRotationSecurity:
             try:
                 salt_affected_settings = Mock()
                 # Different secret would derive different key due to salt integration
-                salt_affected_settings.secret_key = settings.secret_key + "_salt_modified"
+                salt_affected_settings.secret_key = (
+                    settings.secret_key + "_salt_modified"
+                )
 
                 manipulated_service = ApiKeyService(
                     db=mock_db_service,
@@ -409,14 +447,18 @@ class TestSecretKeyRotationSecurity:
 
         # Verify algorithm and iteration count
         assert kdf._algorithm.name == "sha256"
-        assert kdf._iterations >= 300000, "PBKDF2 iteration count below security threshold"
+        assert kdf._iterations >= 300000, (
+            "PBKDF2 iteration count below security threshold"
+        )
 
         # Test that low iteration counts would be insecure
         insecure_iteration_counts = [1, 10, 100, 1000, 10000]
 
         for insecure_count in insecure_iteration_counts:
             # These should be considered insecure by modern standards
-            assert insecure_count < 300000, f"Iteration count {insecure_count} is below security threshold"
+            assert insecure_count < 300000, (
+                f"Iteration count {insecure_count} is below security threshold"
+            )
 
     async def test_encrypted_key_format_tampering_detection(self, api_key_service):
         """Test detection of encrypted key format tampering."""
@@ -430,8 +472,12 @@ class TestSecretKeyRotationSecurity:
             encrypted.replace("A", "B"),
             encrypted + "extra_data",
             # Separator manipulation
-            base64.urlsafe_b64encode(base64.urlsafe_b64decode(encrypted.encode()).replace(b"::", b"||")).decode(),
-            base64.urlsafe_b64encode(base64.urlsafe_b64decode(encrypted.encode()).replace(b"::", b":::")).decode(),
+            base64.urlsafe_b64encode(
+                base64.urlsafe_b64decode(encrypted.encode()).replace(b"::", b"||")
+            ).decode(),
+            base64.urlsafe_b64encode(
+                base64.urlsafe_b64decode(encrypted.encode()).replace(b"::", b":::")
+            ).decode(),
             # Length manipulation
             encrypted[: len(encrypted) // 2],  # Truncated
             encrypted * 2,  # Doubled
@@ -446,7 +492,9 @@ class TestSecretKeyRotationSecurity:
 
         for tampered in tampering_attempts:
             # All tampering attempts should be detected and fail
-            with pytest.raises(ServiceError, match="(Decryption failed|Invalid encrypted key format)"):
+            with pytest.raises(
+                ServiceError, match="(Decryption failed|Invalid encrypted key format)"
+            ):
                 api_key_service._decrypt_api_key(tampered)
 
     async def test_envelope_encryption_data_key_strength(self, api_key_service):
@@ -473,21 +521,29 @@ class TestSecretKeyRotationSecurity:
         # Verify data key uniqueness (should all be different)
         unique_data_keys = set(data_key_parts)
         uniqueness_ratio = len(unique_data_keys) / len(data_key_parts)
-        assert uniqueness_ratio > 0.95, f"Data key uniqueness too low: {uniqueness_ratio:.2%}"
+        assert uniqueness_ratio > 0.95, (
+            f"Data key uniqueness too low: {uniqueness_ratio:.2%}"
+        )
 
         # Verify data key length consistency
         data_key_lengths = [len(dk) for dk in data_key_parts]
-        assert all(length == data_key_lengths[0] for length in data_key_lengths), "Inconsistent data key lengths"
+        assert all(length == data_key_lengths[0] for length in data_key_lengths), (
+            "Inconsistent data key lengths"
+        )
 
         # Verify minimum entropy (length should indicate Fernet key size)
         assert data_key_lengths[0] > 32, "Data key length suggests insufficient entropy"
 
-    async def test_key_lifecycle_security_transitions(self, mock_db_service, mock_cache_service):
+    async def test_key_lifecycle_security_transitions(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test security during key lifecycle transitions."""
         settings = Mock()
         settings.secret_key = "lifecycle_test_secret"
 
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=settings
+        )
 
         test_key = "sk-lifecycle123456789"
 
@@ -514,14 +570,18 @@ class TestSecretKeyRotationSecurity:
 
         # Verify each lifecycle state produces unique encryption
         encrypted_values = list(encrypted_versions.values())
-        assert len(set(encrypted_values)) == len(encrypted_values), "Lifecycle states should produce unique encryptions"
+        assert len(set(encrypted_values)) == len(encrypted_values), (
+            "Lifecycle states should produce unique encryptions"
+        )
 
         # Test that rotation doesn't leave old keys accessible
         # Simulate key rotation by changing master secret
         rotated_settings = Mock()
         rotated_settings.secret_key = "rotated_lifecycle_secret"
 
-        rotated_service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=rotated_settings)
+        rotated_service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=rotated_settings
+        )
 
         # Old encrypted keys should not be accessible after rotation
         for _state, encrypted in encrypted_versions.items():
@@ -573,10 +633,15 @@ class TestSecretKeyRotationSecurity:
                     ]
 
                     for term in sensitive_terms:
-                        assert term not in error_message, f"Error message leaks sensitive term: {term}"
+                        assert term not in error_message, (
+                            f"Error message leaks sensitive term: {term}"
+                        )
 
                     # Should be generic error message
-                    assert "decryption failed" in error_message or "encryption failed" in error_message
+                    assert (
+                        "decryption failed" in error_message
+                        or "encryption failed" in error_message
+                    )
 
             except Exception as e:
                 # Any exception should not leak sensitive information
@@ -585,13 +650,17 @@ class TestSecretKeyRotationSecurity:
                 assert "master" not in error_str
                 assert "pbkdf2" not in error_str
 
-    async def test_key_rotation_backward_compatibility_security(self, mock_db_service, mock_cache_service):
+    async def test_key_rotation_backward_compatibility_security(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test security implications of backward compatibility during key rotation."""
         # Simulate legacy key format (simplified for testing)
         legacy_settings = Mock()
         legacy_settings.secret_key = "legacy_secret_v1"
 
-        legacy_service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=legacy_settings)
+        legacy_service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=legacy_settings
+        )
 
         # Encrypt with legacy system
         test_key = "sk-legacy123456789"
@@ -601,7 +670,9 @@ class TestSecretKeyRotationSecurity:
         new_settings = Mock()
         new_settings.secret_key = "new_secret_v2"
 
-        new_service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=new_settings)
+        new_service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=new_settings
+        )
 
         # New system should not be able to decrypt legacy keys
         with pytest.raises(ServiceError):
@@ -611,8 +682,12 @@ class TestSecretKeyRotationSecurity:
         # by providing legacy-format encrypted data to new system
         fake_legacy_attempts = [
             base64.urlsafe_b64encode(b"fake_legacy_key::fake_data").decode(),
-            base64.urlsafe_b64encode(b"legacy_header" + b"\x00" * 32 + b"::data").decode(),
-            legacy_encrypted.replace(legacy_encrypted[0], "L"),  # "Legacy" marker attempt
+            base64.urlsafe_b64encode(
+                b"legacy_header" + b"\x00" * 32 + b"::data"
+            ).decode(),
+            legacy_encrypted.replace(
+                legacy_encrypted[0], "L"
+            ),  # "Legacy" marker attempt
         ]
 
         for fake_legacy in fake_legacy_attempts:
@@ -629,7 +704,9 @@ class TestCryptographicEdgeCases:
     @pytest.fixture
     async def api_key_service(self, mock_db_service, mock_cache_service, mock_settings):
         """API key service instance for edge case testing."""
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=mock_settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=mock_settings
+        )
         yield service
         await service.client.aclose()
 
@@ -689,7 +766,9 @@ class TestCryptographicEdgeCases:
 
         # All encrypted versions should be different (non-deterministic)
         unique_versions = set(encrypted_versions)
-        assert len(unique_versions) == len(encrypted_versions), "Encryption should be non-deterministic"
+        assert len(unique_versions) == len(encrypted_versions), (
+            "Encryption should be non-deterministic"
+        )
 
         # But all should decrypt to same value
         for encrypted in encrypted_versions:
@@ -766,7 +845,9 @@ class TestCryptographicEdgeCases:
         # All results should be unique
         unique_encrypted = set(all_encrypted)
         uniqueness_ratio = len(unique_encrypted) / len(all_encrypted)
-        assert uniqueness_ratio > 0.95, f"Entropy independence compromised: {uniqueness_ratio:.2%} unique"
+        assert uniqueness_ratio > 0.95, (
+            f"Entropy independence compromised: {uniqueness_ratio:.2%} unique"
+        )
 
         # Verify all decrypt correctly
         for encrypted in all_encrypted:
@@ -800,12 +881,16 @@ class TestCryptographicEdgeCases:
             decrypted = api_key_service._decrypt_api_key(encrypted)
             assert decrypted == test_key
 
-    async def test_cryptographic_error_recovery(self, mock_db_service, mock_cache_service):
+    async def test_cryptographic_error_recovery(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test recovery from cryptographic errors."""
         settings = Mock()
         settings.secret_key = "error_recovery_test_secret"
 
-        service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+        service = ApiKeyService(
+            db=mock_db_service, cache=mock_cache_service, settings=settings
+        )
 
         test_key = "sk-recovery_test123"
 
@@ -849,7 +934,9 @@ class TestCryptographicEdgeCases:
             parts = combined.split(b"::", 1)
 
             # Current format should have exactly 2 parts
-            assert len(parts) == 2, "Current format should have 2 parts separated by '::'"
+            assert len(parts) == 2, (
+                "Current format should have 2 parts separated by '::'"
+            )
 
             encrypted_data_key, encrypted_value = parts
 
@@ -860,7 +947,9 @@ class TestCryptographicEdgeCases:
         except Exception as e:
             pytest.fail(f"Format analysis failed: {e}")
 
-    async def test_master_key_derivation_edge_cases(self, mock_db_service, mock_cache_service):
+    async def test_master_key_derivation_edge_cases(
+        self, mock_db_service, mock_cache_service
+    ):
         """Test master key derivation with edge case inputs."""
         edge_case_secrets = [
             "a",  # Very short
@@ -880,7 +969,9 @@ class TestCryptographicEdgeCases:
                 settings = Mock()
                 settings.secret_key = secret
 
-                service = ApiKeyService(db=mock_db_service, cache=mock_cache_service, settings=settings)
+                service = ApiKeyService(
+                    db=mock_db_service, cache=mock_cache_service, settings=settings
+                )
 
                 # Should be able to encrypt and decrypt
                 encrypted = service._encrypt_api_key(test_key)
@@ -895,4 +986,6 @@ class TestCryptographicEdgeCases:
                     # Very short secrets might be rejected
                     continue
                 else:
-                    pytest.fail(f"Unexpected failure with secret '{secret[:20]}...': {e}")
+                    pytest.fail(
+                        f"Unexpected failure with secret '{secret[:20]}...': {e}"
+                    )

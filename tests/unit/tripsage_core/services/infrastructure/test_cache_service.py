@@ -99,7 +99,9 @@ class TestCacheService:
     # Connection Management Tests
 
     @pytest.mark.asyncio
-    async def test_connect_success(self, mock_settings, mock_redis_client, mock_connection_pool):
+    async def test_connect_success(
+        self, mock_settings, mock_redis_client, mock_connection_pool
+    ):
         """Test successful cache connection."""
         with (
             patch(
@@ -127,7 +129,9 @@ class TestCacheService:
         ):
             service = CacheService(settings=mock_settings)
 
-            with pytest.raises(CoreServiceError, match="Failed to connect to cache service"):
+            with pytest.raises(
+                CoreServiceError, match="Failed to connect to cache service"
+            ):
                 await service.connect()
 
     @pytest.mark.asyncio
@@ -141,7 +145,9 @@ class TestCacheService:
         assert cache_service._client is initial_client
 
     @pytest.mark.asyncio
-    async def test_disconnect_success(self, cache_service, mock_redis_client, mock_connection_pool):
+    async def test_disconnect_success(
+        self, cache_service, mock_redis_client, mock_connection_pool
+    ):
         """Test successful disconnection."""
         await cache_service.disconnect()
 
@@ -152,7 +158,9 @@ class TestCacheService:
         mock_connection_pool.disconnect.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_disconnect_with_errors(self, cache_service, mock_redis_client, mock_connection_pool):
+    async def test_disconnect_with_errors(
+        self, cache_service, mock_redis_client, mock_connection_pool
+    ):
         """Test disconnection with errors."""
         mock_redis_client.close.side_effect = Exception("Close error")
         mock_connection_pool.disconnect.side_effect = Exception("Pool disconnect error")
@@ -167,14 +175,18 @@ class TestCacheService:
         """Test ensure_connected when not connected."""
         cache_service._is_connected = False
 
-        with patch.object(cache_service, "connect", new_callable=AsyncMock) as mock_connect:
+        with patch.object(
+            cache_service, "connect", new_callable=AsyncMock
+        ) as mock_connect:
             await cache_service.ensure_connected()
             mock_connect.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_ensure_connected_when_connected(self, cache_service):
         """Test ensure_connected when already connected."""
-        with patch.object(cache_service, "connect", new_callable=AsyncMock) as mock_connect:
+        with patch.object(
+            cache_service, "connect", new_callable=AsyncMock
+        ) as mock_connect:
             await cache_service.ensure_connected()
             mock_connect.assert_not_called()
 
@@ -203,7 +215,9 @@ class TestCacheService:
         assert call_args[1]["ex"] == 600
 
     @pytest.mark.asyncio
-    async def test_set_json_with_default_ttl(self, cache_service, mock_redis_client, mock_settings):
+    async def test_set_json_with_default_ttl(
+        self, cache_service, mock_redis_client, mock_settings
+    ):
         """Test JSON setting with default TTL."""
         test_data = {"key": "value"}
 
@@ -282,12 +296,16 @@ class TestCacheService:
         mock_redis_client.setex.assert_called_with("test:string", 300, "Hello World")
 
     @pytest.mark.asyncio
-    async def test_set_string_with_default_ttl(self, cache_service, mock_redis_client, mock_settings):
+    async def test_set_string_with_default_ttl(
+        self, cache_service, mock_redis_client, mock_settings
+    ):
         """Test string setting with default TTL."""
         result = await cache_service.set("test:string", "Hello World")
 
         assert result is True
-        mock_redis_client.setex.assert_called_with("test:string", mock_settings.dragonfly.ttl_medium, "Hello World")
+        mock_redis_client.setex.assert_called_with(
+            "test:string", mock_settings.dragonfly.ttl_medium, "Hello World"
+        )
 
     @pytest.mark.asyncio
     async def test_get_string_success(self, cache_service, mock_redis_client):
@@ -684,7 +702,9 @@ class TestCacheService:
         assert call_args[1]["ex"] == mock_settings.dragonfly.ttl_short
 
     @pytest.mark.asyncio
-    async def test_set_medium_ttl(self, cache_service, mock_redis_client, mock_settings):
+    async def test_set_medium_ttl(
+        self, cache_service, mock_redis_client, mock_settings
+    ):
         """Test setting value with medium TTL."""
         test_data = {"key": "value"}
 
@@ -752,7 +772,9 @@ class TestCacheService:
         """Test exists error handling."""
         mock_redis_client.exists.side_effect = Exception("Exists error")
 
-        with pytest.raises(CoreServiceError, match="Failed to check cache key existence"):
+        with pytest.raises(
+            CoreServiceError, match="Failed to check cache key existence"
+        ):
             await cache_service.exists("test:key")
 
     @pytest.mark.asyncio
@@ -782,7 +804,9 @@ class TestCacheService:
     # Dependency Injection Tests
 
     @pytest.mark.asyncio
-    async def test_get_cache_service_function(self, mock_settings, mock_redis_client, mock_connection_pool):
+    async def test_get_cache_service_function(
+        self, mock_settings, mock_redis_client, mock_connection_pool
+    ):
         """Test the get_cache_service dependency function."""
         with (
             patch(
@@ -803,7 +827,9 @@ class TestCacheService:
             assert isinstance(service, CacheService)
 
     @pytest.mark.asyncio
-    async def test_get_cache_service_singleton(self, mock_settings, mock_redis_client, mock_connection_pool):
+    async def test_get_cache_service_singleton(
+        self, mock_settings, mock_redis_client, mock_connection_pool
+    ):
         """Test that get_cache_service returns singleton instance."""
         with (
             patch(
@@ -880,7 +906,9 @@ class TestCacheService:
         result = await cache_service.set("", "value")
 
         assert result is True
-        mock_redis_client.setex.assert_called_with("", mock_redis_client.setex.call_args[0][1], "value")
+        mock_redis_client.setex.assert_called_with(
+            "", mock_redis_client.setex.call_args[0][1], "value"
+        )
 
     @pytest.mark.asyncio
     async def test_none_value_json_handling(self, cache_service, mock_redis_client):
@@ -899,7 +927,9 @@ class TestCacheService:
         result = await cache_service.set(special_key, "value")
 
         assert result is True
-        mock_redis_client.setex.assert_called_with(special_key, mock_redis_client.setex.call_args[0][1], "value")
+        mock_redis_client.setex.assert_called_with(
+            special_key, mock_redis_client.setex.call_args[0][1], "value"
+        )
 
     @pytest.mark.asyncio
     async def test_unicode_data_handling(self, cache_service, mock_redis_client):

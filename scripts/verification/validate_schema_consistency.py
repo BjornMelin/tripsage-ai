@@ -73,7 +73,9 @@ class SchemaValidator:
             lines = content.split("\n")
 
         # Find CREATE TABLE statements
-        table_pattern = re.compile(r"CREATE TABLE\s+(?:IF NOT EXISTS\s+)?(\w+)\s*\(", re.IGNORECASE)
+        table_pattern = re.compile(
+            r"CREATE TABLE\s+(?:IF NOT EXISTS\s+)?(\w+)\s*\(", re.IGNORECASE
+        )
         column_pattern = re.compile(r"^\s*(\w+)\s+(\w+(?:\([^)]+\))?)", re.IGNORECASE)
         fk_pattern = re.compile(r"REFERENCES\s+(\w+\.?\w*)\s*\((\w+)\)", re.IGNORECASE)
 
@@ -143,14 +145,18 @@ class SchemaValidator:
                             file_path=table_def.file_path,
                             line_number=table_def.line_number,
                             issue_type="incorrect_type",
-                            description=(f"Table '{table_name}' has user_id of type '{col_type}' instead of UUID"),
+                            description=(
+                                f"Table '{table_name}' has user_id of type "
+                                f"'{col_type}' instead of UUID"
+                            ),
                             severity="error",
                         )
                     )
 
                 # Check for foreign key constraint
                 has_fk = any(
-                    fk[0] == "user_id" and ("auth.users" in fk[1] or "auth" in fk[1]) for fk in table_def.foreign_keys
+                    fk[0] == "user_id" and ("auth.users" in fk[1] or "auth" in fk[1])
+                    for fk in table_def.foreign_keys
                 )
 
                 if not has_fk:
@@ -167,7 +173,10 @@ class SchemaValidator:
                                 file_path=table_def.file_path,
                                 line_number=table_def.line_number,
                                 issue_type="missing_foreign_key",
-                                description=(f"Table '{table_name}' user_id lacks foreign key to auth.users(id)"),
+                                description=(
+                                    f"Table '{table_name}' user_id lacks foreign key "
+                                    f"to auth.users(id)"
+                                ),
                                 severity="warning",
                             )
                         )
@@ -233,7 +242,8 @@ class SchemaValidator:
                                 line_number=table_def.line_number,
                                 issue_type="text_uuid",
                                 description=(
-                                    f"Column {table_name}.{col_name} uses TEXT type but appears to be a UUID field"
+                                    f"Column {table_name}.{col_name} uses TEXT type "
+                                    f"but appears to be a UUID field"
                                 ),
                                 severity="warning",
                             )
@@ -243,7 +253,11 @@ class SchemaValidator:
         """Validate that migration file references all schema files."""
         print("✅ Validating migration file consistency...")
 
-        migration_file = self.schema_dir.parent / "migrations" / "20250609_02_consolidated_production_schema.sql"
+        migration_file = (
+            self.schema_dir.parent
+            / "migrations"
+            / "20250609_02_consolidated_production_schema.sql"
+        )
         if migration_file.exists():
             with open(migration_file, "r") as f:
                 migration_content = f.read()
@@ -257,7 +271,10 @@ class SchemaValidator:
                             file_path=str(migration_file),
                             line_number=0,
                             issue_type="missing_schema_reference",
-                            description=(f"Migration doesn't reference schema file: {sql_file.name}"),
+                            description=(
+                                f"Migration doesn't reference schema file: "
+                                f"{sql_file.name}"
+                            ),
                             severity="warning",
                         )
                     )

@@ -58,7 +58,9 @@ class TestMemoryPerformance:
     @pytest.mark.asyncio
     async def test_single_memory_operation_latency(self, performance_memory_service):
         """Test latency of individual memory operations."""
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             # Test add conversation latency
             start_time = time.time()
 
@@ -70,14 +72,18 @@ class TestMemoryPerformance:
                 )
             ]
 
-            result = await add_conversation_memory(messages=messages, user_id="latency-user")
+            result = await add_conversation_memory(
+                messages=messages, user_id="latency-user"
+            )
 
             add_latency = time.time() - start_time
 
             # Test search latency
             start_time = time.time()
 
-            search_result = await search_user_memories(MemorySearchQuery(user_id="latency-user", query="test"))
+            search_result = await search_user_memories(
+                MemorySearchQuery(user_id="latency-user", query="test")
+            )
 
             search_latency = time.time() - start_time
 
@@ -99,9 +105,13 @@ class TestMemoryPerformance:
             assert "memories" in context
 
     @pytest.mark.asyncio
-    async def test_concurrent_memory_operations_throughput(self, performance_memory_service):
+    async def test_concurrent_memory_operations_throughput(
+        self, performance_memory_service
+    ):
         """Test throughput with concurrent memory operations."""
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             num_concurrent_ops = 50
             start_time = time.time()
 
@@ -131,7 +141,9 @@ class TestMemoryPerformance:
 
             search_tasks = []
             for i in range(num_concurrent_ops):
-                query = MemorySearchQuery(user_id=f"concurrent-user-{i % 10}", query=f"concurrent {i}")
+                query = MemorySearchQuery(
+                    user_id=f"concurrent-user-{i % 10}", query=f"concurrent {i}"
+                )
                 search_tasks.append(search_user_memories(query))
 
             search_results = await asyncio.gather(*search_tasks)
@@ -154,9 +166,13 @@ class TestMemoryPerformance:
             print(f"Search throughput: {search_throughput:.2f} ops/sec")
 
     @pytest.mark.asyncio
-    async def test_memory_operation_consistency_under_load(self, performance_memory_service):
+    async def test_memory_operation_consistency_under_load(
+        self, performance_memory_service
+    ):
         """Test consistency of memory operations under sustained load."""
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             num_iterations = 100
             latencies = []
 
@@ -173,10 +189,14 @@ class TestMemoryPerformance:
                 ]
 
                 # Add memory
-                await add_conversation_memory(messages=messages, user_id="load-test-user")
+                await add_conversation_memory(
+                    messages=messages, user_id="load-test-user"
+                )
 
                 # Search memory
-                await search_user_memories(MemorySearchQuery(user_id="load-test-user", query="load test"))
+                await search_user_memories(
+                    MemorySearchQuery(user_id="load-test-user", query="load test")
+                )
 
                 # Get context
                 await get_user_context("load-test-user")
@@ -202,36 +222,49 @@ class TestMemoryPerformance:
             print(f"Max latency: {max_latency:.3f}s")
 
     @pytest.mark.asyncio
-    async def test_large_conversation_processing_performance(self, performance_memory_service):
+    async def test_large_conversation_processing_performance(
+        self, performance_memory_service
+    ):
         """Test performance with large conversation processing."""
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             # Create large conversation
             large_messages = []
             for i in range(1000):  # 1000 messages
                 large_messages.append(
                     ConversationMessage(
                         role="user" if i % 2 == 0 else "assistant",
-                        content=f"Large conversation message {i} " * 10,  # ~300 chars each
+                        content=f"Large conversation message {i} "
+                        * 10,  # ~300 chars each
                         timestamp=datetime.now(timezone.utc),
                     )
                 )
 
             start_time = time.time()
 
-            result = await add_conversation_memory(messages=large_messages, user_id="large-conversation-user")
+            result = await add_conversation_memory(
+                messages=large_messages, user_id="large-conversation-user"
+            )
 
             processing_time = time.time() - start_time
 
             # Performance assertions for large conversations
-            assert processing_time < 2.0  # Should process large conversation within 2 seconds
+            assert (
+                processing_time < 2.0
+            )  # Should process large conversation within 2 seconds
             assert result["status"] == "success"
 
             print(f"Large conversation processing time: {processing_time:.3f}s")
             print(f"Messages processed: {len(large_messages)}")
-            print(f"Processing rate: {len(large_messages) / processing_time:.2f} messages/sec")
+            print(
+                f"Processing rate: {len(large_messages) / processing_time:.2f} messages/sec"
+            )
 
     @pytest.mark.asyncio
-    async def test_memory_search_performance_with_large_dataset(self, performance_memory_service):
+    async def test_memory_search_performance_with_large_dataset(
+        self, performance_memory_service
+    ):
         """Test search performance with large memory dataset."""
 
         # Simulate large dataset by modifying mock behavior
@@ -249,7 +282,9 @@ class TestMemoryPerformance:
 
         performance_memory_service.search_memories = large_dataset_search
 
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             # Test search performance with different query complexities
             search_times = []
 
@@ -265,7 +300,9 @@ class TestMemoryPerformance:
                 start_time = time.time()
 
                 results = await search_user_memories(
-                    MemorySearchQuery(user_id="large-dataset-user", query=query, limit=50)
+                    MemorySearchQuery(
+                        user_id="large-dataset-user", query=query, limit=50
+                    )
                 )
 
                 search_time = time.time() - start_time
@@ -286,23 +323,31 @@ class TestMemoryPerformance:
     @pytest.mark.asyncio
     async def test_memory_cache_performance(self, performance_memory_service):
         """Test memory caching performance and hit rates."""
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             user_id = "cache-test-user"
             query = "cache test query"
 
             # First search (cache miss)
             start_time = time.time()
-            first_result = await search_user_memories(MemorySearchQuery(user_id=user_id, query=query))
+            first_result = await search_user_memories(
+                MemorySearchQuery(user_id=user_id, query=query)
+            )
             first_search_time = time.time() - start_time
 
             # Second search (potential cache hit)
             start_time = time.time()
-            second_result = await search_user_memories(MemorySearchQuery(user_id=user_id, query=query))
+            second_result = await search_user_memories(
+                MemorySearchQuery(user_id=user_id, query=query)
+            )
             second_search_time = time.time() - start_time
 
             # Third search (potential cache hit)
             start_time = time.time()
-            third_result = await search_user_memories(MemorySearchQuery(user_id=user_id, query=query))
+            third_result = await search_user_memories(
+                MemorySearchQuery(user_id=user_id, query=query)
+            )
             third_search_time = time.time() - start_time
 
             # Results should be consistent
@@ -324,7 +369,9 @@ class TestMemoryPerformance:
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
 
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             # Perform many memory operations
             for i in range(200):
                 messages = [
@@ -335,11 +382,15 @@ class TestMemoryPerformance:
                     )
                 ]
 
-                await add_conversation_memory(messages=messages, user_id=f"resource-user-{i % 10}")
+                await add_conversation_memory(
+                    messages=messages, user_id=f"resource-user-{i % 10}"
+                )
 
                 if i % 20 == 0:  # Check every 20 operations
                     await search_user_memories(
-                        MemorySearchQuery(user_id=f"resource-user-{i % 10}", query="resource test")
+                        MemorySearchQuery(
+                            user_id=f"resource-user-{i % 10}", query="resource test"
+                        )
                     )
 
                     await get_user_context(f"resource-user-{i % 10}")
@@ -355,9 +406,13 @@ class TestMemoryPerformance:
         print(f"Memory increase: {memory_increase:.2f} MB")
 
     @pytest.mark.asyncio
-    async def test_concurrent_user_isolation_performance(self, performance_memory_service):
+    async def test_concurrent_user_isolation_performance(
+        self, performance_memory_service
+    ):
         """Test performance of concurrent operations with user isolation."""
-        with patch("tripsage.tools.memory_tools.memory_service", performance_memory_service):
+        with patch(
+            "tripsage.tools.memory_tools.memory_service", performance_memory_service
+        ):
             num_users = 20
             operations_per_user = 10
 
@@ -379,11 +434,15 @@ class TestMemoryPerformance:
                         )
                     ]
 
-                    add_task = add_conversation_memory(messages=messages, user_id=user_id)
+                    add_task = add_conversation_memory(
+                        messages=messages, user_id=user_id
+                    )
                     all_tasks.append(add_task)
 
                     # Search operation
-                    search_task = search_user_memories(MemorySearchQuery(user_id=user_id, query=f"message {op_i}"))
+                    search_task = search_user_memories(
+                        MemorySearchQuery(user_id=user_id, query=f"message {op_i}")
+                    )
                     all_tasks.append(search_task)
 
             # Execute all operations concurrently
@@ -395,7 +454,9 @@ class TestMemoryPerformance:
 
             # Performance assertions
             assert len(results) == total_operations
-            assert throughput > 50  # Should handle >50 operations per second with isolation
+            assert (
+                throughput > 50
+            )  # Should handle >50 operations per second with isolation
 
             print(f"Total operations: {total_operations}")
             print(f"Total time: {total_time:.3f}s")
@@ -443,7 +504,9 @@ class TestMemoryPerformanceBenchmarks:
             search_times = []
             for _ in range(10):
                 start = time.time()
-                await search_user_memories(MemorySearchQuery(user_id="benchmark-user", query="benchmark"))
+                await search_user_memories(
+                    MemorySearchQuery(user_id="benchmark-user", query="benchmark")
+                )
                 search_times.append(time.time() - start)
 
             # Report baseline metrics

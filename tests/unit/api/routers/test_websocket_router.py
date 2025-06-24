@@ -101,7 +101,9 @@ class TestWebSocketRouter:
 
             app.dependency_overrides[get_db] = lambda: mock_database_service
 
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
                 yield ac
 
             app.dependency_overrides.clear()
@@ -223,7 +225,9 @@ class TestWebSocketRouter:
         assert data["total_count"] == 0
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
-    async def test_disconnect_nonexistent_connection(self, mock_ws_manager, async_client):
+    async def test_disconnect_nonexistent_connection(
+        self, mock_ws_manager, async_client
+    ):
         """Test disconnecting a connection that doesn't exist."""
         # Arrange
         connection_id = "nonexistent-connection"
@@ -293,7 +297,9 @@ class TestWebSocketRouter:
         assert error_event.error_message == "Test error message"
         assert error_event.type == "connection.error"
 
-    async def test_websocket_endpoints_no_authentication_required_for_health(self, async_client):
+    async def test_websocket_endpoints_no_authentication_required_for_health(
+        self, async_client
+    ):
         """Test that WebSocket health endpoint doesn't require authentication."""
         # Act
         response = await async_client.get("/api/ws/health")

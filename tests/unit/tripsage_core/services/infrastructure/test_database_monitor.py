@@ -28,7 +28,9 @@ class TestHealthCheckResult:
 
     def test_initialization_with_defaults(self):
         """Test initialization with default timestamp."""
-        result = HealthCheckResult(status=HealthStatus.HEALTHY, response_time=0.5, message="All good")
+        result = HealthCheckResult(
+            status=HealthStatus.HEALTHY, response_time=0.5, message="All good"
+        )
 
         assert result.status == HealthStatus.HEALTHY
         assert result.response_time == 0.5
@@ -92,7 +94,9 @@ class TestDatabaseConnectionMonitor:
         self.mock_db_service = Mock()
         self.mock_db_service.is_connected = True
         self.mock_db_service.health_check = AsyncMock(return_value=True)
-        self.mock_db_service.get_database_stats = AsyncMock(return_value={"connections": 5})
+        self.mock_db_service.get_database_stats = AsyncMock(
+            return_value={"connections": 5}
+        )
         self.mock_db_service.select = AsyncMock(return_value=[{"id": "123"}])
         self.mock_db_service.connect = AsyncMock()
         self.mock_db_service.close = AsyncMock()
@@ -106,7 +110,9 @@ class TestDatabaseConnectionMonitor:
 
         self.mock_metrics = Mock(spec=DatabaseMetrics)
         self.mock_metrics.record_health_check = Mock()
-        self.mock_metrics.get_metrics_summary = Mock(return_value={"query_errors": {}, "query_total": {}})
+        self.mock_metrics.get_metrics_summary = Mock(
+            return_value={"query_errors": {}, "query_total": {}}
+        )
 
         self.monitor = DatabaseConnectionMonitor(
             database_service=self.mock_db_service,
@@ -141,9 +147,13 @@ class TestDatabaseConnectionMonitor:
         await self.monitor.start_monitoring()
 
         # Try to start again
-        with patch("tripsage_core.services.infrastructure.database_monitor.logger") as mock_logger:
+        with patch(
+            "tripsage_core.services.infrastructure.database_monitor.logger"
+        ) as mock_logger:
             await self.monitor.start_monitoring()
-            mock_logger.warning.assert_called_with("Database monitoring already started")
+            mock_logger.warning.assert_called_with(
+                "Database monitoring already started"
+            )
 
     @pytest.mark.asyncio
     async def test_perform_health_check_success(self):
@@ -237,7 +247,9 @@ class TestDatabaseConnectionMonitor:
     @pytest.mark.asyncio
     async def test_handle_critical_health(self):
         """Test handling critical health status."""
-        result = HealthCheckResult(status=HealthStatus.CRITICAL, response_time=2.0, message="Critical failure")
+        result = HealthCheckResult(
+            status=HealthStatus.CRITICAL, response_time=2.0, message="Critical failure"
+        )
 
         self.mock_db_service.is_connected = False
 
@@ -363,7 +375,9 @@ class TestDatabaseConnectionMonitor:
         callback_mock = Mock()
         self.monitor.add_alert_callback(callback_mock)
 
-        with patch("tripsage_core.services.infrastructure.database_monitor.logger") as mock_logger:
+        with patch(
+            "tripsage_core.services.infrastructure.database_monitor.logger"
+        ) as mock_logger:
             await self.monitor._trigger_alert(alert)
 
             # Verify alert was logged
@@ -411,7 +425,9 @@ class TestDatabaseConnectionMonitor:
         assert self.monitor.get_current_health() is None
 
         # After setting health check result
-        result = HealthCheckResult(status=HealthStatus.HEALTHY, response_time=0.5, message="Good")
+        result = HealthCheckResult(
+            status=HealthStatus.HEALTHY, response_time=0.5, message="Good"
+        )
         self.monitor._last_health_check = result
 
         assert self.monitor.get_current_health() == result
@@ -420,7 +436,9 @@ class TestDatabaseConnectionMonitor:
         """Test getting health check history."""
         # Add some history
         for i in range(5):
-            result = HealthCheckResult(status=HealthStatus.HEALTHY, response_time=0.1 * i, message=f"Check {i}")
+            result = HealthCheckResult(
+                status=HealthStatus.HEALTHY, response_time=0.1 * i, message=f"Check {i}"
+            )
             self.monitor._health_history.append(result)
 
         # Get all history
@@ -476,7 +494,9 @@ class TestDatabaseConnectionMonitor:
     @pytest.mark.asyncio
     async def test_manual_security_check(self):
         """Test manual security check trigger."""
-        with patch.object(self.monitor, "_perform_security_check") as mock_security_check:
+        with patch.object(
+            self.monitor, "_perform_security_check"
+        ) as mock_security_check:
             await self.monitor.manual_security_check()
             mock_security_check.assert_called_once()
 
@@ -498,12 +518,16 @@ class TestDatabaseConnectionMonitor:
         """Test that history collections are trimmed to max size."""
         # Add more health history than max
         for i in range(self.monitor._max_health_history + 10):
-            result = HealthCheckResult(status=HealthStatus.HEALTHY, response_time=0.1, message=f"Check {i}")
+            result = HealthCheckResult(
+                status=HealthStatus.HEALTHY, response_time=0.1, message=f"Check {i}"
+            )
             self.monitor._health_history.append(result)
 
         # Simulate trimming (normally done in _perform_health_check)
         if len(self.monitor._health_history) > self.monitor._max_health_history:
-            self.monitor._health_history = self.monitor._health_history[-self.monitor._max_health_history :]
+            self.monitor._health_history = self.monitor._health_history[
+                -self.monitor._max_health_history :
+            ]
 
         assert len(self.monitor._health_history) == self.monitor._max_health_history
 

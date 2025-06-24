@@ -41,7 +41,9 @@ def analyze_schema_files() -> Dict[str, any]:
     if indexes_file.exists():
         content = indexes_file.read_text()
         # Find CREATE INDEX statements
-        index_matches = re.findall(r"CREATE INDEX.*?(\w+)\s+ON\s+(\w+)", content, re.IGNORECASE)
+        index_matches = re.findall(
+            r"CREATE INDEX.*?(\w+)\s+ON\s+(\w+)", content, re.IGNORECASE
+        )
         results["indexes"] = {f"{table}.{index}" for index, table in index_matches}
         print(f"✅ Found {len(index_matches)} indexes in schema")
 
@@ -50,7 +52,9 @@ def analyze_schema_files() -> Dict[str, any]:
     if policies_file.exists():
         content = policies_file.read_text()
         # Find CREATE POLICY statements
-        policy_matches = re.findall(r'CREATE POLICY.*?"([^"]+)".*?ON\s+(\w+)', content, re.IGNORECASE)
+        policy_matches = re.findall(
+            r'CREATE POLICY.*?"([^"]+)".*?ON\s+(\w+)', content, re.IGNORECASE
+        )
         results["policies"] = {f"{table}.{policy}" for policy, table in policy_matches}
         print(f"✅ Found {len(policy_matches)} RLS policies in schema")
 
@@ -89,7 +93,9 @@ def check_trip_collaborators_integration() -> List[str]:
             issues.append("❌ trip_collaborators RLS policies missing")
 
     # Check migration file
-    migration_file = Path("supabase/migrations/20250611_01_add_trip_collaborators_table.sql")
+    migration_file = Path(
+        "supabase/migrations/20250611_01_add_trip_collaborators_table.sql"
+    )
     if migration_file.exists():
         print("✅ trip_collaborators migration file exists")
     else:
@@ -140,13 +146,17 @@ def check_memory_table_consistency() -> List[str]:
         if "user_id TEXT" in content:
             print("✅ Memory tables use TEXT user_id for Mem0 compatibility")
         else:
-            issues.append("⚠️  Memory tables may not be configured for Mem0 TEXT user_id")
+            issues.append(
+                "⚠️  Memory tables may not be configured for Mem0 TEXT user_id"
+            )
 
     # Check for vector embeddings
     if "vector(" in content:
         print("✅ Vector embeddings configured for pgvector")
     else:
-        issues.append("❌ Vector embeddings not found - pgvector integration incomplete")
+        issues.append(
+            "❌ Vector embeddings not found - pgvector integration incomplete"
+        )
 
     return issues
 
@@ -178,8 +188,10 @@ def generate_recommendations() -> List[str]:
         [
             "🔒 SECURITY: Verify JWT_SECRET is properly configured (not hardcoded)",
             "🔒 SECURITY: Ensure all user-owned tables have RLS policies enabled",
-            "🔧 PERFORMANCE: Consider adding composite indexes for common query patterns",
-            "🔧 MAINTENANCE: Add database maintenance functions for vector index optimization",
+            "🔧 PERFORMANCE: Consider adding composite indexes for common query "
+            "patterns",
+            "🔧 MAINTENANCE: Add database maintenance functions for vector index "
+            "optimization",
         ]
     )
 
@@ -244,7 +256,10 @@ def main():
     critical_issues = [i for i in all_issues if "❌" in i]
 
     if critical_issues:
-        print(f"\n🚨 Found {len(critical_issues)} critical issues requiring immediate attention")
+        print(
+            f"\n🚨 Found {len(critical_issues)} critical issues requiring "
+            f"immediate attention"
+        )
         return 1
     else:
         print("\n✅ No critical issues found - database schema is production-ready")

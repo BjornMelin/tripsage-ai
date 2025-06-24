@@ -23,12 +23,16 @@ class TestSimpleTripSageOrchestrator:
     @patch("tripsage.orchestration.simple_graph.create_react_agent")
     @patch("tripsage.orchestration.simple_graph.get_all_tools")
     @patch("tripsage.orchestration.simple_graph.get_settings")
-    def test_orchestrator_initialization(self, mock_settings, mock_get_tools, mock_create_agent, mock_openai):
+    def test_orchestrator_initialization(
+        self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
+    ):
         """Test orchestrator initialization."""
         # Mock settings
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
 
         # Mock tools
         mock_tools = [MagicMock(), MagicMock()]
@@ -61,12 +65,16 @@ class TestSimpleTripSageOrchestrator:
     @patch("tripsage.orchestration.simple_graph.get_all_tools")
     @patch("tripsage.orchestration.simple_graph.get_settings")
     @pytest.mark.asyncio
-    async def test_process_conversation(self, mock_settings, mock_get_tools, mock_create_agent, mock_openai):
+    async def test_process_conversation(
+        self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
+    ):
         """Test conversation processing."""
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         # Mock agent response
@@ -74,7 +82,10 @@ class TestSimpleTripSageOrchestrator:
         mock_agent.ainvoke.return_value = {
             "messages": [
                 HumanMessage(content="Find flights to Paris"),
-                AIMessage(content="I'll help you find flights to Paris. Let me search for options."),
+                AIMessage(
+                    content="I'll help you find flights to Paris. "
+                    "Let me search for options."
+                ),
             ]
         }
         mock_create_agent.return_value = mock_agent
@@ -107,7 +118,9 @@ class TestSimpleTripSageOrchestrator:
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         # Mock agent to raise exception
@@ -133,12 +146,16 @@ class TestSimpleTripSageOrchestrator:
     @patch("tripsage.orchestration.simple_graph.get_all_tools")
     @patch("tripsage.orchestration.simple_graph.get_settings")
     @pytest.mark.asyncio
-    async def test_stream_conversation(self, mock_settings, mock_get_tools, mock_create_agent, mock_openai):
+    async def test_stream_conversation(
+        self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
+    ):
         """Test conversation streaming."""
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         # Mock streaming response
@@ -173,17 +190,23 @@ class TestSimpleTripSageOrchestrator:
     @patch("tripsage.orchestration.simple_graph.get_all_tools")
     @patch("tripsage.orchestration.simple_graph.get_settings")
     @pytest.mark.asyncio
-    async def test_health_check(self, mock_settings, mock_get_tools, mock_create_agent, mock_openai):
+    async def test_health_check(
+        self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
+    ):
         """Test orchestrator health check."""
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         # Mock healthy agent
         mock_agent = AsyncMock()
-        mock_agent.ainvoke.return_value = {"messages": [AIMessage(content="Health check OK")]}
+        mock_agent.ainvoke.return_value = {
+            "messages": [AIMessage(content="Health check OK")]
+        }
         mock_create_agent.return_value = mock_agent
 
         orchestrator = SimpleTripSageOrchestrator()
@@ -201,12 +224,16 @@ class TestSimpleTripSageOrchestrator:
     @patch("tripsage.orchestration.simple_graph.get_all_tools")
     @patch("tripsage.orchestration.simple_graph.get_settings")
     @pytest.mark.asyncio
-    async def test_health_check_failure(self, mock_settings, mock_get_tools, mock_create_agent, mock_openai):
+    async def test_health_check_failure(
+        self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
+    ):
         """Test health check when agent is unhealthy."""
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         # Mock unhealthy agent
@@ -346,7 +373,9 @@ class TestIntegrationScenarios:
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         # Mock conversation flow
@@ -354,13 +383,21 @@ class TestIntegrationScenarios:
             {
                 "messages": [
                     HumanMessage(content="I want to plan a trip to Tokyo"),
-                    AIMessage(content="I'd love to help you plan your trip to Tokyo! When are you planning to travel?"),
+                    AIMessage(
+                        content=("I'd love to help you plan your trip to Tokyo! "
+                                "When are you planning to travel?")
+                    ),
                 ]
             },
             {
                 "messages": [
                     HumanMessage(content="March 15-22, 2024"),
-                    AIMessage(content="Great! Let me search for flights and accommodations for March 15-22, 2024."),
+                    AIMessage(
+                        content=(
+                            "Great! Let me search for flights and accommodations "
+                            "for March 15-22, 2024."
+                        )
+                    ),
                 ]
             },
         ]
@@ -379,7 +416,9 @@ class TestIntegrationScenarios:
         assert "Tokyo" in result1["messages"][-1]["content"]
 
         # Follow-up message
-        result2 = await orchestrator.process_conversation([{"role": "user", "content": "March 15-22, 2024"}])
+        result2 = await orchestrator.process_conversation(
+            [{"role": "user", "content": "March 15-22, 2024"}]
+        )
         assert result2["success"] is True
         assert "March" in result2["messages"][-1]["content"]
 
@@ -387,12 +426,16 @@ class TestIntegrationScenarios:
     @patch("tripsage.orchestration.simple_graph.create_react_agent")
     @patch("tripsage.orchestration.simple_graph.get_all_tools")
     @patch("tripsage.orchestration.simple_graph.get_settings")
-    def test_configuration_persistence(self, mock_settings, mock_get_tools, mock_create_agent, mock_openai):
+    def test_configuration_persistence(
+        self, mock_settings, mock_get_tools, mock_create_agent, mock_openai
+    ):
         """Test that conversation configuration (thread_id) works for persistence."""
         # Setup mocks
         mock_settings.return_value.agent.model_name = "gpt-4"
         mock_settings.return_value.agent.temperature = 0.7
-        mock_settings.return_value.openai_api_key.get_secret_value.return_value = "test-key"
+        mock_settings.return_value.openai_api_key.get_secret_value.return_value = (
+            "test-key"
+        )
         mock_get_tools.return_value = []
 
         mock_agent = AsyncMock()

@@ -66,7 +66,9 @@ async def search_airbnb_rentals_tool(
     logger.info(f"Searching Airbnb rentals in {location}")
 
     # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service("accommodation_service")
+    accommodation_service = service_registry.get_required_service(
+        "accommodation_service"
+    )
 
     # Prepare search parameters
     search_params = {
@@ -170,7 +172,9 @@ async def get_airbnb_listing_details_tool(
     logger.info(f"Getting details for Airbnb listing: {listing_id}")
 
     # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service("accommodation_service")
+    accommodation_service = service_registry.get_required_service(
+        "accommodation_service"
+    )
 
     # Get listing details through service
     result = await accommodation_service.get_accommodation_details(
@@ -306,7 +310,9 @@ async def book_accommodation_tool(
     logger.info(f"Initiating booking for {source} listing: {listing_id}")
 
     # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service("accommodation_service")
+    accommodation_service = service_registry.get_required_service(
+        "accommodation_service"
+    )
 
     # Initiate booking through service
     result = await accommodation_service.book_accommodation(

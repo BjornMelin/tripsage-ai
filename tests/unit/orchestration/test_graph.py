@@ -133,7 +133,9 @@ class TestTripSageOrchestrator:
         # Mock handoff coordinator to return a handoff
         mock_handoff_result = ("accommodation_agent", Mock())
         mock_handoff_result[1].model_dump = Mock(return_value={"test": "data"})
-        orchestrator.handoff_coordinator.determine_next_agent = Mock(return_value=mock_handoff_result)
+        orchestrator.handoff_coordinator.determine_next_agent = Mock(
+            return_value=mock_handoff_result
+        )
 
         result = orchestrator._determine_next_step(state)
         assert result == "continue"
@@ -229,7 +231,9 @@ class TestTripSageOrchestrator:
                 }
             )
 
-            result = await orchestrator.process_message("test_user", "Find me flights", "test_session")
+            result = await orchestrator.process_message(
+                "test_user", "Find me flights", "test_session"
+            )
 
             assert result["response"] == "I found some flights for you"
             assert result["session_id"] == "test_session"
@@ -243,7 +247,9 @@ class TestTripSageOrchestrator:
             patch.object(orchestrator, "memory_bridge") as mock_memory_bridge,
         ):
             # Setup error condition
-            mock_memory_bridge.hydrate_state = AsyncMock(side_effect=Exception("Database error"))
+            mock_memory_bridge.hydrate_state = AsyncMock(
+                side_effect=Exception("Database error")
+            )
 
             result = await orchestrator.process_message("test_user", "Find me flights")
 
@@ -320,13 +326,19 @@ class TestTripSageOrchestratorEnhanced:
         }
 
         # Configure service behavior
-        services["flight_service"].search_flights = AsyncMock(return_value={"flights": [], "status": "success"})
+        services["flight_service"].search_flights = AsyncMock(
+            return_value={"flights": [], "status": "success"}
+        )
         services["accommodation_service"].search_accommodations = AsyncMock(
             return_value={"listings": [], "status": "success"}
         )
 
-        registry.get_required_service = MagicMock(side_effect=lambda name: services.get(name))
-        registry.get_optional_service = MagicMock(side_effect=lambda name: services.get(name))
+        registry.get_required_service = MagicMock(
+            side_effect=lambda name: services.get(name)
+        )
+        registry.get_optional_service = MagicMock(
+            side_effect=lambda name: services.get(name)
+        )
 
         return registry
 
@@ -334,13 +346,21 @@ class TestTripSageOrchestratorEnhanced:
     def enhanced_orchestrator(self, comprehensive_mock_registry):
         """Create an enhanced orchestrator with full mocking."""
         with patch("tripsage.orchestration.graph.get_memory_bridge") as mock_bridge:
-            with patch("tripsage.orchestration.graph.get_handoff_coordinator") as mock_coord:
+            with patch(
+                "tripsage.orchestration.graph.get_handoff_coordinator"
+            ) as mock_coord:
                 with patch("tripsage.orchestration.graph.get_default_config"):
                     # Configure mocks
-                    mock_bridge.return_value.hydrate_state = AsyncMock(side_effect=lambda state: state)
-                    mock_bridge.return_value.extract_and_persist_insights = AsyncMock(return_value={"insights": "test"})
+                    mock_bridge.return_value.hydrate_state = AsyncMock(
+                        side_effect=lambda state: state
+                    )
+                    mock_bridge.return_value.extract_and_persist_insights = AsyncMock(
+                        return_value={"insights": "test"}
+                    )
 
-                    mock_coord.return_value.determine_next_agent = MagicMock(return_value=None)
+                    mock_coord.return_value.determine_next_agent = MagicMock(
+                        return_value=None
+                    )
 
                     orchestrator = TripSageOrchestrator(
                         service_registry=comprehensive_mock_registry,
@@ -408,13 +428,17 @@ class TestTripSageOrchestratorEnhanced:
             "messages": [
                 {
                     "role": "assistant",
-                    "content": ("I'm experiencing technical difficulties and need human support"),
+                    "content": (
+                        "I'm experiencing technical difficulties and need human support"
+                    ),
                 }
             ],
             "current_agent": "general_agent",
         }
 
-        enhanced_orchestrator.handoff_coordinator.determine_next_agent.return_value = None
+        enhanced_orchestrator.handoff_coordinator.determine_next_agent.return_value = (
+            None
+        )
         result = enhanced_orchestrator._determine_next_step(state)
         assert result == "end"
 
@@ -424,7 +448,9 @@ class TestTripSageOrchestratorEnhanced:
         # Mock checkpoint manager
         with patch("tripsage.orchestration.graph.get_checkpoint_manager") as mock_cm:
             mock_async_checkpointer = AsyncMock()
-            mock_cm.return_value.get_async_checkpointer = AsyncMock(return_value=mock_async_checkpointer)
+            mock_cm.return_value.get_async_checkpointer = AsyncMock(
+                return_value=mock_async_checkpointer
+            )
 
             # Reset to use PostgreSQL
             enhanced_orchestrator.checkpointer = None
@@ -470,7 +496,9 @@ class TestTripSageOrchestratorEnhanced:
         assert result["response"] == "I'm ready to help with your travel planning!"
 
     @pytest.mark.asyncio
-    async def test_process_message_memory_persistence_error(self, enhanced_orchestrator):
+    async def test_process_message_memory_persistence_error(
+        self, enhanced_orchestrator
+    ):
         """Test graceful handling of memory persistence errors."""
         await enhanced_orchestrator.initialize()
 
@@ -513,7 +541,9 @@ class TestTripSageOrchestratorEnhanced:
         import asyncio
 
         tasks = [
-            enhanced_orchestrator.process_message(f"user-{i}", f"Message {i}", session_id=f"session-{i}")
+            enhanced_orchestrator.process_message(
+                f"user-{i}", f"Message {i}", session_id=f"session-{i}"
+            )
             for i in range(3)
         ]
 
@@ -559,9 +589,13 @@ class TestTripSageOrchestratorEnhanced:
                     from tripsage.agents.service_registry import ServiceRegistry
 
                     mock_registry = MagicMock(spec=ServiceRegistry)
-                    mock_registry.get_required_service = MagicMock(return_value=MagicMock())
+                    mock_registry.get_required_service = MagicMock(
+                        return_value=MagicMock()
+                    )
 
-                    orchestrator = TripSageOrchestrator(config=custom_config, service_registry=mock_registry)
+                    orchestrator = TripSageOrchestrator(
+                        config=custom_config, service_registry=mock_registry
+                    )
 
                     assert orchestrator.config == custom_config
 
@@ -576,7 +610,9 @@ class TestTripSageOrchestratorEnhanced:
                 {"role": "user", "content": "Complex request"},
                 {"role": "assistant", "content": "Complex response"},
             ],
-            "flight_searches": [{"search_id": "FL123", "results": [{"flight": "data"}]}],
+            "flight_searches": [
+                {"search_id": "FL123", "results": [{"flight": "data"}]}
+            ],
             "user_preferences": {
                 "budget_total": 5000,
                 "preferred_airlines": ["United", "Delta"],
@@ -586,7 +622,9 @@ class TestTripSageOrchestratorEnhanced:
 
         mock_state = MagicMock()
         mock_state.values = complex_state
-        enhanced_orchestrator.compiled_graph.get_state = MagicMock(return_value=mock_state)
+        enhanced_orchestrator.compiled_graph.get_state = MagicMock(
+            return_value=mock_state
+        )
 
         result = await enhanced_orchestrator.get_session_state("complex-session")
 

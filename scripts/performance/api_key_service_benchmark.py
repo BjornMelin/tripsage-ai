@@ -38,7 +38,9 @@ class PerformanceBenchmark:
         cache = AsyncMock()
 
         # Mock database responses
-        db.get_user_api_keys.return_value = [self._sample_db_result() for _ in range(10)]
+        db.get_user_api_keys.return_value = [
+            self._sample_db_result() for _ in range(10)
+        ]
         db.create_api_key.return_value = self._sample_db_result()
 
         # Mock cache responses
@@ -136,7 +138,9 @@ class PerformanceBenchmark:
 
         start_time = time.perf_counter()
 
-        for _ in range(self.iterations // 100):  # Fewer iterations for crypto operations
+        for _ in range(
+            self.iterations // 100
+        ):  # Fewer iterations for crypto operations
             for key in test_keys:
                 encrypted = service._encrypt_api_key(key)
                 decrypted = service._decrypt_api_key(encrypted)
@@ -151,7 +155,9 @@ class PerformanceBenchmark:
         service = await self.setup_service()
 
         async def single_validation():
-            return await service.validate_api_key(ServiceType.OPENAI, "sk-test_key", "user-123")
+            return await service.validate_api_key(
+                ServiceType.OPENAI, "sk-test_key", "user-123"
+            )
 
         start_time = time.perf_counter()
 
@@ -192,7 +198,10 @@ class PerformanceBenchmark:
                     "ops_per_second": operations_per_second,
                     "avg_time_ms": (duration / self.iterations) * 1000,
                 }
-                print(f"   ✅ {operations_per_second:,.0f} ops/sec ({duration:.3f}s total)")
+                print(
+                    f"   ✅ {operations_per_second:,.0f} ops/sec "
+                    f"({duration:.3f}s total)"
+                )
             except Exception as e:
                 print(f"   ❌ Failed: {e}")
                 results[name] = {"error": str(e)}
@@ -243,11 +252,16 @@ class PerformanceBenchmark:
                     if actual >= target:
                         status = "✅ PASSED"
                         improvement = (actual / target - 1) * 100
-                        print(f"  {test_name}: {status} (+{improvement:.1f}% above target)")
+                        print(
+                            f"  {test_name}: {status} "
+                            f"(+{improvement:.1f}% above target)"
+                        )
                     else:
                         status = "❌ BELOW TARGET"
                         shortfall = (1 - actual / target) * 100
-                        print(f"  {test_name}: {status} (-{shortfall:.1f}% below target)")
+                        print(
+                            f"  {test_name}: {status} (-{shortfall:.1f}% below target)"
+                        )
 
 
 async def main():

@@ -114,7 +114,9 @@ class TestDatabaseConnectionPerformance:
 
                 return True
 
-            result = await benchmark.pedantic(acquire_and_release_connection, rounds=100, iterations=1)
+            result = await benchmark.pedantic(
+                acquire_and_release_connection, rounds=100, iterations=1
+            )
             assert result is True
 
         finally:
@@ -174,7 +176,9 @@ class TestDatabaseQueryPerformance:
                 logger.warning(f"Query failed: {e}")
                 return 0
 
-        result = await benchmark.pedantic(execute_simple_select, rounds=100, iterations=1)
+        result = await benchmark.pedantic(
+            execute_simple_select, rounds=100, iterations=1
+        )
         assert result >= 0
 
     @pytest.mark.performance
@@ -185,13 +189,17 @@ class TestDatabaseQueryPerformance:
         async def execute_parameterized_query():
             """Execute a parameterized query."""
             try:
-                result = await database_service.execute_sql("SELECT $1::text as param_value", ("test_parameter",))
+                result = await database_service.execute_sql(
+                    "SELECT $1::text as param_value", ("test_parameter",)
+                )
                 return len(result) if result else 0
             except Exception as e:
                 logger.warning(f"Parameterized query failed: {e}")
                 return 0
 
-        result = await benchmark.pedantic(execute_parameterized_query, rounds=50, iterations=1)
+        result = await benchmark.pedantic(
+            execute_parameterized_query, rounds=50, iterations=1
+        )
         assert result >= 0
 
     @pytest.mark.performance
@@ -252,7 +260,9 @@ class TestDatabaseQueryPerformance:
             finally:
                 # Cleanup
                 try:
-                    await database_service.execute_sql("DELETE FROM test_bulk_insert WHERE name LIKE 'bulk_test_%'")
+                    await database_service.execute_sql(
+                        "DELETE FROM test_bulk_insert WHERE name LIKE 'bulk_test_%'"
+                    )
                 except Exception:
                     pass
 
@@ -279,7 +289,9 @@ class TestDatabaseTransactionPerformance:
                 logger.warning(f"Transaction failed: {e}")
                 return False
 
-        result = await benchmark.pedantic(execute_simple_transaction, rounds=30, iterations=1)
+        result = await benchmark.pedantic(
+            execute_simple_transaction, rounds=30, iterations=1
+        )
         assert result is True
 
     @pytest.mark.performance
@@ -327,11 +339,15 @@ class TestDatabaseTransactionPerformance:
             finally:
                 # Cleanup
                 try:
-                    await database_service.execute_sql("DELETE FROM test_transaction WHERE data = 'test_data'")
+                    await database_service.execute_sql(
+                        "DELETE FROM test_transaction WHERE data = 'test_data'"
+                    )
                 except Exception:
                     pass
 
-        result = await benchmark.pedantic(execute_complex_transaction, rounds=15, iterations=1)
+        result = await benchmark.pedantic(
+            execute_complex_transaction, rounds=15, iterations=1
+        )
         assert result >= 0
 
     @pytest.mark.performance
@@ -351,7 +367,9 @@ class TestDatabaseTransactionPerformance:
                 return True
             return False
 
-        result = await benchmark.pedantic(execute_rollback_transaction, rounds=20, iterations=1)
+        result = await benchmark.pedantic(
+            execute_rollback_transaction, rounds=20, iterations=1
+        )
         assert result is True
 
 
@@ -377,7 +395,9 @@ class TestDatabaseCacheIntegration:
 
             # Execute query
             try:
-                result = await database_service.execute_sql("SELECT NOW() as current_time")
+                result = await database_service.execute_sql(
+                    "SELECT NOW() as current_time"
+                )
                 mock_cache[cache_key] = result
                 return result
             except Exception as e:
@@ -385,10 +405,14 @@ class TestDatabaseCacheIntegration:
                 return []
 
         # First run - should hit database
-        result1 = await benchmark.pedantic(execute_cached_query, rounds=10, iterations=1)
+        result1 = await benchmark.pedantic(
+            execute_cached_query, rounds=10, iterations=1
+        )
 
         # Second run - should hit cache
-        result2 = await benchmark.pedantic(execute_cached_query, rounds=10, iterations=1)
+        result2 = await benchmark.pedantic(
+            execute_cached_query, rounds=10, iterations=1
+        )
 
         assert len(result1) >= 0
         assert len(result2) >= 0
@@ -417,7 +441,9 @@ class TestDatabaseCacheIntegration:
 
             return len(keys_to_remove)
 
-        result = await benchmark.pedantic(invalidate_cache_pattern, rounds=50, iterations=1)
+        result = await benchmark.pedantic(
+            invalidate_cache_pattern, rounds=50, iterations=1
+        )
         assert result > 0
 
 
@@ -426,14 +452,18 @@ class TestDatabaseVectorSearchPerformance:
 
     @pytest.mark.performance
     @pytest.mark.database
-    async def test_vector_similarity_search_performance(self, benchmark, database_service):
+    async def test_vector_similarity_search_performance(
+        self, benchmark, database_service
+    ):
         """Benchmark vector similarity search performance."""
 
         async def execute_vector_search():
             """Execute a vector similarity search."""
             try:
                 # Check if pgvector is available
-                await database_service.execute_sql("SELECT 1 FROM pg_extension WHERE extname = 'vector'")
+                await database_service.execute_sql(
+                    "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
+                )
 
                 # Generate test vectors
                 vector1 = np.random.random(384).tolist()
@@ -451,7 +481,9 @@ class TestDatabaseVectorSearchPerformance:
                 # Return mock result for testing
                 return 1
 
-        result = await benchmark.pedantic(execute_vector_search, rounds=10, iterations=1)
+        result = await benchmark.pedantic(
+            execute_vector_search, rounds=10, iterations=1
+        )
         assert result >= 0
 
     @pytest.mark.performance
@@ -470,7 +502,9 @@ class TestDatabaseVectorSearchPerformance:
                 logger.warning(f"Vector index test failed: {e}")
                 return False
 
-        result = await benchmark.pedantic(test_vector_index_operations, rounds=5, iterations=1)
+        result = await benchmark.pedantic(
+            test_vector_index_operations, rounds=5, iterations=1
+        )
         assert result is True
 
 
@@ -480,7 +514,9 @@ class TestDatabaseMemoryUsage:
     @pytest.mark.performance
     @pytest.mark.database
     @pytest.mark.slow
-    async def test_memory_usage_with_large_resultsets(self, benchmark, database_service):
+    async def test_memory_usage_with_large_resultsets(
+        self, benchmark, database_service
+    ):
         """Benchmark memory usage with large result sets."""
 
         async def process_large_resultset():
@@ -506,7 +542,9 @@ class TestDatabaseMemoryUsage:
                 logger.warning(f"Large resultset test failed: {e}")
                 return 0
 
-        result = await benchmark.pedantic(process_large_resultset, rounds=10, iterations=1)
+        result = await benchmark.pedantic(
+            process_large_resultset, rounds=10, iterations=1
+        )
         assert result >= 0
 
     @pytest.mark.performance
@@ -542,7 +580,9 @@ class TestDatabaseMemoryUsage:
                     except Exception:
                         pass
 
-        result = await benchmark.pedantic(test_pool_memory_efficiency, rounds=5, iterations=1)
+        result = await benchmark.pedantic(
+            test_pool_memory_efficiency, rounds=5, iterations=1
+        )
         assert result == 5
 
 
@@ -577,12 +617,16 @@ class TestDatabaseErrorHandlingPerformance:
             finally:
                 await service.close()
 
-        result = await benchmark.pedantic(test_connection_recovery, rounds=10, iterations=1)
+        result = await benchmark.pedantic(
+            test_connection_recovery, rounds=10, iterations=1
+        )
         assert result >= 0
 
     @pytest.mark.performance
     @pytest.mark.database
-    async def test_query_timeout_handling_performance(self, benchmark, database_service):
+    async def test_query_timeout_handling_performance(
+        self, benchmark, database_service
+    ):
         """Benchmark query timeout handling performance."""
 
         async def test_query_timeout():
@@ -611,7 +655,9 @@ class TestDatabaseErrorHandlingPerformance:
 class TestDatabaseIntegrationWorkflows:
     """Integration tests for complete database workflows."""
 
-    async def test_complete_crud_workflow_performance(self, benchmark, database_service):
+    async def test_complete_crud_workflow_performance(
+        self, benchmark, database_service
+    ):
         """Benchmark a complete CRUD workflow."""
 
         # Setup test table
@@ -654,7 +700,9 @@ class TestDatabaseIntegrationWorkflows:
                 )
 
                 # DELETE
-                await database_service.execute_sql("DELETE FROM test_crud_workflow WHERE id = $1", (user_id,))
+                await database_service.execute_sql(
+                    "DELETE FROM test_crud_workflow WHERE id = $1", (user_id,)
+                )
 
                 return 1
 
@@ -662,10 +710,14 @@ class TestDatabaseIntegrationWorkflows:
                 logger.warning(f"CRUD workflow failed: {e}")
                 return 0
 
-        result = await benchmark.pedantic(complete_crud_workflow, rounds=15, iterations=1)
+        result = await benchmark.pedantic(
+            complete_crud_workflow, rounds=15, iterations=1
+        )
         assert result >= 0
 
-    async def test_database_with_cache_workflow_performance(self, benchmark, database_service):
+    async def test_database_with_cache_workflow_performance(
+        self, benchmark, database_service
+    ):
         """Benchmark database operations with cache integration."""
 
         mock_cache = {}
@@ -680,7 +732,9 @@ class TestDatabaseIntegrationWorkflows:
 
             # Database operation
             try:
-                result = await database_service.execute_sql("SELECT 'workflow_result' as result")
+                result = await database_service.execute_sql(
+                    "SELECT 'workflow_result' as result"
+                )
 
                 # Cache result
                 if result:
@@ -694,10 +748,14 @@ class TestDatabaseIntegrationWorkflows:
                 return []
 
         # First run (database hit)
-        result1 = await benchmark.pedantic(database_cache_workflow, rounds=10, iterations=1)
+        result1 = await benchmark.pedantic(
+            database_cache_workflow, rounds=10, iterations=1
+        )
 
         # Second run (cache hit)
-        result2 = await benchmark.pedantic(database_cache_workflow, rounds=10, iterations=1)
+        result2 = await benchmark.pedantic(
+            database_cache_workflow, rounds=10, iterations=1
+        )
 
         assert len(result1) >= 0
         assert len(result2) >= 0

@@ -75,19 +75,28 @@ class MigrationRunner:
             """
             # Note: Supabase client doesn't directly support DDL
             # In production, use database migrations or admin API
-            logger.info("Migrations table needs to be created manually or via admin API")
+            logger.info(
+                "Migrations table needs to be created manually or via admin API"
+            )
             logger.info(f"SQL to create table:\n{create_table_sql}")
 
     async def get_applied_migrations(self) -> List[str]:
         """Get list of already applied migrations."""
         try:
-            result = self.client.table("migrations").select("filename").order("applied_at").execute()
+            result = (
+                self.client.table("migrations")
+                .select("filename")
+                .order("applied_at")
+                .execute()
+            )
 
             if result.data:
                 return [row["filename"] for row in result.data]
             return []
         except Exception as e:
-            logger.warning(f"Could not get applied migrations (table may not exist): {e}")
+            logger.warning(
+                f"Could not get applied migrations (table may not exist): {e}"
+            )
             return []
 
     async def record_migration(self, filename: str, checksum: str) -> bool:
@@ -126,7 +135,9 @@ class MigrationRunner:
                 f
                 for f in MIGRATIONS_DIR.glob("*.sql")
                 if (
-                    f.is_file() and re.match(r"\d{8}_\d{2}_.*\.sql", f.name) and f.parent == MIGRATIONS_DIR
+                    f.is_file()
+                    and re.match(r"\d{8}_\d{2}_.*\.sql", f.name)
+                    and f.parent == MIGRATIONS_DIR
                 )  # Ensure file is directly in migrations dir
             ]
         )
@@ -175,7 +186,9 @@ class MigrationRunner:
             logger.error(f"Error applying migration {filename}: {e}")
             return False
 
-    async def run_migrations(self, up_to: Optional[str] = None, dry_run: bool = False) -> Tuple[int, int]:
+    async def run_migrations(
+        self, up_to: Optional[str] = None, dry_run: bool = False
+    ) -> Tuple[int, int]:
         """Run all pending migrations.
 
         Args:
@@ -190,7 +203,10 @@ class MigrationRunner:
         migration_files = self.get_migration_files()
         applied_migrations = await self.get_applied_migrations()
 
-        logger.info(f"Found {len(migration_files)} migration files, {len(applied_migrations)} already applied")
+        logger.info(
+            f"Found {len(migration_files)} migration files, "
+            f"{len(applied_migrations)} already applied"
+        )
 
         succeeded = 0
         failed = 0
@@ -243,12 +259,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Show what would be done without applying",
     )
-    parser.add_argument("--up-to", help="Apply migrations up to and including this filename")
+    parser.add_argument(
+        "--up-to", help="Apply migrations up to and including this filename"
+    )
 
     args = parser.parse_args()
 
     async def main():
-        succeeded, failed = await run_migrations_cli(project_id=args.project_id, dry_run=args.dry_run, up_to=args.up_to)
+        succeeded, failed = await run_migrations_cli(
+            project_id=args.project_id, dry_run=args.dry_run, up_to=args.up_to
+        )
 
         logger.info(f"Migration summary: {succeeded} succeeded, {failed} failed")
 

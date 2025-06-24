@@ -46,7 +46,9 @@ class TestCollaborationTriggers:
             "user2_id": user2_id,
         }
 
-    async def test_collaboration_notification_trigger(self, db_with_test_data, db_service):
+    async def test_collaboration_notification_trigger(
+        self, db_with_test_data, db_service
+    ):
         """Test that collaboration changes trigger notifications."""
         data = db_with_test_data
 
@@ -83,7 +85,9 @@ class TestCollaborationTriggers:
             assert notification["payload"]["user_id"] == data["user1_id"]
             assert notification["payload"]["permission_level"] == "view"
 
-    async def test_collaboration_permission_validation(self, db_with_test_data, db_service):
+    async def test_collaboration_permission_validation(
+        self, db_with_test_data, db_service
+    ):
         """Test collaboration permission hierarchy validation."""
         data = db_with_test_data
 
@@ -101,7 +105,9 @@ class TestCollaborationTriggers:
         )
 
         # Test: Admin cannot grant admin permissions
-        with pytest.raises(Exception, match="Only trip owners can grant admin permissions"):
+        with pytest.raises(
+            Exception, match="Only trip owners can grant admin permissions"
+        ):
             await db_service.execute_query(
                 """
                 INSERT INTO trip_collaborators 
@@ -294,7 +300,9 @@ class TestBusinessLogicTriggers:
 
         async def mock_notify(channel, payload):
             if channel == "chat_session_expired":
-                notifications.append({"channel": channel, "payload": json.loads(payload)})
+                notifications.append(
+                    {"channel": channel, "payload": json.loads(payload)}
+                )
 
         with patch.object(db_service.pool, "acquire") as mock_acquire:
             mock_conn = AsyncMock()

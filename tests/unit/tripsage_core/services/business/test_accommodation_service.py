@@ -42,7 +42,9 @@ class TestAccommodationService:
     """Test suite for AccommodationService."""
 
     @pytest.fixture
-    def accommodation_service(self, mock_database_service: AsyncMock) -> AccommodationService:
+    def accommodation_service(
+        self, mock_database_service: AsyncMock
+    ) -> AccommodationService:
         """Create AccommodationService instance with mocked dependencies."""
         return AccommodationService(database_service=mock_database_service)
 
@@ -105,7 +107,9 @@ class TestAccommodationService:
         return AccommodationListing(
             id=listing_id,
             name="Charming Parisian Apartment in Montmartre",
-            description=("Beautiful 2-bedroom apartment with stunning views of Sacré-Cœur"),
+            description=(
+                "Beautiful 2-bedroom apartment with stunning views of Sacré-Cœur"
+            ),
             property_type=PropertyType.APARTMENT,
             location=sample_accommodation_location,
             price_per_night=150.00,
@@ -202,7 +206,9 @@ class TestAccommodationService:
     ):
         """Test successful accommodation search returns mock listings."""
         # Act
-        result = await accommodation_service.search_accommodations(sample_search_request)
+        result = await accommodation_service.search_accommodations(
+            sample_search_request
+        )
 
         # Assert
         assert isinstance(result, AccommodationSearchResponse)
@@ -213,10 +219,14 @@ class TestAccommodationService:
         assert all(80 <= listing.price_per_night <= 300 for listing in result.listings)
 
     @pytest.mark.asyncio
-    async def test_search_accommodations_invalid_dates_raises_error(self, accommodation_service: AccommodationService):
+    async def test_search_accommodations_invalid_dates_raises_error(
+        self, accommodation_service: AccommodationService
+    ):
         """Test accommodation search with invalid dates raises validation error."""
         # Act & Assert
-        with pytest.raises(ValueError, match="Check-out date must be after check-in date"):
+        with pytest.raises(
+            ValueError, match="Check-out date must be after check-in date"
+        ):
             AccommodationSearchRequest(
                 location="Paris, France",
                 check_in=date.today() + timedelta(days=30),
@@ -235,7 +245,9 @@ class TestAccommodationService:
     ):
         """Test successful accommodation details retrieval."""
         # Arrange
-        mock_database_service.get_accommodation_listing.return_value = sample_accommodation_listing.model_dump()
+        mock_database_service.get_accommodation_listing.return_value = (
+            sample_accommodation_listing.model_dump()
+        )
 
         # Act
         result = await accommodation_service.get_listing_details(
@@ -262,7 +274,9 @@ class TestAccommodationService:
         mock_database_service.get_accommodation_listing.return_value = None
 
         # Act
-        result = await accommodation_service.get_listing_details(listing_id, user_id="test-user-id")
+        result = await accommodation_service.get_listing_details(
+            listing_id, user_id="test-user-id"
+        )
 
         # Assert
         assert result is None
@@ -280,7 +294,9 @@ class TestAccommodationService:
         """Test successful accommodation booking."""
         # Arrange
         user_id = str(uuid4())
-        mock_database_service.get_accommodation_listing.return_value = sample_accommodation_listing.model_dump()
+        mock_database_service.get_accommodation_listing.return_value = (
+            sample_accommodation_listing.model_dump()
+        )
         mock_database_service.store_accommodation_booking.return_value = None
 
         booking_request = AccommodationBookingRequest(
@@ -294,7 +310,9 @@ class TestAccommodationService:
         )
 
         # Act
-        result = await accommodation_service.book_accommodation(user_id=user_id, booking_request=booking_request)
+        result = await accommodation_service.book_accommodation(
+            user_id=user_id, booking_request=booking_request
+        )
 
         # Assert
         assert isinstance(result, AccommodationBooking)
@@ -318,7 +336,9 @@ class TestAccommodationService:
         user_id = str(uuid4())
         unavailable_listing = sample_accommodation_listing.model_copy()
         unavailable_listing.is_available = False
-        mock_database_service.get_accommodation_listing.return_value = unavailable_listing.model_dump()
+        mock_database_service.get_accommodation_listing.return_value = (
+            unavailable_listing.model_dump()
+        )
 
         booking_request = AccommodationBookingRequest(
             listing_id=sample_accommodation_listing.id,
@@ -331,7 +351,9 @@ class TestAccommodationService:
 
         # Act & Assert
         with pytest.raises(CoreValidationError, match="not available"):
-            await accommodation_service.book_accommodation(user_id=user_id, booking_request=booking_request)
+            await accommodation_service.book_accommodation(
+                user_id=user_id, booking_request=booking_request
+            )
 
     @pytest.mark.asyncio
     async def test_get_user_bookings_returns_list_of_bookings(
@@ -343,7 +365,9 @@ class TestAccommodationService:
         """Test successful user bookings retrieval."""
         # Arrange
         user_id = sample_accommodation_booking.user_id
-        mock_database_service.get_accommodation_bookings.return_value = [sample_accommodation_booking.model_dump()]
+        mock_database_service.get_accommodation_bookings.return_value = [
+            sample_accommodation_booking.model_dump()
+        ]
 
         # Act
         results = await accommodation_service.get_user_bookings(user_id)
@@ -352,7 +376,9 @@ class TestAccommodationService:
         assert len(results) == 1
         assert results[0].id == sample_accommodation_booking.id
         assert results[0].user_id == user_id
-        mock_database_service.get_accommodation_bookings.assert_called_once_with({"user_id": user_id}, 50)
+        mock_database_service.get_accommodation_bookings.assert_called_once_with(
+            {"user_id": user_id}, 50
+        )
 
     # Test Cancellation Operations
 
@@ -365,7 +391,9 @@ class TestAccommodationService:
     ):
         """Test successful booking cancellation."""
         # Arrange
-        mock_database_service.get_accommodation_booking.return_value = sample_accommodation_booking.model_dump()
+        mock_database_service.get_accommodation_booking.return_value = (
+            sample_accommodation_booking.model_dump()
+        )
         mock_database_service.update_accommodation_booking.return_value = True
 
         # Act
@@ -415,7 +443,9 @@ class TestAccommodationService:
     # Test Search Filters
 
     @pytest.mark.asyncio
-    async def test_search_with_complex_filters_applies_all_criteria(self, accommodation_service: AccommodationService):
+    async def test_search_with_complex_filters_applies_all_criteria(
+        self, accommodation_service: AccommodationService
+    ):
         """Test accommodation search with complex filters."""
         # Arrange
         search_request = AccommodationSearchRequest(
@@ -449,7 +479,9 @@ class TestAccommodationService:
     # Test Scoring Logic
 
     @pytest.mark.asyncio
-    async def test_accommodation_scoring_calculates_correctly(self, accommodation_service: AccommodationService):
+    async def test_accommodation_scoring_calculates_correctly(
+        self, accommodation_service: AccommodationService
+    ):
         """Test accommodation scoring and ranking logic."""
         # Arrange
         listings = [
@@ -469,7 +501,10 @@ class TestAccommodationService:
 
         # Act - Test internal scoring method if it exists
         if hasattr(accommodation_service, "_calculate_listing_score"):
-            scores = [accommodation_service._calculate_listing_score(listing) for listing in listings]
+            scores = [
+                accommodation_service._calculate_listing_score(listing)
+                for listing in listings
+            ]
 
             # Assert
             assert all(0 <= score <= 1 for score in scores)
@@ -483,7 +518,9 @@ class TestAccommodationService:
         nights=st.integers(min_value=1, max_value=30),
         price=st.floats(min_value=10.0, max_value=10000.0),
     )
-    def test_booking_total_price_calculation(self, guests: int, nights: int, price: float):
+    def test_booking_total_price_calculation(
+        self, guests: int, nights: int, price: float
+    ):
         """Test booking total price calculation with various inputs."""
         # Arrange
         booking = AccommodationBookingRequest(
@@ -518,7 +555,9 @@ class TestAccommodationService:
         assert request.check_in < date.today()
 
     @pytest.mark.asyncio
-    async def test_search_with_zero_guests_raises_validation_error(self, accommodation_service: AccommodationService):
+    async def test_search_with_zero_guests_raises_validation_error(
+        self, accommodation_service: AccommodationService
+    ):
         """Test search with zero guests raises appropriate error."""
         # Act & Assert
         with pytest.raises(ValidationError) as exc_info:
@@ -533,7 +572,9 @@ class TestAccommodationService:
         assert "greater than or equal to 1" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_mock_listings_generation_produces_valid_data(self, accommodation_service: AccommodationService):
+    async def test_mock_listings_generation_produces_valid_data(
+        self, accommodation_service: AccommodationService
+    ):
         """Test that mock listings generator produces valid data."""
         # Arrange
         search_request = AccommodationSearchRequest(

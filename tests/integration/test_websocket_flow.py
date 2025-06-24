@@ -113,7 +113,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(return_value=auth_response)
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            return_value=auth_response
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.disconnect_connection = AsyncMock()
 
@@ -129,7 +131,9 @@ class TestWebSocketIntegration:
             mock_websocket_manager,
         ):
             # Mock settings validation to prevent JWT and CORS errors
-            with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+            with patch(
+                "tripsage.api.routers.websocket.get_settings"
+            ) as mock_get_settings:
                 mock_settings = MagicMock()
                 mock_settings.cors_origins = ["*"]
                 mock_settings.is_production = False
@@ -163,14 +167,22 @@ class TestWebSocketIntegration:
                     assert True
 
     @pytest.mark.asyncio
-    async def test_websocket_authentication_required(self, test_client, mock_websocket_manager):
+    async def test_websocket_authentication_required(
+        self, test_client, mock_websocket_manager
+    ):
         """Test that authentication is required for WebSocket connection."""
         # Set up proper authentication flow that should fail without token
-        mock_websocket_manager.authenticate_connection = AsyncMock(side_effect=Exception("Authentication required"))
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            side_effect=Exception("Authentication required")
+        )
 
-        with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+        with patch(
+            "tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager
+        ):
             # Mock settings validation to prevent CORS errors
-            with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+            with patch(
+                "tripsage.api.routers.websocket.get_settings"
+            ) as mock_get_settings:
                 mock_settings = MagicMock()
                 mock_settings.cors_origins = ["*"]
                 mock_settings.is_production = False
@@ -190,7 +202,9 @@ class TestWebSocketIntegration:
                     assert "authentication" in response.get("message", "").lower()
 
     @pytest.mark.asyncio
-    async def test_websocket_invalid_token(self, test_client, mock_auth_service, mock_websocket_manager):
+    async def test_websocket_invalid_token(
+        self, test_client, mock_auth_service, mock_websocket_manager
+    ):
         """Test WebSocket connection with invalid token."""
         from tripsage_core.services.infrastructure.websocket_auth_service import (
             WebSocketAuthResponse,
@@ -198,7 +212,9 @@ class TestWebSocketIntegration:
 
         # Mock authentication failure with invalid token
         mock_websocket_manager.authenticate_connection = AsyncMock(
-            return_value=WebSocketAuthResponse(success=False, connection_id="", error="Invalid token")
+            return_value=WebSocketAuthResponse(
+                success=False, connection_id="", error="Invalid token"
+            )
         )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
@@ -207,7 +223,9 @@ class TestWebSocketIntegration:
                 mock_websocket_manager,
             ):
                 # Mock settings validation to prevent CORS errors
-                with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                with patch(
+                    "tripsage.api.routers.websocket.get_settings"
+                ) as mock_get_settings:
                     mock_settings = MagicMock()
                     mock_settings.cors_origins = ["*"]
                     mock_settings.is_production = False
@@ -262,7 +280,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(side_effect=[auth_response_1, auth_response_2])
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            side_effect=[auth_response_1, auth_response_2]
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.send_to_session = AsyncMock(return_value=1)
         mock_websocket_manager.disconnect_connection = AsyncMock()
@@ -297,13 +317,17 @@ class TestWebSocketIntegration:
         mock_chat_service.add_message.return_value = message_response
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
                 with patch(
                     "tripsage.api.routers.websocket.websocket_manager",
                     mock_websocket_manager,
                 ):
                     # Mock settings validation to prevent CORS errors
-                    with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                    with patch(
+                        "tripsage.api.routers.websocket.get_settings"
+                    ) as mock_get_settings:
                         mock_settings = MagicMock()
                         mock_settings.cors_origins = ["*"]
                         mock_settings.is_production = False
@@ -363,7 +387,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(return_value=auth_response)
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            return_value=auth_response
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.subscribe_connection = AsyncMock()
         mock_websocket_manager.disconnect_connection = AsyncMock()
@@ -380,7 +406,9 @@ class TestWebSocketIntegration:
                 mock_websocket_manager,
             ):
                 # Mock settings validation to prevent CORS errors
-                with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                with patch(
+                    "tripsage.api.routers.websocket.get_settings"
+                ) as mock_get_settings:
                     mock_settings = MagicMock()
                     mock_settings.cors_origins = ["*"]
                     mock_settings.is_production = False
@@ -437,7 +465,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(return_value=auth_response)
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            return_value=auth_response
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.send_to_session = AsyncMock(return_value=1)
         mock_websocket_manager.disconnect_connection = AsyncMock()
@@ -449,16 +479,22 @@ class TestWebSocketIntegration:
         mock_websocket_manager.connections = {connection_id: mock_connection}
 
         # Mock rate limit error on chat service
-        mock_chat_service.add_message.side_effect = CoreRateLimitError("Rate limit exceeded")
+        mock_chat_service.add_message.side_effect = CoreRateLimitError(
+            "Rate limit exceeded"
+        )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
                 with patch(
                     "tripsage.api.routers.websocket.websocket_manager",
                     mock_websocket_manager,
                 ):
                     # Mock settings validation to prevent CORS errors
-                    with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                    with patch(
+                        "tripsage.api.routers.websocket.get_settings"
+                    ) as mock_get_settings:
                         mock_settings = MagicMock()
                         mock_settings.cors_origins = ["*"]
                         mock_settings.is_production = False
@@ -490,7 +526,9 @@ class TestWebSocketIntegration:
                             mock_websocket_manager.authenticate_connection.assert_called_once()
 
                             # Verify send_to_session was called for chat messages
-                            assert mock_websocket_manager.send_to_session.call_count >= 1
+                            assert (
+                                mock_websocket_manager.send_to_session.call_count >= 1
+                            )
 
     @pytest.mark.asyncio
     async def test_websocket_reconnection_handling(
@@ -528,7 +566,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(side_effect=[auth_response_1, auth_response_2])
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            side_effect=[auth_response_1, auth_response_2]
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.disconnect_connection = AsyncMock()
 
@@ -552,7 +592,9 @@ class TestWebSocketIntegration:
                 mock_websocket_manager,
             ):
                 # Mock settings validation to prevent CORS errors
-                with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                with patch(
+                    "tripsage.api.routers.websocket.get_settings"
+                ) as mock_get_settings:
                     mock_settings = MagicMock()
                     mock_settings.cors_origins = ["*"]
                     mock_settings.is_production = False
@@ -575,7 +617,10 @@ class TestWebSocketIntegration:
                         await asyncio.sleep(0.1)  # Allow processing
 
                         # Should have authenticated twice (once for each connection)
-                        assert mock_websocket_manager.authenticate_connection.call_count == 2
+                        assert (
+                            mock_websocket_manager.authenticate_connection.call_count
+                            == 2
+                        )
 
     @pytest.mark.asyncio
     async def test_websocket_heartbeat(
@@ -603,7 +648,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(return_value=auth_response)
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            return_value=auth_response
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.disconnect_connection = AsyncMock()
 
@@ -619,7 +666,9 @@ class TestWebSocketIntegration:
                 mock_websocket_manager,
             ):
                 # Mock settings validation to prevent CORS errors
-                with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                with patch(
+                    "tripsage.api.routers.websocket.get_settings"
+                ) as mock_get_settings:
                     mock_settings = MagicMock()
                     mock_settings.cors_origins = ["*"]
                     mock_settings.is_production = False
@@ -674,7 +723,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(return_value=auth_response)
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            return_value=auth_response
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.send_to_session = AsyncMock(return_value=1)
         mock_websocket_manager.disconnect_connection = AsyncMock()
@@ -691,7 +742,9 @@ class TestWebSocketIntegration:
                 mock_websocket_manager,
             ):
                 # Mock settings validation to prevent CORS errors
-                with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                with patch(
+                    "tripsage.api.routers.websocket.get_settings"
+                ) as mock_get_settings:
                     mock_settings = MagicMock()
                     mock_settings.cors_origins = ["*"]
                     mock_settings.is_production = False
@@ -751,7 +804,9 @@ class TestWebSocketIntegration:
         )
 
         # Set up all the mocks that the WebSocket endpoint needs
-        mock_websocket_manager.authenticate_connection = AsyncMock(return_value=auth_response)
+        mock_websocket_manager.authenticate_connection = AsyncMock(
+            return_value=auth_response
+        )
         mock_websocket_manager.send_to_connection = AsyncMock(return_value=True)
         mock_websocket_manager.send_to_session = AsyncMock(return_value=1)
         mock_websocket_manager.disconnect_connection = AsyncMock()
@@ -763,13 +818,17 @@ class TestWebSocketIntegration:
         mock_websocket_manager.connections = {connection_id: mock_connection}
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
                 with patch(
                     "tripsage.api.routers.websocket.websocket_manager",
                     mock_websocket_manager,
                 ):
                     # Mock settings validation to prevent CORS errors
-                    with patch("tripsage.api.routers.websocket.get_settings") as mock_get_settings:
+                    with patch(
+                        "tripsage.api.routers.websocket.get_settings"
+                    ) as mock_get_settings:
                         mock_settings = MagicMock()
                         mock_settings.cors_origins = ["*"]
                         mock_settings.is_production = False
@@ -801,7 +860,9 @@ class TestWebSocketIntegration:
                             mock_websocket_manager.authenticate_connection.assert_called_once()
 
                             # Verify send_to_session was called for chat message
-                            assert mock_websocket_manager.send_to_session.call_count >= 1
+                            assert (
+                                mock_websocket_manager.send_to_session.call_count >= 1
+                            )
 
     @pytest.mark.asyncio
     async def test_websocket_error_recovery(
@@ -821,10 +882,14 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         # Mock service error
-        mock_chat_service.add_message.side_effect = Exception("Database connection lost")
+        mock_chat_service.add_message.side_effect = Exception(
+            "Database connection lost"
+        )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
                 with patch(
                     "tripsage.api.routers.websocket.websocket_manager",
                     mock_websocket_manager,
@@ -856,7 +921,9 @@ class TestWebSocketIntegration:
                         websocket.send_json(chat_msg)
 
                         # Verify connection wasn't terminated
-                        assert mock_websocket_manager.disconnect_connection.call_count == 0
+                        assert (
+                            mock_websocket_manager.disconnect_connection.call_count == 0
+                        )
 
     @pytest.mark.asyncio
     async def test_websocket_connection_stats(
@@ -875,7 +942,9 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         # Mock connection stats
-        mock_websocket_manager.get_connection_stats.return_value = WebSocketFactory.create_connection_stats()
+        mock_websocket_manager.get_connection_stats.return_value = (
+            WebSocketFactory.create_connection_stats()
+        )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
             with patch(

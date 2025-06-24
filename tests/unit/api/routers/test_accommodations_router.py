@@ -21,7 +21,9 @@ class TestAccommodationRouterValidation:
     # === VALIDATION TESTS (These work reliably) ===
 
     @pytest.mark.parametrize("adults", [0, -1, 17])  # Schema allows 1-16
-    def test_search_accommodations_invalid_adults(self, unauthenticated_test_client, adults):
+    def test_search_accommodations_invalid_adults(
+        self, unauthenticated_test_client, adults
+    ):
         """Test accommodation search with invalid adults count."""
         search_request = {
             "location": "Tokyo",
@@ -30,12 +32,16 @@ class TestAccommodationRouterValidation:
             "adults": adults,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=search_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=search_request
+        )
         # FastAPI checks auth before validation, so unauth requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.parametrize("location", ["", " "])  # Schema requires min_length=1
-    def test_search_accommodations_invalid_location(self, unauthenticated_test_client, location):
+    def test_search_accommodations_invalid_location(
+        self, unauthenticated_test_client, location
+    ):
         """Test accommodation search with invalid location."""
         search_request = {
             "location": location,
@@ -44,7 +50,9 @@ class TestAccommodationRouterValidation:
             "adults": 2,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=search_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=search_request
+        )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -57,12 +65,16 @@ class TestAccommodationRouterValidation:
             "adults": 2,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=search_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=search_request
+        )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.parametrize("children", [-1, 11])  # Schema allows 0-10
-    def test_search_accommodations_invalid_children(self, unauthenticated_test_client, children):
+    def test_search_accommodations_invalid_children(
+        self, unauthenticated_test_client, children
+    ):
         """Test accommodation search with invalid children count."""
         search_request = {
             "location": "Tokyo",
@@ -72,12 +84,16 @@ class TestAccommodationRouterValidation:
             "children": children,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=search_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=search_request
+        )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     @pytest.mark.parametrize("rooms", [0, 9])  # Schema allows 1-8
-    def test_search_accommodations_invalid_rooms(self, unauthenticated_test_client, rooms):
+    def test_search_accommodations_invalid_rooms(
+        self, unauthenticated_test_client, rooms
+    ):
         """Test accommodation search with invalid rooms count."""
         search_request = {
             "location": "Tokyo",
@@ -87,7 +103,9 @@ class TestAccommodationRouterValidation:
             "rooms": rooms,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=search_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=search_request
+        )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -102,14 +120,18 @@ class TestAccommodationRouterValidation:
             "adults": 2,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=search_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=search_request
+        )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_accommodation_details_unauthorized(self, unauthenticated_test_client):
         """Test accommodation details without authentication."""
         details_request = {"listing_id": "test-listing-123"}
 
-        response = unauthenticated_test_client.post("/api/accommodations/details", json=details_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/details", json=details_request
+        )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_save_accommodation_unauthorized(self, unauthenticated_test_client):
@@ -121,7 +143,9 @@ class TestAccommodationRouterValidation:
             "trip_id": "test-trip-456",
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/saved", json=save_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/saved", json=save_request
+        )
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     # === ENDPOINT EXISTENCE TESTS ===
@@ -174,7 +198,9 @@ class TestAccommodationRouterValidation:
             "adults": 2,
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=incomplete_request)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=incomplete_request
+        )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -185,7 +211,9 @@ class TestAccommodationRouterValidation:
             "check_out": "2024-03-18",
         }
 
-        response = unauthenticated_test_client.post("/api/accommodations/search", json=incomplete_request2)
+        response = unauthenticated_test_client.post(
+            "/api/accommodations/search", json=incomplete_request2
+        )
         # FastAPI checks auth before validation, so unauthenticated requests return 401
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -327,7 +355,9 @@ class TestAccommodationRouterBehavior:
         assert service_request.location == "Paris"
         assert service_request.guests == 2  # adults only
         assert service_request.adults == 2
-        assert service_request.children == 0  # API doesn't provide children, so defaults to 0
+        assert (
+            service_request.children == 0
+        )  # API doesn't provide children, so defaults to 0
 
 
 # === MODULE TESTS ===
@@ -348,4 +378,6 @@ def test_accommodation_router_module_structure():
     expected_paths = ["/search", "/details", "/saved"]
 
     for expected_path in expected_paths:
-        assert any(expected_path in path for path in routes), f"Expected path {expected_path} not found in {routes}"
+        assert any(expected_path in path for path in routes), (
+            f"Expected path {expected_path} not found in {routes}"
+        )

@@ -159,7 +159,9 @@ class TestMimeTypeDetection:
 
         for filename, content, expected in test_cases:
             detected = _detect_mime_type(filename, content)
-            assert detected == expected, f"Expected {expected} for {filename}, got {detected}"
+            assert detected == expected, (
+                f"Expected {expected} for {filename}, got {detected}"
+            )
 
     def test_content_based_detection(self):
         """Test MIME type detection based on file content."""
@@ -184,7 +186,9 @@ class TestMimeTypeDetection:
 
         for filename, content, expected in test_cases:
             detected = _detect_mime_type(filename, content)
-            assert detected == expected, f"Expected {expected} for content, got {detected}"
+            assert detected == expected, (
+                f"Expected {expected} for content, got {detected}"
+            )
 
     def test_unknown_type_fallback(self):
         """Test fallback for unknown file types."""
@@ -282,7 +286,9 @@ class TestContentValidation:
 class TestFileValidation:
     """Test main file validation functionality."""
 
-    def create_upload_file(self, filename: str, content: bytes, content_type: str = None) -> UploadFile:
+    def create_upload_file(
+        self, filename: str, content: bytes, content_type: str = None
+    ) -> UploadFile:
         """Helper to create UploadFile for testing."""
         file_obj = BytesIO(content)
         return UploadFile(
@@ -431,7 +437,9 @@ class TestBatchUploadValidation:
         """Test rejection when batch contains invalid file."""
         files = [
             self.create_upload_file("valid.txt", b"valid content"),
-            self.create_upload_file("invalid.exe", b"invalid content"),  # Invalid extension
+            self.create_upload_file(
+                "invalid.exe", b"invalid content"
+            ),  # Invalid extension
         ]
 
         result = await validate_batch_upload(files)
@@ -532,7 +540,9 @@ class TestSafeFilenameGeneration:
         safe_name2 = generate_safe_filename("file2.txt", user_id)
 
         assert safe_name1 != safe_name2
-        both_start_with_user_id = safe_name1.startswith(user_id + "_") and safe_name2.startswith(user_id + "_")
+        both_start_with_user_id = safe_name1.startswith(
+            user_id + "_"
+        ) and safe_name2.startswith(user_id + "_")
         assert both_start_with_user_id
 
     def test_extension_preservation(self):
@@ -547,7 +557,9 @@ class TestSafeFilenameGeneration:
 
         for original, expected_ext in test_cases:
             safe_name = generate_safe_filename(original, "user123")
-            assert safe_name.endswith(expected_ext), f"Expected {expected_ext} for {original}, got {safe_name}"
+            assert safe_name.endswith(expected_ext), (
+                f"Expected {expected_ext} for {original}, got {safe_name}"
+            )
 
     def test_hash_component_length(self):
         """Test that hash component has expected length."""

@@ -53,11 +53,17 @@ async def test_trip_user_isolation(supabase_client: Client, service_client: Clie
 
     try:
         # Sign up users
-        auth1 = supabase_client.auth.sign_up({"email": user1_email, "password": password})
-        auth2 = supabase_client.auth.sign_up({"email": user2_email, "password": password})
+        auth1 = supabase_client.auth.sign_up(
+            {"email": user1_email, "password": password}
+        )
+        auth2 = supabase_client.auth.sign_up(
+            {"email": user2_email, "password": password}
+        )
 
         # Sign in as user1
-        supabase_client.auth.sign_in_with_password({"email": user1_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": user1_email, "password": password}
+        )
 
         # Create a trip as user1
         trip_data = {
@@ -73,15 +79,21 @@ async def test_trip_user_isolation(supabase_client: Client, service_client: Clie
         trip_id = trip_result.data[0]["id"]
 
         # Verify user1 can see their trip
-        user1_trips = supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        user1_trips = (
+            supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        )
         assert len(user1_trips.data) == 1
         assert user1_trips.data[0]["name"] == "User1 Private Trip"
 
         # Sign in as user2
-        supabase_client.auth.sign_in_with_password({"email": user2_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": user2_email, "password": password}
+        )
 
         # Verify user2 cannot see user1's trip
-        user2_trips = supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        user2_trips = (
+            supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        )
         assert len(user2_trips.data) == 0
 
     finally:
@@ -96,7 +108,9 @@ async def test_trip_user_isolation(supabase_client: Client, service_client: Clie
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_trip_collaboration_permissions(supabase_client: Client, service_client: Client):
+async def test_trip_collaboration_permissions(
+    supabase_client: Client, service_client: Client
+):
     """Test trip collaboration with different permission levels."""
     # Create three test users
     owner_email = "rls_test_owner@example.com"
@@ -111,17 +125,25 @@ async def test_trip_collaboration_permissions(supabase_client: Client, service_c
 
     try:
         # Sign up users
-        owner_auth = supabase_client.auth.sign_up({"email": owner_email, "password": password})
+        owner_auth = supabase_client.auth.sign_up(
+            {"email": owner_email, "password": password}
+        )
         owner_id = owner_auth.user.id
 
-        viewer_auth = supabase_client.auth.sign_up({"email": viewer_email, "password": password})
+        viewer_auth = supabase_client.auth.sign_up(
+            {"email": viewer_email, "password": password}
+        )
         viewer_id = viewer_auth.user.id
 
-        editor_auth = supabase_client.auth.sign_up({"email": editor_email, "password": password})
+        editor_auth = supabase_client.auth.sign_up(
+            {"email": editor_email, "password": password}
+        )
         editor_id = editor_auth.user.id
 
         # Sign in as owner
-        supabase_client.auth.sign_in_with_password({"email": owner_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": owner_email, "password": password}
+        )
 
         # Create a trip
         trip_data = {
@@ -146,28 +168,43 @@ async def test_trip_collaboration_permissions(supabase_client: Client, service_c
         ).execute()
 
         # Test viewer permissions
-        supabase_client.auth.sign_in_with_password({"email": viewer_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": viewer_email, "password": password}
+        )
 
         # Viewer can read the trip
-        viewer_trips = supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        viewer_trips = (
+            supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        )
         assert len(viewer_trips.data) == 1
 
         # Viewer cannot update the trip
         try:
-            supabase_client.table("trips").update({"name": "Updated by Viewer"}).eq("id", trip_id).execute()
+            supabase_client.table("trips").update({"name": "Updated by Viewer"}).eq(
+                "id", trip_id
+            ).execute()
             raise AssertionError("Viewer should not be able to update trip")
         except Exception:
             pass  # Expected to fail
 
         # Test editor permissions
-        supabase_client.auth.sign_in_with_password({"email": editor_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": editor_email, "password": password}
+        )
 
         # Editor can read the trip
-        editor_trips = supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        editor_trips = (
+            supabase_client.table("trips").select("*").eq("id", trip_id).execute()
+        )
         assert len(editor_trips.data) == 1
 
         # Editor can update the trip
-        update_result = supabase_client.table("trips").update({"name": "Updated by Editor"}).eq("id", trip_id).execute()
+        update_result = (
+            supabase_client.table("trips")
+            .update({"name": "Updated by Editor"})
+            .eq("id", trip_id)
+            .execute()
+        )
         assert len(update_result.data) == 1
         assert update_result.data[0]["name"] == "Updated by Editor"
 
@@ -175,7 +212,9 @@ async def test_trip_collaboration_permissions(supabase_client: Client, service_c
         # Cleanup using service client
         if service_client and trip_id:
             # Delete test data
-            service_client.table("trip_collaborators").delete().eq("trip_id", trip_id).execute()
+            service_client.table("trip_collaborators").delete().eq(
+                "trip_id", trip_id
+            ).execute()
             service_client.table("trips").delete().eq("id", trip_id).execute()
             # Delete test users
             if owner_id:
@@ -188,7 +227,9 @@ async def test_trip_collaboration_permissions(supabase_client: Client, service_c
 
 @pytest.mark.integration
 @pytest.mark.asyncio
-async def test_memories_strict_isolation(supabase_client: Client, service_client: Client):
+async def test_memories_strict_isolation(
+    supabase_client: Client, service_client: Client
+):
     """Test that memories have strict user isolation."""
     user1_email = "rls_memory_user1@example.com"
     user2_email = "rls_memory_user2@example.com"
@@ -200,14 +241,20 @@ async def test_memories_strict_isolation(supabase_client: Client, service_client
 
     try:
         # Sign up users
-        auth1 = supabase_client.auth.sign_up({"email": user1_email, "password": password})
+        auth1 = supabase_client.auth.sign_up(
+            {"email": user1_email, "password": password}
+        )
         user1_id = auth1.user.id
 
-        auth2 = supabase_client.auth.sign_up({"email": user2_email, "password": password})
+        auth2 = supabase_client.auth.sign_up(
+            {"email": user2_email, "password": password}
+        )
         user2_id = auth2.user.id
 
         # Sign in as user1
-        supabase_client.auth.sign_in_with_password({"email": user1_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": user1_email, "password": password}
+        )
 
         # Create a memory as user1
         memory_data = {
@@ -220,14 +267,20 @@ async def test_memories_strict_isolation(supabase_client: Client, service_client
         memory_id = memory_result.data[0]["id"]
 
         # Verify user1 can see their memory
-        user1_memories = supabase_client.table("memories").select("*").eq("id", memory_id).execute()
+        user1_memories = (
+            supabase_client.table("memories").select("*").eq("id", memory_id).execute()
+        )
         assert len(user1_memories.data) == 1
 
         # Sign in as user2
-        supabase_client.auth.sign_in_with_password({"email": user2_email, "password": password})
+        supabase_client.auth.sign_in_with_password(
+            {"email": user2_email, "password": password}
+        )
 
         # Verify user2 cannot see user1's memory
-        user2_memories = supabase_client.table("memories").select("*").eq("id", memory_id).execute()
+        user2_memories = (
+            supabase_client.table("memories").select("*").eq("id", memory_id).execute()
+        )
         assert len(user2_memories.data) == 0
 
     finally:

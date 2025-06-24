@@ -43,7 +43,9 @@ class TestWebSocketEvent:
 
     def test_websocket_event_auto_id_generation(self):
         """Test automatic ID generation for WebSocketEvent."""
-        event = WebSocketEvent(type=WebSocketEventType.USER_STATUS, payload={"status": "online"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.USER_STATUS, payload={"status": "online"}
+        )
 
         assert event.id is not None
         assert len(event.id) > 0
@@ -131,14 +133,18 @@ class TestWebSocketMessagingService:
         return broadcaster
 
     @pytest.fixture
-    def setup_messaging_service(self, messaging_service, mock_connection_service, mock_broadcaster):
+    def setup_messaging_service(
+        self, messaging_service, mock_connection_service, mock_broadcaster
+    ):
         """Setup messaging service with mocked dependencies."""
         messaging_service.connection_service = mock_connection_service
         messaging_service.broadcaster = mock_broadcaster
         return messaging_service
 
     @pytest.mark.asyncio
-    async def test_send_to_connection_success(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_connection_success(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test successful message sending to specific connection."""
         connection_id = "conn_123"
 
@@ -159,14 +165,18 @@ class TestWebSocketMessagingService:
         mock_connection.send.assert_called_once_with(event)
 
     @pytest.mark.asyncio
-    async def test_send_to_connection_not_found(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_connection_not_found(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test sending to non-existent connection."""
         connection_id = "nonexistent_conn"
 
         # Mock connection not found
         mock_connection_service.get_connection.return_value = None
 
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"}
+        )
 
         result = await setup_messaging_service.send_to_connection(connection_id, event)
 
@@ -174,7 +184,9 @@ class TestWebSocketMessagingService:
         mock_connection_service.get_connection.assert_called_once_with(connection_id)
 
     @pytest.mark.asyncio
-    async def test_send_to_connection_send_failure(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_connection_send_failure(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test connection send failure."""
         connection_id = "conn_123"
 
@@ -183,7 +195,9 @@ class TestWebSocketMessagingService:
         mock_connection.send = AsyncMock(return_value=False)
         mock_connection_service.get_connection.return_value = mock_connection
 
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"}
+        )
 
         result = await setup_messaging_service.send_to_connection(connection_id, event)
 
@@ -191,7 +205,9 @@ class TestWebSocketMessagingService:
         mock_connection.send.assert_called_once_with(event)
 
     @pytest.mark.asyncio
-    async def test_send_to_user_with_connections(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_user_with_connections(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test sending to user with active connections."""
         user_id = uuid4()
 
@@ -206,7 +222,9 @@ class TestWebSocketMessagingService:
             mock_conn2,
         ]
 
-        event = WebSocketEvent(type=WebSocketEventType.USER_STATUS, payload={"status": "online"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.USER_STATUS, payload={"status": "online"}
+        )
 
         results = await setup_messaging_service.send_to_user(user_id, event)
 
@@ -226,17 +244,23 @@ class TestWebSocketMessagingService:
         # Mock user has no connections
         mock_connection_service.get_connections_by_user.return_value = []
 
-        event = WebSocketEvent(type=WebSocketEventType.USER_STATUS, payload={"status": "away"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.USER_STATUS, payload={"status": "away"}
+        )
 
         results = await setup_messaging_service.send_to_user(user_id, event)
 
         assert len(results) == 1
         assert results[0] is True
         mock_connection_service.get_connections_by_user.assert_called_once_with(user_id)
-        mock_broadcaster.broadcast_to_user.assert_called_once_with(user_id, event.model_dump())
+        mock_broadcaster.broadcast_to_user.assert_called_once_with(
+            user_id, event.model_dump()
+        )
 
     @pytest.mark.asyncio
-    async def test_send_to_user_mixed_results(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_user_mixed_results(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test sending to user with mixed send results."""
         user_id = uuid4()
 
@@ -263,7 +287,9 @@ class TestWebSocketMessagingService:
         assert results[1] is False
 
     @pytest.mark.asyncio
-    async def test_send_to_session_with_connections(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_session_with_connections(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test sending to session with active connections."""
         session_id = uuid4()
 
@@ -282,7 +308,9 @@ class TestWebSocketMessagingService:
 
         assert len(results) == 1
         assert results[0] is True
-        mock_connection_service.get_connections_by_session.assert_called_once_with(session_id)
+        mock_connection_service.get_connections_by_session.assert_called_once_with(
+            session_id
+        )
         mock_conn1.send.assert_called_once_with(event)
 
     @pytest.mark.asyncio
@@ -295,16 +323,22 @@ class TestWebSocketMessagingService:
         # Mock session has no connections
         mock_connection_service.get_connections_by_session.return_value = []
 
-        event = WebSocketEvent(type=WebSocketEventType.AGENT_STATUS, payload={"agent": "idle"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.AGENT_STATUS, payload={"agent": "idle"}
+        )
 
         results = await setup_messaging_service.send_to_session(session_id, event)
 
         assert len(results) == 1
         assert results[0] is True
-        mock_broadcaster.broadcast_to_session.assert_called_once_with(session_id, event.model_dump())
+        mock_broadcaster.broadcast_to_session.assert_called_once_with(
+            session_id, event.model_dump()
+        )
 
     @pytest.mark.asyncio
-    async def test_send_to_channel_with_subscribers(self, setup_messaging_service, mock_connection_service):
+    async def test_send_to_channel_with_subscribers(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test sending to channel with subscribers."""
         channel = "general"
 
@@ -328,7 +362,9 @@ class TestWebSocketMessagingService:
 
         assert len(results) == 2
         assert all(results)
-        mock_connection_service.get_connections_by_channel.assert_called_once_with(channel)
+        mock_connection_service.get_connections_by_channel.assert_called_once_with(
+            channel
+        )
         mock_conn1.send.assert_called_once_with(event)
         mock_conn2.send.assert_called_once_with(event)
 
@@ -351,10 +387,14 @@ class TestWebSocketMessagingService:
 
         assert len(results) == 1
         assert results[0] is True
-        mock_broadcaster.broadcast_to_channel.assert_called_once_with(channel, event.model_dump())
+        mock_broadcaster.broadcast_to_channel.assert_called_once_with(
+            channel, event.model_dump()
+        )
 
     @pytest.mark.asyncio
-    async def test_broadcast_to_all_connections(self, setup_messaging_service, mock_connection_service):
+    async def test_broadcast_to_all_connections(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test broadcasting to all connections."""
         # Mock all connections
         mock_conn1 = AsyncMock()
@@ -409,8 +449,12 @@ class TestWebSocketMessagingService:
         error_message = "Authentication failed"
         error_code = "AUTH_FAILED"
 
-        with patch.object(setup_messaging_service, "send_to_connection", return_value=True) as mock_send:
-            result = await setup_messaging_service.send_error(connection_id, error_message, error_code)
+        with patch.object(
+            setup_messaging_service, "send_to_connection", return_value=True
+        ) as mock_send:
+            result = await setup_messaging_service.send_error(
+                connection_id, error_message, error_code
+            )
 
             assert result is True
             mock_send.assert_called_once()
@@ -428,7 +472,9 @@ class TestWebSocketMessagingService:
         """Test sending heartbeat events."""
         connection_id = "conn_123"
 
-        with patch.object(setup_messaging_service, "send_to_connection", return_value=True) as mock_send:
+        with patch.object(
+            setup_messaging_service, "send_to_connection", return_value=True
+        ) as mock_send:
             result = await setup_messaging_service.send_heartbeat(connection_id)
 
             assert result is True
@@ -448,8 +494,12 @@ class TestWebSocketMessagingService:
         status = "away"
         metadata = {"last_seen": "2024-01-15T10:30:00Z"}
 
-        with patch.object(setup_messaging_service, "send_to_user", return_value=[True]) as mock_send:
-            result = await setup_messaging_service.handle_user_status_change(user_id, status, metadata)
+        with patch.object(
+            setup_messaging_service, "send_to_user", return_value=[True]
+        ) as mock_send:
+            result = await setup_messaging_service.handle_user_status_change(
+                user_id, status, metadata
+            )
 
             assert result == [True]
             mock_send.assert_called_once()
@@ -470,8 +520,12 @@ class TestWebSocketMessagingService:
         agent_status = "processing"
         task_info = {"task_id": "task_123", "progress": 0.75}
 
-        with patch.object(setup_messaging_service, "send_to_session", return_value=[True]) as mock_send:
-            result = await setup_messaging_service.handle_agent_status_update(session_id, agent_status, task_info)
+        with patch.object(
+            setup_messaging_service, "send_to_session", return_value=[True]
+        ) as mock_send:
+            result = await setup_messaging_service.handle_agent_status_update(
+                session_id, agent_status, task_info
+            )
 
             assert result == [True]
             mock_send.assert_called_once()
@@ -492,8 +546,12 @@ class TestWebSocketMessagingService:
         channel = "general"
         connection_id = "conn_123"
 
-        with patch.object(setup_messaging_service, "send_to_channel", return_value=[True, True]) as mock_send:
-            result = await setup_messaging_service.handle_channel_join(user_id, channel, connection_id)
+        with patch.object(
+            setup_messaging_service, "send_to_channel", return_value=[True, True]
+        ) as mock_send:
+            result = await setup_messaging_service.handle_channel_join(
+                user_id, channel, connection_id
+            )
 
             assert result == [True, True]
             mock_send.assert_called_once()
@@ -514,8 +572,12 @@ class TestWebSocketMessagingService:
         channel = "notifications"
         connection_id = "conn_456"
 
-        with patch.object(setup_messaging_service, "send_to_channel", return_value=[True]) as mock_send:
-            result = await setup_messaging_service.handle_channel_leave(user_id, channel, connection_id)
+        with patch.object(
+            setup_messaging_service, "send_to_channel", return_value=[True]
+        ) as mock_send:
+            result = await setup_messaging_service.handle_channel_leave(
+                user_id, channel, connection_id
+            )
 
             assert result == [True]
             mock_send.assert_called_once()
@@ -537,8 +599,12 @@ class TestWebSocketMessagingService:
         message = "Hello everyone!"
         metadata = {"thread_id": "thread_789"}
 
-        with patch.object(setup_messaging_service, "send_to_channel", return_value=[True, True]) as mock_send:
-            result = await setup_messaging_service.send_chat_message(channel, user_id, message, metadata)
+        with patch.object(
+            setup_messaging_service, "send_to_channel", return_value=[True, True]
+        ) as mock_send:
+            result = await setup_messaging_service.send_chat_message(
+                channel, user_id, message, metadata
+            )
 
             assert result == [True, True]
             mock_send.assert_called_once()
@@ -563,7 +629,9 @@ class TestWebSocketMessagingService:
         with patch.object(
             setup_messaging_service, "broadcast_to_all", return_value=[True, True, True]
         ) as mock_broadcast:
-            result = await setup_messaging_service.send_system_announcement(message, severity, scheduled_time)
+            result = await setup_messaging_service.send_system_announcement(
+                message, severity, scheduled_time
+            )
 
             assert result == [True, True, True]
             mock_broadcast.assert_called_once()
@@ -578,7 +646,9 @@ class TestWebSocketMessagingService:
             assert sent_event.payload["scheduled_time"] == scheduled_time
 
     @pytest.mark.asyncio
-    async def test_concurrent_messaging(self, setup_messaging_service, mock_connection_service):
+    async def test_concurrent_messaging(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test concurrent message sending."""
         # Setup multiple connections
         connections = []
@@ -629,12 +699,16 @@ class TestWebSocketMessagingService:
         pass
 
     @pytest.mark.asyncio
-    async def test_error_handling_in_messaging(self, setup_messaging_service, mock_connection_service):
+    async def test_error_handling_in_messaging(
+        self, setup_messaging_service, mock_connection_service
+    ):
         """Test error handling during message operations."""
         # Mock connection service error
         mock_connection_service.get_connection.side_effect = Exception("Service error")
 
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Error test"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Error test"}
+        )
 
         # Should handle error gracefully
         result = await setup_messaging_service.send_to_connection("conn_123", event)

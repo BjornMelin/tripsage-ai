@@ -110,7 +110,9 @@ class TestWebSocketConnection:
         assert websocket_connection.state == ConnectionState.ERROR
 
     @pytest.mark.asyncio
-    async def test_send_dict_message_success(self, websocket_connection, mock_websocket):
+    async def test_send_dict_message_success(
+        self, websocket_connection, mock_websocket
+    ):
         """Test successful dict message sending."""
         message = {"type": "custom", "data": "test"}
 
@@ -125,7 +127,9 @@ class TestWebSocketConnection:
         assert sent_data == message
 
     @pytest.mark.asyncio
-    async def test_send_dict_message_failure(self, websocket_connection, mock_websocket):
+    async def test_send_dict_message_failure(
+        self, websocket_connection, mock_websocket
+    ):
         """Test dict message sending failure."""
         mock_websocket.send_text.side_effect = Exception("Send failed")
 
@@ -198,10 +202,15 @@ class TestWebSocketConnection:
         assert "test-channel" in websocket_connection.subscribed_channels
 
     @pytest.mark.asyncio
-    async def test_concurrent_send_operations(self, websocket_connection, mock_websocket):
+    async def test_concurrent_send_operations(
+        self, websocket_connection, mock_websocket
+    ):
         """Test concurrent send operations with lock protection."""
         events = [
-            WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"msg": f"Message {i}"}) for i in range(5)
+            WebSocketEvent(
+                type=WebSocketEventType.CHAT_MESSAGE, payload={"msg": f"Message {i}"}
+            )
+            for i in range(5)
         ]
 
         # Send multiple events concurrently
@@ -222,7 +231,9 @@ class TestWebSocketManager:
         """Create mock settings."""
         settings = Mock(spec=Settings)
         settings.database_jwt_secret = Mock()
-        settings.database_jwt_secret.get_secret_value = Mock(return_value="test-secret-key-12345")
+        settings.database_jwt_secret.get_secret_value = Mock(
+            return_value="test-secret-key-12345"
+        )
         return settings
 
     @pytest.fixture
@@ -269,9 +280,15 @@ class TestWebSocketManager:
     async def test_start_manager(self, websocket_manager):
         """Test starting the WebSocket manager."""
         with (
-            patch.object(websocket_manager, "_cleanup_stale_connections", new_callable=AsyncMock),
-            patch.object(websocket_manager, "_heartbeat_monitor", new_callable=AsyncMock),
-            patch.object(websocket_manager, "_performance_monitor", new_callable=AsyncMock),
+            patch.object(
+                websocket_manager, "_cleanup_stale_connections", new_callable=AsyncMock
+            ),
+            patch.object(
+                websocket_manager, "_heartbeat_monitor", new_callable=AsyncMock
+            ),
+            patch.object(
+                websocket_manager, "_performance_monitor", new_callable=AsyncMock
+            ),
         ):
             await websocket_manager.start()
 
@@ -316,7 +333,9 @@ class TestWebSocketManager:
             assert websocket_manager._performance_task.cancelled()
 
     @pytest.mark.asyncio
-    async def test_authenticate_connection_success(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_authenticate_connection_success(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test successful WebSocket authentication."""
         session_id = uuid4()
         auth_request = WebSocketAuthRequest(
@@ -325,7 +344,9 @@ class TestWebSocketManager:
             channels=["general", "notifications"],
         )
 
-        response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         assert response.success is True
         assert response.connection_id != ""
@@ -334,22 +355,30 @@ class TestWebSocketManager:
         assert "general" in response.available_channels
 
         # Verify connection was added to manager
-        assert response.connection_id in websocket_manager.connection_service.connections
+        assert (
+            response.connection_id in websocket_manager.connection_service.connections
+        )
         assert response.user_id in websocket_manager.messaging_service.user_connections
 
     @pytest.mark.asyncio
-    async def test_authenticate_connection_invalid_token(self, websocket_manager, mock_websocket):
+    async def test_authenticate_connection_invalid_token(
+        self, websocket_manager, mock_websocket
+    ):
         """Test WebSocket authentication with invalid token."""
         auth_request = WebSocketAuthRequest(token="invalid-token", channels=["general"])
 
-        response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         assert response.success is False
         assert response.connection_id == ""
         assert response.error is not None
 
     @pytest.mark.asyncio
-    async def test_authenticate_connection_malformed_token(self, websocket_manager, mock_websocket, mock_settings):
+    async def test_authenticate_connection_malformed_token(
+        self, websocket_manager, mock_websocket, mock_settings
+    ):
         """Test authentication with malformed token payload."""
         # Create token with missing required fields
         payload = {"some_field": "value"}  # Missing 'sub' and 'user_id'
@@ -361,17 +390,23 @@ class TestWebSocketManager:
 
         auth_request = WebSocketAuthRequest(token=malformed_token, channels=["general"])
 
-        response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         assert response.success is False
         assert "Invalid token payload" in response.error
 
     @pytest.mark.asyncio
-    async def test_disconnect_connection(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_disconnect_connection(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test disconnecting a WebSocket connection."""
         # First authenticate a connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token, channels=["general"])
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         connection_id = auth_response.connection_id
         user_id = auth_response.user_id
@@ -394,7 +429,9 @@ class TestWebSocketManager:
         await websocket_manager.disconnect_connection("nonexistent-id")
 
     @pytest.mark.asyncio
-    async def test_disconnect_all_connections(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_disconnect_all_connections(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test disconnecting all connections."""
         # Create multiple connections
         connections = []
@@ -403,7 +440,9 @@ class TestWebSocketManager:
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
             connections.append(response.connection_id)
 
         assert len(websocket_manager.connection_service.connections) == 3
@@ -413,15 +452,23 @@ class TestWebSocketManager:
         assert len(websocket_manager.connection_service.connections) == 0
 
     @pytest.mark.asyncio
-    async def test_send_to_connection_success(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_send_to_connection_success(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test sending event to specific connection."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"}
+        )
 
-        result = await websocket_manager.send_to_connection(auth_response.connection_id, event)
+        result = await websocket_manager.send_to_connection(
+            auth_response.connection_id, event
+        )
 
         assert result is True
         mock_websocket.send_text.assert_called_once()
@@ -429,7 +476,9 @@ class TestWebSocketManager:
     @pytest.mark.asyncio
     async def test_send_to_connection_not_found(self, websocket_manager):
         """Test sending event to non-existent connection."""
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Hello"}
+        )
 
         result = await websocket_manager.send_to_connection("nonexistent-id", event)
 
@@ -447,11 +496,15 @@ class TestWebSocketManager:
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
             user_id = response.user_id
             websockets.append(websocket)
 
-        event = WebSocketEvent(type=WebSocketEventType.AGENT_STATUS, payload={"status": "active"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.AGENT_STATUS, payload={"status": "active"}
+        )
 
         sent_count = await websocket_manager.send_to_user(user_id, event)
 
@@ -460,7 +513,9 @@ class TestWebSocketManager:
             websocket.send_text.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_send_to_session(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_send_to_session(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test sending event to all connections for a session."""
         session_id = uuid4()
 
@@ -470,11 +525,15 @@ class TestWebSocketManager:
             websocket = AsyncMock(spec=WebSocket)
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
-            auth_request = WebSocketAuthRequest(token=valid_jwt_token, session_id=session_id)
+            auth_request = WebSocketAuthRequest(
+                token=valid_jwt_token, session_id=session_id
+            )
             await websocket_manager.authenticate_connection(websocket, auth_request)
             websockets.append(websocket)
 
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_STATUS, payload={"status": "typing"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_STATUS, payload={"status": "typing"}
+        )
 
         sent_count = await websocket_manager.send_to_session(session_id, event)
 
@@ -495,12 +554,18 @@ class TestWebSocketManager:
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
 
             # Subscribe to channel
-            connection = websocket_manager.connection_service.get_connection(response.connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                response.connection_id
+            )
             connection.subscribe_to_channel(channel)
-            websocket_manager.messaging_service.subscribe_to_channel(response.connection_id, channel)
+            websocket_manager.messaging_service.subscribe_to_channel(
+                response.connection_id, channel
+            )
 
             websockets.append(websocket)
             connection_ids.append(response.connection_id)
@@ -517,15 +582,23 @@ class TestWebSocketManager:
             websocket.send_text.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_subscribe_connection_success(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_subscribe_connection_success(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test successful channel subscription."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
-        subscribe_request = WebSocketSubscribeRequest(channels=["general", "notifications"], unsubscribe_channels=[])
+        subscribe_request = WebSocketSubscribeRequest(
+            channels=["general", "notifications"], unsubscribe_channels=[]
+        )
 
-        response = await websocket_manager.subscribe_connection(auth_response.connection_id, subscribe_request)
+        response = await websocket_manager.subscribe_connection(
+            auth_response.connection_id, subscribe_request
+        )
 
         assert response.success is True
         assert "general" in response.subscribed_channels
@@ -533,7 +606,9 @@ class TestWebSocketManager:
         assert len(response.failed_channels) == 0
 
         # Verify connection was added to channel mappings
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         assert connection.is_subscribed_to_channel("general")
         assert connection.is_subscribed_to_channel("notifications")
 
@@ -542,25 +617,37 @@ class TestWebSocketManager:
         """Test subscription for non-existent connection."""
         subscribe_request = WebSocketSubscribeRequest(channels=["general"])
 
-        response = await websocket_manager.subscribe_connection("nonexistent-id", subscribe_request)
+        response = await websocket_manager.subscribe_connection(
+            "nonexistent-id", subscribe_request
+        )
 
         assert response.success is False
         assert response.error == "Connection not found"
 
     @pytest.mark.asyncio
-    async def test_subscribe_connection_with_unsubscribe(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_subscribe_connection_with_unsubscribe(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test channel subscription with unsubscribe."""
         # Authenticate and initially subscribe
         auth_request = WebSocketAuthRequest(token=valid_jwt_token, channels=["general"])
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
-        subscribe_request = WebSocketSubscribeRequest(channels=["notifications"], unsubscribe_channels=["general"])
+        subscribe_request = WebSocketSubscribeRequest(
+            channels=["notifications"], unsubscribe_channels=["general"]
+        )
 
-        response = await websocket_manager.subscribe_connection(auth_response.connection_id, subscribe_request)
+        response = await websocket_manager.subscribe_connection(
+            auth_response.connection_id, subscribe_request
+        )
 
         assert response.success is True
 
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         assert not connection.is_subscribed_to_channel("general")
         assert connection.is_subscribed_to_channel("notifications")
 
@@ -570,9 +657,13 @@ class TestWebSocketManager:
         # This needs to be run in async context
         async def run_test():
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+            auth_response = await websocket_manager.authenticate_connection(
+                mock_websocket, auth_request
+            )
 
-            connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                auth_response.connection_id
+            )
 
             assert connection is not None
             assert isinstance(connection, WebSocketConnection)
@@ -583,7 +674,9 @@ class TestWebSocketManager:
 
     def test_get_connection_not_found(self, websocket_manager):
         """Test getting non-existent connection."""
-        connection = websocket_manager.connection_service.get_connection("nonexistent-id")
+        connection = websocket_manager.connection_service.get_connection(
+            "nonexistent-id"
+        )
 
         assert connection is None
 
@@ -616,20 +709,29 @@ class TestWebSocketManager:
         assert channels == []
 
     @pytest.mark.asyncio
-    async def test_send_multiple_events_success(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_send_multiple_events_success(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test sending multiple events sequentially."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         events = [
-            WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"msg": f"Message {i}"}) for i in range(3)
+            WebSocketEvent(
+                type=WebSocketEventType.CHAT_MESSAGE, payload={"msg": f"Message {i}"}
+            )
+            for i in range(3)
         ]
 
         # Send events individually
         results = []
         for event in events:
-            result = await websocket_manager.send_to_connection(auth_response.connection_id, event)
+            result = await websocket_manager.send_to_connection(
+                auth_response.connection_id, event
+            )
             results.append(result)
 
         assert all(results)
@@ -638,14 +740,18 @@ class TestWebSocketManager:
     @pytest.mark.asyncio
     async def test_send_to_nonexistent_connection(self, websocket_manager):
         """Test send to non-existent connection."""
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"msg": "test"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"msg": "test"}
+        )
 
         result = await websocket_manager.send_to_connection("nonexistent-id", event)
 
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_broadcast_optimized_to_channel(self, websocket_manager, valid_jwt_token):
+    async def test_broadcast_optimized_to_channel(
+        self, websocket_manager, valid_jwt_token
+    ):
         """Test optimized broadcast to specific channel."""
         channel = "broadcast-channel"
 
@@ -656,12 +762,18 @@ class TestWebSocketManager:
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
 
             # Subscribe to channel
-            connection = websocket_manager.connection_service.get_connection(response.connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                response.connection_id
+            )
             connection.subscribe_to_channel(channel)
-            websocket_manager.messaging_service.subscribe_to_channel(response.connection_id, channel)
+            websocket_manager.messaging_service.subscribe_to_channel(
+                response.connection_id, channel
+            )
 
             websockets.append(websocket)
 
@@ -677,7 +789,9 @@ class TestWebSocketManager:
             websocket.send_text.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_broadcast_optimized_exclude_connection(self, websocket_manager, valid_jwt_token):
+    async def test_broadcast_optimized_exclude_connection(
+        self, websocket_manager, valid_jwt_token
+    ):
         """Test optimized broadcast with connection exclusion."""
         # Create multiple connections
         websockets = []
@@ -687,12 +801,16 @@ class TestWebSocketManager:
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
 
             websockets.append(websocket)
             connection_ids.append(response.connection_id)
 
-        event = WebSocketEvent(type=WebSocketEventType.MESSAGE_BROADCAST, payload={"message": "Broadcast"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.MESSAGE_BROADCAST, payload={"message": "Broadcast"}
+        )
 
         # Send to specific connections (simulating exclusion)
         target_ids = connection_ids[1:]  # Exclude first connection
@@ -721,13 +839,19 @@ class TestWebSocketManager:
         assert "active_connections" in performance
 
     @pytest.mark.asyncio
-    async def test_cleanup_stale_connections_task(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_cleanup_stale_connections_task(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test cleanup of stale connections background task."""
         # Create a connection and make it stale
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         # Make connection stale by setting old heartbeat
         connection.last_heartbeat = datetime.utcnow().replace(year=2020)
 
@@ -742,10 +866,15 @@ class TestWebSocketManager:
             await websocket_manager._cleanup_stale_connections()
 
         # Verify stale connection was cleaned up
-        assert auth_response.connection_id not in websocket_manager.connection_service.connections
+        assert (
+            auth_response.connection_id
+            not in websocket_manager.connection_service.connections
+        )
 
     @pytest.mark.asyncio
-    async def test_heartbeat_monitor_task(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_heartbeat_monitor_task(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test heartbeat monitor background task."""
         # Create a connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
@@ -822,17 +951,23 @@ class TestWebSocketManager:
             websocket.client = Mock()
             websocket.client.host = f"127.0.0.{i + 1}"
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            tasks.append(websocket_manager.authenticate_connection(websocket, auth_request))
+            tasks.append(
+                websocket_manager.authenticate_connection(websocket, auth_request)
+            )
 
         responses = await asyncio.gather(*tasks)
 
         # All authentications should succeed
         assert all(response.success for response in responses)
-        assert len(set(response.connection_id for response in responses)) == 5  # All unique IDs
+        assert (
+            len(set(response.connection_id for response in responses)) == 5
+        )  # All unique IDs
         assert len(websocket_manager.connection_service.connections) == 5
 
     @pytest.mark.asyncio
-    async def test_connection_with_different_users(self, websocket_manager, mock_settings):
+    async def test_connection_with_different_users(
+        self, websocket_manager, mock_settings
+    ):
         """Test connections from different users."""
         # Create tokens for different users
         user_ids = [str(uuid4()) for _ in range(3)]
@@ -865,7 +1000,9 @@ class TestWebSocketManager:
             assert UUID(user_id) in websocket_manager.messaging_service.user_connections
 
     @pytest.mark.asyncio
-    async def test_message_sending_with_failed_connections(self, websocket_manager, valid_jwt_token):
+    async def test_message_sending_with_failed_connections(
+        self, websocket_manager, valid_jwt_token
+    ):
         """Test message sending when some connections fail."""
         # Create multiple connections
         websockets = []
@@ -881,19 +1018,27 @@ class TestWebSocketManager:
                 websocket.send_text.side_effect = Exception("Connection failed")
 
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
 
             websockets.append(websocket)
             connection_ids.append(response.connection_id)
 
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Test"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Test"}
+        )
 
         # Send to channel (all connections)
         channel = "test-channel"
         for connection_id in connection_ids:
-            connection = websocket_manager.connection_service.get_connection(connection_id)
+            connection = websocket_manager.connection_service.get_connection(
+                connection_id
+            )
             connection.subscribe_to_channel(channel)
-            websocket_manager.messaging_service.subscribe_to_channel(connection_id, channel)
+            websocket_manager.messaging_service.subscribe_to_channel(
+                connection_id, channel
+            )
 
         sent_count = await websocket_manager.send_to_channel(channel, event)
 
@@ -901,33 +1046,49 @@ class TestWebSocketManager:
         assert sent_count == 2
 
         # Verify the failed connection has error status
-        failed_connection = websocket_manager.connection_service.connections[connection_ids[1]]
+        failed_connection = websocket_manager.connection_service.connections[
+            connection_ids[1]
+        ]
         assert failed_connection.state == ConnectionState.ERROR
 
     @pytest.mark.asyncio
-    async def test_edge_case_empty_channels_subscription(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_edge_case_empty_channels_subscription(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test subscription with empty channel lists."""
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
-        subscribe_request = WebSocketSubscribeRequest(channels=[], unsubscribe_channels=[])
+        subscribe_request = WebSocketSubscribeRequest(
+            channels=[], unsubscribe_channels=[]
+        )
 
-        response = await websocket_manager.subscribe_connection(auth_response.connection_id, subscribe_request)
+        response = await websocket_manager.subscribe_connection(
+            auth_response.connection_id, subscribe_request
+        )
 
         assert response.success is True
         assert len(response.subscribed_channels) == 0
         assert len(response.failed_channels) == 0
 
     @pytest.mark.asyncio
-    async def test_connection_cleanup_on_authentication_failure(self, websocket_manager, mock_websocket):
+    async def test_connection_cleanup_on_authentication_failure(
+        self, websocket_manager, mock_websocket
+    ):
         """Test that failed authentication doesn't leave orphaned connections."""
         initial_count = len(websocket_manager.connection_service.connections)
 
         auth_request = WebSocketAuthRequest(token="invalid-token")
-        response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         assert response.success is False
-        assert len(websocket_manager.connection_service.connections) == initial_count  # No new connections
+        assert (
+            len(websocket_manager.connection_service.connections) == initial_count
+        )  # No new connections
 
     def test_websocket_event_model_creation(self):
         """Test WebSocketEvent model creation and serialization."""
@@ -1001,14 +1162,20 @@ class TestWebSocketManager:
         assert len(subscribe_response.failed_channels) == 1
 
     @pytest.mark.asyncio
-    async def test_circuit_breaker_functionality(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_circuit_breaker_functionality(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test circuit breaker patterns in WebSocket operations."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         # Get the connection and access its circuit breaker
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
 
         # Simulate circuit breaker opening due to failures
         for _ in range(5):  # Trigger multiple failures
@@ -1022,13 +1189,19 @@ class TestWebSocketManager:
         assert connection.circuit_breaker.failure_count == 0
 
     @pytest.mark.asyncio
-    async def test_rate_limiting_functionality(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_rate_limiting_functionality(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test rate limiting in WebSocket operations."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
 
         # Get rate limiter
         rate_limiter = connection.rate_limiter
@@ -1053,26 +1226,38 @@ class TestWebSocketManager:
         failing_websocket.send_text.side_effect = Exception("Connection lost")
 
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(failing_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            failing_websocket, auth_request
+        )
 
         # Try to send a message (should trigger error recovery)
-        event = WebSocketEvent(type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Test"})
+        event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_MESSAGE, payload={"message": "Test"}
+        )
 
-        result = await websocket_manager.send_to_connection(auth_response.connection_id, event)
+        result = await websocket_manager.send_to_connection(
+            auth_response.connection_id, event
+        )
 
         # Should handle the error gracefully
         assert result is False
 
         # Connection should be marked as error state
-        connection = websocket_manager.connection_service.get_connection(auth_response.connection_id)
+        connection = websocket_manager.connection_service.get_connection(
+            auth_response.connection_id
+        )
         assert connection.state == ConnectionState.ERROR
 
     @pytest.mark.asyncio
-    async def test_performance_monitoring_integration(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_performance_monitoring_integration(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test performance monitoring integration."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         # Send some messages to generate metrics
         for i in range(5):
@@ -1080,7 +1265,9 @@ class TestWebSocketManager:
                 type=WebSocketEventType.CHAT_MESSAGE,
                 payload={"message": f"Test message {i}"},
             )
-            await websocket_manager.send_to_connection(auth_response.connection_id, event)
+            await websocket_manager.send_to_connection(
+                auth_response.connection_id, event
+            )
 
         # Check performance metrics
         stats = websocket_manager.get_connection_stats()
@@ -1091,7 +1278,9 @@ class TestWebSocketManager:
         assert performance["total_messages_sent"] >= 5
 
     @pytest.mark.asyncio
-    async def test_websocket_session_management_edge_cases(self, websocket_manager, valid_jwt_token, mock_settings):
+    async def test_websocket_session_management_edge_cases(
+        self, websocket_manager, valid_jwt_token, mock_settings
+    ):
         """Test edge cases in session management."""
         # Test session with no channels
         auth_request = WebSocketAuthRequest(token=valid_jwt_token, channels=[])
@@ -1099,7 +1288,9 @@ class TestWebSocketManager:
         mock_websocket.client = Mock()
         mock_websocket.client.host = "127.0.0.1"
 
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         assert auth_response.success is True
         assert len(auth_response.available_channels) > 0  # Should have default channels
@@ -1112,11 +1303,15 @@ class TestWebSocketManager:
         websocket_with_long_ua.headers = {"user-agent": long_user_agent}
 
         # Should handle gracefully
-        auth_response2 = await websocket_manager.authenticate_connection(websocket_with_long_ua, auth_request)
+        auth_response2 = await websocket_manager.authenticate_connection(
+            websocket_with_long_ua, auth_request
+        )
         assert auth_response2.success is True
 
     @pytest.mark.asyncio
-    async def test_distributed_broadcasting_patterns(self, websocket_manager, valid_jwt_token):
+    async def test_distributed_broadcasting_patterns(
+        self, websocket_manager, valid_jwt_token
+    ):
         """Test distributed broadcasting patterns."""
         # Create multiple connections across different "nodes"
         connections = []
@@ -1126,7 +1321,9 @@ class TestWebSocketManager:
             websocket.client.host = f"192.168.1.{i + 1}"  # Different IPs
 
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            auth_response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            auth_response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
             connections.append((websocket, auth_response))
 
         # Test broadcasting to all connections
@@ -1145,18 +1342,26 @@ class TestWebSocketManager:
         assert sent_count >= len(connections)
 
     @pytest.mark.asyncio
-    async def test_channel_management_stress_testing(self, websocket_manager, mock_websocket, valid_jwt_token):
+    async def test_channel_management_stress_testing(
+        self, websocket_manager, mock_websocket, valid_jwt_token
+    ):
         """Test channel management under stress."""
         # Authenticate connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        auth_response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+        auth_response = await websocket_manager.authenticate_connection(
+            mock_websocket, auth_request
+        )
 
         # Subscribe to many channels rapidly
         channels = [f"channel_{i}" for i in range(100)]
 
-        subscribe_request = WebSocketSubscribeRequest(channels=channels, unsubscribe_channels=[])
+        subscribe_request = WebSocketSubscribeRequest(
+            channels=channels, unsubscribe_channels=[]
+        )
 
-        response = await websocket_manager.subscribe_connection(auth_response.connection_id, subscribe_request)
+        response = await websocket_manager.subscribe_connection(
+            auth_response.connection_id, subscribe_request
+        )
 
         assert response.success is True
         # Should handle large number of channels
@@ -1164,7 +1369,9 @@ class TestWebSocketManager:
 
         # Now unsubscribe from half of them
         unsubscribe_channels = channels[:50]
-        unsubscribe_request = WebSocketSubscribeRequest(channels=[], unsubscribe_channels=unsubscribe_channels)
+        unsubscribe_request = WebSocketSubscribeRequest(
+            channels=[], unsubscribe_channels=unsubscribe_channels
+        )
 
         unsubscribe_response = await websocket_manager.subscribe_connection(
             auth_response.connection_id, unsubscribe_request
@@ -1173,7 +1380,9 @@ class TestWebSocketManager:
         assert unsubscribe_response.success is True
 
     @pytest.mark.asyncio
-    async def test_websocket_security_validation(self, websocket_manager, mock_websocket, mock_settings):
+    async def test_websocket_security_validation(
+        self, websocket_manager, mock_websocket, mock_settings
+    ):
         """Test security validation in WebSocket operations."""
         # Test with malformed JWT token
         malformed_tokens = [
@@ -1186,13 +1395,19 @@ class TestWebSocketManager:
 
         for malformed_token in malformed_tokens:
             if malformed_token:
-                auth_request = WebSocketAuthRequest(token=malformed_token, channels=["general"])
-                response = await websocket_manager.authenticate_connection(mock_websocket, auth_request)
+                auth_request = WebSocketAuthRequest(
+                    token=malformed_token, channels=["general"]
+                )
+                response = await websocket_manager.authenticate_connection(
+                    mock_websocket, auth_request
+                )
                 assert response.success is False
                 assert response.error is not None
 
     @pytest.mark.asyncio
-    async def test_memory_and_resource_cleanup(self, websocket_manager, valid_jwt_token):
+    async def test_memory_and_resource_cleanup(
+        self, websocket_manager, valid_jwt_token
+    ):
         """Test memory and resource cleanup."""
         # Create and disconnect many connections
         connections = []
@@ -1202,7 +1417,9 @@ class TestWebSocketManager:
             websocket.client.host = f"127.0.0.{i + 1}"
 
             auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-            auth_response = await websocket_manager.authenticate_connection(websocket, auth_request)
+            auth_response = await websocket_manager.authenticate_connection(
+                websocket, auth_request
+            )
             connections.append(auth_response.connection_id)
 
         # Verify all connections are tracked

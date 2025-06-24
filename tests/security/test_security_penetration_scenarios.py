@@ -86,11 +86,15 @@ class TestAdvancedPersistentThreatScenarios:
 
             # Add authentication middleware
             auth_middleware = AuthenticationMiddleware(penetration_test_app)
-            penetration_test_app.add_middleware(type(auth_middleware).__bases__[0], dispatch=auth_middleware.dispatch)
+            penetration_test_app.add_middleware(
+                type(auth_middleware).__bases__[0], dispatch=auth_middleware.dispatch
+            )
 
             # Add rate limiting middleware
             with patch("tripsage_core.services.infrastructure.get_cache_service"):
-                rate_middleware = EnhancedRateLimitMiddleware(app=penetration_test_app, use_dragonfly=False)
+                rate_middleware = EnhancedRateLimitMiddleware(
+                    app=penetration_test_app, use_dragonfly=False
+                )
                 penetration_test_app.add_middleware(
                     type(rate_middleware).__bases__[0],
                     dispatch=rate_middleware.dispatch,
@@ -132,7 +136,9 @@ class TestAdvancedPersistentThreatScenarios:
                 "status_code": response.status_code,
                 "headers": dict(response.headers),
                 "content_length": len(response.content),
-                "response_time": response.elapsed.total_seconds() if hasattr(response, "elapsed") else 0,
+                "response_time": response.elapsed.total_seconds()
+                if hasattr(response, "elapsed")
+                else 0,
             }
 
             # Analyze response for information disclosure
@@ -156,12 +162,22 @@ class TestAdvancedPersistentThreatScenarios:
                         gathered_info[target]["potential_disclosure"] = disclosure
 
         # APT would analyze this information to plan next phase
-        _accessible_endpoints = [target for target, info in gathered_info.items() if info["status_code"] == 200]
+        _accessible_endpoints = [
+            target
+            for target, info in gathered_info.items()
+            if info["status_code"] == 200
+        ]
 
         # Should not expose sensitive internal information
-        sensitive_exposures = [target for target, info in gathered_info.items() if "potential_disclosure" in info]
+        sensitive_exposures = [
+            target
+            for target, info in gathered_info.items()
+            if "potential_disclosure" in info
+        ]
 
-        assert len(sensitive_exposures) == 0, f"Sensitive information exposed: {sensitive_exposures}"
+        assert len(sensitive_exposures) == 0, (
+            f"Sensitive information exposed: {sensitive_exposures}"
+        )
 
     async def test_apt_initial_access_attempts(self, pentesting_client):
         """Test APT initial access phase - credential attacks."""
@@ -184,7 +200,9 @@ class TestAdvancedPersistentThreatScenarios:
 
             credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
 
-            response = pentesting_client.get("/api/sensitive/data", headers={"Authorization": f"Basic {credentials}"})
+            response = pentesting_client.get(
+                "/api/sensitive/data", headers={"Authorization": f"Basic {credentials}"}
+            )
 
             # Should not accept weak credentials
             assert response.status_code == 401
@@ -200,7 +218,9 @@ class TestAdvancedPersistentThreatScenarios:
         ]
 
         for token in predictable_tokens:
-            response = pentesting_client.get("/api/sensitive/data", headers={"Authorization": f"Bearer {token}"})
+            response = pentesting_client.get(
+                "/api/sensitive/data", headers={"Authorization": f"Bearer {token}"}
+            )
 
             # Should not accept predictable tokens
             assert response.status_code == 401
@@ -222,10 +242,14 @@ class TestAdvancedPersistentThreatScenarios:
         weak_secret = "weak_secret_123"
 
         with patch("tripsage.api.core.config.get_settings") as mock_settings:
-            mock_return = mock_settings.return_value.database_jwt_secret.get_secret_value
+            mock_return = (
+                mock_settings.return_value.database_jwt_secret.get_secret_value
+            )
             mock_return.return_value = weak_secret
 
-            _user_token = jwt.encode(low_privilege_payload, weak_secret, algorithm="HS256")
+            _user_token = jwt.encode(
+                low_privilege_payload, weak_secret, algorithm="HS256"
+            )
 
             # Test privilege escalation attempts
             escalation_attempts = [
@@ -246,7 +270,9 @@ class TestAdvancedPersistentThreatScenarios:
             ]
 
             for malicious_payload in escalation_attempts:
-                escalated_token = jwt.encode(malicious_payload, weak_secret, algorithm="HS256")
+                escalated_token = jwt.encode(
+                    malicious_payload, weak_secret, algorithm="HS256"
+                )
 
                 response = pentesting_client.get(
                     "/api/admin/users",
@@ -276,7 +302,9 @@ class TestAdvancedPersistentThreatScenarios:
 
         for target_user in target_users:
             # Test direct user ID manipulation
-            response = pentesting_client.get(f"/api/users/{target_user}/data", headers={"X-User-ID": target_user})
+            response = pentesting_client.get(
+                f"/api/users/{target_user}/data", headers={"X-User-ID": target_user}
+            )
 
             # Test via query parameters
             response = pentesting_client.get(
@@ -320,7 +348,9 @@ class TestAdvancedPersistentThreatScenarios:
         ]
 
         for technique in exfiltration_techniques:
-            response = pentesting_client.get(technique["endpoint"], params=technique.get("params", {}))
+            response = pentesting_client.get(
+                technique["endpoint"], params=technique.get("params", {})
+            )
 
             # Should not allow bulk data exfiltration
             assert response.status_code in [401, 403, 400, 422]
@@ -328,7 +358,9 @@ class TestAdvancedPersistentThreatScenarios:
             # Response should not contain large amounts of data
             if response.status_code == 200:
                 content_length = len(response.content)
-                assert content_length < 10000, f"Potential data exfiltration: {content_length} bytes"
+                assert content_length < 10000, (
+                    f"Potential data exfiltration: {content_length} bytes"
+                )
 
     async def test_apt_persistence_mechanism_detection(self, pentesting_client):
         """Test detection of APT persistence mechanisms."""
@@ -375,7 +407,9 @@ class TestMultiVectorAttackScenarios:
             "exfiltration_attempts": [],
         }
 
-    async def test_coordinated_dos_and_credential_attack(self, pentesting_client, attack_simulation_setup):
+    async def test_coordinated_dos_and_credential_attack(
+        self, pentesting_client, attack_simulation_setup
+    ):
         """Test coordinated DoS and credential stuffing attack."""
         import threading
         import time
@@ -402,7 +436,9 @@ class TestMultiVectorAttackScenarios:
             for cred in credentials:
                 try:
                     username, password = cred.split(":")
-                    encoded = base64.b64encode(f"{username}:{password}".encode()).decode()
+                    encoded = base64.b64encode(
+                        f"{username}:{password}".encode()
+                    ).decode()
                     response = pentesting_client.get(
                         "/api/admin/users",
                         headers={"Authorization": f"Basic {encoded}"},
@@ -430,7 +466,11 @@ class TestMultiVectorAttackScenarios:
         cred_thread.join()
 
         # Verify defense effectiveness
-        successful_auths = [attack for attack in attack_simulation_setup["attack_vectors"] if attack["status"] == 200]
+        successful_auths = [
+            attack
+            for attack in attack_simulation_setup["attack_vectors"]
+            if attack["status"] == 200
+        ]
 
         assert len(successful_auths) == 0, "Credential attack succeeded during DoS"
 
@@ -520,7 +560,9 @@ class TestMultiVectorAttackScenarios:
                         ]
 
                         for indicator in injection_indicators:
-                            assert indicator not in content, f"Injection indicator '{indicator}' found in response"
+                            assert indicator not in content, (
+                                f"Injection indicator '{indicator}' found in response"
+                            )
 
     async def test_business_logic_attack_chains(self, pentesting_client):
         """Test business logic vulnerabilities in attack chains."""
@@ -549,7 +591,9 @@ class TestMultiVectorAttackScenarios:
                 "description": "Manipulate application state through timing",
                 "attack": lambda: [
                     pentesting_client.get("/api/sensitive/data"),
-                    pentesting_client.post("/api/keys/validate", json={"service": "test"}),
+                    pentesting_client.post(
+                        "/api/keys/validate", json={"service": "test"}
+                    ),
                     pentesting_client.get("/api/sensitive/data"),
                 ],
             },
@@ -559,7 +603,9 @@ class TestMultiVectorAttackScenarios:
                 "description": "Bypass intended workflow sequences",
                 "attack": lambda: [
                     pentesting_client.get("/api/admin/users"),  # Skip authentication
-                    pentesting_client.post("/api/admin/users", json={"role": "admin"}),  # Direct admin creation
+                    pentesting_client.post(
+                        "/api/admin/users", json={"role": "admin"}
+                    ),  # Direct admin creation
                     pentesting_client.delete("/api/admin/users/1"),  # Direct deletion
                 ],
             },
@@ -578,12 +624,16 @@ class TestMultiVectorAttackScenarios:
                         if hasattr(result, "status_code"):
                             # Should not allow unauthorized business operations
                             assert result.status_code in [401, 403, 405, 422], (
-                                f"Business logic vulnerability in {attack_scenario['name']}"
+                                f"Business logic vulnerability in "
+                                f"{attack_scenario['name']}"
                             )
 
             except Exception as e:
                 # Attacks should fail gracefully
-                assert "authentication" in str(e).lower() or "authorization" in str(e).lower()
+                assert (
+                    "authentication" in str(e).lower()
+                    or "authorization" in str(e).lower()
+                )
 
     async def test_social_engineering_simulation(self, pentesting_client):
         """Test technical aspects of social engineering attacks."""
@@ -617,9 +667,13 @@ class TestMultiVectorAttackScenarios:
 
         for vector in social_engineering_vectors:
             if vector["method"] == "POST":
-                response = pentesting_client.post(vector["endpoint"], json=vector["data"])
+                response = pentesting_client.post(
+                    vector["endpoint"], json=vector["data"]
+                )
             else:
-                response = pentesting_client.get(vector["endpoint"], params=vector["data"])
+                response = pentesting_client.get(
+                    vector["endpoint"], params=vector["data"]
+                )
 
             # Should not provide emergency/fake access mechanisms
             assert response.status_code in [401, 403, 404, 405], (
@@ -649,7 +703,9 @@ class TestAdvancedBypassTechniques:
 
         for _original, unicode_variant in unicode_bypasses:
             # Test in authentication
-            response = pentesting_client.get("/api/sensitive/data", headers={"X-Username": unicode_variant})
+            response = pentesting_client.get(
+                "/api/sensitive/data", headers={"X-Username": unicode_variant}
+            )
 
             # Test in API key validation
             response = pentesting_client.post(
@@ -690,11 +746,17 @@ class TestAdvancedBypassTechniques:
 
             for context_type, context_data in contexts:
                 if context_type == "query":
-                    response = pentesting_client.get("/api/sensitive/data", params=context_data)
+                    response = pentesting_client.get(
+                        "/api/sensitive/data", params=context_data
+                    )
                 elif context_type == "header":
-                    response = pentesting_client.get("/api/sensitive/data", headers=context_data)
+                    response = pentesting_client.get(
+                        "/api/sensitive/data", headers=context_data
+                    )
                 elif context_type == "json":
-                    response = pentesting_client.post("/api/keys/validate", json=context_data)
+                    response = pentesting_client.post(
+                        "/api/keys/validate", json=context_data
+                    )
 
                 # Should not bypass validation through encoding
                 if response.status_code == 200:
@@ -722,7 +784,9 @@ class TestAdvancedBypassTechniques:
         for header_name, method in override_techniques:
             for endpoint in sensitive_endpoints:
                 # Test method override via headers
-                response = pentesting_client.post(endpoint, headers={header_name: method}, json={"test": "data"})
+                response = pentesting_client.post(
+                    endpoint, headers={header_name: method}, json={"test": "data"}
+                )
 
                 # Should not allow method override bypass
                 assert response.status_code in [401, 403, 405, 422]
@@ -761,7 +825,10 @@ class TestAdvancedBypassTechniques:
             # Multipart in JSON context
             {
                 "content_type": "application/json",
-                "payload": ('--boundary\r\nContent-Disposition: form-data; name="admin"\r\n\r\ntrue\r\n--boundary--'),
+                "payload": (
+                    "--boundary\r\nContent-Disposition: form-data; "
+                    'name="admin"\r\n\r\ntrue\r\n--boundary--'
+                ),
                 "expected_parsing": "json",
             },
         ]
@@ -810,7 +877,9 @@ class TestAdvancedBypassTechniques:
         ]
 
         for attempt in poisoning_attempts:
-            response = pentesting_client.get("/api/sensitive/data", headers=attempt["headers"])
+            response = pentesting_client.get(
+                "/api/sensitive/data", headers=attempt["headers"]
+            )
 
             # Should not be vulnerable to cache poisoning
             assert response.status_code in [400, 401, 403]
@@ -854,24 +923,32 @@ class TestSecurityMisconfigurationExploitation:
         # Test debug endpoints
         for endpoint in debug_indicators:
             response = pentesting_client.get(endpoint)
-            assert response.status_code in [401, 403, 404], f"Debug endpoint exposed: {endpoint}"
+            assert response.status_code in [401, 403, 404], (
+                f"Debug endpoint exposed: {endpoint}"
+            )
 
         # Test debug headers
         for header in debug_headers:
-            response = pentesting_client.get("/api/sensitive/data", headers={header: "enabled"})
+            response = pentesting_client.get(
+                "/api/sensitive/data", headers={header: "enabled"}
+            )
             # Should not enable debug mode via headers
             if response.status_code == 200:
                 content = response.text.lower()
                 debug_terms = ["debug", "trace", "exception", "stack", "error"]
                 for term in debug_terms:
-                    assert term not in content, f"Debug information leaked via {header} header"
+                    assert term not in content, (
+                        f"Debug information leaked via {header} header"
+                    )
 
         # Test debug parameters
         for params in debug_params:
             response = pentesting_client.get("/api/sensitive/data", params=params)
             # Should not enable debug mode via parameters
             if response.status_code == 200:
-                assert len(response.content) < 5000, "Excessive debug information in response"
+                assert len(response.content) < 5000, (
+                    "Excessive debug information in response"
+                )
 
     async def test_cors_misconfiguration_exploitation(self, pentesting_client):
         """Test CORS misconfiguration exploitation."""
@@ -886,19 +963,31 @@ class TestSecurityMisconfigurationExploitation:
         ]
 
         for origin in malicious_origins:
-            response = pentesting_client.get("/api/sensitive/data", headers={"Origin": origin})
+            response = pentesting_client.get(
+                "/api/sensitive/data", headers={"Origin": origin}
+            )
 
             # Check CORS headers in response
             cors_headers = {
-                "Access-Control-Allow-Origin": response.headers.get("Access-Control-Allow-Origin"),
-                "Access-Control-Allow-Credentials": response.headers.get("Access-Control-Allow-Credentials"),
-                "Access-Control-Allow-Methods": response.headers.get("Access-Control-Allow-Methods"),
+                "Access-Control-Allow-Origin": response.headers.get(
+                    "Access-Control-Allow-Origin"
+                ),
+                "Access-Control-Allow-Credentials": response.headers.get(
+                    "Access-Control-Allow-Credentials"
+                ),
+                "Access-Control-Allow-Methods": response.headers.get(
+                    "Access-Control-Allow-Methods"
+                ),
             }
 
             # Should not allow malicious origins
             if cors_headers["Access-Control-Allow-Origin"]:
-                assert cors_headers["Access-Control-Allow-Origin"] != origin, f"CORS misconfiguration allows {origin}"
-                assert cors_headers["Access-Control-Allow-Origin"] != "*", "CORS allows any origin"
+                assert cors_headers["Access-Control-Allow-Origin"] != origin, (
+                    f"CORS misconfiguration allows {origin}"
+                )
+                assert cors_headers["Access-Control-Allow-Origin"] != "*", (
+                    "CORS allows any origin"
+                )
 
             # Should not allow credentials with wildcard
             if cors_headers["Access-Control-Allow-Origin"] == "*":
@@ -934,11 +1023,15 @@ class TestSecurityMisconfigurationExploitation:
 
         for attempt in bypass_attempts:
             for bypass_value in attempt["bypass_values"]:
-                response = pentesting_client.get("/api/sensitive/data", headers={attempt["header"]: bypass_value})
+                response = pentesting_client.get(
+                    "/api/sensitive/data", headers={attempt["header"]: bypass_value}
+                )
 
                 # Should not accept malicious security header values
                 response_header = response.headers.get(attempt["header"], "")
-                assert bypass_value not in response_header, f"Security header bypass: {attempt['header']}"
+                assert bypass_value not in response_header, (
+                    f"Security header bypass: {attempt['header']}"
+                )
 
     async def test_file_upload_security_bypass(self, pentesting_client):
         """Test file upload security bypasses."""
@@ -948,7 +1041,9 @@ class TestSecurityMisconfigurationExploitation:
             {"filename": "shell.php", "content": "<?php system($_GET['cmd']); ?>"},
             {
                 "filename": "script.jsp",
-                "content": ("<% Runtime.getRuntime().exec(request.getParameter('cmd')); %>"),
+                "content": (
+                    "<% Runtime.getRuntime().exec(request.getParameter('cmd')); %>"
+                ),
             },
             {
                 "filename": "backdoor.aspx",

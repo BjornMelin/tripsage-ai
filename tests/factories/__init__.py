@@ -68,7 +68,9 @@ class UserFactory(BaseFactory):
     @classmethod
     def create_admin(cls, **kwargs) -> Dict[str, Any]:
         """Create a test admin user."""
-        return cls.create(role=UserRole.ADMIN, email="admin@example.com", username="admin", **kwargs)
+        return cls.create(
+            role=UserRole.ADMIN, email="admin@example.com", username="admin", **kwargs
+        )
 
     @classmethod
     def create_batch(cls, count: int = 5) -> List[Dict[str, Any]]:
@@ -122,7 +124,9 @@ class TripFactory(BaseFactory):
     @classmethod
     def create_family_trip(cls, **kwargs) -> Dict[str, Any]:
         """Create a family trip."""
-        return cls.create(name="Family Vacation", travelers_count=4, budget=8000.00, **kwargs)
+        return cls.create(
+            name="Family Vacation", travelers_count=4, budget=8000.00, **kwargs
+        )
 
 
 class AccommodationFactory(BaseFactory):
@@ -263,7 +267,10 @@ class ChatFactory(BaseFactory):
     def create_assistant_message(cls, **kwargs) -> Dict[str, Any]:
         """Create an assistant response message."""
         return cls.create_message(
-            content=("I'd be happy to help you find a hotel in Tokyo! What's your budget and preferred area?"),
+            content=(
+                "I'd be happy to help you find a hotel in Tokyo! "
+                "What's your budget and preferred area?"
+            ),
             role="assistant",
             **kwargs,
         )
@@ -276,7 +283,11 @@ class ChatFactory(BaseFactory):
 
         for i in range(message_count):
             role = "user" if i % 2 == 0 else "assistant"
-            content = f"User message {i // 2 + 1}" if role == "user" else f"Assistant response {i // 2 + 1}"
+            content = (
+                f"User message {i // 2 + 1}"
+                if role == "user"
+                else f"Assistant response {i // 2 + 1}"
+            )
 
             messages.append(
                 cls.create_message(
@@ -293,7 +304,9 @@ class ChatFactory(BaseFactory):
     def create_response(cls, **kwargs) -> Dict[str, Any]:
         """Create a chat service response."""
         defaults = {
-            "response": ("I'd be happy to help you plan your trip! Where would you like to go?"),
+            "response": (
+                "I'd be happy to help you plan your trip! Where would you like to go?"
+            ),
             "session_id": cls.generate_id(),
             "user_id": 1,
             "timestamp": cls.future_datetime(),
@@ -374,7 +387,10 @@ class SearchFactory(BaseFactory):
     def create_search_results(cls, count: int = 5) -> Dict[str, Any]:
         """Create mock search results."""
         return {
-            "results": [AccommodationFactory.create(id=i, name=f"Hotel {i}") for i in range(1, count + 1)],
+            "results": [
+                AccommodationFactory.create(id=i, name=f"Hotel {i}")
+                for i in range(1, count + 1)
+            ],
             "total": count,
             "page": 1,
             "has_more": False,
