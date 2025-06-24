@@ -28,7 +28,10 @@ from typing_extensions import Self
 ModelName = Annotated[
     str,
     StringConstraints(
-        pattern=r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-3.5-turbo|claude-3-sonnet|claude-3-haiku)$"
+        pattern=(
+            r"^(gpt-4|gpt-4-turbo|gpt-4o|gpt-4o-mini|gpt-3.5-turbo|"
+            r"claude-3-sonnet|claude-3-haiku)$"
+        )
     ),
 ]
 

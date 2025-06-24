@@ -239,7 +239,10 @@ class FlightAgentNode(BaseAgentNode):
                 if len(flights) > 3:
                     content += f"\n... and {len(flights) - 3} more options available."
 
-                content += "\n\nWould you like me to help you book one of these flights or search with different criteria?"
+                content += (
+                    "\n\nWould you like me to help you book one of these flights "
+                    "or search with different criteria?"
+                )
             else:
                 content = (
                     f"I couldn't find any flights for {search_params['origin']} "

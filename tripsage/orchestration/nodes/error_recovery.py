@@ -99,7 +99,8 @@ class ErrorRecoveryNode(BaseAgentNode):
         retry_message = {
             "role": "assistant",
             "content": (
-                "I encountered an issue with that request. Let me try a different approach..."
+                "I encountered an issue with that request. "
+                "Let me try a different approach..."
             ),
             "agent": "error_recovery",
             "retry_attempt": retry_count + 1,

@@ -161,7 +161,8 @@ async def get_accommodation_details(
         ResourceNotFoundError: If the accommodation listing is not found
     """
     user_id = get_principal_id(principal)
-    # Service method is get_listing_details(listing_id, user_id), not get_accommodation_details(request)  # noqa: E501
+    # Service method is get_listing_details(listing_id, user_id), not
+    # get_accommodation_details(request)
     listing = await accommodation_service.get_listing_details(
         request.listing_id, user_id
     )

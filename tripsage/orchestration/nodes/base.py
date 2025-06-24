@@ -147,7 +147,8 @@ class BaseAgentNode(ABC):
         error_message = {
             "role": "assistant",
             "content": (
-                "I encountered an issue while processing your request. Let me try a different approach."
+                "I encountered an issue while processing your request. "
+                "Let me try a different approach."
             ),
             "agent": self.node_name,
             "error": True,

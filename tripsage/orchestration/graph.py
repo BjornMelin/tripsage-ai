@@ -103,7 +103,8 @@ class TripSageOrchestrator:
                 logger.info("Initialized PostgreSQL checkpointer")
             except Exception as e:
                 logger.warning(
-                    f"Failed to initialize PostgreSQL checkpointer, using MemorySaver: {e}"
+                    f"Failed to initialize PostgreSQL checkpointer, "
+                    f"using MemorySaver: {e}"
                 )
                 self.checkpointer = MemorySaver()
 
@@ -449,7 +450,8 @@ class TripSageOrchestrator:
             logger.error(f"Error processing message: {str(e)}")
             return {
                 "response": (
-                    "I apologize, but I encountered an error processing your request. Please try again."
+                    "I apologize, but I encountered an error processing your request. "
+                    "Please try again."
                 ),
                 "session_id": session_id,
                 "error": str(e),
