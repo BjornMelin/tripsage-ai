@@ -276,6 +276,10 @@ async def get_upcoming_flights(
             ("MIA", "ATL", "DFW"),
         ]
         airport_codes = [code for group in airports for code in group]
+        destination_choices = {
+            code: [other for other in airport_codes if other != code]
+            for code in airport_codes
+        }
 
         trip_names = [
             "Summer Europe Trip",
@@ -291,9 +295,7 @@ async def get_upcoming_flights(
         for i in range(min(limit, 5)):  # Generate up to 5 mock flights
             airline_code, airline_name = secrets.choice(airlines)
             origin = secrets.choice(airport_codes)
-            destination = secrets.choice(
-                [code for code in airport_codes if code != origin]
-            )
+            destination = secrets.choice(destination_choices[origin])
 
             search_window = max(date_range_days, 1)
             departure_time = current_time + timedelta(
