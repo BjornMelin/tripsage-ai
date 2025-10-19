@@ -22,8 +22,6 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         with:
           args: "detect --redact --no-banner --exit-code 1"
-        env:
-          GITLEAKS_CONFIG: .gitleaks.toml
 
       - name: Summary
         if: always()
