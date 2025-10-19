@@ -3,55 +3,56 @@ name = "tripsage-ai"
 version = "0.1.0"
 description = "AI-powered travel planning system with multi-source data integration"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
     # Core web framework and async support
-    "aiofiles>=24.1.0",
-    "fastapi>=0.115.12",
-    "uvicorn>=0.34.3",
+    "fastapi>=0.119.0,<0.120.0",
+    "uvicorn>=0.38.0,<0.39.0",
     "httpx>=0.28.1",
     "python-multipart>=0.0.20",
+    "starlette>=0.48.0,<0.49.0",
     # Authentication and security
     "pyjwt>=2.10.1", # For Supabase JWT token validation
     "passlib[bcrypt]>=1.7.4", # For password hashing
+    "cryptography>=46.0.3",
+    "aiohttp>=3.13.1",
+    "pyotp>=2.9.0",
+    "qrcode>=8.2",
     # Data validation and configuration
-    "pydantic>=2.11.5",
-    "pydantic-settings>=2.9.1",
-    "email-validator>=2.2.0",
-    "python-dotenv>=1.1.0",
+    "pydantic>=2.12.3",
+    "pydantic-settings>=2.11.0",
+    "typing-extensions>=4.15.0",
     # Database and caching
-    "sqlalchemy[asyncio]>=2.0.41",
-    "greenlet>=3.2.3",
-    "redis>=6.2.0",
-    "supabase>=2.15.2",
+    "sqlalchemy[asyncio]>=2.0.44,<2.1.0",
+    "redis>=6.4.0,<7.0.0",
+    "asyncpg>=0.30.0",
+    "watchdog>=6.0.0",
+    "supabase>=2.22.0,<3.0.0",
     # AI and LLM ecosystem
-    "langchain-core>=0.3.64",
-    "langchain-openai>=0.3.21",
-    "langgraph>=0.4.8",
-    "langsmith>=0.3.45",
-    "openai>=1.84.0",
-    "mem0ai>=0.1.106",
+    "langchain-core>=1.0.0,<2.0.0",
+    "langchain-openai>=1.0.0,<2.0.0",
+    "langgraph>=1.0.0,<2.0.0",
+    "openai>=2.5.0,<3.0.0",
+    "openai-agents>=0.4.0,<0.5.0",
+    "mem0ai>=0.1.118,<2.0.0",
     "tenacity>=9.1.2",
-    "typing-extensions>=4.14.0",
     # Web scraping and automation
-    "crawl4ai>=0.6.3",
-    "playwright>=1.52.0",
+    "crawl4ai>=0.7.4,<0.8.0",
+    "playwright>=1.55.0,<1.56.0",
     # External API integrations
-    "google-api-python-client>=2.171.0",
-    "google-auth>=2.40.3",
-    "google-auth-httplib2>=0.2.0",
+    "google-api-python-client>=2.185.0,<3.0.0",
+    "google-auth>=2.41.1,<3.0.0",
     "google-auth-oauthlib>=1.2.2",
     "googlemaps>=4.10.0",
     "duffel-api>=0.6.2",
     # Observability and monitoring
-    "opentelemetry-api>=1.34.0",
-    "opentelemetry-sdk>=1.34.0",
-    "opentelemetry-instrumentation-redis>=0.55b0",
-    "opentelemetry-exporter-otlp>=1.34.0",
-    "prometheus-client>=0.20.0",
-    "psutil>=7.0.0",
-    "asyncpg>=0.30.0",
+    "opentelemetry-api>=1.38.0,<1.39.0",
+    "opentelemetry-sdk>=1.38.0,<1.39.0",
+    "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
+    "opentelemetry-exporter-otlp>=1.38.0,<1.39.0",
+    "prometheus-client>=0.23.1,<0.24.0",
+    "psutil>=7.1.0,<8.0.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -87,7 +88,7 @@ addopts = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py313"
 include = ["*.py", "*.pyi"]
 src = ["tripsage", "tripsage_core", "scripts", "tests"]
 extend-exclude = [".github", "**/*.md", "**/*.yml", "**/*.yaml"]
@@ -170,6 +171,10 @@ convention = "google"
     "F821",   # undefined names in mocking contexts
 ]
 "scripts/cli/**/*" = ["T20"]
+"tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
+"tripsage/api/core/*.py" = ["B008"]     # Allow Depends() in FastAPI dependencies
+"tripsage_core/services/business/auth_service.py" = ["B008"]
+"tests/conftest.py" = ["E402"]          # Allow imports-after-exec for env setup
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -184,12 +189,7 @@ section-order = [
 ]
 lines-after-imports = 2
 
-# Per-file ignores: Allow FastAPI Depends() only in API router files
-[tool.ruff.lint.per-file-ignores]
-"tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
-"tripsage/api/core/*.py" = ["B008"]  # Allow Depends() in FastAPI dependencies
-"tripsage_core/services/business/auth_service.py" = ["B008"]  # Allow Depends() in auth service
-"tests/conftest.py" = ["E402"]  # Allow imports after code execution for environment setup
+# (merged per-file-ignores above)
 
 [build-system]
 requires = ["hatchling"]
@@ -199,27 +199,28 @@ build-backend = "hatchling.build"
 [dependency-groups]
 test = [
     # Core testing framework
-    "pytest>=8.4.0",
-    "pytest-asyncio>=1.0.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.1",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
     "pytest-timeout>=2.4.0",
     # Testing utilities and mocking
     "pytest-benchmark>=5.1.0",
     "pytest-httpx>=0.35.0",
-    "fakeredis>=2.29.0",
+    "fakeredis>=2.32.0",
     "nest-asyncio>=1.6.0",
-    "hypothesis>=6.120.0",
+    "hypothesis>=6.142.1",
+    "python-dotenv>=1.1.1",
     # Performance and load testing
-    "locust>=2.31.10",
+    "locust>=2.41.6",
     # Coverage reporting
-    "coverage[toml]>=7.8.2",
+    "coverage[toml]>=7.11.0",
 ]
 
 lint = [
     # Code formatting and linting
-    "ruff>=0.11.13",
-    "mypy>=1.16.0",
+"ruff>=0.14.1",
+"mypy>=1.18.2",
 ]
 
 dev = [
@@ -229,11 +230,14 @@ dev = [
     # Additional development tools
     "radon>=6.0.1",
     "python-jose[cryptography]>=3.5.0",
-    "bandit>=1.8.3",
+    "bandit>=1.8.6",
+    "rich>=14.2.0",
+    "numpy>=2.3.4",
+    "uvloop>=0.22.1",
 ]
 
 [tool.pyright]
-pythonVersion = "3.12"
+pythonVersion = "3.14"
 typeCheckingMode = "standard"
 include = ["tripsage", "tripsage_core", "scripts", "tests"]
 exclude = [
@@ -267,7 +271,7 @@ extension-pkg-allow-list = ["pydantic"]
 reports = false
 score = true
 recursive = true
-py-version = "3.12"
+py-version = "3.13"
 
 [tool.pylint.messages_control]
 disable = [
