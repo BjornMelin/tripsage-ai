@@ -141,8 +141,8 @@ git clone <repository-url>
 cd tripsage
 
 # Install dependencies
-uv pip install -r requirements.txt
-uv pip install -r requirements-dev.txt
+uv sync --frozen
+uv sync --group dev --frozen
 
 # Set up environment variables
 cp .env.example .env.test
@@ -667,8 +667,8 @@ jobs:
     - name: Install dependencies
       run: |
         pip install uv
-        uv pip install -r requirements.txt
-        uv pip install -r requirements-dev.txt
+        uv sync --frozen
+        uv sync --group dev --frozen
     
     - name: Run tests
       env:

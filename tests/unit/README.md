@@ -32,7 +32,7 @@ unit/
 ## Prerequisites
 
 - Python 3.11+
-- All dependencies from `requirements.txt`
+- All dependencies via `uv sync` (using `pyproject.toml`)
 - No external services required (all dependencies are mocked)
 - Test environment variables (automatically set by conftest.py)
 

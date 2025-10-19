@@ -164,7 +164,7 @@ class ConfigurationAuditService:
             str(base_path / "docker-compose.yml"),
             str(base_path / "docker-compose.prod.yml"),
             str(base_path / "pyproject.toml"),
-            str(base_path / "requirements.txt"),
+            str(base_path / "uv.lock"),
         ]
 
         # Only return paths that exist
@@ -580,7 +580,7 @@ class ConfigurationAuditService:
         medium_risk_files = {
             ".env.local",
             ".env.development",
-            "requirements.txt",
+            "uv.lock",
             "pyproject.toml",
         }
         if file_name in medium_risk_files:
