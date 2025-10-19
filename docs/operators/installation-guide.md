@@ -3,6 +3,10 @@
 > **Complete Setup and Dependencies for TripSage AI Platform**
 > Local Development | Docker | Dependencies | Node.js Compatibility
 
+> IMPORTANT: This repository is standardized on `pyproject.toml` + `uv` for Python dependencies.
+> Any references to `requirements.txt` or `requirements-dev.txt` are deprecated and will be removed.
+> Use `uv sync` (and `uv sync --group dev`) instead.
+
 ## 📋 Table of Contents
 
 - [🚀 TripSage Installation Guide](#-tripsage-installation-guide)

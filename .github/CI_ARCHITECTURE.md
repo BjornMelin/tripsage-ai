@@ -59,7 +59,7 @@ All path references are correctly structured:
 
 Two jobs run in parallel: Backend (lint/type/unit) and Frontend (lint/type/unit). Each is path-scoped and minimal. The workflow triggers when backend code, tests, dependency manifests/locks, frontend files, or CI configs change, including:
 
-`tripsage/**`, `tripsage_core/**`, `scripts/**`, `supabase/**`, `tests/**`, `requirements*.txt`, `requirements/**`, `uv.lock`, `poetry.lock`, `pyproject.toml`, `ruff.toml`, `pyrightconfig.json`, `setup.cfg`, `pytest.ini`, `frontend/**`, `.github/workflows/**`.
+`tripsage/**`, `tripsage_core/**`, `scripts/**`, `supabase/**`, `tests/**`, `uv.lock`, `pyproject.toml`, `ruff.toml`, `pyrightconfig.json`, `setup.cfg`, `pytest.ini`, `frontend/**`, `.github/workflows/**`.
 
 ### Key Features
 

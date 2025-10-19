@@ -25,6 +25,6 @@ When adding new checks, prefer inlining steps in `ci.yml` to avoid bespoke compo
 To avoid missing critical validation when only tests or dependency definitions change, CI triggers when any of the following change:
 
 - Backend code and configs: `tripsage/**`, `tripsage_core/**`, `scripts/**`, `supabase/**`, `pyproject.toml`, `ruff.toml`, `pyrightconfig.json`, `setup.cfg`, `pytest.ini`
-- Backend tests and dependencies: `tests/**`, `requirements*.txt`, `requirements/**`, `uv.lock`, `poetry.lock`
+- Backend tests and lockfile: `tests/**`, `uv.lock`
 - Frontend: `frontend/**`
 - CI config: `.github/workflows/**`

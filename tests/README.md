@@ -171,7 +171,7 @@ When adding new tests:
 All test dependencies are defined in:
 
 - `conftest.py` files in each directory for shared fixtures
-- `requirements.txt` for external test dependencies
+- Dependencies are managed via `pyproject.toml` and installed with `uv sync`.
 - Test configuration in `pytest.ini`
 
 ## Writing Tests
