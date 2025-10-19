@@ -73,8 +73,10 @@ FROM python:3.11-slim as base
 WORKDIR /app
 
 # Install production dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir uv
+COPY pyproject.toml ./
+COPY uv.lock ./
+RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY src/ ./src/
@@ -152,8 +154,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          uv sync --frozen
+          uv sync --group dev --frozen
       - name: Run tests
         run: pytest
       - name: Run linting
