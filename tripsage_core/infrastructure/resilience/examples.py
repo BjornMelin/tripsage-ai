@@ -7,7 +7,7 @@ and capabilities.
 
 import asyncio
 import os
-import random
+import secrets
 import time
 from typing import Any, Dict
 
@@ -27,6 +27,7 @@ class MockService:
         self.call_count = 0
         self.success_count = 0
         self.failure_count = 0
+        self._random = secrets.SystemRandom()
 
     async def unreliable_operation(self, operation_id: str) -> Dict[str, Any]:
         """Simulate an unreliable operation that may fail."""
@@ -36,7 +37,7 @@ class MockService:
         await asyncio.sleep(0.1)
 
         # Randomly fail based on failure rate
-        if random.random() < self.failure_rate:
+        if self._random.random() < self.failure_rate:
             self.failure_count += 1
             raise ConnectionError(
                 f"Service {self.name} failed for operation {operation_id}"

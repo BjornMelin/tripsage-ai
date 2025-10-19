@@ -7,6 +7,7 @@ patterns to support different operational requirements.
 
 import asyncio
 import logging
+import secrets
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
@@ -98,6 +99,7 @@ class BaseDeploymentStrategy(ABC):
         self.name = name
         self.config = config or {}
         self.enterprise_config = get_enterprise_config()
+        self._random = secrets.SystemRandom()
 
     @abstractmethod
     async def deploy(
@@ -141,9 +143,7 @@ class BaseDeploymentStrategy(ABC):
             }
 
             # Simulate occasional failures for demo purposes
-            import random
-
-            if random.random() < 0.1:  # 10% chance of failure
+            if self._random.random() < 0.1:  # 10% chance of failure
                 checks["api_health"] = False
 
             all_healthy = all(checks.values())
@@ -565,11 +565,9 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         """Analyze canary performance and decide whether to continue."""
         await asyncio.sleep(0.5)  # Simulate analysis time
 
-        # Simulate performance analysis
-        import random
-
-        error_rate = random.uniform(0.0, 0.05)  # 0-5% error rate
-        response_time = random.uniform(50, 200)  # 50-200ms response time
+        # Simulate performance analysis with secure randomness
+        error_rate = self._random.uniform(0.0, 0.05)  # 0-5% error rate
+        response_time = self._random.uniform(50, 200)  # 50-200ms response time
 
         # Decision logic
         continue_deployment = (

@@ -5,12 +5,15 @@ with support for different integration modes (direct SDK, API, etc).
 """
 
 import asyncio
+import logging
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Protocol
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage_core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class ServiceProtocol(Protocol):
@@ -136,8 +139,12 @@ class ServiceRegistry:
                 if hasattr(old_instance, "close"):
                     try:
                         await old_instance.close()
-                    except Exception:
-                        pass  # Ignore cleanup errors
+                    except Exception as close_error:
+                        logger.warning(
+                            "Failed to close existing service instance '%s': %s",
+                            name,
+                            close_error,
+                        )
 
                 del self._instances[name]
 
@@ -152,8 +159,12 @@ class ServiceRegistry:
             if hasattr(instance, "close"):
                 try:
                     await instance.close()
-                except Exception:
-                    pass  # Ignore cleanup errors
+                except Exception as close_error:
+                    logger.warning(
+                        "Failed to close service instance '%s': %s",
+                        _name,
+                        close_error,
+                    )
 
         self._instances.clear()
 

@@ -5,6 +5,7 @@ searching for flights, managing saved flights, and searching for airports.
 """
 
 import logging
+import secrets
 from typing import List, Optional
 from uuid import UUID
 
@@ -256,7 +257,6 @@ async def get_upcoming_flights(
         logger.error(f"Failed to get upcoming flights: {str(e)}")
 
         # Fallback to enhanced mock data with trip context
-        import random
         from datetime import datetime, timedelta
 
         mock_flights = []
@@ -275,6 +275,11 @@ async def get_upcoming_flights(
             ("LAX", "SFO", "ORD"),  # Major destinations
             ("MIA", "ATL", "DFW"),
         ]
+        airport_codes = [code for group in airports for code in group]
+        destination_choices = {
+            code: [other for other in airport_codes if other != code]
+            for code in airport_codes
+        }
 
         trip_names = [
             "Summer Europe Trip",
@@ -288,44 +293,51 @@ async def get_upcoming_flights(
         terminals = ["A", "B", "C", "D"]
 
         for i in range(min(limit, 5)):  # Generate up to 5 mock flights
-            airline_code, airline_name = random.choice(airlines)
-            origin = random.choice(airports)[0]
-            destination = random.choice(airports)[1]
+            airline_code, airline_name = secrets.choice(airlines)
+            origin = secrets.choice(airport_codes)
+            destination = secrets.choice(destination_choices[origin])
 
+            search_window = max(date_range_days, 1)
             departure_time = current_time + timedelta(
-                days=random.randint(1, date_range_days),
-                hours=random.randint(6, 22),
-                minutes=random.choice([0, 15, 30, 45]),
+                days=secrets.randbelow(search_window) + 1,
+                hours=6 + secrets.randbelow(17),
+                minutes=secrets.choice([0, 15, 30, 45]),
             )
 
-            duration_minutes = random.randint(120, 480)  # 2-8 hours
+            duration_minutes = 120 + secrets.randbelow(361)  # 2-8 hours
             arrival_time = departure_time + timedelta(minutes=duration_minutes)
 
             flight = UpcomingFlightResponse(
                 id=f"flight-{i + 1}",
                 airline=airline_code,
                 airline_name=airline_name,
-                flight_number=f"{airline_code}{random.randint(1000, 9999)}",
+                flight_number=f"{airline_code}{secrets.randbelow(9000) + 1000}",
                 origin=origin,
                 destination=destination,
                 departure_time=departure_time,
                 arrival_time=arrival_time,
                 duration=duration_minutes,
-                stops=random.randint(0, 2),
-                price=random.randint(300, 1200),
+                stops=secrets.randbelow(3),
+                price=300 + secrets.randbelow(901),
                 currency="USD",
                 cabin_class="economy",
-                seats_available=random.randint(10, 50),
-                status=random.choice(statuses),
-                terminal=random.choice(terminals) if random.random() > 0.3 else None,
-                gate=str(random.randint(1, 50)) if random.random() > 0.3 else None,
+                seats_available=10 + secrets.randbelow(41),
+                status=secrets.choice(statuses),
+                terminal=(
+                    secrets.choice(terminals) if secrets.randbelow(10) > 2 else None
+                ),
+                gate=(
+                    str(secrets.randbelow(50) + 1)
+                    if secrets.randbelow(10) > 2
+                    else None
+                ),
                 # Enhanced fields with trip context
                 trip_id=f"trip-{i + 1}" if include_trip_context else None,
-                trip_title=random.choice(trip_names) if include_trip_context else None,
-                is_shared_trip=random.choice([True, False])
+                trip_title=secrets.choice(trip_names) if include_trip_context else None,
+                is_shared_trip=bool(secrets.randbelow(2))
                 if include_trip_context
                 else False,
-                collaborator_count=random.randint(0, 4) if include_trip_context else 0,
+                collaborator_count=secrets.randbelow(5) if include_trip_context else 0,
             )
 
             mock_flights.append(flight)
