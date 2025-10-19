@@ -14,7 +14,7 @@ jobs:
     name: Python Setup Example
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0a12ed9d6a96ab950c8b015e8b2e358ef21d60d0 # v4.2.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.0
       
       # Use the Python setup composite action
       - name: Setup Python environment
@@ -41,7 +41,7 @@ jobs:
     name: Node.js Setup Example
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0a12ed9d6a96ab950c8b015e8b2e358ef21d60d0 # v4.2.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.0
       
       # Use the Node.js setup composite action
       - name: Setup Node.js environment
@@ -68,7 +68,7 @@ jobs:
     name: Security Scan Example
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0a12ed9d6a96ab950c8b015e8b2e358ef21d60d0 # v4.2.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.0
       
       # Setup Python for backend scanning
       - name: Setup Python
@@ -116,7 +116,7 @@ jobs:
           - 6379:6379
     
     steps:
-      - uses: actions/checkout@0a12ed9d6a96ab950c8b015e8b2e358ef21d60d0 # v4.2.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.0
       
       # Setup Python environment
       - name: Setup Python
@@ -175,7 +175,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     
     steps:
-      - uses: actions/checkout@0a12ed9d6a96ab950c8b015e8b2e358ef21d60d0 # v4.2.0
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4.2.0
       
       - name: Setup Python ${{ matrix.python-version }}
         uses: ./.github/actions/setup-python
