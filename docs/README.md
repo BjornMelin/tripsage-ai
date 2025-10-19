@@ -1,5 +1,7 @@
 # TripSage Documentation
 
+**AI-powered travel planning platform documentation**
+
 Concise, task-focused documentation for users, developers, and operators.
 
 ## Documentation by Role
@@ -35,6 +37,4 @@ Architecture Decision Records documenting technical choices.
 - Developers: ./developers/README.md
 - Operators: ./operators/README.md
 
-## Archive
-
-Historical documentation and research materials live in ./archive/.
+<!-- Archive content is intentionally excluded from the repository and index. -->
