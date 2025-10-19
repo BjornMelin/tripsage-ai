@@ -7,6 +7,7 @@ for database connections, specifically designed for PostgreSQL/Supabase integrat
 
 import asyncio
 import logging
+import secrets
 import time
 from contextlib import asynccontextmanager
 from enum import Enum
@@ -338,6 +339,7 @@ class ExponentialBackoffRetry:
         self.backoff_factor = backoff_factor
         self.jitter = jitter
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self._random = secrets.SystemRandom()
 
     def calculate_delay(self, attempt: int) -> float:
         """
@@ -352,9 +354,7 @@ class ExponentialBackoffRetry:
         delay = self.base_delay * (self.backoff_factor**attempt)
 
         if self.jitter:
-            import random
-
-            jitter_amount = random.uniform(0, 0.1) * delay
+            jitter_amount = self._random.uniform(0, 0.1) * delay
             delay += jitter_amount
 
         return min(delay, self.max_delay)

@@ -7,6 +7,7 @@ google-api-python-client library, replacing the previous MCP server abstraction.
 
 import asyncio
 import json
+import logging
 import os
 from datetime import datetime, timedelta
 from functools import wraps
@@ -22,6 +23,8 @@ from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
+
+logger = logging.getLogger(__name__)
 
 # If modifying these scopes, delete the token file
 SCOPES = [
@@ -135,9 +138,12 @@ class GoogleCalendarService:
             if self.cache_service is None:
                 try:
                     self.cache_service = await get_cache_service()
-                except Exception:
+                except Exception as cache_error:
                     # Log warning but continue without cache
-                    pass
+                    logger.warning(
+                        "Calendar service cache initialization failed: %s",
+                        cache_error,
+                    )
 
             self._connected = True
 
@@ -220,8 +226,12 @@ class GoogleCalendarService:
             data = await self.cache_service.get(key)
             if data:
                 return json.loads(data)
-        except Exception:
-            pass  # Cache errors are non-fatal
+        except Exception as cache_error:
+            logger.debug(
+                "Calendar cache read failed for key %s: %s",
+                key,
+                cache_error,
+            )
         return None
 
     async def _set_cache(self, key: str, value: Any, ttl: int) -> None:
@@ -231,8 +241,12 @@ class GoogleCalendarService:
 
         try:
             await self.cache_service.set(key, json.dumps(value), ttl=ttl)
-        except Exception:
-            pass  # Cache errors are non-fatal
+        except Exception as cache_error:
+            logger.debug(
+                "Calendar cache write failed for key %s: %s",
+                key,
+                cache_error,
+            )
 
     @async_retry()
     async def list_calendars(
@@ -740,8 +754,12 @@ class GoogleCalendarService:
             # Clear all event-related cache keys for this calendar
             pattern = f"events:{calendar_id}:*"
             await self.cache_service.delete_pattern(pattern)
-        except Exception:
-            pass  # Cache errors are non-fatal
+        except Exception as cache_error:
+            logger.debug(
+                "Calendar cache invalidation failed for pattern %s: %s",
+                pattern,
+                cache_error,
+            )
 
     async def health_check(self) -> bool:
         """

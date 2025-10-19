@@ -267,8 +267,12 @@ class DragonflyCache:
                     await self._cache_service.set(stat_key, str(new_value), ttl=86400)
                 except ValueError:
                     await self._cache_service.set(stat_key, "1", ttl=86400)
-        except Exception:
-            pass  # Don't fail on stats errors
+        except Exception as stats_error:
+            logger.debug(
+                "Suppressed cache stat increment failure for '%s': %s",
+                stat,
+                stats_error,
+            )
 
     async def get_stats(self) -> CacheStats:
         """Get cache statistics."""
@@ -295,9 +299,12 @@ class DragonflyCache:
                             setattr(stats, stat_name, int(value))
                         except ValueError:
                             setattr(stats, stat_name, 0)
-            except Exception:
+            except Exception as stats_error:
                 # Use default values if stats retrieval fails
-                pass
+                logger.debug(
+                    "Falling back to default cache stats due to error: %s",
+                    stats_error,
+                )
 
             # Calculate hit ratio
             total = stats.hits + stats.misses

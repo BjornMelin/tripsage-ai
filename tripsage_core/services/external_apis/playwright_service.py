@@ -7,6 +7,7 @@ JavaScript execution, complex interactions, or sophisticated browser automation.
 """
 
 import asyncio
+import logging
 import time
 from typing import Any, Dict, List, Optional, Union
 
@@ -21,6 +22,8 @@ from pydantic import BaseModel, Field
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
+logger = logging.getLogger(__name__)
 
 
 class PlaywrightServiceError(CoreAPIError):
@@ -308,14 +311,23 @@ class PlaywrightService:
                 if wait_for_selector:
                     try:
                         await page.wait_for_selector(wait_for_selector, timeout=timeout)
-                    except Exception:
-                        pass  # Continue even if wait fails
+                    except Exception as wait_error:
+                        logger.debug(
+                            "Playwright wait_for_selector '%s' failed on %s: %s",
+                            wait_for_selector,
+                            url,
+                            wait_error,
+                        )
 
                 if wait_for_function:
                     try:
                         await page.wait_for_function(wait_for_function, timeout=timeout)
-                    except Exception:
-                        pass  # Continue even if wait fails
+                    except Exception as wait_error:
+                        logger.debug(
+                            "Playwright wait_for_function failed on %s: %s",
+                            url,
+                            wait_error,
+                        )
 
                 # Extract content
                 extract_start = time.time()

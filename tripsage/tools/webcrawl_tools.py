@@ -298,7 +298,12 @@ async def _crawl_with_playwright_fallback(
                         import json
 
                         json_ld_data.append(json.loads(script_content))
-                    except Exception:
+                    except Exception as json_error:
+                        logger.debug(
+                            "Skipping invalid JSON-LD entry on %s: %s",
+                            url,
+                            json_error,
+                        )
                         continue  # Skip invalid JSON-LD
 
                 if json_ld_data:

@@ -7,6 +7,7 @@ rate limiting, and timeout handling integrated with TripSage Core.
 """
 
 import asyncio
+import logging
 import uuid
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
@@ -22,6 +23,8 @@ from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
     CoreServiceError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DuffelAPIError(CoreAPIError):
@@ -152,8 +155,11 @@ class DuffelHTTPClient:
         if self._client:
             try:
                 await self._client.aclose()
-            except Exception:
-                pass  # Ignore cleanup errors
+            except Exception as close_error:
+                logger.warning(
+                    "Error closing Duffel HTTP client: %s",
+                    close_error,
+                )
             finally:
                 self._client = None
                 self._connected = False

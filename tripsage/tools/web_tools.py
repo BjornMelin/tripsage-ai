@@ -244,8 +244,12 @@ class CachedWebSearchTool(WebSearchTool):
 
                         domain = urlparse(item["link"]).netloc
                         domains.append(domain)
-                    except Exception:
-                        pass
+                    except Exception as parse_error:
+                        logger.debug(
+                            "Unable to parse domain from result link '%s': %s",
+                            item.get("link"),
+                            parse_error,
+                        )
 
         # Use content type detection logic
         return determine_content_type(query=query, domains=domains or None)

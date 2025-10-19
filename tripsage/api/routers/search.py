@@ -309,8 +309,12 @@ async def bulk_search(
                             user_id, request.query, "cache_hit", cache_service
                         )
                         return cached_result
-                except Exception:
-                    pass
+                except Exception as cache_error:
+                    logger.warning(
+                        "Cache lookup failed for key %s: %s",
+                        cache_key,
+                        cache_error,
+                    )
 
             # Perform search
             result = await search_service.unified_search(request)
@@ -319,8 +323,12 @@ async def bulk_search(
             if use_cache:
                 try:
                     await cache_service.set(cache_key, result, ttl=300)
-                except Exception:
-                    pass
+                except Exception as cache_error:
+                    logger.warning(
+                        "Cache write failed for key %s: %s",
+                        cache_key,
+                        cache_error,
+                    )
 
             await _track_search_analytics(
                 user_id,
