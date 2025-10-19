@@ -1,31 +1,29 @@
-# 🎯 TripSage Operators Documentation
+# TripSage Operator Documentation
 
-> **Quick Navigation Hub for DevOps & SRE Teams**
+## Documentation Index
 
-## 📚 Documentation Index
-
-### **🚀 Getting Started**
+### Getting Started
 
 - [Installation Guide](./installation-guide.md) - Complete setup and dependencies
 - [Environment Configuration](./environment-configuration.md) - All environment variables and configuration
 
-### **🔧 Deployment & Operations**  
+### Deployment & Operations
 
 - [Deployment Guide](./deployment-guide.md) - Production deployment checklist and procedures
 - [Comprehensive Deployment Guide](./comprehensive-deployment-guide.md) - Complete deployment for all environments with CI/CD, monitoring, and cloud platforms
 - [Configuration Management](./configuration-management.md) - Modern Pydantic-based configuration system with security
 - [Supabase Configuration](./supabase-configuration.md) - Database setup and extensions
 
-### **🔐 Security & Authentication**
+### Security & Authentication
 
 - [Security Guide](./security-guide.md) - Comprehensive security implementation
 - [Authentication Guide](./authentication-guide.md) - OAuth setup and troubleshooting
 
-### **⚙️ Advanced Configuration**
+### Advanced Configuration
 
 - [Settings Reference](./settings-reference.md) - Pydantic settings and technical configuration
 
-## 🎯 Quick Links
+## Quick Links
 
 | **Task** | **Documentation** | **Time Estimate** |
 |----------|-------------------|-------------------|
@@ -34,20 +32,6 @@
 | Security review | [Security Guide](./security-guide.md) | 1-2 hours |
 | OAuth integration | [Authentication Guide](./authentication-guide.md) | 1-3 hours |
 
-## 🏗️ Architecture Overview
+## Notes
 
-**Current TripSage Architecture** (June 2025):
-
-- **Database**: Supabase PostgreSQL with pgvector embeddings
-- **Cache**: DragonflyDB (25x faster than Redis)
-- **Memory System**: Mem0 with pgvector storage
-- **Integrations**: 7 direct SDK integrations + 1 MCP (Airbnb)
-- **Authentication**: OAuth (Google, GitHub) with RLS policies
-- **Configuration**: Pydantic BaseSettings with BYOK support
-
-## 📈 Documentation Metrics
-
-- **Files**: 8 optimized files (reduced from 22)
-- **Duplication**: Eliminated 90%+ environment variable duplication
-- **Organization**: Logical grouping by operator workflow
-- **Maintenance**: Single source of truth for each topic
+This section is scoped to deployment and operations. See `../developers/` for development topics and `../architecture/` for system design.
