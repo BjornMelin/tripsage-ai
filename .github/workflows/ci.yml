@@ -101,7 +101,7 @@ jobs:
       - name: Install deps
         working-directory: frontend
         run: |
-          npm -g install pnpm@9
+          npm install -g pnpm@9
           pnpm install --frozen-lockfile
 
       - name: Biome lint
