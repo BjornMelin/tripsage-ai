@@ -1,9 +1,4 @@
-"""
-Standalone configuration testing for TripSage Core.
-
-This module tests the configuration system without any pytest fixtures
-or conftest.py interference. Run with: python -m pytest tests/unit/test_config_standalone.py
-"""
+"""Standalone configuration tests for TripSage Core."""
 
 import os
 from unittest.mock import patch
@@ -14,6 +9,7 @@ from tripsage_core.config import Settings
 
 
 def test_settings_creation_success():
+    """Verify Settings constructs with defaults."""
     with patch.dict(os.environ, {}, clear=True):
         settings = Settings(_env_file=None)
         assert isinstance(settings, Settings)
@@ -21,6 +17,7 @@ def test_settings_creation_success():
 
 
 def test_all_fields_accessible():
+    """Ensure key configuration attributes exist."""
     settings = Settings(_env_file=None)
     assert hasattr(settings, "environment")
     assert hasattr(settings, "debug")
@@ -37,6 +34,7 @@ def test_all_fields_accessible():
 
 
 def test_environment_validation():
+    """Validate accepted environment values and reject invalid ones."""
     for env in ["development", "production", "test", "testing"]:
         settings = Settings(environment=env, _env_file=None)
         assert settings.environment == env
@@ -49,6 +47,7 @@ def test_environment_validation():
 
 
 def test_environment_variable_override():
+    """Confirm environment variables override defaults."""
     env_vars = {
         "ENVIRONMENT": "production",
         "DEBUG": "true",
@@ -68,6 +67,7 @@ def test_environment_variable_override():
 
 
 def test_type_coercion():
+    """Check string env vars coerce to correct Python types."""
     env_vars = {
         "DEBUG": "true",
         "REDIS_MAX_CONNECTIONS": "75",
@@ -85,6 +85,7 @@ def test_type_coercion():
 
 
 def test_secret_field_types():
+    """Ensure secret fields are Pydantic SecretStr instances."""
     settings = Settings(
         openai_api_key=SecretStr("secret-key"),
         database_public_key=SecretStr("public-key"),
@@ -101,11 +102,13 @@ def test_secret_field_types():
 
 
 def test_secret_value_access():
+    """Verify SecretStr value retrieval works."""
     settings = Settings(openai_api_key=SecretStr("test-openai-key"), _env_file=None)
     assert settings.openai_api_key.get_secret_value() == "test-openai-key"
 
 
 def test_secret_masking():
+    """Assert secrets are masked in string representations."""
     settings = Settings(
         openai_api_key=SecretStr("very-secret-key"),
         secret_key=SecretStr("app-secret"),
@@ -117,6 +120,7 @@ def test_secret_masking():
 
 
 def test_environment_properties():
+    """Check convenience flags for environment selection."""
     dev_settings = Settings(environment="development", _env_file=None)
     assert dev_settings.is_development is True
     assert dev_settings.is_production is False
@@ -132,6 +136,7 @@ def test_environment_properties():
 
 
 def test_effective_postgres_url_explicit():
+    """Use explicit postgres_url when provided."""
     settings = Settings(
         postgres_url="postgresql://user:pass@localhost:5432/db", _env_file=None
     )
@@ -139,8 +144,8 @@ def test_effective_postgres_url_explicit():
 
 
 def test_effective_postgres_url_scheme_conversion():
+    """Convert postgres:// to postgresql:// automatically."""
     settings = Settings(
         postgres_url="postgres://user:pass@localhost:5432/db", _env_file=None
     )
     assert settings.effective_postgres_url == "postgresql://user:pass@localhost:5432/db"
-
