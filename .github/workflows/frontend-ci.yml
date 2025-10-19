@@ -173,7 +173,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Download build artifacts
-        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: nextjs-build-${{ github.run_id }}
           path: frontend/.next
@@ -228,7 +228,7 @@ jobs:
           working-directory: frontend
 
       - name: Download build artifacts
-        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: nextjs-build-${{ github.run_id }}
           path: frontend/.next
@@ -343,7 +343,7 @@ jobs:
           working-directory: frontend
 
       - name: Download coverage artifacts
-        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427 # v4.1.4
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: frontend-coverage-${{ github.run_id }}
           path: frontend/coverage
