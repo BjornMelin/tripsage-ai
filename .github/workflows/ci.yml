@@ -7,22 +7,38 @@ on:
       - 'tripsage/**'
       - 'tripsage_core/**'
       - 'scripts/**'
+      - 'supabase/**'
+      - 'tests/**'
       - 'frontend/**'
+      - 'requirements*.txt'
+      - 'requirements/**'
+      - 'uv.lock'
+      - 'poetry.lock'
       - 'pyproject.toml'
       - 'ruff.toml'
+      - 'pyrightconfig.json'
+      - 'setup.cfg'
       - 'pytest.ini'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
   pull_request:
     branches: [main, develop]
     paths:
       - 'tripsage/**'
       - 'tripsage_core/**'
       - 'scripts/**'
+      - 'supabase/**'
+      - 'tests/**'
       - 'frontend/**'
+      - 'requirements*.txt'
+      - 'requirements/**'
+      - 'uv.lock'
+      - 'poetry.lock'
       - 'pyproject.toml'
       - 'ruff.toml'
+      - 'pyrightconfig.json'
+      - 'setup.cfg'
       - 'pytest.ini'
-      - '.github/workflows/ci.yml'
+      - '.github/workflows/**'
   workflow_dispatch: {}
 
 permissions:
@@ -110,4 +126,3 @@ jobs:
         run: |
           echo "## Frontend CI Summary" >> $GITHUB_STEP_SUMMARY
           echo "Biome lint, TS check, and unit tests completed." >> $GITHUB_STEP_SUMMARY
-
