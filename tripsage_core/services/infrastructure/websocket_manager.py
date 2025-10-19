@@ -139,7 +139,7 @@ RATE_LIMIT_LUA_SCRIPT = """
     -- Add current request with secure random suffix
     local random_suffix = ARGV[5]
     if not random_suffix or random_suffix == '' then
-        random_suffix = tostring(now)
+        error('random_suffix argument must be provided and non-empty')
     end
     local score = tostring(now) .. '-' .. random_suffix
     redis.call('ZADD', user_key, now, score)
