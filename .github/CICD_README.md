@@ -1,21 +1,20 @@
 # CI/CD Pipeline Documentation
 
-This directory contains GitHub Actions workflows for the TripSage AI project.
+This directory contains the simplified GitHub Actions workflows for the TripSage AI project.
 
 ## Workflows
 
-### 1. Frontend CI (`frontend-ci-simple.yml`)
+### 1. CI (`ci.yml`)
 
-#### Primary CI workflow for frontend development
+#### Minimal PR/Push workflow for backend and frontend
 
-- **Triggers**: Push/PR to main/develop/feat/* branches with frontend changes
+- **Triggers**: Push/PR to `main` and `develop`
 - **Jobs**:
-  - **Build and Test**: Essential checks for reliable deployments
-  - **Build**: Next.js production build with caching
-  - **Format Check**: Biome formatting validation
-  - **Type Check**: TypeScript type validation (non-blocking)
-  - **Security Audit**: NPM audit for vulnerabilities (non-blocking)
-  - **Artifact Upload**: Build artifacts for deployment
+  - **Backend**: Ruff lint, Pyright (soft-fail initially), unit tests (soft-fail initially)
+  - **Frontend**: Biome lint, TypeScript `--noEmit`, unit tests
+- **Design**:
+  - Path filters scope jobs to relevant changes
+  - No matrices, no comment bots, no redundant gates
 
 ### 2. Deployment (`deploy.yml`)
 
@@ -31,7 +30,15 @@ This directory contains GitHub Actions workflows for the TripSage AI project.
   - Concurrency control to prevent deployment conflicts
   - Automatic artifact handling
 
-### 3. Dependabot (`dependabot.yml`)
+### 3. Weekly Security (`security.yml`)
+
+#### Scheduled and manual secret scanning
+
+- **Schedule**: Weekly (Monday 02:00 UTC)
+- **Scanner**: gitleaks action (prefer GH Advanced Secret Scanning when available)
+- **Noise reduction**: `.github/secret_scanning.yml` excludes example env templates
+
+### 4. Dependabot (`dependabot.yml`)
 
 #### Automated dependency updates
 
@@ -66,10 +73,9 @@ Recommended branch protection rules for `main`:
 
 - Require status checks to pass before merging
 - Require branches to be up to date before merging
-- Required status checks:
-  - `Frontend CI/CD / Build Application`
-  - `Frontend CI/CD / Lint and Format`
-  - `Frontend CI/CD / Unit Tests`
+- Required status checks (rename as needed in repository settings):
+  - `CI / Backend (lint, type, unit)`
+  - `CI / Frontend (lint, type, unit)`
 
 ## Workflow Features
 
