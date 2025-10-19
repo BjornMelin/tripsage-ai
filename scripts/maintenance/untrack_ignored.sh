@@ -17,10 +17,10 @@ if ! grep -qE '^docs/archive/?$' .gitignore 2>/dev/null; then
   echo "docs/archive/" >> .gitignore
 fi
 
-# Untrack any already-tracked files under docs/archive
+# Untrack any already-tracked files under docs/archive and CLAUDE.md
 git ls-files -z docs/archive | xargs -0 -r git rm -r --cached --ignore-unmatch
+git ls-files -z CLAUDE.md | xargs -0 -r git rm --cached --ignore-unmatch
 
 echo "Done. Commit the changes:"
 echo "  git commit -m 'chore: untrack docs/archive per .gitignore'"
 echo "  git push"
-

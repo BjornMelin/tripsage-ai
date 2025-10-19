@@ -193,11 +193,32 @@ def sample_request():
 class TestServiceIntegration:
     """Integration tests for service operations."""
 
-    @pytest.mark.asyncio
-    async def test_method_success(self, service_instance, sample_request):
-        """Test successful operation."""
-        # Arrange
-        service_instance._external_method.return_value = expected_response
+  @pytest.mark.asyncio
+  async def test_method_success(self, service_instance, sample_request):
+      """Test successful operation."""
+      # Arrange
+      service_instance._external_method.return_value = expected_response
+
+## Security Tests Overview
+
+This project includes focused security tests that validate authorization, authentication, audit logging, and data isolation across API routes. Key areas covered:
+
+- Access control: owner vs collaborator permissions (view/edit/manage) and denial paths.
+- Pre-route verification: dependencies and decorators enforce trip access and authorization before handling requests.
+- Resource isolation: users cannot access other users’ trips, attachments, or activities; cross-trip access is blocked.
+- Audit logging: unauthorized attempts are recorded; errors surface meaningful HTTP statuses.
+
+Recommended patterns
+
+- Use fixtures for principals, mock services, and consistent sample data.
+- Test positive and negative authorization paths, including not‑found vs unauthorized.
+- Parametrize scenarios to cover permission hierarchies succinctly.
+- Keep tests deterministic; avoid relying on random values except when explicitly mocked.
+
+Where to find tests
+
+- Unit tests under `tests/unit/api` (routers, security helpers, decorators).
+- Additional integration tests in `tests/integration/` for end‑to‑end path checks.
         
         # Act
         result = await service_instance.method(sample_request)
