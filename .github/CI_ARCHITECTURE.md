@@ -48,12 +48,12 @@ All YAML files have been validated and are syntactically correct:
 
 ### ✅ Action Pinning
 
-All GitHub Actions are properly pinned to commit SHAs:
+All GitHub Actions are pinned to commit SHAs unless GitHub mandates a supported major tag:
 
 - `actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11` (v4.1.1)
 - `actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d` (v5.1.0)
 - `actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8` (v4.0.2)
-- `actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9` (v4.0.2)
+- `actions/cache@v4` (GitHub deprecates pinning to the legacy commit; use supported major tag)
 - `actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3` (v4.3.1)
 - `actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427` (v4.1.4)
 - `pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2` (v4.0.0)
