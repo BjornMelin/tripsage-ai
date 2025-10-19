@@ -242,6 +242,8 @@ jobs:
               --exclude="*.min.js" \
               --exclude="*.map" \
               --exclude="*.lock" \
+              --exclude=".env.example" \
+              --exclude=".env.test" \
               --exclude="*.svg" \
               --exclude="*.png" \
               --exclude="*.jpg" \
