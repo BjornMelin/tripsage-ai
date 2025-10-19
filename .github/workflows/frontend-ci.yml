@@ -367,7 +367,7 @@ jobs:
           echo "::endgroup::"
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673 # v4.5.0
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           file: frontend/coverage/lcov.info
           flags: frontend
