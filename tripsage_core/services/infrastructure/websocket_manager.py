@@ -16,7 +16,7 @@ import asyncio
 import functools
 import json
 import logging
-import random
+import secrets
 import time
 from collections import defaultdict
 from datetime import datetime
@@ -136,8 +136,12 @@ RATE_LIMIT_LUA_SCRIPT = """
         return {0, 'connection_limit_exceeded', user_count, conn_count}
     end
     
-    -- Add current request
-    local score = tostring(now) .. '-' .. math.random()
+    -- Add current request with secure random suffix
+    local random_suffix = ARGV[5]
+    if not random_suffix or random_suffix == '' then
+        random_suffix = tostring(now)
+    end
+    local score = tostring(now) .. '-' .. random_suffix
     redis.call('ZADD', user_key, now, score)
     redis.call('ZADD', conn_key, now, score)
     redis.call('EXPIRE', user_key, 60)
@@ -268,6 +272,7 @@ class ExponentialBackoff:
         self.max_attempts = max_attempts
         self.jitter = jitter
         self.attempt_count = 0
+        self._random = secrets.SystemRandom()
 
     def get_delay(self) -> float:
         """Calculate delay for current attempt."""
@@ -285,7 +290,7 @@ class ExponentialBackoff:
 
         # Add jitter to prevent thundering herd
         if self.jitter:
-            jitter_amount = random.uniform(-0.1, 0.1) * delay  # ±10% jitter
+            jitter_amount = self._random.uniform(-0.1, 0.1) * delay  # ±10% jitter
             delay += jitter_amount
 
         return delay
@@ -352,6 +357,7 @@ class RateLimiter:
             self.config.max_messages_per_user_per_minute,
             self.config.max_messages_per_connection_per_second
             * self.config.window_seconds,
+            secrets.token_hex(16),
         )
 
         allowed, reason, user_count, conn_count = result
