@@ -5,6 +5,7 @@ including middleware, routers, exception handlers, and startup/shutdown events.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -361,9 +362,13 @@ app = create_app()
 if __name__ == "__main__":
     import uvicorn
 
+    host = os.getenv("TRIPSAGE_API_HOST", "127.0.0.1")
+    port = int(os.getenv("TRIPSAGE_API_PORT", "8001"))
+    reload = os.getenv("TRIPSAGE_API_RELOAD", "true").lower() == "true"
+
     uvicorn.run(
         "tripsage.api.main:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
+        host=host,
+        port=port,
+        reload=reload,
     )

@@ -141,9 +141,13 @@ class MemoryEncryption:
             if field in result and isinstance(result[field], str):
                 try:
                     result[field] = self.decrypt(result[field])
-                except Exception:
+                except Exception as decrypt_error:
+                    logger.debug(
+                        "Skipping decryption for field '%s': %s",
+                        field,
+                        decrypt_error,
+                    )
                     # Field might not be encrypted, leave as is
-                    pass
         return result
 
 

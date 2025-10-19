@@ -341,8 +341,11 @@ class SupabaseCheckpointManager:
         try:
             if hasattr(self, "_connection_pool") and self._connection_pool:
                 self._connection_pool.close()
-        except Exception:
-            pass  # Ignore errors during garbage collection
+        except Exception as cleanup_error:
+            logger.debug(
+                "Suppressed checkpoint manager cleanup error during GC: %s",
+                cleanup_error,
+            )
 
 
 class CheckpointConfig:

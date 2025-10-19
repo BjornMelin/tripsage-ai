@@ -6,6 +6,7 @@ forecasts, current conditions, and travel-specific weather analysis.
 """
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -14,6 +15,8 @@ import httpx
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
+logger = logging.getLogger(__name__)
 
 
 class WeatherServiceError(CoreAPIError):
@@ -84,8 +87,11 @@ class WeatherService:
         if self._client:
             try:
                 await self._client.aclose()
-            except Exception:
-                pass  # Ignore cleanup errors
+            except Exception as close_error:
+                logger.warning(
+                    "Error closing weather service HTTP client: %s",
+                    close_error,
+                )
             finally:
                 self._client = None
                 self._connected = False
@@ -134,8 +140,11 @@ class WeatherService:
             error_data = {}
             try:
                 error_data = e.response.json() if e.response.content else {}
-            except Exception:
-                pass
+            except Exception as parse_error:
+                logger.debug(
+                    "Failed to parse weather API error response: %s",
+                    parse_error,
+                )
 
             raise WeatherServiceError(
                 f"OpenWeatherMap API error: {error_data.get('message', str(e))}",
