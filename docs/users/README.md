@@ -1,9 +1,8 @@
-# 👥 TripSage User Documentation
+# TripSage User Documentation
 
-> **Complete Guide for TripSage Users**  
-> From first login to advanced trip planning - everything you need to make the most of TripSage AI
+User guide from first login to trip planning.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### New to TripSage?
 
@@ -16,46 +15,46 @@
 
 ## 📚 Documentation Sections
 
-### 🌟 Getting Started
+### Getting Started
 
 - **[Getting Started Guide](getting-started.md)** - Account setup, preferences, first steps
 - **[Web App Guide](web-app-guide.md)** - Navigate the TripSage interface
 - **[Mobile Access](web-app-guide.md#mobile-access)** - Using TripSage on mobile devices
 
-### ✈️ Planning Your Trips
+### Planning Your Trips
 
 - **[Travel Planning Guide](travel-planning-guide.md)** - Complete trip planning walkthrough
 - **[Search & Booking](travel-planning-guide.md#search-and-booking)** - Find flights, hotels, and activities
 - **[AI Assistant](travel-planning-guide.md#ai-assistance)** - Work effectively with TripSage AI
 - **[Trip Collaboration](collaboration.md)** - Share and plan trips with others
 
-### ⚙️ Account & Settings
+### Account & Settings
 
 - **[Account Management](web-app-guide.md#account-settings)** - Profile, preferences, and security
 - **[Notification Settings](web-app-guide.md#notification-settings)** - Alerts, updates, and preferences
 - **[Data & Privacy](web-app-guide.md#privacy-controls)** - Your data, privacy controls, and security
 
-### 🆘 Support & Help
+### Support & Help
 
 - **[FAQ](faq.md)** - Frequently asked questions
 - **[Troubleshooting](faq.md#troubleshooting)** - Common issues and solutions
 - **[Getting Help](faq.md#getting-help)** - Contact support and community resources
 
-### 🔗 For Developers
+### For Developers
 
 - **[API Documentation](../api/getting-started.md)** - Integrate with TripSage
 - **[Developer Resources](../developers/README.md)** - Build on TripSage platform
 
-## 🎯 User Types & Paths
+## User Types & Paths
 
-### 🏃‍♂️ Quick User (5 minutes)
+### Quick User
 
 **Goal**: Plan a simple trip quickly
 
 1. **[Getting Started](getting-started.md#quick-setup)** - 2 min account setup
 2. **[AI Planning](travel-planning-guide.md#quick-planning)** - 3 min trip planning
 
-### 👥 Collaborative Planner (15 minutes)
+### Collaborative Planner
 
 **Goal**: Plan a group trip with friends/family
 
@@ -63,7 +62,7 @@
 2. **[Travel Planning](travel-planning-guide.md)** - Detailed planning
 3. **[Collaboration](collaboration.md)** - Invite and coordinate
 
-### 🧑‍💼 Business Traveler (10 minutes)
+### Business Traveler
 
 **Goal**: Efficient business trip management
 
@@ -71,7 +70,7 @@
 2. **[Search & Booking](travel-planning-guide.md#business-travel)** - Corporate travel features
 3. **[Account Management](web-app-guide.md#expense-tracking)** - Expense tracking
 
-### 🔧 Power User (30 minutes)
+### Power User
 
 **Goal**: Master all TripSage features
 
@@ -79,7 +78,7 @@
 2. **[Advanced Features](advanced-features.md)** - All capabilities
 3. **[API Documentation](../api/getting-started.md)** - Integration options
 
-## 💡 Popular Use Cases
+## Use Cases
 
 ### Personal Travel
 
@@ -99,7 +98,7 @@
 - **Friend Trips** → [Group Coordination](collaboration.md#friend-groups)
 - **Corporate Retreats** → [Team Travel](collaboration.md#corporate-groups)
 
-## 📱 Platform Access
+## Platform Access
 
 ### Web Application
 
@@ -118,30 +117,30 @@
 - **Personal Use**: Connect your apps → [API Documentation](../api/getting-started.md)
 - **Business Integration**: Enterprise features → [API Examples](../api/examples.md)
 
-## 🌟 Key Features
+## Features
 
-### AI-Powered Planning
+### Planning
 
 - **Natural Language**: "Plan a week in Japan for under $2000"
 - **Smart Suggestions**: Personalized recommendations based on preferences
 - **Real-Time Updates**: Live price and availability monitoring
 - **Memory System**: Remembers your preferences across conversations
 
-### Comprehensive Search
+### Search
 
 - **Flights**: Direct airline integrations with price tracking
 - **Accommodations**: Hotels, vacation rentals, unique stays
 - **Activities**: Local experiences, tours, and attractions
 - **Destinations**: AI-powered destination recommendations
 
-### Collaboration Tools
+### Collaboration
 
 - **Real-Time Sharing**: Plan trips together in real-time
 - **Role-Based Access**: Different permissions for different users
 - **Communication**: Built-in chat and commenting
 - **Voting & Decisions**: Democratic trip planning tools
 
-### Smart Features
+### Additional Features
 
 - **Budget Tracking**: Automatic expense categorization
 - **Weather Integration**: Weather-aware planning recommendations
@@ -170,6 +169,6 @@
 
 ---
 
-**Ready to start planning?** Begin with our [Getting Started Guide](getting-started.md) or jump right into [planning your first trip](travel-planning-guide.md)! ✈️
+Begin with [Getting Started](getting-started.md) or start [planning your first trip](travel-planning-guide.md).
 
 > *Last updated: June 17, 2025*
