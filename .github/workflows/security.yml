@@ -1,0 +1,33 @@
+name: Weekly Security
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # Mondays 02:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secrets:
+    name: Secret Scan (gitleaks or GHAS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: "detect --redact --no-banner --exit-code 1"
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Weekly Security Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Gitleaks executed with redaction. See run logs for details." >> $GITHUB_STEP_SUMMARY
+
