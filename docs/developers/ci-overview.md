@@ -21,3 +21,10 @@ Configure required checks to use the `CI` workflow jobs (Backend, Frontend). Rem
 ## Adding new checks
 When adding new checks, prefer inlining steps in `ci.yml` to avoid bespoke composite actions. Keep jobs small, fast, and path-scoped.
 
+## Paths monitored
+To avoid missing critical validation when only tests or dependency definitions change, CI triggers when any of the following change:
+
+- Backend code and configs: `tripsage/**`, `tripsage_core/**`, `scripts/**`, `supabase/**`, `pyproject.toml`, `ruff.toml`, `pyrightconfig.json`, `setup.cfg`, `pytest.ini`
+- Backend tests and dependencies: `tests/**`, `requirements*.txt`, `requirements/**`, `uv.lock`, `poetry.lock`
+- Frontend: `frontend/**`
+- CI config: `.github/workflows/**`
