@@ -61,9 +61,9 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies (uv)
+      - name: Install dependencies (uv + ruff)
         run: |
-          pip install uv
+          pip install uv ruff
           uv sync --frozen
 
       - name: Ruff lint
