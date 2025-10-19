@@ -88,7 +88,101 @@ addopts = [
 [tool.ruff]
 line-length = 88
 target-version = "py312"
-lint.select = ["E", "F", "B", "I"]
+include = ["*.py", "*.pyi"]
+src = ["tripsage", "tripsage_core", "scripts", "tests"]
+extend-exclude = [".github", "**/*.md", "**/*.yml", "**/*.yaml"]
+
+[tool.ruff.lint]
+select = [
+    # Documentation and style
+    "D",   # pydocstyle - docstring formatting
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    # Code quality and bug detection
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+    "RUF",  # Ruff-specific
+    # Best practices and modernization
+    "PTH",  # flake8-use-pathlib
+    "PIE",  # flake8-pie
+    "ERA",  # eradicate (commented code)
+    "PD",   # pandas-vet
+    "NPY",  # NumPy
+    "PERF", # perflint
+    "FURB", # refurb
+    # Additional strictness
+    "A",    # flake8-builtins
+    "BLE",  # flake8-blind-except
+    "COM",  # flake8-commas
+    "FBT",  # flake8-boolean-trap
+    "ICN",  # flake8-import-conventions
+    "ISC",  # flake8-implicit-str-concat
+    "Q",    # flake8-quotes
+    "SLF",  # flake8-self (private access)
+    # Logging and debugging
+    "LOG",  # flake8-logging-format
+    "T10",  # flake8-debugger
+    "T20",  # flake8-print
+    # Exception handling
+    "TRY",  # tryceratops
+]
+
+ignore = [
+    # Tests and CLI leniencies
+    "S101",  # asserts in tests
+    "S108",  # insecure temp files (tests)
+    "S311",  # non-crypto randomness (tests)
+    "T20",   # print statements in CLI
+    # Formatter/semantics conflicts
+    "COM812", "COM819",
+    # Exception flow style
+    "TRY003", "TRY301", "TRY300",
+    # Control-flow preferences
+    "RET505",
+    # Common project-level complexities
+    "PLR0912", "PLR0913", "PLR0915",
+    # Private member access sometimes required
+    "SLF001",
+    # Typing-only import rules
+    "TC001", "TC002", "TC003",
+    # Simplification rules that can reduce clarity
+    "SIM300",
+    # Collection call preferences
+    "C408",
+    # Boolean positional arguments
+    "FBT001", "FBT002", "FBT003",
+]
+
+fixable = ["ALL"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = [
+    "S101",   # allow asserts
+    "ARG001", # allow unused args in fixtures/mocks
+    "F821",   # undefined names in mocking contexts
+]
+"scripts/cli/**/*" = ["T20"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+order-by-type = true
+known-first-party = ["tripsage", "tripsage_core", "scripts", "tests"]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+lines-after-imports = 2
 
 # Per-file ignores: Allow FastAPI Depends() only in API router files
 [tool.ruff.lint.per-file-ignores]
@@ -136,6 +230,60 @@ dev = [
     "radon>=6.0.1",
     "python-jose[cryptography]>=3.5.0",
     "bandit>=1.8.3",
+]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["tripsage", "tripsage_core", "scripts", "tests"]
+exclude = [
+    "build",
+    "dist",
+    "docs",
+    "site",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    ".venv",
+]
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+typeCheckingMode = "basic"
+
+[tool.uv]
+managed = true
+package = true
+compile-bytecode = true
+link-mode = "copy"
+default-groups = ["dev"]
+preview = true
+
+[tool.pylint]
+[tool.pylint.main]
+extension-pkg-allow-list = ["pydantic"]
+reports = false
+score = true
+recursive = true
+py-version = "3.12"
+
+[tool.pylint.messages_control]
+disable = [
+    "too-few-public-methods",
+    "invalid-name",
+    "protected-access",
+    "broad-except",
+    "unused-argument",
+    "redefined-outer-name",
+    "pointless-string-statement",
+    "line-too-long",
+    "unnecessary-ellipsis",
+    "import-outside-toplevel",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-branches",
 ]
 
 [tool.coverage.run]
