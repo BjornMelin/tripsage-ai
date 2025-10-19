@@ -101,9 +101,9 @@ jobs:
 
 ## Version Pinning
 
-All external actions are pinned to specific commit SHAs for security and reproducibility:
+All external actions are pinned to specific commit SHAs for security and reproducibility unless GitHub requires a supported major tag:
 - `actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b` (v5.3.0)
 - `actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af` (v4.1.0)
 - `pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2` (v4.0.0)
-- `actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57` (v4.2.0)
+- `actions/cache@v4` (GitHub requires supported major tag)
 - `actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b` (v4.5.0)
