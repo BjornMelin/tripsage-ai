@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { vi } from "vitest";
+import { randomInt, randomUUID } from "crypto";
 
 // Global storage for mock data that persists across client instances
 const globalMockData: Record<string, any[]> = {
@@ -8,11 +9,11 @@ const globalMockData: Record<string, any[]> = {
 
 // Helper to generate trip data
 const generateTripData = (data: any) => {
-  const id = Date.now() + Math.floor(Math.random() * 1000);
+  const id = Date.now() + randomInt(0, 1000);
   const now = new Date().toISOString();
   return {
     id,
-    uuid_id: `uuid-${id}`,
+    uuid_id: randomUUID(),
     user_id: "test-user-id",
     title: data.title || data.name || "Untitled Trip",
     name: data.title || data.name || "Untitled Trip",
