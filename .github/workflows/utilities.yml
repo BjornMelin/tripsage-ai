@@ -32,7 +32,7 @@ jobs:
       validation-passed: ${{ steps.validate.outputs.passed }}
       needs-attention: ${{ steps.validate.outputs.needs-attention }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           
@@ -91,7 +91,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       
       - name: Label based on files changed
         uses: actions/github-script@v7
@@ -168,7 +168,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           
@@ -276,7 +276,7 @@ jobs:
     if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           
@@ -341,7 +341,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [pr-validation]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           
@@ -463,7 +463,7 @@ jobs:
     if: github.event_name == 'pull_request_target' && github.event.action == 'opened'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         
       - name: Assign reviewers based on files
         uses: actions/github-script@v7
@@ -561,7 +561,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'release-prep'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           
