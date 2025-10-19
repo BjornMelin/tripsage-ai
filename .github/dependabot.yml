@@ -2,63 +2,6 @@
 # https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 
-# Enable grouped updates for better PR management and reduced noise
-groups:
-  # Frontend production dependencies
-  frontend-production:
-    dependency-type: "production"
-    applies-to: version-updates
-    update-types:
-      - "minor"
-      - "patch"
-  
-  # Frontend development dependencies
-  frontend-development:
-    dependency-type: "development"
-    applies-to: version-updates
-    exclude-patterns:
-      - "@playwright/*"
-      - "vitest*"
-      - "@biomejs/*"
-  
-  # Frontend framework core
-  frontend-framework:
-    patterns:
-      - "next*"
-      - "@next/*"
-      - "react*"
-      - "react-dom"
-      - "@types/react*"
-    applies-to: version-updates
-  
-  # Frontend testing tools
-  frontend-testing:
-    patterns:
-      - "@playwright/*"
-      - "vitest*"
-      - "@testing-library/*"
-      - "@vitest/*"
-    applies-to: version-updates
-  
-  # Frontend UI/styling
-  frontend-ui:
-    patterns:
-      - "@radix-ui/*"
-      - "lucide-react"
-      - "tailwindcss*"
-      - "@tailwindcss/*"
-      - "framer-motion"
-      - "class-variance-authority"
-      - "clsx"
-      - "tailwind-merge"
-    applies-to: version-updates
-  
-  # Frontend security updates
-  frontend-security:
-    applies-to: security-updates
-    patterns:
-      - "*"
-
 updates:
   # Frontend dependencies
   - package-ecosystem: "npm"
@@ -82,6 +25,61 @@ updates:
       - "frontend"
     allow:
       - dependency-type: "all"
+    groups:
+      # Frontend production dependencies
+      frontend-production:
+        dependency-type: "production"
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Frontend development dependencies
+      frontend-development:
+        dependency-type: "development"
+        applies-to: version-updates
+        exclude-patterns:
+          - "@playwright/*"
+          - "vitest*"
+          - "@biomejs/*"
+
+      # Frontend framework core
+      frontend-framework:
+        patterns:
+          - "next*"
+          - "@next/*"
+          - "react*"
+          - "react-dom"
+          - "@types/react*"
+        applies-to: version-updates
+
+      # Frontend testing tools
+      frontend-testing:
+        patterns:
+          - "@playwright/*"
+          - "vitest*"
+          - "@testing-library/*"
+          - "@vitest/*"
+        applies-to: version-updates
+
+      # Frontend UI/styling
+      frontend-ui:
+        patterns:
+          - "@radix-ui/*"
+          - "lucide-react"
+          - "tailwindcss*"
+          - "@tailwindcss/*"
+          - "framer-motion"
+          - "class-variance-authority"
+          - "clsx"
+          - "tailwind-merge"
+        applies-to: version-updates
+
+      # Frontend security updates
+      frontend-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
     ignore:
       # Ignore major versions that might have breaking changes
       - dependency-name: "next"
