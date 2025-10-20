@@ -21,14 +21,13 @@ from tripsage_core.database.factory import (
 @pytest.fixture
 def mock_settings():
     """Create mock settings for testing."""
-    settings = Settings(
+    return Settings(
         postgres_url="postgresql://testuser:testpass@localhost:5432/testdb",
         database_url="https://test.supabase.co",
         database_public_key=SecretStr("test-public-key"),
         database_service_key=SecretStr("test-service-key"),
         _env_file=None,
     )
-    return settings
 
 
 @pytest.fixture

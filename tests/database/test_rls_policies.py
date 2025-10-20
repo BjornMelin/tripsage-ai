@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive RLS (Row Level Security) Policy Test Suite
+"""Comprehensive RLS (Row Level Security) Policy Test Suite.
 
 Tests all RLS policies across the TripSage database to ensure:
 - Users can only access their own data
@@ -72,7 +72,7 @@ class RLSPolicyTester:
         self.admin_client = self._create_mock_client()
 
     def _create_mock_client(
-        self, is_authenticated: bool = True, user_id: str = None
+        self, is_authenticated: bool = True, user_id: str | None = None
     ) -> MagicMock:
         """Create a mock Supabase client that properly simulates RLS behavior."""
         client = MagicMock()
@@ -172,7 +172,7 @@ class RLSPolicyTester:
 
                     # Debug logging disabled for performance
 
-                    for _record_id, record in client._mock_data[table_name].items():
+                    for record in client._mock_data[table_name].values():
                         # First check if filters match
                         matches_filters = True
                         for field, value in new_mock._filters.items():
@@ -219,9 +219,7 @@ class RLSPolicyTester:
                             trip_id = record.get("trip_id")
                             # Check if user owns the trip
                             trip_record = None
-                            for _tid, trip in client._mock_data.get(
-                                "trips", {}
-                            ).items():
+                            for trip in client._mock_data.get("trips", {}).values():
                                 if trip.get("id") == trip_id:
                                     trip_record = trip
                                     break
@@ -312,7 +310,7 @@ class RLSPolicyTester:
                     if table_name not in client._mock_data:
                         client._mock_data[table_name] = {}
 
-                    for _record_id, record in client._mock_data[table_name].items():
+                    for record in client._mock_data[table_name].values():
                         # Check if filters match
                         matches_filters = True
                         for field, value in new_mock._filters.items():
@@ -357,9 +355,7 @@ class RLSPolicyTester:
                             trip_id = record.get("trip_id")
                             # Check if user owns the trip
                             trip_owner = False
-                            for _tid, trip in client._mock_data.get(
-                                "trips", {}
-                            ).items():
+                            for trip in client._mock_data.get("trips", {}).values():
                                 if (
                                     trip.get("id") == trip_id
                                     and trip.get("user_id") == client._user_id

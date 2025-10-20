@@ -180,9 +180,7 @@ class WebCrawlService:
                     duration_ms = (end_time - start_time) * 1000
 
                     # Convert to our result format
-                    crawl_result = self._convert_crawl_result(result, url, duration_ms)
-
-                    return crawl_result
+                    return self._convert_crawl_result(result, url, duration_ms)
 
             except Exception as e:
                 end_time = time.time()

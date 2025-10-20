@@ -219,7 +219,7 @@ async def api_service_integration(db_session, test_redis):
             return json.loads(value)
         return None
 
-    async def mock_set_json(key: str, value: dict, ttl: int = None):
+    async def mock_set_json(key: str, value: dict, ttl: int | None = None):
         import json
 
         await test_redis.set(key, json.dumps(value), ex=ttl)

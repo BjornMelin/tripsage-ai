@@ -197,7 +197,9 @@ class TripService:
             return await self._build_trip_response(result)
 
         except Exception as e:
-            logger.exception( "Failed to create trip", extra={"user_id": user_id, "error": str(e)})
+            logger.exception(
+                "Failed to create trip", extra={"user_id": user_id, "error": str(e)}
+            )
             raise
 
     async def get_trip(self, trip_id: str, user_id: str) -> TripResponse | None:
@@ -222,7 +224,10 @@ class TripService:
             return await self._build_trip_response(result)
 
         except Exception as e:
-            logger.exception( "Failed to get trip", extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get trip",
+                extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
+            )
             return None
 
     async def get_user_trips(
@@ -270,7 +275,10 @@ class TripService:
             return trips
 
         except Exception as e:
-            logger.exception( "Failed to get user trips", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get user trips",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return []
 
     async def count_user_trips(self, user_id: str) -> int:
@@ -284,11 +292,13 @@ class TripService:
         """
         try:
             filters = {"user_id": user_id}
-            count = await self.db.count("trips", filters=filters)
-            return count
+            return await self.db.count("trips", filters=filters)
 
         except Exception as e:
-            logger.exception( "Failed to count user trips", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to count user trips",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return 0
 
     async def update_trip(
@@ -354,7 +364,10 @@ class TripService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.exception( "Failed to update trip", extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to update trip",
+                extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
+            )
             raise
 
     async def delete_trip(self, trip_id: str, user_id: str) -> bool:
@@ -388,7 +401,10 @@ class TripService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.exception( "Failed to delete trip", extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to delete trip",
+                extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
+            )
             return False
 
     async def share_trip(
@@ -450,7 +466,15 @@ class TripService:
         except (PermissionError, NotFoundError):
             raise
         except Exception as e:
-            logger.exception( "Failed to share trip", extra={ "trip_id": trip_id, "owner_id": owner_id, "share_with": share_with_user_id, "error": str(e), },)
+            logger.exception(
+                "Failed to share trip",
+                extra={
+                    "trip_id": trip_id,
+                    "owner_id": owner_id,
+                    "share_with": share_with_user_id,
+                    "error": str(e),
+                },
+            )
             return False
 
     async def unshare_trip(
@@ -491,7 +515,15 @@ class TripService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.exception( "Failed to unshare trip", extra={ "trip_id": trip_id, "owner_id": owner_id, "unshare_from": unshare_user_id, "error": str(e), },)
+            logger.exception(
+                "Failed to unshare trip",
+                extra={
+                    "trip_id": trip_id,
+                    "owner_id": owner_id,
+                    "unshare_from": unshare_user_id,
+                    "error": str(e),
+                },
+            )
             return False
 
     async def get_shared_trips(
@@ -522,7 +554,10 @@ class TripService:
             return trips[offset : offset + limit]
 
         except Exception as e:
-            logger.exception( "Failed to get shared trips", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get shared trips",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return []
 
     async def search_trips(
@@ -566,7 +601,10 @@ class TripService:
             return trips
 
         except Exception as e:
-            logger.exception( "Failed to search trips", extra={"user_id": user_id, "query": query, "error": str(e)},)
+            logger.exception(
+                "Failed to search trips",
+                extra={"user_id": user_id, "query": query, "error": str(e)},
+            )
             return []
 
     async def _check_trip_access(
@@ -601,10 +639,7 @@ class TripService:
                 return True
 
         # Check if public
-        if trip.get("visibility") == TripVisibility.PUBLIC:
-            return True
-
-        return False
+        return trip.get("visibility") == TripVisibility.PUBLIC
 
     async def _build_trip_response(self, trip_data: dict[str, Any]) -> TripResponse:
         """Build trip response from database data.

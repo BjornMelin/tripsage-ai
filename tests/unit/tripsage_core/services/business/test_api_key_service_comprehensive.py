@@ -66,8 +66,7 @@ class TestApiKeyServiceComprehensive:
         """Create ApiKeyService with mocked dependencies."""
         with patch("tripsage_core.config.get_settings") as mock_settings:
             mock_settings.return_value.secret_key = "test-secret-key-for-testing"
-            service = ApiKeyService(db=mock_db, cache=mock_cache)
-            return service
+            return ApiKeyService(db=mock_db, cache=mock_cache)
 
     @pytest.fixture
     def sample_create_request(self):

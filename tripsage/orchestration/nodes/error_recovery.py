@@ -293,7 +293,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         Args:
             state: Current state with error information
         """
-        escalation_data = {
+        {
             "session_id": state.get("session_id"),
             "user_id": state.get("user_id"),
             "error_count": state.get("error_info", {}).get("error_count", 0),
@@ -304,7 +304,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "conversation_length": len(state.get("messages", [])),
         }
 
-        logger.exception(f"ESCALATION")
+        logger.exception("ESCALATION")
 
         # TODO: Integrate with support ticketing system
         # await support_system.create_ticket(escalation_data)

@@ -5,6 +5,7 @@ concurrent operations, and Redis integration failures to achieve 90%+ coverage.
 """
 
 import asyncio
+import contextlib
 import json
 import time
 from datetime import datetime, timedelta
@@ -56,10 +57,8 @@ class TestHeartbeatMechanisms:
 
         manager._running = False
         heartbeat_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await heartbeat_task
-        except asyncio.CancelledError:
-            pass
 
         assert mock_connection.send_ping.call_count >= 3
 
@@ -84,10 +83,8 @@ class TestHeartbeatMechanisms:
 
         manager._running = False
         cleanup_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await cleanup_task
-        except asyncio.CancelledError:
-            pass
 
         # Connection should be checked for timeout
         assert mock_connection.is_ping_timeout.called

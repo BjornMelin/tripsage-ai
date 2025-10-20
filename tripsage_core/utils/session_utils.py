@@ -258,7 +258,11 @@ async def store_session_summary(
             }
 
     except Exception as exc:
-        logger.exception( "Error storing session summary for user %s, session %s", user_id, session_id,)
+        logger.exception(
+            "Error storing session summary for user %s, session %s",
+            user_id,
+            session_id,
+        )
         return {"status": "error", "error": str(exc), "memories_created": 0}
 
 

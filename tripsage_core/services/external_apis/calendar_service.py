@@ -328,7 +328,7 @@ class GoogleCalendarService:
         service = self._get_service()
 
         try:
-            result = await asyncio.get_event_loop().run_in_executor(
+            return await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: service.events()
                 .insert(
@@ -339,8 +339,6 @@ class GoogleCalendarService:
                 )
                 .execute(),
             )
-
-            return result
 
         except HttpError as e:
             raise GoogleCalendarServiceError(
@@ -371,7 +369,7 @@ class GoogleCalendarService:
         service = self._get_service()
 
         try:
-            result = await asyncio.get_event_loop().run_in_executor(
+            return await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: service.events()
                 .update(
@@ -382,8 +380,6 @@ class GoogleCalendarService:
                 )
                 .execute(),
             )
-
-            return result
 
         except HttpError as e:
             raise GoogleCalendarServiceError(
@@ -456,7 +452,7 @@ class GoogleCalendarService:
         service = self._get_service()
 
         try:
-            result = await asyncio.get_event_loop().run_in_executor(
+            return await asyncio.get_event_loop().run_in_executor(
                 None,
                 lambda: service.events()
                 .get(
@@ -466,8 +462,6 @@ class GoogleCalendarService:
                 )
                 .execute(),
             )
-
-            return result
 
         except HttpError as e:
             raise GoogleCalendarServiceError(

@@ -287,7 +287,10 @@ class FlightService:
                     external_offers = await self._search_external_api(search_request)
                     offers.extend(external_offers)
                 except Exception as e:
-                    logger.exception( "External flight search failed", extra={"error": str(e), "search_id": search_id},)
+                    logger.exception(
+                        "External flight search failed",
+                        extra={"error": str(e), "search_id": search_id},
+                    )
 
             # Add fallback/mock offers if no external service
             if not offers and not self.external_service:
@@ -325,7 +328,14 @@ class FlightService:
             )
 
         except Exception as e:
-            logger.exception( "Flight search failed", extra={ "error": str(e), "origin": search_request.origin, "destination": search_request.destination, },)
+            logger.exception(
+                "Flight search failed",
+                extra={
+                    "error": str(e),
+                    "origin": search_request.origin,
+                    "destination": search_request.destination,
+                },
+            )
             raise ServiceError(f"Flight search failed: {e!s}") from e
 
     async def get_offer_details(
@@ -371,7 +381,10 @@ class FlightService:
             return None
 
         except Exception as e:
-            logger.exception( "Failed to get offer details", extra={"offer_id": offer_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get offer details",
+                extra={"offer_id": offer_id, "user_id": user_id, "error": str(e)},
+            )
             return None
 
     async def book_flight(
@@ -439,7 +452,14 @@ class FlightService:
                         booking.cancellable = external_booking.get("cancellable", False)
                         booking.refundable = external_booking.get("refundable", False)
                 except Exception as e:
-                    logger.exception( "External booking failed", extra={ "booking_id": booking_id, "offer_id": booking_request.offer_id, "error": str(e), },)
+                    logger.exception(
+                        "External booking failed",
+                        extra={
+                            "booking_id": booking_id,
+                            "offer_id": booking_request.offer_id,
+                            "error": str(e),
+                        },
+                    )
                     # Continue with hold status if external booking fails
                     booking.status = BookingStatus.HOLD
 
@@ -461,7 +481,14 @@ class FlightService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.exception( "Flight booking failed", extra={ "user_id": user_id, "offer_id": booking_request.offer_id, "error": str(e), },)
+            logger.exception(
+                "Flight booking failed",
+                extra={
+                    "user_id": user_id,
+                    "offer_id": booking_request.offer_id,
+                    "error": str(e),
+                },
+            )
             raise ServiceError(f"Flight booking failed: {e!s}") from e
 
     async def get_user_bookings(
@@ -498,7 +525,10 @@ class FlightService:
             return bookings
 
         except Exception as e:
-            logger.exception( "Failed to get user bookings", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get user bookings",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return []
 
     async def cancel_booking(self, booking_id: str, user_id: str) -> bool:
@@ -554,7 +584,10 @@ class FlightService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.exception( "Failed to cancel booking", extra={"booking_id": booking_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to cancel booking",
+                extra={"booking_id": booking_id, "user_id": user_id, "error": str(e)},
+            )
             return False
 
     async def _search_external_api(
@@ -774,7 +807,10 @@ class FlightService:
             await self.db.store_flight_booking(booking_data)
 
         except Exception as e:
-            logger.exception( "Failed to store booking", extra={"booking_id": booking.id, "error": str(e)},)
+            logger.exception(
+                "Failed to store booking",
+                extra={"booking_id": booking.id, "error": str(e)},
+            )
             raise
 
     async def _book_external_flight(
@@ -815,7 +851,10 @@ class FlightService:
             }
 
         except Exception as e:
-            logger.exception( "External booking failed", extra={"offer_id": offer.id, "error": str(e)},)
+            logger.exception(
+                "External booking failed",
+                extra={"offer_id": offer.id, "error": str(e)},
+            )
             return None
 
     async def _cancel_external_booking(self, booking: FlightBooking) -> None:
@@ -829,7 +868,10 @@ class FlightService:
             pass
 
         except Exception as e:
-            logger.exception( "External cancellation failed", extra={"booking_id": booking.id, "error": str(e)},)
+            logger.exception(
+                "External cancellation failed",
+                extra={"booking_id": booking.id, "error": str(e)},
+            )
 
 
 # Dependency function for FastAPI

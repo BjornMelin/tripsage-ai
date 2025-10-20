@@ -267,8 +267,8 @@ class ConfigurationAuditService:
                 await self._scan_for_changes()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in periodic scan")
+            except Exception:
+                logger.exception("Error in periodic scan")
 
     async def _scan_for_changes(self):
         """Scan for configuration changes."""
@@ -492,10 +492,9 @@ class ConfigurationAuditService:
                 return True
 
         # Check value patterns (but be careful not to log actual secrets)
-        if any(pattern in value_lower for pattern in ["bearer", "basic", "token"]):
-            return True
-
-        return False
+        return bool(
+            any(pattern in value_lower for pattern in ["bearer", "basic", "token"])
+        )
 
     def _is_file_security_relevant(self, file_path: str) -> bool:
         """Check if a file is security-relevant."""
@@ -522,11 +521,7 @@ class ConfigurationAuditService:
 
         # Check for security-related patterns in path
         path_lower = file_path.lower()
-        for pattern in self._security_patterns:
-            if pattern in path_lower:
-                return True
-
-        return False
+        return any(pattern in path_lower for pattern in self._security_patterns)
 
     def _assess_risk_level(self, key: str, value: str) -> str:
         """Assess the risk level of a configuration change."""

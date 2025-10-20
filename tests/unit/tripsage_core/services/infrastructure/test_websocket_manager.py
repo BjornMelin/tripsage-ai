@@ -257,8 +257,7 @@ class TestWebSocketManager:
                 return_value=mock_settings,
             ),
         ):
-            manager = WebSocketManager()
-            return manager
+            return WebSocketManager()
 
     @pytest.fixture
     def valid_jwt_token(self, mock_settings):
@@ -959,7 +958,7 @@ class TestWebSocketManager:
         # All authentications should succeed
         assert all(response.success for response in responses)
         assert (
-            len(set(response.connection_id for response in responses)) == 5
+            len({response.connection_id for response in responses}) == 5
         )  # All unique IDs
         assert len(websocket_manager.connection_service.connections) == 5
 

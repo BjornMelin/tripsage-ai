@@ -75,7 +75,7 @@ class MockCacheService:
         # Simple pattern matching for tests
         import fnmatch
 
-        return [k for k in self._storage.keys() if fnmatch.fnmatch(k, pattern)]
+        return [k for k in self._storage if fnmatch.fnmatch(k, pattern)]
 
     async def delete_pattern(self, pattern: str) -> int:
         """Mock delete_pattern."""

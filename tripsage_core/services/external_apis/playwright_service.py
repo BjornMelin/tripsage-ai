@@ -341,12 +341,12 @@ class PlaywrightService:
                             'script, style, noscript'
                         );
                         scripts.forEach(el => el.remove());
-                        
+
                         // Get text content and clean it up
                         const text = document.body
                             ? document.body.innerText
                             : document.documentElement.innerText;
-                        
+
                         // Clean up whitespace
                         return text.replace(/\\s+/g, ' ').trim();
                     }

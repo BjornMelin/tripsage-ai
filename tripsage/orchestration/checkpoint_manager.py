@@ -1,4 +1,4 @@
-"""PostgreSQL Checkpoint Manager for LangGraph Integration with Secure URL Handling
+"""PostgreSQL Checkpoint Manager for LangGraph Integration with Secure URL Handling.
 
 This module provides PostgreSQL-based checkpointing for LangGraph using the existing
 Supabase database configuration. It handles checkpoint persistence, recovery, and
@@ -98,7 +98,7 @@ class SupabaseCheckpointManager:
             return self._connection_string
 
         except Exception as e:
-            logger.exception(f"Failed to build secure connection string")
+            logger.exception("Failed to build secure connection string")
             raise DatabaseURLParsingError(
                 f"Could not create secure checkpoint connection: {e}"
             ) from e
@@ -137,8 +137,8 @@ class SupabaseCheckpointManager:
                 self._connection_pool = ConnectionPool(**pool_config)
                 logger.info("Created sync connection pool for checkpointing")
 
-        except Exception as e:
-            logger.exception(f"Failed to create connection pool")
+        except Exception:
+            logger.exception("Failed to create connection pool")
             raise
 
     async def get_async_checkpointer(self):
@@ -176,8 +176,8 @@ class SupabaseCheckpointManager:
             logger.info("Async PostgreSQL checkpointer initialized successfully")
             return self._async_checkpointer
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize async checkpointer")
+        except Exception:
+            logger.exception("Failed to initialize async checkpointer")
             raise
 
     def get_sync_checkpointer(self) -> PostgresSaver:
@@ -205,8 +205,8 @@ class SupabaseCheckpointManager:
             logger.info("Sync PostgreSQL checkpointer initialized successfully")
             return self._checkpointer
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize sync checkpointer")
+        except Exception:
+            logger.exception("Failed to initialize sync checkpointer")
             raise
 
     async def _setup_checkpoint_tables_async(self) -> None:
@@ -241,7 +241,7 @@ class SupabaseCheckpointManager:
         try:
             # Custom cleanup query for old checkpoints
             cleanup_query = """
-            DELETE FROM checkpoints 
+            DELETE FROM checkpoints
             WHERE created_at < NOW() - INTERVAL '%s days'
             RETURNING thread_id
             """
@@ -258,8 +258,8 @@ class SupabaseCheckpointManager:
             )
             return deleted_count
 
-        except Exception as e:
-            logger.exception(f"Failed to cleanup old checkpoints")
+        except Exception:
+            logger.exception("Failed to cleanup old checkpoints")
             return 0
 
     async def get_checkpoint_stats(self) -> dict[str, Any]:
@@ -270,13 +270,13 @@ class SupabaseCheckpointManager:
         """
         try:
             stats_query = """
-            SELECT 
+            SELECT
                 COUNT(*) as total_checkpoints,
                 COUNT(DISTINCT thread_id) as unique_threads,
                 MIN(created_at) as oldest_checkpoint,
                 MAX(created_at) as newest_checkpoint,
                 AVG(
-                    CASE WHEN created_at > NOW() - INTERVAL '24 hours' 
+                    CASE WHEN created_at > NOW() - INTERVAL '24 hours'
                     THEN 1 ELSE 0 END
                 ) * 100 as daily_activity_percent
             FROM checkpoints
@@ -308,7 +308,7 @@ class SupabaseCheckpointManager:
             return stats
 
         except Exception as e:
-            logger.exception(f"Failed to get checkpoint stats")
+            logger.exception("Failed to get checkpoint stats")
             return {
                 "error": str(e),
                 "total_checkpoints": 0,
@@ -326,8 +326,8 @@ class SupabaseCheckpointManager:
                 self._connection_pool.close()
                 logger.info("Closed sync connection pool")
 
-        except Exception as e:
-            logger.exception(f"Error during cleanup")
+        except Exception:
+            logger.exception("Error during cleanup")
 
     def __del__(self):
         """Ensure cleanup on garbage collection."""

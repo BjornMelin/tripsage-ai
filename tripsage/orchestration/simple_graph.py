@@ -55,17 +55,17 @@ class SimpleTripSageOrchestrator:
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the travel planning agent."""
-        return """You are TripSage, an expert AI travel planning assistant. 
+        return """You are TripSage, an expert AI travel planning assistant.
 You help users plan comprehensive trips by:
 
 1. **Flight Search**: Use search_flights to find and compare flight options
-2. **Accommodation Search**: Use search_accommodations to find hotels, 
+2. **Accommodation Search**: Use search_accommodations to find hotels,
    Airbnbs, and other lodging
 3. **Location Services**: Use geocode_location to get coordinates and location details
-4. **Weather Information**: Use get_weather to provide weather forecasts 
+4. **Weather Information**: Use get_weather to provide weather forecasts
    for destinations
 5. **Research**: Use web_search to research destinations, activities, and travel tips
-6. **Memory Management**: Use add_memory and search_memories to remember 
+6. **Memory Management**: Use add_memory and search_memories to remember
    user preferences and past conversations
 
 **Guidelines:**
@@ -78,7 +78,7 @@ You help users plan comprehensive trips by:
 - Be proactive in suggesting improvements and alternatives
 
 **Example Workflow:**
-1. When a user asks about travel, extract key details (origin, destination, 
+1. When a user asks about travel, extract key details (origin, destination,
    dates, budget)
 2. Use appropriate tools to search for flights and accommodations
 3. Research the destination for activities and tips
@@ -140,15 +140,14 @@ Start by greeting the user and asking how you can help with their travel plannin
             return {"messages": response_messages, "success": True}
 
         except Exception as e:
-            logger.exception(f"Error processing conversation")
+            logger.exception("Error processing conversation")
             return {
-                "messages": messages
-                + [
+                "messages": [
+                    *messages,
                     {
                         "role": "assistant",
-                        "content": f"I apologize, but I encountered an error while "
-                        f"processing your request: {e!s}. Please try again.",
-                    }
+                        "content": f"I apologize, but I encountered an error while processing your request: {e!s}. Please try again.",
+                    },
                 ],
                 "success": False,
                 "error": str(e),
@@ -200,7 +199,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 yield chunk
 
         except Exception as e:
-            logger.exception(f"Error streaming conversation")
+            logger.exception("Error streaming conversation")
             yield {
                 "error": str(e),
                 "messages": [{"role": "assistant", "content": f"Error: {e!s}"}],
@@ -224,7 +223,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 ),
             }
         except Exception as e:
-            logger.exception(f"Health check failed")
+            logger.exception("Health check failed")
             return {"status": "unhealthy", "agent_responsive": False, "error": str(e)}
 
 

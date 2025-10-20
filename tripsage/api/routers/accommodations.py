@@ -116,7 +116,7 @@ async def search_accommodations(
     service_results = await accommodation_service.search_accommodations(service_request)
 
     # Convert service response to API response format
-    api_response = AccommodationSearchResponse(
+    return AccommodationSearchResponse(
         listings=service_results.listings,
         count=service_results.total_results,
         currency=service_results.currency
@@ -135,8 +135,6 @@ async def search_accommodations(
         else None,
         search_request=request,  # Use the original API request
     )
-
-    return api_response
 
 
 @router.post("/details", response_model=AccommodationDetailsResponse)

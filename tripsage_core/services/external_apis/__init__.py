@@ -35,31 +35,31 @@ from .webcrawl_service import (
 
 
 __all__ = [
+    "DocumentAnalyzer",
     # Service classes
     "DuffelHTTPClient",
-    "GoogleMapsService",
-    "WeatherService",
     "GoogleCalendarService",
-    "WebCrawlService",
+    "GoogleMapsService",
     "PlaywrightService",
-    "DocumentAnalyzer",
     "TimeService",
-    # Global service getters
-    "get_duffel_client",
-    "get_google_maps_service",
-    "get_weather_service",
-    "get_calendar_service",
-    "get_webcrawl_service",
-    "get_playwright_service",
-    "get_document_analyzer",
-    "get_time_service",
+    "WeatherService",
+    "WebCrawlService",
+    "close_calendar_service",
+    "close_document_analyzer",
     # Service closers
     "close_duffel_client",
     "close_google_maps_service",
-    "close_weather_service",
-    "close_calendar_service",
-    "close_webcrawl_service",
     "close_playwright_service",
-    "close_document_analyzer",
     "close_time_service",
+    "close_weather_service",
+    "close_webcrawl_service",
+    "get_calendar_service",
+    "get_document_analyzer",
+    # Global service getters
+    "get_duffel_client",
+    "get_google_maps_service",
+    "get_playwright_service",
+    "get_time_service",
+    "get_weather_service",
+    "get_webcrawl_service",
 ]

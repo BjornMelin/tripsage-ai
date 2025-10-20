@@ -11,6 +11,7 @@ cryptographic storage security guidelines.
 
 import asyncio
 import base64
+import contextlib
 import secrets
 import time
 from unittest.mock import AsyncMock, Mock
@@ -289,20 +290,16 @@ class TestSecretKeyRotationSecurity:
         # Time valid decryptions
         for _ in range(10):
             start = time.time()
-            try:
+            with contextlib.suppress(Exception):
                 service._decrypt_api_key(valid_encrypted)
-            except Exception:
-                pass
             end = time.time()
             valid_times.append(end - start)
 
         # Time invalid decryptions
         for invalid_key in invalid_encrypted_keys:
             start = time.time()
-            try:
+            with contextlib.suppress(Exception):
                 service._decrypt_api_key(invalid_key)
-            except Exception:
-                pass
             end = time.time()
             invalid_times.append(end - start)
 
@@ -583,7 +580,7 @@ class TestSecretKeyRotationSecurity:
         )
 
         # Old encrypted keys should not be accessible after rotation
-        for _state, encrypted in encrypted_versions.items():
+        for encrypted in encrypted_versions.values():
             with pytest.raises(ServiceError):
                 rotated_service._decrypt_api_key(encrypted)
 

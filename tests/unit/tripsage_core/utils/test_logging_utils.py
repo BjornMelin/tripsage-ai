@@ -59,7 +59,7 @@ class TestLoggingUtils:
         adapter = ContextAdapter(base_logger, {"context": {"service": "test"}})
 
         # Process with existing extra
-        msg, kwargs = adapter.process("Test", {"extra": {"user_id": "123"}})
+        _msg, kwargs = adapter.process("Test", {"extra": {"user_id": "123"}})
 
         assert kwargs["extra"]["service"] == "test"
         assert kwargs["extra"]["user_id"] == "123"

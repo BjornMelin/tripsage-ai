@@ -75,14 +75,12 @@ def mock_websocket_connection():
     mock_ws.send_text = AsyncMock()
     mock_ws.close = AsyncMock()
 
-    connection = WebSocketConnection(
+    return WebSocketConnection(
         websocket=mock_ws,
         connection_id=str(uuid4()),
         user_id=uuid4(),
         session_id=uuid4(),
     )
-
-    return connection
 
 
 class TestWebSocketPerformanceIntegration:

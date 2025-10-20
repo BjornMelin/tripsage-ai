@@ -317,7 +317,16 @@ async def verify_trip_access(
     except (CoreResourceNotFoundError, CoreSecurityError):
         raise
     except Exception as e:
-        logger.exception( "Unexpected error during trip access verification", extra={ "trip_id": context.trip_id, "principal_id": context.principal_id, "operation": context.operation, "error": str(e), }, exc_info=True,)
+        logger.exception(
+            "Unexpected error during trip access verification",
+            extra={
+                "trip_id": context.trip_id,
+                "principal_id": context.principal_id,
+                "operation": context.operation,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
 
         # Log security event for unexpected errors
         await audit_security_event(
@@ -682,25 +691,25 @@ async def get_user_trip_permissions(
 
 
 __all__ = [
+    # Models
+    "TripAccessContext",
     # Enums
     "TripAccessLevel",
     "TripAccessPermission",
-    # Models
-    "TripAccessContext",
     "TripAccessResult",
-    # Core functions
-    "verify_trip_access",
-    "create_trip_access_dependency",
-    "require_trip_access",
-    # Pre-configured dependencies
-    "TripReadAccessDep",
-    "TripWriteAccessDep",
-    "TripOwnerAccessDep",
     "TripCollaboratorAccessDep",
     "TripEditPermissionDep",
     "TripManagePermissionDep",
+    "TripOwnerAccessDep",
+    # Pre-configured dependencies
+    "TripReadAccessDep",
+    "TripWriteAccessDep",
+    "check_trip_collaboration",
     # Helper functions
     "check_trip_ownership",
-    "check_trip_collaboration",
+    "create_trip_access_dependency",
     "get_user_trip_permissions",
+    "require_trip_access",
+    # Core functions
+    "verify_trip_access",
 ]

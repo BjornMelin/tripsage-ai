@@ -361,11 +361,10 @@ class TestTripSageOrchestratorEnhanced:
                         return_value=None
                     )
 
-                    orchestrator = TripSageOrchestrator(
+                    return TripSageOrchestrator(
                         service_registry=comprehensive_mock_registry,
                         checkpointer=MemorySaver(),
                     )
-                    return orchestrator
 
     def test_all_agent_nodes_present(self, enhanced_orchestrator):
         """Test that all required agent nodes are present in the graph."""

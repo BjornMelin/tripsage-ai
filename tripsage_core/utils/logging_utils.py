@@ -214,4 +214,7 @@ def log_exception(
     if context:
         extra.update(context)
 
-    logger.exception( f"Exception occurred", exc_info=True, extra=extra,)
+    logger.exception(
+        "Exception occurred",
+        extra=extra,
+    )

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Database Service Integration Performance Tests
+"""Database Service Integration Performance Tests.
 
 This module provides comprehensive performance testing for database service integration:
 - Connection pool performance
@@ -15,6 +15,7 @@ Uses pytest-benchmark for accurate performance measurements.
 """
 
 import asyncio
+import contextlib
 import logging
 
 import numpy as np
@@ -255,12 +256,10 @@ class TestDatabaseQueryPerformance:
                 return 0
             finally:
                 # Cleanup
-                try:
+                with contextlib.suppress(Exception):
                     await database_service.execute_sql(
                         "DELETE FROM test_bulk_insert WHERE name LIKE 'bulk_test_%'"
                     )
-                except Exception:
-                    pass
 
         result = await benchmark.pedantic(execute_bulk_insert, rounds=10, iterations=1)
         assert result >= 0
@@ -295,7 +294,7 @@ class TestDatabaseTransactionPerformance:
     async def test_complex_transaction_performance(self, benchmark, database_service):
         """Benchmark complex transaction with multiple operations."""
         # Setup test table
-        try:
+        with contextlib.suppress(Exception):
             await database_service.execute_sql("""
                 CREATE TABLE IF NOT EXISTS test_transaction (
                     id SERIAL PRIMARY KEY,
@@ -303,8 +302,6 @@ class TestDatabaseTransactionPerformance:
                     status TEXT DEFAULT 'pending'
                 )
             """)
-        except Exception:
-            pass
 
         async def execute_complex_transaction():
             """Execute a complex transaction with multiple operations."""
@@ -335,12 +332,10 @@ class TestDatabaseTransactionPerformance:
                 return 0
             finally:
                 # Cleanup
-                try:
+                with contextlib.suppress(Exception):
                     await database_service.execute_sql(
                         "DELETE FROM test_transaction WHERE data = 'test_data'"
                     )
-                except Exception:
-                    pass
 
         result = await benchmark.pedantic(
             execute_complex_transaction, rounds=15, iterations=1
@@ -560,20 +555,16 @@ class TestDatabaseMemoryUsage:
 
                 # Simulate concurrent operations
                 for service in services:
-                    try:
+                    with contextlib.suppress(Exception):
                         await service.execute_sql("SELECT 1")
-                    except Exception:
-                        pass
 
                 return len(services)
 
             finally:
                 # Cleanup
                 for service in services:
-                    try:
+                    with contextlib.suppress(Exception):
                         await service.close()
-                    except Exception:
-                        pass
 
         result = await benchmark.pedantic(
             test_pool_memory_efficiency, rounds=5, iterations=1
@@ -655,7 +646,7 @@ class TestDatabaseIntegrationWorkflows:
     ):
         """Benchmark a complete CRUD workflow."""
         # Setup test table
-        try:
+        with contextlib.suppress(Exception):
             await database_service.execute_sql("""
                 CREATE TABLE IF NOT EXISTS test_crud_workflow (
                     id SERIAL PRIMARY KEY,
@@ -665,8 +656,6 @@ class TestDatabaseIntegrationWorkflows:
                     updated_at TIMESTAMP DEFAULT NOW()
                 )
             """)
-        except Exception:
-            pass
 
         async def complete_crud_workflow():
             """Execute a complete CRUD workflow."""

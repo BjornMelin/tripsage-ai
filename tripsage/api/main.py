@@ -170,7 +170,7 @@ def create_app() -> FastAPI:
         request: Request, exc: CoreAuthenticationError
     ):
         """Handle authentication errors."""
-        logger.exception( f"Authentication error", extra={"path": request.url.path})
+        logger.exception("Authentication error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -181,7 +181,7 @@ def create_app() -> FastAPI:
         request: Request, exc: CoreKeyValidationError
     ):
         """Handle API key validation errors."""
-        logger.exception( f"Key validation error", extra={"path": request.url.path})
+        logger.exception("Key validation error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -202,7 +202,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreMCPError)
     async def mcp_error_handler(request: Request, exc: CoreMCPError):
         """Handle MCP server errors."""
-        logger.exception(f"MCP error", extra={"path": request.url.path})
+        logger.exception("MCP error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -211,7 +211,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
         """Handle external API errors."""
-        logger.exception( f"External API error", extra={"path": request.url.path})
+        logger.exception("External API error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -231,7 +231,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreTripSageError)
     async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):
         """Handle all other core TripSage exceptions."""
-        logger.exception(f"Core error", extra={"path": request.url.path})
+        logger.exception("Core error", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -285,7 +285,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle all other unhandled exceptions."""
-        logger.exception( f"Unhandled exception", extra={"path": request.url.path})
+        logger.exception("Unhandled exception", extra={"path": request.url.path})
 
         content = {
             "error": True,

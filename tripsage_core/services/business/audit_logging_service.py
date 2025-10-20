@@ -15,6 +15,7 @@ Features:
 """
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import logging
@@ -373,17 +374,13 @@ class SecurityAuditLogger:
         # Cancel background tasks
         if self._flush_task:
             self._flush_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._flush_task
-            except asyncio.CancelledError:
-                pass
 
         if self._cleanup_task:
             self._cleanup_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._cleanup_task
-            except asyncio.CancelledError:
-                pass
 
         # Flush remaining events
         await self._flush_buffer()
@@ -443,10 +440,10 @@ class SecurityAuditLogger:
 
             return True
 
-        except Exception as e:
+        except Exception:
             self.stats["errors"] += 1
             self._handle_circuit_breaker_failure()
-            logger.exception(f"Failed to log audit event")
+            logger.exception("Failed to log audit event")
             return False
 
     async def log_authentication_event(
@@ -658,8 +655,8 @@ class SecurityAuditLogger:
                 await self._flush_buffer()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in flush loop")
+            except Exception:
+                logger.exception("Error in flush loop")
 
     async def _flush_buffer(self):
         """Flush buffered events to storage."""
@@ -679,8 +676,8 @@ class SecurityAuditLogger:
 
             self.stats["buffer_flushes"] += 1
 
-        except Exception as e:
-            logger.exception(f"Failed to flush events")
+        except Exception:
+            logger.exception("Failed to flush events")
             # Re-add events to buffer for retry
             async with self._buffer_lock:
                 self._buffer.extend(events_to_flush)
@@ -699,9 +696,9 @@ class SecurityAuditLogger:
             ):
                 await self._forward_to_external(event)
 
-        except Exception as e:
+        except Exception:
             self.stats["errors"] += 1
-            raise e
+            raise
 
     async def _forward_to_external(self, event: AuditEvent):
         """Forward event to external logging systems."""
@@ -738,8 +735,8 @@ class SecurityAuditLogger:
                 await self._cleanup_old_logs()
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in cleanup loop")
+            except Exception:
+                logger.exception("Error in cleanup loop")
 
     async def _cleanup_old_logs(self):
         """Clean up old log files based on retention policy."""

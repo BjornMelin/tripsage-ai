@@ -239,7 +239,7 @@ class ToolCallService:
             return processed_responses
 
         except Exception as e:
-            logger.exception(f"Parallel tool call execution failed")
+            logger.exception("Parallel tool call execution failed")
             raise ToolCallError(f"Parallel execution failed: {e!s}") from e
 
     async def validate_tool_call(

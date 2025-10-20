@@ -32,25 +32,25 @@ from tripsage_core.models.api.weather_models import (
 
 
 __all__ = [
+    # Flight models
+    "Airport",
     # Calendar models
     "CalendarEvent",
     "CalendarList",
     "CreateEventRequest",
-    "EventDateTime",
-    "EventReminder",
-    "UpdateEventRequest",
-    # Flight models
-    "Airport",
-    "FlightOffer",
-    "FlightOfferRequest",
-    "Segment",
-    "Passenger",
-    "PaymentRequest",
-    "PriceBreakdown",
     # Weather models
     "CurrentWeather",
     "DailyForecast",
+    "EventDateTime",
+    "EventReminder",
+    "FlightOffer",
+    "FlightOfferRequest",
     "HourlyForecast",
+    "Passenger",
+    "PaymentRequest",
+    "PriceBreakdown",
+    "Segment",
+    "UpdateEventRequest",
     "WeatherAlert",
     "WeatherCondition",
     "WeatherForecast",

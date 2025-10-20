@@ -159,7 +159,7 @@ class BaseDeploymentStrategy(ABC):
 
         except Exception as e:
             response_time = time.time() - start_time
-            logger.exception(f"Health check failed")
+            logger.exception("Health check failed")
 
             return HealthCheckResult(
                 healthy=False,
@@ -224,12 +224,14 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
                 logger.info(f"Simple deployment {deployment_id} completed successfully")
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.exception( f"Simple deployment {deployment_id} failed health check")
+                logger.exception(
+                    f"Simple deployment {deployment_id} failed health check"
+                )
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Simple deployment {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -269,7 +271,7 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Rollback {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -329,7 +331,10 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
 
                 if not health_result.healthy:
                     metrics.phase = DeploymentPhase.FAILED
-                    logger.exception( f"Blue-green deployment {deployment_id} failed health check " f"{i + 1}")
+                    logger.exception(
+                        f"Blue-green deployment {deployment_id} failed health check "
+                        f"{i + 1}"
+                    )
                     metrics.end_time = time.time()
                     return metrics
 
@@ -379,12 +384,14 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
                 )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.exception( f"Blue-green deployment {deployment_id} failed final check")
+                logger.exception(
+                    f"Blue-green deployment {deployment_id} failed final check"
+                )
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Blue-green deployment {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -425,7 +432,7 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Blue-green rollback {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -498,7 +505,10 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
                 metrics.health_checks.append(health_result)
 
                 if not health_result.healthy:
-                    logger.exception( f"Canary deployment {deployment_id} failed at " f"{step_percentage}%")
+                    logger.exception(
+                        f"Canary deployment {deployment_id} failed at "
+                        f"{step_percentage}%"
+                    )
                     metrics.phase = DeploymentPhase.FAILED
 
                     if self.enterprise_config.enable_auto_rollback:
@@ -542,7 +552,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Canary deployment {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -612,7 +622,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Canary rollback {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -685,7 +695,10 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
                         f"{deployment_id}"
                     )
                 else:
-                    logger.exception( f"Instance {instance_num} failed health check for " f"deployment {deployment_id}")
+                    logger.exception(
+                        f"Instance {instance_num} failed health check for "
+                        f"deployment {deployment_id}"
+                    )
                     metrics.phase = DeploymentPhase.FAILED
 
                     if self.enterprise_config.enable_auto_rollback:
@@ -710,12 +723,14 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
                 )
             else:
                 metrics.phase = DeploymentPhase.FAILED
-                logger.exception( f"Rolling deployment {deployment_id} failed final verification")
+                logger.exception(
+                    f"Rolling deployment {deployment_id} failed final verification"
+                )
 
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Rolling deployment {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()
@@ -760,7 +775,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
             metrics.end_time = time.time()
             return metrics
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Rolling rollback {deployment_id} failed")
             metrics.phase = DeploymentPhase.FAILED
             metrics.end_time = time.time()

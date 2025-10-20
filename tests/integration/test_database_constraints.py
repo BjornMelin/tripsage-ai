@@ -38,35 +38,35 @@ BEGIN
     SELECT COUNT(*) INTO invalid_count
     FROM memories
     WHERE user_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
-    
+
     IF invalid_count > 0 THEN
-        RAISE EXCEPTION 'Found % records with invalid UUID format in memories table', 
+        RAISE EXCEPTION 'Found % records with invalid UUID format in memories table',
             invalid_count;
     END IF;
 END $$;
 
 -- Create system user if not exists
 INSERT INTO auth.users (id, email, created_at, updated_at)
-VALUES ('00000000-0000-0000-0000-000000000001', 'system@tripsage.internal', 
+VALUES ('00000000-0000-0000-0000-000000000001', 'system@tripsage.internal',
         NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Convert user_id columns to UUID type
-ALTER TABLE memories 
+ALTER TABLE memories
     ALTER COLUMN user_id TYPE UUID USING user_id::UUID;
 
-ALTER TABLE session_memories 
+ALTER TABLE session_memories
     ALTER COLUMN user_id TYPE UUID USING user_id::UUID;
 
 -- Add foreign key constraints
-ALTER TABLE memories 
-    ADD CONSTRAINT memories_user_id_fkey 
-    FOREIGN KEY (user_id) REFERENCES auth.users(id) 
+ALTER TABLE memories
+    ADD CONSTRAINT memories_user_id_fkey
+    FOREIGN KEY (user_id) REFERENCES auth.users(id)
     ON DELETE CASCADE;
 
-ALTER TABLE session_memories 
-    ADD CONSTRAINT session_memories_user_id_fkey 
-    FOREIGN KEY (user_id) REFERENCES auth.users(id) 
+ALTER TABLE session_memories
+    ADD CONSTRAINT session_memories_user_id_fkey
+    FOREIGN KEY (user_id) REFERENCES auth.users(id)
     ON DELETE CASCADE;
 
 -- Enable RLS
@@ -74,14 +74,14 @@ ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE session_memories ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
-CREATE POLICY "Users can only access their own memories" 
-    ON memories FOR ALL 
-    TO authenticated 
+CREATE POLICY "Users can only access their own memories"
+    ON memories FOR ALL
+    TO authenticated
     USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can only access their own session memories" 
-    ON session_memories FOR ALL 
-    TO authenticated 
+CREATE POLICY "Users can only access their own session memories"
+    ON session_memories FOR ALL
+    TO authenticated
     USING (auth.uid() = user_id);
 
 -- Create indexes for performance
@@ -92,7 +92,7 @@ COMMIT;
 
 -- VERIFICATION QUERIES:
 -- SELECT * FROM pg_policies WHERE tablename IN ('memories', 'session_memories');
--- SELECT * FROM information_schema.table_constraints 
+-- SELECT * FROM information_schema.table_constraints
 -- WHERE table_name IN ('memories', 'session_memories');
 
 -- ROLLBACK PLAN:
@@ -101,7 +101,7 @@ COMMIT;
 -- ALTER TABLE memories ALTER COLUMN user_id TYPE TEXT;
 -- ALTER TABLE session_memories ALTER COLUMN user_id TYPE TEXT;
 -- DROP POLICY IF EXISTS "Users can only access their own memories" ON memories;
--- DROP POLICY IF EXISTS "Users can only access their own session memories" 
+-- DROP POLICY IF EXISTS "Users can only access their own session memories"
 -- ON session_memories;
 """
 
@@ -162,7 +162,7 @@ COMMIT;
         constraint = await mock_db_service.fetch_one(
             """
             SELECT constraint_name, table_name, constraint_type
-            FROM information_schema.table_constraints 
+            FROM information_schema.table_constraints
             WHERE table_name = $1 AND constraint_name = $2
             """,
             "memories",
@@ -231,8 +231,8 @@ COMMIT;
         # Check memories table
         memories_column = await mock_db_service.fetch_one(
             """
-            SELECT column_name, data_type 
-            FROM information_schema.columns 
+            SELECT column_name, data_type
+            FROM information_schema.columns
             WHERE table_name = 'memories' AND column_name = 'user_id'
             """
         )
@@ -242,8 +242,8 @@ COMMIT;
         # Check session_memories table
         session_memories_column = await mock_db_service.fetch_one(
             """
-            SELECT column_name, data_type 
-            FROM information_schema.columns 
+            SELECT column_name, data_type
+            FROM information_schema.columns
             WHERE table_name = 'session_memories' AND column_name = 'user_id'
             """
         )
@@ -313,11 +313,11 @@ COMMIT;
                    ccu.table_name AS foreign_table_name,
                    rc.delete_rule
             FROM information_schema.table_constraints tc
-            JOIN information_schema.referential_constraints rc 
+            JOIN information_schema.referential_constraints rc
                 ON tc.constraint_name = rc.constraint_name
-            JOIN information_schema.constraint_column_usage ccu 
+            JOIN information_schema.constraint_column_usage ccu
                 ON tc.constraint_name = ccu.constraint_name
-            WHERE tc.table_name = 'memories' 
+            WHERE tc.table_name = 'memories'
                 AND tc.constraint_type = 'FOREIGN KEY'
             """
         )
@@ -333,11 +333,11 @@ COMMIT;
                    ccu.table_name AS foreign_table_name,
                    rc.delete_rule
             FROM information_schema.table_constraints tc
-            JOIN information_schema.referential_constraints rc 
+            JOIN information_schema.referential_constraints rc
                 ON tc.constraint_name = rc.constraint_name
-            JOIN information_schema.constraint_column_usage ccu 
+            JOIN information_schema.constraint_column_usage ccu
                 ON tc.constraint_name = ccu.constraint_name
-            WHERE tc.table_name = 'session_memories' 
+            WHERE tc.table_name = 'session_memories'
                 AND tc.constraint_type = 'FOREIGN KEY'
             """
         )

@@ -102,8 +102,8 @@ class DashboardConnectionManager:
         """Send message to specific connection."""
         try:
             await websocket.send_text(message)
-        except Exception as e:
-            logger.exception(f"Failed to send personal message")
+        except Exception:
+            logger.exception("Failed to send personal message")
             self.disconnect(websocket)
 
     async def broadcast(self, message: str, connection_type: str | None = None) -> None:
@@ -119,8 +119,8 @@ class DashboardConnectionManager:
                         continue
 
                 await connection.send_text(message)
-            except Exception as e:
-                logger.exception(f"Failed to broadcast message")
+            except Exception:
+                logger.exception("Failed to broadcast message")
                 disconnected.append(connection)
 
         # Clean up disconnected connections
@@ -203,14 +203,14 @@ async def dashboard_websocket_endpoint(
             except json.JSONDecodeError:
                 logger.warning("Received invalid JSON from dashboard WebSocket client")
                 continue
-            except Exception as e:
-                logger.exception(f"Error handling WebSocket message")
+            except Exception:
+                logger.exception("Error handling WebSocket message")
                 break
 
     except WebSocketDisconnect:
         pass
-    except Exception as e:
-        logger.exception(f"Dashboard WebSocket error")
+    except Exception:
+        logger.exception("Dashboard WebSocket error")
     finally:
         if "metrics_task" in locals():
             metrics_task.cancel()
@@ -274,8 +274,8 @@ async def dashboard_events_stream(
 
                         last_metrics_time = now
 
-                    except Exception as e:
-                        logger.exception(f"Error generating metrics for SSE")
+                    except Exception:
+                        logger.exception("Error generating metrics for SSE")
 
                 # Send any new alerts
                 for alert in monitoring_service.active_alerts.values():
@@ -298,8 +298,8 @@ async def dashboard_events_stream(
 
         except asyncio.CancelledError:
             pass
-        except Exception as e:
-            logger.exception(f"Error in SSE stream")
+        except Exception:
+            logger.exception("Error in SSE stream")
 
     return StreamingResponse(
         event_stream(),
@@ -343,7 +343,7 @@ async def broadcast_alert(
         }
 
     except Exception as e:
-        logger.exception(f"Failed to broadcast alert")
+        logger.exception("Failed to broadcast alert")
         return {
             "success": False,
             "message": f"Failed to broadcast alert: {e!s}",
@@ -380,7 +380,7 @@ async def broadcast_system_event(
         }
 
     except Exception as e:
-        logger.exception(f"Failed to broadcast system event")
+        logger.exception("Failed to broadcast system event")
         return {
             "success": False,
             "message": f"Failed to broadcast system event: {e!s}",
@@ -395,7 +395,7 @@ async def get_active_connections() -> dict[str, Any]:
     """
     connections_info = []
 
-    for _websocket, metadata in dashboard_manager.connection_metadata.items():
+    for metadata in dashboard_manager.connection_metadata.values():
         connections_info.append(
             {
                 "user_id": metadata.get("user_id"),
@@ -452,8 +452,8 @@ async def _send_periodic_metrics(
 
             except WebSocketDisconnect:
                 break
-            except Exception as e:
-                logger.exception(f"Error sending periodic metrics")
+            except Exception:
+                logger.exception("Error sending periodic metrics")
                 await asyncio.sleep(5)  # Continue trying
 
     except asyncio.CancelledError:
@@ -522,8 +522,8 @@ async def _handle_subscription(
 
         await websocket.send_text(json.dumps(confirmation))
 
-    except Exception as e:
-        logger.exception(f"Error handling subscription")
+    except Exception:
+        logger.exception("Error handling subscription")
 
 
 # Export the dashboard manager for use by other services

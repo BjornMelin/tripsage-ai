@@ -284,10 +284,7 @@ class EnterpriseCircuitBreaker:
                 return True
             return False
 
-        if self.state == CircuitState.HALF_OPEN:
-            return True
-
-        return False
+        return self.state == CircuitState.HALF_OPEN
 
     def _record_success(self) -> None:
         """Record successful call and update circuit state."""

@@ -6,6 +6,7 @@ rate limiting, and timeout handling integrated with TripSage Core.
 """
 
 import asyncio
+import contextlib
 import logging
 import uuid
 from typing import Any
@@ -264,10 +265,8 @@ class DuffelHTTPClient:
                 # Handle other client/server errors
                 if response.status_code >= 400:
                     error_data = {}
-                    try:
+                    with contextlib.suppress(Exception):
                         error_data = response.json()
-                    except Exception:
-                        pass
 
                     error_message = error_data.get(
                         "message", f"HTTP {response.status_code}"
@@ -287,8 +286,7 @@ class DuffelHTTPClient:
 
                 # Success - parse and return response
                 try:
-                    response_data = response.json()
-                    return response_data
+                    return response.json()
                 except Exception as e:
                     raise DuffelAPIError(f"Failed to parse response JSON: {e!s}") from e
 
@@ -340,14 +338,12 @@ class DuffelHTTPClient:
         """
         try:
             # Make the API request
-            response_data = await self._make_request(
+            return await self._make_request(
                 method="POST",
                 endpoint="/air/offer_requests",
                 data=search_params,
                 params={"return_offers": "true"},  # Include offers in response
             )
-
-            return response_data
 
         except ValidationError as e:
             raise DuffelAPIError(f"Invalid response format: {e!s}") from e

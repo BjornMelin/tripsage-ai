@@ -203,7 +203,7 @@ async def upload_files_batch(
                 )
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to process file {file.filename}")
             errors.append(f"{file.filename}: Processing failed")
 

@@ -111,7 +111,7 @@ class TestGetTripSecurity:
         mock_trip_service._check_trip_access.return_value = True
 
         # Execute
-        result = await get_trip(trip_id, mock_principal, mock_trip_service)
+        await get_trip(trip_id, mock_principal, mock_trip_service)
 
         # Verify
         mock_trip_service.get_trip.assert_called_once_with(
@@ -146,7 +146,7 @@ class TestGetTripSecurity:
         mock_trip_service.get_trip.return_value = sample_trip_data
 
         # Execute
-        result = await get_trip(trip_id, mock_different_principal, mock_trip_service)
+        await get_trip(trip_id, mock_different_principal, mock_trip_service)
 
         # Verify
         mock_trip_service.get_trip.assert_called_once_with(

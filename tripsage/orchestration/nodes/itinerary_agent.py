@@ -149,9 +149,9 @@ class ItineraryAgentNode(BaseAgentNode):
         extraction_prompt = f"""
         Extract itinerary-related parameters from this message and context, and
         determine the type of itinerary operation requested.
-        
+
         User message: "{message}"
-        
+
         Context from conversation:
         - Previous itineraries: {len(state.get("itineraries", []))}
         - Destination research: {len(state.get("destination_research", []))}
@@ -159,13 +159,13 @@ class ItineraryAgentNode(BaseAgentNode):
         - Accommodation searches: {len(state.get("accommodation_searches", []))}
         - Budget analyses: {len(state.get("budget_analyses", []))}
         - Destination info: {list(state.get("destination_info", {}).keys())}
-        
+
         Determine the operation type from these options:
         - "create": Create a new itinerary
         - "optimize": Optimize an existing itinerary
         - "modify": Modify an existing itinerary (add/remove activities)
         - "calendar": Create calendar events from itinerary
-        
+
         Extract these parameters if mentioned:
         - operation: One of the operation types above
         - destination: Destination(s) for the itinerary
@@ -179,11 +179,11 @@ class ItineraryAgentNode(BaseAgentNode):
         - group_size: Number of travelers
         - special_requests: Any special requirements or requests
         - itinerary_id: ID of existing itinerary (for modify/optimize operations)
-        
+
         Respond with JSON only. If this doesn't seem itinerary-related, return null.
-        
-        Example: {{"operation": "create", "destination": "Paris", 
-                   "start_date": "2024-03-15", "end_date": "2024-03-20", 
+
+        Example: {{"operation": "create", "destination": "Paris",
+                   "start_date": "2024-03-15", "end_date": "2024-03-20",
                    "interests": ["museums", "food"], "pace": "moderate"}}
         """
 
@@ -215,8 +215,8 @@ class ItineraryAgentNode(BaseAgentNode):
             else:
                 return None
 
-        except Exception as e:
-            logger.exception(f"Error extracting itinerary parameters")
+        except Exception:
+            logger.exception("Error extracting itinerary parameters")
             return None
 
     async def _create_itinerary(
@@ -288,7 +288,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.exception(f"Itinerary creation failed")
+            logger.exception("Itinerary creation failed")
             return {"error": f"Failed to create itinerary: {e!s}"}
 
     async def _generate_daily_schedule(
@@ -493,7 +493,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.exception(f"Itinerary optimization failed")
+            logger.exception("Itinerary optimization failed")
             return {"error": f"Failed to optimize itinerary: {e!s}"}
 
     async def _modify_itinerary(
@@ -565,7 +565,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.exception(f"Itinerary modification failed")
+            logger.exception("Itinerary modification failed")
             return {"error": f"Failed to modify itinerary: {e!s}"}
 
     async def _create_calendar_events(
@@ -618,7 +618,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.exception(f"Calendar events creation failed")
+            logger.exception("Calendar events creation failed")
             return {"error": f"Failed to create calendar events: {e!s}"}
 
     async def _generate_itinerary_response(
@@ -797,18 +797,18 @@ class ItineraryAgentNode(BaseAgentNode):
         """
         # Use LLM to generate helpful response for general itinerary questions
         response_prompt = f"""
-        The user is asking about itinerary planning but hasn't provided enough 
+        The user is asking about itinerary planning but hasn't provided enough
         specific information for planning.
-        
+
         User message: "{message}"
-        
+
         Provide a helpful response that:
         1. Acknowledges their interest in itinerary planning
         2. Asks for specific information needed (destination, dates, interests, pace)
-        3. Explains what itinerary services you can provide (creation, optimization, 
+        3. Explains what itinerary services you can provide (creation, optimization,
            modification)
         4. Offers to help once they provide details
-        
+
         Keep the response friendly and concise.
         """
 
@@ -823,8 +823,8 @@ class ItineraryAgentNode(BaseAgentNode):
             response = await self.llm.ainvoke(messages)
             content = response.content
 
-        except Exception as e:
-            logger.exception(f"Error generating itinerary response")
+        except Exception:
+            logger.exception("Error generating itinerary response")
             content = (
                 "I'd be happy to help you create a detailed itinerary! To get started, "
                 "I'll need to know your destination, travel dates, interests, and "

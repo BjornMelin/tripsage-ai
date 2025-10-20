@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enhanced Performance Benchmark Script for Database Service
+"""Enhanced Performance Benchmark Script for Database Service.
 
 Modern performance benchmarking with:
 - Statistical analysis and confidence intervals
@@ -40,30 +40,52 @@ except ImportError as e:
     print("Running in mock mode for demonstration.")
 
     class MockSettings:
+        """Mock settings for demonstration purposes."""
+
         DATABASE_POOL_SIZE = 20
         DATABASE_MAX_OVERFLOW = 30
         DATABASE_POOL_TIMEOUT = 30
         ENABLE_QUERY_CACHE = True
 
     def get_settings():
+        """Get mock settings for demonstration."""
         return MockSettings()
 
     class DatabaseService:
+        """Mock database service for demonstration purposes."""
+
         def __init__(self, settings):
+            """Initialize mock database service.
+
+            Args:
+                settings: Mock settings object
+            """
             self.settings = settings
 
         async def connect(self):
+            """Connect to mock database."""
             await asyncio.sleep(0.001)
 
         async def close(self):
+            """Close mock database connection."""
             await asyncio.sleep(0.001)
 
         async def execute_sql(self, query, params=None):
+            """Execute mock SQL query.
+
+            Args:
+                query: SQL query string
+                params: Query parameters
+
+            Returns:
+                Mock query result
+            """
             await asyncio.sleep(0.002)
             return [{"result": "mock"}]
 
         @asynccontextmanager
         async def transaction(self):
+            """Mock database transaction context manager."""
             yield
 
 
@@ -543,7 +565,7 @@ class EnhancedDatabaseBenchmark:
         baseline_stats = {}
         if self.baseline_file and Path(self.baseline_file).exists():
             try:
-                with open(self.baseline_file) as f:
+                with Path(self.baseline_file).open() as f:
                     baseline_data = json.load(f)
                     baseline_stats = baseline_data.get("statistics", {})
             except Exception as e:
@@ -688,20 +710,20 @@ class EnhancedDatabaseBenchmark:
             <title>Database Benchmark Report - {timestamp}</title>
             <style>
                 body {{ font-family: Arial, sans-serif; margin: 20px; }}
-                .header {{ 
-                    color: #333; 
-                    border-bottom: 2px solid #ddd; 
-                    padding-bottom: 10px; 
+                .header {{
+                    color: #333;
+                    border-bottom: 2px solid #ddd;
+                    padding-bottom: 10px;
                 }}
-                .stats-table {{ 
-                    border-collapse: collapse; 
-                    width: 100%; 
-                    margin: 20px 0; 
+                .stats-table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin: 20px 0;
                 }}
-                .stats-table th, .stats-table td {{ 
-                    border: 1px solid #ddd; 
-                    padding: 8px; 
-                    text-align: left; 
+                .stats-table th, .stats-table td {{
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
                 }}
                 .stats-table th {{ background-color: #f2f2f2; }}
                 .regression {{ background-color: #ffebee; }}
@@ -714,17 +736,17 @@ class EnhancedDatabaseBenchmark:
             <div class="header">
                 <h1>Database Benchmark Report</h1>
                 <p>Generated: {timestamp}</p>
-                <p>Iterations: {self.iterations} | 
+                <p>Iterations: {self.iterations} |
                    Concurrent Users: {self.concurrent_users}</p>
             </div>
-            
+
             <div class="summary">
                 <h2>Summary</h2>
                 <p>Total Operations: {len(self.statistics)}</p>
                 <p>Performance Regressions: {len(self.regressions)}</p>
                 <p>Total Metrics Collected: {len(self.metrics)}</p>
             </div>
-            
+
             <h2>Performance Statistics</h2>
             <table class="stats-table">
                 <tr>
@@ -756,7 +778,7 @@ class EnhancedDatabaseBenchmark:
 
         html_content += """
             </table>
-            
+
             <h2>Performance Regressions</h2>
         """
 
@@ -940,7 +962,10 @@ Examples:
                 r for r in benchmark.regressions if r.severity == "critical"
             ]
             if critical_regressions:
-                logger.exception( f"Critical performance regressions detected: " f"{len(critical_regressions)}")
+                logger.exception(
+                    f"Critical performance regressions detected: "
+                    f"{len(critical_regressions)}"
+                )
                 sys.exit(2)
             else:
                 logger.warning(

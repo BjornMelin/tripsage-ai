@@ -596,7 +596,7 @@ def create_error_response(
     return error_data
 
 
-def safe_execute(
+def safe_execute[T, R](
     func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any
 ) -> T | R:
     """Execute a function with error handling and optional fallback.
@@ -613,7 +613,7 @@ def safe_execute(
     """
     try:
         return func(*args, **kwargs)
-    except Exception as e:
+    except Exception:
         if logger:
             logger.exception(f"Error executing {func.__name__}")
         return fallback
@@ -640,7 +640,7 @@ def with_error_handling(
         def sync_wrapper(*args: Any, **kwargs: Any) -> T | Any:
             try:
                 return func(*args, **kwargs)
-            except Exception as e:
+            except Exception:
                 if logger:
                     logger.exception(f"Error in {func.__name__}", exc_info=True)
                 if re_raise:
@@ -651,7 +651,7 @@ def with_error_handling(
         async def async_wrapper(*args: Any, **kwargs: Any) -> T | Any:
             try:
                 return await func(*args, **kwargs)
-            except Exception as e:
+            except Exception:
                 if logger:
                     logger.exception(f"Error in {func.__name__}", exc_info=True)
                 if re_raise:
@@ -698,33 +698,33 @@ def create_not_found_error(
 
 # Export all exception classes and utilities
 __all__ = [
-    # Base exception
-    "CoreTripSageError",
+    "CoreAgentError",
     # Authentication and authorization
     "CoreAuthenticationError",
     "CoreAuthorizationError",
-    # Resource and validation
-    "CoreResourceNotFoundError",
-    "CoreValidationError",
     # Service and infrastructure
     "CoreConnectionError",
-    "CoreServiceError",
-    "CoreRateLimitError",
-    "CoreKeyValidationError",
     "CoreDatabaseError",
     "CoreExternalAPIError",
+    "CoreKeyValidationError",
     # Specialized exceptions
     "CoreMCPError",
-    "CoreAgentError",
+    "CoreRateLimitError",
+    # Resource and validation
+    "CoreResourceNotFoundError",
+    "CoreServiceError",
+    # Base exception
+    "CoreTripSageError",
+    "CoreValidationError",
     # Utility classes and functions
     "ErrorDetails",
-    "format_exception",
-    "create_error_response",
-    "safe_execute",
-    "with_error_handling",
     # Factory functions
     "create_authentication_error",
     "create_authorization_error",
-    "create_validation_error",
+    "create_error_response",
     "create_not_found_error",
+    "create_validation_error",
+    "format_exception",
+    "safe_execute",
+    "with_error_handling",
 ]

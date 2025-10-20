@@ -70,7 +70,7 @@ class SearchHistoryService:
 
             return searches
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error getting recent searches for user {user_id}")
             raise
 
@@ -141,7 +141,7 @@ class SearchHistoryService:
                 **search_params,
             }
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error saving search for user {user_id}")
             raise
 
@@ -164,8 +164,8 @@ class SearchHistoryService:
             # Check if any rows were deleted
             return len(result) > 0
 
-        except Exception as e:
-            logger.exception( f"Error deleting search {search_id} for user {user_id}")
+        except Exception:
+            logger.exception(f"Error deleting search {search_id} for user {user_id}")
             raise
 
     def _determine_search_type(self, resource_types: list[str] | None) -> str:

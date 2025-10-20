@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive WebSocket Performance Tests
+"""Comprehensive WebSocket Performance Tests.
 
 This module tests WebSocket performance across various scenarios:
 - Connection establishment and teardown
@@ -92,8 +92,7 @@ class TestWebSocketConnectionPerformance:
             # Simulate authentication
             await asyncio.sleep(0.002)  # Simulate auth verification
 
-            connection_time = time.time() - start_time
-            return connection_time
+            return time.time() - start_time
 
         # Benchmark connection establishment
         result = await benchmark.pedantic(connect_websocket, rounds=50, iterations=1)
@@ -372,6 +371,7 @@ class TestWebSocketErrorRecoveryPerformance:
                         await asyncio.sleep(backoff_time)
                     else:
                         return {"success": False, "attempts": attempt + 1}
+            return None
 
         result = await benchmark.pedantic(retry_failed_message, rounds=20, iterations=1)
         assert result["success"] is True
@@ -404,7 +404,7 @@ class TestWebSocketScalabilityPerformance:
                 await asyncio.sleep(0.0001)
 
             # Simulate periodic maintenance
-            for _, conn_data in connections.items():
+            for conn_data in connections.values():
                 conn_data["last_maintenance"] = time.time()
                 await asyncio.sleep(0.00001)
 

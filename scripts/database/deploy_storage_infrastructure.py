@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""TripSage Storage Infrastructure Deployment Script
+"""TripSage Storage Infrastructure Deployment Script.
+
 Description: Deploys complete file storage infrastructure to Supabase
 Created: 2025-01-11
-Version: 1.0
+Version: 1.0.
 """
 
 import asyncio
@@ -133,7 +134,7 @@ class StorageDeployment:
                 policy_count = await conn.fetchval("""
                     SELECT COUNT(*)
                     FROM pg_policies
-                    WHERE schemaname = 'storage' 
+                    WHERE schemaname = 'storage'
                     AND tablename = 'objects'
                     AND policyname LIKE '%attachments%'
                 """)

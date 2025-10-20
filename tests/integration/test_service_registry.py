@@ -203,8 +203,7 @@ class TestServiceRegistry:
 
         async def worker(worker_id: int):
             service = await registry.get_service("test")
-            result = await service.operation(f"worker_{worker_id}")
-            return result
+            return await service.operation(f"worker_{worker_id}")
 
         # Run multiple workers concurrently
         results = await asyncio.gather(*[worker(i) for i in range(10)])

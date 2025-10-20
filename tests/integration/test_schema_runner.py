@@ -99,7 +99,7 @@ class SchemaTestRunner:
             }
 
         except Exception as e:
-            self.logger.exception(f"Test execution failed")
+            self.logger.exception("Test execution failed")
             return {
                 "success": False,
                 "error": str(e),
@@ -295,7 +295,7 @@ class SchemaTestRunner:
             if not result.get("success", True)
         ]
 
-        analysis = {
+        return {
             "summary": {
                 "total_tests": total_tests,
                 "total_passed": total_passed,
@@ -319,8 +319,6 @@ class SchemaTestRunner:
                 results, slow_tests, failed_suites
             ),
         }
-
-        return analysis
 
     def _generate_recommendations(
         self,

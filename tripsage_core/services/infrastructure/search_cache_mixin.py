@@ -207,7 +207,13 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return success
 
         except Exception as e:
-            logger.exception( "Error caching search results", extra={ "error": str(e), "service": self._cache_prefix, },)
+            logger.exception(
+                "Error caching search results",
+                extra={
+                    "error": str(e),
+                    "service": self._cache_prefix,
+                },
+            )
             return False
 
     async def invalidate_cache(self, request: SearchRequestType) -> bool:
@@ -238,7 +244,13 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return bool(deleted)
 
         except Exception as e:
-            logger.exception( "Error invalidating cache", extra={ "error": str(e), "service": self._cache_prefix, },)
+            logger.exception(
+                "Error invalidating cache",
+                extra={
+                    "error": str(e),
+                    "service": self._cache_prefix,
+                },
+            )
             return False
 
     async def invalidate_cache_pattern(self, pattern: str) -> int:
@@ -270,7 +282,14 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return deleted
 
         except Exception as e:
-            logger.exception( "Error invalidating cache pattern", extra={ "error": str(e), "pattern": pattern, "service": self._cache_prefix, },)
+            logger.exception(
+                "Error invalidating cache pattern",
+                extra={
+                    "error": str(e),
+                    "pattern": pattern,
+                    "service": self._cache_prefix,
+                },
+            )
             return 0
 
     async def get_cache_stats(self) -> dict[str, Any]:
@@ -299,7 +318,13 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             }
 
         except Exception as e:
-            logger.exception( "Error getting cache stats", extra={ "error": str(e), "service": self._cache_prefix, },)
+            logger.exception(
+                "Error getting cache stats",
+                extra={
+                    "error": str(e),
+                    "service": self._cache_prefix,
+                },
+            )
             return {
                 "enabled": True,
                 "service": self._cache_prefix,

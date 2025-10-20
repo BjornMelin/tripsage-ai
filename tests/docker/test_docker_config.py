@@ -105,7 +105,7 @@ class TestModernDockerArchitecture:
             "tripsage-api": {"min_cpu": "1.0", "min_memory": "1G"},
         }
 
-        for service_name, _expected_resources in high_perf_services.items():
+        for service_name in high_perf_services:
             if service_name in services:
                 service = services[service_name]
                 if "deploy" in service and "resources" in service["deploy"]:

@@ -1222,8 +1222,7 @@ class TestMemoryServiceTravelInsights:
                 "postgresql://test:test@localhost:5432/test"
             )
 
-            service = MemoryService(database_service=Mock())
-            return service
+            return MemoryService(database_service=Mock())
 
     @pytest.mark.asyncio
     async def test_enrich_travel_memories(self, mock_service):
@@ -1419,8 +1418,7 @@ class TestMemoryServiceUtilities:
                 "postgresql://test:test@localhost:5432/test"
             )
 
-            service = MemoryService(database_service=Mock())
-            return service
+            return MemoryService(database_service=Mock())
 
     def test_parse_datetime_valid_iso_format(self, mock_service):
         """Test datetime parsing with valid ISO format."""

@@ -241,9 +241,9 @@ async def get_database_session() -> AsyncGenerator[AsyncSession]:
     async with session_factory() as session:
         try:
             yield session
-        except Exception as e:
+        except Exception:
             await session.rollback()
-            logger.exception(f"Database session error, rolling back")
+            logger.exception("Database session error, rolling back")
             raise
         finally:
             await session.close()
@@ -265,7 +265,7 @@ async def test_connection() -> bool:
             # Test database features
             db_info = await session.execute(
                 text("""
-                    SELECT 
+                    SELECT
                         current_database() as database,
                         current_user as user,
                         version() as version,
@@ -286,8 +286,8 @@ async def test_connection() -> bool:
             # Check for required extensions (pgvector for Mem0)
             extensions = await session.execute(
                 text("""
-                    SELECT extname, extversion 
-                    FROM pg_extension 
+                    SELECT extname, extversion
+                    FROM pg_extension
                     WHERE extname IN ('vector', 'uuid-ossp', 'pgcrypto')
                 """)
             )
@@ -302,8 +302,8 @@ async def test_connection() -> bool:
 
             return True
 
-    except Exception as e:
-        logger.exception(f"Database connection test failed")
+    except Exception:
+        logger.exception("Database connection test failed")
         return False
 
 

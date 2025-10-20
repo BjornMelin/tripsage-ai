@@ -285,7 +285,10 @@ class ChatService:
             )
 
         except Exception as e:
-            logger.exception( "Failed to create chat session", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to create chat session",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             raise
 
     # This method is replaced by _get_session_internal to avoid router conflicts
@@ -334,7 +337,10 @@ class ChatService:
             return sessions
 
         except Exception as e:
-            logger.exception( "Failed to get user sessions", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get user sessions",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return []
 
     async def add_message(
@@ -423,7 +429,10 @@ class ChatService:
         except (ValidationError, NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.exception( "Failed to add message", extra={"session_id": session_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to add message",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
             raise
 
     # This method is replaced by _get_messages_internal to avoid router conflicts
@@ -472,7 +481,7 @@ class ChatService:
                     content=result["content"],
                     created_at=datetime.fromisoformat(result["created_at"]),
                     metadata=result.get("metadata", {}),
-                    tool_calls=[tc for tc in tool_calls],
+                    tool_calls=list(tool_calls),
                     estimated_tokens=result.get(
                         "estimated_tokens", self._estimate_tokens(result["content"])
                     ),
@@ -494,7 +503,10 @@ class ChatService:
             )
 
         except Exception as e:
-            logger.exception( "Failed to get recent messages", extra={"session_id": session_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get recent messages",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
             return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
     async def end_session(self, session_id: str, user_id: str) -> bool:
@@ -535,7 +547,10 @@ class ChatService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.exception( "Failed to end session", extra={"session_id": session_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to end session",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
             return False
 
     async def update_tool_call_status(
@@ -586,7 +601,10 @@ class ChatService:
                 return None
 
         except Exception as e:
-            logger.exception( "Failed to update tool call status", extra={"tool_call_id": tool_call_id, "status": status, "error": str(e)},)
+            logger.exception(
+                "Failed to update tool call status",
+                extra={"tool_call_id": tool_call_id, "status": status, "error": str(e)},
+            )
             return None
 
     def _sanitize_content(self, content: str) -> str:
@@ -812,7 +830,10 @@ class ChatService:
             }
 
         except Exception as e:
-            logger.exception( "Chat completion failed", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Chat completion failed",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             raise
 
     async def list_sessions(self, user_id: str) -> list[dict[str, Any]]:
@@ -892,7 +913,10 @@ class ChatService:
             )
 
         except Exception as e:
-            logger.exception( "Failed to get chat session", extra={"session_id": session_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get chat session",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
             return None
 
     async def _get_messages_internal(
@@ -924,7 +948,7 @@ class ChatService:
                         content=result["content"],
                         created_at=datetime.fromisoformat(result["created_at"]),
                         metadata=result.get("metadata", {}),
-                        tool_calls=[tc for tc in tool_calls],
+                        tool_calls=list(tool_calls),
                         estimated_tokens=self._estimate_tokens(result["content"]),
                     )
                 )
@@ -932,7 +956,10 @@ class ChatService:
             return messages
 
         except Exception as e:
-            logger.exception( "Failed to get messages", extra={"session_id": session_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get messages",
+                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+            )
             return []
 
     # Router-compatible methods with simplified signatures

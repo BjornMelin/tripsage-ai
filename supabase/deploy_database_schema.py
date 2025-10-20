@@ -122,7 +122,7 @@ class DatabaseDeployer:
                 f.write(f"""-- TripSage Production Schema Deployment
 -- Generated: {datetime.datetime.now().isoformat()}
 -- Description: Complete database schema with trip collaboration and vector search
--- 
+--
 -- This migration applies the complete TripSage schema including:
 -- - Core travel planning tables (trips, flights, accommodations)
 -- - Trip collaboration system (trip_collaborators with RLS)

@@ -302,7 +302,7 @@ class ResultNormalizer:
             return result
 
         except Exception as e:
-            logger.exception( f"Error normalizing direct Crawl4AI output for {url}")
+            logger.exception(f"Error normalizing direct Crawl4AI output for {url}")
             return UnifiedCrawlResult(
                 url=url,
                 status="error",

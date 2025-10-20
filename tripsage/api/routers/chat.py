@@ -41,11 +41,10 @@ async def chat(
         user_id = get_principal_id(principal)
 
         # Delegate to unified chat service
-        response = await chat_service.chat_completion(user_id, request)
-        return response
+        return await chat_service.chat_completion(user_id, request)
 
     except Exception as e:
-        logger.exception(f"Chat request failed")
+        logger.exception("Chat request failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Chat request failed",
@@ -75,11 +74,10 @@ async def create_session(
 
         session_request = SessionCreateRequest(title=title)
 
-        session = await chat_service.create_session(user_id, session_request)
-        return session
+        return await chat_service.create_session(user_id, session_request)
 
     except Exception as e:
-        logger.exception(f"Session creation failed")
+        logger.exception("Session creation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session creation failed",
@@ -102,11 +100,10 @@ async def list_sessions(
     """
     try:
         user_id = get_principal_id(principal)
-        sessions = await chat_service.list_sessions(user_id)
-        return sessions
+        return await chat_service.list_sessions(user_id)
 
     except Exception as e:
-        logger.exception(f"Session listing failed")
+        logger.exception("Session listing failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session listing failed",
@@ -143,7 +140,7 @@ async def get_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Session retrieval failed")
+        logger.exception("Session retrieval failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session retrieval failed",
@@ -170,11 +167,10 @@ async def get_session_messages(
     """
     try:
         user_id = get_principal_id(principal)
-        messages = await chat_service.get_messages(user_id, session_id, limit)
-        return messages
+        return await chat_service.get_messages(user_id, session_id, limit)
 
     except Exception as e:
-        logger.exception(f"Message retrieval failed")
+        logger.exception("Message retrieval failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message retrieval failed",
@@ -208,13 +204,10 @@ async def create_message(
 
         message_request = CreateMessageRequest(content=content, role=role)
 
-        message = await chat_service.create_message(
-            user_id, session_id, message_request
-        )
-        return message
+        return await chat_service.create_message(user_id, session_id, message_request)
 
     except Exception as e:
-        logger.exception(f"Message creation failed")
+        logger.exception("Message creation failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message creation failed",
@@ -251,7 +244,7 @@ async def delete_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Session deletion failed")
+        logger.exception("Session deletion failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session deletion failed",

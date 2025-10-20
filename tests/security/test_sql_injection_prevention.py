@@ -24,8 +24,7 @@ class TestSQLInjectionPrevention:
         mock_settings = Mock()
         mock_settings.secret_key = "test-secret-key"
 
-        service = ApiKeyService(db=mock_db, cache=mock_cache, settings=mock_settings)
-        return service
+        return ApiKeyService(db=mock_db, cache=mock_cache, settings=mock_settings)
 
     @pytest.fixture
     def sql_injection_payloads(self):

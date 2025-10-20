@@ -156,8 +156,8 @@ class DragonflyCache:
             await self._increment_stat("misses")
             return None
 
-        except Exception as e:
-            logger.exception(f"Error getting cache value")
+        except Exception:
+            logger.exception("Error getting cache value")
             return None
 
     async def set(
@@ -180,8 +180,8 @@ class DragonflyCache:
                 await self._increment_stat("sets")
             return bool(result)
 
-        except Exception as e:
-            logger.exception(f"Error setting cache value")
+        except Exception:
+            logger.exception("Error setting cache value")
             return False
 
     async def delete(self, key: str) -> bool:
@@ -196,8 +196,8 @@ class DragonflyCache:
                 return True
             return False
 
-        except Exception as e:
-            logger.exception(f"Error deleting cache value")
+        except Exception:
+            logger.exception("Error deleting cache value")
             return False
 
     async def invalidate_pattern(self, pattern: str) -> int:
@@ -233,8 +233,8 @@ class DragonflyCache:
                 logger.warning(f"Pattern scan failed: {scan_error}")
                 return 0
 
-        except Exception as e:
-            logger.exception(f"Error invalidating pattern")
+        except Exception:
+            logger.exception("Error invalidating pattern")
             return 0
 
     async def _increment_stat(self, stat: str) -> None:
@@ -299,8 +299,8 @@ class DragonflyCache:
 
             return stats
 
-        except Exception as e:
-            logger.exception(f"Error getting cache stats")
+        except Exception:
+            logger.exception("Error getting cache stats")
             return CacheStats()
 
 
@@ -492,8 +492,8 @@ async def batch_cache_set(
             results.append(bool(success))
         return results
 
-    except Exception as e:
-        logger.exception(f"Batch cache set failed")
+    except Exception:
+        logger.exception("Batch cache set failed")
         return [False] * len(items)
 
 
@@ -540,8 +540,8 @@ async def batch_cache_get(
             results.append(value)
         return results
 
-    except Exception as e:
-        logger.exception(f"Batch cache get failed")
+    except Exception:
+        logger.exception("Batch cache get failed")
         return [None] * len(keys)
 
 
@@ -641,30 +641,30 @@ async def get_cache_stats() -> CacheStats:
 
 
 __all__ = [
-    # Cache instances
-    "memory_cache",
-    "redis_cache",
-    # Basic operations
-    "get_cache",
-    "set_cache",
-    "delete_cache",
-    "get_cache_stats",
-    # Utility functions
-    "generate_cache_key",
-    "get_ttl_for_content_type",
+    # Models
+    "CacheStats",
+    "ContentType",
+    "batch_cache_get",
     # Batch operations
     "batch_cache_set",
-    "batch_cache_get",
     # Distributed locks
     "cache_lock",
     # Decorators
     "cached",
-    "cached_realtime",
-    "cached_time_sensitive",
     "cached_daily",
+    "cached_realtime",
     "cached_semi_static",
     "cached_static",
-    # Models
-    "CacheStats",
-    "ContentType",
+    "cached_time_sensitive",
+    "delete_cache",
+    # Utility functions
+    "generate_cache_key",
+    # Basic operations
+    "get_cache",
+    "get_cache_stats",
+    "get_ttl_for_content_type",
+    # Cache instances
+    "memory_cache",
+    "redis_cache",
+    "set_cache",
 ]

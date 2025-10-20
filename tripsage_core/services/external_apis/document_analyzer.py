@@ -377,7 +377,7 @@ class DocumentAnalyzer:
         }
 
         # Mock analysis with Core integration
-        mock_analysis = {
+        return {
             "analysis_type": analysis_type,
             "template_used": template["prompt"],
             "text_stats": text_stats,
@@ -388,8 +388,6 @@ class DocumentAnalyzer:
             "ai_enabled": self.ai_enabled,
             "settings_source": "core_app_settings",
         }
-
-        return mock_analysis
 
     def _extract_basic_entities(self, text: str) -> dict[str, list[str]]:
         """Extract basic entities from text using enhanced pattern matching.
@@ -600,16 +598,18 @@ class DocumentAnalyzer:
             travel_info.activities = activity_keywords
 
             # Add accommodation information based on keywords
-            if any(
-                kw in keywords for kw in ["hotel", "accommodation", "room", "suite"]
+            if (
+                any(
+                    kw in keywords for kw in ["hotel", "accommodation", "room", "suite"]
+                )
+                and "confirmation_numbers" in entities
             ):
-                if "confirmation_numbers" in entities:
-                    accommodations = []
-                    for conf_num in entities["confirmation_numbers"]:
-                        accommodations.append(
-                            {"confirmation_number": conf_num, "type": "accommodation"}
-                        )
-                    travel_info.accommodations = accommodations
+                accommodations = []
+                for conf_num in entities["confirmation_numbers"]:
+                    accommodations.append(
+                        {"confirmation_number": conf_num, "type": "accommodation"}
+                    )
+                travel_info.accommodations = accommodations
 
             return travel_info
 

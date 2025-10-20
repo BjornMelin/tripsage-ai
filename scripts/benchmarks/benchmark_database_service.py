@@ -55,6 +55,16 @@ def simple_table(data, headers):
 
 # Use simple table formatting without external dependencies
 def tabulate(data, headers=None, tablefmt="grid"):
+    """Simple table formatting function without external dependencies.
+
+    Args:
+        data: List of rows to format
+        headers: Optional column headers
+        tablefmt: Table format (unused, kept for compatibility)
+
+    Returns:
+        Formatted table string
+    """
     return simple_table(data, headers)
 
 
@@ -66,6 +76,11 @@ class BenchmarkResult:
     """Container for benchmark results."""
 
     def __init__(self, name: str):
+        """Initialize benchmark result tracking.
+
+        Args:
+            name: Name of the benchmark operation
+        """
         self.name = name
         self.durations: list[float] = []
         self.errors = 0
@@ -113,6 +128,12 @@ class DatabaseBenchmark:
     """Database service benchmark runner."""
 
     def __init__(self, iterations: int = 100, concurrent_users: int = 10):
+        """Initialize database benchmark runner.
+
+        Args:
+            iterations: Number of iterations per test
+            concurrent_users: Number of concurrent users to simulate
+        """
         self.iterations = iterations
         self.concurrent_users = concurrent_users
         self.settings = get_settings()
@@ -460,7 +481,7 @@ class DatabaseBenchmark:
                 "metadata": result.metadata,
             }
 
-        with open(filename, "w") as f:
+        with Path(filename).open("w") as f:
             json.dump(results_data, f, indent=2)
 
         print(f"\nDetailed results saved to: {filename}")

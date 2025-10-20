@@ -384,14 +384,12 @@ class SerializationHelper:
     def test_json_round_trip(self, model_instance):
         """Test JSON serialization round trip and return restored object."""
         json_data = model_instance.model_dump_json()
-        restored = model_instance.__class__.model_validate_json(json_data)
-        return restored
+        return model_instance.__class__.model_validate_json(json_data)
 
     def test_dict_round_trip(self, model_instance):
         """Test dict serialization round trip and return restored object."""
         dict_data = model_instance.model_dump()
-        restored = model_instance.__class__.model_validate(dict_data)
-        return restored
+        return model_instance.__class__.model_validate(dict_data)
 
 
 @pytest.fixture

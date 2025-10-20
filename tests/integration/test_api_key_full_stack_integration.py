@@ -144,7 +144,7 @@ class TestDatabaseService:
                         if op[0] == "insert":
                             _, table, data = op
                             columns = ", ".join(data.keys())
-                            placeholders = ", ".join(f":{key}" for key in data.keys())
+                            placeholders = ", ".join(f":{key}" for key in data)
                             result = await conn.execute(
                                 text(
                                     f"INSERT INTO {table} ({columns}) "
@@ -360,14 +360,12 @@ async def api_key_service(test_db_service, test_cache_service):
     from tripsage_core.config import get_settings
 
     settings = get_settings()
-    service = ApiKeyService(
+    return ApiKeyService(
         db=test_db_service,
         cache=test_cache_service,
         settings=settings,
         validation_timeout=5,  # Shorter timeout for tests
     )
-
-    return service
 
 
 @pytest.fixture

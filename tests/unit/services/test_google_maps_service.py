@@ -38,14 +38,12 @@ class TestGoogleMapsService:
             "tripsage_core.services.external_apis.google_maps_service.get_settings",
             return_value=mock_settings,
         ):
-            service = GoogleMapsService()
-            return service
+            return GoogleMapsService()
 
     @pytest.fixture
     def mock_client(self):
         """Mock Google Maps client."""
-        client = Mock()
-        return client
+        return Mock()
 
     def test_client_initialization(self, google_maps_service, mock_settings):
         """Test that client is properly initialized with settings."""

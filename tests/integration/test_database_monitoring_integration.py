@@ -386,7 +386,7 @@ class TestDatabaseMonitoringIntegration:
             query_totals = summary["query_total"]
 
             # Should have metrics from multiple tables
-            table_metrics = [k for k in query_totals.keys() if "table_" in k]
+            table_metrics = [k for k in query_totals if "table_" in k]
             assert len(table_metrics) > 0
 
         finally:

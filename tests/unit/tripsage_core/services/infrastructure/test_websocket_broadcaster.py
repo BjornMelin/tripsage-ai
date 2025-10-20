@@ -249,7 +249,7 @@ class TestWebSocketBroadcaster:
         assert len(message_data) == 1
 
         # Parse the queued message
-        message_json = list(message_data.keys())[0]
+        message_json = next(iter(message_data.keys()))
         message = json.loads(message_json)
         assert message["target_type"] == "connection"
         assert message["target_id"] == connection_id
@@ -275,7 +275,7 @@ class TestWebSocketBroadcaster:
 
         # Verify message content
         call_args = mock_redis_client.zadd.call_args
-        message_json = list(call_args[0][1].keys())[0]
+        message_json = next(iter(call_args[0][1].keys()))
         message = json.loads(message_json)
         assert message["target_type"] == "user"
         assert message["target_id"] == str(user_id)
@@ -295,7 +295,7 @@ class TestWebSocketBroadcaster:
 
         # Verify message content
         call_args = mock_redis_client.zadd.call_args
-        message_json = list(call_args[0][1].keys())[0]
+        message_json = next(iter(call_args[0][1].keys()))
         message = json.loads(message_json)
         assert message["target_type"] == "session"
         assert message["target_id"] == str(session_id)
@@ -320,7 +320,7 @@ class TestWebSocketBroadcaster:
 
         # Verify message content
         call_args = mock_redis_client.zadd.call_args
-        message_json = list(call_args[0][1].keys())[0]
+        message_json = next(iter(call_args[0][1].keys()))
         message = json.loads(message_json)
         assert message["target_type"] == "channel"
         assert message["target_id"] == channel
@@ -342,7 +342,7 @@ class TestWebSocketBroadcaster:
 
         # Verify message content
         call_args = mock_redis_client.zadd.call_args
-        message_json = list(call_args[0][1].keys())[0]
+        message_json = next(iter(call_args[0][1].keys()))
         message = json.loads(message_json)
         assert message["target_type"] == "broadcast"
         assert message["target_id"] is None
@@ -913,8 +913,8 @@ class TestWebSocketBroadcaster:
         calls = mock_redis_client.zadd.call_args_list
 
         # First message (high priority) should have lower score
-        high_priority_score = list(calls[0][0][1].values())[0]
-        low_priority_score = list(calls[1][0][1].values())[0]
+        high_priority_score = next(iter(calls[0][0][1].values()))
+        low_priority_score = next(iter(calls[1][0][1].values()))
 
         assert high_priority_score < low_priority_score
 

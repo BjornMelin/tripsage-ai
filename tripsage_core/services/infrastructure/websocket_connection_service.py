@@ -255,7 +255,11 @@ class WebSocketConnection:
                     self.priority_queue[priority].append(event)
                     return True
                 # No low priority messages to drop, reject the new message
-                logger.exception( f"Queue full and no low priority messages to drop for " f"connection {self.connection_id}. " f"Rejecting priority {priority} message.")
+                logger.exception(
+                    f"Queue full and no low priority messages to drop for "
+                    f"connection {self.connection_id}. "
+                    f"Rejecting priority {priority} message."
+                )
                 return False
 
         # Queue not full, add normally
@@ -437,7 +441,7 @@ class WebSocketConnection:
 
                 return True
 
-            except Exception as e:
+            except Exception:
                 logger.exception(f"Failed to send message to {self.connection_id}")
                 self.error_count += 1
                 self.state = ConnectionState.ERROR
@@ -517,7 +521,7 @@ class WebSocketConnection:
 
             return success
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to send ping to {self.connection_id}")
             self.state = ConnectionState.ERROR
             return False

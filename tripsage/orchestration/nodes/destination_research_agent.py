@@ -89,8 +89,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 f"temp={self.agent_config['temperature']}"
             )
 
-        except Exception as e:
-            logger.exception( f"Failed to load database configuration, using fallback")
+        except Exception:
+            logger.exception("Failed to load database configuration, using fallback")
 
             # Fallback to settings-based configuration
             settings = get_settings()
@@ -179,16 +179,16 @@ class DestinationResearchAgentNode(BaseAgentNode):
         # Use LLM to extract parameters and determine research type
         extraction_prompt = f"""
         Extract destination research parameters from this message and context.
-        
+
         User message: "{message}"
-        
+
         Context from conversation:
         - Previous destination research: {len(state.get("destination_research", []))}
         - Flight searches: {len(state.get("flight_searches", []))}
         - Accommodation searches: {len(state.get("accommodation_searches", []))}
         - User preferences: {state.get("user_preferences", "None")}
         - Current destination info: {list(state.get("destination_info", {}).keys())}
-        
+
         Determine the research type from these options:
         - "overview": General destination information and overview
         - "attractions": Specific attractions and landmarks
@@ -196,7 +196,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
         - "culture": Cultural information, customs, and etiquette
         - "practical": Practical travel information (transport, currency, etc.)
         - "weather": Climate and seasonal information
-        
+
         Extract these parameters if mentioned:
         - destination: The destination to research (required)
         - research_type: One of the research types above
@@ -204,11 +204,11 @@ class DestinationResearchAgentNode(BaseAgentNode):
         - travel_dates: Dates of travel for seasonal information
         - travel_style: Type of travel (luxury, budget, adventure, family, etc.)
         - duration: Length of stay
-        
+
         Respond with JSON only. If this doesn't seem destination-research related,
         return null.
-        
-        Example: {{"destination": "Paris", "research_type": "attractions", 
+
+        Example: {{"destination": "Paris", "research_type": "attractions",
                    "specific_interests": ["museums", "architecture"], "duration": 5}}
         """
 
@@ -236,8 +236,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             else:
                 return None
 
-        except Exception as e:
-            logger.exception(f"Error extracting research parameters")
+        except Exception:
+            logger.exception("Error extracting research parameters")
             return None
 
     async def _research_destination(
@@ -325,7 +325,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Overview research failed")
+            logger.exception("Overview research failed")
             return {"error": str(e)}
 
     async def _research_attractions(self, destination: str, interests: list) -> list:
@@ -362,7 +362,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     }
                 ]
         except Exception as e:
-            logger.exception(f"Attractions research failed")
+            logger.exception("Attractions research failed")
             return [{"error": str(e)}]
 
     async def _research_activities(self, destination: str, interests: list) -> list:
@@ -403,7 +403,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     }
                 ]
         except Exception as e:
-            logger.exception(f"Activities research failed")
+            logger.exception("Activities research failed")
             return [{"error": str(e)}]
 
     async def _research_practical_info(self, destination: str) -> dict[str, Any]:
@@ -427,7 +427,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Practical info research failed")
+            logger.exception("Practical info research failed")
             return {"error": str(e)}
 
     async def _research_cultural_info(self, destination: str) -> dict[str, Any]:
@@ -450,7 +450,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Cultural info research failed")
+            logger.exception("Cultural info research failed")
             return {"error": str(e)}
 
     async def _research_weather_info(
@@ -471,7 +471,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Weather info research failed")
+            logger.exception("Weather info research failed")
             return {"error": str(e)}
 
     async def _get_location_data(self, destination: str) -> dict[str, Any]:
@@ -489,7 +489,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Location data retrieval failed")
+            logger.exception("Location data retrieval failed")
             return {"error": str(e)}
 
     async def _generate_research_response(
@@ -609,16 +609,16 @@ class DestinationResearchAgentNode(BaseAgentNode):
         response_prompt = f"""
         The user is asking about destination research but hasn't provided enough
         specific information for targeted research.
-        
+
         User message: "{message}"
-        
+
         Provide a helpful response that:
         1. Acknowledges their interest in destination information
         2. Asks for the specific destination they want to research
-        3. Mentions the types of information you can provide (attractions, activities, 
+        3. Mentions the types of information you can provide (attractions, activities,
            culture, practical info)
         4. Offers to help once they specify a destination
-        
+
         Keep the response friendly and concise.
         """
 
@@ -633,8 +633,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             response = await self.llm.ainvoke(messages)
             content = response.content
 
-        except Exception as e:
-            logger.exception(f"Error generating research response")
+        except Exception:
+            logger.exception("Error generating research response")
             content = (
                 "I'd be happy to help you research destinations! Please let me know "
                 "which destination you're interested in, and I can provide information "

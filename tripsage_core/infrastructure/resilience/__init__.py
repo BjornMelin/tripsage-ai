@@ -20,15 +20,15 @@ from tripsage_core.infrastructure.resilience.circuit_breaker import (
 
 
 __all__ = [
-    # Circuit breaker classes
-    "SimpleCircuitBreaker",
-    "EnterpriseCircuitBreaker",
     "CircuitBreakerError",
     "CircuitState",
+    "EnterpriseCircuitBreaker",
+    # Circuit breaker classes
+    "SimpleCircuitBreaker",
     # Factory function
     "circuit_breaker",
-    # Registry functions
-    "register_circuit_breaker",
     "get_circuit_breaker_registry",
     "get_circuit_breaker_status",
+    # Registry functions
+    "register_circuit_breaker",
 ]

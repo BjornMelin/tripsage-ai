@@ -33,8 +33,8 @@ class SimpleMCPService:
                 self._airbnb_client = AirbnbMCPClient()
                 await self._airbnb_client.connect()
                 logger.info("Airbnb MCP client initialized")
-            except Exception as e:
-                logger.exception(f"Failed to initialize Airbnb client")
+            except Exception:
+                logger.exception("Failed to initialize Airbnb client")
                 return None
 
         return self._airbnb_client
@@ -209,8 +209,8 @@ class SimpleMCPService:
                 await self._airbnb_client.disconnect()
                 self._airbnb_client = None
                 logger.info("Airbnb MCP client disconnected")
-            except Exception as e:
-                logger.exception(f"Error disconnecting Airbnb client")
+            except Exception:
+                logger.exception("Error disconnecting Airbnb client")
 
 
 # Global instance

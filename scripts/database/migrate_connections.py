@@ -17,6 +17,8 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # ruff: noqa: E402
+import contextlib
+
 from tripsage_core.config import get_settings
 from tripsage_core.database.connection import (
     create_secure_async_engine,
@@ -211,9 +213,9 @@ class ConnectionMigrationTester:
                 # Check if memory-related tables exist
                 result = await session.execute(
                     text("""
-                        SELECT table_name 
-                        FROM information_schema.tables 
-                        WHERE table_schema = 'public' 
+                        SELECT table_name
+                        FROM information_schema.tables
+                        WHERE table_schema = 'public'
                         AND table_name LIKE '%memory%'
                         LIMIT 5
                     """)
@@ -341,10 +343,8 @@ class ConnectionMigrationTester:
 
             # Trigger failures
             for _ in range(3):
-                try:
+                with contextlib.suppress(Exception):
                     await cb.call(failing_operation)
-                except Exception:
-                    pass
 
             # Circuit should be open now
             try:

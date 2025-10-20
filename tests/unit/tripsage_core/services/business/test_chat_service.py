@@ -35,8 +35,7 @@ class TestChatService:
     @pytest.fixture
     def mock_database_service(self):
         """Mock database service."""
-        db = AsyncMock()
-        return db
+        return AsyncMock()
 
     @pytest.fixture
     def rate_limiter(self):

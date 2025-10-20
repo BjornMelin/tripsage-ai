@@ -45,14 +45,12 @@ class TestDashboardService:
     @pytest.fixture
     def mock_database_service(self):
         """Create mock database service."""
-        db = AsyncMock()
-        return db
+        return AsyncMock()
 
     @pytest.fixture
     def mock_api_key_service(self):
         """Create mock API key service."""
-        service = AsyncMock()
-        return service
+        return AsyncMock()
 
     @pytest.fixture
     def dashboard_service(self, mock_cache_service, mock_database_service):

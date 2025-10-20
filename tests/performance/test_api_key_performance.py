@@ -126,12 +126,11 @@ class TestApiKeyPerformance:
     @pytest.fixture
     def api_key_service(self, mock_db_service, mock_cache_service):
         """Create ApiKeyService instance for performance testing."""
-        service = ApiKeyService(
+        return ApiKeyService(
             db=mock_db_service,
             cache=mock_cache_service,
             validation_timeout=5,
         )
-        return service
 
     @pytest.fixture
     def sample_api_keys(self):
@@ -868,7 +867,7 @@ class TestApiKeyPerformance:
             )
 
             # Calculate performance metrics
-            performance_metrics = {
+            return {
                 "creation_time_ms": creation_time,
                 "retrieval_time_ms": retrieval_time,
                 "mixed_operations_time_ms": mixed_time,
@@ -889,8 +888,6 @@ class TestApiKeyPerformance:
                 if (creation_time + retrieval_time + mixed_time) > 0
                 else 0,
             }
-
-            return performance_metrics
 
         # Benchmark the concurrent database operations
         results = benchmark(lambda: asyncio.run(run_concurrent_database_operations()))
@@ -1033,7 +1030,7 @@ class TestApiKeyPerformance:
 
         async def run_cache_load_scenarios():
             """Run various cache load scenarios and measure hit/miss ratios."""
-            cache_metrics, cache_storage = setup_realistic_cache_with_metrics()
+            cache_metrics, _cache_storage = setup_realistic_cache_with_metrics()
 
             # Scenario 1: Cold cache (all misses)
             print("  Running cold cache scenario...")
@@ -1117,7 +1114,7 @@ class TestApiKeyPerformance:
                 else 0
             )
 
-            performance_metrics = {
+            return {
                 "cold_cache_time_ms": cold_time,
                 "cache_warming_time_ms": warm_time,
                 "hot_cache_time_ms": hot_time,
@@ -1140,8 +1137,6 @@ class TestApiKeyPerformance:
                 if total_operations > 0
                 else 0,
             }
-
-            return performance_metrics
 
         # Benchmark cache load scenarios
         results = benchmark(lambda: asyncio.run(run_cache_load_scenarios()))
@@ -1406,7 +1401,7 @@ class TestApiKeyPerformance:
             avg_cpu = statistics.mean(cpu_samples) if cpu_samples else 0
             peak_cpu = max(cpu_samples) if cpu_samples else 0
 
-            performance_metrics = {
+            return {
                 "baseline_memory_mb": baseline_memory,
                 "peak_memory_mb": resource_metrics["peak_memory_mb"],
                 "final_memory_mb": final_memory,
@@ -1424,8 +1419,6 @@ class TestApiKeyPerformance:
                 if encryption_time > 0
                 else 0,
             }
-
-            return performance_metrics
 
         # Benchmark memory-intensive operations
         results = benchmark(lambda: asyncio.run(run_memory_intensive_operations()))
@@ -1481,7 +1474,7 @@ class TestApiKeyPerformance:
 
         def establish_performance_baselines():
             """Establish performance baselines for regression detection."""
-            baselines = {
+            return {
                 # Core operation baselines (milliseconds)
                 "encryption_max_ms": 10,
                 "decryption_max_ms": 10,
@@ -1500,7 +1493,6 @@ class TestApiKeyPerformance:
                 "error_rate_max": 0.05,  # 5% max error rate
                 "timeout_rate_max": 0.01,  # 1% max timeout rate
             }
-            return baselines
 
         async def run_comprehensive_performance_tests():
             """Run comprehensive performance tests for regression detection."""

@@ -122,7 +122,7 @@ class ChatOrchestrationService:
             return session_data
 
         except Exception as e:
-            self.logger.exception(f"Failed to create chat session")
+            self.logger.exception("Failed to create chat session")
             raise ChatOrchestrationError(f"Failed to create chat session: {e!s}") from e
 
     @with_error_handling()
@@ -191,7 +191,7 @@ class ChatOrchestrationService:
             return message_data
 
         except Exception as e:
-            self.logger.exception(f"Failed to save message")
+            self.logger.exception("Failed to save message")
             raise ChatOrchestrationError(f"Failed to save message: {e!s}") from e
 
     @with_error_handling()
@@ -227,7 +227,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Flight search failed")
+            self.logger.exception("Flight search failed")
             raise ChatOrchestrationError(f"Flight search failed: {e!s}") from e
 
     @with_error_handling()
@@ -263,7 +263,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Accommodation search failed")
+            self.logger.exception("Accommodation search failed")
             raise ChatOrchestrationError(f"Accommodation search failed: {e!s}") from e
 
     @with_error_handling()
@@ -299,12 +299,12 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Location lookup failed")
+            self.logger.exception("Location lookup failed")
             raise ChatOrchestrationError(f"Location lookup failed: {e!s}") from e
 
     @with_error_handling()
     async def execute_parallel_tools(self, tool_calls: list[dict]) -> dict[str, Any]:
-        """Execute multiple tool calls in parallel using structured tool calling service
+        """Execute multiple tool calls in parallel using structured tool calling service.
 
         Args:
             tool_calls: List of tool call dictionaries
@@ -367,7 +367,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Parallel tool execution failed")
+            self.logger.exception("Parallel tool execution failed")
             raise ChatOrchestrationError(
                 f"Parallel tool execution failed: {e!s}"
             ) from e
@@ -402,11 +402,10 @@ class ChatOrchestrationService:
                 params=params,
             )
 
-            response = await self.tool_call_service.execute_tool_call(request)
-            return response
+            return await self.tool_call_service.execute_tool_call(request)
 
         except Exception as e:
-            self.logger.exception(f"Structured tool call failed")
+            self.logger.exception("Structured tool call failed")
             raise ChatOrchestrationError(f"Structured tool call failed: {e!s}") from e
 
     @with_error_handling()
@@ -441,7 +440,7 @@ class ChatOrchestrationService:
             return formatted
 
         except Exception as e:
-            self.logger.exception(f"Tool response formatting failed")
+            self.logger.exception("Tool response formatting failed")
             raise ChatOrchestrationError(
                 f"Tool response formatting failed: {e!s}"
             ) from e
@@ -564,7 +563,7 @@ class ChatOrchestrationService:
 
             # Use properly formatted query with sanitized values
             query = f"""
-                SELECT * FROM chat_messages 
+                SELECT * FROM chat_messages
                 WHERE session_id = {safe_session_id}
                 ORDER BY created_at DESC
                 LIMIT {safe_limit} OFFSET {safe_offset}
@@ -584,7 +583,7 @@ class ChatOrchestrationService:
             return messages
 
         except Exception as e:
-            self.logger.exception(f"Failed to get chat history")
+            self.logger.exception("Failed to get chat history")
             raise ChatOrchestrationError(f"Failed to get chat history: {e!s}") from e
 
     @with_error_handling()
@@ -607,7 +606,7 @@ class ChatOrchestrationService:
             safe_session_id = self._sanitize_sql_value(session_id)
 
             query = f"""
-                UPDATE chat_sessions 
+                UPDATE chat_sessions
                 SET ended_at = NOW(), updated_at = NOW()
                 WHERE id = {safe_session_id}
                 RETURNING ended_at
@@ -626,7 +625,7 @@ class ChatOrchestrationService:
                 raise ChatOrchestrationError(f"Session {session_id} not found")
 
         except Exception as e:
-            self.logger.exception(f"Failed to end chat session")
+            self.logger.exception("Failed to end chat session")
             raise ChatOrchestrationError(f"Failed to end chat session: {e!s}") from e
 
 

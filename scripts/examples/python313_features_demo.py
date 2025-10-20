@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Python 3.13 Modern Features Demonstration for TripSage
+"""Python 3.13 Modern Features Demonstration for TripSage.
 ===================================================
 
 This script demonstrates the Python 3.13 modern features implemented
@@ -188,8 +188,8 @@ async def demonstrate_enhanced_error_handling():
 
         logger.info(f"✅ Successfully processed {len(results)} safe tasks")
 
-    except Exception as e:
-        logger.exception(f"Unexpected error")
+    except Exception:
+        logger.exception("Unexpected error")
 
     return results
 
@@ -315,8 +315,8 @@ async def main():
 
         logger.info("✨ All demonstrations completed successfully!")
 
-    except Exception as e:
-        logger.exception(f"Demo failed")
+    except Exception:
+        logger.exception("Demo failed")
         raise
 
 

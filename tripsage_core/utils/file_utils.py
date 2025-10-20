@@ -233,7 +233,7 @@ def _detect_mime_type(filename: str, content: bytes) -> str:
         return "image/jpeg"
     elif content.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
-    elif content.startswith(b"GIF87a") or content.startswith(b"GIF89a"):
+    elif content.startswith((b"GIF87a", b"GIF89a")):
         return "image/gif"
     elif content.startswith(b"%PDF-"):
         return "application/pdf"
@@ -285,9 +285,7 @@ def _validate_image_content(content: bytes, mime_type: str) -> tuple[bool, str |
         return False, "Invalid JPEG header"
     elif mime_type == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
         return False, "Invalid PNG header"
-    elif mime_type == "image/gif" and not (
-        content.startswith(b"GIF87a") or content.startswith(b"GIF89a")
-    ):
+    elif mime_type == "image/gif" and not (content.startswith((b"GIF87a", b"GIF89a"))):
         return False, "Invalid GIF header"
 
     return True, None
@@ -383,25 +381,23 @@ def generate_safe_filename(original_filename: str, user_id: str) -> str:
     ).hexdigest()[:8]
 
     # Generate safe filename with user isolation
-    safe_name = f"{user_id}_{filename_hash}{extension}"
-
-    return safe_name
+    return f"{user_id}_{filename_hash}{extension}"
 
 
 __all__ = [
-    # Configuration constants
-    "MAX_FILE_SIZE",
-    "MAX_FILES_PER_REQUEST",
-    "MAX_SESSION_SIZE",
     "ALLOWED_EXTENSIONS",
     "ALLOWED_MIME_TYPES",
-    "FILE_TYPE_MAPPING",
     "DEFAULT_STORAGE_ROOT",
-    "TEMP_UPLOAD_DIR",
+    "FILE_TYPE_MAPPING",
+    "MAX_FILES_PER_REQUEST",
+    # Configuration constants
+    "MAX_FILE_SIZE",
+    "MAX_SESSION_SIZE",
     "PROCESSED_DIR",
+    "TEMP_UPLOAD_DIR",
     # Validation functions and classes
     "ValidationResult",
-    "validate_file",
-    "validate_batch_upload",
     "generate_safe_filename",
+    "validate_batch_upload",
+    "validate_file",
 ]

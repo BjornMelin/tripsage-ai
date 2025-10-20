@@ -26,7 +26,7 @@ import pytest
 class MockSupabaseAuthUser:
     """Mock Supabase auth user for testing."""
 
-    def __init__(self, user_id: UUID, email: str = None):
+    def __init__(self, user_id: UUID, email: str | None = None):
         self.id = user_id
         self.email = email or f"user{user_id.hex[:8]}@test.com"
         self.created_at = datetime.utcnow()
@@ -309,13 +309,13 @@ class TestRLSPolicyValidation:
 
         flights = await mock_db_service.fetch_all(
             """
-            SELECT f.*, 
-                   CASE WHEN tc.permission_level IN ('edit', 'admin') 
-                        OR t.user_id = auth.uid() 
+            SELECT f.*,
+                   CASE WHEN tc.permission_level IN ('edit', 'admin')
+                        OR t.user_id = auth.uid()
                         THEN true ELSE false END as can_edit
             FROM flights f
             JOIN trips t ON f.trip_id = t.id
-            LEFT JOIN trip_collaborators tc ON t.id = tc.trip_id 
+            LEFT JOIN trip_collaborators tc ON t.id = tc.trip_id
                  AND tc.user_id = auth.uid()
             WHERE auth.uid() = t.user_id OR tc.user_id = auth.uid()
             """
@@ -337,10 +337,10 @@ class TestRLSPolicyValidation:
         with pytest.raises(Exception, match="RLS policy violation"):
             await mock_db_service.execute_query(
                 """
-                UPDATE flights 
-                SET destination = $1 
+                UPDATE flights
+                SET destination = $1
                 WHERE trip_id IN (
-                    SELECT trip_id FROM trip_collaborators 
+                    SELECT trip_id FROM trip_collaborators
                     WHERE user_id = auth.uid() AND permission_level = 'view'
                 )
                 """,
@@ -361,8 +361,8 @@ class TestRLSPolicyValidation:
         # Try to access user1's private trip
         private_trips = await mock_db_service.fetch_all(
             """
-            SELECT * FROM trips 
-            WHERE user_id = $1 
+            SELECT * FROM trips
+            WHERE user_id = $1
             AND id NOT IN (
                 SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
             )
@@ -465,7 +465,7 @@ class TestForeignKeyConstraints:
         # Valid collaboration insert
         await mock_db_service.execute_query(
             """
-            INSERT INTO trip_collaborators 
+            INSERT INTO trip_collaborators
             (trip_id, user_id, permission_level, added_by)
             VALUES ($1, $2, $3, $4)
             """,
@@ -485,7 +485,7 @@ class TestForeignKeyConstraints:
         with pytest.raises(Exception, match="trip_collaborators_trip_id_fkey"):
             await mock_db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators 
+                INSERT INTO trip_collaborators
                 (trip_id, user_id, permission_level, added_by)
                 VALUES ($1, $2, $3, $4)
                 """,
@@ -737,7 +737,7 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            INSERT INTO trip_collaborators 
+            INSERT INTO trip_collaborators
             (trip_id, user_id, permission_level, added_by)
             VALUES ($1, $2, $3, $4)
             """,
@@ -758,7 +758,7 @@ class TestCollaborationWorkflows:
             SELECT t.* FROM trips t
             WHERE t.id = $1 AND (
                 t.user_id = auth.uid() OR
-                t.id IN (SELECT trip_id FROM trip_collaborators 
+                t.id IN (SELECT trip_id FROM trip_collaborators
                          WHERE user_id = auth.uid())
             )
             """,
@@ -780,7 +780,7 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            UPDATE trip_collaborators 
+            UPDATE trip_collaborators
             SET permission_level = $1, updated_at = NOW()
             WHERE trip_id = $2 AND user_id = $3
             AND trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid())
@@ -818,7 +818,7 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            DELETE FROM trip_collaborators 
+            DELETE FROM trip_collaborators
             WHERE trip_id = $1 AND user_id = $2
             AND trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid())
             """,
@@ -835,7 +835,7 @@ class TestCollaborationWorkflows:
             SELECT t.* FROM trips t
             WHERE t.id = $1 AND (
                 t.user_id = auth.uid() OR
-                t.id IN (SELECT trip_id FROM trip_collaborators 
+                t.id IN (SELECT trip_id FROM trip_collaborators
                          WHERE user_id = auth.uid())
             )
             """,
@@ -880,14 +880,14 @@ class TestMultiUserScenarios:
         collaborators = await mock_db_service.fetch_all(
             """
             SELECT user_id, permission_level,
-                   CASE WHEN permission_level IN ('admin') THEN true 
+                   CASE WHEN permission_level IN ('admin') THEN true
                         ELSE false END as can_manage
             FROM trip_collaborators
             WHERE trip_id = $1
-            ORDER BY CASE permission_level 
+            ORDER BY CASE permission_level
                      WHEN 'admin' THEN 3
-                     WHEN 'edit' THEN 2 
-                     WHEN 'view' THEN 1 
+                     WHEN 'edit' THEN 2
+                     WHEN 'view' THEN 1
                      END DESC
             """,
             1,
@@ -950,7 +950,7 @@ class TestMultiUserScenarios:
         hierarchy = await mock_db_service.fetch_all(
             """
             SELECT trip_id, user_id, permission_level,
-                   CASE WHEN permission_level = 'admin' THEN true 
+                   CASE WHEN permission_level = 'admin' THEN true
                         ELSE false END as can_add_collaborators
             FROM trip_collaborators
             WHERE trip_id = $1
@@ -983,7 +983,7 @@ class TestSecurityIsolation:
         # Attempt to access other users' collaborations
         collaborations = await mock_db_service.fetch_all(
             """
-            SELECT * FROM trip_collaborators 
+            SELECT * FROM trip_collaborators
             WHERE trip_id NOT IN (
                 SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
                 UNION
@@ -1008,7 +1008,7 @@ class TestSecurityIsolation:
         with pytest.raises(Exception, match="RLS policy prevents"):
             await mock_db_service.execute_query(
                 """
-                UPDATE trip_collaborators 
+                UPDATE trip_collaborators
                 SET permission_level = 'admin'
                 WHERE user_id = auth.uid()
                 """
@@ -1109,7 +1109,7 @@ class TestPerformanceOptimization:
             """
             SELECT m.*, 1 - (m.embedding <=> $1) as similarity
             FROM memories m
-            WHERE m.user_id = auth.uid() 
+            WHERE m.user_id = auth.uid()
             AND (1 - (m.embedding <=> $1)) >= $2
             ORDER BY m.embedding <=> $1
             LIMIT $3

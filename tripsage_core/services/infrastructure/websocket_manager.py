@@ -12,6 +12,7 @@ This refactored version extracts responsibilities into focused services.
 """
 
 import asyncio
+import contextlib
 import functools
 import json
 import logging
@@ -89,8 +90,10 @@ def redis_with_fallback(fallback_method: str | None = None):
 
             try:
                 return await func(self, *args, **kwargs)
-            except Exception as e:
-                logger.exception( f"Redis operation failed in {func.__name__}, using fallback")
+            except Exception:
+                logger.exception(
+                    f"Redis operation failed in {func.__name__}, using fallback"
+                )
                 fallback_name = fallback_method or f"_local_{func.__name__}"
                 if hasattr(self, fallback_name):
                     fallback_func = getattr(self, fallback_name)
@@ -100,7 +103,9 @@ def redis_with_fallback(fallback_method: str | None = None):
                         else fallback_func(*args, **kwargs)
                     )
                 else:
-                    logger.exception( f"No fallback method {fallback_name} found for {func.__name__}")
+                    logger.exception(
+                        f"No fallback method {fallback_name} found for {func.__name__}"
+                    )
                     raise
 
         return wrapper
@@ -116,23 +121,23 @@ RATE_LIMIT_LUA_SCRIPT = """
     local now = tonumber(ARGV[2])
     local user_limit = tonumber(ARGV[3])
     local conn_limit = tonumber(ARGV[4])
-    
+
     -- Clean old entries
     redis.call('ZREMRANGEBYSCORE', user_key, 0, window_start)
     redis.call('ZREMRANGEBYSCORE', conn_key, 0, window_start)
-    
+
     -- Check current counts
     local user_count = redis.call('ZCARD', user_key)
     local conn_count = redis.call('ZCARD', conn_key)
-    
+
     if user_count >= user_limit then
         return {0, 'user_limit_exceeded', user_count, conn_count}
     end
-    
+
     if conn_count >= conn_limit then
         return {0, 'connection_limit_exceeded', user_count, conn_count}
     end
-    
+
     -- Add current request with secure random suffix
     local random_suffix = ARGV[5]
     if not random_suffix or random_suffix == '' then
@@ -143,7 +148,7 @@ RATE_LIMIT_LUA_SCRIPT = """
     redis.call('ZADD', conn_key, now, score)
     redis.call('EXPIRE', user_key, 60)
     redis.call('EXPIRE', conn_key, 60)
-    
+
     return {1, 'allowed', user_count + 1, conn_count + 1}
 """
 
@@ -505,7 +510,7 @@ class WebSocketManager:
             logger.info("Enhanced WebSocket manager started with full integration")
 
         except Exception as e:
-            logger.exception(f"Failed to start WebSocket manager")
+            logger.exception("Failed to start WebSocket manager")
             self._running = False
             raise CoreServiceError(
                 message=f"Failed to start WebSocket manager: {e!s}",
@@ -529,10 +534,8 @@ class WebSocketManager:
         for task in tasks:
             if task:
                 task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await task
-                except asyncio.CancelledError:
-                    pass
 
         # Stop broadcaster
         if self.broadcaster:
@@ -568,8 +571,8 @@ class WebSocketManager:
 
             logger.info("Redis connection initialized for WebSocket broadcasting")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize Redis")
+        except Exception:
+            logger.exception("Failed to initialize Redis")
             self.redis_client = None
             self.redis_pubsub = None
 
@@ -644,7 +647,7 @@ class WebSocketManager:
             )
 
         except Exception as e:
-            logger.exception(f"WebSocket authentication failed")
+            logger.exception("WebSocket authentication failed")
             self.performance_metrics["failed_connections"] += 1
             return WebSocketAuthResponse(
                 success=False,
@@ -729,7 +732,7 @@ class WebSocketManager:
 
             logger.info(f"Disconnected WebSocket connection {connection_id}")
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error disconnecting connection {connection_id}")
 
     async def send_to_connection(
@@ -803,7 +806,7 @@ class WebSocketManager:
         # Get stats from messaging service and combine with local metrics
         messaging_stats = self.messaging_service.get_connection_stats()
 
-        combined_stats = {
+        return {
             **messaging_stats,
             "redis_connected": self.redis_client is not None,
             "broadcaster_running": self.broadcaster is not None,
@@ -812,8 +815,6 @@ class WebSocketManager:
                 **messaging_stats.get("performance_metrics", {}),
             },
         }
-
-        return combined_stats
 
     @property
     def connections(self):
@@ -852,8 +853,8 @@ class WebSocketManager:
                 )
                 await cleanup_sleep_task
 
-            except Exception as e:
-                logger.exception(f"Error in cleanup task")
+            except Exception:
+                logger.exception("Error in cleanup task")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(
                     asyncio.sleep(self.cleanup_interval)
@@ -887,8 +888,8 @@ class WebSocketManager:
                 )
                 await heartbeat_sleep_task
 
-            except Exception as e:
-                logger.exception(f"Error in heartbeat task")
+            except Exception:
+                logger.exception("Error in heartbeat task")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(
                     asyncio.sleep(self.heartbeat_interval)
@@ -918,8 +919,8 @@ class WebSocketManager:
                 performance_sleep_task = asyncio.create_task(asyncio.sleep(30))
                 await performance_sleep_task
 
-            except Exception as e:
-                logger.exception(f"Error in performance monitor")
+            except Exception:
+                logger.exception("Error in performance monitor")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(asyncio.sleep(30))
                 await error_sleep_task
@@ -936,11 +937,11 @@ class WebSocketManager:
                         # Parse broadcast message
                         data = json.loads(message["data"])
                         await self._handle_broadcast_message(data)
-                    except Exception as e:
-                        logger.exception(f"Failed to handle broadcast message")
+                    except Exception:
+                        logger.exception("Failed to handle broadcast message")
 
-        except Exception as e:
-            logger.exception(f"Error in Redis message listener")
+        except Exception:
+            logger.exception("Error in Redis message listener")
 
     async def _handle_broadcast_message(self, data: dict[str, Any]) -> None:
         """Handle incoming broadcast message from Redis."""
@@ -979,8 +980,8 @@ class WebSocketManager:
                     event, self.rate_limiter, self.message_limits
                 )
 
-        except Exception as e:
-            logger.exception(f"Failed to handle broadcast message")
+        except Exception:
+            logger.exception("Failed to handle broadcast message")
 
     async def _process_priority_queues(self) -> None:
         """Background task to process priority message queues with anti-starvation.
@@ -1021,8 +1022,8 @@ class WebSocketManager:
                     sleep_task = asyncio.create_task(asyncio.sleep(0.5))
                     await sleep_task
 
-            except Exception as e:
-                logger.exception(f"Error in priority queue processor")
+            except Exception:
+                logger.exception("Error in priority queue processor")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(asyncio.sleep(1))
                 await error_sleep_task

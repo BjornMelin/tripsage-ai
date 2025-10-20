@@ -735,8 +735,8 @@ class DatabaseService:
         except ImportError:
             logger.warning("Prometheus client not available, metrics disabled")
             self._metrics = None
-        except Exception as e:
-            logger.exception(f"Failed to initialize metrics")
+        except Exception:
+            logger.exception("Failed to initialize metrics")
             self._metrics = None
 
     @property
@@ -802,7 +802,7 @@ class DatabaseService:
             self._connection_stats.connection_errors += 1
             self._connection_stats.last_error = str(e)
 
-            logger.exception(f"Failed to connect to database")
+            logger.exception("Failed to connect to database")
             raise CoreDatabaseError(
                 message=f"Failed to connect to database: {e!s}",
                 code="DATABASE_CONNECTION_FAILED",
@@ -843,8 +843,8 @@ class DatabaseService:
 
             logger.debug("Supabase client initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize Supabase client")
+        except Exception:
+            logger.exception("Failed to initialize Supabase client")
             raise
 
     async def _initialize_sqlalchemy_engine(self) -> None:
@@ -886,8 +886,8 @@ class DatabaseService:
                 f"(pool_size={self.pool_size}, max_overflow={self.max_overflow})"
             )
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize SQLAlchemy engine")
+        except Exception:
+            logger.exception("Failed to initialize SQLAlchemy engine")
             raise
 
     def _setup_pool_event_listeners(self) -> None:
@@ -982,8 +982,8 @@ class DatabaseService:
             try:
                 self._sqlalchemy_engine.dispose()
                 logger.info("SQLAlchemy engine disposed")
-            except Exception as e:
-                logger.exception(f"Error disposing SQLAlchemy engine")
+            except Exception:
+                logger.exception("Error disposing SQLAlchemy engine")
 
         self._supabase_client = None
         self._sqlalchemy_engine = None
@@ -1579,6 +1579,7 @@ class DatabaseTransactionContext:
         """Exit the async context manager."""
         if self._monitor_ctx:
             return await self._monitor_ctx.__aexit__(exc_type, exc_val, exc_tb)
+        return None
 
     def insert(self, table: str, data: dict[str, Any] | list[dict[str, Any]]):
         """Add an insert operation to the transaction."""
@@ -1948,7 +1949,7 @@ class DatabaseTransactionContext:
                     )
                     return result.data
             except Exception as e:
-                logger.exception(f"SQL execution error")
+                logger.exception("SQL execution error")
                 raise CoreDatabaseError(
                     message="Failed to execute SQL query",
                     code="SQL_EXECUTION_FAILED",
@@ -1989,7 +1990,7 @@ class DatabaseTransactionContext:
         try:
             result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
             return result[0] if result else None
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to get trip by ID {trip_id}")
             return None
 
@@ -2059,7 +2060,7 @@ class DatabaseTransactionContext:
                 return result.data
 
             except Exception as e:
-                logger.exception(f"Trip search failed")
+                logger.exception("Trip search failed")
                 raise CoreDatabaseError(
                     message="Failed to search trips",
                     code="TRIP_SEARCH_FAILED",
@@ -2076,7 +2077,7 @@ class DatabaseTransactionContext:
                 "trip_collaborators", "*", {"trip_id": trip_id}, user_id=user_id
             )
         except Exception as e:
-            logger.exception( f"Failed to get trip collaborators for trip {trip_id}")
+            logger.exception(f"Failed to get trip collaborators for trip {trip_id}")
             raise CoreDatabaseError(
                 message=f"Failed to get collaborators for trip {trip_id}",
                 code="GET_COLLABORATORS_FAILED",
@@ -2120,7 +2121,7 @@ class DatabaseTransactionContext:
             return results
 
         except Exception as e:
-            logger.exception( f"Failed to get trip related counts for trip {trip_id}")
+            logger.exception(f"Failed to get trip related counts for trip {trip_id}")
             raise CoreDatabaseError(
                 message=f"Failed to get related counts for trip {trip_id}",
                 code="GET_TRIP_COUNTS_FAILED",
@@ -2157,7 +2158,7 @@ class DatabaseTransactionContext:
         except CoreDatabaseError:
             raise
         except Exception as e:
-            logger.exception(f"Failed to add trip collaborator")
+            logger.exception("Failed to add trip collaborator")
             raise CoreDatabaseError(
                 message="Failed to add trip collaborator",
                 code="ADD_COLLABORATOR_FAILED",
@@ -2180,7 +2181,9 @@ class DatabaseTransactionContext:
             return result[0] if result else None
 
         except Exception as e:
-            logger.exception( f"Failed to get trip collaborator for trip {trip_id}, " f"user {user_id}")
+            logger.exception(
+                f"Failed to get trip collaborator for trip {trip_id}, user {user_id}"
+            )
             raise CoreDatabaseError(
                 message=(
                     f"Failed to get collaborator for trip {trip_id} and user {user_id}"
@@ -2252,8 +2255,8 @@ class DatabaseTransactionContext:
                 self._metrics.health_status.labels(component="overall").set(1)
 
             return True
-        except Exception as e:
-            logger.exception(f"Database health check failed")
+        except Exception:
+            logger.exception("Database health check failed")
 
             # Update health metric
             if self._metrics:
@@ -2334,7 +2337,7 @@ class DatabaseTransactionContext:
 
             return stats
         except Exception as e:
-            logger.exception(f"Failed to get database stats")
+            logger.exception("Failed to get database stats")
             raise CoreDatabaseError(
                 message="Failed to get database statistics",
                 code="STATS_FAILED",

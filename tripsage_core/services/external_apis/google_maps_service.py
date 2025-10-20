@@ -154,7 +154,7 @@ class GoogleMapsService:
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception( f"Reverse geocoding failed for coordinates ({lat}, {lng})")
+            logger.exception(f"Reverse geocoding failed for coordinates ({lat}, {lng})")
             raise GoogleMapsServiceError(f"Reverse geocoding failed: {e}", e) from e
 
     async def search_places(
@@ -227,7 +227,7 @@ class GoogleMapsService:
             logger.debug(f"Retrieved place details for place_id '{place_id}'")
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception( f"Place details request failed for place_id '{place_id}'")
+            logger.exception(f"Place details request failed for place_id '{place_id}'")
             raise GoogleMapsServiceError(f"Place details request failed: {e}", e) from e
 
     async def get_directions(
@@ -265,7 +265,9 @@ class GoogleMapsService:
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception( f"Directions request failed from '{origin}' to '{destination}'")
+            logger.exception(
+                f"Directions request failed from '{origin}' to '{destination}'"
+            )
             raise GoogleMapsServiceError(f"Directions request failed: {e}", e) from e
 
     async def distance_matrix(
@@ -308,7 +310,7 @@ class GoogleMapsService:
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Distance matrix request failed")
+            logger.exception("Distance matrix request failed")
             raise GoogleMapsServiceError(
                 f"Distance matrix request failed: {e}", e
             ) from e
@@ -335,7 +337,7 @@ class GoogleMapsService:
             logger.debug(f"Retrieved elevation data for {len(locations)} locations")
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Elevation request failed")
+            logger.exception("Elevation request failed")
             raise GoogleMapsServiceError(f"Elevation request failed: {e}", e) from e
 
     async def get_timezone(
@@ -380,8 +382,8 @@ class GoogleMapsService:
             # Simple test geocode
             await self.geocode("New York", limit=1)
             return True
-        except Exception as e:
-            logger.exception(f"Google Maps API health check failed")
+        except Exception:
+            logger.exception("Google Maps API health check failed")
             return False
 
     async def close(self) -> None:

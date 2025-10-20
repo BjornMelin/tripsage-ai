@@ -28,7 +28,7 @@ This API is designed to serve multiple consumer types with adapted responses:
 - **Standard rate limits** - Optimized for human interaction patterns
 - **Sanitized data** - Secure, filtered responses for web display
 
-### AI Agent Consumers (LangGraph-based Agents) 
+### AI Agent Consumers (LangGraph-based Agents)
 - **Rich context data** - Technical details for decision making
 - **Tool integration metadata** - Information for agent tool calling
 - **Enhanced rate limits** - Higher throughput for automated workflows
@@ -138,7 +138,7 @@ POST /api/v1/keys
 Consumer-aware rate limiting with different limits:
 
 * **Frontend Users**: 100 requests/minute, 1000 requests/hour
-* **AI Agents**: 500 requests/minute, 5000 requests/hour  
+* **AI Agents**: 500 requests/minute, 5000 requests/hour
 * **Authenticated Users**: 5x multiplier on base limits
 * **BYOK Users**: Enhanced limits when using own API keys
 
@@ -185,7 +185,7 @@ WebSocket endpoints for live communication:
 This API leverages the `tripsage_core` shared library for:
 
 * **Business Services** - Flight, accommodation, memory, and chat services
-* **Infrastructure Services** - Database, caching, and WebSocket management  
+* **Infrastructure Services** - Database, caching, and WebSocket management
 * **External API Integration** - Standardized patterns for third-party services
 * **Security & Configuration** - Centralized settings and encryption
 """

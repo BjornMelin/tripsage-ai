@@ -9,6 +9,7 @@ to ensure robust protection against various security threats.
 """
 
 import asyncio
+import contextlib
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -413,10 +414,8 @@ class TestCircuitBreakerSecurity:
 
         # Trigger circuit breaker
         for _i in range(5):
-            try:
+            with contextlib.suppress(Exception):
                 failing_service()
-            except Exception:
-                pass
 
         # Circuit should be open, protecting against further requests
         assert enterprise_breaker.state == CircuitState.OPEN
@@ -537,10 +536,8 @@ class TestCircuitBreakerSecurity:
 
         # Trigger circuit with filtered exceptions
         for _ in range(5):
-            try:
+            with contextlib.suppress(ValueError):
                 service_with_different_exceptions("value")
-            except ValueError:
-                pass
 
         # RuntimeError should not be affected by circuit state
         try:
@@ -562,18 +559,14 @@ class TestCircuitBreakerSecurity:
 
         # Trigger failures to open circuit
         for _ in range(5):
-            try:
+            with contextlib.suppress(Exception):
                 resource_intensive_service()
-            except Exception:
-                pass
 
         # When circuit is open, should fail fast without consuming resources
         start_time = time.time()
         for _ in range(10):
-            try:
+            with contextlib.suppress(CircuitBreakerError):
                 resource_intensive_service()
-            except CircuitBreakerError:
-                pass
         end_time = time.time()
 
         # Should take much less time than if all requests were processed
@@ -592,17 +585,15 @@ class TestCircuitBreakerSecurity:
 
         # Trigger some failures
         for _ in range(3):
-            try:
+            with contextlib.suppress(Exception):
                 service_with_sensitive_data()
-            except Exception:
-                pass
 
         # Check metrics for information disclosure
         _state = enterprise_breaker.get_state()
         metrics = enterprise_breaker.metrics.get_summary()
 
         # Sensitive information should not be exposed in metrics
-        for _key, value in metrics.items():
+        for value in metrics.values():
             if isinstance(value, str):
                 assert "password" not in value.lower()
                 assert "secret" not in value.lower()
@@ -628,10 +619,8 @@ class TestCircuitBreakerSecurity:
                 raise Exception("Test failure")
 
             # Test behavior with modified config
-            try:
+            with contextlib.suppress(Exception):
                 test_service()
-            except Exception:
-                pass
 
     def test_circuit_breaker_timing_attack_resistance(self, enterprise_breaker):
         """Test circuit breaker resistance to timing attacks."""
@@ -650,28 +639,22 @@ class TestCircuitBreakerSecurity:
         for _ in range(5):
             # Test with user exists
             start = time.time()
-            try:
+            with contextlib.suppress(Exception):
                 timing_sensitive_service(True)
-            except Exception:
-                pass
             end = time.time()
             times_user_exists.append(end - start)
 
             # Test with user not exists
             start = time.time()
-            try:
+            with contextlib.suppress(Exception):
                 timing_sensitive_service(False)
-            except Exception:
-                pass
             end = time.time()
             times_user_not_exists.append(end - start)
 
         # Open the circuit
         for _ in range(5):
-            try:
+            with contextlib.suppress(Exception):
                 timing_sensitive_service(True)
-            except Exception:
-                pass
 
         # When circuit is open, timing should be consistent
         # regardless of input parameters
@@ -679,10 +662,8 @@ class TestCircuitBreakerSecurity:
             circuit_times = []
             for user_exists in [True, False, True, False]:
                 start = time.time()
-                try:
+                with contextlib.suppress(CircuitBreakerError):
                     timing_sensitive_service(user_exists)
-                except CircuitBreakerError:
-                    pass
                 end = time.time()
                 circuit_times.append(end - start)
 
@@ -731,7 +712,7 @@ class TestRateLimitingCircuitBreakerIntegration:
 
     async def test_coordinated_attack_protection(self, integrated_service):
         """Test protection against coordinated attacks on both systems."""
-        protected_service, rate_limiter, service_breaker = integrated_service
+        protected_service, _rate_limiter, _service_breaker = integrated_service
 
         user_id = "attacker_123"
 
@@ -748,10 +729,8 @@ class TestRateLimitingCircuitBreakerIntegration:
 
         # Phase 2: Try to trigger circuit breaker with failures
         for _ in range(5):
-            try:
+            with contextlib.suppress(Exception):
                 await protected_service(f"different_user_{_}", should_fail=True)
-            except Exception:
-                pass
 
         # Both protections should be active
         # Rate limiting protects against volume
@@ -759,7 +738,7 @@ class TestRateLimitingCircuitBreakerIntegration:
 
     async def test_bypass_attempt_via_system_interaction(self, integrated_service):
         """Test attempts to bypass protections by exploiting system interactions."""
-        protected_service, rate_limiter, service_breaker = integrated_service
+        protected_service, _rate_limiter, _service_breaker = integrated_service
 
         # Attempt 1: Use circuit breaker to bypass rate limiting
         # (Rate limiting might not apply if circuit is open)
@@ -767,10 +746,8 @@ class TestRateLimitingCircuitBreakerIntegration:
 
         # First, trigger circuit breaker
         for _ in range(5):
-            try:
+            with contextlib.suppress(Exception):
                 await protected_service(user_id, should_fail=True)
-            except Exception:
-                pass
 
         # Now try rapid requests - should still be rate limited
         rate_limited_count = 0
@@ -785,7 +762,7 @@ class TestRateLimitingCircuitBreakerIntegration:
 
     async def test_resource_exhaustion_via_combined_systems(self, integrated_service):
         """Test resource exhaustion attacks targeting both systems."""
-        protected_service, rate_limiter, service_breaker = integrated_service
+        protected_service, _rate_limiter, _service_breaker = integrated_service
 
         # Create many users to test memory usage
         users = [f"memory_user_{i}" for i in range(1000)]
@@ -793,10 +770,8 @@ class TestRateLimitingCircuitBreakerIntegration:
         start_time = time.time()
 
         for user in users:
-            try:
+            with contextlib.suppress(Exception):
                 await protected_service(user, should_fail=False)
-            except Exception:
-                pass
 
         end_time = time.time()
 
@@ -808,17 +783,15 @@ class TestRateLimitingCircuitBreakerIntegration:
 
     async def test_state_consistency_under_attack(self, integrated_service):
         """Test state consistency when both systems are under attack."""
-        protected_service, rate_limiter, service_breaker = integrated_service
+        protected_service, _rate_limiter, service_breaker = integrated_service
 
         async def attack_task(user_prefix: str, fail_rate: float):
             """Concurrent attack task."""
             for i in range(50):
                 user_id = f"{user_prefix}_{i}"
                 should_fail = (i % 10) < (fail_rate * 10)
-                try:
+                with contextlib.suppress(Exception):
                     await protected_service(user_id, should_fail=should_fail)
-                except Exception:
-                    pass
                 await asyncio.sleep(0.001)
 
         # Launch multiple concurrent attack tasks
@@ -863,7 +836,5 @@ class TestRateLimitingCircuitBreakerIntegration:
             raise Exception("Always fails")
 
         # Should handle gracefully without creating security issues
-        try:
+        with contextlib.suppress(Exception):
             conflicted_service()
-        except Exception:
-            pass

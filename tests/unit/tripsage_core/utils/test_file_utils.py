@@ -131,7 +131,7 @@ class TestFilenameValidation:
         valid_files = ["file.PDF", "image.JPG", "data.CSV", "doc.DOCX"]
 
         for filename in valid_files:
-            is_valid, error = _validate_filename(filename)
+            is_valid, _error = _validate_filename(filename)
             assert is_valid, f"Expected {filename} to be valid regardless of case"
 
     def test_case_insensitive_suspicious_patterns(self):
@@ -139,7 +139,7 @@ class TestFilenameValidation:
         suspicious_files = ["file.EXE", "script.BAT", "malware.CMD"]
 
         for filename in suspicious_files:
-            is_valid, error = _validate_filename(filename)
+            is_valid, _error = _validate_filename(filename)
             assert not is_valid, f"Expected {filename} to be flagged regardless of case"
 
 
@@ -286,7 +286,7 @@ class TestFileValidation:
     """Test main file validation functionality."""
 
     def create_upload_file(
-        self, filename: str, content: bytes, content_type: str = None
+        self, filename: str, content: bytes, content_type: str | None = None
     ) -> UploadFile:
         """Helper to create UploadFile for testing."""
         file_obj = BytesIO(content)

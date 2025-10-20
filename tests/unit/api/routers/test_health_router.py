@@ -517,8 +517,7 @@ class TestEnhancedHealthEndpoints:
         import asyncio
 
         async def run_test():
-            response = await async_client.get("/api/health/services/invalid_service")
-            return response
+            return await async_client.get("/api/health/services/invalid_service")
 
         response = asyncio.run(run_test())
 

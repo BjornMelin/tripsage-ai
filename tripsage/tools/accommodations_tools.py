@@ -287,8 +287,8 @@ async def book_accommodation_tool(
     listing_id: str,
     service_registry: ServiceRegistry,
     source: str = "airbnb",
-    checkin: str = None,
-    checkout: str = None,
+    checkin: str | None = None,
+    checkout: str | None = None,
     adults: int = 1,
     children: int = 0,
     guest_details: dict[str, Any] | None = None,
@@ -316,7 +316,7 @@ async def book_accommodation_tool(
     )
 
     # Initiate booking through service
-    result = await accommodation_service.book_accommodation(
+    return await accommodation_service.book_accommodation(
         listing_id=listing_id,
         source=source,
         checkin=checkin,
@@ -325,5 +325,3 @@ async def book_accommodation_tool(
         children=children,
         guest_details=guest_details,
     )
-
-    return result

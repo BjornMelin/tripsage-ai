@@ -66,8 +66,7 @@ class TestAccommodationAgentNode:
     @pytest.fixture
     def mock_llm(self):
         """Create a mock LLM."""
-        llm = AsyncMock()
-        return llm
+        return AsyncMock()
 
     @pytest.fixture
     def accommodation_node(self, mock_service_registry, mock_llm):

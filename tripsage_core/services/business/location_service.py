@@ -72,7 +72,7 @@ class LocationService:
             logger.debug(f"Reverse geocoding coordinates: ({lat}, {lng})")
             return await self.google_maps_service.reverse_geocode(lat, lng, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.exception( f"Reverse geocoding failed for coordinates ({lat}, {lng})")
+            logger.exception(f"Reverse geocoding failed for coordinates ({lat}, {lng})")
             raise LocationServiceError(f"Reverse geocoding failed: {e}") from e
 
     @with_error_handling()
@@ -129,7 +129,7 @@ class LocationService:
                 place_id, fields, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.exception( f"Place details request failed for place_id '{place_id}'")
+            logger.exception(f"Place details request failed for place_id '{place_id}'")
             raise LocationServiceError(f"Place details request failed: {e}") from e
 
     @with_error_handling()
@@ -156,7 +156,9 @@ class LocationService:
                 origin, destination, mode, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.exception( f"Directions request failed from '{origin}' to '{destination}'")
+            logger.exception(
+                f"Directions request failed from '{origin}' to '{destination}'"
+            )
             raise LocationServiceError(f"Directions request failed: {e}") from e
 
     @with_error_handling()
@@ -187,7 +189,7 @@ class LocationService:
                 origins, destinations, mode, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.exception(f"Distance matrix request failed")
+            logger.exception("Distance matrix request failed")
             raise LocationServiceError(f"Distance matrix request failed: {e}") from e
 
     @with_error_handling()
@@ -210,7 +212,7 @@ class LocationService:
             logger.debug("Getting elevation data")
             return await self.google_maps_service.get_elevation(locations, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.exception(f"Elevation request failed")
+            logger.exception("Elevation request failed")
             raise LocationServiceError(f"Elevation request failed: {e}") from e
 
     @with_error_handling()

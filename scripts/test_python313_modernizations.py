@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Test Script for Python 3.13 Modernizations in TripSage
+"""Test Script for Python 3.13 Modernizations in TripSage.
 ======================================================
 
 This script tests and validates all Python 3.13 modern features implemented
@@ -38,6 +38,11 @@ class TestResult:
     """Test result tracking with modern annotations."""
 
     def __init__(self, test_name: str):
+        """Initialize test result tracking.
+
+        Args:
+            test_name: Name of the test being run
+        """
         self.test_name = test_name
         self.start_time = time.time()
         self.success = False
@@ -53,6 +58,7 @@ class TestResult:
         self.details.update(details)
 
     def __str__(self) -> str:
+        """String representation of test result."""
         status = "✅ PASS" if self.success else "❌ FAIL"
         duration_ms = self.duration * 1000
 

@@ -81,8 +81,8 @@ class DatabaseServiceWrapper:
             else:
                 logger.info("Database connection monitoring disabled by feature flag")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize monitoring components")
+        except Exception:
+            logger.exception("Failed to initialize monitoring components")
             # Continue without monitoring if initialization fails
             self.metrics = None
             self.monitor = None
@@ -109,8 +109,8 @@ class DatabaseServiceWrapper:
             if self.monitor and self.settings.enable_database_monitoring:
                 try:
                     await self.monitor.start_monitoring()
-                except Exception as e:
-                    logger.exception(f"Failed to start database monitoring")
+                except Exception:
+                    logger.exception("Failed to start database monitoring")
 
             # Start metrics server if enabled
             if (
@@ -120,8 +120,8 @@ class DatabaseServiceWrapper:
             ):
                 try:
                     self.metrics.start_metrics_server(self.settings.metrics_server_port)
-                except Exception as e:
-                    logger.exception(f"Failed to start metrics server")
+                except Exception:
+                    logger.exception("Failed to start metrics server")
 
         except Exception:
             success = False
@@ -143,8 +143,8 @@ class DatabaseServiceWrapper:
         if self.monitor:
             try:
                 await self.monitor.stop_monitoring()
-            except Exception as e:
-                logger.exception(f"Error stopping database monitoring")
+            except Exception:
+                logger.exception("Error stopping database monitoring")
 
         # Close database connection
         await self.database_service.close()

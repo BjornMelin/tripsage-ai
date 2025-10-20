@@ -76,8 +76,8 @@ class TelemetryService:
             self._initialized = True
             logger.info("Telemetry service initialized successfully")
 
-        except Exception as e:
-            logger.exception(f"Failed to initialize telemetry")
+        except Exception:
+            logger.exception("Failed to initialize telemetry")
 
     def _setup_tracing(self) -> None:
         """Set up distributed tracing with OTLP exporter."""
@@ -270,7 +270,7 @@ class TelemetryService:
         """Record user session end."""
         self.active_users.add(-1, {"user_id": user_id})
 
-    def create_span_decorator(self, name: str = None):
+    def create_span_decorator(self, name: str | None = None):
         """Decorator for automatically creating spans around functions.
 
         Args:

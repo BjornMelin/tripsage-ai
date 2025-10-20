@@ -177,8 +177,8 @@ class WebCrawlPersistence:
             logger.info(f"Successfully stored result in Supabase table: {table}")
             return True
 
-        except Exception as e:
-            logger.exception(f"Error storing result in Supabase")
+        except Exception:
+            logger.exception("Error storing result in Supabase")
             return False
 
     async def _store_in_memory(self, result: dict[str, Any]) -> bool:
@@ -253,8 +253,8 @@ class WebCrawlPersistence:
                 )
                 return False
 
-        except Exception as e:
-            logger.exception(f"Error storing result in memory")
+        except Exception:
+            logger.exception("Error storing result in memory")
             return False
 
     async def _store_events_in_memory(self, result: dict[str, Any]) -> bool:
@@ -331,8 +331,8 @@ class WebCrawlPersistence:
                 )
                 return False
 
-        except Exception as e:
-            logger.exception(f"Error storing events in memory")
+        except Exception:
+            logger.exception("Error storing events in memory")
             return False
 
     async def _store_blog_in_memory(self, result: dict[str, Any]) -> bool:
@@ -428,8 +428,8 @@ class WebCrawlPersistence:
                 )
                 return False
 
-        except Exception as e:
-            logger.exception(f"Error storing blog in memory")
+        except Exception:
+            logger.exception("Error storing blog in memory")
             return False
 
     async def _store_price_history(
@@ -460,7 +460,9 @@ class WebCrawlPersistence:
             response = await self.supabase.insert("price_history", data)
 
             if "error" in response:
-                logger.exception( f"Supabase price history storage error: {response.get('error')}")
+                logger.exception(
+                    f"Supabase price history storage error: {response.get('error')}"
+                )
                 return False
 
             logger.info(
@@ -469,8 +471,8 @@ class WebCrawlPersistence:
             )
             return True
 
-        except Exception as e:
-            logger.exception(f"Error storing price history in Supabase")
+        except Exception:
+            logger.exception("Error storing price history in Supabase")
             return False
 
 

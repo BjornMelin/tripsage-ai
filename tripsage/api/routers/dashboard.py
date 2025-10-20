@@ -206,7 +206,7 @@ async def get_system_overview(
         )
 
     except Exception as e:
-        logger.exception(f"Failed to get system overview")
+        logger.exception("Failed to get system overview")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system overview: {e!s}",
@@ -270,7 +270,7 @@ async def get_services_status(
         return services_status
 
     except Exception as e:
-        logger.exception(f"Failed to get services status")
+        logger.exception("Failed to get services status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve services status: {e!s}",
@@ -349,7 +349,7 @@ async def get_usage_metrics(
         )
 
     except Exception as e:
-        logger.exception(f"Failed to get usage metrics")
+        logger.exception("Failed to get usage metrics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve usage metrics: {e!s}",
@@ -429,7 +429,7 @@ async def get_rate_limits_status(
         return rate_limits
 
     except Exception as e:
-        logger.exception(f"Failed to get rate limits status")
+        logger.exception("Failed to get rate limits status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve rate limits status: {e!s}",
@@ -501,7 +501,7 @@ async def get_alerts(
         return alerts[:limit]
 
     except Exception as e:
-        logger.exception(f"Failed to get alerts")
+        logger.exception("Failed to get alerts")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve alerts: {e!s}",
@@ -659,7 +659,7 @@ async def get_user_activity(
         return user_activities
 
     except Exception as e:
-        logger.exception(f"Failed to get user activity")
+        logger.exception("Failed to get user activity")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve user activity: {e!s}",
@@ -774,7 +774,7 @@ async def get_analytics_summary(
         start_time = end_time - timedelta(hours=time_range_hours)
 
         # Build comprehensive summary
-        summary = {
+        return {
             "period": {
                 "start": start_time.isoformat(),
                 "end": end_time.isoformat(),
@@ -838,10 +838,8 @@ async def get_analytics_summary(
             },
         }
 
-        return summary
-
     except Exception as e:
-        logger.exception(f"Failed to get analytics summary")
+        logger.exception("Failed to get analytics summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve analytics summary: {e!s}",
