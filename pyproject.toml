@@ -26,6 +26,7 @@ dependencies = [
     # Database and caching
     "sqlalchemy[asyncio]>=2.0.44,<2.1.0",
     "redis>=6.4.0,<7.0.0",
+    "aiofiles>=25.1.0,<26.0.0",
     "asyncpg>=0.30.0",
     "watchdog>=6.0.0",
     "supabase>=2.22.0,<3.0.0",
@@ -37,6 +38,7 @@ dependencies = [
     "openai-agents>=0.4.0,<0.5.0",
     "mem0ai>=0.1.118,<2.0.0",
     "tenacity>=9.1.2",
+    "cashews>=7.4.0,<8.0.0",
     # Web scraping and automation
     "crawl4ai>=0.7.4,<0.8.0",
     "playwright>=1.55.0,<1.56.0",
@@ -53,7 +55,7 @@ dependencies = [
     "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
     "opentelemetry-exporter-otlp>=1.38.0,<1.39.0",
     "prometheus-client>=0.23.1,<0.24.0",
-    "psutil>=7.1.0,<8.0.0",
+    "psutil>=7.1.1,<8.0.0",
 ]
 
 [tool.setuptools.packages.find]
