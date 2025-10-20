@@ -17,14 +17,20 @@ from tripsage_core.infrastructure.resilience import (
     circuit_breaker,
     register_circuit_breaker,
 )
-
-# MCPManager removed as part of BJO-161 MCP abstraction removal
-# from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+RECOVERABLE_ERRORS = (
+    TripSageError,
+    NotImplementedError,
+    RuntimeError,
+    ConnectionError,
+    asyncio.TimeoutError,
+    ValueError,
+)
 
 
 class ErrorSeverity(Enum):
@@ -346,7 +352,7 @@ class ErrorRecoveryService:
                 },
             )
 
-        except Exception as retry_error:
+        except RECOVERABLE_ERRORS as retry_error:
             logger.warning(
                 "Circuit breaker retry failed for %s.%s: %s",
                 service,
@@ -389,7 +395,7 @@ class ErrorRecoveryService:
                     f"after MCP removal"
                 )
 
-            except Exception as retry_error:
+            except RECOVERABLE_ERRORS as retry_error:
                 logger.warning(
                     "Simple retry attempt %s failed: %s", attempt + 1, retry_error
                 )
@@ -431,7 +437,7 @@ class ErrorRecoveryService:
                         f"after MCP removal"
                     )
 
-            except Exception as alt_error:
+            except RECOVERABLE_ERRORS as alt_error:
                 logger.warning(
                     "Alternative service %s failed: %s", alt_service, alt_error
                 )
@@ -623,8 +629,8 @@ class ErrorRecoveryService:
                 for key, _ in sorted_items[:100]:  # Remove oldest 100
                     del self.fallback_cache[key]
 
-        except Exception as e:
-            logger.warning("Failed to cache result: %s", e)
+        except RECOVERABLE_ERRORS as error:
+            logger.warning("Failed to cache result: %s", error)
 
     def get_error_statistics(self) -> dict[str, Any]:
         """Get error statistics for monitoring."""
