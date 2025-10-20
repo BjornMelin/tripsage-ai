@@ -100,6 +100,7 @@ class WebSocketMessagingService:
     """Service for consolidating WebSocket messaging operations."""
 
     def __init__(self, auth_service: WebSocketAuthService):
+        """Initialize WebSocket messaging service."""
         self.auth_service = auth_service
 
         # Connection tracking
