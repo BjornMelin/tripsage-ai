@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""TripSage Database Integration Test Script
-Tests Supabase database functionality including trip collaboration,
-RLS policies, and vector search.
+"""TripSage Database Integration Test Script.
+
+Tests Supabase database functionality including trip collaboration, RLS
+policies, and vector search.
 """
 
 import os
@@ -13,6 +14,7 @@ class DatabaseTester:
     """Database integration tester for TripSage Supabase schema."""
 
     def __init__(self):
+        """Initialize database tester."""
         self.test_results = []
         self.schema_dir = Path("supabase/schemas")
         self.migration_dir = Path("supabase/migrations")
@@ -288,13 +290,13 @@ class DatabaseTester:
             return True
 
     def generate_schema_summary(self) -> dict:
-        """Generate a summary of the database schema."""
+        """Generate a summary count of schema components."""
         summary = {
-            "tables": [],
-            "indexes": [],
-            "functions": [],
-            "policies": [],
-            "extensions": [],
+            "tables": 0,
+            "indexes": 0,
+            "functions": 0,
+            "policies": 0,
+            "extensions": 0,
         }
 
         try:
@@ -327,8 +329,9 @@ class DatabaseTester:
             )
             summary["policies"] = len(policy_matches)
 
-        except (OSError, UnicodeDecodeError, ValueError) as exc:
-            summary["error"] = str(exc)
+        except (OSError, UnicodeDecodeError, ValueError):
+            # Record an error event without changing value types.
+            summary["errors"] = 1
 
         return summary
 

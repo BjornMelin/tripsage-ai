@@ -7,7 +7,7 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
@@ -102,6 +102,9 @@ class KeyMonitoringService:
         # Initialize services
         await self.initialize()
 
+        # Validate services for type checkers
+        assert self.cache_service is not None
+
         # Create a log entry
         log_data = {
             "timestamp": datetime.now(UTC).isoformat(),
@@ -164,6 +167,8 @@ class KeyMonitoringService:
             user_id: The user ID
         """
         # Store operation in cache with expiration
+        await self.initialize()
+        assert self.cache_service is not None
         key = f"key_ops:{user_id}:{operation.value}"
         # Get existing operations
         existing_ops = await self.cache_service.get_json(key) or []
@@ -194,6 +199,8 @@ class KeyMonitoringService:
             return False
 
         # Get recent operations from cache
+        await self.initialize()
+        assert self.cache_service is not None
         key = f"key_ops:{user_id}:{operation.value}"
         operations = await self.cache_service.get_json(key) or []
 
@@ -232,6 +239,8 @@ class KeyMonitoringService:
         )
 
         # Store the alert in cache
+        await self.initialize()
+        assert self.cache_service is not None
         alert_key = "key_alerts"
         existing_alerts = await self.cache_service.get_json(alert_key) or []
         existing_alerts.append(
@@ -264,6 +273,7 @@ class KeyMonitoringService:
         """
         # Initialize services
         await self.initialize()
+        assert self.cache_service is not None
 
         # Get operations from cache
         log_key = f"key_logs:{user_id}"
@@ -282,6 +292,7 @@ class KeyMonitoringService:
         """
         # Initialize services
         await self.initialize()
+        assert self.cache_service is not None
 
         # Get alerts from cache
         alerts = await self.cache_service.get_json("key_alerts") or []
@@ -300,6 +311,7 @@ class KeyMonitoringService:
         """
         # Initialize services
         await self.initialize()
+        assert self.cache_service is not None
 
         # Create a cache key
         rate_limit_key = f"rate_limit:key_ops:{user_id}:{operation.value}"
@@ -346,7 +358,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
         self.settings = settings or get_settings()
 
     async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Response]
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Process the request/response and handle rate limiting.
 
@@ -418,9 +430,8 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
         elif path.endswith("/rotate"):
             if method == "POST":
                 return KeyOperation.ROTATE
-        elif "/api/user/keys/" in path:  # Key ID in path
-            if method == "DELETE":
-                return KeyOperation.DELETE
+        elif "/api/user/keys/" in path and method == "DELETE":  # Key ID in path
+            return KeyOperation.DELETE
 
         return None
 
@@ -483,19 +494,26 @@ def monitor_key_operation(
 
             # Get service from args or kwargs
             service = kwargs.get("service")
-            if not service and "key_data" in kwargs:
-                # Try to get service from key_data
-                if hasattr(kwargs["key_data"], "service"):
-                    service = kwargs["key_data"].service
+            if (
+                not service
+                and "key_data" in kwargs
+                and hasattr(kwargs["key_data"], "service")
+            ):
+                service = kwargs["key_data"].service
 
             # Execute the function
             start_time = time.time()
             try:
                 result = await func(*args, **kwargs)
                 success = True
-            except Exception as e:
+            except (
+                ValueError,
+                PermissionError,
+                LookupError,
+                RuntimeError,
+                TypeError,
+            ) as e:
                 success = False
-                # Log the error with the monitoring service
                 if monitoring_service and user_id:
                     await monitoring_service.log_operation(
                         operation=operation,
@@ -594,13 +612,24 @@ async def check_key_expiration(
     threshold = datetime.now(UTC) + timedelta(days=days_before)
 
     # Get expiring keys from database
+    from tripsage_core.exceptions.exceptions import CoreServiceError
+
+    assert monitoring_service.database_service is not None
     try:
-        return await monitoring_service.database_service.select(
+        result = await monitoring_service.database_service.select(
             "api_keys",
             "*",
             {"expires_at": {"lte": threshold.isoformat()}},
         )
-    except Exception:
+        normalized: list[dict[str, Any]] = []
+        if result:
+            for row in result:
+                if isinstance(row, dict):
+                    normalized.append(row)
+                else:
+                    normalized.append({"record": row})
+        return normalized
+    except CoreServiceError:
         logger.exception("Failed to check key expiration")
         return []
 
@@ -611,8 +640,10 @@ async def get_key_health_metrics() -> dict[str, Any]:
     Returns:
         Dictionary with key health metrics
     """
+    # Get database service
+    from tripsage_core.exceptions.exceptions import CoreServiceError
+
     try:
-        # Get database service
         db_service = await get_database_service()
 
         # Get total count of keys
@@ -620,10 +651,13 @@ async def get_key_health_metrics() -> dict[str, Any]:
 
         # Get count of keys by service
         service_result = await db_service.select("api_keys", "service")
-        service_count = {}
+        service_count: dict[str, int] = {}
         if service_result:
             for row in service_result:
-                service = row.get("service", "unknown")
+                if isinstance(row, dict):
+                    service = str(row.get("service", "unknown"))
+                else:
+                    service = str(row)
                 service_count[service] = service_count.get(service, 0) + 1
 
         # Get count of expired keys
@@ -637,21 +671,19 @@ async def get_key_health_metrics() -> dict[str, Any]:
         expiring_result = await db_service.select(
             "api_keys",
             "*",
-            {
-                "expires_at": {
-                    "gt": now.isoformat(),
-                    "lte": future_date.isoformat(),
-                }
-            },
+            {"expires_at": {"gt": now.isoformat(), "lte": future_date.isoformat()}},
         )
         expiring_count = len(expiring_result) if expiring_result else 0
 
         # Get count of keys by user
         user_result = await db_service.select("api_keys", "user_id")
-        user_count = {}
+        user_count: dict[str, int] = {}
         if user_result:
             for row in user_result:
-                user_id = row.get("user_id", "unknown")
+                if isinstance(row, dict):
+                    user_id = str(row.get("user_id", "unknown"))
+                else:
+                    user_id = str(row)
                 user_count[user_id] = user_count.get(user_id, 0) + 1
 
         return {
@@ -664,10 +696,10 @@ async def get_key_health_metrics() -> dict[str, Any]:
             "user_count": [{"user_id": k, "count": v} for k, v in user_count.items()],
         }
 
-    except Exception as e:
+    except CoreServiceError:
         logger.exception("Failed to get key health metrics")
         return {
-            "error": str(e),
+            "error": "database_error",
             "total_count": 0,
             "service_count": [],
             "expired_count": 0,
