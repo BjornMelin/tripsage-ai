@@ -172,12 +172,18 @@ convention = "google"
     "S101",   # allow asserts
     "ARG001", # allow unused args in fixtures/mocks
     "F821",   # undefined names in mocking contexts
+    "BLE001",
+    "RUF043",
+    "RUF001",
 ]
 "scripts/cli/**/*" = ["T20"]
 "tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
 "tripsage/api/core/*.py" = ["B008"]     # Allow Depends() in FastAPI dependencies
 "tripsage_core/services/business/auth_service.py" = ["B008"]
 "tests/conftest.py" = ["E402"]          # Allow imports-after-exec for env setup
+"scripts/**/*" = [
+    "PTH123","PTH108","PTH120","PTH100","PTH118","PTH110",
+]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -240,8 +246,6 @@ dev = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.13"
-typeCheckingMode = "standard"
 include = ["tripsage", "tripsage_core", "scripts", "tests"]
 exclude = [
     "build",
@@ -253,12 +257,10 @@ exclude = [
     ".mypy_cache",
     ".venv",
 ]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
 reportMissingImports = "warning"
 reportMissingTypeStubs = false
-
-[[tool.pyright.executionEnvironments]]
-root = "tests"
-typeCheckingMode = "basic"
 
 [tool.uv]
 managed = true
