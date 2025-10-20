@@ -5,8 +5,6 @@ tools, and orchestration nodes. It ensures proper initialization and lifecycle
 management of services while enabling easy testing through dependency injection.
 """
 
-from typing import Optional
-
 from tripsage_core.config import get_settings
 from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.api_key_service import ApiKeyService
@@ -48,30 +46,30 @@ class ServiceRegistry:
     def __init__(
         self,
         # Business services
-        accommodation_service: Optional[AccommodationService] = None,
-        chat_service: Optional[ChatService] = None,
-        destination_service: Optional[DestinationService] = None,
-        file_processing_service: Optional[FileProcessingService] = None,
-        flight_service: Optional[FlightService] = None,
-        itinerary_service: Optional[ItineraryService] = None,
-        api_key_service: Optional[ApiKeyService] = None,
-        memory_service: Optional[MemoryService] = None,
-        trip_service: Optional[TripService] = None,
-        user_service: Optional[UserService] = None,
+        accommodation_service: AccommodationService | None = None,
+        chat_service: ChatService | None = None,
+        destination_service: DestinationService | None = None,
+        file_processing_service: FileProcessingService | None = None,
+        flight_service: FlightService | None = None,
+        itinerary_service: ItineraryService | None = None,
+        api_key_service: ApiKeyService | None = None,
+        memory_service: MemoryService | None = None,
+        trip_service: TripService | None = None,
+        user_service: UserService | None = None,
         # External API services
-        calendar_service: Optional[GoogleCalendarService] = None,
-        document_analyzer: Optional[DocumentAnalyzer] = None,
-        google_maps_service: Optional[GoogleMapsService] = None,
-        playwright_service: Optional[PlaywrightService] = None,
-        time_service: Optional[TimeService] = None,
-        weather_service: Optional[WeatherService] = None,
-        webcrawl_service: Optional[WebCrawlService] = None,
+        calendar_service: GoogleCalendarService | None = None,
+        document_analyzer: DocumentAnalyzer | None = None,
+        google_maps_service: GoogleMapsService | None = None,
+        playwright_service: PlaywrightService | None = None,
+        time_service: TimeService | None = None,
+        weather_service: WeatherService | None = None,
+        webcrawl_service: WebCrawlService | None = None,
         # Infrastructure services
-        cache_service: Optional[CacheService] = None,
-        database_service: Optional[DatabaseService] = None,
-        key_monitoring_service: Optional[KeyMonitoringService] = None,
-        websocket_broadcaster: Optional[WebSocketBroadcaster] = None,
-        websocket_manager: Optional[WebSocketManager] = None,
+        cache_service: CacheService | None = None,
+        database_service: DatabaseService | None = None,
+        key_monitoring_service: KeyMonitoringService | None = None,
+        websocket_broadcaster: WebSocketBroadcaster | None = None,
+        websocket_manager: WebSocketManager | None = None,
     ):
         """Initialize the service registry with optional service instances.
 
@@ -215,14 +213,3 @@ class ServiceRegistry:
             The service instance or None
         """
         return getattr(self, service_name, None)
-
-    def get_service(self, service_name: str):
-        """Get a service by name, for compatibility with tests.
-
-        Args:
-            service_name: The name of the service attribute
-
-        Returns:
-            The service instance or None
-        """
-        return self.get_optional_service(service_name)
