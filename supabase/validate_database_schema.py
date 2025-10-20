@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""TripSage Database Schema Validation Script
+"""TripSage Database Schema Validation Script.
+
 Validates Supabase database structure and identifies integration issues.
 """
 
@@ -8,12 +9,13 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
 
-def analyze_schema_files() -> dict[str, any]:
+def analyze_schema_files() -> dict[str, Any]:
     """Analyze schema files for completeness and consistency."""
     schema_dir = Path("supabase/schemas")
 
