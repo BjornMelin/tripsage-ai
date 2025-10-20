@@ -176,9 +176,7 @@ class TestSimpleTripSageOrchestrator:
 
         # Test streaming
         messages = [{"role": "user", "content": "Find hotels"}]
-        chunks = [
-            chunk async for chunk in orchestrator.stream_conversation(messages)
-        ]
+        chunks = [chunk async for chunk in orchestrator.stream_conversation(messages)]
 
         # Verify streaming worked
         assert len(chunks) == 3

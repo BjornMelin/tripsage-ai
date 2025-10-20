@@ -696,9 +696,13 @@ class DashboardService:
                     "success_rate": success_rate,
                 }
                 for bucket_start, bucket_end in buckets
-                for hour_usage in [await self._query_usage_logs(bucket_start, bucket_end)]
+                for hour_usage in [
+                    await self._query_usage_logs(bucket_start, bucket_end)
+                ]
                 for requests in [len(hour_usage)]
-                for errors in [sum(1 for log in hour_usage if not log.get("success", True))]
+                for errors in [
+                    sum(1 for log in hour_usage if not log.get("success", True))
+                ]
                 for success_rate in [
                     (requests - errors) / requests if requests > 0 else 1.0
                 ]

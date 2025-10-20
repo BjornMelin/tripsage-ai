@@ -16,10 +16,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.exceptions.exceptions import (
-    CoreServiceError,
-    CoreValidationError as ValidationError,
-)
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -57,9 +53,6 @@ class UserPreferences(BaseModel):
     accommodation_preferences: dict[str, Any] | None = None
     dietary_restrictions: list[str] | None = None
     accessibility_needs: list[str] | None = None
-
-
-
 
 
 # Simple SessionMemory utility class for API dependencies

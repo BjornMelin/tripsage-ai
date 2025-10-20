@@ -862,12 +862,8 @@ class AccommodationService:
                 bathrooms=1.0 + (i * 0.5),
                 amenities=[
                     AccommodationAmenity(name="WiFi"),
-                    AccommodationAmenity(
-                        name="Kitchen" if i > 0 else "Restaurant"
-                    ),
-                    AccommodationAmenity(
-                        name="Pool" if i == 2 else "Air Conditioning"
-                    ),
+                    AccommodationAmenity(name="Kitchen" if i > 0 else "Restaurant"),
+                    AccommodationAmenity(name="Pool" if i == 2 else "Air Conditioning"),
                 ],
                 images=[
                     AccommodationImage(

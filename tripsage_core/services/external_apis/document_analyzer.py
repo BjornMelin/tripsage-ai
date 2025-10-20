@@ -674,7 +674,7 @@ class DocumentAnalyzer:
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error results
-            final_results = [
+            return [
                 DocumentAnalysisResult(
                     file_id=contexts[i].file_id,
                     analysis_type=analysis_type,
@@ -688,8 +688,6 @@ class DocumentAnalyzer:
                 else result
                 for i, result in enumerate(results)
             ]
-
-            return final_results
 
         except Exception as e:
             raise DocumentAnalyzerError(
