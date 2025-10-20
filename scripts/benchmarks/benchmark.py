@@ -20,9 +20,9 @@ from pathlib import Path
 from typing import Any
 
 import click
-from collectors import MetricsCollector, ReportGenerator
 
-from config import BenchmarkConfig
+from scripts.benchmarks.collectors import MetricsCollector, ReportGenerator
+from scripts.benchmarks.config import BenchmarkConfig
 
 
 logger = logging.getLogger(__name__)

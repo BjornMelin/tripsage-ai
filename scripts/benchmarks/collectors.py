@@ -18,7 +18,7 @@ from typing import Any
 
 import psutil
 
-from config import BenchmarkConfig
+from scripts.benchmarks.config import BenchmarkConfig
 
 
 logger = logging.getLogger(__name__)

@@ -7,7 +7,7 @@ types for comprehensive performance testing.
 
 from typing import Any
 
-from config import BenchmarkConfig
+from scripts.benchmarks.config import BenchmarkConfig
 
 
 class BenchmarkScenarioManager:

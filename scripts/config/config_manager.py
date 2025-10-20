@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """TripSage Configuration Manager CLI.
 
-A comprehensive tool for managing TripSage configuration across environments.
+A tool for managing TripSage configuration across environments.
 Provides validation, template generation, secret management, and deployment utilities.
 """
 
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from tripsage_core.config import Settings, get_settings, validate_configuration
+from tripsage_core.config import Settings, get_settings
 
 
 # Configure logging
@@ -41,12 +41,9 @@ class ConfigManager:
         logger.info("🔍 Validating configuration...")
 
         try:
-            if not validate_configuration():
-                logger.exception("❌ Configuration validation failed")
-                return False
-
+            # Load settings; instantiation errors indicate invalid config
             settings = self.load_settings()
-            security_report = settings.get_security_report()
+            security_report = self._generate_security_report(settings)
 
             logger.info("✅ Configuration validation passed")
             logger.info("Environment: %s", settings.environment)
@@ -72,10 +69,10 @@ class ConfigManager:
 
         try:
             settings = self.load_settings()
-            template = settings.export_env_template(include_secrets=include_secrets)
+            template = self._export_env_template(settings, include_secrets)
 
             output_path = Path(output_file)
-            with output_path.open(encoding="utf-8") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 f.write(template)
 
             logger.info("✅ Template saved to %s", output_path)
@@ -117,8 +114,8 @@ class ConfigManager:
             settings = self.load_settings()
 
             # Get comprehensive security information
-            security_report = settings.get_security_report()
-            secret_validation = settings.validate_secrets_security()
+            security_report = self._generate_security_report(settings)
+            secret_validation = self._validate_secrets_security(settings)
 
             report = {
                 "configuration": {
@@ -156,7 +153,7 @@ class ConfigManager:
             if settings.log_level.upper() == "DEBUG":
                 recommendations.append("Use INFO or WARNING log level in production")
 
-            secret_validation = settings.validate_secrets_security()
+            secret_validation = self._validate_secrets_security(settings)
             for field, is_secure in secret_validation.items():
                 if not is_secure:
                     recommendations.append(f"Replace weak secret for {field}")
@@ -233,7 +230,7 @@ class ConfigManager:
                 if settings.debug:
                     issues.append("Debug mode must be disabled")
 
-                security_report = settings.get_security_report()
+                security_report = self._generate_security_report(settings)
                 if not security_report["production_ready"]:
                     issues.extend(security_report.get("warnings", []))
 
@@ -250,6 +247,84 @@ class ConfigManager:
             logger.exception("❌ Environment check failed")
             return False
 
+    def _export_env_template(self, settings: Settings, include_secrets: bool) -> str:
+        """Create a minimal .env template from settings.
+
+        Args:
+            settings: Settings instance.
+            include_secrets: Whether to include actual secret values.
+
+        Returns:
+            The .env file contents.
+        """
+        lines: list[str] = [
+            "# TripSage .env template",
+            "# Populate values as needed; leave blank to use defaults",
+        ]
+
+        for field_name in type(settings).model_fields:
+            env_name = str(field_name).upper()
+            value: str = ""
+
+            attr = getattr(settings, str(field_name))
+            if include_secrets:
+                getter = getattr(attr, "get_secret_value", None)
+                value = str(getter()) if callable(getter) else str(attr)
+            else:
+                if attr.__class__.__name__ != "SecretStr":
+                    value = str(attr)
+
+            lines.append(f"{env_name}={value}")
+
+        lines.append("")
+        return "\n".join(lines)
+
+    def _generate_security_report(self, settings: Settings) -> dict[str, Any]:
+        """Compute a minimal security report from settings."""
+        warnings: list[str] = []
+
+        if settings.environment == "production":
+            if settings.debug:
+                warnings.append("Debug mode is enabled in production")
+            if settings.log_level.upper() == "DEBUG":
+                warnings.append("Debug logging enabled in production")
+            if "*" in settings.cors_origins:
+                warnings.append("Wildcard CORS origins in production")
+
+        production_ready = settings.environment == "production" and len(warnings) == 0
+
+        return {
+            "production_ready": production_ready,
+            "warnings": warnings,
+        }
+
+    def _validate_secrets_security(self, settings: Settings) -> dict[str, bool]:
+        """Validate strength of secret fields (basic checks)."""
+        validation: dict[str, bool] = {}
+
+        secret_key = settings.secret_key.get_secret_value()
+        validation["secret_key"] = (
+            len(secret_key) >= 32
+            and secret_key != "test-application-secret-key-for-testing-only"
+        )
+
+        db_key = settings.database_service_key.get_secret_value()
+        validation["database_service_key"] = (
+            len(db_key) >= 32 and db_key != "test-service-key"
+        )
+
+        jwt_secret = settings.database_jwt_secret.get_secret_value()
+        validation["database_jwt_secret"] = (
+            len(jwt_secret) >= 32 and jwt_secret != "test-jwt-secret-for-testing-only"
+        )
+
+        openai_key = settings.openai_api_key.get_secret_value()
+        validation["openai_api_key"] = (
+            openai_key.startswith("sk-") and openai_key != "sk-test-1234567890"
+        )
+
+        return validation
+
     def export_config(self, output_file: str, format_type: str = "env") -> bool:
         """Export configuration in various formats."""
         logger.info(
@@ -261,7 +336,7 @@ class ConfigManager:
             output_path = Path(output_file)
 
             if format_type.lower() == "env":
-                content = settings.export_env_template(include_secrets=False)
+                content = self._export_env_template(settings, include_secrets=False)
             elif format_type.lower() == "json":
                 config_dict = settings.model_dump(
                     exclude={
@@ -276,7 +351,7 @@ class ConfigManager:
                 logger.exception("❌ Unsupported format: %s", format_type)
                 return False
 
-            with output_path.open(encoding="utf-8") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 f.write(content)
 
             logger.info("✅ Configuration exported to %s", output_path)

@@ -66,9 +66,12 @@ class AccommodationSearchRequest(MCPRequestBase):
     @model_validator(mode="after")
     def validate_price_range(self) -> "AccommodationSearchRequest":
         """Validate that max price is greater than min price if both are provided."""
-        if self.min_price is not None and self.max_price is not None:
-            if self.max_price < self.min_price:
-                raise ValueError("Maximum price must be greater than minimum price")
+        if (
+            self.min_price is not None
+            and self.max_price is not None
+            and self.max_price < self.min_price
+        ):
+            raise ValueError("Maximum price must be greater than minimum price")
         return self
 
 

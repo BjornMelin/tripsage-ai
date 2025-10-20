@@ -7,13 +7,13 @@ with real database and cache dependencies.
 import os
 import uuid
 from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import redis.asyncio as redis
-from redis.exceptions import RedisError
 from fastapi.testclient import TestClient
+from redis.exceptions import RedisError
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
@@ -267,7 +267,7 @@ async def authenticated_test_client(test_user_factory):
         mock_auth.return_value = mock_principal
 
         client = TestClient(app)
-        client.user = user  # Attach user data for test access
+        cast(Any, client).user = user  # Attach user data for test access
         yield client
 
 
