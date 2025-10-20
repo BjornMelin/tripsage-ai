@@ -6,9 +6,10 @@ the enhanced Supabase schema with collaboration features.
 
 import asyncio
 import logging
-from datetime import datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 from uuid import UUID, uuid4
 
 import pytest
@@ -37,7 +38,7 @@ class TestConfig:
     MAX_TEST_MEMORIES = 100
 
     # Schema validation
-    REQUIRED_TABLES = [
+    REQUIRED_TABLES: ClassVar[list[str]] = [
         "trips",
         "trip_collaborators",
         "flights",
@@ -49,14 +50,14 @@ class TestConfig:
         "api_keys",
     ]
 
-    REQUIRED_INDEXES = [
+    REQUIRED_INDEXES: ClassVar[list[str]] = [
         "idx_trip_collaborators_user_trip",
         "idx_trip_collaborators_trip_permission",
         "idx_memories_embedding",
         "idx_session_memories_embedding",
     ]
 
-    REQUIRED_FUNCTIONS = [
+    REQUIRED_FUNCTIONS: ClassVar[list[str]] = [
         "get_user_accessible_trips",
         "check_trip_permission",
         "search_memories",
@@ -68,10 +69,11 @@ class TestUser:
     """Test user representation for collaboration testing."""
 
     def __init__(self, role: str = "user", email: str | None = None):
+        """Initialize test user with role and email."""
         self.id = uuid4()
         self.role = role
         self.email = email or f"{role}_{self.id.hex[:8]}@test.com"
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(UTC)
         self.permissions = self._get_default_permissions(role)
 
     def _get_default_permissions(self, role: str) -> dict[str, bool]:
@@ -113,11 +115,12 @@ class TestTrip:
     """Test trip representation for collaboration testing."""
 
     def __init__(self, owner: TestUser, name: str | None = None):
+        """Initialize test trip with owner and optional name."""
         self.id = abs(hash(str(uuid4()))) % (10**9)  # Simple integer ID
         self.owner = owner
         self.name = name or f"Test Trip {self.id}"
         self.collaborators = {}
-        self.created_at = datetime.utcnow()
+        self.created_at = datetime.now(UTC)
         self.status = "planning"
 
     def add_collaborator(self, user: TestUser, permission_level: str):
@@ -125,7 +128,7 @@ class TestTrip:
         self.collaborators[user.id] = {
             "user": user,
             "permission_level": permission_level,
-            "added_at": datetime.utcnow(),
+            "added_at": datetime.now(UTC),
             "added_by": self.owner.id,
         }
 
@@ -142,6 +145,7 @@ class MockSupabaseClient:
     """Mock Supabase client for testing schema interactions."""
 
     def __init__(self):
+        """Initialize mock Supabase client."""
         self.current_user_id: UUID | None = None
         self.data_store = {
             "trips": {},
@@ -172,27 +176,25 @@ class MockSupabaseClient:
         # Handle different SQL operations
         if query_upper.startswith("SELECT"):
             return await self._handle_select(query, params)
-        elif query_upper.startswith("INSERT"):
+        if query_upper.startswith("INSERT"):
             return await self._handle_insert(query, params)
-        elif query_upper.startswith("UPDATE"):
+        if query_upper.startswith("UPDATE"):
             return await self._handle_update(query, params)
-        elif query_upper.startswith("DELETE"):
+        if query_upper.startswith("DELETE"):
             return await self._handle_delete(query, params)
-        else:
-            logger.info("Unhandled query type: %s...", query[:50])
-            return None
+        logger.info("Unhandled query type: %s...", query[:50])
+        return None
 
     async def _handle_select(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle SELECT queries with RLS simulation."""
         # Extract table name (simple parsing)
         if "FROM trips" in query:
             return await self._select_trips(query, params)
-        elif "FROM trip_collaborators" in query:
+        if "FROM trip_collaborators" in query:
             return await self._select_collaborators(query, params)
-        elif "FROM memories" in query:
+        if "FROM memories" in query:
             return await self._select_memories(query, params)
-        else:
-            return []
+        return []
 
     async def _select_trips(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle trips table SELECT with RLS."""
@@ -231,7 +233,7 @@ class MockSupabaseClient:
             return []
 
         # User can see collaborations they're part of or trips they own
-        accessible_collabs = [
+        return [
             collab_data
             for collab_data in self.data_store["trip_collaborators"].values()
             if collab_data["user_id"] == str(self.current_user_id)
@@ -241,8 +243,6 @@ class MockSupabaseClient:
                 == str(self.current_user_id)
             )
         ]
-
-        return accessible_collabs
 
     async def _select_memories(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle memories table SELECT with RLS."""
@@ -274,13 +274,13 @@ class MockSupabaseClient:
 
         # FK validation: user must exist
         if self.constraints_enabled and not self._user_exists(user_id):
-            raise Exception('Foreign key constraint "trips_user_id_fkey" violated')
+            raise ValueError('Foreign key constraint "trips_user_id_fkey" violated')
 
         self.data_store["trips"][trip_id] = {
             "id": trip_id,
             "user_id": str(user_id),
             "name": name,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     async def _insert_collaborator(self, params: tuple) -> None:
@@ -293,11 +293,11 @@ class MockSupabaseClient:
         # FK validation: trip and users must exist
         if self.constraints_enabled:
             if trip_id not in self.data_store["trips"]:
-                raise Exception(
+                raise ValueError(
                     'Foreign key constraint "trip_collaborators_trip_id_fkey" violated'
                 )
             if not self._user_exists(user_id):
-                raise Exception(
+                raise ValueError(
                     'Foreign key constraint "trip_collaborators_user_id_fkey" violated'
                 )
 
@@ -305,7 +305,7 @@ class MockSupabaseClient:
         if self.rls_enabled:
             trip = self.data_store["trips"].get(trip_id)
             if trip and trip["user_id"] != str(self.current_user_id):
-                raise Exception(
+                raise PermissionError(
                     "RLS policy violation: only trip owners can add collaborators"
                 )
 
@@ -315,7 +315,7 @@ class MockSupabaseClient:
             "user_id": str(user_id),
             "permission_level": permission_level,
             "added_by": str(added_by),
-            "added_at": datetime.utcnow().isoformat(),
+            "added_at": datetime.now(UTC).isoformat(),
         }
 
     async def _insert_memory(self, params: tuple) -> None:
@@ -327,22 +327,23 @@ class MockSupabaseClient:
 
         # FK validation: user must exist
         if self.constraints_enabled and not self._user_exists(user_id):
-            raise Exception('Foreign key constraint "memories_user_id_fkey" violated')
+            raise ValueError('Foreign key constraint "memories_user_id_fkey" violated')
 
         self.data_store["memories"][memory_id] = {
             "id": memory_id,
             "user_id": str(user_id),
             "content": content,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
     def _user_exists(self, user_id: UUID) -> bool:
-        """Check if user exists
+        """Check if user exists.
+
         (simplified - in real implementation would check auth.users).
         """
         # For testing, assume system user and current user exist
         system_user = UUID("00000000-0000-0000-0000-000000000001")
-        return user_id == system_user or user_id == self.current_user_id
+        return user_id in (system_user, self.current_user_id)
 
     async def _handle_update(self, query: str, params: tuple) -> None:
         """Handle UPDATE queries with RLS validation."""
@@ -357,6 +358,7 @@ class SchemaValidator:
     """Validator for database schema components."""
 
     def __init__(self, schema_files: dict[str, str]):
+        """Initialize schema validator with schema files."""
         self.schema_files = schema_files
 
     def validate_policies(self) -> list[str]:
@@ -543,7 +545,7 @@ def performance_tracker():
             {
                 "operation": operation,
                 "duration": duration,
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(UTC),
             }
         )
 
@@ -553,7 +555,7 @@ def performance_tracker():
                 "operation": operation,
                 "duration": duration,
                 "result_count": result_count,
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(UTC),
             }
         )
 
@@ -563,7 +565,7 @@ def performance_tracker():
                 "query_type": query_type,
                 "duration": duration,
                 "user_count": user_count,
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(UTC),
             }
         )
 
@@ -582,6 +584,8 @@ def performance_tracker():
         }
 
     class Tracker:
+        """Performance tracking utility for test metrics."""
+
         def __init__(self):
             self.track_query = track_query
             self.track_memory_operation = track_memory_operation
@@ -648,7 +652,7 @@ def create_test_memory_embedding() -> list[float]:
 
 
 async def simulate_concurrent_access(
-    operations: list[callable], max_concurrent: int = 3
+    operations: list[Callable], max_concurrent: int = 3
 ) -> list[Any]:
     """Simulate concurrent database access for testing."""
     semaphore = asyncio.Semaphore(max_concurrent)
