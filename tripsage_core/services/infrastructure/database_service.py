@@ -1,35 +1,34 @@
-"""Consolidated Database Service for TripSage Core.
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods,no-name-in-module,global-statement
+"""Supabase-only Database Service (FINAL-ONLY).
 
-This module provides a unified, high-performance database service that
-consolidates all functionality from 7 previous database services into
-a single, maintainable solution.
+This module provides a single modern DatabaseService that uses the Supabase
+Python client exclusively. All legacy SQLAlchemy engine and raw engine paths
+have been removed to keep the implementation simple, maintainable, and safe.
 
-Key Features:
-- LIFO connection pooling with SQLAlchemy 2.0+ (pool_size=100, max_overflow=500)
-- Supavisor integration for optimal serverless performance
-- Comprehensive monitoring and metrics (Prometheus)
-- Security hardening with rate limiting and audit logging
-- Read replica support with intelligent routing
-- Vector search operations (pgvector)
-- Automatic retry logic and circuit breaker
-- Query performance tracking and regression detection
-- Connection health monitoring and validation
+Key features:
+- Typed configuration via Pydantic (pool/monitoring/security/performance knobs)
+- Supabase CRUD (select/insert/update/upsert/delete/count)
+- Vector search using pgvector via PostgREST expression ordering
+- RPC function invocation and raw SQL via a safe RPC wrapper (execute_sql)
+- Lightweight monitoring (Prometheus optional) and basic rate limiting/circuit breaker
+- Convenience helpers used by business services and wrappers
 """
+
+from __future__ import annotations
 
 import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, TypeVar
-from urllib.parse import urlparse
+from typing import Any
 
+from postgrest.types import CountMethod
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import create_engine, event, pool, text
-from sqlalchemy.engine import Engine
 from supabase import Client, create_client
-from supabase.lib.client_options import ClientOptions
+from supabase.lib.client_options import SyncClientOptions
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
@@ -39,261 +38,162 @@ from tripsage_core.exceptions.exceptions import (
 )
 
 
-# Python 3.13 type parameters (PEP 695)
-type DatabaseResult[T] = dict[str, T] | list[dict[str, T]]
-type FilterDict = dict[str, Any]
-type MetricsDict = dict[str, Any | int | float]
-
-# Generic type variables for enhanced type safety
-T = TypeVar("T")
-ConfigT = TypeVar("ConfigT", bound="DatabasePoolConfig")
-ResultT = TypeVar("ResultT")
-
 logger = logging.getLogger(__name__)
 
 
-# Configuration Classes using Pydantic 2.x
+# ---------------------------
+# Configuration (Pydantic v2)
+# ---------------------------
 
 
 class DatabasePoolConfig(BaseModel):
-    """Configuration for database connection pooling."""
+    """Connection pool tuning parameters.
+
+    Attributes:
+        pool_size: Baseline number of persistent connections.
+        max_overflow: Extra connections allowed above `pool_size`.
+        pool_use_lifo: Whether to reuse most-recently-used connections first.
+        pool_pre_ping: Enable connection validation before checkout.
+        pool_recycle: Seconds after which connections are recycled.
+        pool_timeout: Seconds to wait for an available connection.
+    """
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    pool_size: int = Field(
-        default=100,
-        description="Number of connections to maintain in pool",
-        ge=1,
-        le=1000,
-    )
-    max_overflow: int = Field(
-        default=500, description="Maximum overflow connections allowed", ge=0, le=2000
-    )
-    pool_use_lifo: bool = Field(
-        default=True,
-        description="Use LIFO connection strategy for better cache locality",
-    )
-    pool_pre_ping: bool = Field(
-        default=True, description="Enable connection validation before use"
-    )
-    pool_recycle: int = Field(
-        default=3600,
-        description="Connection recycle time in seconds",
-        ge=300,
-        le=86400,  # 24 hours max
-    )
-    pool_timeout: float = Field(
-        default=30.0,
-        description="Timeout for getting connection from pool in seconds",
-        gt=0.0,
-        le=300.0,
-    )
+    pool_size: int = Field(default=100, ge=1, le=1000)
+    max_overflow: int = Field(default=500, ge=0, le=2000)
+    pool_use_lifo: bool = Field(default=True)
+    pool_pre_ping: bool = Field(default=True)
+    pool_recycle: int = Field(default=3600, ge=300, le=86400)
+    pool_timeout: float = Field(default=30.0, gt=0.0, le=300.0)
 
     @field_validator("pool_size")
     @classmethod
-    def validate_pool_size(cls, v):
+    def _v_size(cls, v: int) -> int:
+        """Validate the pool size."""
         if v <= 0:
-            raise ValueError("Pool size must be positive")
+            raise ValueError("pool_size must be positive")
         return v
 
     @field_validator("pool_timeout")
     @classmethod
-    def validate_pool_timeout(cls, v):
+    def _v_timeout(cls, v: float) -> float:
+        """Validate the pool timeout."""
         if v <= 0:
-            raise ValueError("Timeout must be positive")
+            raise ValueError("pool_timeout must be positive")
         return v
 
 
 class DatabaseMonitoringConfig(BaseModel):
-    """Configuration for database monitoring and metrics."""
+    """Monitoring and metrics configuration.
+
+    Attributes:
+        enable_monitoring: Enable internal monitoring hooks.
+        enable_metrics: Enable Prometheus metrics counters/gauges.
+        enable_query_tracking: Track per-query timings in memory.
+        slow_query_threshold: Seconds considered a slow query.
+    """
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    enable_monitoring: bool = Field(
-        default=True, description="Enable comprehensive monitoring"
-    )
-    enable_metrics: bool = Field(
-        default=True, description="Enable Prometheus metrics collection"
-    )
-    enable_query_tracking: bool = Field(
-        default=True, description="Track individual query performance"
-    )
-    slow_query_threshold: float = Field(
-        default=1.0,
-        description="Threshold in seconds for slow query detection",
-        gt=0.0,
-        le=60.0,
-    )
-
-    @field_validator("slow_query_threshold")
-    @classmethod
-    def validate_slow_query_threshold(cls, v):
-        if v <= 0:
-            raise ValueError("Slow query threshold must be positive")
-        return v
+    enable_monitoring: bool = True
+    enable_metrics: bool = True
+    enable_query_tracking: bool = True
+    slow_query_threshold: float = Field(default=1.0, gt=0.0, le=60.0)
 
 
 class DatabaseSecurityConfig(BaseModel):
-    """Configuration for database security features."""
+    """Security and rate-limiting configuration.
+
+    Attributes:
+        enable_security: Enable security checks (e.g., SQL guardrail).
+        enable_rate_limiting: Enable per-user in-process rate limiting.
+        enable_audit_logging: Emit audit events for write operations.
+        rate_limit_requests: Requests per minute threshold per user.
+        rate_limit_burst: Allowed burst tokens per minute.
+    """
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    enable_security: bool = Field(default=True, description="Enable security features")
-    enable_rate_limiting: bool = Field(default=True, description="Enable rate limiting")
-    enable_audit_logging: bool = Field(
-        default=True, description="Enable audit logging for compliance"
-    )
-    rate_limit_requests: int = Field(
-        default=1000, description="Requests per minute limit", ge=1, le=100000
-    )
-    rate_limit_burst: int = Field(
-        default=2000, description="Burst limit for rate limiting", ge=1, le=200000
-    )
+    enable_security: bool = True
+    enable_rate_limiting: bool = True
+    enable_audit_logging: bool = True
+    rate_limit_requests: int = Field(default=1000, ge=1, le=100000)
+    rate_limit_burst: int = Field(default=2000, ge=1, le=200000)
 
     @field_validator("rate_limit_burst")
     @classmethod
-    def validate_rate_limit_burst(cls, v, info):
-        if "rate_limit_requests" in info.data and v < info.data["rate_limit_requests"]:
-            raise ValueError("Rate limit burst must be >= rate_limit_requests")
+    def _v_burst(cls, v: int, info) -> int:  # type: ignore[no-any-unimported]
+        """Validate the rate limit burst."""
+        req = info.data.get("rate_limit_requests", 0)
+        if v < req:
+            raise ValueError("rate_limit_burst must be >= rate_limit_requests")
         return v
 
 
 class DatabasePerformanceConfig(BaseModel):
-    """Configuration for database performance features."""
+    """Performance-related feature flags.
+
+    Attributes:
+        enable_read_replicas: Reserved for future read-replica routing.
+        enable_circuit_breaker: Enable a simple circuit breaker guard.
+        circuit_breaker_threshold: Consecutive failures to trip breaker.
+        circuit_breaker_timeout: Seconds the breaker remains open.
+    """
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    enable_read_replicas: bool = Field(
-        default=True, description="Enable read replica support"
-    )
-    enable_circuit_breaker: bool = Field(
-        default=True, description="Enable circuit breaker pattern"
-    )
-    circuit_breaker_threshold: int = Field(
-        default=5, description="Failures before circuit breaker opens", ge=1, le=100
-    )
-    circuit_breaker_timeout: float = Field(
-        default=60.0,
-        description="Circuit breaker timeout in seconds",
-        gt=0.0,
-        le=3600.0,
-    )
-
-    @field_validator("circuit_breaker_threshold")
-    @classmethod
-    def validate_circuit_breaker_threshold(cls, v):
-        if v <= 0:
-            raise ValueError("Circuit breaker threshold must be positive")
-        return v
-
-    @field_validator("circuit_breaker_timeout")
-    @classmethod
-    def validate_circuit_breaker_timeout(cls, v):
-        if v <= 0:
-            raise ValueError("Circuit breaker timeout must be positive")
-        return v
+    enable_read_replicas: bool = True
+    enable_circuit_breaker: bool = True
+    circuit_breaker_threshold: int = Field(default=5, ge=1, le=100)
+    circuit_breaker_timeout: float = Field(default=60.0, gt=0.0, le=3600.0)
 
 
 class DatabaseConfig(BaseModel):
-    """Main database configuration combining all sub-configurations."""
+    """Top-level database configuration grouping sub-configs.
+
+    Attributes:
+        pool: Pool configuration.
+        monitoring: Monitoring and metrics configuration.
+        security: Security and rate limiting configuration.
+        performance: Performance feature flags.
+    """
 
     model_config = ConfigDict(frozen=True, str_strip_whitespace=True)
 
-    pool: DatabasePoolConfig = Field(
-        default_factory=DatabasePoolConfig, description="Connection pool configuration"
-    )
+    pool: DatabasePoolConfig = Field(default_factory=DatabasePoolConfig)
     monitoring: DatabaseMonitoringConfig = Field(
-        default_factory=DatabaseMonitoringConfig,
-        description="Monitoring and metrics configuration",
+        default_factory=DatabaseMonitoringConfig
     )
-    security: DatabaseSecurityConfig = Field(
-        default_factory=DatabaseSecurityConfig, description="Security configuration"
-    )
+    security: DatabaseSecurityConfig = Field(default_factory=DatabaseSecurityConfig)
     performance: DatabasePerformanceConfig = Field(
-        default_factory=DatabasePerformanceConfig,
-        description="Performance configuration",
+        default_factory=DatabasePerformanceConfig
     )
 
     @classmethod
-    def create_default(cls) -> "DatabaseConfig":
-        """Create default production-ready configuration."""
+    def create_default(cls) -> DatabaseConfig:
+        """Create the default database configuration."""
         return cls()
 
     @classmethod
-    def create_production(cls) -> "DatabaseConfig":
-        """Create production-optimized configuration."""
-        return cls(
-            pool=DatabasePoolConfig(
-                pool_size=100, max_overflow=500, pool_use_lifo=True, pool_recycle=3600
-            ),
-            monitoring=DatabaseMonitoringConfig(
-                enable_monitoring=True,
-                enable_metrics=True,
-                enable_query_tracking=True,
-                slow_query_threshold=1.0,
-            ),
-            security=DatabaseSecurityConfig(
-                enable_security=True,
-                enable_rate_limiting=True,
-                enable_audit_logging=True,
-                rate_limit_requests=1000,
-                rate_limit_burst=2000,
-            ),
-            performance=DatabasePerformanceConfig(
-                enable_read_replicas=True,
-                enable_circuit_breaker=True,
-                circuit_breaker_threshold=5,
-                circuit_breaker_timeout=60.0,
-            ),
-        )
-
-    @classmethod
-    def create_development(cls) -> "DatabaseConfig":
-        """Create development-friendly configuration."""
-        return cls(
-            pool=DatabasePoolConfig(
-                pool_size=10, max_overflow=20, pool_use_lifo=True, pool_recycle=1800
-            ),
-            monitoring=DatabaseMonitoringConfig(
-                enable_monitoring=True,
-                enable_metrics=True,
-                enable_query_tracking=True,
-                slow_query_threshold=0.5,
-            ),
-            security=DatabaseSecurityConfig(
-                enable_security=True,
-                enable_rate_limiting=False,  # More permissive for dev
-                enable_audit_logging=False,
-                rate_limit_requests=10000,
-                rate_limit_burst=20000,
-            ),
-            performance=DatabasePerformanceConfig(
-                enable_read_replicas=False,  # Simpler for dev
-                enable_circuit_breaker=True,
-                circuit_breaker_threshold=10,
-                circuit_breaker_timeout=30.0,
-            ),
-        )
-
-    @classmethod
-    def create_testing(cls) -> "DatabaseConfig":
-        """Create test-optimized configuration."""
+    def create_testing(cls) -> DatabaseConfig:
+        """Create the testing database configuration."""
         return cls(
             pool=DatabasePoolConfig(
                 pool_size=5,
                 max_overflow=10,
-                pool_use_lifo=False,  # Deterministic for tests
+                pool_use_lifo=False,
                 pool_recycle=300,
                 pool_timeout=10.0,
             ),
             monitoring=DatabaseMonitoringConfig(
-                enable_monitoring=False,  # Reduce noise in tests
+                enable_monitoring=False,
                 enable_metrics=False,
                 enable_query_tracking=False,
-                slow_query_threshold=5.0,  # More lenient for tests
+                slow_query_threshold=5.0,
             ),
             security=DatabaseSecurityConfig(
-                enable_security=False,  # Permissive for tests
+                enable_security=False,
                 enable_rate_limiting=False,
                 enable_audit_logging=False,
                 rate_limit_requests=100000,
@@ -301,15 +201,20 @@ class DatabaseConfig(BaseModel):
             ),
             performance=DatabasePerformanceConfig(
                 enable_read_replicas=False,
-                enable_circuit_breaker=False,  # Don't fail tests
+                enable_circuit_breaker=False,
                 circuit_breaker_threshold=100,
                 circuit_breaker_timeout=300.0,
             ),
         )
 
 
+# ----------
+# Monitoring
+# ----------
+
+
 class QueryType(Enum):
-    """Database query operation types."""
+    """Logical database operation categories used for metrics."""
 
     SELECT = "SELECT"
     INSERT = "INSERT"
@@ -318,51 +223,55 @@ class QueryType(Enum):
     UPSERT = "UPSERT"
     VECTOR_SEARCH = "VECTOR_SEARCH"
     COUNT = "COUNT"
-    TRANSACTION = "TRANSACTION"
-    FUNCTION_CALL = "FUNCTION_CALL"
+    FUNCTION = "FUNCTION"
     RAW_SQL = "RAW_SQL"
-    READ = "READ"  # Generic read operation
-    WRITE = "WRITE"  # Generic write operation
-    ANALYTICS = "ANALYTICS"  # Analytics queries
-
-
-class HealthStatus(Enum):
-    """Database health status levels."""
-
-    HEALTHY = "healthy"
-    WARNING = "warning"
-    CRITICAL = "critical"
-    UNKNOWN = "unknown"
 
 
 class SecurityEvent(Enum):
-    """Security event types."""
+    """Types of security events recorded by the service."""
 
-    SUSPICIOUS_QUERY = "suspicious_query"
-    CONNECTION_FAILURE = "connection_failure"
-    RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
-    SLOW_QUERY_DETECTED = "slow_query_detected"
-    HIGH_ERROR_RATE = "high_error_rate"
     SQL_INJECTION_ATTEMPT = "sql_injection_attempt"
-    UNAUTHORIZED_ACCESS = "unauthorized_access"
+    RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
 
 
 class QueryMetrics(BaseModel):
-    """Query execution metrics."""
+    """Per-query runtime metrics sample.
+
+    Attributes:
+        query_type: Logical operation type.
+        table: Target table if applicable.
+        duration_ms: Elapsed time in milliseconds.
+        success: Whether the operation completed without error.
+        error: Error summary when `success` is False.
+        timestamp: UTC timestamp of completion.
+        user_id: Optional user attribution for rate limits/auditing.
+    """
 
     query_type: QueryType
     table: str | None = None
     duration_ms: float
-    rows_affected: int = 0
     success: bool = True
     error: str | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_id: str | None = None
-    replica_id: str | None = None
 
 
 class ConnectionStats(BaseModel):
-    """Connection pool statistics."""
+    """Lightweight connection/capacity statistics.
+
+    Attributes:
+        active_connections: Number of in-use connections.
+        idle_connections: Number of idle connections.
+        total_connections: Total connections tracked (if applicable).
+        pool_size: Configured base pool size.
+        max_overflow: Configured overflow capacity.
+        connection_errors: Total connection-related errors observed.
+        last_error: Most recent error message if any.
+        uptime_seconds: Service uptime in seconds.
+        queries_executed: Total executed queries since start.
+        avg_query_time_ms: Rolling average time across successful queries.
+        pool_utilization: Percent utilization of the (pool_size + overflow).
+    """
 
     active_connections: int = 0
     idle_connections: int = 0
@@ -378,433 +287,164 @@ class ConnectionStats(BaseModel):
 
 
 class SecurityAlert(BaseModel):
-    """Security alert information."""
+    """Security alert record for diagnostics and auditing.
+
+    Attributes:
+        event_type: Type of security event.
+        severity: Severity label (e.g., low/medium/high/critical).
+        message: Human-readable description.
+        details: Structured details for troubleshooting.
+        timestamp: UTC timestamp of the event.
+        user_id: Optional user ID involved in the event.
+    """
 
     event_type: SecurityEvent
-    severity: str  # low, medium, high, critical
+    severity: str
     message: str
     details: dict[str, Any]
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_id: str | None = None
-    ip_address: str | None = None
-    action_taken: str | None = None
+
+
+@dataclass
+class Metrics:
+    """Prometheus metric handles used by the service.
+
+    Attributes:
+        connection_attempts: Counter for connection attempts by status.
+        query_duration: Histogram for query durations.
+        query_count: Counter for total queries by status.
+        slow_queries: Counter for slow queries detected.
+        health_status: Gauge for component health (1 healthy / 0 unhealthy).
+        security_events: Counter for security events by type/severity.
+        rate_limit_hits: Counter for per-user rate limit hits.
+    """
+
+    connection_attempts: Any
+    query_duration: Any
+    query_count: Any
+    slow_queries: Any
+    health_status: Any
+    security_events: Any
+    rate_limit_hits: Any
+
+
+# ----------------
+# Database service
+# ----------------
 
 
 class DatabaseService:
-    """Consolidated database service with LIFO pooling and comprehensive features.
+    """Supabase-backed database service.
 
-    This service consolidates functionality from 7 previous database services:
-    - Core database operations (CRUD, transactions)
-    - Connection pooling with LIFO behavior
-    - Monitoring and metrics collection
-    - Security hardening and rate limiting
-    - Read replica management
-    - Query performance tracking
-    - Health checking and recovery
+    This service centralizes all database access using the Supabase Python
+    client (PostgREST + RPC). It provides typed, async CRUD helpers, vector
+    search utilities, RPC execution, and minimal monitoring/guardrails.
+
+    Attributes:
+        settings: Resolved application settings.
+        _config: Database configuration used by the service.
+        _supabase_client: Underlying Supabase sync client (wrapped via to_thread).
+        _connected: Whether `connect()` completed successfully.
+        _start_time: Service start time in seconds.
+        _query_metrics: In-memory rolling query metrics.
+        _security_alerts: Captured security alerts.
+        _connection_stats: Lightweight connection statistics.
+        _metrics: Optional Prometheus metrics container.
     """
 
     def __init__(
-        self,
-        settings: Settings | None = None,
-        config: DatabaseConfig | None = None,
-        # Legacy parameters for backward compatibility
-        pool_size: int | None = None,
-        max_overflow: int | None = None,
-        pool_use_lifo: bool | None = None,
-        pool_pre_ping: bool | None = None,
-        pool_recycle: int | None = None,
-        pool_timeout: float | None = None,
-        enable_monitoring: bool | None = None,
-        enable_metrics: bool | None = None,
-        enable_query_tracking: bool | None = None,
-        slow_query_threshold: float | None = None,
-        enable_security: bool | None = None,
-        enable_rate_limiting: bool | None = None,
-        enable_audit_logging: bool | None = None,
-        rate_limit_requests: int | None = None,
-        rate_limit_burst: int | None = None,
-        enable_read_replicas: bool | None = None,
-        enable_circuit_breaker: bool | None = None,
-        circuit_breaker_threshold: int | None = None,
-        circuit_breaker_timeout: float | None = None,
+        self, settings: Settings | None = None, config: DatabaseConfig | None = None
     ):
-        """Initialize the consolidated database service.
-
-        Args:
-            settings: Application settings
-            config: DatabaseConfig object (preferred approach)
-
-            # Legacy parameters (deprecated - use config object instead)
-            pool_size: Number of connections to maintain in pool
-            max_overflow: Maximum overflow connections allowed
-            pool_use_lifo: Use LIFO connection strategy
-            pool_pre_ping: Enable connection validation
-            pool_recycle: Connection recycle time in seconds
-            pool_timeout: Timeout for getting connection from pool
-            enable_monitoring: Enable comprehensive monitoring
-            enable_metrics: Enable Prometheus metrics
-            enable_query_tracking: Track query performance
-            slow_query_threshold: Threshold for slow query detection
-            enable_security: Enable security features
-            enable_rate_limiting: Enable rate limiting
-            enable_audit_logging: Enable audit logging
-            rate_limit_requests: Requests per minute limit
-            rate_limit_burst: Burst limit for rate limiting
-            enable_read_replicas: Enable read replica support
-            enable_circuit_breaker: Enable circuit breaker pattern
-            circuit_breaker_threshold: Failures before circuit opens
-            circuit_breaker_timeout: Circuit breaker timeout
-        """
+        """Initialize the DatabaseService."""
         self.settings = settings or get_settings()
+        self._config = config or DatabaseConfig.create_default()
 
-        # Initialize configuration using config object or legacy parameters
-        self._config = self._initialize_config(
-            config=config,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            pool_use_lifo=pool_use_lifo,
-            pool_pre_ping=pool_pre_ping,
-            pool_recycle=pool_recycle,
-            pool_timeout=pool_timeout,
-            enable_monitoring=enable_monitoring,
-            enable_metrics=enable_metrics,
-            enable_query_tracking=enable_query_tracking,
-            slow_query_threshold=slow_query_threshold,
-            enable_security=enable_security,
-            enable_rate_limiting=enable_rate_limiting,
-            enable_audit_logging=enable_audit_logging,
-            rate_limit_requests=rate_limit_requests,
-            rate_limit_burst=rate_limit_burst,
-            enable_read_replicas=enable_read_replicas,
-            enable_circuit_breaker=enable_circuit_breaker,
-            circuit_breaker_threshold=circuit_breaker_threshold,
-            circuit_breaker_timeout=circuit_breaker_timeout,
-        )
-
-        # Expose configuration values as instance attributes for compatibility
+        # Expose select config values
         self.pool_size = self._config.pool.pool_size
         self.max_overflow = self._config.pool.max_overflow
-        self.pool_use_lifo = self._config.pool.pool_use_lifo
-        self.pool_pre_ping = self._config.pool.pool_pre_ping
-        self.pool_recycle = self._config.pool.pool_recycle
         self.pool_timeout = self._config.pool.pool_timeout
-
-        self.enable_monitoring = self._config.monitoring.enable_monitoring
-        self.enable_metrics = self._config.monitoring.enable_metrics
-        self.enable_query_tracking = self._config.monitoring.enable_query_tracking
         self.slow_query_threshold = self._config.monitoring.slow_query_threshold
-
+        self.enable_query_tracking = self._config.monitoring.enable_query_tracking
         self.enable_security = self._config.security.enable_security
         self.enable_rate_limiting = self._config.security.enable_rate_limiting
         self.enable_audit_logging = self._config.security.enable_audit_logging
-        self.rate_limit_requests = self._config.security.rate_limit_requests
-        self.rate_limit_burst = self._config.security.rate_limit_burst
-
-        self.enable_read_replicas = self._config.performance.enable_read_replicas
         self.enable_circuit_breaker = self._config.performance.enable_circuit_breaker
         self.circuit_breaker_threshold = (
             self._config.performance.circuit_breaker_threshold
         )
         self.circuit_breaker_timeout = self._config.performance.circuit_breaker_timeout
 
-        # Service state
+        # State
         self._supabase_client: Client | None = None
-        self._sqlalchemy_engine: Engine | None = None
         self._connected = False
         self._start_time = time.time()
-
-        # Monitoring and metrics
         self._query_metrics: list[QueryMetrics] = []
         self._security_alerts: list[SecurityAlert] = []
         self._connection_stats = ConnectionStats(
             pool_size=self.pool_size, max_overflow=self.max_overflow
         )
 
-        # Circuit breaker state
-        self._circuit_breaker_failures = 0
-        self._circuit_breaker_last_failure = 0
-        self._circuit_breaker_open = False
-
-        # Rate limiting state
-        self._rate_limit_window = {}  # user_id -> (count, window_start)
-
-        # Initialize metrics if enabled
-        self._metrics = None
-        if self.enable_metrics:
+        self._metrics: Metrics | None = None
+        if self._config.monitoring.enable_metrics:
             self._initialize_metrics()
 
-        logger.info(
-            "Database Service initialized with pool_size=%s, max_overflow=%s, LIFO=%s",
-            self.pool_size,
-            self.max_overflow,
-            "enabled" if self.pool_use_lifo else "disabled",
-        )
+        # Circuit breaker
+        self._cb_failures = 0
+        self._cb_last_failure = 0.0
+        self._cb_open = False
 
-    def _initialize_config(
-        self, config: DatabaseConfig | None = None, **legacy_params
-    ) -> DatabaseConfig:
-        """Initialize configuration from config object or legacy parameters.
+        # Simple per-minute rate limiter counter
+        self._rate_window: dict[str, tuple[int, float]] = {}
 
-        Args:
-            config: DatabaseConfig object if provided
-            **legacy_params: Legacy parameter values for backward compatibility
-
-        Returns:
-            DatabaseConfig object
-        """
-        if config is not None:
-            # Use provided config object
-            return config
-
-        # Check if any legacy parameters were provided
-        provided_params = {k: v for k, v in legacy_params.items() if v is not None}
-
-        if not provided_params:
-            # No parameters provided, use default configuration
-            return DatabaseConfig.create_default()
-
-        # Build configuration from legacy parameters
-        pool_config_params = {}
-        monitoring_config_params = {}
-        security_config_params = {}
-        performance_config_params = {}
-
-        # Map legacy parameters to config structures
-        if legacy_params.get("pool_size") is not None:
-            pool_config_params["pool_size"] = legacy_params["pool_size"]
-        if legacy_params.get("max_overflow") is not None:
-            pool_config_params["max_overflow"] = legacy_params["max_overflow"]
-        if legacy_params.get("pool_use_lifo") is not None:
-            pool_config_params["pool_use_lifo"] = legacy_params["pool_use_lifo"]
-        if legacy_params.get("pool_pre_ping") is not None:
-            pool_config_params["pool_pre_ping"] = legacy_params["pool_pre_ping"]
-        if legacy_params.get("pool_recycle") is not None:
-            pool_config_params["pool_recycle"] = legacy_params["pool_recycle"]
-        if legacy_params.get("pool_timeout") is not None:
-            pool_config_params["pool_timeout"] = legacy_params["pool_timeout"]
-
-        if legacy_params.get("enable_monitoring") is not None:
-            monitoring_config_params["enable_monitoring"] = legacy_params[
-                "enable_monitoring"
-            ]
-        if legacy_params.get("enable_metrics") is not None:
-            monitoring_config_params["enable_metrics"] = legacy_params["enable_metrics"]
-        if legacy_params.get("enable_query_tracking") is not None:
-            monitoring_config_params["enable_query_tracking"] = legacy_params[
-                "enable_query_tracking"
-            ]
-        if legacy_params.get("slow_query_threshold") is not None:
-            monitoring_config_params["slow_query_threshold"] = legacy_params[
-                "slow_query_threshold"
-            ]
-
-        if legacy_params.get("enable_security") is not None:
-            security_config_params["enable_security"] = legacy_params["enable_security"]
-        if legacy_params.get("enable_rate_limiting") is not None:
-            security_config_params["enable_rate_limiting"] = legacy_params[
-                "enable_rate_limiting"
-            ]
-        if legacy_params.get("enable_audit_logging") is not None:
-            security_config_params["enable_audit_logging"] = legacy_params[
-                "enable_audit_logging"
-            ]
-        if legacy_params.get("rate_limit_requests") is not None:
-            security_config_params["rate_limit_requests"] = legacy_params[
-                "rate_limit_requests"
-            ]
-        if legacy_params.get("rate_limit_burst") is not None:
-            security_config_params["rate_limit_burst"] = legacy_params[
-                "rate_limit_burst"
-            ]
-
-        if legacy_params.get("enable_read_replicas") is not None:
-            performance_config_params["enable_read_replicas"] = legacy_params[
-                "enable_read_replicas"
-            ]
-        if legacy_params.get("enable_circuit_breaker") is not None:
-            performance_config_params["enable_circuit_breaker"] = legacy_params[
-                "enable_circuit_breaker"
-            ]
-        if legacy_params.get("circuit_breaker_threshold") is not None:
-            performance_config_params["circuit_breaker_threshold"] = legacy_params[
-                "circuit_breaker_threshold"
-            ]
-        if legacy_params.get("circuit_breaker_timeout") is not None:
-            performance_config_params["circuit_breaker_timeout"] = legacy_params[
-                "circuit_breaker_timeout"
-            ]
-
-        # Create sub-configurations with provided parameters, using defaults for
-        # missing ones
-        pool_config = (
-            DatabasePoolConfig(**pool_config_params)
-            if pool_config_params
-            else DatabasePoolConfig()
-        )
-        monitoring_config = (
-            DatabaseMonitoringConfig(**monitoring_config_params)
-            if monitoring_config_params
-            else DatabaseMonitoringConfig()
-        )
-        security_config = (
-            DatabaseSecurityConfig(**security_config_params)
-            if security_config_params
-            else DatabaseSecurityConfig()
-        )
-        performance_config = (
-            DatabasePerformanceConfig(**performance_config_params)
-            if performance_config_params
-            else DatabasePerformanceConfig()
-        )
-
-        return DatabaseConfig(
-            pool=pool_config,
-            monitoring=monitoring_config,
-            security=security_config,
-            performance=performance_config,
-        )
-
-    def _initialize_metrics(self):
-        """Initialize Prometheus metrics for monitoring."""
-        try:
-            from prometheus_client import Counter, Gauge, Histogram
-
-            # Create metrics container
-            self._metrics = type("Metrics", (), {})()
-
-            # Connection metrics
-            self._metrics.connection_pool_size = Gauge(
-                "tripsage_db_pool_size",
-                "Current database connection pool size",
-                ["pool_type"],
-            )
-
-            self._metrics.connection_pool_used = Gauge(
-                "tripsage_db_pool_connections_used",
-                "Number of connections currently in use",
-                ["pool_type"],
-            )
-
-            self._metrics.connection_attempts = Counter(
-                "tripsage_db_connection_attempts_total",
-                "Total database connection attempts",
-                ["status"],
-            )
-
-            # Query metrics
-            self._metrics.query_duration = Histogram(
-                "tripsage_db_query_duration_seconds",
-                "Database query execution time",
-                ["operation", "table", "status"],
-                buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
-            )
-
-            self._metrics.query_count = Counter(
-                "tripsage_db_queries_total",
-                "Total database queries executed",
-                ["operation", "table", "status"],
-            )
-
-            self._metrics.slow_queries = Counter(
-                "tripsage_db_slow_queries_total",
-                "Total slow queries detected",
-                ["operation", "table"],
-            )
-
-            # Health metrics
-            self._metrics.health_status = Gauge(
-                "tripsage_db_health_status",
-                "Database health status (1=healthy, 0=unhealthy)",
-                ["component"],
-            )
-
-            # Security metrics
-            self._metrics.security_events = Counter(
-                "tripsage_db_security_events_total",
-                "Total security events detected",
-                ["event_type", "severity"],
-            )
-
-            self._metrics.rate_limit_hits = Counter(
-                "tripsage_db_rate_limit_hits_total",
-                "Total rate limit hits",
-                ["user_id"],
-            )
-
-            logger.info("Prometheus metrics initialized successfully")
-
-        except ImportError:
-            logger.warning("Prometheus client not available, metrics disabled")
-            self._metrics = None
-        except Exception:
-            logger.exception("Failed to initialize metrics")
-            self._metrics = None
+    # ---- connection ----
 
     @property
     def is_connected(self) -> bool:
-        """Check if the service is connected to the database."""
+        """Check if the database service is connected."""
         return self._connected and self._supabase_client is not None
 
     @property
     def client(self) -> Client:
-        """Get Supabase client, raising error if not connected."""
-        if not self._connected or not self._supabase_client:
+        """Get the Supabase client."""
+        if not self.is_connected:
             raise CoreServiceError(
                 message="Database service not connected. Call connect() first.",
                 code="DATABASE_NOT_CONNECTED",
                 service="DatabaseService",
             )
+        assert self._supabase_client is not None
         return self._supabase_client
 
     async def connect(self) -> None:
-        """Initialize database connections with LIFO pooling."""
+        """Establish the Supabase client connection.
+
+        Ensures the client is created and a lightweight connectivity check
+        succeeds. Safe to call multiple times.
+
+        Raises:
+            CoreDatabaseError: If initialization or connectivity checks fail.
+        """
         if self._connected:
             return
-
-        start_time = time.time()
-
+        start = time.time()
         try:
-            # Initialize Supabase client
             await self._initialize_supabase_client()
-
-            # Initialize SQLAlchemy engine with LIFO pooling
-            await self._initialize_sqlalchemy_engine()
-
-            # Test connections
             await self._test_connections()
-
             self._connected = True
-            duration = time.time() - start_time
-
-            # Update metrics
             if self._metrics:
                 self._metrics.connection_attempts.labels(status="success").inc()
                 self._metrics.health_status.labels(component="connection").set(1)
-
-            # Record connection stats
             self._connection_stats.uptime_seconds = 0
             self._connection_stats.connection_errors = 0
-
-            logger.info(
-                "Database service connected successfully in %.2fs. "
-                "LIFO pooling enabled with pool_size=%s, max_overflow=%s",
-                duration,
-                self.pool_size,
-                self.max_overflow,
-            )
-
+            logger.info("Database service connected in %.2fs.", time.time() - start)
         except Exception as e:
             self._connected = False
-
-            # Update metrics
             if self._metrics:
                 self._metrics.connection_attempts.labels(status="failure").inc()
                 self._metrics.health_status.labels(component="connection").set(0)
-
-            # Record error
             self._connection_stats.connection_errors += 1
             self._connection_stats.last_error = str(e)
-
             logger.exception("Failed to connect to database")
             raise CoreDatabaseError(
                 message=f"Failed to connect to database: {e!s}",
@@ -812,303 +452,107 @@ class DatabaseService:
                 details={"error": str(e)},
             ) from e
 
+    async def close(self) -> None:
+        """Close the Supabase client and reset internal state."""
+        self._supabase_client = None
+        self._connected = False
+        if self._metrics:
+            self._metrics.health_status.labels(component="connection").set(0)
+        logger.info("Database service closed")
+
+    async def ensure_connected(self) -> None:
+        """Connect on-demand if not already connected."""
+        if not self.is_connected:
+            await self.connect()
+
     async def _initialize_supabase_client(self) -> None:
-        """Initialize Supabase client with optimal configuration."""
         try:
-            # Get Supabase configuration
             supabase_url = self.settings.database_url
             supabase_key = self.settings.database_public_key.get_secret_value()
-
-            # Validate configuration
             if not supabase_url or not supabase_url.startswith("https://"):
                 raise CoreDatabaseError(
                     message=f"Invalid Supabase URL format: {supabase_url}",
                     code="INVALID_DATABASE_URL",
                 )
-
             if not supabase_key or len(supabase_key) < 20:
                 raise CoreDatabaseError(
-                    message="Invalid Supabase API key",
-                    code="INVALID_DATABASE_KEY",
+                    message="Invalid Supabase API key", code="INVALID_DATABASE_KEY"
                 )
-
-            # Configure client options
-            options = ClientOptions(
+            options = SyncClientOptions(
                 auto_refresh_token=True,
                 persist_session=True,
                 postgrest_client_timeout=self.pool_timeout,
             )
-
-            # Create Supabase client
             self._supabase_client = create_client(
                 supabase_url, supabase_key, options=options
             )
-
-            logger.debug("Supabase client initialized successfully")
-
         except Exception:
             logger.exception("Failed to initialize Supabase client")
             raise
 
-    async def _initialize_sqlalchemy_engine(self) -> None:
-        """Initialize SQLAlchemy engine with LIFO pooling."""
-        try:
-            # Extract database URL from Supabase configuration
-            parsed_url = urlparse(self.settings.database_url)
-            project_ref = parsed_url.hostname.split(".")[0]
-
-            # Build PostgreSQL connection URL
-            # Use Supavisor transaction mode (port 6543) for optimal pooling
-            db_url = (
-                f"postgresql://"
-                f"postgres.{project_ref}:"
-                f"{self.settings.database_password.get_secret_value()}"
-                f"@{project_ref}.pooler.supabase.com:6543/postgres"
-            )
-
-            # Create engine with LIFO pooling
-            self._sqlalchemy_engine = create_engine(
-                db_url,
-                pool_class=pool.QueuePool,
-                pool_size=self.pool_size,
-                max_overflow=self.max_overflow,
-                pool_timeout=self.pool_timeout,
-                pool_recycle=self.pool_recycle,
-                pool_pre_ping=self.pool_pre_ping,
-                pool_use_lifo=self.pool_use_lifo,  # LIFO for better cache locality
-                echo=False,  # Set to True for debugging
-                echo_pool=False,  # Set to True for pool debugging
-            )
-
-            # Add event listeners for monitoring
-            if self.enable_monitoring:
-                self._setup_pool_event_listeners()
-
-            logger.debug(
-                "SQLAlchemy engine initialized with LIFO pooling (pool_size=%s, max_overflow=%s)",
-                self.pool_size,
-                self.max_overflow,
-            )
-
-        except Exception:
-            logger.exception("Failed to initialize SQLAlchemy engine")
-            raise
-
-    def _setup_pool_event_listeners(self) -> None:
-        """Set up SQLAlchemy pool event listeners for monitoring."""
-        if not self._sqlalchemy_engine:
-            return
-
-        # Connection checkout event
-        @event.listens_for(self._sqlalchemy_engine, "checkout")
-        def receive_checkout(dbapi_conn, connection_record, connection_proxy):
-            """Track connection checkout from pool."""
-            self._connection_stats.active_connections += 1
-            if self._metrics:
-                self._metrics.connection_pool_used.labels(pool_type="lifo").set(
-                    self._connection_stats.active_connections
-                )
-
-        # Connection checkin event
-        @event.listens_for(self._sqlalchemy_engine, "checkin")
-        def receive_checkin(dbapi_conn, connection_record):
-            """Track connection checkin to pool."""
-            self._connection_stats.active_connections = max(
-                0, self._connection_stats.active_connections - 1
-            )
-            if self._metrics:
-                self._metrics.connection_pool_used.labels(pool_type="lifo").set(
-                    self._connection_stats.active_connections
-                )
-
-        # Connection invalidate event
-        @event.listens_for(self._sqlalchemy_engine, "invalidate")
-        def receive_invalidate(dbapi_conn, connection_record, exception):
-            """Track connection invalidation."""
-            self._connection_stats.connection_errors += 1
-            if exception:
-                self._connection_stats.last_error = str(exception)
-
     async def _test_connections(self) -> None:
-        """Test both Supabase and SQLAlchemy connections using TaskGroup for
-        concurrent execution.
-        """
-        # Python 3.13 TaskGroup for concurrent connection testing
         async with asyncio.TaskGroup() as tg:
-            # Test Supabase connection concurrently
             supabase_task = tg.create_task(
                 asyncio.to_thread(
-                    lambda: self._supabase_client.table("users")
-                    .select("id")
-                    .limit(1)
-                    .execute()
+                    lambda: self.client.table("users").select("id").limit(1).execute()
                 ),
                 name="supabase_connection_test",
             )
-
-            # Test SQLAlchemy connection concurrently if available
-            sqlalchemy_task = None
-            if self._sqlalchemy_engine:
-                sqlalchemy_task = tg.create_task(
-                    asyncio.to_thread(lambda: self._test_sqlalchemy_connection()),
-                    name="sqlalchemy_connection_test",
-                )
-
-        # Handle results with proper error context
         try:
             await supabase_task
-            logger.debug("Supabase connection test passed")
         except Exception as e:
             raise CoreDatabaseError(
                 message=f"Supabase connection test failed: {e!s}",
                 code="SUPABASE_CONNECTION_TEST_FAILED",
             ) from e
 
-        if sqlalchemy_task:
-            try:
-                await sqlalchemy_task
-                logger.debug("SQLAlchemy connection test passed")
-            except Exception as e:
-                raise CoreDatabaseError(
-                    message=f"SQLAlchemy connection test failed: {e!s}",
-                    code="SQLALCHEMY_CONNECTION_TEST_FAILED",
-                ) from e
+    # ---- metrics ----
 
-    def _test_sqlalchemy_connection(self) -> None:
-        """Helper method for SQLAlchemy connection testing."""
-        with self._sqlalchemy_engine.connect() as conn:
-            result = conn.execute(text("SELECT 1"))
-            result.scalar()
+    def _initialize_metrics(self) -> None:
+        try:
+            from prometheus_client import Counter, Gauge, Histogram
 
-    async def close(self) -> None:
-        """Close database connections and cleanup resources."""
-        if self._sqlalchemy_engine:
-            try:
-                self._sqlalchemy_engine.dispose()
-                logger.info("SQLAlchemy engine disposed")
-            except Exception:
-                logger.exception("Error disposing SQLAlchemy engine")
-
-        self._supabase_client = None
-        self._sqlalchemy_engine = None
-        self._connected = False
-
-        # Update metrics
-        if self._metrics:
-            self._metrics.health_status.labels(component="connection").set(0)
-            self._metrics.connection_pool_used.labels(pool_type="lifo").set(0)
-
-        logger.info("Database service closed")
-
-    async def ensure_connected(self) -> None:
-        """Ensure database connection is established."""
-        if not self.is_connected:
-            await self.connect()
-
-    # Circuit breaker implementation
-
-    def _check_circuit_breaker(self) -> None:
-        """Check if circuit breaker should block the request."""
-        if not self.enable_circuit_breaker:
-            return
-
-        # Check if circuit is open
-        if self._circuit_breaker_open:
-            # Check if timeout has passed
-            if (
-                time.time() - self._circuit_breaker_last_failure
-                > self.circuit_breaker_timeout
-            ):
-                # Try to close the circuit
-                self._circuit_breaker_open = False
-                self._circuit_breaker_failures = 0
-                logger.info("Circuit breaker closed after timeout")
-            else:
-                raise CoreServiceError(
-                    message="Circuit breaker is open - service temporarily unavailable",
-                    code="CIRCUIT_BREAKER_OPEN",
-                    service="DatabaseService",
-                )
-
-    def _record_circuit_breaker_success(self) -> None:
-        """Record successful operation for circuit breaker."""
-        if not self.enable_circuit_breaker:
-            return
-
-        # Reset failure count on success
-        if self._circuit_breaker_failures > 0:
-            self._circuit_breaker_failures = 0
-            logger.debug("Circuit breaker failure count reset")
-
-    def _record_circuit_breaker_failure(self) -> None:
-        """Record failed operation for circuit breaker."""
-        if not self.enable_circuit_breaker:
-            return
-
-        self._circuit_breaker_failures += 1
-        self._circuit_breaker_last_failure = time.time()
-
-        # Open circuit if threshold reached
-        if self._circuit_breaker_failures >= self.circuit_breaker_threshold:
-            self._circuit_breaker_open = True
-            logger.warning(
-                "Circuit breaker opened after %s failures",
-                self._circuit_breaker_failures,
+            self._metrics = Metrics(
+                connection_attempts=Counter(
+                    "tripsage_db_connection_attempts_total",
+                    "Total database connection attempts",
+                    ["status"],
+                ),
+                query_duration=Histogram(
+                    "tripsage_db_query_duration_seconds",
+                    "Database query execution time",
+                    ["operation", "table", "status"],
+                    buckets=(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0),
+                ),
+                query_count=Counter(
+                    "tripsage_db_queries_total",
+                    "Total database queries executed",
+                    ["operation", "table", "status"],
+                ),
+                slow_queries=Counter(
+                    "tripsage_db_slow_queries_total",
+                    "Total slow queries detected",
+                    ["operation", "table"],
+                ),
+                health_status=Gauge(
+                    "tripsage_db_health_status",
+                    "Database health status (1=healthy, 0=unhealthy)",
+                    ["component"],
+                ),
+                security_events=Counter(
+                    "tripsage_db_security_events_total",
+                    "Total security events detected",
+                    ["event_type", "severity"],
+                ),
+                rate_limit_hits=Counter(
+                    "tripsage_db_rate_limit_hits_total",
+                    "Total rate limit hits",
+                    ["user_id"],
+                ),
             )
-
-    # Rate limiting implementation
-
-    async def _check_rate_limit(self, user_id: str | None = None) -> None:
-        """Check if request should be rate limited."""
-        if not self.enable_rate_limiting or not user_id:
-            return
-
-        current_time = time.time()
-        window_start = current_time - 60  # 1 minute window
-
-        if user_id in self._rate_limit_window:
-            count, last_window_start = self._rate_limit_window[user_id]
-
-            # Reset window if expired
-            if last_window_start < window_start:
-                self._rate_limit_window[user_id] = (1, current_time)
-                return
-
-            # Check rate limit
-            if count >= self.rate_limit_requests:
-                # Record rate limit hit
-                if self._metrics:
-                    self._metrics.rate_limit_hits.labels(user_id=user_id).inc()
-
-                # Create security alert
-                if self.enable_security:
-                    alert = SecurityAlert(
-                        event_type=SecurityEvent.RATE_LIMIT_EXCEEDED,
-                        severity="medium",
-                        message=f"Rate limit exceeded for user {user_id}",
-                        details={
-                            "user_id": user_id,
-                            "request_count": count,
-                            "limit": self.rate_limit_requests,
-                        },
-                        user_id=user_id,
-                    )
-                    self._security_alerts.append(alert)
-
-                raise CoreServiceError(
-                    message="Rate limit exceeded - please try again later",
-                    code="RATE_LIMIT_EXCEEDED",
-                    service="DatabaseService",
-                    details={"retry_after": 60},
-                )
-
-            # Increment counter
-            self._rate_limit_window[user_id] = (count + 1, last_window_start)
-        else:
-            # First request in window
-            self._rate_limit_window[user_id] = (1, current_time)
-
-    # Query monitoring and metrics
+        except (ImportError, ValueError, RuntimeError, TypeError):
+            logger.warning("Prometheus metrics unavailable; metrics disabled")
+            self._metrics = None
 
     @asynccontextmanager
     async def _monitor_query(
@@ -1117,197 +561,214 @@ class DatabaseService:
         table: str | None = None,
         user_id: str | None = None,
     ):
-        """Context manager for query monitoring and metrics."""
         start_time = time.time()
-        query_id = f"{query_type.value}_{table}_{int(start_time * 1000)}"
-
-        # Check circuit breaker
         self._check_circuit_breaker()
-
-        # Check rate limit
         await self._check_rate_limit(user_id)
-
         try:
-            yield query_id
-
-            # Calculate duration
+            yield
             duration = time.time() - start_time
-
-            # Record metrics
             if self.enable_query_tracking:
-                metric = QueryMetrics(
-                    query_type=query_type,
-                    table=table,
-                    duration_ms=duration * 1000,
-                    success=True,
-                    user_id=user_id,
+                self._query_metrics.append(
+                    QueryMetrics(
+                        query_type=query_type,
+                        table=table,
+                        duration_ms=duration * 1000,
+                        success=True,
+                        user_id=user_id,
+                    )
                 )
-                self._query_metrics.append(metric)
-
-            # Update Prometheus metrics
             if self._metrics:
                 self._metrics.query_duration.labels(
                     operation=query_type.value,
                     table=table or "unknown",
                     status="success",
                 ).observe(duration)
-
                 self._metrics.query_count.labels(
                     operation=query_type.value,
                     table=table or "unknown",
                     status="success",
                 ).inc()
-
-                # Check for slow query
                 if duration > self.slow_query_threshold:
                     self._metrics.slow_queries.labels(
-                        operation=query_type.value,
-                        table=table or "unknown",
+                        operation=query_type.value, table=table or "unknown"
                     ).inc()
-
-                    # Create security alert for slow query
-                    if self.enable_security:
-                        alert = SecurityAlert(
-                            event_type=SecurityEvent.SLOW_QUERY_DETECTED,
-                            severity="low",
-                            message=(
-                                f"Slow query detected: {query_type.value} on {table}"
-                            ),
-                            details={
-                                "query_type": query_type.value,
-                                "table": table,
-                                "duration_ms": duration * 1000,
-                                "threshold_ms": self.slow_query_threshold * 1000,
-                            },
-                            user_id=user_id,
-                        )
-                        self._security_alerts.append(alert)
-
-            # Update connection stats
             self._connection_stats.queries_executed += 1
-
-            # Record circuit breaker success
             self._record_circuit_breaker_success()
-
-        except Exception as e:
-            # Calculate duration
+        except Exception:
             duration = time.time() - start_time
-
-            # Record metrics
             if self.enable_query_tracking:
-                metric = QueryMetrics(
-                    query_type=query_type,
-                    table=table,
-                    duration_ms=duration * 1000,
-                    success=False,
-                    error=str(e),
-                    user_id=user_id,
+                self._query_metrics.append(
+                    QueryMetrics(
+                        query_type=query_type,
+                        table=table,
+                        duration_ms=duration * 1000,
+                        success=False,
+                    )
                 )
-                self._query_metrics.append(metric)
-
-            # Update Prometheus metrics
             if self._metrics:
                 self._metrics.query_duration.labels(
-                    operation=query_type.value,
-                    table=table or "unknown",
-                    status="error",
+                    operation=query_type.value, table=table or "unknown", status="error"
                 ).observe(duration)
-
                 self._metrics.query_count.labels(
-                    operation=query_type.value,
-                    table=table or "unknown",
-                    status="error",
+                    operation=query_type.value, table=table or "unknown", status="error"
                 ).inc()
-
-            # Record circuit breaker failure
             self._record_circuit_breaker_failure()
-
-            # Re-raise the exception
             raise
 
-    # Core database operations
+    # ---- circuit breaker & rate limiting ----
 
-    async def insert[T](
+    def _check_circuit_breaker(self) -> None:
+        """Check the circuit breaker."""
+        if not self.enable_circuit_breaker:
+            return
+        if (
+            self._cb_open
+            and (time.time() - self._cb_last_failure) <= self.circuit_breaker_timeout
+        ):
+            raise CoreServiceError(
+                message="Circuit breaker open",
+                code="CIRCUIT_BREAKER_OPEN",
+                service="DatabaseService",
+            )
+        if (
+            self._cb_open
+            and (time.time() - self._cb_last_failure) > self.circuit_breaker_timeout
+        ):
+            self._cb_open = False
+            self._cb_failures = 0
+
+    def _record_circuit_breaker_success(self) -> None:
+        """Record the circuit breaker success."""
+        if self._cb_failures:
+            self._cb_failures = 0
+
+    def _record_circuit_breaker_failure(self) -> None:
+        """Record the circuit breaker failure."""
+        self._cb_failures += 1
+        self._cb_last_failure = time.time()
+        if self._cb_failures >= self.circuit_breaker_threshold:
+            self._cb_open = True
+
+    async def _check_rate_limit(self, user_id: str | None) -> None:
+        """Check the rate limit."""
+        if not self.enable_rate_limiting or not user_id:
+            return
+        now = time.time()
+        window_start = now - 60
+        if user_id in self._rate_window:
+            count, win = self._rate_window[user_id]
+            if win < window_start:
+                self._rate_window[user_id] = (1, now)
+                return
+            if count >= self._config.security.rate_limit_requests:
+                if self._metrics:
+                    self._metrics.rate_limit_hits.labels(user_id=user_id).inc()
+                raise CoreServiceError(
+                    message="Rate limit exceeded",
+                    code="RATE_LIMIT_EXCEEDED",
+                    service="DatabaseService",
+                )
+            self._rate_window[user_id] = (count + 1, win)
+        else:
+            self._rate_window[user_id] = (1, now)
+
+    # ---- CRUD ----
+
+    async def insert(
         self,
         table: str,
         data: dict[str, Any] | list[dict[str, Any]],
         user_id: str | None = None,
-    ) -> DatabaseResult[T]:
-        """Insert data into table with monitoring and security."""
-        await self.ensure_connected()
+    ) -> list[dict[str, Any]]:
+        """Insert records into a table.
 
+        Args:
+            table: Target table name.
+            data: Single row or list of row dictionaries to insert.
+            user_id: Optional user performing the action (for auditing/limits).
+
+        Returns:
+            Inserted rows as a list of dictionaries.
+
+        Raises:
+            CoreDatabaseError: If insertion fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.INSERT, table, user_id):
             try:
-                result = await asyncio.to_thread(
+                result: Any = await asyncio.to_thread(
                     lambda: self.client.table(table).insert(data).execute()
                 )
-
-                # Audit logging
                 if self.enable_audit_logging:
                     self._log_audit_event(
-                        user_id=user_id,
-                        action="INSERT",
-                        table=table,
-                        records_affected=len(result.data) if result.data else 0,
+                        user_id, "INSERT", table, len(result.data) if result.data else 0
                     )
-
                 return result.data
             except Exception as e:
                 logger.exception("INSERT error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to insert into table '{table}'",
+                    message=f"Failed to insert into '{table}'",
                     code="INSERT_FAILED",
                     operation="INSERT",
                     table=table,
                     details={"error": str(e)},
                 ) from e
 
-    async def select[T](
+    async def select(
         self,
         table: str,
         columns: str = "*",
-        filters: FilterDict | None = None,
+        *,
+        filters: dict[str, Any] | None = None,
         order_by: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
         user_id: str | None = None,
-    ) -> DatabaseResult[T]:
-        """Select data from table with monitoring."""
-        await self.ensure_connected()
+    ) -> list[dict[str, Any]]:
+        """Select rows from a table with optional filtering and pagination.
 
+        Args:
+            table: Target table name.
+            columns: Column selection string (e.g., "*", "id,name").
+            filters: Mapping of equality or operator mappings (e.g.,
+                {"id": 1} or {"created_at": {"gte": "..."}}).
+            order_by: Column name to order by; prefix with '-' for DESC.
+            limit: Optional limit of rows.
+            offset: Optional offset for pagination.
+            user_id: Optional user attribution.
+
+        Returns:
+            Selected rows as a list of dictionaries.
+
+        Raises:
+            CoreDatabaseError: If selection fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.SELECT, table, user_id):
             try:
                 query = self.client.table(table).select(columns)
-
-                # Apply filters
                 if filters:
                     for key, value in filters.items():
                         if isinstance(value, dict):
-                            # Support for complex filters
-                            for operator, filter_value in value.items():
-                                query = getattr(query, operator)(key, filter_value)
+                            for op, val in value.items():
+                                query = getattr(query, op)(key, val)
                         else:
                             query = query.eq(key, value)
-
-                # Apply ordering
                 if order_by:
                     if order_by.startswith("-"):
                         query = query.order(order_by[1:], desc=True)
                     else:
                         query = query.order(order_by)
-
-                # Apply pagination
-                if limit:
+                if limit is not None:
                     query = query.limit(limit)
-                if offset:
+                if offset is not None:
                     query = query.offset(offset)
-
-                result = await asyncio.to_thread(lambda: query.execute())
+                result: Any = await asyncio.to_thread(query.execute)
                 return result.data
             except Exception as e:
                 logger.exception("SELECT error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to select from table '{table}'",
+                    message=f"Failed to select from '{table}'",
                     code="SELECT_FAILED",
                     operation="SELECT",
                     table=table,
@@ -1321,33 +782,36 @@ class DatabaseService:
         filters: dict[str, Any],
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Update data in table with monitoring and security."""
-        await self.ensure_connected()
+        """Update rows in a table.
 
+        Args:
+            table: Target table name.
+            data: Partial row dictionary with fields to update.
+            filters: Equality filters identifying rows to update.
+            user_id: Optional user attribution.
+
+        Returns:
+            Updated rows as a list of dictionaries.
+
+        Raises:
+            CoreDatabaseError: If update fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.UPDATE, table, user_id):
             try:
                 query = self.client.table(table).update(data)
-
-                # Apply filters
-                for key, value in filters.items():
-                    query = query.eq(key, value)
-
-                result = await asyncio.to_thread(lambda: query.execute())
-
-                # Audit logging
+                for k, v in filters.items():
+                    query = query.eq(k, v)
+                result: Any = await asyncio.to_thread(query.execute)
                 if self.enable_audit_logging:
                     self._log_audit_event(
-                        user_id=user_id,
-                        action="UPDATE",
-                        table=table,
-                        records_affected=len(result.data) if result.data else 0,
+                        user_id, "UPDATE", table, len(result.data) if result.data else 0
                     )
-
                 return result.data
             except Exception as e:
                 logger.exception("UPDATE error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to update table '{table}'",
+                    message=f"Failed to update '{table}'",
                     code="UPDATE_FAILED",
                     operation="UPDATE",
                     table=table,
@@ -1361,32 +825,36 @@ class DatabaseService:
         on_conflict: str | None = None,
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Upsert data in table with monitoring."""
-        await self.ensure_connected()
+        """Insert-or-update rows in a table.
 
+        Args:
+            table: Target table name.
+            data: Single row or list of row dictionaries.
+            on_conflict: Column(s) used to resolve conflicts (e.g., "id").
+            user_id: Optional user attribution.
+
+        Returns:
+            Upserted rows as a list of dictionaries.
+
+        Raises:
+            CoreDatabaseError: If upsert fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.UPSERT, table, user_id):
             try:
                 query = self.client.table(table).upsert(data)
-
-                if on_conflict:
-                    query = query.on_conflict(on_conflict)
-
-                result = await asyncio.to_thread(lambda: query.execute())
-
-                # Audit logging
+                if on_conflict and hasattr(query, "on_conflict"):
+                    query = query.on_conflict(on_conflict)  # type: ignore[call-arg]
+                result: Any = await asyncio.to_thread(query.execute)
                 if self.enable_audit_logging:
                     self._log_audit_event(
-                        user_id=user_id,
-                        action="UPSERT",
-                        table=table,
-                        records_affected=len(result.data) if result.data else 0,
+                        user_id, "UPSERT", table, len(result.data) if result.data else 0
                     )
-
                 return result.data
             except Exception as e:
                 logger.exception("UPSERT error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to upsert into table '{table}'",
+                    message=f"Failed to upsert into '{table}'",
                     code="UPSERT_FAILED",
                     operation="UPSERT",
                     table=table,
@@ -1394,38 +862,37 @@ class DatabaseService:
                 ) from e
 
     async def delete(
-        self,
-        table: str,
-        filters: dict[str, Any],
-        user_id: str | None = None,
+        self, table: str, filters: dict[str, Any], user_id: str | None = None
     ) -> list[dict[str, Any]]:
-        """Delete data from table with monitoring and security."""
-        await self.ensure_connected()
+        """Delete rows from a table.
 
+        Args:
+            table: Target table name.
+            filters: Equality filters identifying rows to delete.
+            user_id: Optional user attribution.
+
+        Returns:
+            Deleted rows returned by PostgREST.
+
+        Raises:
+            CoreDatabaseError: If deletion fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.DELETE, table, user_id):
             try:
                 query = self.client.table(table).delete()
-
-                # Apply filters
-                for key, value in filters.items():
-                    query = query.eq(key, value)
-
-                result = await asyncio.to_thread(lambda: query.execute())
-
-                # Audit logging
+                for k, v in filters.items():
+                    query = query.eq(k, v)
+                result: Any = await asyncio.to_thread(query.execute)
                 if self.enable_audit_logging:
                     self._log_audit_event(
-                        user_id=user_id,
-                        action="DELETE",
-                        table=table,
-                        records_affected=len(result.data) if result.data else 0,
+                        user_id, "DELETE", table, len(result.data) if result.data else 0
                     )
-
                 return result.data
             except Exception as e:
                 logger.exception("DELETE error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to delete from table '{table}'",
+                    message=f"Failed to delete from '{table}'",
                     code="DELETE_FAILED",
                     operation="DELETE",
                     table=table,
@@ -1438,186 +905,235 @@ class DatabaseService:
         filters: dict[str, Any] | None = None,
         user_id: str | None = None,
     ) -> int:
-        """Count records in table with monitoring."""
-        await self.ensure_connected()
+        """Count rows matching optional filters.
 
+        Args:
+            table: Target table name.
+            filters: Equality filters to apply before counting.
+            user_id: Optional user attribution.
+
+        Returns:
+            Exact number of rows matching the filter.
+
+        Raises:
+            CoreDatabaseError: If count fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.COUNT, table, user_id):
             try:
-                query = self.client.table(table).select("*", count="exact")
-
-                # Apply filters
+                query = self.client.table(table).select("*", count=CountMethod.exact)
                 if filters:
-                    for key, value in filters.items():
-                        query = query.eq(key, value)
-
-                result = await asyncio.to_thread(lambda: query.execute())
-                return result.count
+                    for k, v in filters.items():
+                        query = query.eq(k, v)
+                result: Any = await asyncio.to_thread(query.execute)
+                return int(getattr(result, "count", 0) or 0)
             except Exception as e:
                 logger.exception("COUNT error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to count records in table '{table}'",
+                    message=f"Failed to count records in '{table}'",
                     code="COUNT_FAILED",
                     operation="COUNT",
                     table=table,
                     details={"error": str(e)},
                 ) from e
 
-    # Vector search operations
+    # ---- Vector search ----
 
     async def vector_search(
         self,
         table: str,
         vector_column: str,
         query_vector: list[float],
+        *,
         limit: int = 10,
         similarity_threshold: float | None = None,
         filters: dict[str, Any] | None = None,
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Perform vector similarity search using pgvector."""
-        await self.ensure_connected()
+        """Perform a vector similarity search using pgvector ordering.
 
+        Args:
+            table: Target table name containing the vector column.
+            vector_column: Name of the vector column (pgvector type).
+            query_vector: Query embedding vector.
+            limit: Maximum number of results to return.
+            similarity_threshold: Optional similarity threshold in [0, 1].
+            filters: Optional equality filters to apply.
+            user_id: Optional user attribution.
+
+        Returns:
+            Ranked rows with a computed ``distance`` field.
+
+        Raises:
+            CoreDatabaseError: If the vector search fails.
+        """
+        await self.ensure_connected()
         async with self._monitor_query(QueryType.VECTOR_SEARCH, table, user_id):
             try:
-                # Use SQLAlchemy for vector operations
-                if self._sqlalchemy_engine:
-                    with self._sqlalchemy_engine.connect() as conn:
-                        # Build vector search query
-                        vector_str = f"'[{','.join(map(str, query_vector))}]'"
-
-                        # Base query with vector distance
-                        sql = f"""
-                        SELECT *, ({vector_column} <-> {vector_str}::vector) as distance
-                        FROM {table}
-                        WHERE 1=1
-                        """
-
-                        # Add similarity threshold if provided
-                        if similarity_threshold:
-                            distance_threshold = 1 - similarity_threshold
-                            sql += (
-                                f" AND ({vector_column} <-> {vector_str}::vector) < "
-                                f"{distance_threshold}"
-                            )
-
-                        # Add filters
-                        params = {}
-                        if filters:
-                            for i, (key, value) in enumerate(filters.items()):
-                                sql += f" AND {key} = :param_{i}"
-                                params[f"param_{i}"] = value
-
-                        # Order by similarity and limit
-                        sql += (
-                            f" ORDER BY {vector_column} <-> {vector_str}::vector "
-                            f"LIMIT {limit}"
-                        )
-
-                        # Execute query
-                        result = conn.execute(text(sql), params)
-                        rows = result.fetchall()
-
-                        # Convert to list of dicts
-                        return [dict(row._mapping) for row in rows]
-                else:
-                    # Fallback to Supabase client (less efficient)
-                    vector_str = f"[{','.join(map(str, query_vector))}]"
-
-                    query = self.client.table(table).select(
-                        f"*, {vector_column} <-> '{vector_str}' as distance"
-                    )
-
-                    if filters:
-                        for key, value in filters.items():
-                            query = query.eq(key, value)
-
-                    if similarity_threshold:
-                        distance_threshold = 1 - similarity_threshold
-                        query = query.lt(
-                            f"{vector_column} <-> '{vector_str}'", distance_threshold
-                        )
-
-                    query = query.order(f"{vector_column} <-> '{vector_str}'").limit(
-                        limit
-                    )
-
-                    result = await asyncio.to_thread(lambda: query.execute())
-                    return result.data
-
+                vec = f"[{','.join(map(str, query_vector))}]"
+                query = self.client.table(table).select(
+                    f"*, {vector_column} <-> '{vec}' as distance"
+                )
+                if filters:
+                    for k, v in filters.items():
+                        query = query.eq(k, v)
+                if similarity_threshold is not None:
+                    dist_thr = 1 - similarity_threshold
+                    query = query.lt(f"{vector_column} <-> '{vec}'", dist_thr)
+                query = query.order(f"{vector_column} <-> '{vec}'").limit(limit)
+                result: Any = await asyncio.to_thread(query.execute)
+                return result.data
             except Exception as e:
                 logger.exception("Vector search error for table '%s'", table)
                 raise CoreDatabaseError(
-                    message=f"Failed to perform vector search on table '{table}'",
+                    message=f"Failed vector search on '{table}'",
                     code="VECTOR_SEARCH_FAILED",
                     operation="VECTOR_SEARCH",
                     table=table,
                     details={"error": str(e)},
                 ) from e
 
-    # Transaction support
+    # ---- RPC / SQL ----
 
-    def transaction(self, user_id: str | None = None):
-        """Create a transaction context manager for database transactions."""
-        return DatabaseTransactionContext(self, user_id)
+    async def execute_sql(
+        self, sql: str, params: dict[str, Any] | None = None, user_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Execute raw SQL through a trusted RPC wrapper.
 
+        Args:
+            sql: SQL text to execute. Use parameter placeholders handled by the RPC.
+            params: Parameter mapping supplied to the RPC wrapper.
+            user_id: Optional user attribution.
 
-class DatabaseTransactionContext:
-    """Async context manager for database transactions."""
+        Returns:
+            Result rows as a list of dictionaries.
 
-    def __init__(self, service: "DatabaseService", user_id: str | None = None):
-        self.service = service
-        self.user_id = user_id
-        self.operations = []
-        self._monitor_ctx = None
-
-    async def __aenter__(self):
-        """Enter the async context manager."""
-        await self.service.ensure_connected()
-        self._monitor_ctx = self.service._monitor_query(
-            QueryType.TRANSACTION, None, self.user_id
-        )
-        self._query_id = await self._monitor_ctx.__aenter__()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Exit the async context manager."""
-        if self._monitor_ctx:
-            return await self._monitor_ctx.__aexit__(exc_type, exc_val, exc_tb)
-        return None
-
-    def insert(self, table: str, data: dict[str, Any] | list[dict[str, Any]]):
-        """Add an insert operation to the transaction."""
-        self.operations.append(("insert", table, data))
-
-    def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]):
-        """Add an update operation to the transaction."""
-        self.operations.append(("update", table, data, filters))
-
-    def delete(self, table: str, filters: dict[str, Any]):
-        """Add a delete operation to the transaction."""
-        self.operations.append(("delete", table, filters))
-
-    async def execute(self):
-        """Execute all operations in the transaction."""
-        results = []
-        for operation in self.operations:
-            op_type = operation[0]
-            if op_type == "insert":
-                result = await self.service.insert(
-                    operation[1], operation[2], self.user_id
+        Raises:
+            CoreDatabaseError: If the SQL execution fails.
+        """
+        await self.ensure_connected()
+        if self.enable_security:
+            self._check_sql_injection(sql)
+        async with self._monitor_query(QueryType.RAW_SQL, None, user_id):
+            try:
+                result: Any = await asyncio.to_thread(
+                    self.client.rpc(
+                        "execute_sql", {"sql": sql, "params": params or {}}
+                    ).execute
                 )
-            elif op_type == "update":
-                result = await self.service.update(
-                    operation[1], operation[2], operation[3], self.user_id
-                )
-            elif op_type == "delete":
-                result = await self.service.delete(
-                    operation[1], operation[2], self.user_id
-                )
-            results.append(result)
-        return results
+                return result.data
+            except Exception as e:
+                logger.exception("SQL execution error")
+                raise CoreDatabaseError(
+                    message="Failed to execute SQL",
+                    code="SQL_EXECUTION_FAILED",
+                    operation="EXECUTE_SQL",
+                    details={"error": str(e), "sql": sql},
+                ) from e
 
-    # High-level business operations
+    async def call_function(
+        self,
+        function_name: str,
+        params: dict[str, Any] | None = None,
+        user_id: str | None = None,
+    ) -> Any:
+        """Invoke a Postgres function via Supabase RPC.
+
+        Args:
+            function_name: Name of the function to invoke.
+            params: Optional mapping of parameters.
+            user_id: Optional user attribution.
+
+        Returns:
+            Function return payload as provided by Supabase.
+
+        Raises:
+            CoreDatabaseError: If the RPC call fails.
+        """
+        await self.ensure_connected()
+        async with self._monitor_query(QueryType.FUNCTION, function_name, user_id):
+            try:
+                result: Any = await asyncio.to_thread(
+                    self.client.rpc(function_name, params or {}).execute
+                )
+                return result.data
+            except Exception as e:
+                logger.exception("Function call error for '%s'", function_name)
+                raise CoreDatabaseError(
+                    message=f"Failed to call function '{function_name}'",
+                    code="FUNCTION_CALL_FAILED",
+                    operation="CALL_FUNCTION",
+                    details={"error": str(e)},
+                ) from e
+
+    # ---- Convenience helpers used by wrappers/services ----
+    class _Tx:
+        """Minimal transactional batch executor.
+
+        This helper batches multiple CRUD operations and executes them
+        sequentially when ``execute()`` is called inside an async context.
+
+        Attributes:
+            svc: Parent DatabaseService.
+            user_id: Optional user attribution for auditing.
+            ops: Recorded operations to execute in order.
+        """
+
+        def __init__(self, svc: DatabaseService, user_id: str | None):
+            self.svc = svc
+            self.user_id = user_id
+            self.ops: list[tuple[str, tuple]] = []
+
+        async def __aenter__(self) -> DatabaseService._Tx:
+            """Enter the transaction context and ensure connectivity."""
+            await self.svc.ensure_connected()
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            """Exit the transaction context without committing extra state."""
+            return False
+
+        def insert(self, table: str, data: dict[str, Any] | list[dict[str, Any]]):
+            """Insert a record into a table."""
+            self.ops.append(("insert", (table, data)))
+
+        def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]):
+            """Update a record in a table."""
+            self.ops.append(("update", (table, data, filters)))
+
+        def delete(self, table: str, filters: dict[str, Any]):
+            """Delete a record from a table."""
+            self.ops.append(("delete", (table, filters)))
+
+        async def execute(self) -> list[Any]:
+            """Execute all recorded operations in order.
+
+            Returns:
+                List with each operation's result payload.
+            """
+            out: list[Any] = []
+            for op, args in self.ops:
+                if op == "insert":
+                    out.append(await self.svc.insert(args[0], args[1], self.user_id))
+                elif op == "update":
+                    out.append(
+                        await self.svc.update(args[0], args[1], args[2], self.user_id)
+                    )
+                elif op == "delete":
+                    out.append(await self.svc.delete(args[0], args[1], self.user_id))
+            return out
+
+    def transaction(self, user_id: str | None = None) -> DatabaseService._Tx:
+        """Create a new transactional batch context.
+
+        Args:
+            user_id: Optional user attribution for auditing.
+
+        Returns:
+            A transactional context manager supporting ``insert``, ``update``,
+            ``delete`` and ``execute``.
+        """
+        return DatabaseService._Tx(self, user_id)
 
     async def create_trip(
         self, trip_data: dict[str, Any], user_id: str | None = None
@@ -1626,23 +1142,36 @@ class DatabaseTransactionContext:
         result = await self.insert("trips", trip_data, user_id)
         return result[0] if result else {}
 
+    async def get_trip_by_id(
+        self, trip_id: str, user_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """Get trip by ID."""
+        result = await self.select(
+            "trips", "*", filters={"id": trip_id}, user_id=user_id
+        )
+        return result[0] if result else None
+
+    async def get_user_trips(self, user_id: str) -> list[dict[str, Any]]:
+        """Get all trips for a user."""
+        return await self.select(
+            "trips",
+            "*",
+            filters={"user_id": user_id},
+            order_by="-created_at",
+            user_id=user_id,
+        )
+
     async def get_trip(
         self, trip_id: str, user_id: str | None = None
     ) -> dict[str, Any] | None:
         """Get trip by ID."""
-        result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
+        result = await self.get_trip_by_id(trip_id, user_id)
         if not result:
             raise CoreResourceNotFoundError(
                 message=f"Trip {trip_id} not found",
                 details={"resource_id": trip_id, "resource_type": "trip"},
             )
-        return result[0]
-
-    async def get_user_trips(self, user_id: str) -> list[dict[str, Any]]:
-        """Get all trips for a user."""
-        return await self.select(
-            "trips", "*", {"user_id": user_id}, order_by="-created_at", user_id=user_id
-        )
+        return result
 
     async def update_trip(
         self, trip_id: str, trip_data: dict[str, Any], user_id: str | None = None
@@ -1661,8 +1190,6 @@ class DatabaseTransactionContext:
         result = await self.delete("trips", {"id": trip_id}, user_id)
         return len(result) > 0
 
-    # User operations
-
     async def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new user record."""
         result = await self.insert("users", user_data)
@@ -1670,17 +1197,12 @@ class DatabaseTransactionContext:
 
     async def get_user(self, user_id: str) -> dict[str, Any] | None:
         """Get user by ID."""
-        result = await self.select("users", "*", {"id": user_id})
-        if not result:
-            raise CoreResourceNotFoundError(
-                message=f"User {user_id} not found",
-                details={"resource_id": user_id, "resource_type": "user"},
-            )
-        return result[0]
+        result = await self.select("users", "*", filters={"id": user_id})
+        return result[0] if result else None
 
     async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         """Get user by email."""
-        result = await self.select("users", "*", {"email": email})
+        result = await self.select("users", "*", filters={"email": email})
         return result[0] if result else None
 
     async def update_user(
@@ -1695,134 +1217,213 @@ class DatabaseTransactionContext:
             )
         return result[0]
 
-    # Flight operations
-
     async def save_flight_search(
         self, search_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
-        """Save flight search parameters."""
+        """Persist a flight search request.
+
+        Args:
+            search_data: Search parameters to store.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created record.
+        """
         result = await self.insert("flight_searches", search_data, user_id)
+        return result[0] if result else {}
+
+    async def save_accommodation_search(
+        self, search_data: dict[str, Any], user_id: str | None = None
+    ) -> dict[str, Any]:
+        """Persist an accommodation search request.
+
+        Args:
+            search_data: Search parameters to store.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created record.
+        """
+        result = await self.insert("accommodation_searches", search_data, user_id)
         return result[0] if result else {}
 
     async def save_flight_option(
         self, option_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
-        """Save flight option."""
+        """Persist a flight option candidate.
+
+        Args:
+            option_data: Flight option payload.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created record.
+        """
         result = await self.insert("flight_options", option_data, user_id)
         return result[0] if result else {}
 
     async def get_user_flight_searches(self, user_id: str) -> list[dict[str, Any]]:
-        """Get user's flight searches."""
+        """List flight searches created by a user.
+
+        Args:
+            user_id: User identifier.
+
+        Returns:
+            List of search rows.
+        """
         return await self.select(
             "flight_searches",
             "*",
-            {"user_id": user_id},
+            filters={"user_id": user_id},
             order_by="-created_at",
             user_id=user_id,
         )
 
-    # Accommodation operations
-
-    async def save_accommodation_search(
-        self, search_data: dict[str, Any], user_id: str | None = None
-    ) -> dict[str, Any]:
-        """Save accommodation search parameters."""
-        result = await self.insert("accommodation_searches", search_data, user_id)
-        return result[0] if result else {}
-
     async def save_accommodation_option(
         self, option_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
-        """Save accommodation option."""
+        """Persist an accommodation option candidate.
+
+        Args:
+            option_data: Option payload to store.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created record.
+        """
         result = await self.insert("accommodation_options", option_data, user_id)
         return result[0] if result else {}
 
     async def get_user_accommodation_searches(
         self, user_id: str
     ) -> list[dict[str, Any]]:
-        """Get user's accommodation searches."""
+        """List accommodation searches created by a user.
+
+        Args:
+            user_id: User identifier.
+
+        Returns:
+            List of search rows.
+        """
         return await self.select(
             "accommodation_searches",
             "*",
-            {"user_id": user_id},
+            filters={"user_id": user_id},
             order_by="-created_at",
             user_id=user_id,
         )
 
-    # Chat operations
-
     async def create_chat_session(
         self, session_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
-        """Create chat session."""
+        """Create a chat session row.
+
+        Args:
+            session_data: Session payload.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created session.
+        """
         result = await self.insert("chat_sessions", session_data, user_id)
         return result[0] if result else {}
 
     async def save_chat_message(
         self, message_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
-        """Save chat message."""
+        """Store a chat message.
+
+        Args:
+            message_data: Message payload.
+            user_id: Optional user attribution.
+
+        Returns:
+            The created message.
+        """
         result = await self.insert("chat_messages", message_data, user_id)
         return result[0] if result else {}
 
     async def get_chat_history(
         self, session_id: str, limit: int = 50, user_id: str | None = None
     ) -> list[dict[str, Any]]:
-        """Get chat history for session."""
+        """Fetch chat messages for a session.
+
+        Args:
+            session_id: Chat session identifier.
+            limit: Max messages to return.
+            user_id: Optional user attribution.
+
+        Returns:
+            List of chat messages.
+        """
         return await self.select(
             "chat_messages",
             "*",
-            {"session_id": session_id},
+            filters={"session_id": session_id},
             order_by="created_at",
             limit=limit,
             user_id=user_id,
         )
 
-    # API key operations
+    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
+        """List API keys for a user.
+
+        Args:
+            user_id: User identifier.
+
+        Returns:
+            List of API key rows.
+        """
+        return await self.select(
+            "api_keys", "*", filters={"user_id": user_id}, user_id=user_id
+        )
+
+    async def get_api_key(
+        self, user_id: str, service_name: str
+    ) -> dict[str, Any] | None:
+        """Fetch a user's API key for a service.
+
+        Args:
+            user_id: User identifier.
+            service_name: Logical service name.
+
+        Returns:
+            API key row or None.
+        """
+        result = await self.select(
+            "api_keys",
+            "*",
+            filters={"user_id": user_id, "service_name": service_name},
+            user_id=user_id,
+        )
+        return result[0] if result else None
 
     async def save_api_key(
         self, key_data: dict[str, Any], user_id: str | None = None
     ) -> dict[str, Any]:
-        """Save API key configuration."""
+        """Create or update an API key using upsert.
+
+        Args:
+            key_data: API key payload.
+            user_id: Optional user attribution.
+
+        Returns:
+            Saved API key row.
+        """
         result = await self.upsert(
             "api_keys", key_data, on_conflict="user_id,service_name", user_id=user_id
         )
         return result[0] if result else {}
 
-    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
-        """Get user's API keys."""
-        return await self.select("api_keys", "*", {"user_id": user_id}, user_id=user_id)
-
-    async def get_api_key(
-        self, user_id: str, service_name: str
-    ) -> dict[str, Any] | None:
-        """Get specific API key for user and service."""
-        result = await self.select(
-            "api_keys",
-            "*",
-            {"user_id": user_id, "service_name": service_name},
-            user_id=user_id,
-        )
-        return result[0] if result else None
-
-    async def delete_api_key(self, key_id: str, user_id: str) -> bool:
-        """Delete API key by ID with user authorization."""
-        result = await self.delete(
-            "api_keys", {"id": key_id, "user_id": user_id}, user_id
-        )
-        return len(result) > 0
-
-    async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
-        """Delete API key by service name."""
-        result = await self.delete(
-            "api_keys", {"user_id": user_id, "service_name": service_name}, user_id
-        )
-        return len(result) > 0
-
-    # Additional API key methods for compatibility
-
     async def create_api_key(self, key_data: dict[str, Any]) -> dict[str, Any]:
-        """Create a new API key."""
+        """Create a new API key row.
+
+        Args:
+            key_data: API key payload.
+
+        Returns:
+            Created API key row.
+        """
         user_id = key_data.get("user_id")
         result = await self.insert("api_keys", key_data, user_id)
         return result[0] if result else {}
@@ -1830,44 +1431,69 @@ class DatabaseTransactionContext:
     async def get_api_key_for_service(
         self, user_id: str, service: str
     ) -> dict[str, Any] | None:
-        """Get API key for specific service - alias for get_api_key."""
+        """Alias for :meth:`get_api_key` for backward compatibility.
+
+        Args:
+            user_id: User identifier.
+            service: Service name.
+
+        Returns:
+            API key row or None.
+        """
         return await self.get_api_key(user_id, service)
 
     async def get_api_key_by_id(
         self, key_id: str, user_id: str
     ) -> dict[str, Any] | None:
-        """Get API key by ID with user authorization."""
+        """Fetch an API key by ID for a user.
+
+        Args:
+            key_id: Key identifier.
+            user_id: User identifier.
+
+        Returns:
+            API key row or None.
+        """
         result = await self.select(
-            "api_keys", "*", {"id": key_id, "user_id": user_id}, user_id=user_id
+            "api_keys", "*", filters={"id": key_id, "user_id": user_id}, user_id=user_id
         )
         return result[0] if result else None
 
     async def update_api_key_last_used(self, key_id: str) -> bool:
-        """Update the last_used timestamp for an API key."""
-        from datetime import datetime
+        """Update the ``last_used`` and ``updated_at`` timestamps for a key.
 
+        Args:
+            key_id: Key identifier.
+
+        Returns:
+            True if any row was updated.
+        """
+        now = datetime.now(UTC).isoformat()
         result = await self.update(
-            "api_keys",
-            {
-                "last_used": datetime.now(UTC).isoformat(),
-                "updated_at": datetime.now(UTC).isoformat(),
-            },
-            {"id": key_id},
+            "api_keys", {"last_used": now, "updated_at": now}, {"id": key_id}
         )
         return len(result) > 0
 
     async def update_api_key_validation(
         self, key_id: str, is_valid: bool, validated_at: datetime
     ) -> bool:
-        """Update API key validation status."""
-        from datetime import datetime
+        """Record a key validation result and timestamp.
 
+        Args:
+            key_id: Key identifier.
+            is_valid: Validation status.
+            validated_at: Validation timestamp in UTC.
+
+        Returns:
+            True if any row was updated.
+        """
+        now = datetime.now(UTC).isoformat()
         result = await self.update(
             "api_keys",
             {
                 "is_valid": is_valid,
                 "last_validated": validated_at.isoformat(),
-                "updated_at": datetime.now(UTC).isoformat(),
+                "updated_at": now,
             },
             {"id": key_id},
         )
@@ -1876,17 +1502,45 @@ class DatabaseTransactionContext:
     async def update_api_key(
         self, key_id: str, update_data: dict[str, Any]
     ) -> dict[str, Any]:
-        """Update an API key with new data."""
+        """Update arbitrary fields for a key.
+
+        Args:
+            key_id: Key identifier.
+            update_data: Fields to update.
+
+        Returns:
+            Updated API key row or empty dict.
+        """
         result = await self.update("api_keys", update_data, {"id": key_id})
         return result[0] if result else {}
 
     async def log_api_key_usage(self, usage_data: dict[str, Any]) -> dict[str, Any]:
-        """Log API key usage for audit trail."""
+        """Append an API key usage event.
+
+        Args:
+            usage_data: Usage payload to persist.
+
+        Returns:
+            Created usage row.
+        """
         user_id = usage_data.get("user_id")
         result = await self.insert("api_key_usage_logs", usage_data, user_id)
         return result[0] if result else {}
 
-    # Destination and embedding operations
+    async def delete_api_key(self, key_id: str, user_id: str) -> bool:
+        """Delete a key by ID for the given user.
+
+        Args:
+            key_id: Key identifier.
+            user_id: User identifier.
+
+        Returns:
+            True if any row was deleted.
+        """
+        result = await self.delete(
+            "api_keys", {"id": key_id, "user_id": user_id}, user_id
+        )
+        return len(result) > 0
 
     async def vector_search_destinations(
         self,
@@ -1895,7 +1549,17 @@ class DatabaseTransactionContext:
         similarity_threshold: float = 0.7,
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Search destinations using vector similarity."""
+        """Convenience wrapper for destination vector search.
+
+        Args:
+            query_vector: Embedding to search with.
+            limit: Max rows to return.
+            similarity_threshold: Optional similarity threshold in [0, 1].
+            user_id: Optional user attribution.
+
+        Returns:
+            Ranked destination rows including ``distance``.
+        """
         return await self.vector_search(
             "destinations",
             "embedding",
@@ -1911,92 +1575,105 @@ class DatabaseTransactionContext:
         embedding: list[float],
         user_id: str | None = None,
     ) -> dict[str, Any]:
-        """Save destination with embedding."""
+        """Upsert a destination row with an embedding.
+
+        Args:
+            destination_data: Destination payload.
+            embedding: Embedding vector to store.
+            user_id: Optional user attribution.
+
+        Returns:
+            Saved destination row.
+        """
         destination_data["embedding"] = embedding
         result = await self.upsert(
             "destinations", destination_data, on_conflict="id", user_id=user_id
         )
         return result[0] if result else {}
 
-    # Advanced query operations
+    async def get_trip_collaborators(self, trip_id: str) -> list[dict[str, Any]]:
+        """List collaborators for a trip.
 
-    async def execute_sql(
-        self,
-        sql: str,
-        params: dict[str, Any] | None = None,
-        user_id: str | None = None,
-    ) -> list[dict[str, Any]]:
-        """Execute raw SQL query with security checks."""
-        await self.ensure_connected()
+        Args:
+            trip_id: Trip identifier.
 
-        # Security check for SQL injection
-        if self.enable_security:
-            self._check_sql_injection(sql)
+        Returns:
+            List of collaborator rows.
+        """
+        return await self.select(
+            "trip_collaborators", "*", filters={"trip_id": trip_id}
+        )
 
-        async with self._monitor_query(QueryType.RAW_SQL, None, user_id):
-            try:
-                if self._sqlalchemy_engine:
-                    # Use SQLAlchemy for better control
-                    with self._sqlalchemy_engine.connect() as conn:
-                        result = conn.execute(text(sql), params or {})
-                        if result.returns_rows:
-                            rows = result.fetchall()
-                            return [dict(row._mapping) for row in rows]
-                        else:
-                            return [{"rows_affected": result.rowcount}]
-                else:
-                    # Fallback to Supabase RPC
-                    result = await asyncio.to_thread(
-                        lambda: self.client.rpc(
-                            "execute_sql", {"sql": sql, "params": params or {}}
-                        ).execute()
-                    )
-                    return result.data
-            except Exception as e:
-                logger.exception("SQL execution error")
+    async def add_trip_collaborator(
+        self, collaborator_data: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Add or update a trip collaborator.
+
+        Args:
+            collaborator_data: Collaborator payload; must include
+                ``trip_id``, ``user_id``, ``permission_level``, ``added_by``.
+
+        Returns:
+            Saved collaboration row.
+
+        Raises:
+            CoreDatabaseError: If a required field is missing or upsert fails.
+        """
+        required = ["trip_id", "user_id", "permission_level", "added_by"]
+        for f in required:
+            if f not in collaborator_data:
                 raise CoreDatabaseError(
-                    message="Failed to execute SQL query",
-                    code="SQL_EXECUTION_FAILED",
-                    operation="EXECUTE_SQL",
-                    details={"error": str(e), "sql": sql},
-                ) from e
-
-    async def call_function(
-        self,
-        function_name: str,
-        params: dict[str, Any] | None = None,
-        user_id: str | None = None,
-    ) -> Any:
-        """Call Supabase database function."""
-        await self.ensure_connected()
-
-        async with self._monitor_query(QueryType.FUNCTION_CALL, function_name, user_id):
-            try:
-                result = await asyncio.to_thread(
-                    lambda: self.client.rpc(function_name, params or {}).execute()
+                    message=f"Missing required field: {f}",
+                    code="MISSING_REQUIRED_FIELD",
+                    operation="ADD_TRIP_COLLABORATOR",
+                    details={"missing_field": f},
                 )
-                return result.data
-            except Exception as e:
-                logger.exception("Function call error for '%s'", function_name)
-                raise CoreDatabaseError(
-                    message=f"Failed to call database function '{function_name}'",
-                    code="FUNCTION_CALL_FAILED",
-                    operation="CALL_FUNCTION",
-                    details={"error": str(e), "function": function_name},
-                ) from e
+        user_id = collaborator_data.get("added_by")
+        result = await self.upsert(
+            "trip_collaborators",
+            collaborator_data,
+            on_conflict="trip_id,user_id",
+            user_id=user_id,
+        )
+        return result[0] if result else {}
 
-    # Trip-specific operations
-
-    async def get_trip_by_id(
-        self, trip_id: str, user_id: str | None = None
+    async def get_trip_collaborator(
+        self, trip_id: str, user_id: str
     ) -> dict[str, Any] | None:
-        """Get trip by ID - compatibility method."""
-        try:
-            result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
-            return result[0] if result else None
-        except Exception:
-            logger.exception("Failed to get trip by ID %s", trip_id)
-            return None
+        """Fetch a specific collaborator for a trip and user.
+
+        Args:
+            trip_id: Trip identifier.
+            user_id: Collaborator user identifier.
+
+        Returns:
+            Collaborator row or None.
+        """
+        result = await self.select(
+            "trip_collaborators",
+            "*",
+            filters={"trip_id": trip_id, "user_id": user_id},
+            user_id=user_id,
+        )
+        return result[0] if result else None
+
+    async def get_trip_related_counts(self, trip_id: str) -> dict[str, int]:
+        """Compute related entity counts for a trip.
+
+        Args:
+            trip_id: Trip identifier.
+
+        Returns:
+            Mapping of count names to values (flights, accommodations, messages).
+        """
+        flights = await self.count("flights", {"trip_id": trip_id})
+        accommodations = await self.count("accommodations", {"trip_id": trip_id})
+        messages = await self.count("chat_messages", {"trip_id": trip_id})
+        return {
+            "flights": flights,
+            "accommodations": accommodations,
+            "messages": messages,
+        }
 
     async def search_trips(
         self,
@@ -2005,229 +1682,79 @@ class DatabaseTransactionContext:
         offset: int = 0,
         user_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Search trips with text and filters."""
+        """Search trips using filters and simple text matching.
+
+        Args:
+            search_filters: Filter mapping (user_id, status, visibility, query,
+                destinations, tags, date_range).
+            limit: Page size.
+            offset: Page offset.
+            user_id: Optional user attribution.
+
+        Returns:
+            List of trips matching the criteria.
+        """
         await self.ensure_connected()
-
         async with self._monitor_query(QueryType.SELECT, "trips", user_id):
-            try:
-                query = self.client.table("trips").select("*")
+            q = self.client.table("trips").select("*")
+            if "user_id" in search_filters:
+                q = q.eq("user_id", search_filters["user_id"])
+            if "status" in search_filters:
+                q = q.eq("status", search_filters["status"])
+            if "visibility" in search_filters:
+                q = q.eq("visibility", search_filters["visibility"])
+            if search_filters.get("query"):
+                text = search_filters["query"]
+                q = q.or_(f"name.ilike.%{text}%,destination.ilike.%{text}%")
+            if search_filters.get("destinations"):
+                ors = ",".join(
+                    [f"destination.ilike.%{d}%" for d in search_filters["destinations"]]
+                )
+                if ors:
+                    q = q.or_(ors)
+            if search_filters.get("tags"):
+                q = q.overlaps("notes", search_filters["tags"])  # type: ignore[call-arg]
+            if "date_range" in search_filters:
+                dr = search_filters["date_range"]
+                if "start_date" in dr:
+                    q = q.gte("start_date", dr["start_date"].isoformat())
+                if "end_date" in dr:
+                    q = q.lte("end_date", dr["end_date"].isoformat())
+            q = q.order("created_at").limit(limit).offset(offset)
+            result: Any = await asyncio.to_thread(q.execute)
+            return result.data
+        return len(result) > 0
 
-                # Apply basic filters
-                if "user_id" in search_filters:
-                    query = query.eq("user_id", search_filters["user_id"])
+    async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
+        """Delete an API key by service for a user.
 
-                if "status" in search_filters:
-                    query = query.eq("status", search_filters["status"])
+        Args:
+            user_id: User identifier.
+            service_name: Logical service name.
 
-                if "visibility" in search_filters:
-                    query = query.eq("visibility", search_filters["visibility"])
-
-                # Text search
-                if search_filters.get("query"):
-                    search_text = search_filters["query"]
-                    query = query.or_(
-                        f"name.ilike.%{search_text}%,destination.ilike.%{search_text}%"
-                    )
-
-                # Filter by destinations
-                if search_filters.get("destinations"):
-                    destination_filters = [
-                        f"destination.ilike.%{dest}%"
-                        for dest in search_filters["destinations"]
-                    ]
-                    if destination_filters:
-                        query = query.or_(",".join(destination_filters))
-
-                # Filter by tags
-                if search_filters.get("tags"):
-                    query = query.overlaps("notes", search_filters["tags"])
-
-                # Date range filter
-                if "date_range" in search_filters:
-                    date_range = search_filters["date_range"]
-                    if "start_date" in date_range:
-                        query = query.gte(
-                            "start_date", date_range["start_date"].isoformat()
-                        )
-                    if "end_date" in date_range:
-                        query = query.lte(
-                            "end_date", date_range["end_date"].isoformat()
-                        )
-
-                # Apply pagination and ordering
-                query = query.order("created_at", desc=True)
-                if limit:
-                    query = query.limit(limit)
-                if offset:
-                    query = query.offset(offset)
-
-                result = await asyncio.to_thread(lambda: query.execute())
-                return result.data
-
-            except Exception as e:
-                logger.exception("Trip search failed")
-                raise CoreDatabaseError(
-                    message="Failed to search trips",
-                    code="TRIP_SEARCH_FAILED",
-                    operation="SEARCH_TRIPS",
-                    details={"error": str(e), "filters": search_filters},
-                ) from e
-
-    async def get_trip_collaborators(
-        self, trip_id: str, user_id: str | None = None
-    ) -> list[dict[str, Any]]:
-        """Get trip collaborators."""
-        try:
-            return await self.select(
-                "trip_collaborators", "*", {"trip_id": trip_id}, user_id=user_id
-            )
-        except Exception as e:
-            logger.exception("Failed to get trip collaborators for trip %s", trip_id)
-            raise CoreDatabaseError(
-                message=f"Failed to get collaborators for trip {trip_id}",
-                code="GET_COLLABORATORS_FAILED",
-                operation="GET_TRIP_COLLABORATORS",
-                table="trip_collaborators",
-                details={"error": str(e), "trip_id": trip_id},
-            ) from e
-
-    async def get_trip_related_counts(
-        self, trip_id: str, user_id: str | None = None
-    ) -> dict[str, int]:
-        """Get counts of related trip data."""
-        try:
-            results = {}
-
-            # Count itinerary items
-            results["itinerary_count"] = await self.count(
-                "itinerary_items", {"trip_id": trip_id}, user_id
-            )
-
-            # Count flights
-            results["flight_count"] = await self.count(
-                "flights", {"trip_id": trip_id}, user_id
-            )
-
-            # Count accommodations
-            results["accommodation_count"] = await self.count(
-                "accommodations", {"trip_id": trip_id}, user_id
-            )
-
-            # Count transportation
-            results["transportation_count"] = await self.count(
-                "transportation", {"trip_id": trip_id}, user_id
-            )
-
-            # Count collaborators
-            results["collaborator_count"] = await self.count(
-                "trip_collaborators", {"trip_id": trip_id}, user_id
-            )
-
-            return results
-
-        except Exception as e:
-            logger.exception("Failed to get trip related counts for trip %s", trip_id)
-            raise CoreDatabaseError(
-                message=f"Failed to get related counts for trip {trip_id}",
-                code="GET_TRIP_COUNTS_FAILED",
-                operation="GET_TRIP_RELATED_COUNTS",
-                details={"error": str(e), "trip_id": trip_id},
-            ) from e
-
-    async def add_trip_collaborator(
-        self, collaborator_data: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Add trip collaborator."""
-        try:
-            # Ensure required fields
-            required_fields = ["trip_id", "user_id", "permission_level", "added_by"]
-            for field in required_fields:
-                if field not in collaborator_data:
-                    raise CoreDatabaseError(
-                        message=f"Missing required field: {field}",
-                        code="MISSING_REQUIRED_FIELD",
-                        operation="ADD_TRIP_COLLABORATOR",
-                        details={"missing_field": field},
-                    )
-
-            # Use upsert to handle duplicates
-            user_id = collaborator_data.get("added_by")
-            result = await self.upsert(
-                "trip_collaborators",
-                collaborator_data,
-                on_conflict="trip_id,user_id",
-                user_id=user_id,
-            )
-            return result[0] if result else {}
-
-        except CoreDatabaseError:
-            raise
-        except Exception as e:
-            logger.exception("Failed to add trip collaborator")
-            raise CoreDatabaseError(
-                message="Failed to add trip collaborator",
-                code="ADD_COLLABORATOR_FAILED",
-                operation="ADD_TRIP_COLLABORATOR",
-                table="trip_collaborators",
-                details={"error": str(e), "collaborator_data": collaborator_data},
-            ) from e
-
-    async def get_trip_collaborator(
-        self, trip_id: str, user_id: str
-    ) -> dict[str, Any] | None:
-        """Get specific trip collaborator."""
-        try:
-            result = await self.select(
-                "trip_collaborators",
-                "*",
-                {"trip_id": trip_id, "user_id": user_id},
-                user_id=user_id,
-            )
-            return result[0] if result else None
-
-        except Exception as e:
-            logger.exception(
-                "Failed to get trip collaborator for trip %s, user %s", trip_id, user_id
-            )
-            raise CoreDatabaseError(
-                message=(
-                    f"Failed to get collaborator for trip {trip_id} and user {user_id}"
-                ),
-                code="GET_COLLABORATOR_FAILED",
-                operation="GET_TRIP_COLLABORATOR",
-                table="trip_collaborators",
-                details={"error": str(e), "trip_id": trip_id, "user_id": user_id},
-            ) from e
-
-    # Analytics and reporting
-
-    async def get_user_stats(self, user_id: str) -> dict[str, Any]:
-        """Get user statistics."""
-        # Get trip count
-        trip_count = await self.count("trips", {"user_id": user_id}, user_id)
-
-        # Get search count
-        flight_searches = await self.count(
-            "flight_searches", {"user_id": user_id}, user_id
+        Returns:
+            True if a row was deleted.
+        """
+        result = await self.delete(
+            "api_keys", {"user_id": user_id, "service_name": service_name}, user_id
         )
-        accommodation_searches = await self.count(
-            "accommodation_searches", {"user_id": user_id}, user_id
-        )
-
-        return {
-            "trip_count": trip_count,
-            "flight_searches": flight_searches,
-            "accommodation_searches": accommodation_searches,
-            "total_searches": flight_searches + accommodation_searches,
-        }
+        return len(result) > 0
 
     async def get_popular_destinations(
         self, limit: int = 10, user_id: str | None = None
     ) -> list[dict[str, Any]]:
-        """Get most popular destinations."""
+        """Return the most frequently used destinations from trips.
+
+        Args:
+            limit: Maximum number of destinations to return.
+            user_id: Optional user attribution.
+
+        Returns:
+            Aggregated rows with destination and search_count.
+        """
         return await self.execute_sql(
             """
-            SELECT destination, COUNT(*) as search_count
+            SELECT destination, COUNT(*) AS search_count
             FROM trips
             WHERE destination IS NOT NULL
             GROUP BY destination
@@ -2238,43 +1765,65 @@ class DatabaseTransactionContext:
             user_id,
         )
 
-    # Health and monitoring
+    async def get_user_stats(self, user_id: str) -> dict[str, Any]:
+        """Collect high-level usage statistics for a user.
+
+        Args:
+            user_id: User identifier.
+
+        Returns:
+            Mapping of counters (trips, searches, total_searches).
+        """
+        trip_count = await self.count("trips", {"user_id": user_id}, user_id)
+        flight_searches = await self.count(
+            "flight_searches", {"user_id": user_id}, user_id
+        )
+        accommodation_searches = await self.count(
+            "accommodation_searches", {"user_id": user_id}, user_id
+        )
+        return {
+            "trip_count": trip_count,
+            "flight_searches": flight_searches,
+            "accommodation_searches": accommodation_searches,
+            "total_searches": flight_searches + accommodation_searches,
+        }
+
+    # ---- Health / schema / stats ----
 
     async def health_check(self) -> bool:
-        """Check database connectivity and health."""
+        """Verify database connectivity.
+
+        Returns:
+            True when a very small probe query succeeds; False otherwise.
+        """
         try:
             await self.ensure_connected()
-
-            # Test Supabase connection
             await asyncio.to_thread(
-                lambda: self.client.table("users").select("id").limit(1).execute()
+                self.client.table("users").select("id").limit(1).execute
             )
-
-            # Test SQLAlchemy connection if available
-            if self._sqlalchemy_engine:
-                with self._sqlalchemy_engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-
-            # Update health metric
             if self._metrics:
                 self._metrics.health_status.labels(component="overall").set(1)
-
             return True
         except Exception:
             logger.exception("Database health check failed")
-
-            # Update health metric
             if self._metrics:
                 self._metrics.health_status.labels(component="overall").set(0)
-
             return False
 
     async def get_table_info(
         self, table: str, user_id: str | None = None
     ) -> dict[str, Any]:
-        """Get table schema information."""
+        """Fetch basic column metadata from information_schema.
+
+        Args:
+            table: Table name.
+            user_id: Optional user attribution.
+
+        Returns:
+            Dict with ``columns`` list.
+        """
         try:
-            result = await self.execute_sql(
+            cols = await self.execute_sql(
                 """
                 SELECT column_name, data_type, is_nullable, column_default
                 FROM information_schema.columns
@@ -2284,121 +1833,75 @@ class DatabaseTransactionContext:
                 {"table_name": table},
                 user_id,
             )
-            return {"columns": result}
+            return {"columns": cols}
         except Exception as e:
             logger.exception("Failed to get table info for '%s'", table)
             raise CoreDatabaseError(
-                message=f"Failed to get schema info for table '{table}'",
+                message=f"Failed to get schema for '{table}'",
                 code="TABLE_INFO_FAILED",
                 table=table,
                 details={"error": str(e)},
             ) from e
 
     async def get_database_stats(self) -> dict[str, Any]:
-        """Get comprehensive database statistics."""
-        try:
-            stats = {
-                "connection_stats": self._connection_stats.dict(),
-                "uptime_seconds": time.time() - self._start_time,
+        """Return service statistics and recent security/metrics summaries.
+
+        Returns:
+            Mapping of connection/query/security summaries.
+        """
+        stats: dict[str, Any] = {
+            "connection_stats": self._connection_stats.model_dump(),
+            "uptime_seconds": time.time() - self._start_time,
+        }
+        if self.enable_query_tracking and self._query_metrics:
+            successful = [m for m in self._query_metrics if m.success]
+            failed = [m for m in self._query_metrics if not m.success]
+            stats["query_stats"] = {
+                "total_queries": len(self._query_metrics),
+                "successful_queries": len(successful),
+                "failed_queries": len(failed),
+                "avg_query_time_ms": (
+                    sum(m.duration_ms for m in successful) / len(successful)
+                )
+                if successful
+                else 0.0,
             }
+        if self.enable_security and self._security_alerts:
+            stats["security_stats"] = {
+                "total_alerts": len(self._security_alerts),
+                "recent_alerts": [a.model_dump() for a in self._security_alerts[-10:]],
+            }
+        return stats
 
-            # Add query metrics summary
-            if self.enable_query_tracking and self._query_metrics:
-                successful_queries = [m for m in self._query_metrics if m.success]
-                failed_queries = [m for m in self._query_metrics if not m.success]
-
-                stats["query_stats"] = {
-                    "total_queries": len(self._query_metrics),
-                    "successful_queries": len(successful_queries),
-                    "failed_queries": len(failed_queries),
-                    "avg_query_time_ms": (
-                        sum(m.duration_ms for m in successful_queries)
-                        / len(successful_queries)
-                        if successful_queries
-                        else 0
-                    ),
-                    "queries_by_type": self._get_queries_by_type(),
-                }
-
-            # Add security stats
-            if self.enable_security and self._security_alerts:
-                stats["security_stats"] = {
-                    "total_alerts": len(self._security_alerts),
-                    "alerts_by_type": self._get_alerts_by_type(),
-                    "recent_alerts": [
-                        alert.dict() for alert in self._security_alerts[-10:]
-                    ],
-                }
-
-            # Add pool stats from SQLAlchemy
-            if self._sqlalchemy_engine:
-                pool = self._sqlalchemy_engine.pool
-                stats["pool_stats"] = {
-                    "size": pool.size(),
-                    "checked_out": pool.checked_out_connections(),
-                    "overflow": pool.overflow(),
-                    "total": pool.size() + pool.overflow(),
-                }
-
-            return stats
-        except Exception as e:
-            logger.exception("Failed to get database stats")
-            raise CoreDatabaseError(
-                message="Failed to get database statistics",
-                code="STATS_FAILED",
-                details={"error": str(e)},
-            ) from e
-
-    # Helper methods
+    # ---- Helpers ----
 
     def _check_sql_injection(self, sql: str) -> None:
-        """Basic SQL injection detection."""
-        # List of suspicious patterns
-        suspicious_patterns = [
-            "';",
-            '";',
+        # Heuristic guardrail; prefer parameterization and RPC in practice
+        suspicious = [
             "--",
             "/*",
             "*/",
-            "xp_",
-            "sp_",
-            "exec",
-            "execute",
             "drop table",
-            "drop database",
             "truncate",
             "delete from",
-            "insert into",
-            "update set",
             "union select",
             "or 1=1",
             "or '1'='1'",
-            "or true",
-            "admin'--",
         ]
-
-        sql_lower = sql.lower()
-        for pattern in suspicious_patterns:
-            if pattern in sql_lower:
-                # Create security alert
+        low = sql.lower()
+        for pat in suspicious:
+            if pat in low:
                 alert = SecurityAlert(
                     event_type=SecurityEvent.SQL_INJECTION_ATTEMPT,
                     severity="critical",
                     message="Potential SQL injection attempt detected",
-                    details={
-                        "pattern": pattern,
-                        "sql_snippet": sql[:100],
-                    },
+                    details={"pattern": pat, "sql_snippet": sql[:100]},
                 )
                 self._security_alerts.append(alert)
-
-                # Record metric
                 if self._metrics:
                     self._metrics.security_events.labels(
-                        event_type="sql_injection_attempt",
-                        severity="critical",
+                        event_type="sql_injection_attempt", severity="critical"
                     ).inc()
-
                 raise CoreServiceError(
                     message="Potential SQL injection detected",
                     code="SQL_INJECTION_DETECTED",
@@ -2406,19 +1909,12 @@ class DatabaseTransactionContext:
                 )
 
     def _log_audit_event(
-        self,
-        user_id: str | None,
-        action: str,
-        table: str,
-        records_affected: int,
+        self, user_id: str | None, action: str, table: str, records_affected: int
     ) -> None:
-        """Log audit event for compliance."""
         if not self.enable_audit_logging:
             return
-
-        # In a real implementation, this would write to an audit log table
         logger.info(
-            "AUDIT: user=%s, action=%s, table=%s, records=%s, timestamp=%s",
+            "AUDIT: user=%s, action=%s, table=%s, records=%s, ts=%s",
             user_id,
             action,
             table,
@@ -2426,107 +1922,36 @@ class DatabaseTransactionContext:
             datetime.now(UTC).isoformat(),
         )
 
-    def _get_queries_by_type(self) -> dict[str, int]:
-        """Get query count by type."""
-        counts = {}
-        for metric in self._query_metrics:
-            query_type = metric.query_type.value
-            counts[query_type] = counts.get(query_type, 0) + 1
-        return counts
-
-    def _get_alerts_by_type(self) -> dict[str, int]:
-        """Get security alert count by type."""
-        counts = {}
-        for alert in self._security_alerts:
-            event_type = alert.event_type.value
-            counts[event_type] = counts.get(event_type, 0) + 1
-        return counts
-
-    # Public monitoring methods
-
-    def get_connection_stats(self) -> ConnectionStats:
-        """Get current connection pool statistics."""
-        # Update pool utilization
-        if self._sqlalchemy_engine:
-            pool = self._sqlalchemy_engine.pool
-            total_capacity = self.pool_size + self.max_overflow
-            used_connections = pool.checked_out_connections()
-            self._connection_stats.pool_utilization = (
-                used_connections / total_capacity
-            ) * 100
-            self._connection_stats.active_connections = used_connections
-            self._connection_stats.idle_connections = pool.size() - used_connections
-
-        # Update average query time
-        if self._query_metrics:
-            successful_queries = [m for m in self._query_metrics if m.success]
-            if successful_queries:
-                self._connection_stats.avg_query_time_ms = sum(
-                    m.duration_ms for m in successful_queries
-                ) / len(successful_queries)
-
-        # Update uptime
-        self._connection_stats.uptime_seconds = time.time() - self._start_time
-
-        return self._connection_stats
-
-    def get_recent_queries(
-        self, limit: int = 100, include_slow_only: bool = False
-    ) -> list[QueryMetrics]:
-        """Get recent query metrics."""
-        queries = self._query_metrics[-limit:]
-
-        if include_slow_only:
-            queries = [
-                q for q in queries if q.duration_ms > self.slow_query_threshold * 1000
-            ]
-
-        return queries
-
-    def get_security_alerts(
-        self, limit: int | None = None, severity: str | None = None
-    ) -> list[SecurityAlert]:
-        """Get security alerts with optional filtering."""
-        alerts = self._security_alerts
-
-        if severity:
-            alerts = [a for a in alerts if a.severity == severity]
-
-        if limit:
-            alerts = alerts[-limit:]
-
-        return alerts
-
     def clear_metrics(self) -> None:
-        """Clear accumulated metrics and alerts."""
+        """Clear in-memory metrics and security alerts for this instance."""
         self._query_metrics.clear()
         self._security_alerts.clear()
         logger.info("Metrics and alerts cleared")
 
 
-# Global database service instance
+# -----------------
+# Global entrypoints
+# -----------------
+
 _database_service: DatabaseService | None = None
 
 
 async def get_database_service() -> DatabaseService:
-    """Get the global database service instance.
+    """Get a connected singleton DatabaseService instance.
 
     Returns:
-        Connected DatabaseService instance
+        A connected DatabaseService.
     """
     global _database_service
-
     if _database_service is None:
         _database_service = DatabaseService()
         await _database_service.connect()
-
     return _database_service
 
 
 async def close_database_service() -> None:
-    """Close the global database service instance."""
+    """Close and clear the singleton DatabaseService instance."""
     global _database_service
-
     if _database_service:
         await _database_service.close()
         _database_service = None
