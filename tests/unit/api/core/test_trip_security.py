@@ -1,5 +1,4 @@
-"""
-Tests for trip access verification and security decorators.
+"""Tests for trip access verification and security decorators.
 
 This module tests the trip security functionality including access verification,
 decorators, and integration with the existing authentication system.

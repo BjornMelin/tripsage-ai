@@ -1,5 +1,4 @@
-"""
-TripSage Core Models.
+"""TripSage Core Models.
 
 This module provides centralized access to all core TripSage models including:
 - Base models for consistent configuration
@@ -86,6 +85,7 @@ from .domain import (
     SessionMemory,
     TravelMemory,
 )
+
 
 __all__ = [
     # Base models

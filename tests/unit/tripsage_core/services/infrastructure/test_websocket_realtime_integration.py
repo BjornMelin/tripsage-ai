@@ -1,5 +1,4 @@
-"""
-Comprehensive Real-time Integration Tests for TripSage WebSocket Infrastructure.
+"""Comprehensive Real-time Integration Tests for TripSage WebSocket Infrastructure.
 
 This module provides comprehensive test coverage for real-time communication patterns,
 end-to-end WebSocket workflows, performance under load, and system integration
@@ -651,7 +650,7 @@ class TestWebSocketStressAndLoad:
             failure_count += 1
             if failure_count % 3 == 0:  # Fail every 3rd message
                 raise Exception("Simulated network error")
-            return None
+            return
 
         mock_ws.send_text.side_effect = mock_send_text
         mock_ws.client = Mock()

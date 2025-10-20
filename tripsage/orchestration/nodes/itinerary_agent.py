@@ -1,5 +1,4 @@
-"""
-Itinerary agent node implementation for LangGraph orchestration.
+"""Itinerary agent node implementation for LangGraph orchestration.
 
 This module implements the itinerary planning agent as a LangGraph node,
 replacing the OpenAI Agents SDK implementation with improved performance and
@@ -7,8 +6,8 @@ capabilities.
 """
 
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -18,12 +17,12 @@ from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class ItineraryAgentNode(BaseAgentNode):
-    """
-    Itinerary planning agent node.
+    """Itinerary planning agent node.
 
     This node handles all itinerary-related requests including creation, optimization,
     modification, and calendar integration using MCP tool integration.
@@ -69,8 +68,7 @@ class ItineraryAgentNode(BaseAgentNode):
         )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Process itinerary-related requests.
+        """Process itinerary-related requests.
 
         Args:
             state: Current travel planning state
@@ -109,7 +107,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
             # Update state with results
             itinerary_record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "operation": operation_type,
                 "parameters": itinerary_params,
                 "result": itinerary_result,
@@ -137,9 +135,8 @@ class ItineraryAgentNode(BaseAgentNode):
 
     async def _extract_itinerary_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Extract itinerary parameters from user message and conversation context.
+    ) -> dict[str, Any] | None:
+        """Extract itinerary parameters from user message and conversation context.
 
         Args:
             message: User message to analyze
@@ -219,14 +216,13 @@ class ItineraryAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.error(f"Error extracting itinerary parameters: {str(e)}")
+            logger.error(f"Error extracting itinerary parameters: {e!s}")
             return None
 
     async def _create_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Create a detailed daily itinerary.
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
+        """Create a detailed daily itinerary.
 
         Args:
             params: Itinerary creation parameters
@@ -273,9 +269,7 @@ class ItineraryAgentNode(BaseAgentNode):
                 daily_schedule, destination
             )
 
-            itinerary_id = (
-                f"itinerary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
-            )
+            itinerary_id = f"itinerary_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}"
 
             return {
                 "itinerary_id": itinerary_id,
@@ -294,20 +288,20 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.error(f"Itinerary creation failed: {str(e)}")
-            return {"error": f"Failed to create itinerary: {str(e)}"}
+            logger.error(f"Itinerary creation failed: {e!s}")
+            return {"error": f"Failed to create itinerary: {e!s}"}
 
     async def _generate_daily_schedule(
         self,
         destination: str,
         duration: int,
         start_date: str,
-        attractions: List[Dict],
-        activities: List[Dict],
-        interests: List[str],
+        attractions: list[dict],
+        activities: list[dict],
+        interests: list[str],
         pace: str,
         budget_per_day: float,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Generate a daily schedule for the itinerary."""
         daily_schedule = []
 
@@ -346,7 +340,7 @@ class ItineraryAgentNode(BaseAgentNode):
         current_date = (
             datetime.strptime(start_date, "%Y-%m-%d")
             if start_date
-            else datetime.now(timezone.utc)
+            else datetime.now(UTC)
         )
 
         for day in range(duration):
@@ -402,8 +396,8 @@ class ItineraryAgentNode(BaseAgentNode):
         return daily_schedule
 
     async def _optimize_schedule_logistics(
-        self, daily_schedule: List[Dict], destination: str
-    ) -> List[Dict]:
+        self, daily_schedule: list[dict], destination: str
+    ) -> list[dict]:
         """Optimize the schedule for logistics and travel times."""
         # This would use Google Maps API to calculate travel times and optimize routes
         # For now, we'll add basic logistics information
@@ -422,8 +416,8 @@ class ItineraryAgentNode(BaseAgentNode):
         return daily_schedule
 
     def _calculate_estimated_cost(
-        self, daily_schedule: List[Dict], budget_per_day: float
-    ) -> Dict[str, float]:
+        self, daily_schedule: list[dict], budget_per_day: float
+    ) -> dict[str, float]:
         """Calculate estimated costs for the itinerary."""
         total_cost = 0
         daily_costs = []
@@ -444,10 +438,9 @@ class ItineraryAgentNode(BaseAgentNode):
         }
 
     async def _optimize_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Optimize an existing itinerary for better flow and efficiency.
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
+        """Optimize an existing itinerary for better flow and efficiency.
 
         Args:
             params: Optimization parameters
@@ -496,18 +489,17 @@ class ItineraryAgentNode(BaseAgentNode):
                 **existing_itinerary,
                 "daily_schedule": optimized_schedule,
                 "optimization_applied": True,
-                "optimization_timestamp": datetime.now(timezone.utc).isoformat(),
+                "optimization_timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Itinerary optimization failed: {str(e)}")
-            return {"error": f"Failed to optimize itinerary: {str(e)}"}
+            logger.error(f"Itinerary optimization failed: {e!s}")
+            return {"error": f"Failed to optimize itinerary: {e!s}"}
 
     async def _modify_itinerary(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Modify an existing itinerary by adding or removing activities.
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
+        """Modify an existing itinerary by adding or removing activities.
 
         Args:
             params: Modification parameters
@@ -569,18 +561,17 @@ class ItineraryAgentNode(BaseAgentNode):
                 "daily_schedule": daily_schedule,
                 "modification_applied": True,
                 "modification_type": modification_type,
-                "modification_timestamp": datetime.now(timezone.utc).isoformat(),
+                "modification_timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Itinerary modification failed: {str(e)}")
-            return {"error": f"Failed to modify itinerary: {str(e)}"}
+            logger.error(f"Itinerary modification failed: {e!s}")
+            return {"error": f"Failed to modify itinerary: {e!s}"}
 
     async def _create_calendar_events(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Create calendar events from an itinerary.
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
+        """Create calendar events from an itinerary.
 
         Args:
             params: Calendar creation parameters
@@ -623,22 +614,21 @@ class ItineraryAgentNode(BaseAgentNode):
                 "itinerary_id": itinerary_id,
                 "calendar_events": calendar_events,
                 "events_count": len(calendar_events),
-                "creation_timestamp": datetime.now(timezone.utc).isoformat(),
+                "creation_timestamp": datetime.now(UTC).isoformat(),
             }
 
         except Exception as e:
-            logger.error(f"Calendar events creation failed: {str(e)}")
-            return {"error": f"Failed to create calendar events: {str(e)}"}
+            logger.error(f"Calendar events creation failed: {e!s}")
+            return {"error": f"Failed to create calendar events: {e!s}"}
 
     async def _generate_itinerary_response(
         self,
-        result: Dict[str, Any],
-        params: Dict[str, Any],
+        result: dict[str, Any],
+        params: dict[str, Any],
         operation_type: str,
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
-        """
-        Generate user-friendly response from itinerary results.
+    ) -> dict[str, Any]:
+        """Generate user-friendly response from itinerary results.
 
         Args:
             result: Itinerary operation results
@@ -675,7 +665,7 @@ class ItineraryAgentNode(BaseAgentNode):
         )
 
     def _format_create_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format itinerary creation response."""
         destination = result.get("destination", "")
@@ -724,7 +714,7 @@ class ItineraryAgentNode(BaseAgentNode):
         return content
 
     def _format_optimize_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format itinerary optimization response."""
         destination = result.get("destination", "")
@@ -745,7 +735,7 @@ class ItineraryAgentNode(BaseAgentNode):
         return content
 
     def _format_modify_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format itinerary modification response."""
         modification_type = result.get("modification_type", "")
@@ -773,7 +763,7 @@ class ItineraryAgentNode(BaseAgentNode):
         return content
 
     def _format_calendar_response(
-        self, result: Dict[str, Any], params: Dict[str, Any]
+        self, result: dict[str, Any], params: dict[str, Any]
     ) -> str:
         """Format calendar events creation response."""
         events_count = result.get("events_count", 0)
@@ -795,9 +785,8 @@ class ItineraryAgentNode(BaseAgentNode):
 
     async def _handle_general_itinerary_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Handle general itinerary inquiries that don't require specific planning.
+    ) -> dict[str, Any]:
+        """Handle general itinerary inquiries that don't require specific planning.
 
         Args:
             message: User message
@@ -835,7 +824,7 @@ class ItineraryAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.error(f"Error generating itinerary response: {str(e)}")
+            logger.error(f"Error generating itinerary response: {e!s}")
             content = (
                 "I'd be happy to help you create a detailed itinerary! To get started, "
                 "I'll need to know your destination, travel dates, interests, and "

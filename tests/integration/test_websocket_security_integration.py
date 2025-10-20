@@ -1,5 +1,4 @@
-"""
-WebSocket Security Integration Tests.
+"""WebSocket Security Integration Tests.
 
 This module provides comprehensive security testing for WebSocket functionality
 including:
@@ -175,12 +174,14 @@ class TestWebSocketAuthentication:
         }
         wrong_token = jwt.encode(wrong_payload, "wrong-secret", algorithm="HS256")
 
-        with patch(
-            "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
-            return_value=mock_settings,
+        with (
+            patch(
+                "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
+                return_value=mock_settings,
+            ),
+            pytest.raises(CoreAuthenticationError),
         ):
-            with pytest.raises(CoreAuthenticationError):
-                await auth_service.authenticate_token(wrong_token)
+            await auth_service.authenticate_token(wrong_token)
 
     @pytest.mark.asyncio
     @pytest.mark.security
@@ -197,12 +198,14 @@ class TestWebSocketAuthentication:
         # This should fail as 'none' algorithm should not be accepted
         none_token = jwt.encode(payload, "", algorithm="none")
 
-        with patch(
-            "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
-            return_value=mock_settings,
+        with (
+            patch(
+                "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
+                return_value=mock_settings,
+            ),
+            pytest.raises(CoreAuthenticationError),
         ):
-            with pytest.raises(CoreAuthenticationError):
-                await auth_service.authenticate_token(none_token)
+            await auth_service.authenticate_token(none_token)
 
 
 class TestWebSocketAuthorization:
@@ -726,7 +729,6 @@ class TestWebSocketSecurityIntegration:
         self, test_client, auth_service, valid_jwt_token, mock_settings
     ):
         """Test complete security workflow from connection to cleanup."""
-
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
             return_value=mock_settings,
@@ -776,7 +778,6 @@ class TestWebSocketSecurityIntegration:
     @pytest.mark.integration
     async def test_attack_scenario_protection(self, auth_service, mock_settings):
         """Test protection against common attack scenarios."""
-
         with patch(
             "tripsage_core.services.infrastructure.websocket_auth_service.get_settings",
             return_value=mock_settings,

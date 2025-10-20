@@ -1,12 +1,11 @@
-"""
-Planning tools for TripSage travel planning agent.
+"""Planning tools for TripSage travel planning agent.
 
 This module provides function tools for travel planning operations used by the
 TravelPlanningAgent, including plan creation, updates, and persistence.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -16,6 +15,7 @@ from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
@@ -24,12 +24,12 @@ class TravelPlanInput(BaseModel):
 
     user_id: str = Field(..., description="User ID")
     title: str = Field(..., description="Plan title")
-    destinations: List[str] = Field(..., description="List of destinations")
+    destinations: list[str] = Field(..., description="List of destinations")
     start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
     end_date: str = Field(..., description="End date (YYYY-MM-DD)")
     travelers: int = Field(1, description="Number of travelers")
-    budget: Optional[float] = Field(None, description="Total budget")
-    preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
+    budget: float | None = Field(None, description="Total budget")
+    preferences: dict[str, Any] | None = Field(None, description="User preferences")
 
 
 class TravelPlanUpdate(BaseModel):
@@ -37,31 +37,31 @@ class TravelPlanUpdate(BaseModel):
 
     plan_id: str = Field(..., description="Travel plan ID")
     user_id: str = Field(..., description="User ID")
-    updates: Dict[str, Any] = Field(..., description="Fields to update")
+    updates: dict[str, Any] = Field(..., description="Fields to update")
 
 
 class SearchResultInput(BaseModel):
     """Input model for combining search results."""
 
-    flight_results: Optional[Dict[str, Any]] = Field(
+    flight_results: dict[str, Any] | None = Field(
         None, description="Flight search results"
     )
-    accommodation_results: Optional[Dict[str, Any]] = Field(
+    accommodation_results: dict[str, Any] | None = Field(
         None, description="Accommodation search results"
     )
-    activity_results: Optional[Dict[str, Any]] = Field(
+    activity_results: dict[str, Any] | None = Field(
         None, description="Activity search results"
     )
-    destination_info: Optional[Dict[str, Any]] = Field(
+    destination_info: dict[str, Any] | None = Field(
         None, description="Destination information"
     )
-    user_preferences: Optional[Dict[str, Any]] = Field(
+    user_preferences: dict[str, Any] | None = Field(
         None, description="User preferences"
     )
 
 
 @with_error_handling()
-async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Create a new travel plan with basic information.
 
     Creates an initial travel plan with core details like destinations, dates,
@@ -86,7 +86,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         plan_input = TravelPlanInput(**params)
 
         # Generate plan ID
-        plan_id = f"plan_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+        plan_id = f"plan_{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}"
 
         # Create travel plan object
         travel_plan = {
@@ -99,8 +99,8 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             "travelers": plan_input.travelers,
             "budget": plan_input.budget,
             "preferences": plan_input.preferences or {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "components": {
                 "flights": [],
                 "accommodations": [],
@@ -152,7 +152,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             )
 
         except Exception as e:
-            logger.warning(f"Error creating memory entities: {str(e)}")
+            logger.warning(f"Error creating memory entities: {e!s}")
             # Continue even if memory creation fails
 
         return {
@@ -163,13 +163,13 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error creating travel plan: {str(e)}")
+        logger.error(f"Error creating travel plan: {e!s}")
         log_exception(e)
-        return {"success": False, "error": f"Travel plan creation error: {str(e)}"}
+        return {"success": False, "error": f"Travel plan creation error: {e!s}"}
 
 
 @with_error_handling()
-async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Update an existing travel plan with new information.
 
     Updates specific fields in a travel plan, such as adding components or
@@ -208,7 +208,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 travel_plan[key] = value
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now(timezone.utc).isoformat()
+        travel_plan["updated_at"] = datetime.now(UTC).isoformat()
 
         # Save the updated plan
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
@@ -254,7 +254,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 )
 
         except Exception as e:
-            logger.warning(f"Error updating memory entity: {str(e)}")
+            logger.warning(f"Error updating memory entity: {e!s}")
             # Continue even if memory update fails
 
         return {
@@ -265,13 +265,13 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error updating travel plan: {str(e)}")
+        logger.error(f"Error updating travel plan: {e!s}")
         log_exception(e)
-        return {"success": False, "error": f"Travel plan update error: {str(e)}"}
+        return {"success": False, "error": f"Travel plan update error: {e!s}"}
 
 
 @with_error_handling()
-async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
+async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
     """Combine results from multiple search operations into a unified recommendation.
 
     Analyzes and combines flight, accommodation, and activity search results based on
@@ -390,13 +390,13 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error combining search results: {str(e)}")
+        logger.error(f"Error combining search results: {e!s}")
         log_exception(e)
-        return {"success": False, "error": f"Result combination error: {str(e)}"}
+        return {"success": False, "error": f"Result combination error: {e!s}"}
 
 
 @with_error_handling()
-async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
+async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
     """Generate a comprehensive summary of a travel plan.
 
     Creates a user-friendly summary of a travel plan with key information
@@ -450,12 +450,12 @@ async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error generating travel summary: {str(e)}")
+        logger.error(f"Error generating travel summary: {e!s}")
         log_exception(e)
-        return {"success": False, "error": f"Summary generation error: {str(e)}"}
+        return {"success": False, "error": f"Summary generation error: {e!s}"}
 
 
-def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_markdown_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a markdown summary of a travel plan.
 
     Args:
@@ -534,7 +534,7 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
     return summary
 
 
-def _generate_text_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_text_summary(travel_plan: dict[str, Any]) -> str:
     """Generate a plain text summary of a travel plan.
 
     Args:
@@ -551,7 +551,7 @@ def _generate_text_summary(travel_plan: Dict[str, Any]) -> str:
     return text
 
 
-def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
+def _generate_html_summary(travel_plan: dict[str, Any]) -> str:
     """Generate an HTML summary of a travel plan.
 
     Args:
@@ -571,7 +571,7 @@ def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
 
 
 @with_error_handling()
-async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
+async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
     """Save a travel plan to persistent storage.
 
     Stores the travel plan in the database and updates related knowledge graph entities.
@@ -608,10 +608,10 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Mark as finalized if requested
         if finalize:
             travel_plan["status"] = "finalized"
-            travel_plan["finalized_at"] = datetime.now(timezone.utc).isoformat()
+            travel_plan["finalized_at"] = datetime.now(UTC).isoformat()
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now(timezone.utc).isoformat()
+        travel_plan["updated_at"] = datetime.now(UTC).isoformat()
 
         # Save to persistent storage (database)
         # This would interface with the database in a real implementation
@@ -627,7 +627,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
             # Add finalization memory if finalized
             if finalize:
-                finalization_time = datetime.now(timezone.utc).isoformat()
+                finalization_time = datetime.now(UTC).isoformat()
                 finalize_memory = (
                     f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
                     f"finalized on {finalization_time}"
@@ -680,7 +680,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                     )
 
         except Exception as e:
-            logger.warning(f"Error updating memory entity: {str(e)}")
+            logger.warning(f"Error updating memory entity: {e!s}")
             # Continue even if memory update fails
 
         return {
@@ -694,6 +694,6 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Error saving travel plan: {str(e)}")
+        logger.error(f"Error saving travel plan: {e!s}")
         log_exception(e)
-        return {"success": False, "error": f"Travel plan save error: {str(e)}"}
+        return {"success": False, "error": f"Travel plan save error: {e!s}"}

@@ -5,7 +5,6 @@ and comments associated with trips.
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import Field, field_validator
 
@@ -22,7 +21,7 @@ class TripNote(TripSageModel):
         content: The note content
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     timestamp: datetime = Field(..., description="When the note was created")
     content: str = Field(..., description="The note content")
@@ -38,8 +37,7 @@ class TripNote(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the note was created recently (within 24 hours)."""
-        from datetime import datetime as datetime_type
-        from datetime import timedelta
+        from datetime import datetime as datetime_type, timedelta
 
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
 

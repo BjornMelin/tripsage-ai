@@ -5,7 +5,6 @@ searching for accommodations, managing saved accommodations, and retrieving deta
 """
 
 import logging
-from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -26,11 +25,10 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.models.schemas_common import BookingStatus
 from tripsage_core.services.business.accommodation_service import (
     AccommodationSearchRequest as ServiceAccommodationSearchRequest,
-)
-from tripsage_core.services.business.accommodation_service import (
     AccommodationService,
     get_accommodation_service,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -270,9 +268,9 @@ async def delete_saved_accommodation(
         )
 
 
-@router.get("/saved", response_model=List[SavedAccommodationResponse])
+@router.get("/saved", response_model=list[SavedAccommodationResponse])
 async def list_saved_accommodations(
-    trip_id: Optional[UUID] = None,
+    trip_id: UUID | None = None,
     principal: Principal = Depends(require_principal),
     accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):

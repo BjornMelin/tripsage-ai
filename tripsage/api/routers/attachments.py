@@ -5,7 +5,6 @@ of travel documents, following KISS principles and security best practices.
 """
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
@@ -24,6 +23,7 @@ from tripsage_core.services.business.file_processing_service import (
 )
 from tripsage_core.services.business.trip_service import TripService, get_trip_service
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
+
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class FileUploadResponse(BaseModel):
 class BatchUploadResponse(BaseModel):
     """Response model for batch file upload."""
 
-    files: List[FileUploadResponse] = Field(..., description="Processed files")
+    files: list[FileUploadResponse] = Field(..., description="Processed files")
     total_files: int = Field(..., description="Total files processed")
     total_size: int = Field(..., description="Total size in bytes")
 
@@ -128,7 +128,7 @@ async def upload_file(
         )
 
     except Exception as e:
-        logger.error(f"File processing failed for {file.filename}: {str(e)}")
+        logger.error(f"File processing failed for {file.filename}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File processing failed",
@@ -137,7 +137,7 @@ async def upload_file(
 
 @router.post("/upload/batch", response_model=BatchUploadResponse)
 async def upload_files_batch(
-    files: List[UploadFile] = files_upload_dep,
+    files: list[UploadFile] = files_upload_dep,
     principal: Principal = require_principal_module_dep,
     service: FileProcessingService = get_file_processing_service_dep,
 ):
@@ -204,7 +204,7 @@ async def upload_files_batch(
             )
 
         except Exception as e:
-            logger.error(f"Failed to process file {file.filename}: {str(e)}")
+            logger.error(f"Failed to process file {file.filename}: {e!s}")
             errors.append(f"{file.filename}: Processing failed")
 
     if errors and not processed_files:
@@ -252,7 +252,7 @@ async def get_file_metadata(
         return file_info
 
     except Exception as e:
-        logger.error(f"Failed to get file info for {file_id}: {str(e)}")
+        logger.error(f"Failed to get file info for {file_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file information",
@@ -282,7 +282,7 @@ async def delete_file(
         return {"message": "File deleted successfully", "file_id": file_id}
 
     except Exception as e:
-        logger.error(f"Failed to delete file {file_id}: {str(e)}")
+        logger.error(f"Failed to delete file {file_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete file",
@@ -313,7 +313,7 @@ async def list_user_files(
         }
 
     except Exception as e:
-        logger.error(f"Failed to list files for user {user_id}: {str(e)}")
+        logger.error(f"Failed to list files for user {user_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
@@ -375,7 +375,7 @@ async def download_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to download file {file_id}: {str(e)}")
+        logger.error(f"Failed to download file {file_id}: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to download file",
@@ -463,7 +463,7 @@ async def list_trip_attachments(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to list trip attachments for trip {trip_id}: {str(e)}")
+        logger.error(f"Failed to list trip attachments for trip {trip_id}: {e!s}")
 
         # Log system error
         await audit_security_event(

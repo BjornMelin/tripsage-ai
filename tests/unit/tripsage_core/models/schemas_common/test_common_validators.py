@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for CommonValidators.
+"""Comprehensive tests for CommonValidators.
 
 This module tests all validation functions and Annotated types to ensure
 consistent behavior across the application.

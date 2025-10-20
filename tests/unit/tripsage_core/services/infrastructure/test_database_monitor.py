@@ -1,5 +1,4 @@
-"""
-Tests for database connection monitoring functionality.
+"""Tests for database connection monitoring functionality.
 
 Tests cover health checks, security monitoring, recovery mechanisms,
 and alert generation for database operations.

@@ -1,5 +1,4 @@
-"""
-Integration tests for API → Service → Database flow.
+"""Integration tests for API → Service → Database flow.
 
 This module tests the complete flow from API endpoints through service layers
 to database operations, ensuring proper data flow and error handling.

@@ -1,5 +1,4 @@
-"""
-Clean test configuration module for TripSage.
+"""Clean test configuration module for TripSage.
 
 This module provides a simplified, robust test configuration approach that:
 1. Uses environment variables exclusively for configuration
@@ -10,7 +9,7 @@ This module provides a simplified, robust test configuration approach that:
 """
 
 import os
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -50,8 +49,7 @@ def setup_test_environment() -> None:
 
 
 def create_test_settings(**overrides) -> Settings:
-    """
-    Create a test settings instance with proper defaults.
+    """Create a test settings instance with proper defaults.
 
     Args:
         **overrides: Optional overrides for specific settings
@@ -83,7 +81,7 @@ class MockCacheService:
     """Simple, reliable mock cache service for tests."""
 
     def __init__(self):
-        self._storage: Dict[str, Any] = {}
+        self._storage: dict[str, Any] = {}
         self._connected = True
 
     @property
@@ -125,13 +123,13 @@ class MockDatabaseService:
     async def get_session(self):
         return MagicMock()
 
-    async def execute(self, query: str, params: Dict = None):
+    async def execute(self, query: str, params: dict = None):
         return MagicMock()
 
-    async def fetch_one(self, query: str, params: Dict = None):
+    async def fetch_one(self, query: str, params: dict = None):
         return None
 
-    async def fetch_all(self, query: str, params: Dict = None):
+    async def fetch_all(self, query: str, params: dict = None):
         return []
 
     async def health_check(self) -> bool:
@@ -195,8 +193,7 @@ def mock_database_service():
 
 
 def create_mock_api_settings(**overrides) -> Any:
-    """
-    Create mock API settings for tests that need API configuration.
+    """Create mock API settings for tests that need API configuration.
 
     Args:
         **overrides: Optional overrides for specific settings
@@ -259,14 +256,14 @@ def mock_api_settings():
 
 # Export convenience functions
 __all__ = [
-    "setup_test_environment",
-    "create_test_settings",
-    "create_mock_api_settings",
     "MockCacheService",
     "MockDatabaseService",
     "clean_test_environment",
-    "test_settings",
+    "create_mock_api_settings",
+    "create_test_settings",
+    "mock_api_settings",
     "mock_cache_service",
     "mock_database_service",
-    "mock_api_settings",
+    "setup_test_environment",
+    "test_settings",
 ]

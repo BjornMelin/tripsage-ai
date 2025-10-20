@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Test script for the TripSage API.
+"""Test script for the TripSage API.
 
 This script starts the FastAPI server and performs basic tests to
 verify the API functionality.
@@ -11,7 +10,6 @@ import os
 import sys
 import time
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
 
 import httpx
 import uvicorn
@@ -19,6 +17,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from tripsage.api.main import app
+
 
 # Add the project root to the path so we can import from src
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,8 +37,8 @@ TEST_USER_PASSWORD = "password123"
 class UserModel(BaseModel):
     email: str
     password: str
-    full_name: Optional[str] = None
-    auth_token: Optional[str] = None
+    full_name: str | None = None
+    auth_token: str | None = None
 
 
 class TripModel(BaseModel):
@@ -49,7 +48,7 @@ class TripModel(BaseModel):
     destination: str
     budget: float
     travelers: int = 1
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class FlightModel(BaseModel):
@@ -58,9 +57,9 @@ class FlightModel(BaseModel):
     destination: str
     departure_time: datetime
     arrival_time: datetime
-    airline: Optional[str] = None
+    airline: str | None = None
     price: float
-    id: Optional[str] = None
+    id: str | None = None
 
 
 async def initialize_db():
@@ -143,7 +142,7 @@ async def create_trip(
         return False
 
 
-async def get_trips(client: httpx.AsyncClient, user: UserModel) -> List[Dict]:
+async def get_trips(client: httpx.AsyncClient, user: UserModel) -> list[dict]:
     """Get all trips for the user."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -196,7 +195,7 @@ async def create_flight(
 
 async def get_flights_for_trip(
     client: httpx.AsyncClient, user: UserModel, trip_id: str
-) -> List[Dict]:
+) -> list[dict]:
     """Get all flights for a trip."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 

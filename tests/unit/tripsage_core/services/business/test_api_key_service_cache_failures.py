@@ -1,5 +1,4 @@
-"""
-Comprehensive cache infrastructure failure tests for API key service.
+"""Comprehensive cache infrastructure failure tests for API key service.
 
 This module provides extensive testing of cache failure scenarios to ensure
 the service maintains resilience when DragonflyDB/Redis cache is unavailable,
@@ -17,7 +16,7 @@ Key failure modes tested:
 import asyncio
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -47,11 +46,11 @@ class TestApiKeyServiceCacheFailures:
             "service": "openai",
             "description": "Test description",
             "is_valid": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "expires_at": None,
             "last_used": None,
-            "last_validated": datetime.now(timezone.utc).isoformat(),
+            "last_validated": datetime.now(UTC).isoformat(),
             "usage_count": 0,
         }
 
@@ -573,7 +572,7 @@ class TestApiKeyServiceCacheFailures:
 
         async def mock_cache_get(key):
             cache_calls.append(key)
-            return None
+            return
 
         with patch.object(api_service.cache, "get", side_effect=mock_cache_get):
             await api_service._get_cached_validation(service_type, key_value)

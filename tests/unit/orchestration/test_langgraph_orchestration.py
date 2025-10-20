@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for LangGraph orchestration system.
+"""Comprehensive tests for LangGraph orchestration system.
 
 Tests the modern LangGraph-based agent orchestration with proper state management,
 node implementations, and tool integration following latest best practices.

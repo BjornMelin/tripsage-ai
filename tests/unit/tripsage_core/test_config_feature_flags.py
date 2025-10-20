@@ -1,5 +1,4 @@
-"""
-Tests for configuration feature flags and database hardening settings.
+"""Tests for configuration feature flags and database hardening settings.
 
 Tests cover feature flag behavior, configuration validation,
 and proper integration with monitoring components.

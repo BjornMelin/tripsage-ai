@@ -1,5 +1,4 @@
-"""
-Database Service Extensions for Comprehensive Testing
+"""Database Service Extensions for Comprehensive Testing
 
 This module contains additional methods and functionality for the DatabaseService
 that support comprehensive testing and advanced features. These methods are
@@ -9,7 +8,7 @@ separated to maintain clarity in the main service file.
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import text
@@ -22,6 +21,7 @@ from tripsage_core.services.infrastructure.database_service import (
     QueryType,
     SecurityAlert,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ class DatabaseServiceExtensions:
             "circuit_breaker_open": self._circuit_breaker_open,
             "pool_utilization": self._get_pool_statistics().pool_utilization,
             "slow_queries_count": len(self._get_slow_queries()),
-            "last_check": datetime.now(timezone.utc).isoformat(),
+            "last_check": datetime.now(UTC).isoformat(),
         }
 
     def _get_aggregated_metrics(self) -> dict[str, Any]:
@@ -281,7 +281,7 @@ class DatabaseServiceExtensions:
         # Mock implementation for testing
         return [
             {
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": datetime.now(UTC),
                 "user_id": "test_user",
                 "action": "SELECT",
                 "table": "users",
@@ -370,7 +370,6 @@ class DatabaseServiceExtensions:
     async def _set_transaction_isolation(self, level: str):
         """Set transaction isolation level."""
         # Mock implementation for testing
-        pass
 
     # Error Handling and Recovery Methods
 
@@ -392,7 +391,7 @@ class DatabaseServiceExtensions:
         """Execute operation with timeout."""
         try:
             return await asyncio.wait_for(operation(*args, **kwargs), timeout=timeout)
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             raise CoreDatabaseError(
                 message="Query timeout",
                 code="QUERY_TIMEOUT",

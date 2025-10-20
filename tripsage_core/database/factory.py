@@ -1,12 +1,11 @@
-"""
-Database connection factory for TripSage.
+"""Database connection factory for TripSage.
 
 Provides a factory for creating database connections with proper security validation
 and connection pooling using asyncpg directly.
 """
 
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 from urllib.parse import urlparse
 
 import asyncpg
@@ -26,14 +25,14 @@ class DatabaseConnectionFactory:
         r"/\*.*\*/",  # Multi-line comments
     ]
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize the connection factory.
 
         Args:
             settings: Application settings instance (uses get_settings() if None)
         """
         self.settings = settings or get_settings()
-        self._pool: Optional[asyncpg.Pool] = None
+        self._pool: asyncpg.Pool | None = None
 
     def _validate_connection_url(self, url: str) -> None:
         """Validate the connection URL for security issues.
@@ -64,7 +63,7 @@ class DatabaseConnectionFactory:
         except Exception as e:
             raise ValueError(f"Invalid connection URL: {e}") from e
 
-    def _get_pool_config(self) -> Dict[str, Any]:
+    def _get_pool_config(self) -> dict[str, Any]:
         """Get connection pool configuration.
 
         Returns:
@@ -155,7 +154,7 @@ class DatabaseConnectionFactory:
             return False
 
     async def execute_query(
-        self, query: str, *args, timeout: Optional[float] = None
+        self, query: str, *args, timeout: float | None = None
     ) -> str:
         """Execute a query and return the result.
 
@@ -179,7 +178,7 @@ class DatabaseConnectionFactory:
 
 
 # Global factory instance
-_factory: Optional[DatabaseConnectionFactory] = None
+_factory: DatabaseConnectionFactory | None = None
 
 
 def get_connection_factory() -> DatabaseConnectionFactory:

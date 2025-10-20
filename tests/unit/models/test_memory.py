@@ -1,6 +1,6 @@
 """Tests for Memory models following modern pytest patterns."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -25,8 +25,8 @@ class TestMemoryModel:
             "id": uuid4(),
             "user_id": uuid4(),
             "memory": "User prefers window seats on flights",
-            "created_at": datetime.now(timezone.utc),
-            "updated_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
+            "updated_at": datetime.now(UTC),
         }
 
     def test_memory_creation_with_full_data(self, base_memory_data):
@@ -157,7 +157,7 @@ class TestSessionMemoryModel:
     @pytest.fixture
     def base_session_data(self):
         """Base data for creating session memory instances."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return {
             "id": uuid4(),
             "session_id": uuid4(),
@@ -201,7 +201,7 @@ class TestSessionMemoryModel:
 
     def test_session_memory_expiry_logic(self, base_session_data):
         """Test session memory expiry functionality."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Create expired session memory
         expired_data = {**base_session_data, "expires_at": now - timedelta(hours=1)}
@@ -251,7 +251,7 @@ class TestMemorySearchResult:
     @pytest.fixture
     def sample_memory(self):
         """Create a sample memory for search results."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return Memory(
             id=uuid4(),
             user_id=uuid4(),

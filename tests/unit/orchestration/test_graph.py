@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSageOrchestrator and graph construction.
+"""Comprehensive tests for TripSageOrchestrator and graph construction.
 
 This module provides full test coverage for the main orchestration graph
 including node configuration, routing logic, and message processing.

@@ -27,6 +27,7 @@ from tripsage_core.models.schemas_common.flight_schemas import (
     UpcomingFlightResponse,
 )
 
+
 __all__ = [
     # Request schemas
     "FlightSearchRequest",

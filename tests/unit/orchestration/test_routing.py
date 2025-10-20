@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for enhanced routing and handoff coordination.
+"""Comprehensive tests for enhanced routing and handoff coordination.
 
 This module tests the improved routing logic with multi-tier classification,
 confidence scoring, and sophisticated handoff coordination.

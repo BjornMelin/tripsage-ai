@@ -1,5 +1,4 @@
-"""
-TripSage Core utilities module.
+"""TripSage Core utilities module.
 
 This module provides common utility functions used across the TripSage Core library.
 """
@@ -73,8 +72,6 @@ from .logging_utils import (
     configure_logging,
     configure_root_logger,
     get_logger,
-)
-from .logging_utils import (
     log_exception as log_exception_util,
 )
 
@@ -87,6 +84,7 @@ from .session_utils import (
     store_session_summary,
     update_session_memory,
 )
+
 
 __all__ = [
     # Cache utilities

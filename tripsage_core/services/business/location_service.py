@@ -1,5 +1,4 @@
-"""
-Google Maps location service for TripSage.
+"""Google Maps location service for TripSage.
 
 This service provides comprehensive location operations using the Google Maps
 Python SDK,
@@ -7,7 +6,7 @@ including geocoding, place search, directions, distance calculations, and timezo
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsServiceError,
@@ -15,13 +14,12 @@ from tripsage_core.services.external_apis.google_maps_service import (
 )
 from tripsage_core.utils.decorator_utils import with_error_handling
 
+
 logger = logging.getLogger(__name__)
 
 
 class LocationServiceError(Exception):
     """Raised when location service operations fail."""
-
-    pass
 
 
 class LocationService:
@@ -33,7 +31,7 @@ class LocationService:
         logger.info("LocationService initialized successfully")
 
     @with_error_handling()
-    async def geocode(self, address: str, **kwargs) -> List[Dict[str, Any]]:
+    async def geocode(self, address: str, **kwargs) -> list[dict[str, Any]]:
         """Convert address to coordinates.
 
         Args:
@@ -56,7 +54,7 @@ class LocationService:
     @with_error_handling()
     async def reverse_geocode(
         self, lat: float, lng: float, **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Convert coordinates to address.
 
         Args:
@@ -83,10 +81,10 @@ class LocationService:
     async def search_places(
         self,
         query: str,
-        location: Optional[tuple] = None,
-        radius: Optional[int] = None,
+        location: tuple | None = None,
+        radius: int | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search for places.
 
         Args:
@@ -112,8 +110,8 @@ class LocationService:
 
     @with_error_handling()
     async def get_place_details(
-        self, place_id: str, fields: Optional[List[str]] = None, **kwargs
-    ) -> Dict[str, Any]:
+        self, place_id: str, fields: list[str] | None = None, **kwargs
+    ) -> dict[str, Any]:
         """Get detailed information about a specific place.
 
         Args:
@@ -139,7 +137,7 @@ class LocationService:
     @with_error_handling()
     async def get_directions(
         self, origin: str, destination: str, mode: str = "driving", **kwargs
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get directions between two locations.
 
         Args:
@@ -168,11 +166,11 @@ class LocationService:
     @with_error_handling()
     async def distance_matrix(
         self,
-        origins: List[str],
-        destinations: List[str],
+        origins: list[str],
+        destinations: list[str],
         mode: str = "driving",
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Calculate distance and time for multiple origins/destinations.
 
         Args:
@@ -198,8 +196,8 @@ class LocationService:
 
     @with_error_handling()
     async def get_elevation(
-        self, locations: List[tuple], **kwargs
-    ) -> List[Dict[str, Any]]:
+        self, locations: list[tuple], **kwargs
+    ) -> list[dict[str, Any]]:
         """Get elevation data for locations.
 
         Args:
@@ -221,8 +219,8 @@ class LocationService:
 
     @with_error_handling()
     async def get_timezone(
-        self, location: tuple, timestamp: Optional[int] = None, **kwargs
-    ) -> Dict[str, Any]:
+        self, location: tuple, timestamp: int | None = None, **kwargs
+    ) -> dict[str, Any]:
         """Get timezone information for a location.
 
         Args:

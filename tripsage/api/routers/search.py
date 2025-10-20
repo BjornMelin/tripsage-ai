@@ -1,9 +1,7 @@
-"""
-Router for unified search endpoints in the TripSage API.
-"""
+"""Router for unified search endpoints in the TripSage API."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -23,6 +21,7 @@ from tripsage_core.services.business.unified_search_service import (
 )
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
 
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -33,8 +32,7 @@ async def unified_search(
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
 ):
-    """
-    Perform a unified search across multiple resource types with caching.
+    """Perform a unified search across multiple resource types with caching.
 
     This endpoint searches across destinations, activities, accommodations,
     and flights (when applicable) to provide comprehensive travel search results.
@@ -104,7 +102,7 @@ async def unified_search(
 
 
 async def _track_search_analytics(
-    user_id: Optional[str], query: str, cache_status: str, cache_service
+    user_id: str | None, query: str, cache_status: str, cache_service
 ):
     """Track search analytics for monitoring and optimization."""
     try:
@@ -132,15 +130,14 @@ async def _track_search_analytics(
         logger.warning(f"Failed to track search analytics: {e}")
 
 
-@router.get("/suggest", response_model=List[str])
+@router.get("/suggest", response_model=list[str])
 async def search_suggestions(
     query: str = Query(
         ..., min_length=1, max_length=100, description="Partial search query"
     ),
     limit: int = Query(10, ge=1, le=20, description="Maximum number of suggestions"),
 ):
-    """
-    Get search suggestions based on partial query.
+    """Get search suggestions based on partial query.
 
     This endpoint provides intelligent search suggestions including popular
     destinations, activity types, and common search patterns to help users
@@ -169,15 +166,14 @@ async def search_suggestions(
         ) from e
 
 
-@router.get("/recent", response_model=List[Dict[str, Any]])
+@router.get("/recent", response_model=list[dict[str, Any]])
 async def get_recent_searches(
     limit: int = Query(
         10, ge=1, le=50, description="Maximum number of searches to return"
     ),
     principal=Depends(require_principal),
 ):
-    """
-    Get recent searches for the authenticated user.
+    """Get recent searches for the authenticated user.
 
     Returns the user's search history ordered by most recent first.
     """
@@ -201,13 +197,12 @@ async def get_recent_searches(
         ) from e
 
 
-@router.post("/save", response_model=Dict[str, str])
+@router.post("/save", response_model=dict[str, str])
 async def save_search(
     request: UnifiedSearchRequest,
     principal=Depends(require_principal),
 ):
-    """
-    Save a search query for the authenticated user.
+    """Save a search query for the authenticated user.
 
     Saves the search parameters to the user's search history for
     quick access and personalization.
@@ -238,8 +233,7 @@ async def delete_saved_search(
     search_id: str,
     principal=Depends(require_principal),
 ):
-    """
-    Delete a saved search for the authenticated user.
+    """Delete a saved search for the authenticated user.
 
     Removes the specified search from the user's search history.
     """
@@ -269,14 +263,13 @@ async def delete_saved_search(
         ) from e
 
 
-@router.post("/bulk", response_model=List[UnifiedSearchResponse])
+@router.post("/bulk", response_model=list[UnifiedSearchResponse])
 async def bulk_search(
-    requests: List[UnifiedSearchRequest],
+    requests: list[UnifiedSearchRequest],
     use_cache: bool = Query(True, description="Whether to use cached results"),
     principal=Depends(get_current_principal),
 ):
-    """
-    Perform multiple searches in a single request for efficiency.
+    """Perform multiple searches in a single request for efficiency.
 
     Useful for comparing multiple destinations or search variations.
     Results are processed in parallel for optimal performance.
@@ -375,8 +368,7 @@ async def get_search_analytics(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
     principal=Depends(require_principal),
 ):
-    """
-    Get search analytics for a specific date.
+    """Get search analytics for a specific date.
 
     Only available to authenticated users for their own analytics.
     """

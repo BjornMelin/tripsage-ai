@@ -1,5 +1,4 @@
-"""
-WebSocket messaging service.
+"""WebSocket messaging service.
 
 This service consolidates all WebSocket message sending logic including:
 - Connection-level messaging
@@ -18,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from .websocket_auth_service import WebSocketAuthService
 from .websocket_connection_service import WebSocketConnection
+
 
 logger = logging.getLogger(__name__)
 

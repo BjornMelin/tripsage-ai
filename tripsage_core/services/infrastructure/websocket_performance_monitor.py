@@ -1,5 +1,4 @@
-"""
-WebSocket Performance Monitoring Service.
+"""WebSocket Performance Monitoring Service.
 
 This service provides comprehensive performance monitoring for
 WebSocket connections including:
@@ -18,11 +17,12 @@ import time
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from .websocket_connection_service import WebSocketConnection
+
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ class WebSocketPerformanceMonitor:
         collection_interval: float = 1.0,
         aggregation_interval: float = 60.0,
         retention_hours: int = 24,
-        thresholds: Optional[PerformanceThresholds] = None,
+        thresholds: PerformanceThresholds | None = None,
     ):
         self.collection_interval = collection_interval
         self.aggregation_interval = aggregation_interval
@@ -105,18 +105,18 @@ class WebSocketPerformanceMonitor:
         # Metrics storage
         self.snapshots: deque[PerformanceSnapshot] = deque(maxlen=10000)
         self.aggregated_metrics: deque[AggregatedMetrics] = deque(maxlen=1000)
-        self.active_alerts: Dict[str, PerformanceAlert] = {}
+        self.active_alerts: dict[str, PerformanceAlert] = {}
         self.alert_history: deque[PerformanceAlert] = deque(maxlen=1000)
 
         # Connection tracking
-        self.connection_metrics: Dict[str, Dict[str, Any]] = defaultdict(dict)
-        self.circuit_breaker_events: Dict[str, List[float]] = defaultdict(list)
-        self.backpressure_events: Dict[str, List[float]] = defaultdict(list)
+        self.connection_metrics: dict[str, dict[str, Any]] = defaultdict(dict)
+        self.circuit_breaker_events: dict[str, list[float]] = defaultdict(list)
+        self.backpressure_events: dict[str, list[float]] = defaultdict(list)
 
         # Background tasks
-        self._monitor_task: Optional[asyncio.Task] = None
-        self._aggregation_task: Optional[asyncio.Task] = None
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._monitor_task: asyncio.Task | None = None
+        self._aggregation_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task | None = None
         self._running = False
 
     async def start(self) -> None:
@@ -477,7 +477,7 @@ class WebSocketPerformanceMonitor:
             f"aggregated {old_aggregated_count} -> {len(self.aggregated_metrics)}"
         )
 
-    def get_performance_summary(self) -> Dict[str, Any]:
+    def get_performance_summary(self) -> dict[str, Any]:
         """Get current performance summary."""
         if not self.aggregated_metrics:
             return {"status": "no_data", "message": "No performance data available yet"}
@@ -530,7 +530,7 @@ class WebSocketPerformanceMonitor:
             "timestamp": latest.end_time,
         }
 
-    def get_connection_performance(self, connection_id: str) -> Dict[str, Any]:
+    def get_connection_performance(self, connection_id: str) -> dict[str, Any]:
         """Get performance data for a specific connection."""
         if connection_id not in self.connection_metrics:
             return {"error": "Connection not found"}
@@ -590,7 +590,7 @@ class WebSocketPerformanceMonitor:
             "recent_snapshots_count": len(recent_snapshots),
         }
 
-    def get_active_alerts(self) -> List[Dict[str, Any]]:
+    def get_active_alerts(self) -> list[dict[str, Any]]:
         """Get all active performance alerts."""
         return [alert.model_dump() for alert in self.active_alerts.values()]
 

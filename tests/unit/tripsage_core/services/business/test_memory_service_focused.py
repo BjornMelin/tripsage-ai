@@ -1,5 +1,4 @@
-"""
-Focused Memory Service Tests with Dependency Isolation.
+"""Focused Memory Service Tests with Dependency Isolation.
 
 This module provides comprehensive test coverage for memory management operations
 without triggering problematic external dependencies. Tests focus on business logic
@@ -7,13 +6,12 @@ validation, error handling, and integration patterns while mocking external serv
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.exceptions import CoreServiceError as ServiceError
@@ -40,7 +38,7 @@ class MockMemory:
             "text": str(messages),
             "user_id": user_id,
             "metadata": metadata or {},
-            "created_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
         }
         self.memories[memory_id] = memory
         return {"id": memory_id}
@@ -53,7 +51,7 @@ class MockMemory:
                 "memory": f"Mock memory for query: {query}",
                 "score": 0.95,
                 "metadata": {"category": "travel"},
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
         ]
 
@@ -104,7 +102,7 @@ class TestMemoryServiceModels:
         # Import here to avoid dependency issues
         from tripsage_core.services.business.memory_service import MemorySearchResult
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result = MemorySearchResult(
             id="test-id",
             memory="Test memory content",
@@ -472,7 +470,7 @@ class TestMemoryServiceIntegration:
         # Setup realistic database behavior
         database.fetch_one.return_value = {
             "preferences": {},
-            "created_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
         }
         database.fetch_all.return_value = []
 
@@ -616,13 +614,11 @@ class TestMemoryServicePerformance:
         """Test memory search performance under load."""
         # This would test search performance with large datasets
         # Implementation depends on test environment setup
-        pass
 
     async def test_bulk_operation_performance(self):
         """Test bulk operation performance."""
         # This would test bulk operations performance
         # Implementation depends on test environment setup
-        pass
 
 
 class TestMemoryServiceUtilities:

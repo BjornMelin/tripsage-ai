@@ -1,5 +1,4 @@
-"""
-Tests for WebSocket performance monitoring.
+"""Tests for WebSocket performance monitoring.
 
 This test suite validates the WebSocket performance monitoring infrastructure including:
 - Metrics collection and aggregation

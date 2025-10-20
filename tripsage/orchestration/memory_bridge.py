@@ -1,5 +1,4 @@
-"""
-Session Memory Bridge for LangGraph Integration
+"""Session Memory Bridge for LangGraph Integration
 
 This module provides integration between LangGraph state management and TripSage's
 existing session memory utilities, enabling seamless memory persistence and retrieval
@@ -7,8 +6,8 @@ across agent interactions.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
@@ -17,12 +16,12 @@ from tripsage_core.utils.session_utils import (
     update_session_memory,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
 class SessionMemoryBridge:
-    """
-    Bridge between LangGraph state and TripSage session memory utilities.
+    """Bridge between LangGraph state and TripSage session memory utilities.
 
     This class handles bidirectional synchronization between:
     - LangGraph TravelPlanningState (ephemeral)
@@ -30,13 +29,12 @@ class SessionMemoryBridge:
     - User preferences and learned insights
     """
 
-    def __init__(self, mcp_manager: Optional[MCPManager] = None):
+    def __init__(self, mcp_manager: MCPManager | None = None):
         """Initialize the memory bridge."""
         self.mcp_manager = mcp_manager or MCPManager()
 
     async def hydrate_state(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Load user context and preferences into LangGraph state.
+        """Load user context and preferences into LangGraph state.
 
         Args:
             state: Current LangGraph state
@@ -69,10 +67,9 @@ class SessionMemoryBridge:
         return state
 
     async def _map_session_to_state(
-        self, state: TravelPlanningState, session_data: Dict[str, Any]
+        self, state: TravelPlanningState, session_data: dict[str, Any]
     ) -> TravelPlanningState:
-        """
-        Map session memory data to LangGraph state format.
+        """Map session memory data to LangGraph state format.
 
         Args:
             state: Current state
@@ -139,12 +136,12 @@ class SessionMemoryBridge:
         state["session_metadata"] = {
             "last_activity": session_data.get("last_activity"),
             "session_count": session_data.get("session_count", 0),
-            "memory_loaded_at": datetime.now(timezone.utc).isoformat(),
+            "memory_loaded_at": datetime.now(UTC).isoformat(),
         }
 
         return state
 
-    def _extract_favorite_destinations(self, trips: List[Dict[str, Any]]) -> List[str]:
+    def _extract_favorite_destinations(self, trips: list[dict[str, Any]]) -> list[str]:
         """Extract frequently visited destinations."""
         destination_counts = {}
         for trip in trips:
@@ -162,8 +159,8 @@ class SessionMemoryBridge:
         ]
 
     def _calculate_typical_budget_range(
-        self, budget_history: List[Dict[str, Any]]
-    ) -> Dict[str, float]:
+        self, budget_history: list[dict[str, Any]]
+    ) -> dict[str, float]:
         """Calculate typical budget range from history."""
         budgets = [
             b.get("total_budget", 0) for b in budget_history if b.get("total_budget")
@@ -180,8 +177,8 @@ class SessionMemoryBridge:
         }
 
     def _analyze_spending_patterns(
-        self, budget_history: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+        self, budget_history: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Analyze spending patterns from budget history."""
         patterns = {
             "accommodation_percentage": [],
@@ -193,7 +190,7 @@ class SessionMemoryBridge:
         for budget in budget_history:
             total = budget.get("total_budget", 0)
             if total > 0:
-                for category in patterns.keys():
+                for category in patterns:
                     category_amount = budget.get(category.replace("_percentage", ""), 0)
                     patterns[category].append((category_amount / total) * 100)
 
@@ -205,9 +202,8 @@ class SessionMemoryBridge:
 
     async def extract_and_persist_insights(
         self, state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Extract insights from state and update knowledge graph.
+    ) -> dict[str, Any]:
+        """Extract insights from state and update knowledge graph.
 
         Args:
             state: Current LangGraph state
@@ -241,9 +237,8 @@ class SessionMemoryBridge:
 
     async def _extract_insights_from_state(
         self, state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Extract insights from LangGraph state.
+    ) -> dict[str, Any]:
+        """Extract insights from LangGraph state.
 
         Args:
             state: Current state
@@ -287,7 +282,7 @@ class SessionMemoryBridge:
 
         # Add session context
         insights["session_context"] = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "session_id": state.get("session_id"),
             "agent_interactions": state.get("agent_history", []),
             "total_messages": len(messages),
@@ -295,7 +290,7 @@ class SessionMemoryBridge:
 
         return insights
 
-    def _extract_facts_from_messages(self, messages: List[Dict[str, Any]]) -> List[str]:
+    def _extract_facts_from_messages(self, messages: list[dict[str, Any]]) -> list[str]:
         """Extract facts and insights from conversation messages."""
         facts = []
 
@@ -328,9 +323,8 @@ class SessionMemoryBridge:
 
         return facts[-5:]  # Keep last 5 facts to avoid overwhelming memory
 
-    def state_to_checkpoint_format(self, state: TravelPlanningState) -> Dict[str, Any]:
-        """
-        Convert state to format suitable for checkpointing.
+    def state_to_checkpoint_format(self, state: TravelPlanningState) -> dict[str, Any]:
+        """Convert state to format suitable for checkpointing.
 
         Args:
             state: Current state
@@ -373,10 +367,9 @@ class SessionMemoryBridge:
         return checkpoint_data
 
     async def restore_from_checkpoint(
-        self, checkpoint_data: Dict[str, Any]
+        self, checkpoint_data: dict[str, Any]
     ) -> TravelPlanningState:
-        """
-        Restore state from checkpoint data.
+        """Restore state from checkpoint data.
 
         Args:
             checkpoint_data: Saved checkpoint data
@@ -404,10 +397,9 @@ class SessionMemoryBridge:
         user_id: str,
         session_id: str,
         checkpoint_id: str,
-        metadata: Dict[str, Any],
+        metadata: dict[str, Any],
     ) -> None:
-        """
-        Store reference to checkpoint in knowledge graph.
+        """Store reference to checkpoint in knowledge graph.
 
         Args:
             user_id: User identifier
@@ -419,7 +411,7 @@ class SessionMemoryBridge:
             checkpoint_ref = {
                 "checkpoint_id": checkpoint_id,
                 "session_id": session_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "metadata": metadata,
             }
 
@@ -437,7 +429,7 @@ class SessionMemoryBridge:
 
 
 # Global bridge instance
-_global_memory_bridge: Optional[SessionMemoryBridge] = None
+_global_memory_bridge: SessionMemoryBridge | None = None
 
 
 def get_memory_bridge() -> SessionMemoryBridge:

@@ -1,5 +1,4 @@
-"""
-Clean, focused test suite for auth router.
+"""Clean, focused test suite for auth router.
 
 Tests basic structure and imports without requiring full app startup.
 """

@@ -1,5 +1,4 @@
-"""
-Modern configuration testing for TripSage Core.
+"""Modern configuration testing for TripSage Core.
 
 Tests the simplified, consolidated configuration system following 2025 best practices.
 Focuses on the unified Settings structure with feature toggles.

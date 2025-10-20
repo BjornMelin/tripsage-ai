@@ -5,7 +5,6 @@ conversation history, and travel preferences using the unified memory service.
 """
 
 import logging
-from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -16,6 +15,7 @@ from tripsage.api.core.dependencies import (
     get_principal_id,
 )
 
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
@@ -23,8 +23,8 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 class ConversationMemoryRequest(BaseModel):
     """Request model for adding conversation memory."""
 
-    messages: List[Dict[str, str]] = Field(..., description="Conversation messages")
-    session_id: Optional[str] = Field(None, description="Session ID")
+    messages: list[dict[str, str]] = Field(..., description="Conversation messages")
+    session_id: str | None = Field(None, description="Session ID")
     context_type: str = Field("travel_planning", description="Context type")
 
 
@@ -38,7 +38,7 @@ class SearchMemoryRequest(BaseModel):
 class UpdatePreferencesRequest(BaseModel):
     """Request model for updating user preferences."""
 
-    preferences: Dict = Field(..., description="User preferences to update")
+    preferences: dict = Field(..., description="User preferences to update")
 
 
 @router.post("/conversation")
@@ -79,7 +79,7 @@ async def add_conversation_memory(
         return result
 
     except Exception as e:
-        logger.error(f"Add conversation memory failed: {str(e)}")
+        logger.error(f"Add conversation memory failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add conversation memory",
@@ -106,7 +106,7 @@ async def get_user_context(
         return context
 
     except Exception as e:
-        logger.error(f"Get user context failed: {str(e)}")
+        logger.error(f"Get user context failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user context",
@@ -139,7 +139,7 @@ async def search_memories(
         return {"results": memories, "query": request.query, "total": len(memories)}
 
     except Exception as e:
-        logger.error(f"Search memories failed: {str(e)}")
+        logger.error(f"Search memories failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search memories",
@@ -170,7 +170,7 @@ async def update_preferences(
         return result
 
     except Exception as e:
-        logger.error(f"Update preferences failed: {str(e)}")
+        logger.error(f"Update preferences failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update preferences",
@@ -203,7 +203,7 @@ async def add_preference(
         return result
 
     except Exception as e:
-        logger.error(f"Add preference failed: {str(e)}")
+        logger.error(f"Add preference failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add preference",
@@ -240,7 +240,7 @@ async def delete_memory(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Delete memory failed: {str(e)}")
+        logger.error(f"Delete memory failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete memory",
@@ -267,7 +267,7 @@ async def get_memory_stats(
         return stats
 
     except Exception as e:
-        logger.error(f"Get memory stats failed: {str(e)}")
+        logger.error(f"Get memory stats failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get memory stats",
@@ -296,7 +296,7 @@ async def clear_user_memory(
         return result
 
     except Exception as e:
-        logger.error(f"Clear memory failed: {str(e)}")
+        logger.error(f"Clear memory failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear memory",

@@ -43,88 +43,87 @@ class TestDatabaseMigration:
     @pytest.mark.asyncio
     async def test_secure_engine_creation_with_supabase_url(self, mock_settings):
         """Test creating engine with Supabase URL converts to PostgreSQL."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
                 "tripsage_core.database.connection.create_async_engine"
-            ) as mock_create:
-                with patch(
-                    "tripsage_core.database.connection.get_connection_manager"
-                ) as mock_manager:
-                    # Setup mocks
-                    mock_engine = AsyncMock()
-                    mock_create.return_value = mock_engine
+            ) as mock_create,
+            patch(
+                "tripsage_core.database.connection.get_connection_manager"
+            ) as mock_manager,
+        ):
+            # Setup mocks
+            mock_engine = AsyncMock()
+            mock_create.return_value = mock_engine
 
-                    mock_conn_mgr = MagicMock()
-                    mock_creds = MagicMock()
-                    mock_creds.to_connection_string.return_value = (
-                        "postgresql://postgres:test@localhost:5432/test"
-                    )
-                    mock_creds.database = "postgres"
-                    mock_creds.hostname = "test-project.supabase.co"
+            mock_conn_mgr = MagicMock()
+            mock_creds = MagicMock()
+            mock_creds.to_connection_string.return_value = (
+                "postgresql://postgres:test@localhost:5432/test"
+            )
+            mock_creds.database = "postgres"
+            mock_creds.hostname = "test-project.supabase.co"
 
-                    mock_conn_mgr.parse_and_validate_url = AsyncMock(
-                        return_value=mock_creds
-                    )
-                    mock_manager.return_value = mock_conn_mgr
+            mock_conn_mgr.parse_and_validate_url = AsyncMock(return_value=mock_creds)
+            mock_manager.return_value = mock_conn_mgr
 
-                    # Test engine creation
-                    await create_secure_async_engine(
-                        "https://test-project.supabase.co",
-                        pool_size=5,
-                        echo=True,
-                    )
+            # Test engine creation
+            await create_secure_async_engine(
+                "https://test-project.supabase.co",
+                pool_size=5,
+                echo=True,
+            )
 
-                    # Verify conversion happened
-                    mock_conn_mgr.parse_and_validate_url.assert_called_once()
-                    call_url = mock_conn_mgr.parse_and_validate_url.call_args[0][0]
-                    assert "postgresql://" in call_url
-                    assert "test-project.supabase.co" in call_url
+            # Verify conversion happened
+            mock_conn_mgr.parse_and_validate_url.assert_called_once()
+            call_url = mock_conn_mgr.parse_and_validate_url.call_args[0][0]
+            assert "postgresql://" in call_url
+            assert "test-project.supabase.co" in call_url
 
-                    # Verify engine created with async driver
-                    mock_create.assert_called_once()
-                    engine_url = mock_create.call_args[0][0]
-                    assert "postgresql+asyncpg://" in engine_url
+            # Verify engine created with async driver
+            mock_create.assert_called_once()
+            engine_url = mock_create.call_args[0][0]
+            assert "postgresql+asyncpg://" in engine_url
 
     @pytest.mark.asyncio
     async def test_secure_engine_creation_with_postgres_url(self):
         """Test creating engine with PostgreSQL URL."""
         postgres_url = "postgresql://user:pass@localhost:5432/testdb"
 
-        with patch(
-            "tripsage_core.database.connection.create_async_engine"
-        ) as mock_create:
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.create_async_engine"
+            ) as mock_create,
+            patch(
                 "tripsage_core.database.connection.get_connection_manager"
-            ) as mock_manager:
-                # Setup mocks
-                mock_engine = AsyncMock()
-                mock_create.return_value = mock_engine
+            ) as mock_manager,
+        ):
+            # Setup mocks
+            mock_engine = AsyncMock()
+            mock_create.return_value = mock_engine
 
-                mock_conn_mgr = MagicMock()
-                mock_creds = MagicMock()
-                mock_creds.to_connection_string.return_value = postgres_url
-                mock_creds.database = "testdb"
-                mock_creds.hostname = "localhost"
+            mock_conn_mgr = MagicMock()
+            mock_creds = MagicMock()
+            mock_creds.to_connection_string.return_value = postgres_url
+            mock_creds.database = "testdb"
+            mock_creds.hostname = "localhost"
 
-                mock_conn_mgr.parse_and_validate_url = AsyncMock(
-                    return_value=mock_creds
-                )
-                mock_manager.return_value = mock_conn_mgr
+            mock_conn_mgr.parse_and_validate_url = AsyncMock(return_value=mock_creds)
+            mock_manager.return_value = mock_conn_mgr
 
-                # Test engine creation
-                await create_secure_async_engine(postgres_url)
+            # Test engine creation
+            await create_secure_async_engine(postgres_url)
 
-                # Verify URL was validated
-                mock_conn_mgr.parse_and_validate_url.assert_called_once_with(
-                    postgres_url
-                )
+            # Verify URL was validated
+            mock_conn_mgr.parse_and_validate_url.assert_called_once_with(postgres_url)
 
-                # Verify engine created with asyncpg
-                mock_create.assert_called_once()
-                engine_url = mock_create.call_args[0][0]
-                assert "postgresql+asyncpg://" in engine_url
+            # Verify engine created with asyncpg
+            mock_create.assert_called_once()
+            engine_url = mock_create.call_args[0][0]
+            assert "postgresql+asyncpg://" in engine_url
 
     @pytest.mark.asyncio
     async def test_secure_engine_validation_failure(self):
@@ -184,40 +183,39 @@ class TestDatabaseMigration:
     @pytest.mark.asyncio
     async def test_database_session_with_secure_connection(self, mock_settings):
         """Test database session uses secure connection."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
+        with (
+            patch(
+                "tripsage_core.database.connection.get_settings",
+                return_value=mock_settings,
+            ),
+            patch("tripsage_core.database.connection.get_engine") as mock_get_engine,
+            patch(
+                "tripsage_core.database.connection.async_sessionmaker"
+            ) as mock_sessionmaker,
         ):
-            with patch(
-                "tripsage_core.database.connection.get_engine"
-            ) as mock_get_engine:
-                with patch(
-                    "tripsage_core.database.connection.async_sessionmaker"
-                ) as mock_sessionmaker:
-                    # Setup mocks
-                    mock_engine = MagicMock()
-                    mock_get_engine.return_value = mock_engine
+            # Setup mocks
+            mock_engine = MagicMock()
+            mock_get_engine.return_value = mock_engine
 
-                    mock_session = AsyncMock()
-                    mock_session_factory = MagicMock()
-                    mock_session_factory.__aenter__ = AsyncMock(
-                        return_value=mock_session
-                    )
-                    mock_session_factory.__aexit__ = AsyncMock()
-                    mock_sessionmaker.return_value.return_value = mock_session_factory
+            mock_session = AsyncMock()
+            mock_session_factory = MagicMock()
+            mock_session_factory.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_factory.__aexit__ = AsyncMock()
+            mock_sessionmaker.return_value.return_value = mock_session_factory
 
-                    # Test session creation
-                    async with get_database_session() as session:
-                        assert session == mock_session
+            # Test session creation
+            async with get_database_session() as session:
+                assert session == mock_session
 
-                    # Verify secure engine was used
-                    mock_get_engine.assert_called_once()
-                    mock_sessionmaker.assert_called_once_with(
-                        mock_engine,
-                        class_=AsyncSession,
-                        expire_on_commit=False,
-                        autoflush=False,
-                        autocommit=False,
-                    )
+            # Verify secure engine was used
+            mock_get_engine.assert_called_once()
+            mock_sessionmaker.assert_called_once_with(
+                mock_engine,
+                class_=AsyncSession,
+                expire_on_commit=False,
+                autoflush=False,
+                autocommit=False,
+            )
 
     @pytest.mark.asyncio
     async def test_connection_test_with_extensions(self, mock_settings):
@@ -298,47 +296,47 @@ class TestDatabaseMigration:
         """Test security features are properly configured."""
         postgres_url = "postgresql://user:password@host:5432/db?sslmode=require"
 
-        with patch(
-            "tripsage_core.database.connection.create_async_engine"
-        ) as mock_create:
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.create_async_engine"
+            ) as mock_create,
+            patch(
                 "tripsage_core.database.connection.get_connection_manager"
-            ) as mock_manager:
-                # Setup mocks
-                mock_engine = AsyncMock()
-                mock_create.return_value = mock_engine
+            ) as mock_manager,
+        ):
+            # Setup mocks
+            mock_engine = AsyncMock()
+            mock_create.return_value = mock_engine
 
-                mock_conn_mgr = MagicMock()
-                mock_creds = MagicMock()
-                mock_creds.to_connection_string.return_value = postgres_url
-                mock_creds.database = "db"
-                mock_creds.hostname = "host"
-                mock_creds.query_params = {"sslmode": "require"}
+            mock_conn_mgr = MagicMock()
+            mock_creds = MagicMock()
+            mock_creds.to_connection_string.return_value = postgres_url
+            mock_creds.database = "db"
+            mock_creds.hostname = "host"
+            mock_creds.query_params = {"sslmode": "require"}
 
-                mock_conn_mgr.parse_and_validate_url = AsyncMock(
-                    return_value=mock_creds
-                )
-                mock_manager.return_value = mock_conn_mgr
+            mock_conn_mgr.parse_and_validate_url = AsyncMock(return_value=mock_creds)
+            mock_manager.return_value = mock_conn_mgr
 
-                # Test engine creation
-                await create_secure_async_engine(
-                    postgres_url,
-                    pool_pre_ping=True,
-                    pool_size=10,
-                )
+            # Test engine creation
+            await create_secure_async_engine(
+                postgres_url,
+                pool_pre_ping=True,
+                pool_size=10,
+            )
 
-                # Verify security settings
-                mock_create.assert_called_once()
-                call_kwargs = mock_create.call_args[1]
+            # Verify security settings
+            mock_create.assert_called_once()
+            call_kwargs = mock_create.call_args[1]
 
-                # Check pool settings
-                assert call_kwargs["pool_pre_ping"] is True
-                assert call_kwargs["pool_size"] == 10
-                assert call_kwargs["pool_recycle"] == 3600
-                assert call_kwargs["pool_timeout"] == 30
+            # Check pool settings
+            assert call_kwargs["pool_pre_ping"] is True
+            assert call_kwargs["pool_size"] == 10
+            assert call_kwargs["pool_recycle"] == 3600
+            assert call_kwargs["pool_timeout"] == 30
 
-                # Check connect args
-                connect_args = call_kwargs["connect_args"]
-                assert connect_args["server_settings"]["application_name"] == "tripsage"
-                assert connect_args["command_timeout"] == 60
-                assert connect_args["timeout"] == 10
+            # Check connect args
+            connect_args = call_kwargs["connect_args"]
+            assert connect_args["server_settings"]["application_name"] == "tripsage"
+            assert connect_args["command_timeout"] == 60
+            assert connect_args["timeout"] == 10

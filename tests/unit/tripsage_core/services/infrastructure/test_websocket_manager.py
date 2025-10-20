@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core WebSocket Manager.
+"""Comprehensive tests for TripSage Core WebSocket Manager.
 
 This module provides comprehensive test coverage for WebSocket manager functionality
 including connection management, authentication, channel subscriptions, message
@@ -9,7 +8,7 @@ broadcasting, background task management, performance monitoring, and error hand
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID, uuid4
 
@@ -1101,7 +1100,7 @@ class TestWebSocketManager:
             session_id=session_id,
             payload={
                 "message": "Hello",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
 

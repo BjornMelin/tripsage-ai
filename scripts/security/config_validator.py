@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Security configuration validator for TripSage.
+"""Security configuration validator for TripSage.
 
 This script validates the security configuration before deployment,
 ensuring that production environments meet security requirements.
@@ -9,9 +8,9 @@ ensuring that production environments meet security requirements.
 import logging
 import sys
 from pathlib import Path
-from typing import List
 
 from tripsage_core.config import Settings, get_settings, validate_configuration
+
 
 # Configure logging
 logging.basicConfig(
@@ -26,8 +25,8 @@ class SecurityValidator:
     """Comprehensive security validation for TripSage configuration."""
 
     def __init__(self):
-        self.issues: List[str] = []
-        self.warnings: List[str] = []
+        self.issues: list[str] = []
+        self.warnings: list[str] = []
 
     def validate_configuration_security(self) -> bool:
         """Run comprehensive security validation.

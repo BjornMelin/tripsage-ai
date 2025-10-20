@@ -1,5 +1,4 @@
-"""
-Tests for SearchCacheMixin and SimpleCacheMixin.
+"""Tests for SearchCacheMixin and SimpleCacheMixin.
 
 This module tests the caching mixin functionality to ensure consistent
 caching behavior across services.
@@ -7,7 +6,7 @@ caching behavior across services.
 
 import json
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -25,9 +24,7 @@ class MockSearchRequest(BaseModel):
     """Mock search request model for testing."""
 
     query: str = Field(..., description="Search query")
-    filters: Optional[Dict[str, Any]] = Field(
-        default=None, description="Search filters"
-    )
+    filters: dict[str, Any] | None = Field(default=None, description="Search filters")
     page: int = Field(default=1, description="Page number")
     page_size: int = Field(default=20, description="Page size")
 
@@ -35,7 +32,7 @@ class MockSearchRequest(BaseModel):
 class MockSearchResponse(BaseModel):
     """Mock search response model for testing."""
 
-    results: list[Dict[str, Any]] = Field(..., description="Search results")
+    results: list[dict[str, Any]] = Field(..., description="Search results")
     total_count: int = Field(..., description="Total result count")
     page: int = Field(..., description="Current page")
     page_size: int = Field(..., description="Page size")
@@ -45,12 +42,12 @@ class MockSearchResponse(BaseModel):
 class MockSearchService(SearchCacheMixin[MockSearchRequest, MockSearchResponse]):
     """Mock service implementing SearchCacheMixin for testing."""
 
-    def __init__(self, cache_service: Optional[CacheService] = None):
+    def __init__(self, cache_service: CacheService | None = None):
         self._cache_service = cache_service
         self._cache_ttl = 300  # 5 minutes
         self._cache_prefix = "test_search"
 
-    def get_cache_fields(self, request: MockSearchRequest) -> Dict[str, Any]:
+    def get_cache_fields(self, request: MockSearchRequest) -> dict[str, Any]:
         """Extract cacheable fields from request."""
         fields = {
             "query": request.query,
@@ -69,7 +66,7 @@ class MockSearchService(SearchCacheMixin[MockSearchRequest, MockSearchResponse])
 class MockSimpleService(SimpleCacheMixin):
     """Test service implementing SimpleCacheMixin."""
 
-    def __init__(self, cache_service: Optional[CacheService] = None):
+    def __init__(self, cache_service: CacheService | None = None):
         self._cache_service = cache_service
         self._cache_ttl = 600  # 10 minutes
         self._cache_prefix = "test_simple"

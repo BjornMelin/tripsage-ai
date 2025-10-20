@@ -1,5 +1,4 @@
-"""
-Database connection utilities with security hardening and robust error handling.
+"""Database connection utilities with security hardening and robust error handling.
 
 This module provides secure URL parsing, connection validation, and retry logic
 for database connections, specifically designed for PostgreSQL/Supabase integration.
@@ -11,10 +10,11 @@ import secrets
 import time
 from contextlib import asynccontextmanager
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 from urllib.parse import ParseResult, quote_plus, unquote_plus, urlparse
 
 from pydantic import BaseModel, Field, ValidationError
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +30,13 @@ class ConnectionState(Enum):
 class DatabaseURLParsingError(Exception):
     """Raised when database URL parsing fails."""
 
-    pass
-
 
 class DatabaseConnectionError(Exception):
     """Raised when database connection fails."""
 
-    pass
-
 
 class DatabaseValidationError(Exception):
     """Raised when database connection validation fails."""
-
-    pass
 
 
 class ConnectionCredentials(BaseModel):
@@ -54,7 +48,7 @@ class ConnectionCredentials(BaseModel):
     hostname: str = Field(..., description="Database hostname")
     port: int = Field(default=5432, ge=1, le=65535, description="Database port")
     database: str = Field(default="postgres", description="Database name")
-    query_params: Dict[str, str] = Field(
+    query_params: dict[str, str] = Field(
         default_factory=dict, description="Query parameters"
     )
 
@@ -64,8 +58,7 @@ class ConnectionCredentials(BaseModel):
         frozen = True
 
     def to_connection_string(self, mask_password: bool = False) -> str:
-        """
-        Convert credentials to connection string.
+        """Convert credentials to connection string.
 
         Args:
             mask_password: Whether to mask the password in the output
@@ -95,8 +88,7 @@ class ConnectionCredentials(BaseModel):
 
 
 class DatabaseURLParser:
-    """
-    Secure database URL parser with comprehensive validation.
+    """Secure database URL parser with comprehensive validation.
 
     This parser handles PostgreSQL connection URLs with proper security
     validation, special character encoding, and error handling.
@@ -108,8 +100,7 @@ class DatabaseURLParser:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     def parse_url(self, url: str) -> ConnectionCredentials:
-        """
-        Parse database URL into secure credentials object.
+        """Parse database URL into secure credentials object.
 
         Args:
             url: Database connection URL to parse
@@ -147,8 +138,7 @@ class DatabaseURLParser:
             raise DatabaseURLParsingError(error_msg) from e
 
     def _validate_url_security(self, url: str) -> None:
-        """
-        Validate URL for security issues.
+        """Validate URL for security issues.
 
         Args:
             url: URL to validate
@@ -173,9 +163,8 @@ class DatabaseURLParser:
         if "://" not in url:
             raise DatabaseURLParsingError("URL must contain scheme separator '://'")
 
-    def _extract_components(self, parsed: ParseResult) -> Dict[str, Any]:
-        """
-        Extract and validate URL components.
+    def _extract_components(self, parsed: ParseResult) -> dict[str, Any]:
+        """Extract and validate URL components.
 
         Args:
             parsed: Parsed URL result
@@ -232,16 +221,14 @@ class DatabaseURLParser:
 
 
 class ConnectionCircuitBreaker:
-    """
-    Circuit breaker for database connections to prevent cascade failures.
+    """Circuit breaker for database connections to prevent cascade failures.
 
     Implements the circuit breaker pattern to protect against sustained
     database connection failures.
     """
 
     def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 60.0):
-        """
-        Initialize circuit breaker.
+        """Initialize circuit breaker.
 
         Args:
             failure_threshold: Number of failures before opening circuit
@@ -255,8 +242,7 @@ class ConnectionCircuitBreaker:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     async def call(self, operation, *args, **kwargs):
-        """
-        Execute operation with circuit breaker protection.
+        """Execute operation with circuit breaker protection.
 
         Args:
             operation: Async function to execute
@@ -308,8 +294,7 @@ class ConnectionCircuitBreaker:
 
 
 class ExponentialBackoffRetry:
-    """
-    Exponential backoff retry logic for database operations.
+    """Exponential backoff retry logic for database operations.
 
     Implements exponential backoff with jitter to prevent thundering herd
     problems during connection recovery.
@@ -323,8 +308,7 @@ class ExponentialBackoffRetry:
         backoff_factor: float = 2.0,
         jitter: bool = True,
     ):
-        """
-        Initialize retry configuration.
+        """Initialize retry configuration.
 
         Args:
             max_retries: Maximum number of retry attempts
@@ -342,8 +326,7 @@ class ExponentialBackoffRetry:
         self._random = secrets.SystemRandom()
 
     def calculate_delay(self, attempt: int) -> float:
-        """
-        Calculate delay for retry attempt.
+        """Calculate delay for retry attempt.
 
         Args:
             attempt: Current attempt number (0-based)
@@ -360,8 +343,7 @@ class ExponentialBackoffRetry:
         return min(delay, self.max_delay)
 
     async def execute_with_retry(self, operation, *args, **kwargs):
-        """
-        Execute operation with exponential backoff retry.
+        """Execute operation with exponential backoff retry.
 
         Args:
             operation: Async function to execute
@@ -401,16 +383,14 @@ class ExponentialBackoffRetry:
 
 
 class DatabaseConnectionValidator:
-    """
-    Database connection validator with health checks.
+    """Database connection validator with health checks.
 
     Provides comprehensive connection validation including basic connectivity,
     extension availability, and performance checks.
     """
 
     def __init__(self, timeout: float = 10.0):
-        """
-        Initialize validator.
+        """Initialize validator.
 
         Args:
             timeout: Connection timeout in seconds
@@ -419,8 +399,7 @@ class DatabaseConnectionValidator:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     async def validate_connection(self, credentials: ConnectionCredentials) -> bool:
-        """
-        Validate database connection with comprehensive checks.
+        """Validate database connection with comprehensive checks.
 
         Args:
             credentials: Database connection credentials
@@ -480,7 +459,7 @@ class DatabaseConnectionValidator:
             finally:
                 await conn.close()
 
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             error_msg = f"Connection validation timed out after {self.timeout}s"
             self.logger.error(error_msg)
             raise DatabaseValidationError(error_msg) from e
@@ -491,8 +470,7 @@ class DatabaseConnectionValidator:
 
 
 class SecureDatabaseConnectionManager:
-    """
-    Comprehensive database connection manager with security and resilience.
+    """Comprehensive database connection manager with security and resilience.
 
     Combines URL parsing, validation, retry logic, and circuit breaking
     into a single, production-ready connection management solution.
@@ -505,8 +483,7 @@ class SecureDatabaseConnectionManager:
         circuit_breaker_timeout: float = 60.0,
         validation_timeout: float = 10.0,
     ):
-        """
-        Initialize connection manager.
+        """Initialize connection manager.
 
         Args:
             max_retries: Maximum retry attempts for operations
@@ -524,8 +501,7 @@ class SecureDatabaseConnectionManager:
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     async def parse_and_validate_url(self, url: str) -> ConnectionCredentials:
-        """
-        Parse and validate database URL with full security checks.
+        """Parse and validate database URL with full security checks.
 
         Args:
             url: Database connection URL
@@ -557,8 +533,7 @@ class SecureDatabaseConnectionManager:
 
     @asynccontextmanager
     async def get_validated_connection(self, url: str):
-        """
-        Get validated database connection as async context manager.
+        """Get validated database connection as async context manager.
 
         Args:
             url: Database connection URL
@@ -605,8 +580,7 @@ class SecureDatabaseConnectionManager:
 
 # Convenience functions for backward compatibility
 async def parse_database_url(url: str) -> ConnectionCredentials:
-    """
-    Parse database URL with security validation.
+    """Parse database URL with security validation.
 
     Args:
         url: Database connection URL
@@ -619,8 +593,7 @@ async def parse_database_url(url: str) -> ConnectionCredentials:
 
 
 async def validate_database_connection(url: str) -> bool:
-    """
-    Validate database connection.
+    """Validate database connection.
 
     Args:
         url: Database connection URL

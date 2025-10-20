@@ -1,5 +1,4 @@
-"""
-LangGraph-MCP Bridge Layer for Airbnb Integration
+"""LangGraph-MCP Bridge Layer for Airbnb Integration
 
 This module provides integration between LangGraph and the Airbnb MCP,
 allowing LangGraph agents to use Airbnb accommodation tools while
@@ -7,17 +6,16 @@ maintaining compatibility with the simplified MCPManager architecture.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from langchain_core.tools import Tool, tool
 from pydantic import BaseModel, Field
 
 from tripsage_core.services.simple_mcp_service import (
     SimpleMCPService as MCPManager,
-)
-from tripsage_core.services.simple_mcp_service import (
     mcp_manager as global_mcp_manager,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,23 +25,22 @@ class AirbnbToolWrapper(BaseModel):
 
     name: str = Field(description="Tool name")
     description: str = Field(description="Tool description")
-    parameters: Dict[str, Any] = Field(description="Tool parameters schema")
+    parameters: dict[str, Any] = Field(description="Tool parameters schema")
     mcp_method: str = Field(description="Airbnb MCP method name")
 
 
 class LangGraphMCPBridge:
-    """
-    Bridge between LangGraph and Airbnb MCP.
+    """Bridge between LangGraph and Airbnb MCP.
 
     This class converts Airbnb MCP tools to LangGraph-compatible format while preserving
     all existing error handling, caching, and monitoring capabilities from MCPManager.
     """
 
-    def __init__(self, mcp_manager: Optional[MCPManager] = None):
+    def __init__(self, mcp_manager: MCPManager | None = None):
         """Initialize the bridge with an MCPManager instance."""
         self.mcp_manager = mcp_manager or global_mcp_manager
-        self._tool_cache: Dict[str, Tool] = {}
-        self._tool_metadata: Dict[str, AirbnbToolWrapper] = {}
+        self._tool_cache: dict[str, Tool] = {}
+        self._tool_metadata: dict[str, AirbnbToolWrapper] = {}
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -166,9 +163,8 @@ class LangGraphMCPBridge:
                     mcp_method=method,
                 )
 
-    async def get_tools(self) -> List[Tool]:
-        """
-        Get all available Airbnb tools in LangGraph-compatible format.
+    async def get_tools(self) -> list[Tool]:
+        """Get all available Airbnb tools in LangGraph-compatible format.
 
         Returns:
             List of LangGraph Tool objects
@@ -188,8 +184,7 @@ class LangGraphMCPBridge:
         return tools
 
     def _create_langgraph_tool(self, metadata: AirbnbToolWrapper) -> Tool:
-        """
-        Create a LangGraph Tool from Airbnb tool metadata.
+        """Create a LangGraph Tool from Airbnb tool metadata.
 
         Args:
             metadata: Airbnb tool metadata
@@ -212,16 +207,14 @@ class LangGraphMCPBridge:
                 )
 
                 # Convert result to string for LangGraph compatibility
-                if isinstance(result, dict):
-                    return str(result)
-                elif isinstance(result, list):
+                if isinstance(result, dict) or isinstance(result, list):
                     return str(result)
                 else:
                     return str(result)
 
             except Exception as e:
                 logger.error(f"Airbnb tool {metadata.name} failed: {e}")
-                return f"Tool execution failed: {str(e)}"
+                return f"Tool execution failed: {e!s}"
 
         # Create LangGraph tool with proper metadata
         return Tool(
@@ -231,9 +224,8 @@ class LangGraphMCPBridge:
             args_schema=self._create_args_schema(metadata.parameters),
         )
 
-    def _create_args_schema(self, parameters: Dict[str, Any]) -> Optional[type]:
-        """
-        Create a Pydantic schema for tool arguments.
+    def _create_args_schema(self, parameters: dict[str, Any]) -> type | None:
+        """Create a Pydantic schema for tool arguments.
 
         Args:
             parameters: Tool parameters schema
@@ -283,9 +275,8 @@ class LangGraphMCPBridge:
         namespace = {"__annotations__": annotations, **field_defaults}
         return type("AirbnbToolArgsSchema", (BaseModel,), namespace)
 
-    async def invoke_tool_direct(self, tool_name: str, params: Dict[str, Any]) -> Any:
-        """
-        Directly invoke an Airbnb tool by name.
+    async def invoke_tool_direct(self, tool_name: str, params: dict[str, Any]) -> Any:
+        """Directly invoke an Airbnb tool by name.
 
         Args:
             tool_name: Name of the tool to invoke
@@ -305,11 +296,11 @@ class LangGraphMCPBridge:
             method_name=metadata.mcp_method, params=params
         )
 
-    def get_tool_metadata(self, tool_name: str) -> Optional[AirbnbToolWrapper]:
+    def get_tool_metadata(self, tool_name: str) -> AirbnbToolWrapper | None:
         """Get metadata for a specific tool."""
         return self._tool_metadata.get(tool_name)
 
-    def list_available_tools(self) -> List[str]:
+    def list_available_tools(self) -> list[str]:
         """List all available tool names."""
         return list(self._tool_metadata.keys())
 
@@ -323,7 +314,7 @@ class LangGraphMCPBridge:
 
 
 # Global bridge instance for easy access
-_global_bridge: Optional[LangGraphMCPBridge] = None
+_global_bridge: LangGraphMCPBridge | None = None
 
 
 async def get_mcp_bridge() -> LangGraphMCPBridge:
@@ -335,7 +326,7 @@ async def get_mcp_bridge() -> LangGraphMCPBridge:
     return _global_bridge
 
 
-async def get_airbnb_tools() -> List[Tool]:
+async def get_airbnb_tools() -> list[Tool]:
     """Get all available Airbnb tools for LangGraph."""
     bridge = await get_mcp_bridge()
     return await bridge.get_tools()
@@ -343,8 +334,7 @@ async def get_airbnb_tools() -> List[Tool]:
 
 # Convenience function for creating Airbnb tools
 def create_airbnb_tool(name: str, description: str, mcp_method: str):
-    """
-    Decorator to create Airbnb-backed LangGraph tools.
+    """Decorator to create Airbnb-backed LangGraph tools.
 
     Usage:
         @create_airbnb_tool(

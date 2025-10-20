@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core WebSocket Connection Service.
+"""Comprehensive tests for TripSage Core WebSocket Connection Service.
 
 This module provides comprehensive test coverage for WebSocket connection functionality
 including connection lifecycle management, health monitoring, state transitions,
@@ -8,7 +7,7 @@ circuit breaker patterns, backpressure handling, rate limiting, and error recove
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -38,7 +37,7 @@ class TestConnectionHealth:
             message_rate=10.5,
             error_rate=0.02,
             reconnect_count=1,
-            last_activity=datetime.now(timezone.utc),
+            last_activity=datetime.now(UTC),
             quality="good",
             queue_size=25,
             backpressure_active=False,
@@ -63,7 +62,7 @@ class TestConnectionHealth:
                 message_rate=5.0,
                 error_rate=0.01,
                 reconnect_count=0,
-                last_activity=datetime.now(timezone.utc),
+                last_activity=datetime.now(UTC),
                 quality="good",
                 queue_size=10,
                 backpressure_active=False,
@@ -77,7 +76,7 @@ class TestConnectionHealth:
                 message_rate=5.0,
                 error_rate=1.5,  # Error rate > 1.0 should be invalid
                 reconnect_count=0,
-                last_activity=datetime.now(timezone.utc),
+                last_activity=datetime.now(UTC),
                 quality="good",
                 queue_size=10,
                 backpressure_active=False,
@@ -795,16 +794,13 @@ class TestWebSocketConnectionIntegration:
         """Test complete connection lifecycle."""
         # This would require actual WebSocket connection
         # Implementation depends on test environment setup
-        pass
 
     @pytest.mark.asyncio
     async def test_concurrent_connection_handling(self):
         """Test handling multiple concurrent connections."""
         # Test concurrent connection creation, messaging, and cleanup
-        pass
 
     @pytest.mark.asyncio
     async def test_connection_performance_under_load(self):
         """Test connection performance under high load."""
         # Performance testing for connection management
-        pass

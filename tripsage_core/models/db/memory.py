@@ -4,8 +4,8 @@ These models represent the database schema for memory storage and retrieval,
 implementing Mem0's memory system with pgvector for semantic search.
 """
 
-from datetime import datetime, timezone
-from typing import Any, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -37,14 +37,14 @@ class Memory(BaseModel):
     id: UUID = Field(description="Unique identifier for the memory")
     user_id: UUID = Field(description="ID of the user this memory belongs to")
     memory: str = Field(description="The actual memory content")
-    embedding: Optional[List[float]] = Field(
+    embedding: list[float] | None = Field(
         None,
         description="Vector embedding (1536 dims for OpenAI text-embedding-3-small)",
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the memory"
     )
-    categories: List[str] = Field(
+    categories: list[str] = Field(
         default_factory=list, description="Categories for organizing memories"
     )
     created_at: datetime = Field(description="Timestamp when the memory was created")
@@ -53,7 +53,7 @@ class Memory(BaseModel):
     )
     is_deleted: bool = Field(False, description="Whether the memory is soft deleted")
     version: int = Field(1, description="Version number for tracking changes")
-    hash: Optional[str] = Field(None, description="Content hash for deduplication")
+    hash: str | None = Field(None, description="Content hash for deduplication")
     relevance_score: float = Field(
         1.0, description="Relevance score for the memory (0.0 to 1.0)"
     )
@@ -76,7 +76,7 @@ class Memory(BaseModel):
 
     @field_validator("categories")
     @classmethod
-    def validate_categories(cls, v: List[str]) -> List[str]:
+    def validate_categories(cls, v: list[str]) -> list[str]:
         """Validate and clean categories."""
         if not v:
             return []
@@ -229,14 +229,14 @@ class SessionMemory(BaseModel):
             return datetime.now() > expires_at
         else:
             # If expires_at is timezone-aware, compare with timezone-aware now
-            return datetime.now(timezone.utc) > expires_at
+            return datetime.now(UTC) > expires_at
 
     def extend_expiry(self, hours: int = 24) -> None:
         """Extend the expiry time by the specified number of hours."""
         from datetime import timedelta
 
         # Ensure timezone-aware comparison
-        new_expiry = datetime.now(timezone.utc) + timedelta(hours=hours)
+        new_expiry = datetime.now(UTC) + timedelta(hours=hours)
         # Keep the same timezone format as original
         if self.expires_at.tzinfo is None:
             self.expires_at = new_expiry.replace(tzinfo=None)
@@ -292,7 +292,7 @@ class MemoryCreate(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the memory"
     )
-    categories: List[str] = Field(
+    categories: list[str] = Field(
         default_factory=list, description="Categories for organizing memories"
     )
     relevance_score: float = Field(
@@ -317,7 +317,7 @@ class MemoryCreate(BaseModel):
 
     @field_validator("categories")
     @classmethod
-    def validate_categories(cls, v: List[str]) -> List[str]:
+    def validate_categories(cls, v: list[str]) -> list[str]:
         """Validate and clean categories."""
         if not v:
             return []
@@ -374,20 +374,20 @@ class MemoryUpdate(BaseModel):
         }
     )
 
-    memory: Optional[str] = Field(None, description="Updated memory content")
-    metadata: Optional[dict[str, Any]] = Field(
+    memory: str | None = Field(None, description="Updated memory content")
+    metadata: dict[str, Any] | None = Field(
         None, description="Updated metadata for the memory"
     )
-    categories: Optional[List[str]] = Field(
+    categories: list[str] | None = Field(
         None, description="Updated categories for organizing memories"
     )
-    relevance_score: Optional[float] = Field(
+    relevance_score: float | None = Field(
         None, description="Updated relevance score for the memory (0.0 to 1.0)"
     )
 
     @field_validator("memory")
     @classmethod
-    def validate_memory_content(cls, v: Optional[str]) -> Optional[str]:
+    def validate_memory_content(cls, v: str | None) -> str | None:
         """Validate memory content is not empty if provided."""
         if v is not None:
             if not v or not v.strip():
@@ -397,7 +397,7 @@ class MemoryUpdate(BaseModel):
 
     @field_validator("categories")
     @classmethod
-    def validate_categories(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+    def validate_categories(cls, v: list[str] | None) -> list[str] | None:
         """Validate and clean categories if provided."""
         if v is not None:
             if not v:
@@ -415,7 +415,7 @@ class MemoryUpdate(BaseModel):
 
     @field_validator("relevance_score")
     @classmethod
-    def validate_relevance_score(cls, v: Optional[float]) -> Optional[float]:
+    def validate_relevance_score(cls, v: float | None) -> float | None:
         """Validate relevance score is between 0.0 and 1.0 if provided."""
         if v is not None:
             if not (0.0 <= v <= 1.0):
@@ -424,7 +424,7 @@ class MemoryUpdate(BaseModel):
 
     @field_validator("metadata", mode="before")
     @classmethod
-    def ensure_dict(cls, v: Any) -> Optional[dict[str, Any]]:
+    def ensure_dict(cls, v: Any) -> dict[str, Any] | None:
         """Ensure metadata is a dictionary if provided."""
         if v is not None:
             if isinstance(v, dict):

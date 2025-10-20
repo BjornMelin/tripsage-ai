@@ -1,5 +1,4 @@
-"""
-Database metrics collection using Prometheus.
+"""Database metrics collection using Prometheus.
 
 This module provides comprehensive database monitoring and metrics collection
 using Prometheus client library, tracking connection health, performance,
@@ -9,7 +8,6 @@ and error rates for the TripSage database services.
 import logging
 import time
 from contextlib import contextmanager
-from typing import Dict, Optional
 
 from prometheus_client import (
     CollectorRegistry,
@@ -20,12 +18,12 @@ from prometheus_client import (
     start_http_server,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
 class DatabaseMetrics:
-    """
-    Prometheus metrics collector for database operations.
+    """Prometheus metrics collector for database operations.
 
     Tracks comprehensive database performance and health metrics including:
     - Connection attempts, successes, and failures
@@ -35,7 +33,7 @@ class DatabaseMetrics:
     - Health check results
     """
 
-    def __init__(self, registry: Optional[CollectorRegistry] = None):
+    def __init__(self, registry: CollectorRegistry | None = None):
         """Initialize database metrics collector.
 
         Args:
@@ -170,7 +168,7 @@ class DatabaseMetrics:
         table: str,
         duration: float,
         success: bool,
-        error_type: Optional[str] = None,
+        error_type: str | None = None,
     ):
         """Record a database query execution.
 
@@ -299,7 +297,7 @@ class DatabaseMetrics:
                 f"Recorded transaction: service={service}, duration={duration:.3f}s"
             )
 
-    def get_metrics_summary(self) -> Dict[str, any]:
+    def get_metrics_summary(self) -> dict[str, any]:
         """Get a summary of current metrics.
 
         Returns:
@@ -313,7 +311,7 @@ class DatabaseMetrics:
             "health_status": self._get_gauge_value(self.health_status),
         }
 
-    def _get_counter_value(self, counter: Counter) -> Dict[str, float]:
+    def _get_counter_value(self, counter: Counter) -> dict[str, float]:
         """Get counter values by labels."""
         try:
             return {
@@ -323,7 +321,7 @@ class DatabaseMetrics:
         except (IndexError, AttributeError):
             return {}
 
-    def _get_gauge_value(self, gauge: Gauge) -> Dict[str, float]:
+    def _get_gauge_value(self, gauge: Gauge) -> dict[str, float]:
         """Get gauge values by labels."""
         try:
             return {
@@ -348,7 +346,7 @@ class DatabaseMetrics:
 
 
 # Global metrics instance
-_database_metrics: Optional[DatabaseMetrics] = None
+_database_metrics: DatabaseMetrics | None = None
 
 
 def get_database_metrics() -> DatabaseMetrics:

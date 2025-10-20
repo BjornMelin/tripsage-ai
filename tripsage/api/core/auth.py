@@ -1,24 +1,22 @@
-"""
-Simple JWT authentication for TripSage API.
+"""Simple JWT authentication for TripSage API.
 
 This module provides clean, maintainable authentication following FastAPI
 best practices. Replaces complex middleware with simple dependency injection.
 """
 
 import logging
-from typing import Optional
 
 import jwt
 from fastapi import Header, HTTPException, status
 
 from tripsage_core.config import get_settings
 
+
 logger = logging.getLogger(__name__)
 
 
-async def get_current_user_id(authorization: Optional[str] = Header(None)) -> str:
-    """
-    Verify JWT token and return user ID.
+async def get_current_user_id(authorization: str | None = Header(None)) -> str:
+    """Verify JWT token and return user ID.
 
     Simple, maintainable authentication dependency following FastAPI best practices.
 
@@ -65,10 +63,9 @@ async def get_current_user_id(authorization: Optional[str] = Header(None)) -> st
 
 
 async def get_optional_user_id(
-    authorization: Optional[str] = Header(None),
-) -> Optional[str]:
-    """
-    Get user ID if authenticated, None otherwise.
+    authorization: str | None = Header(None),
+) -> str | None:
+    """Get user ID if authenticated, None otherwise.
 
     For endpoints that work with or without authentication.
 

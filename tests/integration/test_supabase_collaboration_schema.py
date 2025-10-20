@@ -1,5 +1,4 @@
-"""
-Comprehensive integration tests for enhanced Supabase schema and collaboration features.
+"""Comprehensive integration tests for enhanced Supabase schema and collaboration features.
 
 This test suite covers:
 - RLS policy validation for collaborative access
@@ -17,7 +16,7 @@ Dependencies: PostgreSQL, pgvector, Supabase auth
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
@@ -37,7 +36,7 @@ class MockDatabaseService:
     """Mock database service that simulates Supabase behavior."""
 
     def __init__(self):
-        self.current_user_id: Optional[UUID] = None
+        self.current_user_id: UUID | None = None
         self.tables = {
             "trips": [],
             "trip_collaborators": [],
@@ -54,7 +53,7 @@ class MockDatabaseService:
         self.indexes = []
         self.functions = []
 
-    def set_current_user(self, user_id: Optional[UUID]):
+    def set_current_user(self, user_id: UUID | None):
         """Set the current authenticated user for RLS testing."""
         self.current_user_id = user_id
 
@@ -75,7 +74,7 @@ class MockDatabaseService:
 
         return None
 
-    async def fetch_one(self, query: str, *params) -> Optional[Dict[str, Any]]:
+    async def fetch_one(self, query: str, *params) -> dict[str, Any] | None:
         """Mock single row fetch with RLS simulation."""
         if "auth.uid()" in query:
             return {
@@ -92,7 +91,7 @@ class MockDatabaseService:
 
         return None
 
-    async def fetch_all(self, query: str, *params) -> List[Dict[str, Any]]:
+    async def fetch_all(self, query: str, *params) -> list[dict[str, Any]]:
         """Mock multiple row fetch with RLS simulation."""
         if "pg_policies" in query:
             return self._get_all_policies()
@@ -110,7 +109,7 @@ class MockDatabaseService:
         # Simulate system user always exists
         return str(user_id) == "00000000-0000-0000-0000-000000000001"
 
-    def _apply_rls_filter(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    def _apply_rls_filter(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Apply mock RLS filtering based on current user."""
         if not self.current_user_id:
             return []
@@ -118,7 +117,7 @@ class MockDatabaseService:
         # Simulate user-specific data access
         return [{"id": 1, "user_id": str(self.current_user_id), "content": "User data"}]
 
-    def _get_constraint_info(self, table_name: str) -> Dict[str, Any]:
+    def _get_constraint_info(self, table_name: str) -> dict[str, Any]:
         """Get mock constraint information."""
         if table_name == "memories":
             return {
@@ -130,7 +129,7 @@ class MockDatabaseService:
             }
         return {}
 
-    def _get_policy_info(self, table_name: str) -> Dict[str, Any]:
+    def _get_policy_info(self, table_name: str) -> dict[str, Any]:
         """Get mock RLS policy information."""
         if table_name == "memories":
             return {
@@ -143,7 +142,7 @@ class MockDatabaseService:
             }
         return {}
 
-    def _get_all_policies(self) -> List[Dict[str, Any]]:
+    def _get_all_policies(self) -> list[dict[str, Any]]:
         """Get all mock RLS policies."""
         return [
             {
@@ -176,7 +175,7 @@ class MockDatabaseService:
             },
         ]
 
-    def _get_column_info(self) -> List[Dict[str, Any]]:
+    def _get_column_info(self) -> list[dict[str, Any]]:
         """Get mock column information."""
         return [
             {"table_name": "memories", "column_name": "user_id", "data_type": "uuid"},
@@ -188,7 +187,7 @@ class MockDatabaseService:
             {"table_name": "trips", "column_name": "user_id", "data_type": "uuid"},
         ]
 
-    def _get_accessible_trips(self) -> List[Dict[str, Any]]:
+    def _get_accessible_trips(self) -> list[dict[str, Any]]:
         """Get trips accessible to current user (owned + collaborative)."""
         return [
             {
@@ -209,9 +208,7 @@ class MockDatabaseService:
 
 
 class TestSupabaseCollaborationSchema:
-    """
-    Comprehensive test suite for enhanced Supabase schema and collaboration features.
-    """
+    """Comprehensive test suite for enhanced Supabase schema and collaboration features."""
 
     @pytest.fixture
     def mock_db_service(self):
@@ -291,8 +288,7 @@ class TestRLSPolicyValidation:
         assert trips[0]["user_role"] == "collaborator"
 
     async def test_permission_level_inheritance(self, mock_db_service, test_users):
-        """
-        Test that trip-related data inherits proper permissions from trip
+        """Test that trip-related data inherits proper permissions from trip
         collaboration.
         """
         editor = test_users["editor"]

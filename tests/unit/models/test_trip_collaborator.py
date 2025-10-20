@@ -11,12 +11,11 @@ models and PermissionLevel enum with:
 - Property-based testing for model validation
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.models.db.trip_collaborator import (
@@ -77,7 +76,7 @@ class TestTripCollaboratorDB:
     @pytest.fixture
     def base_collaborator_data(self):
         """Base data for creating collaborator instances."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return {
             "id": 1,
             "trip_id": 123,
@@ -207,8 +206,8 @@ class TestTripCollaboratorDB:
                 user_id=uuid4(),
                 permission_level=PermissionLevel.VIEW,
                 added_by=uuid4(),
-                added_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                added_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
         errors = exc_info.value.errors()
         assert any(error["loc"] == ("trip_id",) for error in errors)
@@ -221,8 +220,8 @@ class TestTripCollaboratorDB:
                 user_id=uuid4(),
                 permission_level="invalid_permission",
                 added_by=uuid4(),
-                added_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                added_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
 
     def test_collaborator_uuid_validation(self, base_collaborator_data):
@@ -502,7 +501,7 @@ class TestTripCollaboratorEdgeCases:
     def test_collaborator_with_same_user_and_added_by(self):
         """Test collaborator where user_id equals added_by (self-addition)."""
         user_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         collaborator = TripCollaboratorDB(
             id=1,
@@ -520,7 +519,7 @@ class TestTripCollaboratorEdgeCases:
     def test_collaborator_with_extreme_trip_ids(self):
         """Test collaborators with extreme trip ID values."""
         user_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Test very large trip_id
         large_trip_id = 2**31 - 1  # Max 32-bit integer
@@ -546,7 +545,7 @@ class TestTripCollaboratorEdgeCases:
         user_id = uuid4()
 
         # Test with UTC timezone
-        utc_time = datetime.now(timezone.utc)
+        utc_time = datetime.now(UTC)
         collaborator = TripCollaboratorDB(
             id=1,
             trip_id=123,
@@ -557,8 +556,8 @@ class TestTripCollaboratorEdgeCases:
             updated_at=utc_time,
         )
 
-        assert collaborator.added_at.tzinfo == timezone.utc
-        assert collaborator.updated_at.tzinfo == timezone.utc
+        assert collaborator.added_at.tzinfo == UTC
+        assert collaborator.updated_at.tzinfo == UTC
 
     def test_collaborator_permission_level_case_variations(self):
         """Test permission level handling with various string cases."""
@@ -620,7 +619,7 @@ class TestTripCollaboratorPropertyBased:
         self, collaborator_id, trip_id, user_id, added_by, permission_level
     ):
         """Property-based test for permission hierarchy invariants."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         collaborator = TripCollaboratorDB(
             id=collaborator_id,
             trip_id=trip_id,
@@ -698,7 +697,7 @@ class TestTripCollaboratorBusinessLogic:
         """Test workflow of escalating permissions."""
         user_id = uuid4()
         admin_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Start with VIEW permission
         collaborator = TripCollaboratorDB(
@@ -731,7 +730,7 @@ class TestTripCollaboratorBusinessLogic:
         """Test workflow of downgrading permissions."""
         user_id = uuid4()
         admin_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Start with ADMIN permission
         collaborator = TripCollaboratorDB(
@@ -760,7 +759,7 @@ class TestTripCollaboratorBusinessLogic:
     def test_bulk_permission_check(self):
         """Test checking permissions for multiple collaborators."""
         admin_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         collaborators = []
         permission_levels = [
@@ -814,7 +813,7 @@ class TestTripCollaboratorBusinessLogic:
         """Test serialization suitable for API responses."""
         user_id = uuid4()
         added_by = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         collaborator = TripCollaboratorDB(
             id=1,
@@ -848,7 +847,7 @@ class TestTripCollaboratorBusinessLogic:
         """Test validation patterns that would work with database integration."""
         user_id = uuid4()
         added_by = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Test creating from database-like dict (simulate ORM result)
         db_result = {

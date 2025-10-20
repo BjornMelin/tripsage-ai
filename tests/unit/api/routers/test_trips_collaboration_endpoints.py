@@ -130,9 +130,7 @@ class TestTripCollaborationEndpoints:
                                 else ""
                             )
                         ),
-                        "permission_level": getattr(
-                            c, "permission_level", "view"
-                        ),
+                        "permission_level": getattr(c, "permission_level", "view"),
                         "added_at": getattr(
                             c, "added_at", datetime.now(UTC)
                         ).isoformat(),
@@ -179,9 +177,7 @@ class TestTripCollaborationEndpoints:
                     {
                         "user_id": str(getattr(c, "user_id", "")),
                         "email": getattr(c, "email", ""),
-                        "permission_level": getattr(
-                            c, "permission_level", "view"
-                        ),
+                        "permission_level": getattr(c, "permission_level", "view"),
                         "added_at": getattr(
                             c, "added_at", datetime.now(UTC)
                         ).isoformat(),

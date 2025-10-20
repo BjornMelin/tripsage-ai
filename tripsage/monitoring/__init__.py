@@ -7,6 +7,7 @@ from tripsage.monitoring.telemetry import (
     traced,
 )
 
+
 __all__ = [
     "TelemetryService",
     "get_telemetry",

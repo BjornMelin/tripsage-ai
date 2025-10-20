@@ -1,5 +1,4 @@
-"""
-Configuration Change Audit Service.
+"""Configuration Change Audit Service.
 
 This service tracks and audits all configuration changes across the TripSage
 application, providing comprehensive audit trails for compliance and security.
@@ -21,9 +20,9 @@ import hashlib
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import Field
 from watchdog.events import FileSystemEventHandler
@@ -37,6 +36,7 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
 )
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -59,21 +59,21 @@ class ConfigChange(TripSageModel):
 
     change_id: str = Field(default_factory=lambda: f"cfg-{int(time.time() * 1000)}")
     change_type: ConfigChangeType
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # What changed
     config_path: str  # File path, env var name, etc.
-    config_key: Optional[str] = None  # Specific key within config
+    config_key: str | None = None  # Specific key within config
 
     # Change details
-    old_value: Optional[str] = None
-    new_value: Optional[str] = None
-    old_hash: Optional[str] = None
-    new_hash: Optional[str] = None
+    old_value: str | None = None
+    new_value: str | None = None
+    old_hash: str | None = None
+    new_hash: str | None = None
 
     # Context
     changed_by: str = "system"  # User ID or system process
-    change_reason: Optional[str] = None
+    change_reason: str | None = None
     change_source: str = "file_watcher"  # file_watcher, api, manual, etc.
 
     # Security context
@@ -82,31 +82,30 @@ class ConfigChange(TripSageModel):
     requires_approval: bool = False
 
     # Metadata
-    file_size: Optional[int] = None
-    file_permissions: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    file_size: int | None = None
+    file_permissions: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ConfigurationAuditService:
-    """
-    Service for monitoring and auditing configuration changes.
+    """Service for monitoring and auditing configuration changes.
 
     This service provides comprehensive tracking of configuration changes
     across the entire application stack, with special focus on security-
     relevant configurations.
     """
 
-    def __init__(self, config_paths: Optional[List[str]] = None):
+    def __init__(self, config_paths: list[str] | None = None):
         """Initialize the configuration audit service."""
         self.config_paths = config_paths or self._get_default_config_paths()
         self._is_running = False
-        self._file_observer: Optional[Observer] = None
-        self._file_handler: Optional["ConfigFileHandler"] = None
+        self._file_observer: Observer | None = None
+        self._file_handler: ConfigFileHandler | None = None
 
         # State tracking
-        self._file_hashes: Dict[str, str] = {}
-        self._env_vars: Dict[str, str] = {}
-        self._last_scan_time: Optional[datetime] = None
+        self._file_hashes: dict[str, str] = {}
+        self._env_vars: dict[str, str] = {}
+        self._last_scan_time: datetime | None = None
 
         # Statistics
         self.stats = {
@@ -151,7 +150,7 @@ class ConfigurationAuditService:
             "SECURITY_HEADERS",
         }
 
-    def _get_default_config_paths(self) -> List[str]:
+    def _get_default_config_paths(self) -> list[str]:
         """Get default configuration paths to monitor."""
         base_path = Path(__file__).parent.parent.parent.parent
 
@@ -258,7 +257,7 @@ class ConfigurationAuditService:
 
         # Snapshot environment variables
         self._env_vars = dict(os.environ)
-        self._last_scan_time = datetime.now(timezone.utc)
+        self._last_scan_time = datetime.now(UTC)
 
     async def _periodic_scan_loop(self):
         """Periodic scanning for changes not caught by file watcher."""
@@ -279,7 +278,7 @@ class ConfigurationAuditService:
         # Check file hashes
         await self._check_file_changes()
 
-        self._last_scan_time = datetime.now(timezone.utc)
+        self._last_scan_time = datetime.now(UTC)
 
     async def _check_env_var_changes(self):
         """Check for environment variable changes."""
@@ -635,7 +634,7 @@ class ConfigurationAuditService:
         old_value: Any,
         new_value: Any,
         changed_by: str,
-        change_reason: Optional[str] = None,
+        change_reason: str | None = None,
         requires_approval: bool = False,
     ):
         """Record a manual configuration change."""
@@ -658,7 +657,7 @@ class ConfigurationAuditService:
         await self._handle_config_change(change)
         return change.change_id
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get configuration audit statistics."""
         return {
             **self.stats,
@@ -698,7 +697,7 @@ class ConfigFileHandler(FileSystemEventHandler):
 
 
 # Global configuration audit service instance
-_config_audit_service: Optional[ConfigurationAuditService] = None
+_config_audit_service: ConfigurationAuditService | None = None
 
 
 async def get_config_audit_service() -> ConfigurationAuditService:
@@ -727,7 +726,7 @@ async def record_config_change(
     old_value: Any,
     new_value: Any,
     changed_by: str,
-    change_reason: Optional[str] = None,
+    change_reason: str | None = None,
     requires_approval: bool = False,
 ) -> str:
     """Record a manual configuration change."""

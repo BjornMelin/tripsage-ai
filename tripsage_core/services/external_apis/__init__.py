@@ -1,5 +1,4 @@
-"""
-External API client services with TripSage Core integration.
+"""External API client services with TripSage Core integration.
 
 This module provides direct SDK/API integrations for external services,
 replacing MCP wrappers with high-performance native implementations.
@@ -33,6 +32,7 @@ from .webcrawl_service import (
     close_webcrawl_service,
     get_webcrawl_service,
 )
+
 
 __all__ = [
     # Service classes

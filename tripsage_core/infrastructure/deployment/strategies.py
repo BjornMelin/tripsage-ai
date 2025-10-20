@@ -11,11 +11,12 @@ import secrets
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import DeploymentStrategy, get_enterprise_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class HealthCheckResult(BaseModel):
     response_time: float = Field(
         ..., description="Health check response time in seconds"
     )
-    checks: Dict[str, bool] = Field(
+    checks: dict[str, bool] = Field(
         default_factory=dict, description="Individual check results"
     )
     message: str = Field(default="", description="Health check message")
@@ -55,13 +56,13 @@ class DeploymentMetrics(BaseModel):
     start_time: float = Field(
         default_factory=time.time, description="Deployment start time"
     )
-    end_time: Optional[float] = Field(default=None, description="Deployment end time")
+    end_time: float | None = Field(default=None, description="Deployment end time")
     phase: DeploymentPhase = Field(
         default=DeploymentPhase.PREPARING, description="Current phase"
     )
 
     # Health and performance metrics
-    health_checks: List[HealthCheckResult] = Field(
+    health_checks: list[HealthCheckResult] = Field(
         default_factory=list, description="Health check history"
     )
     error_rate: float = Field(default=0.0, description="Current error rate")
@@ -95,7 +96,7 @@ class DeploymentMetrics(BaseModel):
 class BaseDeploymentStrategy(ABC):
     """Base class for deployment strategies."""
 
-    def __init__(self, name: str, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, name: str, config: dict[str, Any] | None = None):
         self.name = name
         self.config = config or {}
         self.enterprise_config = get_enterprise_config()
@@ -107,10 +108,9 @@ class BaseDeploymentStrategy(ABC):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute the deployment strategy."""
-        pass
 
     @abstractmethod
     async def rollback(
@@ -120,7 +120,6 @@ class BaseDeploymentStrategy(ABC):
         environment: str,
     ) -> DeploymentMetrics:
         """Rollback to previous version."""
-        pass
 
     async def health_check(
         self,
@@ -166,7 +165,7 @@ class BaseDeploymentStrategy(ABC):
                 healthy=False,
                 response_time=response_time,
                 checks={},
-                message=f"Health check error: {str(e)}",
+                message=f"Health check error: {e!s}",
             )
 
 
@@ -178,7 +177,7 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
     environments where downtime is acceptable.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__("simple", config)
         logger.info("Initialized simple deployment strategy")
 
@@ -187,7 +186,7 @@ class SimpleDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute simple deployment."""
         logger.info(f"Starting simple deployment {deployment_id} to {environment}")
@@ -285,7 +284,7 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
     and zero-downtime deployments.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__("blue_green", config)
         self.switch_delay = config.get("switch_delay", 5.0) if config else 5.0
         logger.info("Initialized blue-green deployment strategy")
@@ -295,7 +294,7 @@ class BlueGreenDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute blue-green deployment."""
         logger.info(f"Starting blue-green deployment {deployment_id} to {environment}")
@@ -446,7 +445,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
     the deployment is successful.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__("canary", config)
         self.canary_steps = (
             config.get("canary_steps", [5, 10, 25, 50, 100])
@@ -463,7 +462,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute canary deployment."""
         logger.info(f"Starting canary deployment {deployment_id} to {environment}")
@@ -561,7 +560,7 @@ class CanaryDeploymentStrategy(BaseDeploymentStrategy):
         self,
         environment: str,
         traffic_percentage: float,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze canary performance and decide whether to continue."""
         await asyncio.sleep(0.5)  # Simulate analysis time
 
@@ -636,7 +635,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
     with multiple instances.
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__("rolling", config)
         self.instance_count = config.get("instance_count", 3) if config else 3
         self.update_delay = config.get("update_delay", 2.0) if config else 2.0
@@ -650,7 +649,7 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
         deployment_id: str,
         image_tag: str,
         environment: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
     ) -> DeploymentMetrics:
         """Execute rolling deployment."""
         logger.info(f"Starting rolling deployment {deployment_id} to {environment}")
@@ -782,8 +781,8 @@ class RollingDeploymentStrategy(BaseDeploymentStrategy):
 
 
 def get_deployment_strategy(
-    strategy: Optional[DeploymentStrategy] = None,
-    config: Optional[Dict[str, Any]] = None,
+    strategy: DeploymentStrategy | None = None,
+    config: dict[str, Any] | None = None,
 ) -> BaseDeploymentStrategy:
     """Get deployment strategy based on enterprise configuration.
 

@@ -1,5 +1,4 @@
-"""
-WebSocket connection management service.
+"""WebSocket connection management service.
 
 This service handles individual WebSocket connection lifecycle including:
 - Connection establishment and authentication
@@ -15,11 +14,12 @@ import time
 from collections import deque
 from datetime import datetime
 from enum import Enum
-from typing import Any, Deque
+from typing import Any
 from uuid import UUID
 
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 
@@ -119,10 +119,10 @@ class WebSocketConnection:
         self.BACKPRESSURE_THRESHOLD = 0.8  # 80% of max size triggers backpressure
 
         # Message queue with priority support - fix starvation issue
-        self.message_queue: Deque[Any] = MonitoredDeque(
+        self.message_queue: deque[Any] = MonitoredDeque(
             maxlen=1000, priority_name="main", connection_id=connection_id
         )
-        self.priority_queue: dict[int, Deque[Any]] = {
+        self.priority_queue: dict[int, deque[Any]] = {
             1: MonitoredDeque(
                 maxlen=100, priority_name="high", connection_id=connection_id
             ),
@@ -147,7 +147,7 @@ class WebSocketConnection:
         self.reconnect_count = 0
 
         # Connection health - fix latency calculation for low sample counts
-        self.latency_samples: Deque[float] = deque(maxlen=10)
+        self.latency_samples: deque[float] = deque(maxlen=10)
         self.ping_sent_times: dict[str, float] = {}  # ping_id -> timestamp
         self.ping_timeout_threshold = 5.0  # seconds
 
@@ -326,9 +326,9 @@ class WebSocketConnection:
                 if hasattr(event, "model_dump"):
                     event_dict = event.model_dump()
                     # Convert UUID fields to strings for JSON serialization
-                    if "user_id" in event_dict and event_dict["user_id"]:
+                    if event_dict.get("user_id"):
                         event_dict["user_id"] = str(event_dict["user_id"])
-                    if "session_id" in event_dict and event_dict["session_id"]:
+                    if event_dict.get("session_id"):
                         event_dict["session_id"] = str(event_dict["session_id"])
                     if "timestamp" in event_dict and hasattr(
                         event_dict["timestamp"], "isoformat"
@@ -411,9 +411,9 @@ class WebSocketConnection:
                 if hasattr(event, "model_dump"):
                     event_dict = event.model_dump()
                     # Convert UUID fields to strings for JSON serialization
-                    if "user_id" in event_dict and event_dict["user_id"]:
+                    if event_dict.get("user_id"):
                         event_dict["user_id"] = str(event_dict["user_id"])
-                    if "session_id" in event_dict and event_dict["session_id"]:
+                    if event_dict.get("session_id"):
                         event_dict["session_id"] = str(event_dict["session_id"])
                     if "timestamp" in event_dict and hasattr(
                         event_dict["timestamp"], "isoformat"
@@ -656,9 +656,9 @@ class WebSocketConnection:
                     if hasattr(event, "model_dump"):
                         event_dict = event.model_dump()
                         # Convert UUID fields to strings for JSON serialization
-                        if "user_id" in event_dict and event_dict["user_id"]:
+                        if event_dict.get("user_id"):
                             event_dict["user_id"] = str(event_dict["user_id"])
-                        if "session_id" in event_dict and event_dict["session_id"]:
+                        if event_dict.get("session_id"):
                             event_dict["session_id"] = str(event_dict["session_id"])
                         if "timestamp" in event_dict and hasattr(
                             event_dict["timestamp"], "isoformat"

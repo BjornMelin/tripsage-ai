@@ -1,5 +1,4 @@
-"""
-Unit tests for Google Maps Service.
+"""Unit tests for Google Maps Service.
 
 This module tests the direct Google Maps SDK integration service with
 mocked Google Maps responses.

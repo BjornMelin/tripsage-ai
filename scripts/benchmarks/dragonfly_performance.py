@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-DragonflyDB Performance Benchmark Script
+"""DragonflyDB Performance Benchmark Script
 
 This script validates the performance improvements of DragonflyDB over Redis
 by running various cache operations and measuring throughput.

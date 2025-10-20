@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core WebSocket Broadcaster.
+"""Comprehensive tests for TripSage Core WebSocket Broadcaster.
 
 This module provides comprehensive test coverage for WebSocket broadcaster functionality
 including message broadcasting, Redis pub/sub integration, priority queuing,
@@ -699,7 +698,7 @@ class TestWebSocketBroadcaster:
             await asyncio.wait_for(
                 websocket_broadcaster._process_broadcast_queue(), timeout=1.0
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass  # Expected to timeout when _running becomes False
 
         await stop_task
@@ -731,7 +730,7 @@ class TestWebSocketBroadcaster:
             await asyncio.wait_for(
                 websocket_broadcaster._process_broadcast_queue(), timeout=1.0
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass  # Expected to timeout when _running becomes False
 
         await stop_task
@@ -769,7 +768,7 @@ class TestWebSocketBroadcaster:
             await asyncio.wait_for(
                 websocket_broadcaster._process_broadcast_queue(), timeout=1.0
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass  # Expected to timeout when _running becomes False
 
         await stop_task
@@ -802,7 +801,7 @@ class TestWebSocketBroadcaster:
                 await asyncio.wait_for(
                     broadcaster._process_broadcast_queue(), timeout=1.0
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass  # Expected to timeout when _running becomes False
 
             await stop_task
@@ -995,7 +994,7 @@ class TestWebSocketBroadcaster:
             await asyncio.wait_for(
                 websocket_broadcaster._process_broadcast_queue(), timeout=1.0
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass  # Expected to timeout when _running becomes False
 
         await stop_task

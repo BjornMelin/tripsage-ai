@@ -4,7 +4,7 @@ This module provides comprehensive integration tests for the dashboard
 monitoring and analytics functionality, including real-time features.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -166,23 +166,19 @@ class TestDashboardIntegration:
             },
             usage_trend=[
                 {
-                    "timestamp": (
-                        datetime.now(timezone.utc) - timedelta(hours=2)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(UTC) - timedelta(hours=2)).isoformat(),
                     "requests": 180,
                     "errors": 8,
                     "success_rate": 0.955,
                 },
                 {
-                    "timestamp": (
-                        datetime.now(timezone.utc) - timedelta(hours=1)
-                    ).isoformat(),
+                    "timestamp": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
                     "requests": 220,
                     "errors": 12,
                     "success_rate": 0.945,
                 },
                 {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "requests": 280,
                     "errors": 15,
                     "success_rate": 0.946,

@@ -1,5 +1,4 @@
-"""
-Integration tests for the memory system workflow.
+"""Integration tests for the memory system workflow.
 Tests backend-frontend communication, data flow, and API compatibility.
 """
 
@@ -38,19 +37,21 @@ class TestMemorySystemIntegration:
         mock_principal.email = "test@example.com"
 
         # Patch authentication dependencies
-        with patch(
-            "tripsage.api.core.dependencies.get_current_principal",
-            return_value=mock_principal,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.api.core.dependencies.get_current_principal",
+                return_value=mock_principal,
+            ),
+            patch(
                 "tripsage.api.core.dependencies.require_principal",
                 return_value=mock_principal,
-            ):
-                with patch(
-                    "tripsage.api.core.dependencies.get_principal_id",
-                    return_value="test-user-123",
-                ):
-                    yield mock_principal
+            ),
+            patch(
+                "tripsage.api.core.dependencies.get_principal_id",
+                return_value="test-user-123",
+            ),
+        ):
+            yield mock_principal
 
     @pytest.fixture
     def mock_memory_service(self):

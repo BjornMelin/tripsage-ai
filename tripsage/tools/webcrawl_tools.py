@@ -6,8 +6,6 @@ This module implements the architecture from docs/REFACTOR/CRAWLING/:
 - No MCP overhead for maximum performance
 """
 
-from typing import Optional
-
 from playwright.async_api import async_playwright
 
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
@@ -34,7 +32,7 @@ logger = get_logger(__name__)
 async def crawl_website_content(
     url: str,
     extract_structured_data: bool = False,
-    content_type: Optional[str] = None,
+    content_type: str | None = None,
     requires_javascript: bool = False,
     use_cache: bool = True,
     enable_playwright_fallback: bool = True,
@@ -98,7 +96,7 @@ async def crawl_website_content(
         return result
 
     except Exception as e:
-        logger.error(f"Direct Crawl4AI failed for {url}: {str(e)}")
+        logger.error(f"Direct Crawl4AI failed for {url}: {e!s}")
 
         # Try Playwright fallback if enabled
         if enable_playwright_fallback:
@@ -119,7 +117,7 @@ async def crawl_website_content(
 
             except Exception as fallback_error:
                 logger.error(
-                    f"Playwright fallback also failed for {url}: {str(fallback_error)}"
+                    f"Playwright fallback also failed for {url}: {fallback_error!s}"
                 )
 
                 # Record fallback failure in metrics
@@ -130,7 +128,7 @@ async def crawl_website_content(
         return UnifiedCrawlResult(
             url=url,
             status="error",
-            error_message=f"All crawling methods failed. Crawl4AI: {str(e)}",
+            error_message=f"All crawling methods failed. Crawl4AI: {e!s}",
             metadata={
                 "source_crawler": "failed_all",
                 "crawl4ai_error": type(e).__name__,

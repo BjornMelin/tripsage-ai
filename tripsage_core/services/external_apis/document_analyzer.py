@@ -1,5 +1,4 @@
-"""
-AI-powered document analysis service for travel-related document processing
+"""AI-powered document analysis service for travel-related document processing
 with TripSage Core integration.
 
 This service analyzes uploaded documents to extract travel-relevant information
@@ -9,15 +8,17 @@ using AI models while following KISS principles and Core integration patterns.
 import asyncio
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
 
 # Import models from existing location (could be moved to Core later)
 from tripsage_core.models.attachments import (
@@ -29,7 +30,7 @@ from tripsage_core.models.attachments import (
 class DocumentAnalyzerError(CoreAPIError):
     """Exception raised for document analyzer errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="DOCUMENT_ANALYZER_ERROR",
@@ -46,44 +47,42 @@ class AnalysisContext(BaseModel):
     file_path: Path = Field(..., description="Path to file on disk")
     mime_type: str = Field(..., description="MIME type of file")
     file_type: FileType = Field(..., description="Categorized file type")
-    user_context: Optional[str] = Field(None, description="User-provided context")
+    user_context: str | None = Field(None, description="User-provided context")
 
 
 class TravelInformation(BaseModel):
     """Extracted travel-related information."""
 
-    destinations: List[str] = Field(
+    destinations: list[str] = Field(
         default_factory=list, description="Mentioned destinations"
     )
-    dates: List[str] = Field(default_factory=list, description="Travel dates")
-    accommodations: List[Dict[str, str]] = Field(
+    dates: list[str] = Field(default_factory=list, description="Travel dates")
+    accommodations: list[dict[str, str]] = Field(
         default_factory=list, description="Accommodation details"
     )
-    flights: List[Dict[str, str]] = Field(
+    flights: list[dict[str, str]] = Field(
         default_factory=list, description="Flight information"
     )
-    activities: List[str] = Field(
+    activities: list[str] = Field(
         default_factory=list, description="Planned activities"
     )
-    budget_info: Optional[Dict[str, Any]] = Field(
+    budget_info: dict[str, Any] | None = Field(
         None, description="Budget-related information"
     )
-    contact_info: List[Dict[str, str]] = Field(
+    contact_info: list[dict[str, str]] = Field(
         default_factory=list, description="Important contact information"
     )
 
 
 class DocumentAnalyzer:
-    """
-    Service for AI-powered analysis of travel documents with Core integration.
+    """Service for AI-powered analysis of travel documents with Core integration.
 
     Processes various document types to extract travel-relevant information
     using appropriate extraction methods based on file type.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
-        """
-        Initialize document analyzer.
+    def __init__(self, settings: Settings | None = None):
+        """Initialize document analyzer.
 
         Args:
             settings: Core application settings
@@ -156,7 +155,7 @@ class DocumentAnalyzer:
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Failed to connect document analyzer: {str(e)}",
+                message=f"Failed to connect document analyzer: {e!s}",
                 code="CONNECTION_FAILED",
                 service="DocumentAnalyzer",
                 details={"error": str(e)},
@@ -175,8 +174,7 @@ class DocumentAnalyzer:
     async def analyze_document(
         self, context: AnalysisContext, analysis_type: str = "general"
     ) -> DocumentAnalysisResult:
-        """
-        Analyze a document and extract travel-relevant information.
+        """Analyze a document and extract travel-relevant information.
 
         Args:
             context: Analysis context with file information
@@ -190,7 +188,7 @@ class DocumentAnalyzer:
         """
         await self.ensure_connected()
 
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         async with self._analysis_semaphore:
             try:
@@ -207,7 +205,7 @@ class DocumentAnalyzer:
 
                 # Calculate processing time
                 processing_time = int(
-                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                    (datetime.now(UTC) - start_time).total_seconds() * 1000
                 )
 
                 # Extract travel-specific information
@@ -229,17 +227,16 @@ class DocumentAnalyzer:
 
             except Exception as e:
                 processing_time = int(
-                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                    (datetime.now(UTC) - start_time).total_seconds() * 1000
                 )
 
                 raise DocumentAnalyzerError(
-                    f"Document analysis failed for {context.file_id}: {str(e)}",
+                    f"Document analysis failed for {context.file_id}: {e!s}",
                     original_error=e,
                 ) from e
 
-    async def _extract_text_content(self, context: AnalysisContext) -> Optional[str]:
-        """
-        Extract text content from file based on type.
+    async def _extract_text_content(self, context: AnalysisContext) -> str | None:
+        """Extract text content from file based on type.
 
         Args:
             context: Analysis context
@@ -281,29 +278,28 @@ class DocumentAnalyzer:
 
         except Exception as e:
             raise DocumentAnalyzerError(
-                f"Text extraction failed for {context.file_id}: {str(e)}",
+                f"Text extraction failed for {context.file_id}: {e!s}",
                 original_error=e,
             ) from e
 
     async def _extract_text_from_text_file(self, file_path: Path) -> str:
         """Extract text from plain text file."""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
                 if len(content) > self.max_text_length:
                     content = content[: self.max_text_length]
                 return content
         except UnicodeDecodeError:
             # Try with different encoding
-            with open(file_path, "r", encoding="latin-1") as f:
+            with open(file_path, encoding="latin-1") as f:
                 content = f.read()
                 if len(content) > self.max_text_length:
                     content = content[: self.max_text_length]
                 return content
 
-    async def _extract_text_from_pdf(self, file_path: Path) -> Optional[str]:
-        """
-        Extract text from PDF file.
+    async def _extract_text_from_pdf(self, file_path: Path) -> str | None:
+        """Extract text from PDF file.
 
         TODO: Implement PDF text extraction using PyPDF2 or similar
         when needed. For now, return placeholder.
@@ -313,7 +309,7 @@ class DocumentAnalyzer:
 
     async def _extract_text_from_json(self, file_path: Path) -> str:
         """Extract text from JSON file."""
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
             content = json.dumps(data, indent=2)
             if len(content) > self.max_text_length:
@@ -322,15 +318,14 @@ class DocumentAnalyzer:
 
     async def _extract_text_from_csv(self, file_path: Path) -> str:
         """Extract text from CSV file."""
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
             if len(content) > self.max_text_length:
                 content = content[: self.max_text_length]
             return content
 
-    async def _extract_text_from_image(self, file_path: Path) -> Optional[str]:
-        """
-        Extract text from image using OCR.
+    async def _extract_text_from_image(self, file_path: Path) -> str | None:
+        """Extract text from image using OCR.
 
         TODO: Implement OCR using pytesseract or cloud OCR service
         when needed. For now, return placeholder.
@@ -338,9 +333,8 @@ class DocumentAnalyzer:
         # Placeholder implementation
         return f"OCR text extraction not yet implemented for {file_path.name}"
 
-    async def _extract_text_from_office_doc(self, file_path: Path) -> Optional[str]:
-        """
-        Extract text from Office documents.
+    async def _extract_text_from_office_doc(self, file_path: Path) -> str | None:
+        """Extract text from Office documents.
 
         TODO: Implement Office document parsing using python-docx, openpyxl
         when needed. For now, return placeholder.
@@ -351,10 +345,9 @@ class DocumentAnalyzer:
         )
 
     async def _analyze_text_with_ai(
-        self, text: str, analysis_type: str, user_context: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Analyze extracted text using AI.
+        self, text: str, analysis_type: str, user_context: str | None = None
+    ) -> dict[str, Any]:
+        """Analyze extracted text using AI.
 
         Args:
             text: Extracted text content
@@ -398,9 +391,8 @@ class DocumentAnalyzer:
 
         return mock_analysis
 
-    def _extract_basic_entities(self, text: str) -> Dict[str, List[str]]:
-        """
-        Extract basic entities from text using enhanced pattern matching.
+    def _extract_basic_entities(self, text: str) -> dict[str, list[str]]:
+        """Extract basic entities from text using enhanced pattern matching.
 
         This is an enhanced implementation that can be further improved with
         proper NLP libraries when needed.
@@ -472,7 +464,7 @@ class DocumentAnalyzer:
 
         return entities
 
-    def _find_travel_keywords(self, text: str) -> List[str]:
+    def _find_travel_keywords(self, text: str) -> list[str]:
         """Find travel-related keywords in text with enhanced matching."""
         travel_keywords = {
             # Transportation
@@ -542,10 +534,9 @@ class DocumentAnalyzer:
         return found_keywords
 
     def _extract_travel_information(
-        self, analysis_results: Dict[str, Any], text: str
-    ) -> Optional[TravelInformation]:
-        """
-        Extract structured travel information from analysis results.
+        self, analysis_results: dict[str, Any], text: str
+    ) -> TravelInformation | None:
+        """Extract structured travel information from analysis results.
 
         Args:
             analysis_results: AI analysis results
@@ -625,9 +616,8 @@ class DocumentAnalyzer:
         except Exception:
             return None
 
-    def _calculate_confidence_score(self, analysis_results: Dict[str, Any]) -> float:
-        """
-        Calculate confidence score for analysis results.
+    def _calculate_confidence_score(self, analysis_results: dict[str, Any]) -> float:
+        """Calculate confidence score for analysis results.
 
         Args:
             analysis_results: Analysis results dictionary
@@ -659,9 +649,8 @@ class DocumentAnalyzer:
 
         return min(1.0, score)
 
-    async def get_supported_analysis_types(self) -> List[str]:
-        """
-        Get list of supported analysis types.
+    async def get_supported_analysis_types(self) -> list[str]:
+        """Get list of supported analysis types.
 
         Returns:
             List of supported analysis type names
@@ -669,10 +658,9 @@ class DocumentAnalyzer:
         return list(self.analysis_templates.keys())
 
     async def batch_analyze_documents(
-        self, contexts: List[AnalysisContext], analysis_type: str = "general"
-    ) -> List[DocumentAnalysisResult]:
-        """
-        Analyze multiple documents in batch.
+        self, contexts: list[AnalysisContext], analysis_type: str = "general"
+    ) -> list[DocumentAnalysisResult]:
+        """Analyze multiple documents in batch.
 
         Args:
             contexts: List of analysis contexts
@@ -717,14 +705,13 @@ class DocumentAnalyzer:
 
         except Exception as e:
             raise DocumentAnalyzerError(
-                f"Batch document analysis failed: {str(e)}", original_error=e
+                f"Batch document analysis failed: {e!s}", original_error=e
             ) from e
 
     async def analyze_travel_document(
         self, context: AnalysisContext, document_type: str = "general"
     ) -> DocumentAnalysisResult:
-        """
-        Analyze travel-specific document with enhanced extraction.
+        """Analyze travel-specific document with enhanced extraction.
 
         Args:
             context: Analysis context
@@ -746,8 +733,7 @@ class DocumentAnalyzer:
         return await self.analyze_document(context, analysis_type)
 
     async def health_check(self) -> bool:
-        """
-        Perform a health check to verify the service is working.
+        """Perform a health check to verify the service is working.
 
         Returns:
             True if the service is healthy, False otherwise
@@ -776,12 +762,11 @@ class DocumentAnalyzer:
 
 
 # Global service instance
-_document_analyzer: Optional[DocumentAnalyzer] = None
+_document_analyzer: DocumentAnalyzer | None = None
 
 
 async def get_document_analyzer() -> DocumentAnalyzer:
-    """
-    Get the global document analyzer instance.
+    """Get the global document analyzer instance.
 
     Returns:
         DocumentAnalyzer instance
@@ -805,10 +790,10 @@ async def close_document_analyzer() -> None:
 
 
 __all__ = [
+    "AnalysisContext",
     "DocumentAnalyzer",
     "DocumentAnalyzerError",
-    "AnalysisContext",
     "TravelInformation",
-    "get_document_analyzer",
     "close_document_analyzer",
+    "get_document_analyzer",
 ]

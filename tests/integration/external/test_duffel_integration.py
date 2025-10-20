@@ -1,5 +1,4 @@
-"""
-Integration tests for Duffel API service.
+"""Integration tests for Duffel API service.
 
 This module tests the integration with the Duffel flight booking API,
 ensuring proper authentication, search functionality, and booking workflows.
@@ -278,10 +277,8 @@ class TestDuffelAPIIntegration:
         self, flights_service, mock_duffel_client, sample_flight_search_request
     ):
         """Test handling of request timeouts."""
-        import asyncio
-
         # Mock timeout error
-        mock_duffel_client.search_flights.side_effect = asyncio.TimeoutError()
+        mock_duffel_client.search_flights.side_effect = TimeoutError()
 
         # The service handles timeout errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)

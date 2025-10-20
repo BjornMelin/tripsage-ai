@@ -1,5 +1,4 @@
-"""
-Configuration management schemas for API endpoints.
+"""Configuration management schemas for API endpoints.
 
 Defines Pydantic v2 models for configuration validation and serialization
 following 2025 best practices with comprehensive type safety, computed fields,
@@ -7,10 +6,10 @@ and advanced validation patterns.
 """
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, Any, Self
 
 from pydantic import (
     BaseModel,
@@ -22,7 +21,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
+
 
 # Type aliases for better type safety
 ModelName = Annotated[
@@ -96,34 +95,31 @@ class BaseConfigModel(BaseModel):
 class AgentConfigRequest(BaseConfigModel):
     """Request schema for agent configuration updates with advanced validation."""
 
-    temperature: Optional[
+    temperature: (
         Annotated[
             float,
             Field(
                 ge=0.0,
                 le=2.0,
-                description=(
-                    "Controls randomness in responses (0.0=deterministic, "
-                    "2.0=very creative)"
-                ),
+                description="Controls randomness in responses (0.0=deterministic, 2.0=very creative)",
             ),
         ]
-    ] = None
+        | None
+    ) = None
 
-    max_tokens: Optional[
+    max_tokens: (
         Annotated[
             int,
             Field(
                 ge=1,
                 le=8000,
-                description=(
-                    "Maximum tokens in response (affects cost and response length)"
-                ),
+                description="Maximum tokens in response (affects cost and response length)",
             ),
         ]
-    ] = None
+        | None
+    ) = None
 
-    top_p: Optional[
+    top_p: (
         Annotated[
             float,
             Field(
@@ -132,23 +128,23 @@ class AgentConfigRequest(BaseConfigModel):
                 description="Nucleus sampling parameter (0.1=focused, 1.0=diverse)",
             ),
         ]
-    ] = None
+        | None
+    ) = None
 
-    timeout_seconds: Optional[
+    timeout_seconds: (
         Annotated[int, Field(ge=5, le=300, description="Request timeout in seconds")]
-    ] = None
+        | None
+    ) = None
 
-    model: Optional[ModelName] = Field(
-        None, description="AI model to use for this agent"
-    )
+    model: ModelName | None = Field(None, description="AI model to use for this agent")
 
-    description: Optional[DescriptionText] = Field(
+    description: DescriptionText | None = Field(
         None, description="Description of configuration changes"
     )
 
     @field_validator("temperature")
     @classmethod
-    def validate_temperature_precision(cls, v: Optional[float]) -> Optional[float]:
+    def validate_temperature_precision(cls, v: float | None) -> float | None:
         """Validate temperature with precision control."""
         if v is not None:
             # Round to 2 decimal places for consistency
@@ -162,10 +158,8 @@ class AgentConfigRequest(BaseConfigModel):
             # GPT-3.5 models work best with lower temperature
             if "gpt-3.5" in self.model and self.temperature > 1.5:
                 raise ValueError(
-                    (
-                        "GPT-3.5 models work best with temperature ≤ 1.5 "
-                        "for optimal performance"
-                    )
+                    "GPT-3.5 models work best with temperature ≤ 1.5 "
+                    "for optimal performance"
                 )
 
             # Claude models have different optimal ranges
@@ -203,7 +197,7 @@ class AgentConfigRequest(BaseConfigModel):
         # Python 3.9+ usedforsecurity=False parameter indicates this is not for security
         return hashlib.md5(config_str.encode(), usedforsecurity=False).hexdigest()[:8]
 
-    def get_changed_fields(self, other: "AgentConfigRequest") -> List[str]:
+    def get_changed_fields(self, other: "AgentConfigRequest") -> list[str]:
         """Get list of fields that changed compared to another configuration."""
         changed = []
         for field_name in self.model_fields:
@@ -222,10 +216,10 @@ class AgentConfigResponse(BaseConfigModel):
     timeout_seconds: Annotated[int, Field(ge=5, le=300)]
     model: ModelName
     scope: ConfigurationScope
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_by: Optional[str] = None
-    description: Optional[DescriptionText] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_by: str | None = None
+    description: DescriptionText | None = None
     is_active: bool = True
 
     @computed_field
@@ -287,7 +281,7 @@ class AgentConfigResponse(BaseConfigModel):
     def serialize_datetime(self, value: datetime) -> str:
         """Serialize datetime to ISO format with timezone."""
         if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
+            value = value.replace(tzinfo=UTC)
         return value.isoformat()
 
     def is_optimal_for_agent_type(self) -> bool:
@@ -296,33 +290,27 @@ class AgentConfigResponse(BaseConfigModel):
         temp_diff = abs(self.temperature - recommended_temp)
         return temp_diff <= 0.1  # Within 10% of recommended
 
-    def get_optimization_suggestions(self) -> List[str]:
+    def get_optimization_suggestions(self) -> list[str]:
         """Get suggestions for optimizing this configuration."""
         suggestions = []
 
         recommended_temp = self.agent_type.recommended_temperature
         if abs(self.temperature - recommended_temp) > 0.2:
             suggestions.append(
-                (
-                    f"Consider temperature {recommended_temp} for optimal "
-                    f"{self.agent_type.display_name} performance"
-                )
+                f"Consider temperature {recommended_temp} for optimal "
+                f"{self.agent_type.display_name} performance"
             )
 
         if self.agent_type == AgentType.BUDGET_AGENT and self.temperature > 0.5:
             suggestions.append(
-                (
-                    "Budget agents work best with lower temperature (≤0.3) "
-                    "for consistent calculations"
-                )
+                "Budget agents work best with lower temperature (≤0.3) "
+                "for consistent calculations"
             )
 
         if self.max_tokens > 2000 and self.agent_type == AgentType.BUDGET_AGENT:
             suggestions.append(
-                (
-                    "Budget responses are typically concise; consider reducing "
-                    "max_tokens for cost efficiency"
-                )
+                "Budget responses are typically concise; consider reducing "
+                "max_tokens for cost efficiency"
             )
 
         return suggestions
@@ -333,20 +321,20 @@ class ConfigurationVersion(BaseConfigModel):
 
     version_id: VersionId = Field(description="Unique version identifier")
     agent_type: AgentType
-    configuration: Dict[str, Any] = Field(description="Configuration snapshot")
+    configuration: dict[str, Any] = Field(description="Configuration snapshot")
     scope: ConfigurationScope
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: str
-    description: Optional[DescriptionText] = None
+    description: DescriptionText | None = None
     is_current: bool = False
 
     @computed_field
     @property
     def age_in_days(self) -> int:
         """Calculate age of this version in days."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if self.created_at.tzinfo is None:
-            created_at = self.created_at.replace(tzinfo=timezone.utc)
+            created_at = self.created_at.replace(tzinfo=UTC)
         else:
             created_at = self.created_at
         return (now - created_at).days
@@ -362,8 +350,8 @@ class ConfigurationDiff(BaseConfigModel):
     """Schema for configuration differences."""
 
     field: str
-    old_value: Union[str, int, float, bool, None]
-    new_value: Union[str, int, float, bool, None]
+    old_value: str | int | float | bool | None
+    new_value: str | int | float | bool | None
     change_type: str = Field(description="added, modified, or removed")
 
     @computed_field
@@ -392,9 +380,9 @@ class PerformanceMetrics(BaseConfigModel):
     error_rate: Annotated[
         float, Field(ge=0.0, le=1.0, description="Error rate (0.0-1.0)")
     ]
-    token_usage: Dict[str, int] = Field(description="Token usage statistics")
+    token_usage: dict[str, int] = Field(description="Token usage statistics")
     cost_estimate: Annotated[Decimal, Field(ge=0, description="Estimated cost in USD")]
-    measured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    measured_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     sample_size: Annotated[int, Field(ge=1, description="Number of requests measured")]
 
     @computed_field
@@ -426,13 +414,13 @@ class ConfigurationRecommendation(BaseConfigModel):
     """Schema for AI-driven configuration optimization recommendations."""
 
     agent_type: AgentType
-    current_config: Dict[str, Any]
-    recommended_config: Dict[str, Any]
+    current_config: dict[str, Any]
+    recommended_config: dict[str, Any]
     reasoning: str
     expected_improvement: str
     confidence_score: Annotated[float, Field(ge=0.0, le=1.0)]
     metrics_basis: PerformanceMetrics
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @computed_field
     @property
@@ -455,10 +443,8 @@ class ConfigurationRecommendation(BaseConfigModel):
         if abs(recommended_temp - current_temp) > 0.5:
             if self.confidence_score > 0.9:
                 raise ValueError(
-                    (
-                        "High confidence recommendations should not suggest "
-                        "dramatic temperature changes"
-                    )
+                    "High confidence recommendations should not suggest "
+                    "dramatic temperature changes"
                 )
 
         return self
@@ -468,12 +454,12 @@ class WebSocketConfigMessage(BaseConfigModel):
     """Schema for real-time WebSocket configuration messages."""
 
     type: str = Field(description="Message type (update, rollback, validation, etc.)")
-    agent_type: Optional[AgentType] = None
-    configuration: Optional[Dict[str, Any]] = None
-    version_id: Optional[VersionId] = None
-    updated_by: Optional[str] = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    message: Optional[str] = None
+    agent_type: AgentType | None = None
+    configuration: dict[str, Any] | None = None
+    version_id: VersionId | None = None
+    updated_by: str | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    message: str | None = None
 
     @model_validator(mode="after")
     def validate_message_consistency(self) -> Self:
@@ -492,10 +478,10 @@ class ConfigurationExport(BaseConfigModel):
 
     export_id: str
     environment: str
-    agent_configurations: Dict[str, AgentConfigResponse]
-    feature_flags: Dict[str, bool]
-    global_defaults: Dict[str, Any]
-    exported_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    agent_configurations: dict[str, AgentConfigResponse]
+    feature_flags: dict[str, bool]
+    global_defaults: dict[str, Any]
+    exported_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     exported_by: str
     format: str = "json"
 
@@ -517,10 +503,10 @@ class ConfigurationImport(BaseConfigModel):
     """Schema for configuration import with validation."""
 
     source_environment: str
-    agent_configurations: Dict[str, AgentConfigRequest]
-    feature_flags: Optional[Dict[str, bool]] = None
-    global_defaults: Optional[Dict[str, Any]] = None
-    description: Optional[DescriptionText] = None
+    agent_configurations: dict[str, AgentConfigRequest]
+    feature_flags: dict[str, bool] | None = None
+    global_defaults: dict[str, Any] | None = None
+    description: DescriptionText | None = None
     dry_run: bool = False
 
     @model_validator(mode="after")
@@ -543,8 +529,8 @@ class ConfigurationValidationError(BaseConfigModel):
 
     field: str
     error: str
-    current_value: Union[str, int, float, bool, None]
-    suggested_value: Union[str, int, float, bool, None] = None
+    current_value: str | int | float | bool | None
+    suggested_value: str | int | float | bool | None = None
     severity: str = Field(default="error", description="error, warning, or info")
 
     @computed_field
@@ -560,9 +546,9 @@ class ConfigurationValidationResponse(BaseConfigModel):
     """Response schema for comprehensive configuration validation."""
 
     is_valid: bool
-    errors: List[ConfigurationValidationError] = []
-    warnings: List[ConfigurationValidationError] = []
-    suggestions: List[str] = []
+    errors: list[ConfigurationValidationError] = []
+    warnings: list[ConfigurationValidationError] = []
+    suggestions: list[str] = []
 
     @computed_field
     @property
@@ -582,10 +568,10 @@ class ConfigurationImportResult(BaseConfigModel):
 
     import_id: str
     success: bool
-    imported_configurations: List[str] = []
-    failed_configurations: List[str] = []
-    validation_errors: List[ConfigurationValidationError] = []
-    imported_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    imported_configurations: list[str] = []
+    failed_configurations: list[str] = []
+    validation_errors: list[ConfigurationValidationError] = []
+    imported_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     imported_by: str
 
     @computed_field

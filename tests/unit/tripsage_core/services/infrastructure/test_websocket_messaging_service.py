@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core WebSocket Messaging Service.
+"""Comprehensive tests for TripSage Core WebSocket Messaging Service.
 
 This module provides comprehensive test coverage for WebSocket messaging functionality
 including event handling, message routing, connection messaging, user messaging,
@@ -8,7 +7,7 @@ session messaging, channel messaging, broadcast messaging, and error handling.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -32,7 +31,7 @@ class TestWebSocketEvent:
             type=WebSocketEventType.CHAT_MESSAGE,
             payload={"message": "Hello World", "user": "alice"},
             metadata={"priority": "high", "encrypted": False},
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
         assert event.id == "event_123"
@@ -678,25 +677,21 @@ class TestWebSocketMessagingService:
     async def test_message_filtering(self, setup_messaging_service):
         """Test message filtering based on content."""
         # This would test content filtering if implemented
-        pass
 
     @pytest.mark.asyncio
     async def test_message_rate_limiting(self, setup_messaging_service):
         """Test message rate limiting functionality."""
         # This would test rate limiting if implemented
-        pass
 
     @pytest.mark.asyncio
     async def test_message_encryption(self, setup_messaging_service):
         """Test message encryption for sensitive data."""
         # This would test message encryption if implemented
-        pass
 
     @pytest.mark.asyncio
     async def test_message_persistence(self, setup_messaging_service):
         """Test message persistence for offline users."""
         # This would test message queuing/persistence if implemented
-        pass
 
     @pytest.mark.asyncio
     async def test_error_handling_in_messaging(
@@ -735,16 +730,13 @@ class TestWebSocketMessagingIntegration:
     async def test_full_messaging_flow(self):
         """Test complete messaging flow with real services."""
         # This would require actual WebSocket connections and services
-        pass
 
     @pytest.mark.asyncio
     async def test_messaging_performance_under_load(self):
         """Test messaging performance under high load."""
         # Performance testing for messaging service
-        pass
 
     @pytest.mark.asyncio
     async def test_multi_channel_messaging(self):
         """Test messaging across multiple channels simultaneously."""
         # Test complex multi-channel scenarios
-        pass

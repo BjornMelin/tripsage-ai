@@ -1,12 +1,11 @@
-"""
-Comprehensive tests for MemoryService.
+"""Comprehensive tests for MemoryService.
 
 This module provides full test coverage for memory management operations
 including memory storage, retrieval, search, and AI-powered contextual understanding.
 Tests use actual domain models with proper mocking and async patterns.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -146,7 +145,7 @@ class TestMemoryService:
                 "memory": "User prefers boutique hotels",
                 "metadata": {
                     "categories": ["accommodation", "preferences"],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
                 "similarity": 0.92,
             }
@@ -325,10 +324,8 @@ class TestMemoryService:
             filters={
                 "categories": ["preferences", "travel"],
                 "date_range": {
-                    "start": (
-                        datetime.now(timezone.utc) - timedelta(days=30)
-                    ).isoformat(),
-                    "end": datetime.now(timezone.utc).isoformat(),
+                    "start": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
+                    "end": datetime.now(UTC).isoformat(),
                 },
             },
             similarity_threshold=0.8,

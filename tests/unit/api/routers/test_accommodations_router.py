@@ -1,5 +1,4 @@
-"""
-Simplified accommodation router tests following ULTRATHINK methodology.
+"""Simplified accommodation router tests following ULTRATHINK methodology.
 
 This module focuses on testing the validation and routing behavior that we know works,
 avoiding complex service integration that causes test instability.
@@ -152,7 +151,6 @@ class TestAccommodationRouterValidation:
 
     def test_endpoints_exist_and_respond(self, unauthenticated_test_client):
         """Test that all accommodation endpoints exist and respond (not 404)."""
-
         # Test data that will pass validation but fail auth
         valid_search = {
             "location": "Tokyo",
@@ -190,7 +188,6 @@ class TestAccommodationRouterValidation:
 
     def test_required_fields_validation(self, unauthenticated_test_client):
         """Test that required fields are properly validated."""
-
         # Missing location
         incomplete_request = {
             "check_in": "2024-03-15",
@@ -222,8 +219,7 @@ class TestAccommodationRouterCoverageBasics:
     """Simple tests to improve coverage without complex model validation."""
 
     def test_schema_adapter_execution_paths(self):
-        """
-        Test schema adapter execution to cover optional field paths
+        """Test schema adapter execution to cover optional field paths
         (lines 73, 76, 79, 83, 87, 91, 95).
         """
         from uuid import uuid4

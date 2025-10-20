@@ -1,10 +1,9 @@
-"""
-Unit tests for search history endpoints.
+"""Unit tests for search history endpoints.
 
 Tests authentication-dependent search history functionality.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -66,7 +65,7 @@ class TestSearchHistoryEndpoints:
                     "rating": 4.0,
                 },
                 "destination": "Tokyo, Japan",
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             },
             {
                 "id": str(uuid4()),
@@ -75,7 +74,7 @@ class TestSearchHistoryEndpoints:
                 "resource_types": ["activity"],
                 "filters": {"category": "sightseeing"},
                 "destination": "Paris, France",
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             },
         ]
 
@@ -166,7 +165,7 @@ class TestSearchHistoryEndpoints:
             "id": saved_search_id,
             "user_id": "user123",
             **sample_search_request.model_dump(),
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         # Call endpoint

@@ -61,6 +61,7 @@ from tripsage_core.services.infrastructure.websocket_broadcaster import (
 from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
 from tripsage_core.services.simple_mcp_service import mcp_manager
 
+
 logger = logging.getLogger(__name__)
 
 

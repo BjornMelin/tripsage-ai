@@ -1,5 +1,4 @@
-"""
-Test suite for unified API dependencies.
+"""Test suite for unified API dependencies.
 
 Tests the modern Principal-based dependency injection system.
 """

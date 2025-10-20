@@ -1,5 +1,4 @@
-"""
-Unit tests for TripSage Core cache utilities.
+"""Unit tests for TripSage Core cache utilities.
 
 Tests cache validation, TTL logic, key generation, cache invalidation,
 batch operations, and distributed locking functionality.

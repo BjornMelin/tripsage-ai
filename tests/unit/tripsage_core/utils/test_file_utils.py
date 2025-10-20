@@ -1,5 +1,4 @@
-"""
-Unit tests for TripSage Core file utilities.
+"""Unit tests for TripSage Core file utilities.
 
 Tests file validation, path validation, type detection, size limits,
 security scanning, and batch upload functionality.
@@ -252,7 +251,7 @@ class TestContentValidation:
     def test_text_content_validation(self):
         """Test text content validation."""
         # Valid UTF-8 text
-        valid_text = "Hello, 世界! 🌍".encode("utf-8")
+        valid_text = "Hello, 世界! 🌍".encode()
         is_valid, error = _validate_text_content(valid_text)
         assert is_valid
         assert error is None

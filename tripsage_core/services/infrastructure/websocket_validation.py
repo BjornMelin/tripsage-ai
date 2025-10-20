@@ -1,5 +1,4 @@
-"""
-Comprehensive Pydantic validation models for WebSocket messages.
+"""Comprehensive Pydantic validation models for WebSocket messages.
 
 This module provides security-focused validation for all WebSocket message types
 to prevent injection vulnerabilities and ensure data integrity.
@@ -8,7 +7,7 @@ to prevent injection vulnerabilities and ensure data integrity.
 import json
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -58,10 +57,10 @@ class WebSocketBaseMessage(BaseModel):
     """Base model for all WebSocket messages with security validation."""
 
     type: WebSocketMessageType = Field(..., description="Message type")
-    timestamp: Optional[datetime] = Field(
+    timestamp: datetime | None = Field(
         default_factory=datetime.now, description="Message timestamp"
     )
-    id: Optional[str] = Field(None, max_length=128, description="Optional message ID")
+    id: str | None = Field(None, max_length=128, description="Optional message ID")
 
     @field_validator("type")
     @classmethod
@@ -94,8 +93,8 @@ class WebSocketAuthMessage(WebSocketBaseMessage):
     token: str = Field(
         ..., min_length=1, max_length=4096, description="JWT authentication token"
     )
-    session_id: Optional[UUID] = Field(None, description="Optional session ID")
-    channels: List[str] = Field(
+    session_id: UUID | None = Field(None, description="Optional session ID")
+    channels: list[str] = Field(
         default_factory=list, max_items=50, description="Channels to subscribe to"
     )
 
@@ -131,8 +130,8 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
     """Heartbeat/ping/pong message validation."""
 
     type: WebSocketMessageType = Field(..., description="Message type")
-    ping_id: Optional[str] = Field(None, max_length=64, description="Ping identifier")
-    payload: Dict[str, Any] = Field(
+    ping_id: str | None = Field(None, max_length=64, description="Ping identifier")
+    payload: dict[str, Any] = Field(
         default_factory=dict, max_length=512, description="Heartbeat payload"
     )
 
@@ -172,8 +171,8 @@ class WebSocketChatMessage(WebSocketBaseMessage):
         ..., min_length=1, max_length=32768, description="Message content"
     )  # 32KB max
     session_id: UUID = Field(..., description="Chat session ID")
-    user_id: Optional[UUID] = Field(None, description="User ID")
-    metadata: Dict[str, Any] = Field(
+    user_id: UUID | None = Field(None, description="User ID")
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -218,10 +217,10 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
     type: WebSocketMessageType = Field(
         default=WebSocketMessageType.SUBSCRIBE, description="Message type"
     )
-    channels: List[str] = Field(
+    channels: list[str] = Field(
         default_factory=list, max_items=20, description="Channels to subscribe to"
     )
-    unsubscribe_channels: List[str] = Field(
+    unsubscribe_channels: list[str] = Field(
         default_factory=list, max_items=20, description="Channels to unsubscribe from"
     )
 
@@ -262,9 +261,7 @@ class WebSocketErrorMessage(WebSocketBaseMessage):
     )
     error_code: str = Field(..., max_length=50, description="Error code")
     error_message: str = Field(..., max_length=1024, description="Error message")
-    details: Optional[Dict[str, Any]] = Field(
-        None, description="Additional error details"
-    )
+    details: dict[str, Any] | None = Field(None, description="Additional error details")
 
     @field_validator("error_code")
     @classmethod
@@ -281,7 +278,7 @@ class WebSocketErrorMessage(WebSocketBaseMessage):
 class WebSocketGenericMessage(WebSocketBaseMessage):
     """Generic message validation for any message type."""
 
-    payload: Dict[str, Any] = Field(default_factory=dict, description="Message payload")
+    payload: dict[str, Any] = Field(default_factory=dict, description="Message payload")
 
     @field_validator("payload")
     @classmethod

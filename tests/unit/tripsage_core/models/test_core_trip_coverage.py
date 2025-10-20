@@ -1,5 +1,4 @@
-"""
-Coverage-focused tests for DB Trip Models.
+"""Coverage-focused tests for DB Trip Models.
 
 These tests exercise the actual DB trip model implementation to increase coverage.
 """
@@ -7,8 +6,7 @@ These tests exercise the actual DB trip model implementation to increase coverag
 from datetime import date
 from uuid import uuid4
 
-from tripsage_core.models.trip import EnhancedBudget as TripBudget
-from tripsage_core.models.trip import Trip as DbTrip
+from tripsage_core.models.trip import EnhancedBudget as TripBudget, Trip as DbTrip
 
 
 class TestDbTripModelCoverage:

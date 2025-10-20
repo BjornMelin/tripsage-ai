@@ -1,5 +1,4 @@
-"""
-Modern comprehensive tests for keys router using 2025 best practices.
+"""Modern comprehensive tests for keys router using 2025 best practices.
 
 This module provides enhanced test coverage with property-based testing,
 modern FastAPI testing patterns, and comprehensive error handling scenarios.
@@ -10,8 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.keys import (
@@ -37,6 +35,7 @@ from tripsage_core.services.business.api_key_service import (
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
 )
+
 
 # Hypothesis strategies for property-based testing
 user_ids = st.text(min_size=1, max_size=50).filter(str.strip)

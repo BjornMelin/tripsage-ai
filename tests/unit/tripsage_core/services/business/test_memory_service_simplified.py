@@ -1,5 +1,4 @@
-"""
-Simplified Memory Service Tests - High Coverage without Dependencies.
+"""Simplified Memory Service Tests - High Coverage without Dependencies.
 
 This module provides comprehensive test coverage for memory management operations
 while completely avoiding problematic external dependencies. Tests focus on
@@ -7,13 +6,12 @@ business logic validation, error handling, and API contract verification.
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 
@@ -24,7 +22,7 @@ class TestMemoryServiceModels:
         """Test MemorySearchResult model creation."""
         from tripsage_core.services.business.memory_service import MemorySearchResult
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result = MemorySearchResult(
             id="test-id",
             memory="Test memory content",
@@ -403,7 +401,7 @@ class TestMemoryServiceCaching:
             test_result = MemorySearchResult(
                 id="test-id",
                 memory="test memory",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user-123",
             )
 
@@ -557,7 +555,7 @@ class TestMemoryServiceDataHandling:
             },
             categories=["accommodation", "location"],
             similarity=0.95,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             user_id="user-456",
         )
 
@@ -583,7 +581,7 @@ class TestMemoryServiceDataHandling:
             metadata={"test": True},
             categories=categories,
             similarity=similarity,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             user_id=str(uuid4()),
         )
 

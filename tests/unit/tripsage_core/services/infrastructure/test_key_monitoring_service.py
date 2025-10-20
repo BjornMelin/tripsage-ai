@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core Key Monitoring Service.
+"""Comprehensive tests for TripSage Core Key Monitoring Service.
 
 This module provides comprehensive test coverage for key monitoring service
 functionality including operation logging, suspicious pattern detection, rate
@@ -7,7 +6,7 @@ limiting, security features, health metrics, and error handling.
 """
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -307,7 +306,7 @@ class TestKeyMonitoringService:
         operation = KeyOperation.CREATE
 
         # Mock existing operations - some old, some recent
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         old_timestamp = (
             now - timedelta(seconds=700)
         ).isoformat()  # Older than timeframe
@@ -388,7 +387,7 @@ class TestKeyMonitoringService:
         """Test alert sending functionality."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
-        log_data = {"count": 6, "timestamp": datetime.now(timezone.utc).isoformat()}
+        log_data = {"count": 6, "timestamp": datetime.now(UTC).isoformat()}
 
         mock_cache_service.get_json.return_value = []  # No existing alerts
 

@@ -1,9 +1,6 @@
-"""
-Router for itinerary-related endpoints in the TripSage API.
-"""
+"""Router for itinerary-related endpoints in the TripSage API."""
 
 import logging
-from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
@@ -30,6 +27,7 @@ from tripsage_core.services.business.itinerary_service import (
     get_itinerary_service,
 )
 
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -40,28 +38,24 @@ async def create_itinerary(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Create a new itinerary.
-    """
+    """Create a new itinerary."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.create_itinerary(user_id, request)
     except ValueError as e:
-        logger.warning(f"Invalid itinerary creation request: {str(e)}")
+        logger.warning(f"Invalid itinerary creation request: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
 
 
-@router.get("", response_model=List[ItineraryResponse])
+@router.get("", response_model=list[ItineraryResponse])
 async def list_itineraries(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    List all itineraries for the current user.
-    """
+    """List all itineraries for the current user."""
     user_id = get_principal_id(principal)
     return await itinerary_service.list_itineraries(user_id)
 
@@ -72,9 +66,7 @@ async def search_itineraries(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Search for itineraries based on criteria.
-    """
+    """Search for itineraries based on criteria."""
     user_id = get_principal_id(principal)
     return await itinerary_service.search_itineraries(user_id, request)
 
@@ -85,9 +77,7 @@ async def get_itinerary(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Get a specific itinerary by ID.
-    """
+    """Get a specific itinerary by ID."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.get_itinerary(user_id, itinerary_id)
@@ -106,9 +96,7 @@ async def update_itinerary(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Update an existing itinerary.
-    """
+    """Update an existing itinerary."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.update_itinerary(user_id, itinerary_id, request)
@@ -119,7 +107,7 @@ async def update_itinerary(
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid itinerary update request: {str(e)}")
+        logger.warning(f"Invalid itinerary update request: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -132,9 +120,7 @@ async def delete_itinerary(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Delete an itinerary.
-    """
+    """Delete an itinerary."""
     try:
         user_id = get_principal_id(principal)
         await itinerary_service.delete_itinerary(user_id, itinerary_id)
@@ -153,9 +139,7 @@ async def add_item_to_itinerary(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Add an item to an itinerary.
-    """
+    """Add an item to an itinerary."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.add_item_to_itinerary(
@@ -168,7 +152,7 @@ async def add_item_to_itinerary(
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid item creation request: {str(e)}")
+        logger.warning(f"Invalid item creation request: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -182,9 +166,7 @@ async def get_itinerary_item(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Get a specific item from an itinerary.
-    """
+    """Get a specific item from an itinerary."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.get_item(user_id, itinerary_id, item_id)
@@ -204,9 +186,7 @@ async def update_itinerary_item(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Update an item in an itinerary.
-    """
+    """Update an item in an itinerary."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.update_item(
@@ -219,7 +199,7 @@ async def update_itinerary_item(
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid item update request: {str(e)}")
+        logger.warning(f"Invalid item update request: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -235,9 +215,7 @@ async def delete_itinerary_item(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Delete an item from an itinerary.
-    """
+    """Delete an item from an itinerary."""
     try:
         user_id = get_principal_id(principal)
         await itinerary_service.delete_item(user_id, itinerary_id, item_id)
@@ -255,9 +233,7 @@ async def check_itinerary_conflicts(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Check for conflicts in an itinerary schedule.
-    """
+    """Check for conflicts in an itinerary schedule."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.check_conflicts(user_id, itinerary_id)
@@ -275,9 +251,7 @@ async def optimize_itinerary(
     principal: Principal = Depends(require_principal),
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
-    """
-    Optimize an itinerary based on provided settings.
-    """
+    """Optimize an itinerary based on provided settings."""
     try:
         user_id = get_principal_id(principal)
         return await itinerary_service.optimize_itinerary(user_id, request)
@@ -288,7 +262,7 @@ async def optimize_itinerary(
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid optimization request: {str(e)}")
+        logger.warning(f"Invalid optimization request: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),

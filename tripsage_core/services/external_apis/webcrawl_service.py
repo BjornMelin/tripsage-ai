@@ -1,5 +1,4 @@
-"""
-WebCrawl Service using direct Crawl4AI SDK integration with TripSage Core.
+"""WebCrawl Service using direct Crawl4AI SDK integration with TripSage Core.
 
 This service provides high-performance web crawling capabilities using the
 Crawl4AI SDK directly, with full TripSage Core integration for settings,
@@ -8,20 +7,22 @@ error handling, and logging.
 
 import asyncio
 import time
-from typing import Any, Dict, Optional
+from typing import Any
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
 
 
 class WebCrawlServiceError(CoreAPIError):
     """Exception raised for web crawl service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="WEBCRAWL_SERVICE_ERROR",
@@ -43,15 +44,13 @@ class WebCrawlParams(BaseModel):
         default=False, description="Extract structured data"
     )
     use_cache: bool = Field(default=True, description="Use caching for results")
-    wait_for: Optional[str] = Field(
+    wait_for: str | None = Field(
         default=None, description="CSS selector or time to wait for"
     )
-    css_selector: Optional[str] = Field(
+    css_selector: str | None = Field(
         default=None, description="CSS selector for content extraction"
     )
-    excluded_tags: Optional[list] = Field(
-        default=None, description="HTML tags to exclude"
-    )
+    excluded_tags: list | None = Field(default=None, description="HTML tags to exclude")
     screenshot: bool = Field(default=False, description="Take screenshot")
     pdf: bool = Field(default=False, description="Generate PDF")
     timeout: int = Field(default=30, description="Request timeout in seconds")
@@ -62,29 +61,27 @@ class WebCrawlResult(BaseModel):
 
     success: bool
     url: str
-    title: Optional[str] = None
-    markdown: Optional[str] = None
-    html: Optional[str] = None
-    structured_data: Optional[Dict[str, Any]] = None
-    screenshot: Optional[bytes] = None
-    pdf: Optional[bytes] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    error_message: Optional[str] = None
-    status_code: Optional[int] = None
-    performance_metrics: Dict[str, Any] = Field(default_factory=dict)
+    title: str | None = None
+    markdown: str | None = None
+    html: str | None = None
+    structured_data: dict[str, Any] | None = None
+    screenshot: bytes | None = None
+    pdf: bytes | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    error_message: str | None = None
+    status_code: int | None = None
+    performance_metrics: dict[str, Any] = Field(default_factory=dict)
 
 
 class WebCrawlService:
-    """
-    Direct Crawl4AI SDK service for web crawling operations with Core integration.
+    """Direct Crawl4AI SDK service for web crawling operations with Core integration.
 
     This service provides high-performance web crawling capabilities using
     the Crawl4AI SDK directly, with full TripSage Core integration.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
-        """
-        Initialize the WebCrawl service.
+    def __init__(self, settings: Settings | None = None):
+        """Initialize the WebCrawl service.
 
         Args:
             settings: Core application settings
@@ -130,7 +127,7 @@ class WebCrawlService:
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Failed to initialize WebCrawl service: {str(e)}",
+                message=f"Failed to initialize WebCrawl service: {e!s}",
                 code="CONNECTION_FAILED",
                 service="WebCrawlService",
                 details={"error": str(e)},
@@ -147,10 +144,9 @@ class WebCrawlService:
             await self.connect()
 
     async def crawl_url(
-        self, url: str, params: Optional[WebCrawlParams] = None
+        self, url: str, params: WebCrawlParams | None = None
     ) -> WebCrawlResult:
-        """
-        Crawl a single URL using direct Crawl4AI SDK.
+        """Crawl a single URL using direct Crawl4AI SDK.
 
         Args:
             url: The URL to crawl
@@ -193,14 +189,13 @@ class WebCrawlService:
                 duration_ms = (end_time - start_time) * 1000
 
                 raise WebCrawlServiceError(
-                    f"Web crawl failed for {url}: {str(e)}", original_error=e
+                    f"Web crawl failed for {url}: {e!s}", original_error=e
                 ) from e
 
     async def crawl_multiple_urls(
-        self, urls: list[str], params: Optional[WebCrawlParams] = None
+        self, urls: list[str], params: WebCrawlParams | None = None
     ) -> list[WebCrawlResult]:
-        """
-        Crawl multiple URLs concurrently.
+        """Crawl multiple URLs concurrently.
 
         Args:
             urls: List of URLs to crawl
@@ -249,12 +244,11 @@ class WebCrawlService:
 
         except Exception as e:
             raise WebCrawlServiceError(
-                f"Failed to crawl multiple URLs: {str(e)}", original_error=e
+                f"Failed to crawl multiple URLs: {e!s}", original_error=e
             ) from e
 
     def _build_crawler_config(self, params: WebCrawlParams) -> CrawlerRunConfig:
-        """
-        Build CrawlerRunConfig from WebCrawlParams.
+        """Build CrawlerRunConfig from WebCrawlParams.
 
         Args:
             params: Input parameters
@@ -312,8 +306,7 @@ class WebCrawlService:
     def _convert_crawl_result(
         self, crawl_result: Any, url: str, duration_ms: float
     ) -> WebCrawlResult:
-        """
-        Convert Crawl4AI result to WebCrawlResult format.
+        """Convert Crawl4AI result to WebCrawlResult format.
 
         Args:
             crawl_result: Result from Crawl4AI
@@ -396,7 +389,7 @@ class WebCrawlService:
             return WebCrawlResult(
                 success=False,
                 url=url,
-                error_message=f"Result conversion error: {str(e)}",
+                error_message=f"Result conversion error: {e!s}",
                 performance_metrics={
                     "duration_ms": duration_ms,
                     "crawler_type": "crawl4ai_direct",
@@ -407,8 +400,7 @@ class WebCrawlService:
     async def extract_travel_content(
         self, url: str, content_type: str = "general"
     ) -> WebCrawlResult:
-        """
-        Extract travel-specific content from a URL.
+        """Extract travel-specific content from a URL.
 
         Args:
             url: URL to crawl
@@ -443,8 +435,7 @@ class WebCrawlService:
         return await self.crawl_url(url, params)
 
     async def health_check(self) -> bool:
-        """
-        Perform a health check to verify the service is working.
+        """Perform a health check to verify the service is working.
 
         Returns:
             True if the service is healthy, False otherwise
@@ -462,8 +453,7 @@ class WebCrawlService:
             return False
 
     async def close(self) -> None:
-        """
-        Close the service and clean up resources.
+        """Close the service and clean up resources.
 
         Since we use context managers for AsyncWebCrawler,
         there's no persistent cleanup needed.
@@ -481,12 +471,11 @@ class WebCrawlService:
 
 
 # Global service instance
-_webcrawl_service: Optional[WebCrawlService] = None
+_webcrawl_service: WebCrawlService | None = None
 
 
 async def get_webcrawl_service() -> WebCrawlService:
-    """
-    Get the global WebCrawl service instance.
+    """Get the global WebCrawl service instance.
 
     Returns:
         WebCrawlService instance

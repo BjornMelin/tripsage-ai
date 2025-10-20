@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Security Validation Script for TripSage API.
+"""Security Validation Script for TripSage API.
 
 This script validates security configurations, headers, and best practices
 across the application.
@@ -10,6 +9,7 @@ import json
 import re
 import sys
 from typing import Any
+
 
 # Security checks
 SECURITY_CHECKS = {"critical": [], "high": [], "medium": [], "low": [], "info": []}
@@ -133,7 +133,7 @@ def check_sql_injection_protection():
     found_issues = False
     for file_path in python_files:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             for pattern in sql_patterns:
@@ -179,7 +179,7 @@ def check_xss_protection():
     found_issues = False
     for file_path in frontend_files:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             for pattern in xss_patterns:
@@ -212,7 +212,7 @@ def check_authentication_security():
 
     try:
         # Check authentication middleware exists and has security measures
-        with open(auth_middleware_path, "r") as f:
+        with open(auth_middleware_path) as f:
             auth_content = f.read()
 
         if "_validate_request_headers" in auth_content:
@@ -252,7 +252,7 @@ def check_authentication_security():
 
     try:
         # Check session security service
-        with open(session_service_path, "r") as f:
+        with open(session_service_path) as f:
             session_content = f.read()
 
         if "_validate_and_score_ip" in session_content:
@@ -291,7 +291,7 @@ def check_input_validation():
     validation_found = False
     for file_path in model_files:
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 content = f.read()
 
             if "field_validator" in content or "validator" in content:
@@ -311,7 +311,7 @@ def check_input_validation():
     # Check for specific security validations
     session_service_path = "tripsage_core/services/business/session_security_service.py"
     try:
-        with open(session_service_path, "r") as f:
+        with open(session_service_path) as f:
             content = f.read()
 
         if "validate_ip_address" in content:
@@ -345,7 +345,7 @@ def check_cors_configuration():
     cors_found = False
     for file_path in api_files:
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 content = f.read()
 
             if "CORSMiddleware" in content or "allow_origins" in content:
@@ -394,7 +394,7 @@ def check_https_enforcement():
     https_found = False
     for file_path in config_files:
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 content = f.read()
 
             if "Strict-Transport-Security" in content:

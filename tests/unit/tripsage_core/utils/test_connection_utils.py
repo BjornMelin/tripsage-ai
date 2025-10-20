@@ -1,5 +1,4 @@
-"""
-Comprehensive unit tests for connection utilities.
+"""Comprehensive unit tests for connection utilities.
 
 Tests cover:
 - Database URL parsing with various formats and edge cases
@@ -487,7 +486,7 @@ class TestDatabaseConnectionValidator:
         """Test connection validation timeout."""
         with patch("asyncpg.connect") as mock_connect:
             # Simulate timeout
-            mock_connect.side_effect = asyncio.TimeoutError()
+            mock_connect.side_effect = TimeoutError()
 
             with pytest.raises(DatabaseValidationError, match="timed out"):
                 await self.validator.validate_connection(self.valid_credentials)

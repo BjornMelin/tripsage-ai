@@ -1,5 +1,4 @@
-"""
-Pytest configuration for TripSage tests.
+"""Pytest configuration for TripSage tests.
 
 This module provides common fixtures and utilities used across all test suites.
 """
@@ -7,7 +6,7 @@ This module provides common fixtures and utilities used across all test suites.
 import asyncio
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -15,6 +14,7 @@ import pytest
 # Load test environment variables FIRST
 from dotenv import load_dotenv
 from pydantic import BaseModel
+
 
 load_dotenv(".env.test", override=True)
 
@@ -155,7 +155,7 @@ class TestRequest(BaseModel):
 class TestResponse(BaseModel):
     """Generic test response model."""
 
-    results: List[Dict[str, Any]]
+    results: list[dict[str, Any]]
     total: int
     success: bool = True
 
@@ -194,7 +194,7 @@ def assert_mcp_invoked(
     mock_manager,
     service_name: str,
     method_name: str,
-    params: Optional[Dict[str, Any]] = None,
+    params: dict[str, Any] | None = None,
 ):
     """Assert that MCPManager.invoke was called with expected parameters."""
     mock_manager.invoke.assert_called_once()
@@ -206,7 +206,7 @@ def assert_mcp_invoked(
         assert call_args[2] == params
 
 
-def create_mock_tool_response(data: Any, error: Optional[str] = None):
+def create_mock_tool_response(data: Any, error: str | None = None):
     """Create a standardized tool response for testing."""
     if error:
         return {"error": error, "success": False}
@@ -244,7 +244,8 @@ def mock_web_operations_cache():
 @pytest.fixture(autouse=True)
 def mock_settings_and_redis(monkeypatch):
     """Mock settings and Redis client to avoid actual connections and
-    validation errors."""
+    validation errors.
+    """
     # Set environment variables for testing
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")

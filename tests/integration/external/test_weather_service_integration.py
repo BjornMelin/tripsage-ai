@@ -1,5 +1,4 @@
-"""
-Integration tests for weather service functionality.
+"""Integration tests for weather service functionality.
 
 Modern tests that validate weather service operations with mocked
 external API dependencies using actual service APIs.

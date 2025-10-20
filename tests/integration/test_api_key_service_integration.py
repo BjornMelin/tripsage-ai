@@ -1,5 +1,4 @@
-"""
-Integration tests for ApiKeyService with real dependencies.
+"""Integration tests for ApiKeyService with real dependencies.
 
 This module tests the service integration with actual database, cache,
 and external API providers using modern async testing patterns.
@@ -8,8 +7,8 @@ and external API providers using modern async testing patterns.
 import asyncio
 import os
 import uuid
-from datetime import datetime, timezone
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 from unittest.mock import patch
 
 import pytest
@@ -104,7 +103,7 @@ async def test_redis():
 
 
 @pytest.fixture
-async def db_session(test_db_engine) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(test_db_engine) -> AsyncGenerator[AsyncSession]:
     """Create database session for each test."""
     async with AsyncSession(test_db_engine) as session:
         yield session
@@ -141,8 +140,8 @@ async def api_service_integration(db_session, test_redis):
                 "service": request.service.value,
                 "encrypted_key": service._encrypt_key(request.key_value),
                 "description": request.description,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             },
         )
         await db_session.commit()
@@ -153,11 +152,11 @@ async def api_service_integration(db_session, test_redis):
             "service": request.service.value,
             "description": request.description,
             "is_valid": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "expires_at": None,
             "last_used": None,
-            "last_validated": datetime.now(timezone.utc).isoformat(),
+            "last_validated": datetime.now(UTC).isoformat(),
             "usage_count": 0,
         }
 
@@ -196,7 +195,7 @@ async def api_service_integration(db_session, test_redis):
         """),
             {
                 "id": log_id,
-                "timestamp": datetime.now(timezone.utc),
+                "timestamp": datetime.now(UTC),
                 **kwargs,
             },
         )
@@ -418,7 +417,7 @@ class TestApiKeyServiceIntegration:
 
         # Store monitoring data directly in Redis
         monitoring_data = {
-            "last_check": datetime.now(timezone.utc).isoformat(),
+            "last_check": datetime.now(UTC).isoformat(),
             "status": "healthy",
             "response_time": 120,
             "success_rate": 0.98,
@@ -448,7 +447,7 @@ class TestApiKeyServiceIntegration:
 
         # Test network timeout
         with patch("httpx.AsyncClient.get") as mock_get:
-            mock_get.side_effect = asyncio.TimeoutError("Network timeout")
+            mock_get.side_effect = TimeoutError("Network timeout")
 
             result = await api_service_integration.validate_api_key(
                 ServiceType.OPENAI, "sk-timeout_test", user_id

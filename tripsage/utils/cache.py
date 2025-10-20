@@ -1,5 +1,4 @@
-"""
-Unified caching utilities for TripSage.
+"""Unified caching utilities for TripSage.
 
 This module provides both in-memory and DragonflyDB-based caching functionality
 with content-aware TTL settings and performance monitoring.
@@ -10,16 +9,11 @@ import functools
 import hashlib
 import json
 import time
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from typing import (
     Any,
-    AsyncIterator,
-    Callable,
-    Dict,
-    List,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -29,6 +23,7 @@ from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.content_utils import ContentType, get_ttl_for_content_type
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -65,11 +60,11 @@ class InMemoryCache:
 
     def __init__(self):
         """Initialize the in-memory cache."""
-        self._cache: Dict[str, Dict[str, Any]] = {}
+        self._cache: dict[str, dict[str, Any]] = {}
         self._lock = asyncio.Lock()
         self._stats = CacheStats()
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get a value from the cache."""
         async with self._lock:
             if key not in self._cache:
@@ -87,7 +82,7 @@ class InMemoryCache:
             self._stats.hits += 1
             return cache_item["value"]
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set a value in the cache."""
         async with self._lock:
             expires_at = None if ttl is None else time.time() + ttl
@@ -150,7 +145,7 @@ class DragonflyCache:
             return key
         return f"{self.namespace}:{key}"
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get a value from the cache."""
         try:
             await self._ensure_connected()
@@ -173,7 +168,7 @@ class DragonflyCache:
         self,
         key: str,
         value: Any,
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
         nx: bool = False,
         xx: bool = False,
     ) -> bool:
@@ -314,7 +309,7 @@ class DragonflyCache:
 
 
 def generate_cache_key(
-    prefix: str, query: str, args: Optional[List[Any]] = None, **kwargs: Any
+    prefix: str, query: str, args: list[Any] | None = None, **kwargs: Any
 ) -> str:
     """Generate a deterministic cache key."""
     # Normalize the query
@@ -340,10 +335,10 @@ def generate_cache_key(
 
 
 def cached(
-    content_type: Optional[Union[ContentType, str]] = None,
-    ttl: Optional[int] = None,
+    content_type: ContentType | str | None = None,
+    ttl: int | None = None,
     namespace: str = "tripsage",
-    skip_args: Optional[List[str]] = None,
+    skip_args: list[str] | None = None,
     use_redis: bool = True,
 ) -> Callable[[F], F]:
     """Decorator for caching async function results."""
@@ -417,36 +412,35 @@ def cached(
 
 
 # Content-specific cache decorators
-def cached_realtime(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
+def cached_realtime(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching realtime data (short TTL)."""
     return cached(content_type=ContentType.REALTIME, ttl=ttl or 60, **kwargs)
 
 
-def cached_time_sensitive(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
+def cached_time_sensitive(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching time-sensitive data."""
     return cached(content_type=ContentType.TIME_SENSITIVE, ttl=ttl or 300, **kwargs)
 
 
-def cached_daily(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
+def cached_daily(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching daily data."""
     return cached(content_type=ContentType.DAILY, ttl=ttl or 3600, **kwargs)
 
 
-def cached_semi_static(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
+def cached_semi_static(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching semi-static data."""
     return cached(content_type=ContentType.SEMI_STATIC, ttl=ttl or 28800, **kwargs)
 
 
-def cached_static(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
+def cached_static(ttl: int | None = None, **kwargs: Any) -> Callable[[F], F]:
     """Decorator for caching static data."""
     return cached(content_type=ContentType.STATIC, ttl=ttl or 86400, **kwargs)
 
 
 async def batch_cache_set(
-    items: List[Dict[str, Any]], namespace: str = "tripsage", use_redis: bool = True
-) -> List[bool]:
-    """
-    Set multiple cache entries in batch for improved performance.
+    items: list[dict[str, Any]], namespace: str = "tripsage", use_redis: bool = True
+) -> list[bool]:
+    """Set multiple cache entries in batch for improved performance.
 
     Args:
         items: List of cache items with 'key', 'value', and optional 'ttl' fields
@@ -508,10 +502,9 @@ async def batch_cache_set(
 
 
 async def batch_cache_get(
-    keys: List[str], namespace: str = "tripsage", use_redis: bool = True
-) -> List[Optional[Any]]:
-    """
-    Get multiple cache entries in batch for improved performance.
+    keys: list[str], namespace: str = "tripsage", use_redis: bool = True
+) -> list[Any | None]:
+    """Get multiple cache entries in batch for improved performance.
 
     Args:
         keys: List of cache keys to retrieve
@@ -564,8 +557,7 @@ async def cache_lock(
     retry_count: int = 50,
     namespace: str = "tripsage",
 ) -> AsyncIterator[bool]:
-    """
-    Distributed lock using DragonflyDB/Redis for synchronization.
+    """Distributed lock using DragonflyDB/Redis for synchronization.
 
     Args:
         lock_name: Name of the lock
@@ -622,7 +614,7 @@ redis_cache = DragonflyCache()
 
 
 # Export convenience functions using DragonflyDB by default
-async def get_cache(key: str, namespace: str = "tripsage") -> Optional[Any]:
+async def get_cache(key: str, namespace: str = "tripsage") -> Any | None:
     """Get a value from the cache (DragonflyDB by default)."""
     return await redis_cache.get(key)
 
@@ -630,8 +622,8 @@ async def get_cache(key: str, namespace: str = "tripsage") -> Optional[Any]:
 async def set_cache(
     key: str,
     value: Any,
-    ttl: Optional[int] = None,
-    content_type: Optional[Union[ContentType, str]] = None,
+    ttl: int | None = None,
+    content_type: ContentType | str | None = None,
     namespace: str = "tripsage",
 ) -> bool:
     """Set a value in the cache (DragonflyDB by default)."""

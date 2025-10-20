@@ -1,5 +1,4 @@
-"""
-Error Handling Service for Phase 5 MCP Operations.
+"""Error Handling Service for Phase 5 MCP Operations.
 
 This service implements comprehensive error handling with fallback mechanisms
 for MCP operations, following Phase 5 implementation patterns.
@@ -8,7 +7,7 @@ for MCP operations, following Phase 5 implementation patterns.
 import asyncio
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +22,7 @@ from tripsage_core.infrastructure.resilience import (
 # from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -56,7 +56,7 @@ class MCPOperationError(TripSageError):
         method: str,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
         retry_count: int = 0,
-        original_error: Optional[Exception] = None,
+        original_error: Exception | None = None,
     ):
         """Initialize MCP operation error.
 
@@ -82,19 +82,18 @@ class FallbackResult(BaseModel):
 
     success: bool = Field(..., description="Whether fallback succeeded")
     strategy_used: FallbackStrategy = Field(..., description="Fallback strategy used")
-    result: Optional[Dict[str, Any]] = Field(
+    result: dict[str, Any] | None = Field(
         default=None, description="Fallback result data"
     )
-    error: Optional[str] = Field(default=None, description="Fallback error message")
+    error: str | None = Field(default=None, description="Fallback error message")
     execution_time: float = Field(..., description="Fallback execution time")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
 
 
 class ErrorRecoveryService:
-    """
-    Service for handling MCP operation errors with comprehensive fallback mechanisms.
+    """Service for handling MCP operation errors with comprehensive fallback mechanisms.
 
     This service implements Phase 5 error handling patterns with multiple
     fallback strategies and graceful degradation.
@@ -109,8 +108,8 @@ class ErrorRecoveryService:
         # MCP manager removed as part of BJO-161 MCP abstraction removal
         if mcp_manager is not None:
             logger.warning("MCP manager parameter is deprecated and will be ignored")
-        self.error_history: List[MCPOperationError] = []
-        self.fallback_cache: Dict[str, Any] = {}
+        self.error_history: list[MCPOperationError] = []
+        self.fallback_cache: dict[str, Any] = {}
 
         # Service fallback mappings
         self.service_alternatives = {
@@ -198,7 +197,7 @@ class ErrorRecoveryService:
         error: Exception,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         retry_count: int = 0,
     ) -> FallbackResult:
         """Handle MCP operation error with comprehensive fallback strategies.
@@ -230,7 +229,7 @@ class ErrorRecoveryService:
             )
             self.error_history.append(mcp_error)
 
-            logger.error(f"MCP operation failed: {service}.{method} - {str(error)}")
+            logger.error(f"MCP operation failed: {service}.{method} - {error!s}")
 
             # Determine fallback strategy
             strategy = self._determine_fallback_strategy(mcp_error, params)
@@ -244,11 +243,11 @@ class ErrorRecoveryService:
             return result
 
         except Exception as fallback_error:
-            logger.error(f"Fallback handling failed: {str(fallback_error)}")
+            logger.error(f"Fallback handling failed: {fallback_error!s}")
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.FAIL_FAST,
-                error=f"Fallback failed: {str(fallback_error)}",
+                error=f"Fallback failed: {fallback_error!s}",
                 execution_time=time.time() - start_time,
             )
 
@@ -257,7 +256,7 @@ class ErrorRecoveryService:
         strategy: FallbackStrategy,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
         """Execute specific fallback strategy.
@@ -296,7 +295,7 @@ class ErrorRecoveryService:
         self,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
         """Retry operation using configurable circuit breaker."""
@@ -338,7 +337,7 @@ class ErrorRecoveryService:
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.RETRY,
-                error=f"Circuit breaker open: {str(cb_error)}",
+                error=f"Circuit breaker open: {cb_error!s}",
                 execution_time=0.0,
                 metadata={
                     "circuit_breaker": breaker.name,
@@ -349,13 +348,12 @@ class ErrorRecoveryService:
 
         except Exception as retry_error:
             logger.warning(
-                f"Circuit breaker retry failed for {service}.{method}: "
-                f"{str(retry_error)}"
+                f"Circuit breaker retry failed for {service}.{method}: {retry_error!s}"
             )
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.RETRY,
-                error=f"Circuit breaker retry failed: {str(retry_error)}",
+                error=f"Circuit breaker retry failed: {retry_error!s}",
                 execution_time=0.0,
                 metadata={
                     "circuit_breaker": breaker.name,
@@ -367,7 +365,7 @@ class ErrorRecoveryService:
         self,
         service: str,
         method: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         error: MCPOperationError,
     ) -> FallbackResult:
         """Simple retry fallback when no circuit breaker is available."""
@@ -390,7 +388,7 @@ class ErrorRecoveryService:
 
             except Exception as retry_error:
                 logger.warning(
-                    f"Simple retry attempt {attempt + 1} failed: {str(retry_error)}"
+                    f"Simple retry attempt {attempt + 1} failed: {retry_error!s}"
                 )
                 continue
 
@@ -402,7 +400,7 @@ class ErrorRecoveryService:
         )
 
     async def _try_alternative_service(
-        self, original_service: str, method: str, params: Dict[str, Any]
+        self, original_service: str, method: str, params: dict[str, Any]
     ) -> FallbackResult:
         """Try alternative services for the same functionality."""
         alternatives = self.service_alternatives.get(original_service, [])
@@ -432,7 +430,7 @@ class ErrorRecoveryService:
 
             except Exception as alt_error:
                 logger.warning(
-                    f"Alternative service {alt_service} failed: {str(alt_error)}"
+                    f"Alternative service {alt_service} failed: {alt_error!s}"
                 )
                 continue
 
@@ -444,7 +442,7 @@ class ErrorRecoveryService:
         )
 
     async def _get_cached_response(
-        self, service: str, method: str, params: Dict[str, Any]
+        self, service: str, method: str, params: dict[str, Any]
     ) -> FallbackResult:
         """Get cached response for the operation."""
         cache_key = self._generate_cache_key(service, method, params)
@@ -471,7 +469,7 @@ class ErrorRecoveryService:
         )
 
     async def _graceful_degradation(
-        self, service: str, method: str, params: Dict[str, Any]
+        self, service: str, method: str, params: dict[str, Any]
     ) -> FallbackResult:
         """Provide graceful degradation response."""
         # Map service to degradation category
@@ -525,7 +523,7 @@ class ErrorRecoveryService:
         return ErrorSeverity.LOW
 
     def _determine_fallback_strategy(
-        self, error: MCPOperationError, params: Dict[str, Any]
+        self, error: MCPOperationError, params: dict[str, Any]
     ) -> FallbackStrategy:
         """Determine appropriate fallback strategy based on error characteristics."""
         # Critical errors should fail fast
@@ -564,8 +562,8 @@ class ErrorRecoveryService:
         return service in known_services
 
     async def _adapt_params_for_service(
-        self, params: Dict[str, Any], original_service: str, target_service: str
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], original_service: str, target_service: str
+    ) -> dict[str, Any]:
         """Adapt parameters for different service APIs."""
         # In production, this would handle parameter mapping between services
         # For now, return original parameters
@@ -575,13 +573,13 @@ class ErrorRecoveryService:
         return adapted_params
 
     def _generate_cache_key(
-        self, service: str, method: str, params: Dict[str, Any]
+        self, service: str, method: str, params: dict[str, Any]
     ) -> str:
         """Generate cache key for operation."""
         import hashlib
 
         # Create deterministic key from service, method, and params
-        key_data = f"{service}:{method}:{str(sorted(params.items()))}"
+        key_data = f"{service}:{method}:{sorted(params.items())!s}"
         return hashlib.md5(key_data.encode(), usedforsecurity=False).hexdigest()
 
     def _get_service_category(self, service: str) -> str:
@@ -601,7 +599,7 @@ class ErrorRecoveryService:
 
     @with_error_handling()
     async def store_successful_result(
-        self, service: str, method: str, params: Dict[str, Any], result: Any
+        self, service: str, method: str, params: dict[str, Any], result: Any
     ) -> None:
         """Store successful result in cache for future fallback use."""
         try:
@@ -623,9 +621,9 @@ class ErrorRecoveryService:
                     del self.fallback_cache[key]
 
         except Exception as e:
-            logger.warning(f"Failed to cache result: {str(e)}")
+            logger.warning(f"Failed to cache result: {e!s}")
 
-    def get_error_statistics(self) -> Dict[str, Any]:
+    def get_error_statistics(self) -> dict[str, Any]:
         """Get error statistics for monitoring."""
         if not self.error_history:
             return {"total_errors": 0, "by_service": {}, "by_severity": {}}
@@ -652,7 +650,7 @@ class ErrorRecoveryService:
             "cache_size": len(self.fallback_cache),
         }
 
-    def get_circuit_breaker_status(self) -> Dict[str, Any]:
+    def get_circuit_breaker_status(self) -> dict[str, Any]:
         """Get status of all circuit breakers for enterprise monitoring."""
         status = {}
 
@@ -671,7 +669,7 @@ class ErrorRecoveryService:
 
         return status
 
-    def get_comprehensive_statistics(self) -> Dict[str, Any]:
+    def get_comprehensive_statistics(self) -> dict[str, Any]:
         """Get comprehensive error handling and circuit breaker statistics."""
         error_stats = self.get_error_statistics()
         circuit_stats = self.get_circuit_breaker_status()

@@ -6,10 +6,11 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 from supabase import Client, create_client
+
 from tripsage_core.config import get_settings
+
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -21,7 +22,7 @@ MIGRATIONS_DIR = Path(__file__).parent.parent.parent.parent / "migrations"
 class MigrationRunner:
     """Handles database migrations using direct Supabase SQL execution."""
 
-    def __init__(self, project_id: Optional[str] = None):
+    def __init__(self, project_id: str | None = None):
         """Initialize migration runner.
 
         Args:
@@ -80,7 +81,7 @@ class MigrationRunner:
             )
             logger.info(f"SQL to create table:\n{create_table_sql}")
 
-    async def get_applied_migrations(self) -> List[str]:
+    async def get_applied_migrations(self) -> list[str]:
         """Get list of already applied migrations."""
         try:
             result = (
@@ -118,7 +119,7 @@ class MigrationRunner:
             logger.error(f"Failed to record migration {filename}: {e}")
             return False
 
-    def get_migration_files(self) -> List[Path]:
+    def get_migration_files(self) -> list[Path]:
         """Get all migration files, sorted by filename.
 
         Only scans the main migrations directory, excluding subdirectories like
@@ -157,7 +158,7 @@ class MigrationRunner:
         filename = filepath.name
 
         try:
-            with open(filepath, "r") as f:
+            with open(filepath) as f:
                 content = f.read()
 
             checksum = self._calculate_checksum(content)
@@ -187,8 +188,8 @@ class MigrationRunner:
             return False
 
     async def run_migrations(
-        self, up_to: Optional[str] = None, dry_run: bool = False
-    ) -> Tuple[int, int]:
+        self, up_to: str | None = None, dry_run: bool = False
+    ) -> tuple[int, int]:
         """Run all pending migrations.
 
         Args:
@@ -237,8 +238,8 @@ class MigrationRunner:
 
 
 async def run_migrations_cli(
-    project_id: Optional[str] = None, up_to: Optional[str] = None, dry_run: bool = False
-) -> Tuple[int, int]:
+    project_id: str | None = None, up_to: str | None = None, dry_run: bool = False
+) -> tuple[int, int]:
     """CLI entry point for running migrations."""
     runner = MigrationRunner(project_id)
     return await runner.run_migrations(up_to=up_to, dry_run=dry_run)

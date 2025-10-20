@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Performance benchmark script for the unified database service.
+"""Performance benchmark script for the unified database service.
 
 Benchmarks the consolidated DatabaseService across various operations:
 - Connection establishment and pooling

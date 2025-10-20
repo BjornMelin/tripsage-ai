@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core Cache Service.
+"""Comprehensive tests for TripSage Core Cache Service.
 
 This module provides comprehensive test coverage for cache service functionality
 including connection management, JSON/string operations, batch operations,
@@ -8,7 +7,7 @@ pattern-based operations, TTL management, atomic operations, and error handling.
 
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -198,7 +197,7 @@ class TestCacheService:
         test_data = {
             "name": "Test",
             "value": 123,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "nested": {"key": "value"},
             "list": [1, 2, 3],
         }
@@ -231,7 +230,7 @@ class TestCacheService:
     async def test_set_json_with_complex_data(self, cache_service, mock_redis_client):
         """Test JSON setting with complex data types."""
         test_data = {
-            "datetime": datetime.now(timezone.utc),
+            "datetime": datetime.now(UTC),
             "none_value": None,
             "boolean": True,
             "float": 3.14159,

@@ -1,12 +1,11 @@
-"""
-Test data factories for TripSage AI.
+"""Test data factories for TripSage AI.
 
 This module provides factory classes for generating consistent test data
 across the entire test suite. Uses the factory pattern to create realistic
 test data for models, requests, and responses.
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any, Dict, List
 from uuid import uuid4
 
@@ -40,14 +39,14 @@ class BaseFactory:
     @staticmethod
     def future_datetime(days: int = 30, hours: int = 0) -> datetime:
         """Generate a future datetime for testing."""
-        return datetime.now(timezone.utc) + timedelta(days=days, hours=hours)
+        return datetime.now(UTC) + timedelta(days=days, hours=hours)
 
 
 class UserFactory(BaseFactory):
     """Factory for creating test user data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test user with optional overrides."""
         defaults = {
             "id": 1,
@@ -66,14 +65,14 @@ class UserFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_admin(cls, **kwargs) -> Dict[str, Any]:
+    def create_admin(cls, **kwargs) -> dict[str, Any]:
         """Create a test admin user."""
         return cls.create(
             role=UserRole.ADMIN, email="admin@example.com", username="admin", **kwargs
         )
 
     @classmethod
-    def create_batch(cls, count: int = 5) -> List[Dict[str, Any]]:
+    def create_batch(cls, count: int = 5) -> list[dict[str, Any]]:
         """Create multiple test users."""
         return [
             cls.create(
@@ -89,7 +88,7 @@ class TripFactory(BaseFactory):
     """Factory for creating test trip data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test trip with optional overrides."""
         defaults = {
             "id": 1,
@@ -111,7 +110,7 @@ class TripFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_business_trip(cls, **kwargs) -> Dict[str, Any]:
+    def create_business_trip(cls, **kwargs) -> dict[str, Any]:
         """Create a business trip."""
         return cls.create(
             name="Business Conference",
@@ -122,7 +121,7 @@ class TripFactory(BaseFactory):
         )
 
     @classmethod
-    def create_family_trip(cls, **kwargs) -> Dict[str, Any]:
+    def create_family_trip(cls, **kwargs) -> dict[str, Any]:
         """Create a family trip."""
         return cls.create(
             name="Family Vacation", travelers_count=4, budget=8000.00, **kwargs
@@ -133,7 +132,7 @@ class AccommodationFactory(BaseFactory):
     """Factory for creating test accommodation data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test accommodation with optional overrides."""
         defaults = {
             "id": 1,
@@ -160,7 +159,7 @@ class AccommodationFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_airbnb(cls, **kwargs) -> Dict[str, Any]:
+    def create_airbnb(cls, **kwargs) -> dict[str, Any]:
         """Create an Airbnb accommodation."""
         return cls.create(
             accommodation_type=AccommodationType.APARTMENT,
@@ -171,7 +170,7 @@ class AccommodationFactory(BaseFactory):
         )
 
     @classmethod
-    def create_hostel(cls, **kwargs) -> Dict[str, Any]:
+    def create_hostel(cls, **kwargs) -> dict[str, Any]:
         """Create a hostel accommodation."""
         return cls.create(
             accommodation_type=AccommodationType.HOSTEL,
@@ -187,7 +186,7 @@ class FlightFactory(BaseFactory):
     """Factory for creating test flight data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test flight with optional overrides."""
         departure_time = cls.future_datetime(30)
         defaults = {
@@ -207,7 +206,7 @@ class FlightFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_return_flight(cls, **kwargs) -> Dict[str, Any]:
+    def create_return_flight(cls, **kwargs) -> dict[str, Any]:
         """Create a return flight."""
         departure_time = cls.future_datetime(37)
         return cls.create(
@@ -221,7 +220,7 @@ class FlightFactory(BaseFactory):
         )
 
     @classmethod
-    def create_domestic_flight(cls, **kwargs) -> Dict[str, Any]:
+    def create_domestic_flight(cls, **kwargs) -> dict[str, Any]:
         """Create a domestic flight."""
         departure_time = cls.future_datetime(15)
         return cls.create(
@@ -239,7 +238,7 @@ class ChatFactory(BaseFactory):
     """Factory for creating test chat data."""
 
     @classmethod
-    def create_message(cls, **kwargs) -> Dict[str, Any]:
+    def create_message(cls, **kwargs) -> dict[str, Any]:
         """Create a test chat message."""
         defaults = {
             "id": cls.generate_id(),
@@ -264,7 +263,7 @@ class ChatFactory(BaseFactory):
         return ChatMessage(**{**defaults, **kwargs})
 
     @classmethod
-    def create_assistant_message(cls, **kwargs) -> Dict[str, Any]:
+    def create_assistant_message(cls, **kwargs) -> dict[str, Any]:
         """Create an assistant response message."""
         return cls.create_message(
             content=(
@@ -276,7 +275,7 @@ class ChatFactory(BaseFactory):
         )
 
     @classmethod
-    def create_conversation(cls, message_count: int = 4) -> List[Dict[str, Any]]:
+    def create_conversation(cls, message_count: int = 4) -> list[dict[str, Any]]:
         """Create a conversation with multiple messages."""
         session_id = cls.generate_id()
         messages = []
@@ -301,7 +300,7 @@ class ChatFactory(BaseFactory):
         return messages
 
     @classmethod
-    def create_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_response(cls, **kwargs) -> dict[str, Any]:
         """Create a chat service response."""
         defaults = {
             "response": (
@@ -324,7 +323,7 @@ class APIKeyFactory(BaseFactory):
     """Factory for creating test API key data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test API key."""
         defaults = {
             "id": 1,
@@ -340,7 +339,7 @@ class APIKeyFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_service_keys(cls, user_id: int = 1) -> List[Dict[str, Any]]:
+    def create_service_keys(cls, user_id: int = 1) -> list[dict[str, Any]]:
         """Create API keys for common services."""
         services = ["openai", "anthropic", "google_maps", "duffel"]
         return [
@@ -357,7 +356,7 @@ class SearchFactory(BaseFactory):
     """Factory for creating test search data."""
 
     @classmethod
-    def create_accommodation_search(cls, **kwargs) -> Dict[str, Any]:
+    def create_accommodation_search(cls, **kwargs) -> dict[str, Any]:
         """Create accommodation search parameters."""
         defaults = {
             "destination": "Tokyo, Japan",
@@ -371,7 +370,7 @@ class SearchFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_flight_search(cls, **kwargs) -> Dict[str, Any]:
+    def create_flight_search(cls, **kwargs) -> dict[str, Any]:
         """Create flight search parameters."""
         defaults = {
             "origin": "LAX",
@@ -384,7 +383,7 @@ class SearchFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_search_results(cls, count: int = 5) -> Dict[str, Any]:
+    def create_search_results(cls, count: int = 5) -> dict[str, Any]:
         """Create mock search results."""
         return {
             "results": [
@@ -401,7 +400,7 @@ class DestinationFactory(BaseFactory):
     """Factory for creating test destination data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test destination."""
         defaults = {
             "id": cls.generate_id(),
@@ -419,7 +418,7 @@ class DestinationFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_search_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_search_response(cls, **kwargs) -> dict[str, Any]:
         """Create a destination search response."""
         defaults = {
             "destinations": [cls.create()],
@@ -431,7 +430,7 @@ class DestinationFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_details_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_details_response(cls, **kwargs) -> dict[str, Any]:
         """Create a destination details response."""
         base_destination = cls.create(**kwargs)
         details = {
@@ -452,7 +451,7 @@ class DestinationFactory(BaseFactory):
         return details
 
     @classmethod
-    def create_saved_destination(cls, **kwargs) -> Dict[str, Any]:
+    def create_saved_destination(cls, **kwargs) -> dict[str, Any]:
         """Create a saved destination."""
         defaults = {
             "id": cls.generate_id(),
@@ -470,7 +469,7 @@ class ItineraryFactory(BaseFactory):
     """Factory for creating test itinerary data."""
 
     @classmethod
-    def create(cls, **kwargs) -> Dict[str, Any]:
+    def create(cls, **kwargs) -> dict[str, Any]:
         """Create a test itinerary."""
         defaults = {
             "id": cls.generate_id(),
@@ -489,7 +488,7 @@ class ItineraryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_item(cls, **kwargs) -> Dict[str, Any]:
+    def create_item(cls, **kwargs) -> dict[str, Any]:
         """Create a test itinerary item."""
         defaults = {
             "id": cls.generate_id(),
@@ -510,7 +509,7 @@ class ItineraryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_search_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_search_response(cls, **kwargs) -> dict[str, Any]:
         """Create an itinerary search response."""
         defaults = {
             "itineraries": [cls.create()],
@@ -525,7 +524,7 @@ class ItineraryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_conflict_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_conflict_response(cls, **kwargs) -> dict[str, Any]:
         """Create an itinerary conflict check response."""
         defaults = {
             "has_conflicts": False,
@@ -536,7 +535,7 @@ class ItineraryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_optimize_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_optimize_response(cls, **kwargs) -> dict[str, Any]:
         """Create an itinerary optimization response."""
         defaults = {
             "optimized_itinerary": cls.create(),
@@ -555,7 +554,7 @@ class MemoryFactory(BaseFactory):
     """Factory for creating test memory data."""
 
     @classmethod
-    def create_conversation_result(cls, **kwargs) -> Dict[str, Any]:
+    def create_conversation_result(cls, **kwargs) -> dict[str, Any]:
         """Create a conversation memory result."""
         defaults = {
             "memory_id": cls.generate_id(),
@@ -567,7 +566,7 @@ class MemoryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_user_context(cls, **kwargs) -> Dict[str, Any]:
+    def create_user_context(cls, **kwargs) -> dict[str, Any]:
         """Create user context data."""
         defaults = {
             "user_id": "test-user-id",
@@ -595,7 +594,7 @@ class MemoryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_memories(cls, count: int = 3, **kwargs) -> List[Dict[str, Any]]:
+    def create_memories(cls, count: int = 3, **kwargs) -> list[dict[str, Any]]:
         """Create a list of memory entries."""
         memories = []
         for i in range(count):
@@ -614,7 +613,7 @@ class MemoryFactory(BaseFactory):
         return memories
 
     @classmethod
-    def create_preferences(cls, **kwargs) -> Dict[str, Any]:
+    def create_preferences(cls, **kwargs) -> dict[str, Any]:
         """Create user preferences."""
         defaults = {
             "budget_range": "medium",
@@ -628,7 +627,7 @@ class MemoryFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_memory_stats(cls, **kwargs) -> Dict[str, Any]:
+    def create_memory_stats(cls, **kwargs) -> dict[str, Any]:
         """Create memory statistics."""
         defaults = {
             "total_memories": 25,
@@ -646,7 +645,7 @@ class WebSocketFactory(BaseFactory):
     """Factory for creating test WebSocket data."""
 
     @classmethod
-    def create_auth_request(cls, **kwargs) -> Dict[str, Any]:
+    def create_auth_request(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket authentication request."""
         defaults = {
             "access_token": "test-token-12345",
@@ -657,7 +656,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_auth_response(cls, **kwargs) -> Dict[str, Any]:
+    def create_auth_response(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket authentication response."""
         defaults = {
             "success": True,
@@ -670,7 +669,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_chat_message(cls, **kwargs) -> Dict[str, Any]:
+    def create_chat_message(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket chat message."""
         defaults = {
             "type": "chat_message",
@@ -685,13 +684,13 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_heartbeat_message(cls, **kwargs) -> Dict[str, Any]:
+    def create_heartbeat_message(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket heartbeat message."""
         defaults = {"type": "heartbeat", "timestamp": cls.future_datetime().isoformat()}
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_subscribe_request(cls, **kwargs) -> Dict[str, Any]:
+    def create_subscribe_request(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket subscription request."""
         defaults = {
             "type": "subscribe",
@@ -700,7 +699,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_connection_event(cls, **kwargs) -> Dict[str, Any]:
+    def create_connection_event(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket connection event."""
         defaults = {
             "type": "connection",
@@ -713,7 +712,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_error_event(cls, **kwargs) -> Dict[str, Any]:
+    def create_error_event(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket error event."""
         defaults = {
             "type": "error",
@@ -726,7 +725,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_typing_event(cls, **kwargs) -> Dict[str, Any]:
+    def create_typing_event(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket typing indicator event."""
         defaults = {
             "type": "typing",
@@ -738,7 +737,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_message_chunk(cls, **kwargs) -> Dict[str, Any]:
+    def create_message_chunk(cls, **kwargs) -> dict[str, Any]:
         """Create a WebSocket message chunk for streaming."""
         defaults = {
             "type": "message_chunk",
@@ -752,7 +751,7 @@ class WebSocketFactory(BaseFactory):
         return {**defaults, **kwargs}
 
     @classmethod
-    def create_connection_stats(cls, **kwargs) -> Dict[str, Any]:
+    def create_connection_stats(cls, **kwargs) -> dict[str, Any]:
         """Create WebSocket connection statistics."""
         defaults = {
             "total_connections": 5,
@@ -767,16 +766,16 @@ class WebSocketFactory(BaseFactory):
 
 # Export all factories
 __all__ = [
-    "BaseFactory",
-    "UserFactory",
-    "TripFactory",
-    "AccommodationFactory",
-    "FlightFactory",
-    "ChatFactory",
     "APIKeyFactory",
-    "SearchFactory",
+    "AccommodationFactory",
+    "BaseFactory",
+    "ChatFactory",
     "DestinationFactory",
+    "FlightFactory",
     "ItineraryFactory",
     "MemoryFactory",
+    "SearchFactory",
+    "TripFactory",
+    "UserFactory",
     "WebSocketFactory",
 ]

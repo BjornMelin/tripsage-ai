@@ -81,7 +81,6 @@ class TripPreferencesRequest(TripPreferences):
     """Request model for updating trip preferences."""
 
 
-
 # ===== Response Schemas =====
 
 

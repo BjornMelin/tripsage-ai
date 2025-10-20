@@ -1,5 +1,4 @@
-"""
-Comprehensive integration tests for API key validation full stack flow.
+"""Comprehensive integration tests for API key validation full stack flow.
 
 This module provides end-to-end integration testing covering:
 - FastAPI HTTP endpoints with TestClient
@@ -18,8 +17,8 @@ import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -37,6 +36,7 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,12 +47,12 @@ class TestDatabaseService:
         self.engine = engine
         self._transaction_stack = []
 
-    async def insert(self, table: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def insert(self, table: str, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Insert data into table."""
         async with self.engine.begin() as conn:
             # Build INSERT statement
             columns = ", ".join(data.keys())
-            placeholders = ", ".join(f":{key}" for key in data.keys())
+            placeholders = ", ".join(f":{key}" for key in data)
 
             result = await conn.execute(
                 text(
@@ -64,8 +64,8 @@ class TestDatabaseService:
             return [dict(row._mapping) for row in result.fetchall()]
 
     async def select(
-        self, table: str, filters: Optional[Dict[str, Any]] = None, columns: str = "*"
-    ) -> List[Dict[str, Any]]:
+        self, table: str, filters: dict[str, Any] | None = None, columns: str = "*"
+    ) -> list[dict[str, Any]]:
         """Select data from table."""
         async with self.engine.begin() as conn:
             query = f"SELECT {columns} FROM {table}"
@@ -82,8 +82,8 @@ class TestDatabaseService:
             return [dict(row._mapping) for row in result.fetchall()]
 
     async def update(
-        self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        self, table: str, data: dict[str, Any], filters: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Update data in table."""
         async with self.engine.begin() as conn:
             set_clauses = []
@@ -105,7 +105,7 @@ class TestDatabaseService:
             result = await conn.execute(text(query), params)
             return [dict(row._mapping) for row in result.fetchall()]
 
-    async def delete(self, table: str, filters: Dict[str, Any]) -> int:
+    async def delete(self, table: str, filters: dict[str, Any]) -> int:
         """Delete data from table."""
         async with self.engine.begin() as conn:
             conditions = []
@@ -128,13 +128,13 @@ class TestDatabaseService:
             def __init__(self, ops):
                 self.ops = ops
 
-            def insert(self, table: str, data: Dict[str, Any]):
+            def insert(self, table: str, data: dict[str, Any]):
                 self.ops.append(("insert", table, data))
 
-            def update(self, table: str, data: Dict[str, Any], filters: Dict[str, Any]):
+            def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]):
                 self.ops.append(("update", table, data, filters))
 
-            def delete(self, table: str, filters: Dict[str, Any]):
+            def delete(self, table: str, filters: dict[str, Any]):
                 self.ops.append(("delete", table, filters))
 
             async def execute(self):
@@ -199,13 +199,13 @@ class TestDatabaseService:
         yield ctx
 
     # Methods required by ApiKeyService
-    async def get_user_api_keys(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
         """Get all API keys for a user."""
         return await self.select("api_keys", {"user_id": user_id})
 
     async def get_api_key_for_service(
         self, user_id: str, service: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key for specific service."""
         results = await self.select(
             "api_keys", {"user_id": user_id, "service": service}
@@ -214,7 +214,7 @@ class TestDatabaseService:
 
     async def get_api_key_by_id(
         self, key_id: str, user_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key by ID and user."""
         results = await self.select("api_keys", {"id": key_id, "user_id": user_id})
         return results[0] if results else None
@@ -223,7 +223,7 @@ class TestDatabaseService:
         """Update last used timestamp."""
         await self.update(
             "api_keys",
-            {"last_used": datetime.now(timezone.utc).isoformat()},
+            {"last_used": datetime.now(UTC).isoformat()},
             {"id": key_id},
         )
 
@@ -234,11 +234,11 @@ class TestCacheService:
     def __init__(self, redis_client):
         self.redis = redis_client
 
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         """Get value from cache."""
         return await self.redis.get(key)
 
-    async def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: str, ex: int | None = None) -> bool:
         """Set value in cache."""
         return await self.redis.set(key, value, ex=ex)
 
@@ -405,83 +405,83 @@ class TestApiKeyFullStackIntegration:
         user_id = test_user["id"]
 
         # Mock authentication to return our test user
-        with patch(
-            "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+        with (
+            patch(
+                "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+            ),
+            patch("tripsage.api.core.dependencies.require_principal") as mock_auth,
         ):
-            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
-                mock_principal = MagicMock()
-                mock_principal.user_id = user_id
-                mock_auth.return_value = mock_principal
+            mock_principal = MagicMock()
+            mock_principal.user_id = user_id
+            mock_auth.return_value = mock_principal
 
-                # Mock external API validation
-                with patch("httpx.AsyncClient.get") as mock_get:
-                    mock_response = MagicMock()
-                    mock_response.status_code = 200
-                    mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
-                    mock_get.return_value = mock_response
+            # Mock external API validation
+            with patch("httpx.AsyncClient.get") as mock_get:
+                mock_response = MagicMock()
+                mock_response.status_code = 200
+                mock_response.json.return_value = {"data": [{"id": "gpt-4"}]}
+                mock_get.return_value = mock_response
 
-                    # 1. Create API key
-                    create_data = {
-                        "name": "Test Integration Key",
-                        "service": "openai",
-                        "key": "sk-test_integration_key_12345",
-                        "description": "Integration test key",
-                    }
+                # 1. Create API key
+                create_data = {
+                    "name": "Test Integration Key",
+                    "service": "openai",
+                    "key": "sk-test_integration_key_12345",
+                    "description": "Integration test key",
+                }
 
-                    response = test_client.post("/api/keys", json=create_data)
-                    assert response.status_code == 201
+                response = test_client.post("/api/keys", json=create_data)
+                assert response.status_code == 201
 
-                    created_key = response.json()
-                    assert created_key["name"] == create_data["name"]
-                    assert created_key["service"] == create_data["service"]
-                    assert created_key["is_valid"] is True
-                    key_id = created_key["id"]
+                created_key = response.json()
+                assert created_key["name"] == create_data["name"]
+                assert created_key["service"] == create_data["service"]
+                assert created_key["is_valid"] is True
+                key_id = created_key["id"]
 
-                    # 2. List API keys
-                    response = test_client.get("/api/keys")
-                    assert response.status_code == 200
+                # 2. List API keys
+                response = test_client.get("/api/keys")
+                assert response.status_code == 200
 
-                    keys = response.json()
-                    assert len(keys) == 1
-                    assert keys[0]["id"] == key_id
+                keys = response.json()
+                assert len(keys) == 1
+                assert keys[0]["id"] == key_id
 
-                    # 3. Validate API key
-                    validate_data = {
-                        "service": "openai",
-                        "key": "sk-test_validation_key",
-                    }
+                # 3. Validate API key
+                validate_data = {
+                    "service": "openai",
+                    "key": "sk-test_validation_key",
+                }
 
-                    response = test_client.post(
-                        "/api/keys/validate", json=validate_data
-                    )
-                    assert response.status_code == 200
+                response = test_client.post("/api/keys/validate", json=validate_data)
+                assert response.status_code == 200
 
-                    validation_result = response.json()
-                    assert validation_result["is_valid"] is True
-                    assert validation_result["service"] == "openai"
+                validation_result = response.json()
+                assert validation_result["is_valid"] is True
+                assert validation_result["service"] == "openai"
 
-                    # 4. Rotate API key
-                    rotate_data = {"new_key": "sk-rotated_integration_key_67890"}
+                # 4. Rotate API key
+                rotate_data = {"new_key": "sk-rotated_integration_key_67890"}
 
-                    response = test_client.post(
-                        f"/api/keys/{key_id}/rotate", json=rotate_data
-                    )
-                    assert response.status_code == 200
+                response = test_client.post(
+                    f"/api/keys/{key_id}/rotate", json=rotate_data
+                )
+                assert response.status_code == 200
 
-                    rotated_key = response.json()
-                    assert rotated_key["id"] == key_id
-                    assert rotated_key["is_valid"] is True
+                rotated_key = response.json()
+                assert rotated_key["id"] == key_id
+                assert rotated_key["is_valid"] is True
 
-                    # 5. Delete API key
-                    response = test_client.delete(f"/api/keys/{key_id}")
-                    assert response.status_code == 204
+                # 5. Delete API key
+                response = test_client.delete(f"/api/keys/{key_id}")
+                assert response.status_code == 204
 
-                    # 6. Verify deletion
-                    response = test_client.get("/api/keys")
-                    assert response.status_code == 200
+                # 6. Verify deletion
+                response = test_client.get("/api/keys")
+                assert response.status_code == 200
 
-                    keys = response.json()
-                    assert len(keys) == 0
+                keys = response.json()
+                assert len(keys) == 0
 
     @pytest.mark.asyncio
     async def test_database_transaction_rollback(self, api_key_service, test_user):
@@ -495,7 +495,7 @@ class TestApiKeyFullStackIntegration:
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
                 message="Valid",
-                validated_at=datetime.now(timezone.utc),
+                validated_at=datetime.now(UTC),
             )
 
             # Create request
@@ -591,7 +591,7 @@ class TestApiKeyFullStackIntegration:
                     status=ValidationStatus.VALID,
                     service=ServiceType.OPENAI,
                     message="Valid",
-                    validated_at=datetime.now(timezone.utc),
+                    validated_at=datetime.now(UTC),
                 )
 
                 return await api_key_service.create_api_key(user_id, request)
@@ -626,48 +626,48 @@ class TestApiKeyFullStackIntegration:
         """Test error propagation from service layer to API responses."""
         user_id = test_user["id"]
 
-        with patch(
-            "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+        with (
+            patch(
+                "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+            ),
+            patch("tripsage.api.core.dependencies.require_principal") as mock_auth,
         ):
-            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
-                mock_principal = MagicMock()
-                mock_principal.user_id = user_id
-                mock_auth.return_value = mock_principal
+            mock_principal = MagicMock()
+            mock_principal.user_id = user_id
+            mock_auth.return_value = mock_principal
 
-                # Test validation failure propagation
-                with patch("httpx.AsyncClient.get") as mock_get:
-                    mock_response = MagicMock()
-                    mock_response.status_code = 401
-                    mock_get.return_value = mock_response
+            # Test validation failure propagation
+            with patch("httpx.AsyncClient.get") as mock_get:
+                mock_response = MagicMock()
+                mock_response.status_code = 401
+                mock_get.return_value = mock_response
 
-                    create_data = {
-                        "name": "Invalid Key Test",
-                        "service": "openai",
-                        "key": "sk-invalid_key",
-                        "description": "Test invalid key",
-                    }
+                create_data = {
+                    "name": "Invalid Key Test",
+                    "service": "openai",
+                    "key": "sk-invalid_key",
+                    "description": "Test invalid key",
+                }
 
-                    response = test_client.post("/api/keys", json=create_data)
-                    assert response.status_code == 400
-                    assert "Invalid API key" in response.json()["detail"]
+                response = test_client.post("/api/keys", json=create_data)
+                assert response.status_code == 400
+                assert "Invalid API key" in response.json()["detail"]
 
-                # Test service error propagation
-                with patch("httpx.AsyncClient.get") as mock_get:
-                    mock_get.side_effect = Exception("Service unavailable")
+            # Test service error propagation
+            with patch("httpx.AsyncClient.get") as mock_get:
+                mock_get.side_effect = Exception("Service unavailable")
 
-                    validate_data = {
-                        "service": "openai",
-                        "key": "sk-service_error_test",
-                    }
+                validate_data = {
+                    "service": "openai",
+                    "key": "sk-service_error_test",
+                }
 
-                    response = test_client.post(
-                        "/api/keys/validate", json=validate_data
-                    )
-                    assert response.status_code == 200  # Service handles gracefully
+                response = test_client.post("/api/keys/validate", json=validate_data)
+                assert response.status_code == 200  # Service handles gracefully
 
-                    result = response.json()
-                    assert result["is_valid"] is False
-                    assert result["status"] == "service_error"
+                result = response.json()
+                assert result["is_valid"] is False
+                assert result["status"] == "service_error"
 
     @pytest.mark.asyncio
     async def test_external_api_retry_mechanisms(self, api_key_service, test_user):
@@ -743,7 +743,7 @@ class TestApiKeyFullStackIntegration:
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
                 message="Valid",
-                validated_at=datetime.now(timezone.utc),
+                validated_at=datetime.now(UTC),
             )
 
             # Create key with sensitive data
@@ -779,7 +779,7 @@ class TestApiKeyFullStackIntegration:
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
                 message="Valid",
-                validated_at=datetime.now(timezone.utc),
+                validated_at=datetime.now(UTC),
             )
 
             # Mock audit logging
@@ -822,35 +822,37 @@ class TestApiKeyValidationEdgeCases:
         """Test handling of malformed requests."""
         user_id = test_user["id"]
 
-        with patch(
-            "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+        with (
+            patch(
+                "tripsage.api.core.dependencies.get_principal_id", return_value=user_id
+            ),
+            patch("tripsage.api.core.dependencies.require_principal") as mock_auth,
         ):
-            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
-                mock_principal = MagicMock()
-                mock_principal.user_id = user_id
-                mock_auth.return_value = mock_principal
+            mock_principal = MagicMock()
+            mock_principal.user_id = user_id
+            mock_auth.return_value = mock_principal
 
-                # Missing required fields
-                response = test_client.post("/api/keys", json={})
-                assert response.status_code == 422
+            # Missing required fields
+            response = test_client.post("/api/keys", json={})
+            assert response.status_code == 422
 
-                # Invalid service type
-                response = test_client.post(
-                    "/api/keys",
-                    json={
-                        "name": "Test",
-                        "service": "invalid_service",
-                        "key": "test-key",
-                    },
-                )
-                assert response.status_code == 422
+            # Invalid service type
+            response = test_client.post(
+                "/api/keys",
+                json={
+                    "name": "Test",
+                    "service": "invalid_service",
+                    "key": "test-key",
+                },
+            )
+            assert response.status_code == 422
 
-                # Key too short
-                response = test_client.post(
-                    "/api/keys",
-                    json={"name": "Test", "service": "openai", "key": "short"},
-                )
-                assert response.status_code == 422
+            # Key too short
+            response = test_client.post(
+                "/api/keys",
+                json={"name": "Test", "service": "openai", "key": "short"},
+            )
+            assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_rate_limiting_behavior(self, api_key_service, test_user, test_redis):
@@ -937,7 +939,7 @@ class TestApiKeyPerformance:
                 status=ValidationStatus.VALID,
                 service=ServiceType.OPENAI,
                 message="Valid",
-                validated_at=datetime.now(timezone.utc),
+                validated_at=datetime.now(UTC),
             )
 
             start_time = datetime.now()

@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core Session Security Service.
+"""Comprehensive tests for TripSage Core Session Security Service.
 
 This module provides comprehensive test coverage for session security functionality
 including session lifecycle management, security event logging, risk assessment,
@@ -10,12 +9,11 @@ import asyncio
 import hashlib
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.exceptions.exceptions import CoreSecurityError
@@ -32,7 +30,7 @@ class TestSessionSecurityModels:
 
     def test_user_session_creation(self):
         """Test UserSession model creation."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(hours=24)
 
         session = UserSession(
@@ -58,7 +56,7 @@ class TestSessionSecurityModels:
 
     def test_user_session_validation_errors(self):
         """Test UserSession validation errors."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expires_at = now + timedelta(hours=24)
 
         # Invalid session ID - too short
@@ -132,7 +130,7 @@ class TestSessionSecurityModels:
 
     def test_session_security_metrics_creation(self):
         """Test SessionSecurityMetrics model creation."""
-        last_login = datetime.now(timezone.utc)
+        last_login = datetime.now(UTC)
 
         metrics = SessionSecurityMetrics(
             user_id="user-123",
@@ -201,7 +199,7 @@ class TestSessionSecurityModels:
                 id=session_id,
                 user_id=user_id,
                 session_token="abcd1234" * 8,  # Valid 64-char hex
-                expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+                expires_at=datetime.now(UTC) + timedelta(hours=24),
             )
 
             assert session.id == session_id
@@ -355,13 +353,9 @@ class TestSessionLifecycleManagement:
                 "user_id": user_id,
                 "session_token": "abcd1234" * 8,
                 "is_active": True,
-                "created_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=i)
-                ).isoformat(),
-                "expires_at": (
-                    datetime.now(timezone.utc) + timedelta(hours=24)
-                ).isoformat(),
-                "last_activity_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": (datetime.now(UTC) - timedelta(hours=i)).isoformat(),
+                "expires_at": (datetime.now(UTC) + timedelta(hours=24)).isoformat(),
+                "last_activity_at": datetime.now(UTC).isoformat(),
             }
             existing_sessions.append(session_data)
 
@@ -401,9 +395,9 @@ class TestSessionLifecycleManagement:
             "user_agent": "Mozilla/5.0",
             "device_info": {},
             "location_info": {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
-            "last_activity_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+            "last_activity_at": datetime.now(UTC).isoformat(),
             "ended_at": None,
         }
 
@@ -440,11 +434,11 @@ class TestSessionLifecycleManagement:
             "user_agent": "Mozilla/5.0",
             "device_info": {},
             "location_info": {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "expires_at": (
-                datetime.now(timezone.utc) - timedelta(hours=1)
+                datetime.now(UTC) - timedelta(hours=1)
             ).isoformat(),  # Expired
-            "last_activity_at": datetime.now(timezone.utc).isoformat(),
+            "last_activity_at": datetime.now(UTC).isoformat(),
             "ended_at": None,
         }
 
@@ -518,11 +512,9 @@ class TestSessionLifecycleManagement:
                 "user_agent": "Mozilla/5.0",
                 "device_info": {},
                 "location_info": {},
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": (
-                    datetime.now(timezone.utc) + timedelta(hours=1)
-                ).isoformat(),
-                "last_activity_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+                "last_activity_at": datetime.now(UTC).isoformat(),
                 "ended_at": None,
             }
         ]
@@ -712,7 +704,7 @@ class TestRiskAssessment:
             session_token="abcd1234" * 8,
             ip_address="192.168.1.1",
             user_agent="Mozilla/5.0 Original",
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+            expires_at=datetime.now(UTC) + timedelta(hours=24),
         )
 
         # Same IP and user agent - low risk
@@ -852,17 +844,13 @@ class TestSessionCleanup:
                 "id": "session-1",
                 "user_id": "user-123",
                 "is_active": True,
-                "expires_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=1)
-                ).isoformat(),
+                "expires_at": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
             },
             {
                 "id": "session-2",
                 "user_id": "user-456",
                 "is_active": True,
-                "expires_at": (
-                    datetime.now(timezone.utc) - timedelta(hours=2)
-                ).isoformat(),
+                "expires_at": (datetime.now(UTC) - timedelta(hours=2)).isoformat(),
             },
         ]
 
@@ -946,11 +934,9 @@ class TestSessionSecurityIntegration:
                 "user_agent": user_agent,
                 "device_info": {},
                 "location_info": {},
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": (
-                    datetime.now(timezone.utc) + timedelta(hours=1)
-                ).isoformat(),
-                "last_activity_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+                "last_activity_at": datetime.now(UTC).isoformat(),
                 "ended_at": None,
             }
         ]

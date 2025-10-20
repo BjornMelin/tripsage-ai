@@ -1,5 +1,4 @@
-"""
-Clean tests for keys router.
+"""Clean tests for keys router.
 
 Tests the actual implemented API key management functionality.
 Follows TripSage standards for focused, actionable testing.

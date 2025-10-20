@@ -1,5 +1,4 @@
-"""
-Security penetration test scenarios for API key validation infrastructure.
+"""Security penetration test scenarios for API key validation infrastructure.
 
 This module provides comprehensive penetration testing scenarios covering
 realistic attack vectors against the API key validation system. Tests

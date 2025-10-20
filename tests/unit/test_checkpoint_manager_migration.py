@@ -170,32 +170,34 @@ class TestCheckpointManagerMigration:
 
     def test_checkpoint_manager_error_handling(self, mock_settings, mock_converter):
         """Test error handling in connection string building."""
-        with patch(
-            "tripsage.orchestration.checkpoint_manager.get_settings",
-            return_value=mock_settings,
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage.orchestration.checkpoint_manager.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
                 "tripsage.orchestration.checkpoint_manager.DatabaseURLConverter",
                 return_value=mock_converter,
-            ):
-                # Make conversion fail
-                mock_converter.supabase_to_postgres.side_effect = Exception(
-                    "Conversion failed"
-                )
+            ),
+        ):
+            # Make conversion fail
+            mock_converter.supabase_to_postgres.side_effect = Exception(
+                "Conversion failed"
+            )
 
-                from tripsage.orchestration.checkpoint_manager import (
-                    SupabaseCheckpointManager,
-                )
+            from tripsage.orchestration.checkpoint_manager import (
+                SupabaseCheckpointManager,
+            )
 
-                manager = SupabaseCheckpointManager()
+            manager = SupabaseCheckpointManager()
 
-                with pytest.raises(DatabaseURLParsingError) as exc_info:
-                    manager._build_connection_string()
+            with pytest.raises(DatabaseURLParsingError) as exc_info:
+                manager._build_connection_string()
 
-                assert "Could not create secure checkpoint connection" in str(
-                    exc_info.value
-                )
-                assert "Conversion failed" in str(exc_info.value)
+            assert "Could not create secure checkpoint connection" in str(
+                exc_info.value
+            )
+            assert "Conversion failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_checkpoint_manager_async_checkpointer(

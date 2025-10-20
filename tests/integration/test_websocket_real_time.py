@@ -1,5 +1,4 @@
-"""
-Integration tests for WebSocket real-time features.
+"""Integration tests for WebSocket real-time features.
 
 Tests the complete WebSocket integration including:
 - Authentication flow
@@ -11,7 +10,6 @@ Tests the complete WebSocket integration including:
 
 import json
 import uuid
-from typing import Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import jwt
@@ -39,7 +37,7 @@ class MockWebSocket:
     """Mock WebSocket for testing."""
 
     def __init__(self):
-        self.messages_sent: List[str] = []
+        self.messages_sent: list[str] = []
         self.closed = False
         self.close_code = None
         self.close_reason = None
@@ -49,7 +47,6 @@ class MockWebSocket:
 
     async def accept(self):
         """Mock accept method."""
-        pass
 
     async def send_text(self, data: str):
         """Mock send_text method."""
@@ -84,7 +81,7 @@ class MockChatService:
 class MockChatAgent:
     """Mock chat agent for testing."""
 
-    async def run(self, content: str, context: Dict):
+    async def run(self, content: str, context: dict):
         """Mock run method."""
         return {
             "content": f"I received your message: {content}. This is a mock response.",

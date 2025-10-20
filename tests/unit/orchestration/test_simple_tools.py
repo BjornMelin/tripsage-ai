@@ -1,5 +1,4 @@
-"""
-Tests for simplified LangGraph tools using @tool decorator.
+"""Tests for simplified LangGraph tools using @tool decorator.
 
 Tests the modern, simple tool implementation that replaces the over-engineered
 registry system with direct tool functions.

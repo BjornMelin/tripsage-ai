@@ -1,5 +1,4 @@
-"""
-Security tests for secret key rotation and cryptographic edge cases.
+"""Security tests for secret key rotation and cryptographic edge cases.
 
 This module provides comprehensive security testing for secret key rotation,
 cryptographic edge cases, and key lifecycle management vulnerabilities.
@@ -985,7 +984,4 @@ class TestCryptographicEdgeCases:
                 if len(secret) < 8:
                     # Very short secrets might be rejected
                     continue
-                else:
-                    pytest.fail(
-                        f"Unexpected failure with secret '{secret[:20]}...': {e}"
-                    )
+                pytest.fail(f"Unexpected failure with secret '{secret[:20]}...': {e}")

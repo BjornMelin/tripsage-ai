@@ -1,5 +1,4 @@
-"""
-Google Calendar API service implementation with TripSage Core integration.
+"""Google Calendar API service implementation with TripSage Core integration.
 
 This module provides direct integration with Google Calendar API using the
 google-api-python-client library, replacing the previous MCP server abstraction.
@@ -11,7 +10,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -20,9 +19,12 @@ from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
 from tripsage_core.services.infrastructure.cache_service import get_cache_service
+
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +75,7 @@ def async_retry(
 class GoogleCalendarServiceError(CoreAPIError):
     """Exception raised for Google Calendar service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="CALENDAR_SERVICE_ERROR",
@@ -88,12 +90,11 @@ class GoogleCalendarService:
 
     def __init__(
         self,
-        credentials_file: Optional[str] = None,
-        token_file: Optional[str] = None,
-        settings: Optional[Settings] = None,
+        credentials_file: str | None = None,
+        token_file: str | None = None,
+        settings: Settings | None = None,
     ):
-        """
-        Initialize the Google Calendar service.
+        """Initialize the Google Calendar service.
 
         Args:
             credentials_file: Path to OAuth2 credentials JSON file
@@ -115,8 +116,8 @@ class GoogleCalendarService:
         )
 
         self.cache_service = None
-        self._service: Optional[Resource] = None
-        self._credentials: Optional[Credentials] = None
+        self._service: Resource | None = None
+        self._credentials: Credentials | None = None
         self._connected = False
 
         # Cache settings
@@ -149,7 +150,7 @@ class GoogleCalendarService:
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Failed to connect to Google Calendar API: {str(e)}",
+                message=f"Failed to connect to Google Calendar API: {e!s}",
                 code="CONNECTION_FAILED",
                 service="GoogleCalendarService",
                 details={"error": str(e)},
@@ -217,7 +218,7 @@ class GoogleCalendarService:
             )
         return self._service
 
-    async def _get_from_cache(self, key: str) -> Optional[Any]:
+    async def _get_from_cache(self, key: str) -> Any | None:
         """Get data from cache."""
         if not self.cache_service:
             return None
@@ -251,9 +252,8 @@ class GoogleCalendarService:
     @async_retry()
     async def list_calendars(
         self, show_hidden: bool = False, show_deleted: bool = False
-    ) -> Dict[str, Any]:
-        """
-        List all calendars accessible by the user.
+    ) -> dict[str, Any]:
+        """List all calendars accessible by the user.
 
         Args:
             show_hidden: Include hidden calendars
@@ -308,12 +308,11 @@ class GoogleCalendarService:
     async def create_event(
         self,
         calendar_id: str,
-        event_data: Dict[str, Any],
+        event_data: dict[str, Any],
         send_notifications: bool = True,
-        conference_data_version: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        """
-        Create a new calendar event.
+        conference_data_version: int | None = None,
+    ) -> dict[str, Any]:
+        """Create a new calendar event.
 
         Args:
             calendar_id: Calendar ID (use 'primary' for main calendar)
@@ -353,11 +352,10 @@ class GoogleCalendarService:
         self,
         calendar_id: str,
         event_id: str,
-        event_data: Dict[str, Any],
+        event_data: dict[str, Any],
         send_notifications: bool = True,
-    ) -> Dict[str, Any]:
-        """
-        Update an existing calendar event.
+    ) -> dict[str, Any]:
+        """Update an existing calendar event.
 
         Args:
             calendar_id: Calendar ID
@@ -399,8 +397,7 @@ class GoogleCalendarService:
         event_id: str,
         send_notifications: bool = True,
     ) -> bool:
-        """
-        Delete a calendar event.
+        """Delete a calendar event.
 
         Args:
             calendar_id: Calendar ID
@@ -442,10 +439,9 @@ class GoogleCalendarService:
         self,
         calendar_id: str,
         event_id: str,
-        time_zone: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Get a specific calendar event.
+        time_zone: str | None = None,
+    ) -> dict[str, Any]:
+        """Get a specific calendar event.
 
         Args:
             calendar_id: Calendar ID
@@ -482,15 +478,14 @@ class GoogleCalendarService:
     async def list_events(
         self,
         calendar_id: str,
-        time_min: Optional[str] = None,
-        time_max: Optional[str] = None,
+        time_min: str | None = None,
+        time_max: str | None = None,
         max_results: int = 250,
         single_events: bool = True,
         order_by: str = "startTime",
         **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        List calendar events with various filters.
+    ) -> dict[str, Any]:
+        """List calendar events with various filters.
 
         Args:
             calendar_id: Calendar ID
@@ -564,13 +559,12 @@ class GoogleCalendarService:
     @async_retry()
     async def get_free_busy(
         self,
-        calendars: List[str],
+        calendars: list[str],
         time_min: str,
         time_max: str,
         time_zone: str = "UTC",
-    ) -> Dict[str, Any]:
-        """
-        Query free/busy information for calendars.
+    ) -> dict[str, Any]:
+        """Query free/busy information for calendars.
 
         Args:
             calendars: List of calendar IDs to query
@@ -618,14 +612,13 @@ class GoogleCalendarService:
         title: str,
         start: datetime,
         end: datetime,
-        location: Optional[str] = None,
-        description: Optional[str] = None,
+        location: str | None = None,
+        description: str | None = None,
         travel_type: str = "flight",
-        booking_reference: Optional[str] = None,
-        attendees: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Create a travel-specific calendar event with metadata.
+        booking_reference: str | None = None,
+        attendees: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Create a travel-specific calendar event with metadata.
 
         Args:
             calendar_id: Calendar ID
@@ -670,10 +663,9 @@ class GoogleCalendarService:
         self,
         calendar_id: str,
         trip_id: str,
-        trip_data: Dict[str, Any],
-    ) -> List[Dict[str, Any]]:
-        """
-        Sync an entire trip itinerary to calendar.
+        trip_data: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Sync an entire trip itinerary to calendar.
 
         Args:
             calendar_id: Calendar ID
@@ -762,8 +754,7 @@ class GoogleCalendarService:
             )
 
     async def health_check(self) -> bool:
-        """
-        Check if the Google Calendar API is accessible.
+        """Check if the Google Calendar API is accessible.
 
         Returns:
             True if API is accessible, False otherwise
@@ -782,12 +773,11 @@ class GoogleCalendarService:
 
 
 # Global service instance
-_calendar_service: Optional[GoogleCalendarService] = None
+_calendar_service: GoogleCalendarService | None = None
 
 
 async def get_calendar_service() -> GoogleCalendarService:
-    """
-    Get the global Google Calendar service instance.
+    """Get the global Google Calendar service instance.
 
     Returns:
         GoogleCalendarService instance

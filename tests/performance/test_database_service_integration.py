@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Database Service Integration Performance Tests
+"""Database Service Integration Performance Tests
 
 This module provides comprehensive performance testing for database service integration:
 - Connection pool performance
@@ -17,7 +16,6 @@ Uses pytest-benchmark for accurate performance measurements.
 
 import asyncio
 import logging
-from typing import Optional
 
 import numpy as np
 import pytest
@@ -26,6 +24,7 @@ from pydantic import BaseModel
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +36,9 @@ class DatabaseMetrics(BaseModel):
     duration_ms: float
     success: bool
     connection_count: int
-    memory_usage_mb: Optional[float] = None
-    query_complexity: Optional[str] = None
-    cache_hit: Optional[bool] = None
+    memory_usage_mb: float | None = None
+    query_complexity: str | None = None
+    cache_hit: bool | None = None
 
 
 @pytest.fixture
@@ -95,7 +94,6 @@ class TestDatabaseConnectionPerformance:
     @pytest.mark.database
     async def test_connection_pool_performance(self, benchmark, db_settings):
         """Benchmark connection pool acquisition and release."""
-
         service = DatabaseService(settings=db_settings)
         await service.connect()
 
@@ -126,7 +124,6 @@ class TestDatabaseConnectionPerformance:
     @pytest.mark.database
     async def test_concurrent_connection_handling(self, benchmark, db_settings):
         """Benchmark handling multiple concurrent database connections."""
-
         service = DatabaseService(settings=db_settings)
         await service.connect()
 
@@ -230,7 +227,6 @@ class TestDatabaseQueryPerformance:
     @pytest.mark.database
     async def test_bulk_insert_performance(self, benchmark, database_service):
         """Benchmark bulk insert performance."""
-
         # Setup test table
         try:
             await database_service.execute_sql("""
@@ -298,7 +294,6 @@ class TestDatabaseTransactionPerformance:
     @pytest.mark.database
     async def test_complex_transaction_performance(self, benchmark, database_service):
         """Benchmark complex transaction with multiple operations."""
-
         # Setup test table
         try:
             await database_service.execute_sql("""
@@ -383,7 +378,6 @@ class TestDatabaseCacheIntegration:
     @pytest.mark.cache
     async def test_cached_query_performance(self, benchmark, database_service):
         """Benchmark cached query performance."""
-
         # Mock cache for testing
         mock_cache = {}
 
@@ -424,7 +418,6 @@ class TestDatabaseCacheIntegration:
     @pytest.mark.cache
     async def test_cache_invalidation_performance(self, benchmark):
         """Benchmark cache invalidation performance."""
-
         mock_cache = {f"key_{i}": f"value_{i}" for i in range(100)}
 
         async def invalidate_cache_pattern():
@@ -433,7 +426,7 @@ class TestDatabaseCacheIntegration:
             keys_to_remove = []
 
             # Find keys matching pattern
-            for key in mock_cache.keys():
+            for key in mock_cache:
                 if pattern in key:
                     keys_to_remove.append(key)
 
@@ -641,7 +634,7 @@ class TestDatabaseErrorHandlingPerformance:
                 result = await database_service.execute_sql("SELECT 1")
                 return len(result) if result else 0
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Handle timeout gracefully
                 return -1
             except Exception as e:
@@ -661,7 +654,6 @@ class TestDatabaseIntegrationWorkflows:
         self, benchmark, database_service
     ):
         """Benchmark a complete CRUD workflow."""
-
         # Setup test table
         try:
             await database_service.execute_sql("""
@@ -722,7 +714,6 @@ class TestDatabaseIntegrationWorkflows:
         self, benchmark, database_service
     ):
         """Benchmark database operations with cache integration."""
-
         mock_cache = {}
 
         async def database_cache_workflow():
@@ -768,12 +759,10 @@ class TestDatabaseIntegrationWorkflows:
 @pytest.mark.performance
 @pytest.mark.database
 def test_database_performance_regression_detection():
-    """
-    Performance regression detection for database operations.
+    """Performance regression detection for database operations.
 
     Defines performance thresholds for database operations to detect regressions.
     """
-
     # Define performance thresholds (in milliseconds)
     PERFORMANCE_THRESHOLDS = {
         "connection_establishment": 500,  # 500ms max

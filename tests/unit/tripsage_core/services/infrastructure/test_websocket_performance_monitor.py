@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core WebSocket Performance Monitor.
+"""Comprehensive tests for TripSage Core WebSocket Performance Monitor.
 
 This module provides comprehensive test coverage for WebSocket performance
 monitoring functionality

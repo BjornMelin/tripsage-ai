@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Performance benchmark for ApiKeyService optimizations.
+"""Performance benchmark for ApiKeyService optimizations.
 
 This script measures the performance improvements from the 2025 Pydantic V2
 optimizations and modern patterns implementation.
@@ -9,8 +8,8 @@ optimizations and modern patterns implementation.
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock
 
 import uvloop  # For better asyncio performance
@@ -30,7 +29,7 @@ class PerformanceBenchmark:
     def __init__(self):
         """Initialize benchmark with mock dependencies."""
         self.iterations = 1000
-        self.results: Dict[str, List[float]] = {}
+        self.results: dict[str, list[float]] = {}
 
     async def setup_service(self) -> ApiKeyService:
         """Create ApiKeyService with mocked dependencies."""
@@ -50,7 +49,7 @@ class PerformanceBenchmark:
         service = ApiKeyService(db=db, cache=cache, validation_timeout=5)
         return service
 
-    def _sample_db_result(self) -> Dict[str, Any]:
+    def _sample_db_result(self) -> dict[str, Any]:
         """Generate sample database result."""
         return {
             "id": "test-key-id",
@@ -58,11 +57,11 @@ class PerformanceBenchmark:
             "service": "openai",
             "description": "Test key for benchmarking",
             "is_valid": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "expires_at": None,
             "last_used": None,
-            "last_validated": datetime.now(timezone.utc).isoformat(),
+            "last_validated": datetime.now(UTC).isoformat(),
             "usage_count": 0,
         }
 
@@ -172,7 +171,7 @@ class PerformanceBenchmark:
 
         return end_time - start_time
 
-    async def run_all_benchmarks(self) -> Dict[str, float]:
+    async def run_all_benchmarks(self) -> dict[str, float]:
         """Run all performance benchmarks."""
         print("🚀 Starting ApiKeyService Performance Benchmarks")
         print(f"Running {self.iterations} iterations per test...")
@@ -209,7 +208,7 @@ class PerformanceBenchmark:
 
         return results
 
-    def print_summary(self, results: Dict[str, Any]):
+    def print_summary(self, results: dict[str, Any]):
         """Print benchmark summary."""
         print("📊 Performance Benchmark Results Summary")
         print("=" * 50)

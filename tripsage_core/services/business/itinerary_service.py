@@ -1,5 +1,4 @@
-"""
-Itinerary service for comprehensive itinerary management operations.
+"""Itinerary service for comprehensive itinerary management operations.
 
 This service consolidates itinerary-related business logic including itinerary
 creation, item management, optimization, conflict detection, sharing, and
@@ -8,24 +7,20 @@ while maintaining proper data relationships.
 """
 
 import logging
-from datetime import date as DateType
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, date as DateType, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field, field_validator
 
 from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +89,7 @@ class TimeSlot(TripSageModel):
         ..., pattern=r"^([01]?[0-9]|2[0-3]):[0-5][0-9]$", description="End time (HH:MM)"
     )
     duration_minutes: int = Field(..., ge=0, description="Duration in minutes")
-    timezone: Optional[str] = Field(None, description="Timezone for the time slot")
+    timezone: str | None = Field(None, description="Timezone for the time slot")
 
     @field_validator("duration_minutes")
     @classmethod
@@ -122,14 +117,12 @@ class Location(TripSageModel):
     """Location information."""
 
     name: str = Field(..., description="Location name")
-    address: Optional[str] = Field(None, description="Full address")
-    city: Optional[str] = Field(None, description="City")
-    country: Optional[str] = Field(None, description="Country")
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
-    place_id: Optional[str] = Field(
-        None, description="External place ID (Google, etc.)"
-    )
+    address: str | None = Field(None, description="Full address")
+    city: str | None = Field(None, description="City")
+    country: str | None = Field(None, description="Country")
+    latitude: float | None = Field(None, description="Latitude coordinate")
+    longitude: float | None = Field(None, description="Longitude coordinate")
+    place_id: str | None = Field(None, description="External place ID (Google, etc.)")
 
 
 class ItineraryItem(TripSageModel):
@@ -138,20 +131,20 @@ class ItineraryItem(TripSageModel):
     id: str = Field(..., description="Item ID")
     item_type: ItineraryItemType = Field(..., description="Item type")
     title: str = Field(..., description="Item title")
-    description: Optional[str] = Field(None, description="Item description")
+    description: str | None = Field(None, description="Item description")
     item_date: DateType = Field(..., description="Item date")
-    time_slot: Optional[TimeSlot] = Field(None, description="Time slot")
-    location: Optional[Location] = Field(None, description="Location")
-    cost: Optional[float] = Field(None, ge=0, description="Item cost")
-    currency: Optional[str] = Field(None, description="Currency code")
-    booking_reference: Optional[str] = Field(None, description="Booking reference")
-    notes: Optional[str] = Field(None, description="Additional notes")
+    time_slot: TimeSlot | None = Field(None, description="Time slot")
+    location: Location | None = Field(None, description="Location")
+    cost: float | None = Field(None, ge=0, description="Item cost")
+    currency: str | None = Field(None, description="Currency code")
+    booking_reference: str | None = Field(None, description="Booking reference")
+    notes: str | None = Field(None, description="Additional notes")
     is_flexible: bool = Field(default=False, description="Whether timing is flexible")
     is_confirmed: bool = Field(default=False, description="Whether item is confirmed")
-    created_by: Optional[str] = Field(None, description="User ID who created the item")
+    created_by: str | None = Field(None, description="User ID who created the item")
 
     # Type-specific data stored as dict for flexibility
-    type_specific_data: Dict[str, Any] = Field(
+    type_specific_data: dict[str, Any] = Field(
         default_factory=dict, description="Type-specific data"
     )
 
@@ -163,8 +156,8 @@ class ItineraryConflict(TripSageModel):
     conflict_type: ConflictType = Field(..., description="Conflict type")
     severity: float = Field(..., ge=0, le=1, description="Conflict severity (0-1)")
     description: str = Field(..., description="Conflict description")
-    affected_items: List[str] = Field(..., description="IDs of affected items")
-    suggestions: List[str] = Field(
+    affected_items: list[str] = Field(..., description="IDs of affected items")
+    suggestions: list[str] = Field(
         default_factory=list, description="Resolution suggestions"
     )
     auto_resolvable: bool = Field(default=False, description="Whether auto-resolvable")
@@ -174,17 +167,17 @@ class ItineraryDay(TripSageModel):
     """Itinerary day model."""
 
     date: DateType = Field(..., description="Day date")
-    items: List[ItineraryItem] = Field(default_factory=list, description="Day items")
-    notes: Optional[str] = Field(None, description="Day notes")
-    budget_allocated: Optional[float] = Field(
+    items: list[ItineraryItem] = Field(default_factory=list, description="Day items")
+    notes: str | None = Field(None, description="Day notes")
+    budget_allocated: float | None = Field(
         None, ge=0, description="Budget allocated for the day"
     )
-    budget_spent: Optional[float] = Field(
+    budget_spent: float | None = Field(
         None, ge=0, description="Budget spent for the day"
     )
 
     @property
-    def sorted_items(self) -> List[ItineraryItem]:
+    def sorted_items(self) -> list[ItineraryItem]:
         """Return items sorted by time."""
 
         def get_sort_key(item: ItineraryItem) -> str:
@@ -201,32 +194,32 @@ class ItineraryShareSettings(TripSageModel):
     visibility: ItineraryVisibility = Field(
         default=ItineraryVisibility.PRIVATE, description="Visibility level"
     )
-    shared_with: List[str] = Field(
+    shared_with: list[str] = Field(
         default_factory=list, description="User IDs with access"
     )
-    editable_by: List[str] = Field(
+    editable_by: list[str] = Field(
         default_factory=list, description="User IDs with edit access"
     )
-    share_link: Optional[str] = Field(None, description="Public share link")
+    share_link: str | None = Field(None, description="Public share link")
     password_protected: bool = Field(
         default=False, description="Whether password protected"
     )
-    expires_at: Optional[datetime] = Field(None, description="Share link expiration")
+    expires_at: datetime | None = Field(None, description="Share link expiration")
 
 
 class ItineraryCreateRequest(TripSageModel):
     """Request model for creating an itinerary."""
 
     title: str = Field(..., min_length=1, max_length=200, description="Itinerary title")
-    description: Optional[str] = Field(None, description="Itinerary description")
+    description: str | None = Field(None, description="Itinerary description")
     start_date: DateType = Field(..., description="Start date")
     end_date: DateType = Field(..., description="End date")
-    destinations: List[str] = Field(default_factory=list, description="Destination IDs")
-    total_budget: Optional[float] = Field(None, ge=0, description="Total budget")
-    currency: Optional[str] = Field(None, description="Currency code")
-    tags: List[str] = Field(default_factory=list, description="Tags")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    template_id: Optional[str] = Field(None, description="Template to base on")
+    destinations: list[str] = Field(default_factory=list, description="Destination IDs")
+    total_budget: float | None = Field(None, ge=0, description="Total budget")
+    currency: str | None = Field(None, description="Currency code")
+    tags: list[str] = Field(default_factory=list, description="Tags")
+    trip_id: str | None = Field(None, description="Associated trip ID")
+    template_id: str | None = Field(None, description="Template to base on")
 
     @field_validator("end_date")
     @classmethod
@@ -240,18 +233,18 @@ class ItineraryCreateRequest(TripSageModel):
 class ItineraryUpdateRequest(TripSageModel):
     """Request model for updating an itinerary."""
 
-    title: Optional[str] = Field(
+    title: str | None = Field(
         None, min_length=1, max_length=200, description="Itinerary title"
     )
-    description: Optional[str] = Field(None, description="Itinerary description")
-    status: Optional[ItineraryStatus] = Field(None, description="Itinerary status")
-    start_date: Optional[DateType] = Field(None, description="Start date")
-    end_date: Optional[DateType] = Field(None, description="End date")
-    destinations: Optional[List[str]] = Field(None, description="Destination IDs")
-    total_budget: Optional[float] = Field(None, ge=0, description="Total budget")
-    currency: Optional[str] = Field(None, description="Currency code")
-    tags: Optional[List[str]] = Field(None, description="Tags")
-    share_settings: Optional[ItineraryShareSettings] = Field(
+    description: str | None = Field(None, description="Itinerary description")
+    status: ItineraryStatus | None = Field(None, description="Itinerary status")
+    start_date: DateType | None = Field(None, description="Start date")
+    end_date: DateType | None = Field(None, description="End date")
+    destinations: list[str] | None = Field(None, description="Destination IDs")
+    total_budget: float | None = Field(None, ge=0, description="Total budget")
+    currency: str | None = Field(None, description="Currency code")
+    tags: list[str] | None = Field(None, description="Tags")
+    share_settings: ItineraryShareSettings | None = Field(
         None, description="Share settings"
     )
 
@@ -261,22 +254,22 @@ class Itinerary(TripSageModel):
 
     id: str = Field(..., description="Itinerary ID")
     user_id: str = Field(..., description="Owner user ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
     title: str = Field(..., description="Itinerary title")
-    description: Optional[str] = Field(None, description="Itinerary description")
+    description: str | None = Field(None, description="Itinerary description")
     status: ItineraryStatus = Field(default=ItineraryStatus.DRAFT, description="Status")
 
     start_date: DateType = Field(..., description="Start date")
     end_date: DateType = Field(..., description="End date")
 
-    days: List[ItineraryDay] = Field(default_factory=list, description="Itinerary days")
-    destinations: List[str] = Field(default_factory=list, description="Destination IDs")
+    days: list[ItineraryDay] = Field(default_factory=list, description="Itinerary days")
+    destinations: list[str] = Field(default_factory=list, description="Destination IDs")
 
-    total_budget: Optional[float] = Field(None, ge=0, description="Total budget")
-    budget_spent: Optional[float] = Field(None, ge=0, description="Budget spent")
-    currency: Optional[str] = Field(None, description="Currency code")
+    total_budget: float | None = Field(None, ge=0, description="Total budget")
+    budget_spent: float | None = Field(None, ge=0, description="Budget spent")
+    currency: str | None = Field(None, description="Currency code")
 
-    tags: List[str] = Field(default_factory=list, description="Tags")
+    tags: list[str] = Field(default_factory=list, description="Tags")
     share_settings: ItineraryShareSettings = Field(
         default_factory=ItineraryShareSettings, description="Share settings"
     )
@@ -285,7 +278,7 @@ class Itinerary(TripSageModel):
     updated_at: datetime = Field(..., description="Last update timestamp")
 
     # Collaboration
-    collaborators: List[str] = Field(
+    collaborators: list[str] = Field(
         default_factory=list, description="Collaborator user IDs"
     )
     version: int = Field(
@@ -303,16 +296,16 @@ class ItineraryItemCreateRequest(TripSageModel):
 
     item_type: ItineraryItemType = Field(..., description="Item type")
     title: str = Field(..., min_length=1, max_length=200, description="Item title")
-    description: Optional[str] = Field(None, description="Item description")
+    description: str | None = Field(None, description="Item description")
     item_date: DateType = Field(..., description="Item date")
-    time_slot: Optional[TimeSlot] = Field(None, description="Time slot")
-    location: Optional[Location] = Field(None, description="Location")
-    cost: Optional[float] = Field(None, ge=0, description="Item cost")
-    currency: Optional[str] = Field(None, description="Currency code")
-    booking_reference: Optional[str] = Field(None, description="Booking reference")
-    notes: Optional[str] = Field(None, description="Additional notes")
+    time_slot: TimeSlot | None = Field(None, description="Time slot")
+    location: Location | None = Field(None, description="Location")
+    cost: float | None = Field(None, ge=0, description="Item cost")
+    currency: str | None = Field(None, description="Currency code")
+    booking_reference: str | None = Field(None, description="Booking reference")
+    notes: str | None = Field(None, description="Additional notes")
     is_flexible: bool = Field(default=False, description="Whether timing is flexible")
-    type_specific_data: Optional[Dict[str, Any]] = Field(
+    type_specific_data: dict[str, Any] | None = Field(
         None, description="Type-specific data"
     )
 
@@ -320,17 +313,17 @@ class ItineraryItemCreateRequest(TripSageModel):
 class OptimizationSettings(TripSageModel):
     """Itinerary optimization settings."""
 
-    goals: List[OptimizationGoal] = Field(..., description="Optimization goals")
+    goals: list[OptimizationGoal] = Field(..., description="Optimization goals")
     prioritize_cost: bool = Field(default=False, description="Prioritize cost savings")
     minimize_travel_time: bool = Field(default=True, description="Minimize travel time")
     include_breaks: bool = Field(default=True, description="Include breaks")
     break_duration_minutes: int = Field(default=30, ge=0, description="Break duration")
-    start_day_time: Optional[str] = Field(None, description="Preferred day start time")
-    end_day_time: Optional[str] = Field(None, description="Preferred day end time")
-    meal_preferences: Optional[Dict[str, str]] = Field(
+    start_day_time: str | None = Field(None, description="Preferred day start time")
+    end_day_time: str | None = Field(None, description="Preferred day end time")
+    meal_preferences: dict[str, str] | None = Field(
         None, description="Meal time preferences"
     )
-    max_daily_budget: Optional[float] = Field(
+    max_daily_budget: float | None = Field(
         None, ge=0, description="Maximum daily budget"
     )
 
@@ -350,9 +343,9 @@ class ItineraryOptimizeResponse(TripSageModel):
 
     original_itinerary: Itinerary = Field(..., description="Original itinerary")
     optimized_itinerary: Itinerary = Field(..., description="Optimized itinerary")
-    changes: List[Dict[str, Any]] = Field(..., description="Changes made")
+    changes: list[dict[str, Any]] = Field(..., description="Changes made")
     optimization_score: float = Field(..., ge=0, le=1, description="Optimization score")
-    estimated_savings: Optional[Dict[str, float]] = Field(
+    estimated_savings: dict[str, float] | None = Field(
         None, description="Estimated savings"
     )
 
@@ -360,24 +353,21 @@ class ItineraryOptimizeResponse(TripSageModel):
 class ItinerarySearchRequest(TripSageModel):
     """Request model for searching itineraries."""
 
-    query: Optional[str] = Field(None, description="Search query")
-    status: Optional[ItineraryStatus] = Field(None, description="Status filter")
-    start_date_from: Optional[DateType] = Field(
+    query: str | None = Field(None, description="Search query")
+    status: ItineraryStatus | None = Field(None, description="Status filter")
+    start_date_from: DateType | None = Field(
         None, description="Start date filter (from)"
     )
-    start_date_to: Optional[DateType] = Field(
-        None, description="Start date filter (to)"
-    )
-    destinations: Optional[List[str]] = Field(None, description="Destination filters")
-    tags: Optional[List[str]] = Field(None, description="Tag filters")
+    start_date_to: DateType | None = Field(None, description="Start date filter (to)")
+    destinations: list[str] | None = Field(None, description="Destination filters")
+    tags: list[str] | None = Field(None, description="Tag filters")
     shared_only: bool = Field(default=False, description="Only shared itineraries")
     limit: int = Field(default=20, ge=1, le=100, description="Result limit")
     offset: int = Field(default=0, ge=0, description="Result offset")
 
 
 class ItineraryService:
-    """
-    Comprehensive itinerary service for creation, management, and optimization.
+    """Comprehensive itinerary service for creation, management, and optimization.
 
     This service handles:
     - Complete itinerary CRUD operations
@@ -397,8 +387,7 @@ class ItineraryService:
         optimization_engine=None,
         cache_ttl: int = 1800,
     ):
-        """
-        Initialize the itinerary service.
+        """Initialize the itinerary service.
 
         Args:
             database_service: Database service for persistence
@@ -434,14 +423,13 @@ class ItineraryService:
         self.cache_ttl = cache_ttl
 
         # In-memory cache
-        self._itinerary_cache: Dict[str, tuple] = {}
-        self._conflict_cache: Dict[str, tuple] = {}
+        self._itinerary_cache: dict[str, tuple] = {}
+        self._conflict_cache: dict[str, tuple] = {}
 
     async def create_itinerary(
         self, user_id: str, create_request: ItineraryCreateRequest
     ) -> Itinerary:
-        """
-        Create a new itinerary.
+        """Create a new itinerary.
 
         Args:
             user_id: User ID
@@ -456,7 +444,7 @@ class ItineraryService:
         """
         try:
             itinerary_id = str(uuid4())
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # Create empty days for the date range
             days = []
@@ -513,13 +501,12 @@ class ItineraryService:
                     "error": str(e),
                 },
             )
-            raise ServiceError(f"Failed to create itinerary: {str(e)}") from e
+            raise ServiceError(f"Failed to create itinerary: {e!s}") from e
 
     async def get_itinerary(
         self, itinerary_id: str, user_id: str, check_access: bool = True
-    ) -> Optional[Itinerary]:
-        """
-        Get an itinerary by ID.
+    ) -> Itinerary | None:
+        """Get an itinerary by ID.
 
         Args:
             itinerary_id: Itinerary ID
@@ -569,8 +556,7 @@ class ItineraryService:
     async def update_itinerary(
         self, itinerary_id: str, user_id: str, update_request: ItineraryUpdateRequest
     ) -> Itinerary:
-        """
-        Update an existing itinerary.
+        """Update an existing itinerary.
 
         Args:
             itinerary_id: Itinerary ID
@@ -611,7 +597,7 @@ class ItineraryService:
                     "error": str(e),
                 },
             )
-            raise ServiceError(f"Failed to update itinerary: {str(e)}") from e
+            raise ServiceError(f"Failed to update itinerary: {e!s}") from e
 
     async def _validate_itinerary_access(
         self, itinerary_id: str, user_id: str, edit_access: bool = False
@@ -683,7 +669,7 @@ class ItineraryService:
         self, itinerary: Itinerary, itinerary_id: str
     ) -> None:
         """Save itinerary updates and update metadata."""
-        itinerary.updated_at = datetime.now(timezone.utc)
+        itinerary.updated_at = datetime.now(UTC)
         itinerary.version += 1
 
         # Store updated itinerary
@@ -695,8 +681,7 @@ class ItineraryService:
     async def add_item_to_itinerary(
         self, itinerary_id: str, user_id: str, item_request: ItineraryItemCreateRequest
     ) -> ItineraryItem:
-        """
-        Add an item to an itinerary.
+        """Add an item to an itinerary.
 
         Args:
             itinerary_id: Itinerary ID
@@ -761,7 +746,7 @@ class ItineraryService:
                 itinerary.budget_spent += item.cost
 
             # Update itinerary
-            itinerary.updated_at = datetime.now(timezone.utc)
+            itinerary.updated_at = datetime.now(UTC)
             itinerary.version += 1
 
             # Store updated itinerary
@@ -793,13 +778,12 @@ class ItineraryService:
                     "error": str(e),
                 },
             )
-            raise ServiceError(f"Failed to add item: {str(e)}") from e
+            raise ServiceError(f"Failed to add item: {e!s}") from e
 
     async def detect_conflicts(
         self, itinerary_id: str, user_id: str
-    ) -> List[ItineraryConflict]:
-        """
-        Detect conflicts in an itinerary.
+    ) -> list[ItineraryConflict]:
+        """Detect conflicts in an itinerary.
 
         Args:
             itinerary_id: Itinerary ID
@@ -852,8 +836,7 @@ class ItineraryService:
     async def optimize_itinerary(
         self, user_id: str, optimize_request: ItineraryOptimizeRequest
     ) -> ItineraryOptimizeResponse:
-        """
-        Optimize an itinerary based on settings.
+        """Optimize an itinerary based on settings.
 
         Args:
             user_id: User ID
@@ -934,13 +917,12 @@ class ItineraryService:
                     "error": str(e),
                 },
             )
-            raise ServiceError(f"Failed to optimize itinerary: {str(e)}") from e
+            raise ServiceError(f"Failed to optimize itinerary: {e!s}") from e
 
     async def search_itineraries(
         self, user_id: str, search_request: ItinerarySearchRequest
-    ) -> List[Itinerary]:
-        """
-        Search itineraries for a user.
+    ) -> list[Itinerary]:
+        """Search itineraries for a user.
 
         Args:
             user_id: User ID
@@ -991,8 +973,7 @@ class ItineraryService:
             return []
 
     async def delete_itinerary(self, itinerary_id: str, user_id: str) -> bool:
-        """
-        Delete an itinerary.
+        """Delete an itinerary.
 
         Args:
             itinerary_id: Itinerary ID
@@ -1038,8 +1019,8 @@ class ItineraryService:
             return False
 
     async def _apply_template(
-        self, template_id: str, days: List[ItineraryDay]
-    ) -> Optional[Dict[str, Any]]:
+        self, template_id: str, days: list[ItineraryDay]
+    ) -> dict[str, Any] | None:
         """Apply a template to itinerary days."""
         try:
             template_data = await self.db.get_itinerary_template(template_id)
@@ -1058,8 +1039,8 @@ class ItineraryService:
             return None
 
     async def _adjust_days(
-        self, current_days: List[ItineraryDay], new_start: DateType, new_end: DateType
-    ) -> List[ItineraryDay]:
+        self, current_days: list[ItineraryDay], new_start: DateType, new_end: DateType
+    ) -> list[ItineraryDay]:
         """Adjust days list for new date range."""
         # Create a dict of existing days by date
         existing_days = {day.date: day for day in current_days}
@@ -1106,7 +1087,7 @@ class ItineraryService:
 
     async def _detect_time_conflicts(
         self, itinerary: Itinerary
-    ) -> List[ItineraryConflict]:
+    ) -> list[ItineraryConflict]:
         """Detect time-based conflicts."""
         conflicts = []
 
@@ -1148,7 +1129,7 @@ class ItineraryService:
 
     async def _detect_location_conflicts(
         self, itinerary: Itinerary
-    ) -> List[ItineraryConflict]:
+    ) -> list[ItineraryConflict]:
         """Detect location-based conflicts."""
         conflicts = []
         # Implementation for location conflict detection
@@ -1156,7 +1137,7 @@ class ItineraryService:
 
     async def _detect_budget_conflicts(
         self, itinerary: Itinerary
-    ) -> List[ItineraryConflict]:
+    ) -> list[ItineraryConflict]:
         """Detect budget-related conflicts."""
         conflicts = []
 
@@ -1184,7 +1165,7 @@ class ItineraryService:
 
     async def _detect_travel_conflicts(
         self, itinerary: Itinerary
-    ) -> List[ItineraryConflict]:
+    ) -> list[ItineraryConflict]:
         """Detect impossible travel scenarios."""
         conflicts = []
         # Implementation for travel conflict detection
@@ -1195,7 +1176,7 @@ class ItineraryService:
         itinerary: Itinerary,
         settings: OptimizationSettings,
         preserve_confirmed: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Basic optimization without external engine."""
         changes = []
 
@@ -1257,7 +1238,7 @@ class ItineraryService:
 
     async def _calculate_savings(
         self, original: Itinerary, optimized: Itinerary
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Calculate estimated savings from optimization."""
         savings = {}
 
@@ -1289,7 +1270,7 @@ class ItineraryService:
         minute = minutes % 60
         return f"{hour:02d}:{minute:02d}"
 
-    def _get_cached_itinerary(self, cache_key: str) -> Optional[Itinerary]:
+    def _get_cached_itinerary(self, cache_key: str) -> Itinerary | None:
         """Get cached itinerary if still valid."""
         if cache_key in self._itinerary_cache:
             result, timestamp = self._itinerary_cache[cache_key]
@@ -1313,9 +1294,7 @@ class ItineraryService:
         if cache_key in self._itinerary_cache:
             del self._itinerary_cache[cache_key]
 
-    def _get_cached_conflicts(
-        self, cache_key: str
-    ) -> Optional[List[ItineraryConflict]]:
+    def _get_cached_conflicts(self, cache_key: str) -> list[ItineraryConflict] | None:
         """Get cached conflicts if still valid."""
         if cache_key in self._conflict_cache:
             result, timestamp = self._conflict_cache[cache_key]
@@ -1328,7 +1307,7 @@ class ItineraryService:
         return None
 
     def _cache_conflicts(
-        self, cache_key: str, conflicts: List[ItineraryConflict]
+        self, cache_key: str, conflicts: list[ItineraryConflict]
     ) -> None:
         """Cache conflicts."""
         import time
@@ -1351,8 +1330,7 @@ class ItineraryService:
 
 # Dependency function for FastAPI
 async def get_itinerary_service() -> ItineraryService:
-    """
-    Get itinerary service instance for dependency injection.
+    """Get itinerary service instance for dependency injection.
 
     Returns:
         ItineraryService instance

@@ -1,22 +1,19 @@
-"""
-Memory update node implementation for LangGraph orchestration.
+"""Memory update node implementation for LangGraph orchestration.
 
 This module handles updating persistent memory and session state with
 insights learned during conversation.
 """
 
-from typing import List
-
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
 
 class MemoryUpdateNode(BaseAgentNode):
-    """
-    Node for updating persistent memory and session state.
+    """Node for updating persistent memory and session state.
 
     This node extracts learnable insights from conversations and updates
     both the knowledge graph and session data for future reference.
@@ -40,8 +37,7 @@ class MemoryUpdateNode(BaseAgentNode):
         )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Update memory with conversation insights.
+        """Update memory with conversation insights.
 
         Args:
             state: Current travel planning state
@@ -66,9 +62,8 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return state
 
-    async def _extract_insights(self, state: TravelPlanningState) -> List[str]:
-        """
-        Extract learnable insights from conversation state.
+    async def _extract_insights(self, state: TravelPlanningState) -> list[str]:
+        """Extract learnable insights from conversation state.
 
         Args:
             state: Current conversation state
@@ -125,9 +120,8 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return insights
 
-    def _extract_search_insights(self, state: TravelPlanningState) -> List[str]:
-        """
-        Extract insights from search behavior.
+    def _extract_search_insights(self, state: TravelPlanningState) -> list[str]:
+        """Extract insights from search behavior.
 
         Args:
             state: Current conversation state
@@ -189,9 +183,8 @@ class MemoryUpdateNode(BaseAgentNode):
 
         return insights
 
-    def _extract_interaction_insights(self, state: TravelPlanningState) -> List[str]:
-        """
-        Extract insights from agent interaction patterns.
+    def _extract_interaction_insights(self, state: TravelPlanningState) -> list[str]:
+        """Extract insights from agent interaction patterns.
 
         Args:
             state: Current conversation state
@@ -230,10 +223,9 @@ class MemoryUpdateNode(BaseAgentNode):
         return insights
 
     async def _update_knowledge_graph(
-        self, state: TravelPlanningState, insights: List[str]
+        self, state: TravelPlanningState, insights: list[str]
     ) -> None:
-        """
-        Update knowledge graph with insights.
+        """Update knowledge graph with insights.
 
         Args:
             state: Current conversation state
@@ -254,11 +246,10 @@ class MemoryUpdateNode(BaseAgentNode):
             logger.info(f"Updated knowledge graph with {len(insights)} insights")
 
         except Exception as e:
-            logger.error(f"Failed to update knowledge graph: {str(e)}")
+            logger.error(f"Failed to update knowledge graph: {e!s}")
 
     async def _update_session_data(self, state: TravelPlanningState) -> None:
-        """
-        Update session data in Supabase.
+        """Update session data in Supabase.
 
         Args:
             state: Current conversation state
@@ -282,4 +273,4 @@ class MemoryUpdateNode(BaseAgentNode):
             logger.info(f"Updated session data for {session_id}")
 
         except Exception as e:
-            logger.error(f"Failed to update session data: {str(e)}")
+            logger.error(f"Failed to update session data: {e!s}")

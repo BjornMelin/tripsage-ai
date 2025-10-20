@@ -1,5 +1,4 @@
-"""
-Modern dependency injection for TripSage API.
+"""Modern dependency injection for TripSage API.
 
 This module provides clean, modern dependency injection using Annotated types
 for unified authentication across JWT (frontend) and API keys (agents).
@@ -41,8 +40,10 @@ from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
 )
-from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
-from tripsage_core.services.simple_mcp_service import mcp_manager
+from tripsage_core.services.simple_mcp_service import (
+    SimpleMCPService as MCPManager,
+    mcp_manager,
+)
 from tripsage_core.utils.session_utils import SessionMemory
 
 

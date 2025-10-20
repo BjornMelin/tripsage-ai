@@ -7,11 +7,12 @@ with structured logging support.
 import logging
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             # Log the exception
             logger.exception(
-                f"Request failed: {str(e)}",
+                f"Request failed: {e!s}",
                 extra={
                     "correlation_id": correlation_id,
                     "processing_time_ms": int(process_time * 1000),

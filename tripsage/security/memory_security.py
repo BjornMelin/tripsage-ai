@@ -8,9 +8,10 @@ import hashlib
 import json
 import time
 from collections import defaultdict
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, Set
+from typing import Any
 
 from cryptography.fernet import Fernet
 from pydantic import BaseModel, Field
@@ -19,6 +20,7 @@ from tripsage.monitoring.telemetry import get_telemetry
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -44,16 +46,16 @@ class SecurityConfig(BaseModel):
     rate_limit_burst: int = Field(default=10, description="Burst allowance")
 
     # Encryption settings
-    encryption_key: Optional[str] = Field(
+    encryption_key: str | None = Field(
         default=None, description="Base64 encoded encryption key"
     )
 
     # Access control settings
-    allowed_operations: Set[str] = Field(
+    allowed_operations: set[str] = Field(
         default={"search", "add", "update", "delete"},
         description="Allowed memory operations",
     )
-    sensitive_fields: Set[str] = Field(
+    sensitive_fields: set[str] = Field(
         default={"personal_info", "financial_data", "health_info"},
         description="Fields requiring extra protection",
     )
@@ -65,18 +67,18 @@ class AuditLog(BaseModel):
     timestamp: datetime
     user_id: str
     operation: str
-    resource_id: Optional[str] = None
+    resource_id: str | None = None
     success: bool
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    ip_address: Optional[str] = None
-    session_id: Optional[str] = None
+    error: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    ip_address: str | None = None
+    session_id: str | None = None
 
 
 class MemoryEncryption:
     """Handles encryption/decryption of memory content."""
 
-    def __init__(self, key: Optional[str] = None):
+    def __init__(self, key: str | None = None):
         """Initialize encryption with key.
 
         Args:
@@ -110,7 +112,7 @@ class MemoryEncryption:
         """
         return self.cipher.decrypt(encrypted.encode()).decode()
 
-    def encrypt_dict(self, data: Dict[str, Any], fields: Set[str]) -> Dict[str, Any]:
+    def encrypt_dict(self, data: dict[str, Any], fields: set[str]) -> dict[str, Any]:
         """Encrypt specific fields in dictionary.
 
         Args:
@@ -126,7 +128,7 @@ class MemoryEncryption:
                 result[field] = self.encrypt(result[field])
         return result
 
-    def decrypt_dict(self, data: Dict[str, Any], fields: Set[str]) -> Dict[str, Any]:
+    def decrypt_dict(self, data: dict[str, Any], fields: set[str]) -> dict[str, Any]:
         """Decrypt specific fields in dictionary.
 
         Args:
@@ -156,9 +158,9 @@ class RateLimiter:
 
     def __init__(self, config: SecurityConfig):
         self.config = config
-        self.buckets: Dict[str, Dict[str, Any]] = defaultdict(self._create_bucket)
+        self.buckets: dict[str, dict[str, Any]] = defaultdict(self._create_bucket)
 
-    def _create_bucket(self) -> Dict[str, Any]:
+    def _create_bucket(self) -> dict[str, Any]:
         """Create a new token bucket."""
         return {
             "tokens": self.config.rate_limit_burst,
@@ -231,11 +233,11 @@ class AuditLogger:
         user_id: str,
         operation: str,
         success: bool,
-        resource_id: Optional[str] = None,
-        error: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-        session_id: Optional[str] = None,
+        resource_id: str | None = None,
+        error: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        ip_address: str | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Log an audit entry.
 
@@ -253,7 +255,7 @@ class AuditLogger:
             return
 
         audit_entry = AuditLog(
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             user_id=user_id,
             operation=operation,
             resource_id=resource_id,
@@ -318,7 +320,7 @@ class AuditLogger:
 class MemorySecurity:
     """Main security service for memory operations."""
 
-    def __init__(self, config: Optional[SecurityConfig] = None):
+    def __init__(self, config: SecurityConfig | None = None):
         self.config = config or SecurityConfig()
         self.encryption = MemoryEncryption(self.config.encryption_key)
         self.rate_limiter = RateLimiter(self.config)
@@ -393,8 +395,8 @@ class MemorySecurity:
         user_id: str,
         func: Callable,
         *args,
-        ip_address: Optional[str] = None,
-        session_id: Optional[str] = None,
+        ip_address: str | None = None,
+        session_id: str | None = None,
         **kwargs,
     ) -> Any:
         """Execute operation with security checks.
@@ -465,8 +467,6 @@ class MemorySecurity:
 
 class SecurityError(Exception):
     """Security-related error."""
-
-    pass
 
 
 # Decorator for securing functions

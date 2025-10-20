@@ -6,7 +6,6 @@ searching for flights, managing saved flights, and searching for airports.
 
 import logging
 import secrets
-from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -31,6 +30,7 @@ from tripsage_core.services.business.flight_service import (
     FlightService,
     get_flight_service,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -196,9 +196,9 @@ async def delete_saved_flight(
         )
 
 
-@router.get("/saved", response_model=List[SavedFlightResponse])
+@router.get("/saved", response_model=list[SavedFlightResponse])
 async def list_saved_flights(
-    trip_id: Optional[UUID] = None,
+    trip_id: UUID | None = None,
     principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
@@ -217,7 +217,7 @@ async def list_saved_flights(
     return await flight_service.list_saved_flights(user_id, trip_id)
 
 
-@router.get("/upcoming", response_model=List[UpcomingFlightResponse])
+@router.get("/upcoming", response_model=list[UpcomingFlightResponse])
 async def get_upcoming_flights(
     limit: int = 10,
     include_trip_context: bool = True,
@@ -254,7 +254,7 @@ async def get_upcoming_flights(
         return upcoming_flights
 
     except Exception as e:
-        logger.error(f"Failed to get upcoming flights: {str(e)}")
+        logger.error(f"Failed to get upcoming flights: {e!s}")
 
         # Fallback to enhanced mock data with trip context
         from datetime import datetime, timedelta

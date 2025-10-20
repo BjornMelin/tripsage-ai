@@ -1,5 +1,4 @@
-"""
-TripSage agents module.
+"""TripSage agents module.
 
 This module provides factory functions for creating various specialized agents
 for the TripSage application.
@@ -11,15 +10,16 @@ from tripsage.agents.base import BaseAgent
 from tripsage.agents.chat import ChatAgent
 from tripsage_core.config import get_settings
 
+
 settings = get_settings()
 
 
 def create_agent(
     agent_type: str,
     service_registry=None,
-    name: Optional[str] = None,
-    model: Optional[str] = None,
-    temperature: Optional[float] = None,
+    name: str | None = None,
+    model: str | None = None,
+    temperature: float | None = None,
     **kwargs,
 ) -> BaseAgent:
     """Create an agent of the specified type.

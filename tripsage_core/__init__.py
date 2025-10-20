@@ -1,5 +1,4 @@
-"""
-TripSage Core Package.
+"""TripSage Core Package.
 
 This package contains the centralized core functionality for the TripSage application,
 including models, exceptions, and shared utilities.
@@ -32,6 +31,7 @@ from tripsage_core.models.base_core_model import (
     TripSageDomainModel,
     TripSageModel,
 )
+
 
 __all__ = [
     # Core models

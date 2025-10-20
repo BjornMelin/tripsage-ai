@@ -1,5 +1,4 @@
-"""
-Reusable trip-related fixtures for API router tests.
+"""Reusable trip-related fixtures for API router tests.
 
 This module centralizes common test data and stubs used by the trips router
 security tests, following the repository's guidance to keep fixtures DRY and
@@ -8,8 +7,8 @@ maintainable.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
-from typing import Iterator
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 

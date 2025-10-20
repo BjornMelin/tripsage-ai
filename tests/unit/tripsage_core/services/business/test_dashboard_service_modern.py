@@ -1,5 +1,4 @@
-"""
-Modern comprehensive tests for Dashboard Service - 2025 Edition.
+"""Modern comprehensive tests for Dashboard Service - 2025 Edition.
 
 This module provides comprehensive test coverage for the DashboardService
 using modern pytest patterns, async testing, and property-based testing.
@@ -24,13 +23,12 @@ Testing patterns used:
 """
 
 import asyncio
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest_asyncio
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 
 from tripsage_core.services.business.api_key_service import (
     ServiceHealthStatus,
@@ -70,16 +68,14 @@ class TestDashboardServiceModern:
         cache.keys = AsyncMock(return_value=["rate_limit:key1", "rate_limit:key2"])
 
         # Performance simulation
-        async def realistic_get_json(key: str) -> Dict[str, Any] | None:
+        async def realistic_get_json(key: str) -> dict[str, Any] | None:
             await asyncio.sleep(0.001)  # 1ms realistic cache latency
             # Mock different cache keys
             if "rate_limit:" in key:
                 return {
                     "count": 45,
                     "limit": 100,
-                    "reset_at": (
-                        datetime.now(timezone.utc) + timedelta(hours=1)
-                    ).isoformat(),
+                    "reset_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
                 }
             elif "dashboard:metrics:" in key:
                 return None  # Force fresh computation
@@ -100,12 +96,12 @@ class TestDashboardServiceModern:
         db.select = AsyncMock(return_value=[])
 
         # Performance simulation
-        async def realistic_select(table: str, **kwargs) -> List[Dict[str, Any]]:
+        async def realistic_select(table: str, **kwargs) -> list[dict[str, Any]]:
             await asyncio.sleep(0.005)  # 5ms realistic database latency
 
             if table == "api_key_usage_logs":
                 # Generate realistic usage logs
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 return [
                     {
                         "timestamp": (now - timedelta(minutes=i)).isoformat(),
@@ -144,9 +140,9 @@ class TestDashboardServiceModern:
         )
 
     @pytest_asyncio.fixture
-    async def sample_usage_logs(self) -> List[Dict[str, Any]]:
+    async def sample_usage_logs(self) -> list[dict[str, Any]]:
         """Generate sample usage logs for testing."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return [
             {
                 "timestamp": (now - timedelta(minutes=i)).isoformat(),
@@ -187,12 +183,12 @@ class TestDashboardServiceModern:
                     ServiceType.OPENAI: MagicMock(
                         status=ServiceHealthStatus.HEALTHY,
                         latency_ms=120.0,
-                        checked_at=datetime.now(timezone.utc),
+                        checked_at=datetime.now(UTC),
                     ),
                     ServiceType.WEATHER: MagicMock(
                         status=ServiceHealthStatus.DEGRADED,
                         latency_ms=300.0,
-                        checked_at=datetime.now(timezone.utc),
+                        checked_at=datetime.now(UTC),
                     ),
                 },
             ):
@@ -231,8 +227,8 @@ class TestDashboardServiceModern:
             "active_keys_count": 5,
             "unique_users_count": 20,
             "requests_per_minute": 10.0,
-            "period_start": datetime.now(timezone.utc).isoformat(),
-            "period_end": datetime.now(timezone.utc).isoformat(),
+            "period_start": datetime.now(UTC).isoformat(),
+            "period_end": datetime.now(UTC).isoformat(),
         }
 
         mock_cache_service.get_json.return_value = cached_metrics
@@ -273,7 +269,7 @@ class TestDashboardServiceModern:
         cache_data = {
             "count": 75,
             "limit": 100,
-            "reset_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+            "reset_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
         }
         mock_cache_service.get_json.return_value = cache_data
 
@@ -305,7 +301,7 @@ class TestDashboardServiceModern:
         cache_data = {
             "count": 150,
             "limit": 100,
-            "reset_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+            "reset_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
         }
         mock_cache_service.get_json.return_value = cache_data
 
@@ -392,7 +388,7 @@ class TestDashboardServiceModern:
     ):
         """Test performance with large amounts of usage data."""
         # Generate large dataset
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         large_usage_logs = [
             {
                 "timestamp": (now - timedelta(minutes=i)).isoformat(),
@@ -539,7 +535,7 @@ class TestDashboardServiceModern:
         assert alert.message == message
         assert not alert.acknowledged
         assert not alert.resolved
-        assert alert.created_at <= datetime.now(timezone.utc)
+        assert alert.created_at <= datetime.now(UTC)
         assert alert.priority_score > 0
 
     # Error handling tests
@@ -590,7 +586,7 @@ class TestDashboardServiceModern:
             {"success": "not-boolean", "latency_ms": "not-number"},
             # Some valid data mixed in
             {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "user_id": "user_1",
                 "success": True,
                 "latency_ms": 100,
@@ -616,21 +612,23 @@ class TestDashboardServiceModern:
     async def test_full_dashboard_workflow(self, dashboard_service, sample_usage_logs):
         """Test complete dashboard workflow integration."""
         # 1. Get initial dashboard data
-        with patch.object(
-            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+            ),
+            patch.object(
                 dashboard_service.api_key_service,
                 "check_all_services_health",
                 return_value={
                     ServiceType.OPENAI: MagicMock(
                         status=ServiceHealthStatus.HEALTHY,
                         latency_ms=120.0,
-                        checked_at=datetime.now(timezone.utc),
+                        checked_at=datetime.now(UTC),
                     ),
                 },
-            ):
-                dashboard_data = await dashboard_service.get_dashboard_data()
+            ),
+        ):
+            dashboard_data = await dashboard_service.get_dashboard_data()
 
         assert isinstance(dashboard_data, DashboardData)
         initial_requests = dashboard_data.metrics.total_requests
@@ -653,21 +651,23 @@ class TestDashboardServiceModern:
             assert "percentage_used" in rate_status
 
         # 4. Get updated dashboard data
-        with patch.object(
-            dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                dashboard_service, "_query_usage_logs", return_value=sample_usage_logs
+            ),
+            patch.object(
                 dashboard_service.api_key_service,
                 "check_all_services_health",
                 return_value={
                     ServiceType.OPENAI: MagicMock(
                         status=ServiceHealthStatus.HEALTHY,
                         latency_ms=120.0,
-                        checked_at=datetime.now(timezone.utc),
+                        checked_at=datetime.now(UTC),
                     ),
                 },
-            ):
-                updated_data = await dashboard_service.get_dashboard_data()
+            ),
+        ):
+            updated_data = await dashboard_service.get_dashboard_data()
 
         # Verify consistency
         assert updated_data.metrics.total_requests == initial_requests
@@ -683,17 +683,17 @@ class TestDashboardServiceModern:
                 ServiceType.OPENAI: MagicMock(
                     status=ServiceHealthStatus.HEALTHY,
                     latency_ms=100.0,
-                    checked_at=datetime.now(timezone.utc),
+                    checked_at=datetime.now(UTC),
                 ),
                 ServiceType.WEATHER: MagicMock(
                     status=ServiceHealthStatus.DEGRADED,
                     latency_ms=400.0,
-                    checked_at=datetime.now(timezone.utc),
+                    checked_at=datetime.now(UTC),
                 ),
                 ServiceType.GOOGLEMAPS: MagicMock(
                     status=ServiceHealthStatus.UNHEALTHY,
                     latency_ms=1000.0,
-                    checked_at=datetime.now(timezone.utc),
+                    checked_at=datetime.now(UTC),
                 ),
             },
         ):
@@ -726,8 +726,8 @@ class TestDashboardServiceModern:
         self, dashboard_service, mock_database_service
     ):
         """Test usage logs querying with time filtering."""
-        start_time = datetime.now(timezone.utc) - timedelta(hours=1)
-        end_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC) - timedelta(hours=1)
+        end_time = datetime.now(UTC)
 
         await dashboard_service._query_usage_logs(start_time, end_time)
 

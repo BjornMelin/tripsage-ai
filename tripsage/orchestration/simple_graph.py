@@ -1,11 +1,10 @@
-"""
-Simplified LangGraph orchestrator for TripSage AI.
+"""Simplified LangGraph orchestrator for TripSage AI.
 
 This module implements a simple, maintainable graph-based orchestration system
 using modern LangGraph patterns with create_react_agent for simplicity.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -16,12 +15,12 @@ from tripsage.orchestration.tools import get_all_tools
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class SimpleTripSageOrchestrator:
-    """
-    Simplified LangGraph orchestrator using modern create_react_agent pattern.
+    """Simplified LangGraph orchestrator using modern create_react_agent pattern.
 
     This replaces the complex multi-agent graph with a single, powerful agent
     that has access to all travel tools and can handle all travel planning tasks.
@@ -90,10 +89,9 @@ You help users plan comprehensive trips by:
 Start by greeting the user and asking how you can help with their travel planning!"""
 
     async def process_conversation(
-        self, messages: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """
-        Process a conversation using the simple agent.
+        self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
+        """Process a conversation using the simple agent.
 
         Args:
             messages: List of conversation messages
@@ -149,7 +147,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                     {
                         "role": "assistant",
                         "content": f"I apologize, but I encountered an error while "
-                        f"processing your request: {str(e)}. Please try again.",
+                        f"processing your request: {e!s}. Please try again.",
                     }
                 ],
                 "success": False,
@@ -168,10 +166,9 @@ Start by greeting the user and asking how you can help with their travel plannin
             return "unknown"
 
     async def stream_conversation(
-        self, messages: List[Dict[str, Any]], config: Optional[Dict[str, Any]] = None
+        self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
     ):
-        """
-        Stream a conversation response from the agent.
+        """Stream a conversation response from the agent.
 
         Args:
             messages: List of conversation messages
@@ -206,10 +203,10 @@ Start by greeting the user and asking how you can help with their travel plannin
             logger.error(f"Error streaming conversation: {e}")
             yield {
                 "error": str(e),
-                "messages": [{"role": "assistant", "content": f"Error: {str(e)}"}],
+                "messages": [{"role": "assistant", "content": f"Error: {e!s}"}],
             }
 
-    async def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> dict[str, Any]:
         """Perform health check on the orchestrator."""
         try:
             # Test basic agent functionality
@@ -232,7 +229,7 @@ Start by greeting the user and asking how you can help with their travel plannin
 
 
 # Global orchestrator instance
-_global_orchestrator: Optional[SimpleTripSageOrchestrator] = None
+_global_orchestrator: SimpleTripSageOrchestrator | None = None
 
 
 def get_orchestrator(service_registry=None) -> SimpleTripSageOrchestrator:

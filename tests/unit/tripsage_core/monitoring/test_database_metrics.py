@@ -1,5 +1,4 @@
-"""
-Tests for database metrics collection functionality.
+"""Tests for database metrics collection functionality.
 
 Tests cover Prometheus metrics collection, timing contexts,
 and metrics aggregation for database operations.

@@ -1,5 +1,4 @@
-"""
-Web tools for TripSage.
+"""Web tools for TripSage.
 
 This module provides wrappers and utilities for web-based operations,
 including caching for WebSearchTool from the OpenAI Agents SDK.
@@ -15,7 +14,7 @@ allowing sharing of cached web search results across multiple application instan
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage_core.utils.cache_utils import (
     CacheStats,
@@ -34,6 +33,7 @@ from tripsage_core.utils.content_utils import ContentType
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
+
 # NOTE: Temporarily using mock implementation due to missing agents dependency
 # from agents import WebSearchTool
 
@@ -47,7 +47,7 @@ class MockWebSearchTool:
 
     def __init__(
         self,
-        user_location: Optional[Any] = None,
+        user_location: Any | None = None,
         search_context_size: str = "medium",
     ):
         """Initialize the MockWebSearchTool.
@@ -115,7 +115,7 @@ class CachedWebSearchTool(WebSearchTool):
     def __init__(
         self,
         namespace: str = WEB_CACHE_NAMESPACE,
-        user_location: Optional[Any] = None,
+        user_location: Any | None = None,
         search_context_size: str = "medium",
     ):
         """Initialize the CachedWebSearchTool.
@@ -170,18 +170,14 @@ class CachedWebSearchTool(WebSearchTool):
                 cached_result = await get_cache(cache_key, namespace=self.namespace)
                 if cached_result is not None:
                     logger.info(
-                        (
-                            f"Cache hit for web search query: {query} "
-                            f"(key: {cache_key.split(':')[-1][:8]}...)"
-                        )
+                        f"Cache hit for web search query: {query} "
+                        f"(key: {cache_key.split(':')[-1][:8]}...)"
                     )
                     return cached_result
 
                 logger.info(
-                    (
-                        f"Cache miss for web search query: {query} "
-                        f"(key: {cache_key.split(':')[-1][:8]}...)"
-                    )
+                    f"Cache miss for web search query: {query} "
+                    f"(key: {cache_key.split(':')[-1][:8]}...)"
                 )
 
                 # Execute the actual search
@@ -213,7 +209,7 @@ class CachedWebSearchTool(WebSearchTool):
                 return result
 
         except Exception as e:
-            logger.error(f"Error in CachedWebSearchTool._run: {str(e)}")
+            logger.error(f"Error in CachedWebSearchTool._run: {e!s}")
             log_exception(e)
             # Return error information in the format expected by the agents SDK
             return {
@@ -223,7 +219,7 @@ class CachedWebSearchTool(WebSearchTool):
             }
 
     def _determine_content_type(
-        self, query: str, result: Optional[Dict[str, Any]] = None
+        self, query: str, result: dict[str, Any] | None = None
     ) -> ContentType:
         """Determine content type from query and results.
 
@@ -297,7 +293,7 @@ class CachedWebSearchTool(WebSearchTool):
                 await prefetch_cache_keys(prefetch_pattern, namespace=self.namespace)
         except Exception as e:
             # Don't let prefetching errors affect the main flow
-            logger.debug(f"Error prefetching related queries: {str(e)}")
+            logger.debug(f"Error prefetching related queries: {e!s}")
 
 
 async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
@@ -336,13 +332,13 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         logger.info(f"Invalidated {count} cache entries for query: {query}")
         return count
     except Exception as e:
-        logger.error(f"Error invalidating web cache for query '{query}': {str(e)}")
+        logger.error(f"Error invalidating web cache for query '{query}': {e!s}")
         return 0
 
 
 async def batch_web_search(
-    queries: List[str], skip_cache: bool = False
-) -> List[Dict[str, Any]]:
+    queries: list[str], skip_cache: bool = False
+) -> list[dict[str, Any]]:
     """Perform multiple web searches in a batch.
 
     This function optimizes multiple searches by using batch cache operations
@@ -396,14 +392,14 @@ async def batch_web_search(
 
         return final_results
     except Exception as e:
-        logger.error(f"Error in batch_web_search: {str(e)}")
+        logger.error(f"Error in batch_web_search: {e!s}")
         log_exception(e)
         return [
             {"status": "error", "error": {"message": str(e)}, "search_results": []}
         ] * len(queries)
 
 
-def web_cached(content_type: ContentType, ttl: Optional[int] = None):
+def web_cached(content_type: ContentType, ttl: int | None = None):
     """Decorator for adding web caching to any function.
 
     Args:
@@ -422,10 +418,10 @@ def web_cached(content_type: ContentType, ttl: Optional[int] = None):
 
 # Export API
 __all__ = [
+    "WEB_CACHE_NAMESPACE",
     "CachedWebSearchTool",
+    "batch_web_search",
     "get_web_cache_stats",
     "invalidate_web_cache_for_query",
-    "batch_web_search",
     "web_cached",
-    "WEB_CACHE_NAMESPACE",
 ]

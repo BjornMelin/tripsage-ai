@@ -1,5 +1,4 @@
-"""
-Comprehensive integration tests for WebSocket functionality.
+"""Comprehensive integration tests for WebSocket functionality.
 
 This module tests the complete WebSocket lifecycle including connection,
 authentication, message handling, agent status updates, broadcasting,

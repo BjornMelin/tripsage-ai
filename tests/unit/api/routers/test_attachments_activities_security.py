@@ -1,5 +1,4 @@
-"""
-Comprehensive security tests for attachments and activities router security fixes.
+"""Comprehensive security tests for attachments and activities router security fixes.
 
 This module tests the security vulnerability fixes implemented in the attachments
 and activities routers, ensuring proper trip access verification, user data isolation,
@@ -13,7 +12,7 @@ Security fixes tested:
 - Audit logging for security events
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -102,7 +101,7 @@ def sample_trip_data():
         "title": "Test Trip",
         "visibility": "private",
         "status": "planning",
-        "created_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
     }
 
 
@@ -116,7 +115,7 @@ def sample_attachment_data():
         "filename": "test-document.pdf",
         "file_type": "application/pdf",
         "file_size": 1024,
-        "upload_date": datetime.now(timezone.utc),
+        "upload_date": datetime.now(UTC),
     }
 
 

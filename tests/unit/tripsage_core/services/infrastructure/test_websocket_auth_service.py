@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core WebSocket Authentication Service.
+"""Comprehensive tests for TripSage Core WebSocket Authentication Service.
 
 This module provides comprehensive test coverage for WebSocket authentication
 functionality including JWT token validation, channel access control, rate limiting,
@@ -7,7 +6,7 @@ session management, security features, and error handling.
 """
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -117,8 +116,8 @@ class TestWebSocketAuthService:
         """Helper to create test JWT tokens."""
         payload = {
             "sub": str(user_id),
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=exp_minutes),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(minutes=exp_minutes),
+            "iat": datetime.now(UTC),
             "iss": "tripsage",
         }
         if session_id:
@@ -163,8 +162,8 @@ class TestWebSocketAuthService:
     async def test_verify_jwt_token_missing_user_id(self, auth_service):
         """Test JWT token verification with missing user ID."""
         payload = {
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
         }
         token = jwt.encode(
             payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
@@ -301,8 +300,8 @@ class TestWebSocketAuthService:
         payload = {
             "sub": str(user_id),
             "email": "test@example.com",
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
         }
         token = jwt.encode(
             payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
@@ -320,8 +319,8 @@ class TestWebSocketAuthService:
         user_id = "string_user_id"
         payload = {
             "sub": user_id,
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
         }
         token = jwt.encode(
             payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
@@ -501,7 +500,7 @@ class TestWebSocketAuthService:
         # Test token with missing iat (issued at)
         payload = {
             "sub": str(uuid4()),
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
         }
         token = jwt.encode(
             payload, "test-jwt-secret-for-testing-only", algorithm="HS256"
@@ -708,8 +707,8 @@ class TestWebSocketAuthServiceIntegration:
         """Helper to create test JWT tokens."""
         payload = {
             "sub": str(user_id),
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=exp_minutes),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(minutes=exp_minutes),
+            "iat": datetime.now(UTC),
             "iss": "tripsage",
         }
         if session_id:
@@ -930,8 +929,8 @@ class TestWebSocketAuthServiceSecurity:
         """Helper to create test JWT tokens."""
         payload = {
             "sub": str(user_id),
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=exp_minutes),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(minutes=exp_minutes),
+            "iat": datetime.now(UTC),
             "iss": "tripsage",
         }
         if session_id:
@@ -1008,8 +1007,8 @@ class TestWebSocketAuthServiceSecurity:
         """Test handling of malicious JWT payloads."""
         # Test token with no subject
         payload_no_sub = {
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
-            "iat": datetime.now(timezone.utc),
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
             "role": "admin",  # Malicious role claim
         }
         token_no_sub = jwt.encode(

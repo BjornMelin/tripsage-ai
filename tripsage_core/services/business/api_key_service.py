@@ -1,5 +1,4 @@
-"""
-API Key Service - Modern Implementation for TripSage.
+"""API Key Service - Modern Implementation for TripSage.
 
 This service provides comprehensive API key management functionality following
 2025 best practices and modern architectural patterns.
@@ -21,6 +20,7 @@ import uuid
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any, Optional
+
 
 if TYPE_CHECKING:
     from tripsage_core.config import Settings
@@ -54,6 +54,7 @@ from tripsage_core.services.business.audit_logging_service import (
     AuditOutcome,
     audit_api_key,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -241,8 +242,7 @@ class ServiceHealthCheck(TripSageModel):
 
 
 class ApiKeyService:
-    """
-    Simplified API key service for TripSage following KISS principles.
+    """Simplified API key service for TripSage following KISS principles.
 
     Provides key management, validation, and security features with clean
     dependency injection and atomic operations.
@@ -255,8 +255,7 @@ class ApiKeyService:
         settings: Optional["Settings"] = None,
         validation_timeout: int = 10,
     ):
-        """
-        Initialize the API key service with injected dependencies.
+        """Initialize the API key service with injected dependencies.
 
         Args:
             db: Database service instance (required)
@@ -292,8 +291,7 @@ class ApiKeyService:
         await self.client.aclose()
 
     def _get_service_value(self, service: ServiceType | str) -> str:
-        """
-        Get string value from service type, handling both enum and string inputs.
+        """Get string value from service type, handling both enum and string inputs.
 
         This helper method accommodates the Pydantic V2 use_enum_values=True
         optimization
@@ -308,8 +306,7 @@ class ApiKeyService:
         return service.value if hasattr(service, "value") else str(service)
 
     def _initialize_encryption(self, master_secret: str) -> None:
-        """
-        Initialize envelope encryption with 2025 enhanced security standards.
+        """Initialize envelope encryption with 2025 enhanced security standards.
 
         Uses modern cryptographic practices including:
         - PBKDF2 with 600,000 iterations (2025 NIST recommendation)
@@ -346,8 +343,7 @@ class ApiKeyService:
     async def create_api_key(
         self, user_id: str, key_data: ApiKeyCreateRequest
     ) -> ApiKeyResponse:
-        """
-        Create and store a new API key atomically.
+        """Create and store a new API key atomically.
 
         Args:
             user_id: User ID
@@ -435,8 +431,7 @@ class ApiKeyService:
             raise ServiceError(f"Failed to create API key: {e!s}") from e
 
     async def list_user_keys(self, user_id: str) -> list[ApiKeyResponse]:
-        """
-        Get all API keys for a user.
+        """Get all API keys for a user.
 
         Args:
             user_id: User ID
@@ -448,8 +443,7 @@ class ApiKeyService:
         return [self._db_result_to_response(result) for result in results]
 
     async def get_api_key(self, key_id: str, user_id: str) -> dict[str, Any] | None:
-        """
-        Get a specific API key by ID.
+        """Get a specific API key by ID.
 
         Args:
             key_id: API key ID
@@ -463,8 +457,7 @@ class ApiKeyService:
     async def get_key_for_service(
         self, user_id: str, service: ServiceType
     ) -> str | None:
-        """
-        Get decrypted API key for a specific service.
+        """Get decrypted API key for a specific service.
 
         Args:
             user_id: User ID
@@ -509,8 +502,7 @@ class ApiKeyService:
         key_value: str,
         user_id: str | None = None,
     ) -> ValidationResult:
-        """
-        Validate an API key with comprehensive retry patterns and caching.
+        """Validate an API key with comprehensive retry patterns and caching.
 
         This method implements a robust validation pipeline:
         1. Checks cache for recent validation results (5-minute TTL)
@@ -617,8 +609,7 @@ class ApiKeyService:
             )
 
     async def check_service_health(self, service: ServiceType) -> ServiceHealthCheck:
-        """
-        Check the health of an external service.
+        """Check the health of an external service.
 
         Args:
             service: The service to check
@@ -655,8 +646,7 @@ class ApiKeyService:
             )
 
     async def check_all_services_health(self) -> dict[ServiceType, ServiceHealthCheck]:
-        """
-        Check health of all supported services concurrently.
+        """Check health of all supported services concurrently.
 
         Returns:
             Dictionary of service health check results
@@ -682,8 +672,7 @@ class ApiKeyService:
         return health_status
 
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
-        """
-        Delete an API key atomically.
+        """Delete an API key atomically.
 
         Args:
             key_id: API key ID
@@ -732,8 +721,7 @@ class ApiKeyService:
         return success
 
     def _encrypt_api_key(self, key_value: str) -> str:
-        """
-        Encrypt API key using enhanced envelope encryption with 2025 security patterns.
+        """Encrypt API key using enhanced envelope encryption with 2025 security patterns.
 
         Implementation features:
         - Envelope encryption with unique data keys per operation
@@ -780,8 +768,7 @@ class ApiKeyService:
             raise ServiceError("Encryption failed - unable to secure API key") from e
 
     def _decrypt_api_key(self, encrypted_key: str) -> str:
-        """
-        Decrypt API key using enhanced envelope encryption with backwards compatibility.
+        """Decrypt API key using enhanced envelope encryption with backwards compatibility.
 
         Supports both v3 and v4 encryption formats for seamless migration.
 
@@ -835,8 +822,7 @@ class ApiKeyService:
             raise ServiceError("Decryption failed - unable to recover API key") from e
 
     async def _validate_openai_key(self, key_value: str) -> ValidationResult:
-        """
-        Validate OpenAI API key with optimized error handling.
+        """Validate OpenAI API key with optimized error handling.
 
         Args:
             key_value: The API key to validate
@@ -1228,8 +1214,7 @@ class ApiKeyService:
     def _handle_rate_limit_response(
         self, response: httpx.Response, service: ServiceType
     ) -> ValidationResult:
-        """
-        Handle rate limit responses efficiently.
+        """Handle rate limit responses efficiently.
 
         Args:
             response: HTTP response object
@@ -1255,8 +1240,7 @@ class ApiKeyService:
     def _process_openai_success_response(
         self, response: httpx.Response
     ) -> ValidationResult:
-        """
-        Process successful OpenAI API response efficiently.
+        """Process successful OpenAI API response efficiently.
 
         Args:
             response: Successful HTTP response from OpenAI
@@ -1384,8 +1368,7 @@ class ApiKeyService:
             logger.warning(f"Audit logging failed for key deletion: {e}")
 
     def _db_result_to_response(self, result: dict[str, Any]) -> ApiKeyResponse:
-        """
-        Convert database result to modern response model with optimized parsing.
+        """Convert database result to modern response model with optimized parsing.
 
         Uses efficient datetime parsing and optimized field access patterns
         for better performance with large datasets.
@@ -1433,8 +1416,7 @@ async def get_api_key_service(
     db: Annotated["DatabaseService", Depends("get_database_service")],
     cache: Annotated[Optional["CacheService"], Depends("get_cache_service")] = None,
 ) -> ApiKeyService:
-    """
-    Modern dependency injection for ApiKeyService.
+    """Modern dependency injection for ApiKeyService.
 
     Args:
         db: Database service (injected)

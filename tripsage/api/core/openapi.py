@@ -8,6 +8,7 @@ from fastapi.openapi.utils import get_openapi
 
 from tripsage.api.core.config import get_settings
 
+
 # API metadata
 settings = get_settings()
 API_TITLE = "TripSage Unified API"

@@ -1,5 +1,4 @@
-"""
-Enhanced comprehensive tests for MemoryService.
+"""Enhanced comprehensive tests for MemoryService.
 
 This module provides full test coverage for memory management operations
 including memory storage, retrieval, search, and AI-powered contextual understanding.
@@ -8,13 +7,12 @@ Includes property-based testing with Hypothesis for robust coverage.
 """
 
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.services.business.memory_service import (
@@ -33,7 +31,7 @@ class TestMemoryServiceModels:
 
     def test_memory_search_result_creation(self):
         """Test MemorySearchResult model creation."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         result = MemorySearchResult(
             id="test-id",
             memory="Test memory content",
@@ -393,7 +391,7 @@ class TestMemoryService:
                     "metadata": {},
                     "categories": ["accommodation", "preferences"],
                     "score": 0.92,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -430,7 +428,7 @@ class TestMemoryService:
                     "metadata": {},
                     "categories": [],
                     "score": 0.95,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
                 {
                     "id": "mem0_low",
@@ -438,7 +436,7 @@ class TestMemoryService:
                     "metadata": {},
                     "categories": [],
                     "score": 0.5,  # Below threshold
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
             ]
         }
@@ -465,7 +463,7 @@ class TestMemoryService:
                     "metadata": {},
                     "categories": [],
                     "score": 0.8,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -659,7 +657,7 @@ class TestMemoryService:
                     "score": 0.8,
                     "metadata": {},
                     "categories": [],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -682,7 +680,7 @@ class TestMemoryService:
                     "score": 0.8,
                     "metadata": {},
                     "categories": [],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
                 {
                     "id": "mem0_2",
@@ -690,7 +688,7 @@ class TestMemoryService:
                     "score": 0.9,
                     "metadata": {},
                     "categories": [],
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
             ]
         }
@@ -724,10 +722,8 @@ class TestMemoryService:
             filters={
                 "categories": ["preferences", "travel"],
                 "date_range": {
-                    "start": (
-                        datetime.now(timezone.utc) - timedelta(days=30)
-                    ).isoformat(),
-                    "end": datetime.now(timezone.utc).isoformat(),
+                    "start": (datetime.now(UTC) - timedelta(days=30)).isoformat(),
+                    "end": datetime.now(UTC).isoformat(),
                 },
             },
             similarity_threshold=0.8,
@@ -781,7 +777,7 @@ class TestMemoryService:
                     "metadata": {},
                     "categories": ["preferences"],
                     "score": 0.85,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -1069,7 +1065,8 @@ class TestMemoryServicePropertyBased:
 
 class TestMemoryServiceIntegration:
     """Integration-style tests for MemoryService (still using mocks but
-    testing workflows)."""
+    testing workflows).
+    """
 
     @pytest.fixture
     def integration_memory_service(self, mock_settings):
@@ -1111,7 +1108,8 @@ class TestMemoryServiceIntegration:
     @pytest.mark.asyncio
     async def test_full_memory_workflow(self, integration_memory_service):
         """Test complete memory workflow: connect -> add -> search ->
-        update -> delete."""
+        update -> delete.
+        """
         service, mock_mem0_client = integration_memory_service
         user_id = str(uuid4())
 
@@ -1152,7 +1150,7 @@ class TestMemoryServiceIntegration:
                     "metadata": {},
                     "categories": ["preferences"],
                     "score": 0.95,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -1235,7 +1233,7 @@ class TestMemoryServiceIntegration:
                     "metadata": {},
                     "categories": [],
                     "score": 0.8,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }
@@ -1268,7 +1266,7 @@ class TestMemoryServiceIntegration:
                     "metadata": {},
                     "categories": [],
                     "score": 0.8,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             ]
         }

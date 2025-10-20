@@ -5,7 +5,6 @@ chat service for clean separation of concerns.
 """
 
 import logging
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
@@ -16,6 +15,7 @@ from tripsage.api.core.dependencies import (
     get_principal_id,
 )
 from tripsage.api.schemas.chat import ChatRequest, ChatResponse
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -45,7 +45,7 @@ async def chat(
         return response
 
     except Exception as e:
-        logger.error(f"Chat request failed: {str(e)}")
+        logger.error(f"Chat request failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Chat request failed",
@@ -79,14 +79,14 @@ async def create_session(
         return session
 
     except Exception as e:
-        logger.error(f"Session creation failed: {str(e)}")
+        logger.error(f"Session creation failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session creation failed",
         ) from e
 
 
-@router.get("/sessions", response_model=List[dict])
+@router.get("/sessions", response_model=list[dict])
 async def list_sessions(
     principal: RequiredPrincipalDep,
     chat_service: ChatServiceDep,
@@ -106,7 +106,7 @@ async def list_sessions(
         return sessions
 
     except Exception as e:
-        logger.error(f"Session listing failed: {str(e)}")
+        logger.error(f"Session listing failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session listing failed",
@@ -143,14 +143,14 @@ async def get_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session retrieval failed: {str(e)}")
+        logger.error(f"Session retrieval failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session retrieval failed",
         ) from e
 
 
-@router.get("/sessions/{session_id}/messages", response_model=List[dict])
+@router.get("/sessions/{session_id}/messages", response_model=list[dict])
 async def get_session_messages(
     session_id: UUID,
     principal: RequiredPrincipalDep,
@@ -174,7 +174,7 @@ async def get_session_messages(
         return messages
 
     except Exception as e:
-        logger.error(f"Message retrieval failed: {str(e)}")
+        logger.error(f"Message retrieval failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message retrieval failed",
@@ -214,7 +214,7 @@ async def create_message(
         return message
 
     except Exception as e:
-        logger.error(f"Message creation failed: {str(e)}")
+        logger.error(f"Message creation failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message creation failed",
@@ -251,7 +251,7 @@ async def delete_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session deletion failed: {str(e)}")
+        logger.error(f"Session deletion failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session deletion failed",

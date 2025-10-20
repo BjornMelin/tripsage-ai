@@ -6,11 +6,9 @@ focus on boundary conditions, precision handling, and real-world scenarios.
 """
 
 import json
-from typing import Optional
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.models.schemas_common.geographic import (
@@ -624,7 +622,7 @@ class TestRegionEdgeCases:
     ),
 )
 @settings(max_examples=100, deadline=None)
-def test_coordinates_property_based(lat: float, lon: float, altitude: Optional[float]):
+def test_coordinates_property_based(lat: float, lon: float, altitude: float | None):
     """Test Coordinates with property-based testing."""
     try:
         coords = Coordinates(latitude=lat, longitude=lon, altitude=altitude)
@@ -660,7 +658,7 @@ def test_coordinates_property_based(lat: float, lon: float, altitude: Optional[f
 )
 @settings(max_examples=50, deadline=None)
 def test_place_property_based(
-    name: str, street: Optional[str], city: Optional[str], country: Optional[str]
+    name: str, street: str | None, city: str | None, country: str | None
 ):
     """Test Place with property-based testing."""
     try:

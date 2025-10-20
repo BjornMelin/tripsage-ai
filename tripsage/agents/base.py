@@ -1,5 +1,4 @@
-"""
-Base Agent implementation for TripSage.
+"""Base Agent implementation for TripSage.
 
 This module provides the base agent class using the OpenAI Agents SDK
 for the TripSage application. Refactored to use dependency injection
@@ -10,7 +9,9 @@ import importlib
 import inspect
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Set, Type, Union
+from collections.abc import Callable
+from typing import Any
+
 
 try:
     from agents import Agent, Runner, function_tool
@@ -28,6 +29,7 @@ from tripsage_core.exceptions.exceptions import CoreTripSageError
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 settings = get_settings()
 
@@ -42,8 +44,8 @@ class BaseAgent:
         service_registry: ServiceRegistry,
         model: str = None,
         temperature: float = None,
-        tools: Optional[List[Callable]] = None,
-        metadata: Optional[Dict[str, str]] = None,
+        tools: list[Callable] | None = None,
+        metadata: dict[str, str] | None = None,
     ):
         """Initialize the agent with dependency injection.
 
@@ -65,9 +67,9 @@ class BaseAgent:
 
         # Initialize tools
         self._tools = tools or []
-        self._registered_tools: Set[str] = set()
-        self._handoff_tools: Dict[str, Dict[str, Any]] = {}
-        self._delegation_tools: Dict[str, Dict[str, Any]] = {}
+        self._registered_tools: set[str] = set()
+        self._handoff_tools: dict[str, dict[str, Any]] = {}
+        self._delegation_tools: dict[str, dict[str, Any]] = {}
 
         # Register default tools
         self._register_default_tools()
@@ -140,8 +142,8 @@ class BaseAgent:
     def register_tool_group(
         self,
         module_name: str,
-        package: Optional[str] = None,
-        service_registry: Optional[ServiceRegistry] = None,
+        package: str | None = None,
+        service_registry: ServiceRegistry | None = None,
     ) -> int:
         """Register all tools from a module with service injection.
 
@@ -224,10 +226,10 @@ class BaseAgent:
 
     def register_handoff(
         self,
-        target_agent_class: Type["BaseAgent"],
+        target_agent_class: type["BaseAgent"],
         tool_name: str,
         description: str,
-        context_filter: Optional[List[str]] = None,
+        context_filter: list[str] | None = None,
     ) -> None:
         """Register a handoff tool for transferring control to another agent.
 
@@ -251,11 +253,11 @@ class BaseAgent:
 
     def register_delegation(
         self,
-        target_agent_class: Type["BaseAgent"],
+        target_agent_class: type["BaseAgent"],
         tool_name: str,
         description: str,
         return_key: str = "content",
-        context_filter: Optional[List[str]] = None,
+        context_filter: list[str] | None = None,
     ) -> None:
         """Register a delegation tool for using another agent as a tool.
 
@@ -281,7 +283,7 @@ class BaseAgent:
 
     def register_multiple_handoffs(
         self,
-        target_agents: Dict[str, Dict[str, Union[Type["BaseAgent"], str, List[str]]]],
+        target_agents: dict[str, dict[str, type["BaseAgent"] | str | list[str]]],
     ) -> int:
         """Register multiple handoff tools at once.
 
@@ -302,9 +304,7 @@ class BaseAgent:
 
     def register_multiple_delegations(
         self,
-        target_agents: Dict[
-            str, Dict[str, Union[Type["BaseAgent"], str, List[str], str]]
-        ],
+        target_agents: dict[str, dict[str, type["BaseAgent"] | str | list[str] | str]],
     ) -> int:
         """Register multiple delegation tools at once.
 
@@ -324,9 +324,7 @@ class BaseAgent:
             self, target_agents, service_registry=self.service_registry
         )
 
-    async def _initialize_session(
-        self, user_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def _initialize_session(self, user_id: str | None = None) -> dict[str, Any]:
         """Initialize a new session with memory data.
 
         Args:
@@ -390,8 +388,8 @@ class BaseAgent:
             log_exception(e)
 
     async def run(
-        self, user_input: str, context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, user_input: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Run the agent with user input.
 
         Args:
@@ -542,7 +540,7 @@ class BaseAgent:
                 "error_message": str(e),
             }
 
-    def get_conversation_history(self) -> List[Dict[str, Any]]:
+    def get_conversation_history(self) -> list[dict[str, Any]]:
         """Get the conversation history.
 
         Returns:
@@ -551,7 +549,7 @@ class BaseAgent:
         return self.messages_history
 
     @function_tool
-    async def echo(self, text: str) -> Dict[str, str]:
+    async def echo(self, text: str) -> dict[str, str]:
         """Echo the input back to the user.
 
         Args:

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Unified Database Performance Benchmark for TripSage.
+"""Unified Database Performance Benchmark for TripSage.
 
 Simple, focused benchmark that validates core optimization claims:
 - 3x general query performance improvement
@@ -22,7 +21,9 @@ from typing import Any
 
 import click
 from collectors import MetricsCollector, ReportGenerator
+
 from config import BenchmarkConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -481,7 +482,7 @@ def full_suite(output_dir: str, timeout: int):
                 click.echo("⚠️  Some optimization claims were not met.")
                 return 1
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             click.echo(f"❌ Benchmark suite timed out after {timeout} seconds")
             return 1
         except Exception as e:

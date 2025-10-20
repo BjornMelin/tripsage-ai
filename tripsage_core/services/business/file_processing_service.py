@@ -1,5 +1,4 @@
-"""
-File processing service for comprehensive file management operations.
+"""File processing service for comprehensive file management operations.
 
 This service consolidates file-related business logic including file upload,
 validation, storage, metadata extraction, security scanning, and AI analysis.
@@ -11,27 +10,22 @@ import asyncio
 import hashlib
 import logging
 import mimetypes
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field
 
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -82,13 +76,13 @@ class FileValidationResult(TripSageModel):
     """File validation result model."""
 
     is_valid: bool = Field(..., description="Whether file passed validation")
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         None, description="Error message if validation failed"
     )
     file_size: int = Field(..., description="File size in bytes")
-    detected_mime_type: Optional[str] = Field(None, description="Detected MIME type")
-    file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
-    security_warnings: List[str] = Field(
+    detected_mime_type: str | None = Field(None, description="Detected MIME type")
+    file_hash: str | None = Field(None, description="SHA256 hash of file content")
+    security_warnings: list[str] = Field(
         default_factory=list, description="Security warnings"
     )
 
@@ -96,48 +90,46 @@ class FileValidationResult(TripSageModel):
 class FileMetadata(TripSageModel):
     """File metadata model."""
 
-    dimensions: Optional[Dict[str, int]] = Field(
+    dimensions: dict[str, int] | None = Field(
         None, description="Image/video dimensions"
     )
-    duration: Optional[float] = Field(
-        None, description="Audio/video duration in seconds"
-    )
-    page_count: Optional[int] = Field(None, description="Document page count")
-    word_count: Optional[int] = Field(None, description="Text word count")
-    character_count: Optional[int] = Field(None, description="Text character count")
-    encoding: Optional[str] = Field(None, description="Text encoding")
-    creation_date: Optional[datetime] = Field(None, description="File creation date")
-    modification_date: Optional[datetime] = Field(
+    duration: float | None = Field(None, description="Audio/video duration in seconds")
+    page_count: int | None = Field(None, description="Document page count")
+    word_count: int | None = Field(None, description="Text word count")
+    character_count: int | None = Field(None, description="Text character count")
+    encoding: str | None = Field(None, description="Text encoding")
+    creation_date: datetime | None = Field(None, description="File creation date")
+    modification_date: datetime | None = Field(
         None, description="File modification date"
     )
-    author: Optional[str] = Field(None, description="Document author")
-    title: Optional[str] = Field(None, description="Document title")
-    keywords: List[str] = Field(default_factory=list, description="Extracted keywords")
-    language: Optional[str] = Field(None, description="Detected language")
+    author: str | None = Field(None, description="Document author")
+    title: str | None = Field(None, description="Document title")
+    keywords: list[str] = Field(default_factory=list, description="Extracted keywords")
+    language: str | None = Field(None, description="Detected language")
 
 
 class FileAnalysisResult(TripSageModel):
     """AI analysis result for file content."""
 
-    content_summary: Optional[str] = Field(
+    content_summary: str | None = Field(
         None, description="AI-generated content summary"
     )
-    extracted_text: Optional[str] = Field(None, description="Extracted text content")
-    entities: List[str] = Field(default_factory=list, description="Detected entities")
-    categories: List[str] = Field(
+    extracted_text: str | None = Field(None, description="Extracted text content")
+    entities: list[str] = Field(default_factory=list, description="Detected entities")
+    categories: list[str] = Field(
         default_factory=list, description="Content categories"
     )
-    sentiment: Optional[float] = Field(
+    sentiment: float | None = Field(
         None, ge=-1, le=1, description="Sentiment score (-1 to 1)"
     )
-    confidence_score: Optional[float] = Field(
+    confidence_score: float | None = Field(
         None, ge=0, le=1, description="Analysis confidence"
     )
-    language_detected: Optional[str] = Field(None, description="Detected language")
+    language_detected: str | None = Field(None, description="Detected language")
     travel_related: bool = Field(
         default=False, description="Whether content is travel-related"
     )
-    travel_context: Optional[Dict[str, Any]] = Field(
+    travel_context: dict[str, Any] | None = Field(
         None, description="Travel-specific context"
     )
 
@@ -147,7 +139,7 @@ class ProcessedFile(TripSageModel):
 
     id: str = Field(..., description="File ID")
     user_id: str = Field(..., description="Owner user ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
 
     original_filename: str = Field(..., description="Original filename")
     stored_filename: str = Field(..., description="Storage filename")
@@ -158,35 +150,33 @@ class ProcessedFile(TripSageModel):
 
     storage_provider: StorageProvider = Field(..., description="Storage provider")
     storage_path: str = Field(..., description="Storage path")
-    storage_url: Optional[str] = Field(None, description="Storage URL")
+    storage_url: str | None = Field(None, description="Storage URL")
 
     processing_status: ProcessingStatus = Field(..., description="Processing status")
     upload_timestamp: datetime = Field(..., description="Upload timestamp")
-    processed_timestamp: Optional[datetime] = Field(
+    processed_timestamp: datetime | None = Field(
         None, description="Processing completion timestamp"
     )
 
-    metadata: Optional[FileMetadata] = Field(None, description="File metadata")
-    analysis_result: Optional[FileAnalysisResult] = Field(
+    metadata: FileMetadata | None = Field(None, description="File metadata")
+    analysis_result: FileAnalysisResult | None = Field(
         None, description="AI analysis result"
     )
 
     visibility: FileVisibility = Field(
         default=FileVisibility.PRIVATE, description="File visibility"
     )
-    shared_with: List[str] = Field(
+    shared_with: list[str] = Field(
         default_factory=list, description="User IDs with access"
     )
-    tags: List[str] = Field(default_factory=list, description="File tags")
+    tags: list[str] = Field(default_factory=list, description="File tags")
 
     version: int = Field(default=1, description="File version")
-    parent_file_id: Optional[str] = Field(
-        None, description="Parent file ID for versions"
-    )
+    parent_file_id: str | None = Field(None, description="Parent file ID for versions")
 
     # Usage tracking
     download_count: int = Field(default=0, description="Download count")
-    last_accessed: Optional[datetime] = Field(None, description="Last access timestamp")
+    last_accessed: datetime | None = Field(None, description="Last access timestamp")
 
 
 class FileUploadRequest(TripSageModel):
@@ -194,8 +184,8 @@ class FileUploadRequest(TripSageModel):
 
     filename: str = Field(..., description="Original filename")
     content: bytes = Field(..., description="File content")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    tags: List[str] = Field(default_factory=list, description="File tags")
+    trip_id: str | None = Field(None, description="Associated trip ID")
+    tags: list[str] = Field(default_factory=list, description="File tags")
     visibility: FileVisibility = Field(
         default=FileVisibility.PRIVATE, description="File visibility"
     )
@@ -207,8 +197,8 @@ class FileUploadRequest(TripSageModel):
 class FileBatchUploadRequest(TripSageModel):
     """Batch file upload request model."""
 
-    files: List[FileUploadRequest] = Field(..., description="Files to upload")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    files: list[FileUploadRequest] = Field(..., description="Files to upload")
+    trip_id: str | None = Field(None, description="Associated trip ID")
     max_total_size: int = Field(
         default=50 * 1024 * 1024, description="Maximum total size in bytes"
     )
@@ -217,14 +207,14 @@ class FileBatchUploadRequest(TripSageModel):
 class FileSearchRequest(TripSageModel):
     """File search request model."""
 
-    query: Optional[str] = Field(None, description="Search query")
-    file_types: Optional[List[FileType]] = Field(None, description="File type filters")
-    trip_id: Optional[str] = Field(None, description="Trip ID filter")
-    tags: Optional[List[str]] = Field(None, description="Tag filters")
-    date_from: Optional[datetime] = Field(None, description="Date range start")
-    date_to: Optional[datetime] = Field(None, description="Date range end")
-    min_size: Optional[int] = Field(None, description="Minimum file size")
-    max_size: Optional[int] = Field(None, description="Maximum file size")
+    query: str | None = Field(None, description="Search query")
+    file_types: list[FileType] | None = Field(None, description="File type filters")
+    trip_id: str | None = Field(None, description="Trip ID filter")
+    tags: list[str] | None = Field(None, description="Tag filters")
+    date_from: datetime | None = Field(None, description="Date range start")
+    date_to: datetime | None = Field(None, description="Date range end")
+    min_size: int | None = Field(None, description="Minimum file size")
+    max_size: int | None = Field(None, description="Maximum file size")
     shared_only: bool = Field(default=False, description="Only shared files")
     limit: int = Field(default=20, ge=1, le=100, description="Result limit")
     offset: int = Field(default=0, ge=0, description="Result offset")
@@ -235,15 +225,14 @@ class FileUsageStats(TripSageModel):
 
     total_files: int = Field(..., description="Total number of files")
     total_size: int = Field(..., description="Total storage used in bytes")
-    files_by_type: Dict[str, int] = Field(..., description="File count by type")
-    storage_by_type: Dict[str, int] = Field(..., description="Storage used by type")
+    files_by_type: dict[str, int] = Field(..., description="File count by type")
+    storage_by_type: dict[str, int] = Field(..., description="Storage used by type")
     recent_uploads: int = Field(..., description="Files uploaded in last 7 days")
-    most_accessed: List[str] = Field(..., description="Most accessed file IDs")
+    most_accessed: list[str] = Field(..., description="Most accessed file IDs")
 
 
 class FileProcessingService:
-    """
-    Comprehensive file processing service for upload, storage, and analysis.
+    """Comprehensive file processing service for upload, storage, and analysis.
 
     This service handles:
     - File upload and validation with security checks
@@ -267,8 +256,7 @@ class FileProcessingService:
         max_file_size: int = 10 * 1024 * 1024,
         max_session_size: int = 50 * 1024 * 1024,
     ):
-        """
-        Initialize the file processing service.
+        """Initialize the file processing service.
 
         Args:
             database_service: Database service for persistence
@@ -394,8 +382,7 @@ class FileProcessingService:
     async def upload_file(
         self, user_id: str, upload_request: FileUploadRequest
     ) -> ProcessedFile:
-        """
-        Upload and process a single file.
+        """Upload and process a single file.
 
         Args:
             user_id: User ID
@@ -472,7 +459,7 @@ class FileProcessingService:
                 storage_path=storage_result["path"],
                 storage_url=storage_result.get("url"),
                 processing_status=ProcessingStatus.PROCESSING,
-                upload_timestamp=datetime.now(timezone.utc),
+                upload_timestamp=datetime.now(UTC),
                 metadata=metadata,
                 visibility=upload_request.visibility,
                 tags=upload_request.tags,
@@ -487,7 +474,7 @@ class FileProcessingService:
             else:
                 # Mark as completed if no analysis needed
                 processed_file.processing_status = ProcessingStatus.COMPLETED
-                processed_file.processed_timestamp = datetime.now(timezone.utc)
+                processed_file.processed_timestamp = datetime.now(UTC)
                 await self._update_file_record(processed_file)
 
             logger.info(
@@ -513,13 +500,12 @@ class FileProcessingService:
                     "error": str(e),
                 },
             )
-            raise ServiceError(f"File upload failed: {str(e)}") from e
+            raise ServiceError(f"File upload failed: {e!s}") from e
 
     async def upload_batch(
         self, user_id: str, batch_request: FileBatchUploadRequest
-    ) -> List[ProcessedFile]:
-        """
-        Upload multiple files in batch.
+    ) -> list[ProcessedFile]:
+        """Upload multiple files in batch.
 
         Args:
             user_id: User ID
@@ -558,9 +544,7 @@ class FileProcessingService:
 
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
-                    errors.append(
-                        f"File {batch_request.files[i].filename}: {str(result)}"
-                    )
+                    errors.append(f"File {batch_request.files[i].filename}: {result!s}")
                 else:
                     processed_files.append(result)
 
@@ -585,13 +569,12 @@ class FileProcessingService:
             logger.error(
                 "Batch upload failed", extra={"user_id": user_id, "error": str(e)}
             )
-            raise ServiceError(f"Batch upload failed: {str(e)}") from e
+            raise ServiceError(f"Batch upload failed: {e!s}") from e
 
     async def get_file(
         self, file_id: str, user_id: str, check_access: bool = True
-    ) -> Optional[ProcessedFile]:
-        """
-        Get file information by ID.
+    ) -> ProcessedFile | None:
+        """Get file information by ID.
 
         Args:
             file_id: File ID
@@ -615,7 +598,7 @@ class FileProcessingService:
                 raise PermissionError("Access denied to file")
 
             # Update last accessed timestamp
-            processed_file.last_accessed = datetime.now(timezone.utc)
+            processed_file.last_accessed = datetime.now(UTC)
             await self._update_file_record(processed_file)
 
             return processed_file
@@ -629,9 +612,8 @@ class FileProcessingService:
             )
             return None
 
-    async def get_file_content(self, file_id: str, user_id: str) -> Optional[bytes]:
-        """
-        Get file content by ID.
+    async def get_file_content(self, file_id: str, user_id: str) -> bytes | None:
+        """Get file content by ID.
 
         Args:
             file_id: File ID
@@ -674,9 +656,8 @@ class FileProcessingService:
 
     async def search_files(
         self, user_id: str, search_request: FileSearchRequest
-    ) -> List[ProcessedFile]:
-        """
-        Search files for a user.
+    ) -> list[ProcessedFile]:
+        """Search files for a user.
 
         Args:
             user_id: User ID
@@ -732,8 +713,7 @@ class FileProcessingService:
             return []
 
     async def delete_file(self, file_id: str, user_id: str) -> bool:
-        """
-        Delete a file and its content.
+        """Delete a file and its content.
 
         Args:
             file_id: File ID
@@ -781,8 +761,7 @@ class FileProcessingService:
             return False
 
     async def get_usage_stats(self, user_id: str) -> FileUsageStats:
-        """
-        Get file usage statistics for a user.
+        """Get file usage statistics for a user.
 
         Args:
             user_id: User ID
@@ -909,7 +888,7 @@ class FileProcessingService:
 
     def _validate_file_format(
         self, content: bytes, mime_type: str
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate file format consistency."""
         if mime_type.startswith("image/"):
             return self._validate_image_format(content, mime_type)
@@ -922,7 +901,7 @@ class FileProcessingService:
 
     def _validate_image_format(
         self, content: bytes, mime_type: str
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """Validate image format."""
         if mime_type == "image/jpeg" and not content.startswith(b"\xff\xd8\xff"):
             return False, "Invalid JPEG header"
@@ -935,7 +914,7 @@ class FileProcessingService:
 
         return True, None
 
-    def _validate_pdf_format(self, content: bytes) -> Tuple[bool, Optional[str]]:
+    def _validate_pdf_format(self, content: bytes) -> tuple[bool, str | None]:
         """Validate PDF format."""
         if not content.startswith(b"%PDF-"):
             return False, "Invalid PDF header"
@@ -945,7 +924,7 @@ class FileProcessingService:
 
         return True, None
 
-    def _validate_text_format(self, content: bytes) -> Tuple[bool, Optional[str]]:
+    def _validate_text_format(self, content: bytes) -> tuple[bool, str | None]:
         """Validate text format."""
         try:
             content.decode("utf-8")
@@ -977,7 +956,7 @@ class FileProcessingService:
 
     async def _check_duplicate(
         self, user_id: str, file_hash: str
-    ) -> Optional[ProcessedFile]:
+    ) -> ProcessedFile | None:
         """Check for duplicate files by hash."""
         try:
             duplicate_data = await self.db.get_file_by_hash(user_id, file_hash)
@@ -1000,7 +979,7 @@ class FileProcessingService:
         new_file.trip_id = upload_request.trip_id
         new_file.tags = upload_request.tags
         new_file.visibility = upload_request.visibility
-        new_file.upload_timestamp = datetime.now(timezone.utc)
+        new_file.upload_timestamp = datetime.now(UTC)
         new_file.parent_file_id = existing_file.id
 
         await self._store_file_record(new_file)
@@ -1008,7 +987,7 @@ class FileProcessingService:
 
     async def _store_file(
         self, file_id: str, user_id: str, filename: str, content: bytes
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Store file content to storage provider."""
         if self.storage_service:
             # Use external storage service
@@ -1047,7 +1026,7 @@ class FileProcessingService:
 
         try:
             # Basic file info
-            metadata.creation_date = datetime.now(timezone.utc)
+            metadata.creation_date = datetime.now(UTC)
 
             # Type-specific metadata extraction
             if mime_type.startswith("text/"):
@@ -1108,7 +1087,7 @@ class FileProcessingService:
             # Update file with analysis results
             processed_file.analysis_result = FileAnalysisResult(**analysis_result)
             processed_file.processing_status = ProcessingStatus.COMPLETED
-            processed_file.processed_timestamp = datetime.now(timezone.utc)
+            processed_file.processed_timestamp = datetime.now(UTC)
 
             await self._update_file_record(processed_file)
 
@@ -1174,8 +1153,7 @@ class FileProcessingService:
 
 # Dependency function for FastAPI
 async def get_file_processing_service() -> FileProcessingService:
-    """
-    Get file processing service instance for dependency injection.
+    """Get file processing service instance for dependency injection.
 
     Returns:
         FileProcessingService instance

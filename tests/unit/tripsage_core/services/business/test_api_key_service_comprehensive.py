@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for ApiKeyService - working version with proper mocks.
+"""Comprehensive tests for ApiKeyService - working version with proper mocks.
 
 This module provides comprehensive test coverage that actually works with
 the current ApiKeyService implementation, using proper mocking and
@@ -8,12 +7,11 @@ modern testing patterns.
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 
 from tripsage_core.services.business.api_key_service import (
     ApiKeyCreateRequest,
@@ -23,6 +21,7 @@ from tripsage_core.services.business.api_key_service import (
     ValidationResult,
     ValidationStatus,
 )
+
 
 # Test data strategies
 service_types = st.sampled_from(list(ServiceType))
@@ -60,7 +59,7 @@ class TestApiKeyServiceComprehensive:
     def mock_cache(self):
         """Create mock cache service."""
         # Return None for cache to avoid caching issues in tests
-        return None
+        return
 
     @pytest.fixture
     def api_service(self, mock_db, mock_cache):
@@ -85,7 +84,6 @@ class TestApiKeyServiceComprehensive:
         self, api_service, mock_db, sample_create_request
     ):
         """Test successful API key creation."""
-        pass
 
     @pytest.mark.asyncio
     async def test_list_user_keys(self, api_service, mock_db):
@@ -101,11 +99,11 @@ class TestApiKeyServiceComprehensive:
                 "service": "openai",
                 "description": "Test key 1",
                 "is_valid": True,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
                 "expires_at": None,
                 "last_used": None,
-                "last_validated": datetime.now(timezone.utc).isoformat(),
+                "last_validated": datetime.now(UTC).isoformat(),
                 "usage_count": 5,
             }
         ]
@@ -148,7 +146,7 @@ class TestApiKeyServiceComprehensive:
         service = ServiceType.OPENAI
 
         # Mock expired key
-        expired_time = datetime.now(timezone.utc) - timedelta(days=1)
+        expired_time = datetime.now(UTC) - timedelta(days=1)
         mock_db_result = {
             "expires_at": expired_time.isoformat(),
             "is_valid": True,
@@ -214,7 +212,7 @@ class TestApiKeyServiceComprehensive:
     async def test_validate_api_key_network_error(self, api_service):
         """Test API key validation with network error."""
         with patch("httpx.AsyncClient.get") as mock_get:
-            mock_get.side_effect = asyncio.TimeoutError("Network timeout")
+            mock_get.side_effect = TimeoutError("Network timeout")
 
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test_key"
@@ -350,7 +348,6 @@ class TestApiKeyServiceComprehensive:
         self, api_service, mock_db, service, key_name
     ):
         """Property-based test for key creation."""
-        pass
 
     @given(api_key=valid_api_keys)
     @pytest.mark.asyncio

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Deploy Supabase Extensions and Automation
+"""Deploy Supabase Extensions and Automation
 Applies all extension configurations and sets up automation features.
 """
 
@@ -12,6 +11,7 @@ from pathlib import Path
 import asyncpg
 from rich.console import Console
 from rich.panel import Panel
+
 
 console = Console()
 
@@ -39,7 +39,7 @@ class ExtensionDeployer:
     async def execute_sql_file(self, file_path: Path, description: str = None) -> bool:
         """Execute SQL file."""
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 sql_content = f.read()
 
             console.print(f"📝 Executing: {description or file_path.name}")

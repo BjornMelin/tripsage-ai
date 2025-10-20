@@ -6,7 +6,7 @@ tags, preferences, and detailed budget breakdown.
 """
 
 from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import Field, field_validator, model_validator
@@ -52,19 +52,19 @@ class TripPreferences(TripSageModel):
     destination_flexibility: bool = Field(
         False, description="Whether destination is flexible"
     )
-    accommodation_preferences: Dict[str, Any] = Field(
+    accommodation_preferences: dict[str, Any] = Field(
         default_factory=dict, description="Accommodation preferences"
     )
-    transportation_preferences: Dict[str, Any] = Field(
+    transportation_preferences: dict[str, Any] = Field(
         default_factory=dict, description="Transportation preferences"
     )
-    activity_preferences: List[str] = Field(
+    activity_preferences: list[str] = Field(
         default_factory=list, description="Activity preferences"
     )
-    dietary_restrictions: List[str] = Field(
+    dietary_restrictions: list[str] = Field(
         default_factory=list, description="Dietary restrictions"
     )
-    accessibility_needs: List[str] = Field(
+    accessibility_needs: list[str] = Field(
         default_factory=list, description="Accessibility requirements"
     )
 
@@ -82,7 +82,7 @@ class Trip(TripSageModel):
 
     # Core Trip Information
     title: str = Field(..., min_length=1, max_length=200, description="Trip title")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, max_length=2000, description="Trip description"
     )
     start_date: date = Field(..., description="Trip start date")
@@ -106,14 +106,14 @@ class Trip(TripSageModel):
         default=TripVisibility.PRIVATE,
         description="Trip visibility (private/shared/public)",
     )
-    tags: List[str] = Field(default_factory=list, max_items=20, description="Trip tags")
+    tags: list[str] = Field(default_factory=list, max_items=20, description="Trip tags")
     preferences_extended: TripPreferences = Field(
         default_factory=TripPreferences, description="Extended preferences"
     )
 
     # Additional metadata
-    notes: List[Dict[str, Any]] = Field(default_factory=list, description="Trip notes")
-    search_metadata: Dict[str, Any] = Field(
+    notes: list[dict[str, Any]] = Field(default_factory=list, description="Trip notes")
+    search_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Search and discovery metadata"
     )
 
@@ -134,7 +134,7 @@ class Trip(TripSageModel):
 
     @field_validator("tags")
     @classmethod
-    def validate_tags(cls, v: List[str]) -> List[str]:
+    def validate_tags(cls, v: list[str]) -> list[str]:
         """Validate and clean trip tags."""
         # Remove duplicates and empty strings
         cleaned = list(set(tag.strip() for tag in v if tag.strip()))
@@ -262,8 +262,8 @@ class Trip(TripSageModel):
 
 # Export the models
 __all__ = [
-    "Trip",
-    "EnhancedBudget",
     "BudgetBreakdown",
+    "EnhancedBudget",
+    "Trip",
     "TripPreferences",
 ]

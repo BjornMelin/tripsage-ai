@@ -1,5 +1,4 @@
-"""
-Direct HTTP client for Duffel API integration with TripSage Core.
+"""Direct HTTP client for Duffel API integration with TripSage Core.
 
 This module provides a direct HTTP client for the Duffel API, replacing the
 discontinued Python SDK. It implements proper error handling, retry logic,
@@ -9,7 +8,7 @@ rate limiting, and timeout handling integrated with TripSage Core.
 import asyncio
 import logging
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 from urllib.parse import urljoin
 
 import httpx
@@ -18,11 +17,10 @@ from pydantic import ValidationError
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
     CoreServiceError,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +31,8 @@ class DuffelAPIError(CoreAPIError):
     def __init__(
         self,
         message: str,
-        status_code: Optional[int] = None,
-        response_data: Optional[Dict] = None,
+        status_code: int | None = None,
+        response_data: dict | None = None,
     ):
         super().__init__(
             message=message,
@@ -50,7 +48,7 @@ class DuffelAPIError(CoreAPIError):
 class DuffelRateLimitError(CoreRateLimitError):
     """Exception raised when rate limit is exceeded."""
 
-    def __init__(self, message: str, retry_after: Optional[int] = None):
+    def __init__(self, message: str, retry_after: int | None = None):
         super().__init__(
             message=message,
             code="DUFFEL_RATE_LIMIT_EXCEEDED",
@@ -60,8 +58,7 @@ class DuffelRateLimitError(CoreRateLimitError):
 
 
 class DuffelHTTPClient:
-    """
-    Direct HTTP client for Duffel API with Core integration.
+    """Direct HTTP client for Duffel API with Core integration.
 
     This client provides direct HTTP API access to Duffel services, implementing:
     - Comprehensive error handling and retry logic
@@ -73,16 +70,15 @@ class DuffelHTTPClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        settings: Optional[Settings] = None,
+        api_key: str | None = None,
+        settings: Settings | None = None,
         base_url: str = "https://api.duffel.com",
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_backoff: float = 1.0,
         max_connections: int = 10,
     ):
-        """
-        Initialize the Duffel HTTP client.
+        """Initialize the Duffel HTTP client.
 
         Args:
             api_key: Duffel API key. If not provided, will use from settings.
@@ -94,7 +90,7 @@ class DuffelHTTPClient:
             max_connections: Maximum number of concurrent connections.
         """
         self.settings = settings or get_settings()
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
         self._connected = False
 
         # Use provided API key or get from core settings
@@ -144,7 +140,7 @@ class DuffelHTTPClient:
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Failed to connect to Duffel API: {str(e)}",
+                message=f"Failed to connect to Duffel API: {e!s}",
                 code="CONNECTION_FAILED",
                 service="DuffelHTTPClient",
                 details={"error": str(e)},
@@ -169,7 +165,7 @@ class DuffelHTTPClient:
         if not self._connected:
             await self.connect()
 
-    def _get_default_headers(self) -> Dict[str, str]:
+    def _get_default_headers(self) -> dict[str, str]:
         """Get default headers for Duffel API requests."""
         return {
             "Authorization": f"Bearer {self.api_key}",
@@ -207,12 +203,11 @@ class DuffelHTTPClient:
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict] = None,
-        params: Optional[Dict] = None,
-        correlation_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """
-        Make an HTTP request to the Duffel API with retry logic.
+        data: dict | None = None,
+        params: dict | None = None,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Make an HTTP request to the Duffel API with retry logic.
 
         Args:
             method: HTTP method (GET, POST, etc.)
@@ -261,11 +256,10 @@ class DuffelHTTPClient:
                         await asyncio.sleep(retry_after)
                         retry_count += 1
                         continue
-                    else:
-                        raise DuffelRateLimitError(
-                            "Rate limit exceeded and max retries reached",
-                            retry_after=retry_after,
-                        )
+                    raise DuffelRateLimitError(
+                        "Rate limit exceeded and max retries reached",
+                        retry_after=retry_after,
+                    )
 
                 # Handle other client/server errors
                 if response.status_code >= 400:
@@ -296,9 +290,7 @@ class DuffelHTTPClient:
                     response_data = response.json()
                     return response_data
                 except Exception as e:
-                    raise DuffelAPIError(
-                        f"Failed to parse response JSON: {str(e)}"
-                    ) from e
+                    raise DuffelAPIError(f"Failed to parse response JSON: {e!s}") from e
 
             except (
                 httpx.TimeoutException,
@@ -331,12 +323,11 @@ class DuffelHTTPClient:
         # If we get here, we've exhausted retries
         raise DuffelAPIError(
             f"Request failed after {self.max_retries + 1} attempts. "
-            f"Last error: {str(last_exception)}"
+            f"Last error: {last_exception!s}"
         )
 
-    async def search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Search for flights using the Duffel API.
+    async def search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
+        """Search for flights using the Duffel API.
 
         Args:
             search_params: Flight search parameters
@@ -359,11 +350,10 @@ class DuffelHTTPClient:
             return response_data
 
         except ValidationError as e:
-            raise DuffelAPIError(f"Invalid response format: {str(e)}") from e
+            raise DuffelAPIError(f"Invalid response format: {e!s}") from e
 
-    async def get_aircraft(self, aircraft_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get aircraft information by ID.
+    async def get_aircraft(self, aircraft_id: str) -> dict[str, Any] | None:
+        """Get aircraft information by ID.
 
         Args:
             aircraft_id: Duffel aircraft ID
@@ -383,9 +373,8 @@ class DuffelHTTPClient:
                 return None
             raise
 
-    async def list_aircraft(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """
-        List available aircraft.
+    async def list_aircraft(self, limit: int = 50) -> list[dict[str, Any]]:
+        """List available aircraft.
 
         Args:
             limit: Maximum number of aircraft to return
@@ -399,9 +388,8 @@ class DuffelHTTPClient:
 
         return response_data.get("data", [])
 
-    async def get_airports(self, query: str) -> List[Dict[str, Any]]:
-        """
-        Search for airports by code or name.
+    async def get_airports(self, query: str) -> list[dict[str, Any]]:
+        """Search for airports by code or name.
 
         Note: This is a placeholder implementation since Duffel doesn't have
         a dedicated airports endpoint.
@@ -421,8 +409,7 @@ class DuffelHTTPClient:
         return []
 
     async def health_check(self) -> bool:
-        """
-        Check if the Duffel API is accessible.
+        """Check if the Duffel API is accessible.
 
         Returns:
             True if API is accessible, False otherwise
@@ -450,12 +437,11 @@ class DuffelHTTPClient:
 
 
 # Global service instance
-_duffel_client: Optional[DuffelHTTPClient] = None
+_duffel_client: DuffelHTTPClient | None = None
 
 
 async def get_duffel_client() -> DuffelHTTPClient:
-    """
-    Get the global Duffel HTTP client instance.
+    """Get the global Duffel HTTP client instance.
 
     Returns:
         Connected DuffelHTTPClient instance

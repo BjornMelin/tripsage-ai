@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Run tests with coverage report and detailed failure information.
-"""
+"""Run tests with coverage report and detailed failure information."""
 
 import os
 import subprocess

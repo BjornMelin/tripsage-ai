@@ -1,5 +1,4 @@
-"""
-TripSage Core Monitoring Package.
+"""TripSage Core Monitoring Package.
 
 Provides comprehensive monitoring capabilities including:
 - Database connection monitoring
@@ -9,6 +8,7 @@ Provides comprehensive monitoring capabilities including:
 """
 
 from .database_metrics import DatabaseMetrics, get_database_metrics
+
 
 __all__ = [
     "DatabaseMetrics",

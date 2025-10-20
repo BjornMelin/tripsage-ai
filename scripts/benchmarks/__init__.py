@@ -1,5 +1,4 @@
-"""
-Performance Benchmarking Suite for Database Optimization Framework.
+"""Performance Benchmarking Suite for Database Optimization Framework.
 
 This module provides comprehensive performance benchmarking tools to validate
 the claimed performance improvements of the database optimization framework:
@@ -40,8 +39,8 @@ def _get_scenario_manager():
 
 
 __all__ = [
-    "BenchmarkRunner",
-    "PerformanceMetricsCollector",
     "BenchmarkReportGenerator",
+    "BenchmarkRunner",
     "BenchmarkScenarioManager",
+    "PerformanceMetricsCollector",
 ]

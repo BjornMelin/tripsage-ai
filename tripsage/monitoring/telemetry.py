@@ -5,15 +5,14 @@ for the memory service and other critical components.
 """
 
 import os
+from collections.abc import Callable
 from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.grpc import (
     metric_exporter as otlp_metric_exporter,
-)
-from opentelemetry.exporter.otlp.proto.grpc import (
     trace_exporter as otlp_trace_exporter,
 )
 from opentelemetry.instrumentation.redis import RedisInstrumentor
@@ -28,6 +27,7 @@ from opentelemetry.trace import Status, StatusCode
 
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -178,7 +178,7 @@ class TelemetryService:
         yield Observation(value=memory_info.vms, attributes={"type": "vms"})
 
     @contextmanager
-    def span(self, name: str, attributes: Optional[Dict[str, Any]] = None):
+    def span(self, name: str, attributes: dict[str, Any] | None = None):
         """Context manager for creating spans.
 
         Args:
@@ -211,7 +211,7 @@ class TelemetryService:
         duration_ms: float,
         user_id: str,
         success: bool = True,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> None:
         """Record memory operation metrics.
 

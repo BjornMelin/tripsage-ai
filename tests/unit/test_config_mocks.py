@@ -1,12 +1,11 @@
-"""
-Mock configuration objects for isolated testing.
+"""Mock configuration objects for isolated testing.
 
 This module provides comprehensive mocking of configuration objects
 to enable isolated testing without external dependencies.
 """
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -143,7 +142,7 @@ class MockServiceRegistry:
         else:
             return AsyncMock()
 
-    def get_optional_service(self, name: str) -> Optional[Any]:
+    def get_optional_service(self, name: str) -> Any | None:
         """Get an optional mock service."""
         try:
             return self.get_service(name)
@@ -236,7 +235,7 @@ class MockMCPManager:
         self.connect = AsyncMock()
         self.disconnect = AsyncMock()
 
-    async def invoke(self, method_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def invoke(self, method_name: str, params: dict[str, Any]) -> dict[str, Any]:
         """Mock MCP invoke method."""
         # Return different mock responses based on method name
         if "search_flights" in method_name:

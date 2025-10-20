@@ -1,5 +1,4 @@
-"""
-Database URL conversion utilities for Supabase and PostgreSQL.
+"""Database URL conversion utilities for Supabase and PostgreSQL.
 
 This module provides secure conversion between Supabase HTTPS URLs and
 PostgreSQL connection strings, leveraging the secure parsing utilities
@@ -8,7 +7,6 @@ from connection_utils.py.
 
 import logging
 import re
-from typing import Dict, Tuple
 
 from tripsage_core.utils.connection_utils import (
     ConnectionCredentials,
@@ -16,12 +14,12 @@ from tripsage_core.utils.connection_utils import (
     DatabaseURLParsingError,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
 class DatabaseURLConverter:
-    """
-    Convert between Supabase HTTPS URLs and PostgreSQL connection strings.
+    """Convert between Supabase HTTPS URLs and PostgreSQL connection strings.
 
     This converter handles the dual nature of database connections in TripSage,
     providing secure conversion with validation and error handling.
@@ -43,8 +41,7 @@ class DatabaseURLConverter:
         self.url_parser = DatabaseURLParser()
 
     def is_supabase_url(self, url: str) -> bool:
-        """
-        Check if URL is a Supabase HTTPS URL.
+        """Check if URL is a Supabase HTTPS URL.
 
         Args:
             url: URL to check
@@ -55,8 +52,7 @@ class DatabaseURLConverter:
         return bool(self.SUPABASE_URL_PATTERN.match(url))
 
     def is_postgres_url(self, url: str) -> bool:
-        """
-        Check if URL is a PostgreSQL connection string.
+        """Check if URL is a PostgreSQL connection string.
 
         Args:
             url: URL to check
@@ -66,9 +62,8 @@ class DatabaseURLConverter:
         """
         return url.startswith(("postgresql://", "postgres://"))
 
-    def extract_supabase_project_ref(self, supabase_url: str) -> Tuple[str, str]:
-        """
-        Extract project reference and domain from Supabase URL.
+    def extract_supabase_project_ref(self, supabase_url: str) -> tuple[str, str]:
+        """Extract project reference and domain from Supabase URL.
 
         Args:
             supabase_url: Supabase HTTPS URL
@@ -103,8 +98,7 @@ class DatabaseURLConverter:
         database: str = "postgres",
         sslmode: str = "require",
     ) -> str:
-        """
-        Convert Supabase HTTPS URL to PostgreSQL connection string.
+        """Convert Supabase HTTPS URL to PostgreSQL connection string.
 
         Args:
             supabase_url: Supabase project URL (https://[ref].supabase.co)
@@ -168,9 +162,8 @@ class DatabaseURLConverter:
 
     def postgres_to_supabase(
         self, postgres_url: str, *, domain: str = "supabase.co"
-    ) -> Tuple[str, str]:
-        """
-        Extract Supabase project reference from PostgreSQL URL.
+    ) -> tuple[str, str]:
+        """Extract Supabase project reference from PostgreSQL URL.
 
         Args:
             postgres_url: PostgreSQL connection string
@@ -212,8 +205,7 @@ class DatabaseURLConverter:
             raise DatabaseURLParsingError(error_msg) from e
 
     def validate_conversion(self, original_url: str, converted_url: str) -> bool:
-        """
-        Validate that URL conversion preserved essential information.
+        """Validate that URL conversion preserved essential information.
 
         Args:
             original_url: Original URL
@@ -251,8 +243,7 @@ class DatabaseURLConverter:
 
 
 class DatabaseURLDetector:
-    """
-    Detect and classify database URLs for appropriate handling.
+    """Detect and classify database URLs for appropriate handling.
 
     This detector helps identify URL types and suggest appropriate
     conversion or parsing strategies.
@@ -262,9 +253,8 @@ class DatabaseURLDetector:
         self.converter = DatabaseURLConverter()
         self.parser = DatabaseURLParser()
 
-    def detect_url_type(self, url: str) -> Dict[str, any]:
-        """
-        Detect URL type and provide metadata.
+    def detect_url_type(self, url: str) -> dict[str, any]:
+        """Detect URL type and provide metadata.
 
         Args:
             url: URL to analyze
@@ -307,8 +297,7 @@ class DatabaseURLDetector:
         return result
 
     def suggest_handler(self, url: str) -> str:
-        """
-        Suggest appropriate handler for URL type.
+        """Suggest appropriate handler for URL type.
 
         Args:
             url: URL to analyze
@@ -337,8 +326,7 @@ class DatabaseURLDetector:
 
 # Convenience functions
 def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> str:
-    """
-    Convert Supabase URL to PostgreSQL connection string.
+    """Convert Supabase URL to PostgreSQL connection string.
 
     Args:
         supabase_url: Supabase project URL
@@ -352,9 +340,8 @@ def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> 
     return converter.supabase_to_postgres(supabase_url, password, **kwargs)
 
 
-def detect_database_url_type(url: str) -> Dict[str, any]:
-    """
-    Detect and analyze database URL type.
+def detect_database_url_type(url: str) -> dict[str, any]:
+    """Detect and analyze database URL type.
 
     Args:
         url: URL to analyze

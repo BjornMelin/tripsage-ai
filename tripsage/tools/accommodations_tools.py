@@ -1,11 +1,11 @@
-"""
-Accommodation search tools for TripSage agents.
+"""Accommodation search tools for TripSage agents.
 
 This module provides function tools for searching accommodations.
 Refactored to be lean wrappers that delegate to core services.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 try:
     from agents import function_tool
@@ -18,6 +18,7 @@ from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
+
 # Set up logger
 logger = get_logger(__name__)
 
@@ -27,20 +28,20 @@ logger = get_logger(__name__)
 async def search_airbnb_rentals_tool(
     location: str,
     service_registry: ServiceRegistry,
-    checkin: Optional[str] = None,
-    checkout: Optional[str] = None,
+    checkin: str | None = None,
+    checkout: str | None = None,
     adults: int = 1,
-    children: Optional[int] = None,
-    min_price: Optional[int] = None,
-    max_price: Optional[int] = None,
-    property_type: Optional[str] = None,
-    min_rating: Optional[float] = None,
-    superhost: Optional[bool] = None,
-    min_beds: Optional[int] = None,
-    min_bedrooms: Optional[int] = None,
-    min_bathrooms: Optional[int] = None,
-    amenities: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    children: int | None = None,
+    min_price: int | None = None,
+    max_price: int | None = None,
+    property_type: str | None = None,
+    min_rating: float | None = None,
+    superhost: bool | None = None,
+    min_beds: int | None = None,
+    min_bedrooms: int | None = None,
+    min_bathrooms: int | None = None,
+    amenities: list[str] | None = None,
+) -> dict[str, Any]:
     """Search for Airbnb rental options based on location and filters.
 
     Args:
@@ -153,10 +154,10 @@ async def search_airbnb_rentals_tool(
 async def get_airbnb_listing_details_tool(
     listing_id: str,
     service_registry: ServiceRegistry,
-    checkin: Optional[str] = None,
-    checkout: Optional[str] = None,
+    checkin: str | None = None,
+    checkout: str | None = None,
     adults: int = 1,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get detailed information about a specific Airbnb listing.
 
     Args:
@@ -222,16 +223,16 @@ async def search_accommodations_tool(
     location: str,
     service_registry: ServiceRegistry,
     source: str = "airbnb",
-    checkin: Optional[str] = None,
-    checkout: Optional[str] = None,
+    checkin: str | None = None,
+    checkout: str | None = None,
     adults: int = 1,
-    children: Optional[int] = None,
-    min_price: Optional[int] = None,
-    max_price: Optional[int] = None,
-    property_type: Optional[str] = None,
-    min_rating: Optional[float] = None,
-    amenities: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    children: int | None = None,
+    min_price: int | None = None,
+    max_price: int | None = None,
+    property_type: str | None = None,
+    min_rating: float | None = None,
+    amenities: list[str] | None = None,
+) -> dict[str, Any]:
     """Search for accommodations across different providers.
 
     Args:
@@ -290,8 +291,8 @@ async def book_accommodation_tool(
     checkout: str = None,
     adults: int = 1,
     children: int = 0,
-    guest_details: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    guest_details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Initiate accommodation booking process.
 
     Args:

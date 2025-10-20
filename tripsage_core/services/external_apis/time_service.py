@@ -1,25 +1,26 @@
-"""
-Time Service using Python datetime functionality with TripSage Core integration.
+"""Time Service using Python datetime functionality with TripSage Core integration.
 
 This service provides timezone-aware time operations, eliminating the need for
 external MCP services for basic time and timezone calculations.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Union
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
 
 
 class TimeServiceError(CoreAPIError):
     """Exception raised for time service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="TIME_SERVICE_ERROR",
@@ -63,9 +64,8 @@ class WorldClock(BaseModel):
 class TimeService:
     """Service for timezone and time operations with Core integration."""
 
-    def __init__(self, settings: Optional[Settings] = None):
-        """
-        Initialize Time service.
+    def __init__(self, settings: Settings | None = None):
+        """Initialize Time service.
 
         Args:
             settings: Core application settings
@@ -124,12 +124,12 @@ class TimeService:
 
         try:
             # Test timezone functionality
-            _ = datetime.now(timezone.utc)
+            _ = datetime.now(UTC)
             self._connected = True
 
         except Exception as e:
             raise CoreServiceError(
-                message=f"Failed to connect time service: {str(e)}",
+                message=f"Failed to connect time service: {e!s}",
                 code="CONNECTION_FAILED",
                 service="TimeService",
                 details={"error": str(e)},
@@ -144,9 +144,8 @@ class TimeService:
         if not self._connected:
             await self.connect()
 
-    async def get_current_time(self, timezone_name: Optional[str] = None) -> datetime:
-        """
-        Get current time in specified timezone.
+    async def get_current_time(self, timezone_name: str | None = None) -> datetime:
+        """Get current time in specified timezone.
 
         Args:
             timezone_name: Timezone name (e.g., 'America/New_York') or None for default
@@ -168,20 +167,19 @@ class TimeService:
                 timezone_name = self._major_timezones[timezone_name.upper()]
 
             if timezone_name == "UTC":
-                return datetime.now(timezone.utc)
+                return datetime.now(UTC)
 
             tz = ZoneInfo(timezone_name)
             return datetime.now(tz)
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error getting time for timezone {timezone_name}: {str(e)}",
+                f"Error getting time for timezone {timezone_name}: {e!s}",
                 original_error=e,
             ) from e
 
     async def get_timezone_info(self, timezone_name: str) -> TimeZoneInfo:
-        """
-        Get detailed timezone information.
+        """Get detailed timezone information.
 
         Args:
             timezone_name: Timezone name
@@ -200,7 +198,7 @@ class TimeService:
                 timezone_name = self._major_timezones[timezone_name.upper()]
 
             if timezone_name == "UTC":
-                tz = timezone.utc
+                tz = UTC
             else:
                 tz = ZoneInfo(timezone_name)
 
@@ -228,18 +226,17 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error getting timezone info for {timezone_name}: {str(e)}",
+                f"Error getting timezone info for {timezone_name}: {e!s}",
                 original_error=e,
             ) from e
 
     async def convert_time(
         self,
-        time_to_convert: Union[datetime, str],
+        time_to_convert: datetime | str,
         source_timezone: str,
         target_timezone: str,
     ) -> TimeConversion:
-        """
-        Convert time between timezones.
+        """Convert time between timezones.
 
         Args:
             time_to_convert: Time to convert (datetime or ISO string)
@@ -293,7 +290,7 @@ class TimeService:
             # Convert to source timezone if naive
             if parsed_time.tzinfo is None:
                 if source_timezone == "UTC":
-                    source_tz = timezone.utc
+                    source_tz = UTC
                 else:
                     source_tz = ZoneInfo(source_timezone)
                 source_time = parsed_time.replace(tzinfo=source_tz)
@@ -302,7 +299,7 @@ class TimeService:
 
             # Convert to target timezone
             if target_timezone == "UTC":
-                target_tz = timezone.utc
+                target_tz = UTC
             else:
                 target_tz = ZoneInfo(target_timezone)
             target_time = source_time.astimezone(target_tz)
@@ -329,15 +326,14 @@ class TimeService:
         except Exception as e:
             raise TimeServiceError(
                 f"Error converting time from {source_timezone} to {target_timezone}: "
-                f"{str(e)}",
+                f"{e!s}",
                 original_error=e,
             ) from e
 
     async def get_world_clock(
-        self, cities: Optional[List[str]] = None
-    ) -> List[WorldClock]:
-        """
-        Get world clock for major cities.
+        self, cities: list[str] | None = None
+    ) -> list[WorldClock]:
+        """Get world clock for major cities.
 
         Args:
             cities: List of city/timezone names (optional)
@@ -404,7 +400,7 @@ class TimeService:
                         timezone_name = city
 
                     if timezone_name == "UTC":
-                        tz = timezone.utc
+                        tz = UTC
                     else:
                         tz = ZoneInfo(timezone_name)
 
@@ -435,14 +431,13 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error getting world clock: {str(e)}", original_error=e
+                f"Error getting world clock: {e!s}", original_error=e
             ) from e
 
     async def get_time_until(
-        self, target_time: Union[datetime, str], timezone_name: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Calculate time remaining until a target time.
+        self, target_time: datetime | str, timezone_name: str | None = None
+    ) -> dict[str, Any]:
+        """Calculate time remaining until a target time.
 
         Args:
             target_time: Target datetime or ISO string
@@ -477,13 +472,13 @@ class TimeService:
             if parsed_time.tzinfo is None:
                 if timezone_name:
                     if timezone_name == "UTC":
-                        tz = timezone.utc
+                        tz = UTC
                     else:
                         tz = ZoneInfo(timezone_name)
                     parsed_time = parsed_time.replace(tzinfo=tz)
                 else:
                     if self.default_timezone == "UTC":
-                        parsed_time = parsed_time.replace(tzinfo=timezone.utc)
+                        parsed_time = parsed_time.replace(tzinfo=UTC)
                     else:
                         tz = ZoneInfo(self.default_timezone)
                         parsed_time = parsed_time.replace(tzinfo=tz)
@@ -508,7 +503,7 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error calculating time until {target_time}: {str(e)}",
+                f"Error calculating time until {target_time}: {e!s}",
                 original_error=e,
             ) from e
 
@@ -539,12 +534,11 @@ class TimeService:
     async def get_business_hours_status(
         self,
         timezone_name: str,
-        business_start: Optional[str] = None,
-        business_end: Optional[str] = None,
-        weekdays_only: Optional[bool] = None,
-    ) -> Dict[str, Any]:
-        """
-        Check if current time is within business hours.
+        business_start: str | None = None,
+        business_end: str | None = None,
+        weekdays_only: bool | None = None,
+    ) -> dict[str, Any]:
+        """Check if current time is within business hours.
 
         Args:
             timezone_name: Timezone to check
@@ -589,13 +583,12 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error checking business hours for {timezone_name}: {str(e)}",
+                f"Error checking business hours for {timezone_name}: {e!s}",
                 original_error=e,
             ) from e
 
-    async def get_available_timezones(self, region: Optional[str] = None) -> List[str]:
-        """
-        Get list of available timezone names.
+    async def get_available_timezones(self, region: str | None = None) -> list[str]:
+        """Get list of available timezone names.
 
         Args:
             region: Optional region filter (e.g., 'America', 'Europe')
@@ -625,11 +618,10 @@ class TimeService:
     async def format_datetime(
         self,
         dt: datetime,
-        format_string: Optional[str] = None,
-        timezone_name: Optional[str] = None,
+        format_string: str | None = None,
+        timezone_name: str | None = None,
     ) -> str:
-        """
-        Format datetime according to settings or custom format.
+        """Format datetime according to settings or custom format.
 
         Args:
             dt: Datetime to format
@@ -650,7 +642,7 @@ class TimeService:
             # Convert timezone if requested
             if timezone_name:
                 if timezone_name == "UTC":
-                    target_tz = timezone.utc
+                    target_tz = UTC
                 else:
                     target_tz = ZoneInfo(timezone_name)
                 target_dt = dt.astimezone(target_tz)
@@ -663,12 +655,11 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error formatting datetime: {str(e)}", original_error=e
+                f"Error formatting datetime: {e!s}", original_error=e
             ) from e
 
     async def health_check(self) -> bool:
-        """
-        Perform a health check to verify the service is working.
+        """Perform a health check to verify the service is working.
 
         Returns:
             True if the service is healthy, False otherwise
@@ -703,12 +694,11 @@ class TimeService:
 
 
 # Global service instance
-_time_service: Optional[TimeService] = None
+_time_service: TimeService | None = None
 
 
 async def get_time_service() -> TimeService:
-    """
-    Get the global time service instance.
+    """Get the global time service instance.
 
     Returns:
         TimeService instance
@@ -744,21 +734,21 @@ async def convert_timezone(time_str: str, from_tz: str, to_tz: str) -> TimeConve
     return await service.convert_time(time_str, from_tz, to_tz)
 
 
-async def get_world_time() -> List[WorldClock]:
+async def get_world_time() -> list[WorldClock]:
     """Get world clock for major cities."""
     service = await get_time_service()
     return await service.get_world_clock()
 
 
 __all__ = [
+    "TimeConversion",
     "TimeService",
     "TimeServiceError",
     "TimeZoneInfo",
-    "TimeConversion",
     "WorldClock",
-    "get_time_service",
     "close_time_service",
-    "get_current_time_utc",
     "convert_timezone",
+    "get_current_time_utc",
+    "get_time_service",
     "get_world_time",
 ]

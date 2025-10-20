@@ -1,5 +1,4 @@
-"""
-Tests for the production-ready DashboardService.
+"""Tests for the production-ready DashboardService.
 
 This module tests all functionality of the modernized DashboardService including:
 - Real-time analytics and metrics calculation
@@ -11,7 +10,7 @@ This module tests all functionality of the modernized DashboardService including
 """
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -72,7 +71,7 @@ class TestDashboardService:
     @pytest.fixture
     def sample_usage_logs(self):
         """Create sample usage logs for testing."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return [
             {
                 "user_id": "user_001",
@@ -111,7 +110,7 @@ class TestDashboardService:
     @pytest.fixture
     def sample_health_checks(self):
         """Create sample service health checks."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return {
             ServiceType.OPENAI: ServiceHealthCheck(
                 service=ServiceType.OPENAI,
@@ -214,8 +213,8 @@ class TestDashboardService:
             "active_keys_count": 10,
             "unique_users_count": 25,
             "requests_per_minute": 4.17,
-            "period_start": datetime.now(timezone.utc).isoformat(),
-            "period_end": datetime.now(timezone.utc).isoformat(),
+            "period_start": datetime.now(UTC).isoformat(),
+            "period_end": datetime.now(UTC).isoformat(),
         }
         dashboard_service.cache.get_json.return_value = cached_metrics
 
@@ -290,9 +289,7 @@ class TestDashboardService:
         cached_data = {
             "count": 250,
             "limit": 1000,
-            "reset_at": (
-                datetime.now(timezone.utc) + timedelta(minutes=30)
-            ).isoformat(),
+            "reset_at": (datetime.now(UTC) + timedelta(minutes=30)).isoformat(),
         }
         dashboard_service.cache.get_json.return_value = cached_data
 
@@ -515,8 +512,8 @@ class TestDashboardService:
             active_keys_count=25,
             unique_users_count=100,
             requests_per_minute=16.67,
-            period_start=datetime.now(timezone.utc),
-            period_end=datetime.now(timezone.utc),
+            period_start=datetime.now(UTC),
+            period_end=datetime.now(UTC),
         )
 
         assert (
@@ -525,7 +522,7 @@ class TestDashboardService:
         assert metrics.uptime_percentage == 95.0  # 0.95 * 100
 
         # Test UserActivityData computed fields
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user = UserActivityData(
             user_id="test_user",
             request_count=100,
@@ -555,8 +552,8 @@ class TestDashboardService:
             active_keys_count=25,
             unique_users_count=100,
             requests_per_minute=16.67,
-            period_start=datetime.now(timezone.utc),
-            period_end=datetime.now(timezone.utc),
+            period_start=datetime.now(UTC),
+            period_end=datetime.now(UTC),
         )
 
         # Create service analytics
@@ -569,7 +566,7 @@ class TestDashboardService:
                 success_rate=0.96,
                 avg_latency_ms=150.0,
                 active_keys=10,
-                last_health_check=datetime.now(timezone.utc),
+                last_health_check=datetime.now(UTC),
                 health_status=ServiceHealthStatus.HEALTHY,
             ),
             ServiceAnalytics(
@@ -580,7 +577,7 @@ class TestDashboardService:
                 success_rate=0.93,
                 avg_latency_ms=300.0,
                 active_keys=8,
-                last_health_check=datetime.now(timezone.utc),
+                last_health_check=datetime.now(UTC),
                 health_status=ServiceHealthStatus.DEGRADED,
             ),
             ServiceAnalytics(
@@ -591,7 +588,7 @@ class TestDashboardService:
                 success_rate=0.95,
                 avg_latency_ms=75.0,
                 active_keys=7,
-                last_health_check=datetime.now(timezone.utc),
+                last_health_check=datetime.now(UTC),
                 health_status=ServiceHealthStatus.HEALTHY,
             ),
         ]
@@ -626,7 +623,7 @@ class TestDashboardService:
     async def test_performance_with_large_dataset(self, dashboard_service):
         """Test performance with large dataset."""
         # Create large sample dataset
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         large_dataset = []
 
         for i in range(10000):  # 10k records
@@ -646,9 +643,9 @@ class TestDashboardService:
         dashboard_service.cache.get_json.return_value = None  # No cached data
 
         # Measure performance
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
         metrics = await dashboard_service._get_real_time_metrics(time_range_hours=24)
-        end_time = datetime.now(timezone.utc)
+        end_time = datetime.now(UTC)
 
         # Verify calculation completed
         assert metrics.total_requests == 10000
@@ -757,8 +754,8 @@ class TestPerformanceOptimizations:
 
         # Test usage logs query
         await service._query_usage_logs(
-            start_time=datetime.now(timezone.utc) - timedelta(hours=24),
-            end_time=datetime.now(timezone.utc),
+            start_time=datetime.now(UTC) - timedelta(hours=24),
+            end_time=datetime.now(UTC),
         )
 
         # Verify database was called with proper filters

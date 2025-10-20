@@ -1,5 +1,4 @@
-"""
-WebSocket authentication service.
+"""WebSocket authentication service.
 
 This service handles WebSocket connection authentication including:
 - JWT token verification
@@ -16,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,12 +88,12 @@ class WebSocketAuthService:
             ) from e
         except jwt.InvalidTokenError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid token: {str(e)}",
+                message=f"Invalid token: {e!s}",
                 code="INVALID_TOKEN",
             ) from e
         except ValueError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid user ID format: {str(e)}",
+                message=f"Invalid user ID format: {e!s}",
                 code="INVALID_USER_ID",
             ) from e
 
@@ -260,12 +260,12 @@ class WebSocketAuthService:
             ) from e
         except jwt.InvalidTokenError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid token: {str(e)}",
+                message=f"Invalid token: {e!s}",
                 code="INVALID_TOKEN",
             ) from e
         except ValueError as e:
             raise CoreAuthenticationError(
-                message=f"Invalid user ID format: {str(e)}",
+                message=f"Invalid user ID format: {e!s}",
                 code="INVALID_USER_ID",
             ) from e
 

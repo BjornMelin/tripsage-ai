@@ -1,5 +1,4 @@
-"""
-Modern comprehensive test suite for API Key Service.
+"""Modern comprehensive test suite for API Key Service.
 
 This module demonstrates modern pytest patterns for TripSage (2025):
 - Pydantic v2 compatibility and testing patterns
@@ -17,15 +16,14 @@ import base64
 import json
 import secrets
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID
 
 import pytest
 import pytest_asyncio
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.exceptions.exceptions import (
@@ -42,8 +40,7 @@ from tripsage_core.services.business.api_key_service import (
 
 
 class TestApiKeyServiceModern:
-    """
-    Modern test suite for API Key Service with comprehensive coverage.
+    """Modern test suite for API Key Service with comprehensive coverage.
 
     Demonstrates 2025 best practices:
     - Fixture-based dependency injection
@@ -69,7 +66,7 @@ class TestApiKeyServiceModern:
         # Add realistic response delays for performance testing
         async def realistic_fetch_one(*args, **kwargs):
             await asyncio.sleep(0.001)  # 1ms realistic database latency
-            return None
+            return
 
         db.fetch_one.side_effect = realistic_fetch_one
 
@@ -129,7 +126,7 @@ class TestApiKeyServiceModern:
         return service
 
     @pytest.fixture
-    def valid_api_key_data(self) -> Dict[str, Any]:
+    def valid_api_key_data(self) -> dict[str, Any]:
         """Generate valid API key creation data."""
         return {
             "user_id": uuid.uuid4(),
@@ -149,7 +146,7 @@ class TestApiKeyServiceModern:
         description=st.one_of(st.none(), st.text(max_size=1000)),
     )
     def test_api_key_create_model_validation(
-        self, user_id: UUID, name: str, service: str, description: Optional[str]
+        self, user_id: UUID, name: str, service: str, description: str | None
     ):
         """Test API key creation model with property-based testing."""
         # Create valid encrypted key data
@@ -178,14 +175,14 @@ class TestApiKeyServiceModern:
 
     @pytest.mark.asyncio
     async def test_create_api_key_success(
-        self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]
+        self, api_key_service: ApiKeyService, valid_api_key_data: dict[str, Any]
     ):
         """Test successful API key creation with modern async patterns."""
         # Mock database to return a successful creation
         expected_api_key = ApiKeyDB(
             id=uuid.uuid4(),
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
             is_active=True,
             **valid_api_key_data,
         )
@@ -206,7 +203,7 @@ class TestApiKeyServiceModern:
 
     @pytest.mark.asyncio
     async def test_create_api_key_duplicate_name(
-        self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]
+        self, api_key_service: ApiKeyService, valid_api_key_data: dict[str, Any]
     ):
         """Test API key creation with duplicate name handling."""
         # Mock database to simulate existing key with same name
@@ -354,7 +351,7 @@ class TestApiKeyServiceModern:
 
     @pytest.mark.asyncio
     async def test_error_handling_database_failure(
-        self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]
+        self, api_key_service: ApiKeyService, valid_api_key_data: dict[str, Any]
     ):
         """Test error handling when database operations fail."""
         # Mock database failure
@@ -390,7 +387,7 @@ class TestApiKeyServiceModern:
 
     @pytest.mark.asyncio
     async def test_audit_logging_integration(
-        self, api_key_service: ApiKeyService, valid_api_key_data: Dict[str, Any]
+        self, api_key_service: ApiKeyService, valid_api_key_data: dict[str, Any]
     ):
         """Test that audit logging is properly integrated."""
         with patch(
@@ -427,7 +424,7 @@ class TestApiKeyServiceModern:
         assert result.is_valid
 
     @pytest.mark.asyncio
-    async def test_pydantic_v2_serialization(self, valid_api_key_data: Dict[str, Any]):
+    async def test_pydantic_v2_serialization(self, valid_api_key_data: dict[str, Any]):
         """Test Pydantic v2 serialization and deserialization."""
         # Create model instance
         api_key = ApiKeyCreate(**valid_api_key_data)
@@ -487,7 +484,7 @@ class TestApiKeyServiceModern:
             "name": "Original Name",
             "description": "Original Description",
             "is_active": True,
-            "updated_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(UTC),
         }
         api_key_service.db.fetch_one.return_value = existing_key
 
@@ -538,7 +535,7 @@ class TestApiKeyServiceModern:
                 "name": f"Key {i}",
                 "service": "openai" if i % 2 == 0 else "weather",
                 "is_active": True,
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             }
             for i in range(5)
         ]
@@ -567,7 +564,7 @@ class TestApiKeyServicePropertyBased:
         description=st.one_of(st.none(), st.text(max_size=1000)),
     )
     def test_api_key_creation_properties(
-        self, name: str, service: str, description: Optional[str]
+        self, name: str, service: str, description: str | None
     ):
         """Property-based test for API key creation with various inputs."""
         user_id = uuid.uuid4()
@@ -641,7 +638,7 @@ class TestApiKeyServiceErrorScenarios:
 
         with patch("httpx.AsyncClient.get") as mock_get:
             # Simulate network timeout
-            mock_get.side_effect = asyncio.TimeoutError("Request timed out")
+            mock_get.side_effect = TimeoutError("Request timed out")
 
             result = await service.validate_key("sk-timeout_test", ServiceType.OPENAI)
 

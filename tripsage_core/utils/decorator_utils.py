@@ -1,5 +1,4 @@
-"""
-Utility decorators for TripSage Core.
+"""Utility decorators for TripSage Core.
 
 This module provides decorators used across the TripSage codebase for standardized
 error handling and client initialization patterns.
@@ -9,7 +8,8 @@ import asyncio
 import functools
 import inspect
 import time
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 from tripsage_core.exceptions import (
     CoreAuthenticationError,
@@ -21,6 +21,7 @@ from tripsage_core.utils.logging_utils import get_logger
 
 from .error_handling_utils import log_exception
 
+
 logger = get_logger(__name__)
 
 # Type definitions for better type checking
@@ -28,14 +29,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 
 
 def with_error_handling(
-    operation_name: Optional[str] = None,
-    expected_errors: Optional[Tuple[Exception, ...]] = None,
-    log_extra_func: Optional[Callable[..., Dict[str, Any]]] = None,
-    reraise_errors: Optional[Tuple[Exception, ...]] = None,
-    default_return: Optional[Any] = None,
+    operation_name: str | None = None,
+    expected_errors: tuple[Exception, ...] | None = None,
+    log_extra_func: Callable[..., dict[str, Any]] | None = None,
+    reraise_errors: tuple[Exception, ...] | None = None,
+    default_return: Any | None = None,
 ) -> Callable[[F], F]:
-    """
-    Enhanced decorator for standardized error handling with comprehensive features.
+    """Enhanced decorator for standardized error handling with comprehensive features.
 
     This decorator provides advanced error handling with configurable parameters,
     proper logging, performance metrics, and support for both sync and async functions.
@@ -135,7 +135,7 @@ def with_error_handling(
                     # Always re-raise critical errors
                     execution_time = time.time() - start_time
                     logger.critical(
-                        f"Critical error in {operation_name}: {str(e)}",
+                        f"Critical error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -150,7 +150,7 @@ def with_error_handling(
                     # Handle expected errors gracefully
                     execution_time = time.time() - start_time
                     logger.warning(
-                        f"Expected error in {operation_name}: {str(e)}",
+                        f"Expected error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -180,7 +180,7 @@ def with_error_handling(
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
                     logger.error(
-                        f"Unexpected error in {operation_name}: {str(e)}",
+                        f"Unexpected error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -259,7 +259,7 @@ def with_error_handling(
                     # Always re-raise critical errors
                     execution_time = time.time() - start_time
                     logger.critical(
-                        f"Critical error in {operation_name}: {str(e)}",
+                        f"Critical error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -274,7 +274,7 @@ def with_error_handling(
                     # Handle expected errors gracefully
                     execution_time = time.time() - start_time
                     logger.warning(
-                        f"Expected error in {operation_name}: {str(e)}",
+                        f"Expected error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -304,7 +304,7 @@ def with_error_handling(
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
                     logger.error(
-                        f"Unexpected error in {operation_name}: {str(e)}",
+                        f"Unexpected error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -388,7 +388,7 @@ def ensure_memory_client_initialized(func: F) -> F:
         except Exception as e:
             # Get function name for better error logging
             func_name = func.__name__
-            logger.error(f"Error in {func_name}: {str(e)}")
+            logger.error(f"Error in {func_name}: {e!s}")
             log_exception(e)
 
             # Return error response in the expected format for agent tools
@@ -488,6 +488,6 @@ def retry_on_failure(
 
 __all__ = [
     "ensure_memory_client_initialized",
-    "with_error_handling",
     "retry_on_failure",
+    "with_error_handling",
 ]

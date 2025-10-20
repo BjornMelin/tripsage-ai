@@ -1,5 +1,4 @@
-"""
-Integration tests for database monitoring system.
+"""Integration tests for database monitoring system.
 
 Tests the complete monitoring stack including metrics collection,
 health monitoring, security alerts, and database service integration.

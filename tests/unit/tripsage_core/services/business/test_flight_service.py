@@ -5,13 +5,12 @@ including flight search, booking, cancellation, and external API integration.
 Updated for Pydantic v2 and modern testing patterns.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from hypothesis import HealthCheck, given, settings
-from hypothesis import strategies as st
+from hypothesis import HealthCheck, given, settings, strategies as st
 
 from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
@@ -61,7 +60,7 @@ class TestFlightService:
             given_name="John",
             family_name="Doe",
             title="Mr",
-            date_of_birth=datetime(1990, 1, 1, tzinfo=timezone.utc),
+            date_of_birth=datetime(1990, 1, 1, tzinfo=UTC),
             email="john.doe@example.com",
             phone="+1234567890",
         )
@@ -74,8 +73,8 @@ class TestFlightService:
         return FlightSearchRequest(
             origin="JFK",
             destination="CDG",
-            departure_date=datetime.now(timezone.utc) + timedelta(days=30),
-            return_date=datetime.now(timezone.utc) + timedelta(days=37),
+            departure_date=datetime.now(UTC) + timedelta(days=30),
+            return_date=datetime.now(UTC) + timedelta(days=37),
             passengers=[sample_flight_passenger],
             cabin_class=CabinClass.ECONOMY,
             max_stops=1,
@@ -88,7 +87,7 @@ class TestFlightService:
     @pytest.fixture
     def sample_flight_segment(self) -> FlightSegment:
         """Sample flight segment."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return FlightSegment(
             origin="JFK",
             destination="CDG",
@@ -119,7 +118,7 @@ class TestFlightService:
             total_duration=480,
             stops_count=0,
             airlines=["AF"],
-            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+            expires_at=datetime.now(UTC) + timedelta(hours=24),
             bookable=True,
             source="duffel",
             source_offer_id="duffel_offer_123",
@@ -135,7 +134,7 @@ class TestFlightService:
         """Sample flight booking."""
         booking_id = str(uuid4())
         user_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return FlightBooking(
             id=booking_id,
@@ -226,9 +225,9 @@ class TestFlightService:
             FlightSearchRequest(
                 origin="JFK",
                 destination="CDG",
-                departure_date=datetime.now(timezone.utc) + timedelta(days=30),
+                departure_date=datetime.now(UTC) + timedelta(days=30),
                 return_date=(
-                    datetime.now(timezone.utc) + timedelta(days=25)
+                    datetime.now(UTC) + timedelta(days=25)
                 ),  # Before departure
                 passengers=[sample_flight_passenger],
             )
@@ -351,7 +350,7 @@ class TestFlightService:
     ):
         """Test flight booking with expired offer."""
         # Arrange
-        sample_flight_offer.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        sample_flight_offer.expires_at = datetime.now(UTC) - timedelta(hours=1)
         booking_request = FlightBookingRequest(
             offer_id=sample_flight_offer.id, passengers=[sample_flight_passenger]
         )
@@ -542,8 +541,8 @@ class TestFlightService:
         segment = FlightSegment(
             origin="JFK",
             destination="CDG",
-            departure_date=datetime.now(timezone.utc),
-            arrival_date=datetime.now(timezone.utc) + timedelta(hours=8),
+            departure_date=datetime.now(UTC),
+            arrival_date=datetime.now(UTC) + timedelta(hours=8),
         )
 
         # Assert
@@ -557,8 +556,8 @@ class TestFlightService:
             FlightSegment(
                 origin="JFKK",  # Too long
                 destination="CDG",
-                departure_date=datetime.now(timezone.utc),
-                arrival_date=datetime.now(timezone.utc) + timedelta(hours=8),
+                departure_date=datetime.now(UTC),
+                arrival_date=datetime.now(UTC) + timedelta(hours=8),
             )
 
         # Act & Assert - Contains number
@@ -566,8 +565,8 @@ class TestFlightService:
             FlightSegment(
                 origin="J1K",  # Contains number
                 destination="CDG",
-                departure_date=datetime.now(timezone.utc),
-                arrival_date=datetime.now(timezone.utc) + timedelta(hours=8),
+                departure_date=datetime.now(UTC),
+                arrival_date=datetime.now(UTC) + timedelta(hours=8),
             )
 
     def test_passenger_email_validation_accepts_valid_email(self):
@@ -745,10 +744,8 @@ class TestFlightService:
         search_request = FlightSearchRequest(
             origin="JFK",
             destination="CDG",
-            departure_date=datetime.now(timezone.utc) + timedelta(days=30),
-            return_date=(
-                datetime.now(timezone.utc) + timedelta(days=365)
-            ),  # One year later
+            departure_date=datetime.now(UTC) + timedelta(days=30),
+            return_date=(datetime.now(UTC) + timedelta(days=365)),  # One year later
             passengers=[sample_flight_passenger],
         )
 
@@ -774,7 +771,7 @@ class TestFlightService:
         search_request = FlightSearchRequest(
             origin="JFK",
             destination="CDG",
-            departure_date=datetime.now(timezone.utc) + timedelta(days=30),
+            departure_date=datetime.now(UTC) + timedelta(days=30),
             passengers=passengers,
         )
 

@@ -1,5 +1,4 @@
-"""
-Multi-Factor Authentication (MFA) Service for TripSage.
+"""Multi-Factor Authentication (MFA) Service for TripSage.
 
 This service provides TOTP-based MFA functionality including:
 - QR code generation for authenticator apps
@@ -12,7 +11,6 @@ import base64
 import logging
 import secrets
 from io import BytesIO
-from typing import List, Optional
 
 import pyotp
 import qrcode
@@ -23,6 +21,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class MFAEnrollmentRequest(TripSageModel):
 class MFAEnrollmentResponse(TripSageModel):
     """Response for MFA enrollment."""
 
-    backup_codes: List[str] = Field(..., description="One-time backup codes")
+    backup_codes: list[str] = Field(..., description="One-time backup codes")
     enrolled_at: str = Field(..., description="Enrollment timestamp")
     success: bool = Field(..., description="Whether enrollment was successful")
 
@@ -49,7 +48,7 @@ class MFASetupResponse(TripSageModel):
 
     secret: str = Field(..., description="TOTP secret key")
     qr_code_url: str = Field(..., description="QR code data URL")
-    backup_codes: List[str] = Field(..., description="One-time backup codes")
+    backup_codes: list[str] = Field(..., description="One-time backup codes")
     manual_entry_key: str = Field(..., description="Manual entry key for apps")
 
 
@@ -70,7 +69,7 @@ class MFAVerificationResponse(TripSageModel):
 
     valid: bool = Field(..., description="Whether the code is valid")
     code_type: str = Field(..., description="Type of code (totp, backup)")
-    remaining_backup_codes: Optional[int] = Field(
+    remaining_backup_codes: int | None = Field(
         None, description="Remaining backup codes"
     )
 
@@ -79,16 +78,15 @@ class MFAStatus(TripSageModel):
     """MFA status for a user."""
 
     enabled: bool = Field(..., description="Whether MFA is enabled")
-    enrolled_at: Optional[str] = Field(None, description="Enrollment timestamp")
+    enrolled_at: str | None = Field(None, description="Enrollment timestamp")
     backup_codes_remaining: int = Field(
         default=0, description="Number of backup codes remaining"
     )
-    last_used: Optional[str] = Field(None, description="Last successful verification")
+    last_used: str | None = Field(None, description="Last successful verification")
 
 
 class MFAService:
-    """
-    Multi-Factor Authentication service for TOTP and backup codes.
+    """Multi-Factor Authentication service for TOTP and backup codes.
 
     This service handles:
     - TOTP secret generation and QR code creation
@@ -98,8 +96,7 @@ class MFAService:
     """
 
     def __init__(self, database_service=None, app_name: str = "TripSage"):
-        """
-        Initialize MFA service.
+        """Initialize MFA service.
 
         Args:
             database_service: Database service for persistence
@@ -129,8 +126,7 @@ class MFAService:
             self.db = await self._db_service_factory()
 
     async def setup_mfa(self, user_id: str, user_email: str) -> MFASetupResponse:
-        """
-        Set up MFA for a user (generate secret and QR code).
+        """Set up MFA for a user (generate secret and QR code).
 
         Args:
             user_id: User ID
@@ -194,8 +190,7 @@ class MFAService:
             ) from e
 
     async def enroll_mfa(self, request: MFAEnrollmentRequest) -> MFAEnrollmentResponse:
-        """
-        Complete MFA enrollment by verifying the TOTP code.
+        """Complete MFA enrollment by verifying the TOTP code.
 
         Args:
             request: MFA enrollment request with verification code
@@ -268,8 +263,7 @@ class MFAService:
     async def verify_mfa(
         self, request: MFAVerificationRequest
     ) -> MFAVerificationResponse:
-        """
-        Verify MFA code (TOTP or backup code).
+        """Verify MFA code (TOTP or backup code).
 
         Args:
             request: MFA verification request
@@ -338,8 +332,7 @@ class MFAService:
             ) from e
 
     async def get_mfa_status(self, user_id: str) -> MFAStatus:
-        """
-        Get MFA status for a user.
+        """Get MFA status for a user.
 
         Args:
             user_id: User ID
@@ -371,8 +364,7 @@ class MFAService:
             return MFAStatus(enabled=False)
 
     async def disable_mfa(self, user_id: str) -> bool:
-        """
-        Disable MFA for a user.
+        """Disable MFA for a user.
 
         Args:
             user_id: User ID
@@ -392,9 +384,8 @@ class MFAService:
             logger.error(f"Failed to disable MFA for user {user_id}: {e}")
             return False
 
-    async def regenerate_backup_codes(self, user_id: str) -> List[str]:
-        """
-        Regenerate backup codes for a user.
+    async def regenerate_backup_codes(self, user_id: str) -> list[str]:
+        """Regenerate backup codes for a user.
 
         Args:
             user_id: User ID
@@ -445,8 +436,7 @@ class MFAService:
             ) from e
 
     def _generate_qr_code(self, provisioning_uri: str) -> str:
-        """
-        Generate QR code as data URL.
+        """Generate QR code as data URL.
 
         Args:
             provisioning_uri: TOTP provisioning URI
@@ -472,9 +462,8 @@ class MFAService:
 
         return f"data:image/png;base64,{img_str}"
 
-    def _generate_backup_codes(self, count: int = 10) -> List[str]:
-        """
-        Generate backup codes.
+    def _generate_backup_codes(self, count: int = 10) -> list[str]:
+        """Generate backup codes.
 
         Args:
             count: Number of backup codes to generate

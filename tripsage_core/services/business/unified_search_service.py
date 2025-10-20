@@ -1,5 +1,4 @@
-"""
-Unified search service for TripSage.
+"""Unified search service for TripSage.
 
 This service orchestrates searches across multiple resource types (destinations,
 flights, accommodations, activities) and provides a unified interface for
@@ -10,7 +9,7 @@ to avoid code duplication while providing enhanced search capabilities.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import (
@@ -26,6 +25,7 @@ from tripsage_core.services.infrastructure.cache_service import get_cache_servic
 from tripsage_core.services.infrastructure.search_cache_mixin import SearchCacheMixin
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -44,7 +44,7 @@ DEFAULT_SEARCH_TYPES = ["destination", "activity", "accommodation"]
 class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         details = {
             "additional_context": {
                 "original_error": str(original_error) if original_error else None
@@ -65,8 +65,7 @@ class UnifiedSearchService(
     """Service for unified search across multiple resource types."""
 
     def __init__(self, cache_service=None):
-        """
-        Initialize unified search service.
+        """Initialize unified search service.
 
         Args:
             cache_service: Cache service instance
@@ -93,7 +92,7 @@ class UnifiedSearchService(
         if not self._activity_service:
             self._activity_service = await get_activity_service()
 
-    def get_cache_fields(self, request: UnifiedSearchRequest) -> Dict[str, Any]:
+    def get_cache_fields(self, request: UnifiedSearchRequest) -> dict[str, Any]:
         """Extract fields for cache key generation."""
         cache_fields = {
             "query": request.query,
@@ -134,8 +133,7 @@ class UnifiedSearchService(
     async def unified_search(
         self, request: UnifiedSearchRequest
     ) -> UnifiedSearchResponse:
-        """
-        Perform unified search across multiple resource types.
+        """Perform unified search across multiple resource types.
 
         Args:
             request: Unified search request
@@ -257,7 +255,7 @@ class UnifiedSearchService(
 
     async def _search_destinations(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search destinations and convert to unified results."""
         try:
             # Use the destination service to search
@@ -299,7 +297,7 @@ class UnifiedSearchService(
 
     async def _search_activities(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search activities and convert to unified results."""
         try:
             if not request.destination:
@@ -359,7 +357,7 @@ class UnifiedSearchService(
 
     async def _search_flights(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search flights and convert to unified results."""
         try:
             # For now, return empty as flight service integration needs more work
@@ -372,7 +370,7 @@ class UnifiedSearchService(
 
     async def _search_accommodations(
         self, request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+    ) -> list[SearchResultItem]:
         """Search accommodations and convert to unified results."""
         try:
             # For now, return empty as accommodation service integration needs more work
@@ -384,8 +382,8 @@ class UnifiedSearchService(
             return []
 
     def _apply_unified_filters(
-        self, results: List[SearchResultItem], request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+        self, results: list[SearchResultItem], request: UnifiedSearchRequest
+    ) -> list[SearchResultItem]:
         """Apply filters across all result types."""
         if not request.filters:
             return results
@@ -418,8 +416,8 @@ class UnifiedSearchService(
         return filtered
 
     def _sort_unified_results(
-        self, results: List[SearchResultItem], request: UnifiedSearchRequest
-    ) -> List[SearchResultItem]:
+        self, results: list[SearchResultItem], request: UnifiedSearchRequest
+    ) -> list[SearchResultItem]:
         """Sort results across all types."""
         sort_by = request.sort_by or "relevance"
         reverse = request.sort_order == "desc"
@@ -445,7 +443,7 @@ class UnifiedSearchService(
 
         return results
 
-    def _generate_facets(self, results: List[SearchResultItem]) -> List[SearchFacet]:
+    def _generate_facets(self, results: list[SearchResultItem]) -> list[SearchFacet]:
         """Generate facets for filtering UI."""
         facets = []
 
@@ -493,9 +491,8 @@ class UnifiedSearchService(
         return facets
 
     @with_error_handling()
-    async def get_search_suggestions(self, query: str, limit: int = 10) -> List[str]:
-        """
-        Get search suggestions based on partial query.
+    async def get_search_suggestions(self, query: str, limit: int = 10) -> list[str]:
+        """Get search suggestions based on partial query.
 
         Args:
             query: Partial search query
@@ -555,7 +552,7 @@ class UnifiedSearchService(
 
 
 # Global service instance
-_unified_search_service: Optional[UnifiedSearchService] = None
+_unified_search_service: UnifiedSearchService | None = None
 
 
 async def get_unified_search_service() -> UnifiedSearchService:

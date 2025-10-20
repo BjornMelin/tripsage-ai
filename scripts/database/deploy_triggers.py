@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Deploy Database Triggers Script
+"""Deploy Database Triggers Script
 Applies business logic and automation triggers to the database.
 """
 
@@ -11,6 +10,7 @@ from pathlib import Path
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
+
 
 # Configure logging
 logging.basicConfig(

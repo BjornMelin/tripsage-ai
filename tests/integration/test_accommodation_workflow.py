@@ -1,5 +1,4 @@
-"""
-Integration tests for accommodation search workflows.
+"""Integration tests for accommodation search workflows.
 
 Modern, focused tests that validate core accommodation functionality
 with properly mocked dependencies using actual service APIs.

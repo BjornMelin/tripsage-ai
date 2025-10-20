@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for UnifiedSearchService.
+"""Comprehensive tests for UnifiedSearchService.
 
 Tests cover:
 - Unified search across multiple resource types
@@ -930,16 +929,18 @@ class TestUnifiedSearchService:
 
     async def test_get_search_suggestions_error(self, unified_search_service):
         """Test get_search_suggestions with error."""
-        with patch(
-            "tripsage_core.services.business.unified_search_service.with_error_handling"
-        ):
-            with patch.object(
+        with (
+            patch(
+                "tripsage_core.services.business.unified_search_service.with_error_handling"
+            ),
+            patch.object(
                 unified_search_service,
                 "get_search_suggestions",
                 side_effect=Exception("Error"),
-            ):
-                with raises(UnifiedSearchServiceError):
-                    await unified_search_service.get_search_suggestions("test")
+            ),
+            raises(UnifiedSearchServiceError),
+        ):
+            await unified_search_service.get_search_suggestions("test")
 
 
 class TestGlobalServiceFunctions:

@@ -1,5 +1,4 @@
-"""
-Centralized exception system for TripSage.
+"""Centralized exception system for TripSage.
 
 This module provides a comprehensive exception hierarchy for all TripSage components,
 including APIs, agents, services, and tools. It consolidates exception handling
@@ -8,10 +7,12 @@ from across the application into a single, consistent system.
 
 import functools
 import traceback
-from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar, Union
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 from fastapi import status
 from pydantic import BaseModel, Field
+
 
 # Type variables for generic functions
 T = TypeVar("T")
@@ -21,19 +22,18 @@ R = TypeVar("R")
 class ErrorDetails(BaseModel):
     """Structured error details for enhanced debugging and logging."""
 
-    service: Optional[str] = Field(None, description="Service that raised the error")
-    operation: Optional[str] = Field(None, description="Operation that failed")
-    resource_id: Optional[str] = Field(None, description="ID of the resource involved")
-    user_id: Optional[str] = Field(None, description="User ID associated with error")
-    request_id: Optional[str] = Field(None, description="Request ID for tracing")
-    additional_context: Optional[Dict[str, Any]] = Field(
+    service: str | None = Field(None, description="Service that raised the error")
+    operation: str | None = Field(None, description="Operation that failed")
+    resource_id: str | None = Field(None, description="ID of the resource involved")
+    user_id: str | None = Field(None, description="User ID associated with error")
+    request_id: str | None = Field(None, description="Request ID for tracing")
+    additional_context: dict[str, Any] | None = Field(
         default_factory=dict, description="Additional context information"
     )
 
 
 class CoreTripSageError(Exception):
-    """
-    Base exception for all TripSage errors.
+    """Base exception for all TripSage errors.
 
     This is the root exception class that all TripSage-specific exceptions
     should inherit from. It provides a consistent interface for error handling
@@ -45,7 +45,7 @@ class CoreTripSageError(Exception):
         message: str = "An unexpected error occurred",
         code: str = "INTERNAL_ERROR",
         status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
     ):
         """Initialize the CoreTripSageError.
 
@@ -69,7 +69,7 @@ class CoreTripSageError(Exception):
 
         super().__init__(self.message)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for API responses.
 
         Returns:
@@ -103,7 +103,7 @@ class CoreAuthenticationError(CoreTripSageError):
         self,
         message: str = "Authentication failed",
         code: str = "AUTHENTICATION_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
     ):
         """Initialize the CoreAuthenticationError.
 
@@ -127,7 +127,7 @@ class CoreAuthorizationError(CoreTripSageError):
         self,
         message: str = "You are not authorized to perform this action",
         code: str = "AUTHORIZATION_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
     ):
         """Initialize the CoreAuthorizationError.
 
@@ -151,7 +151,7 @@ class CoreSecurityError(CoreTripSageError):
         self,
         message: str = "Security violation detected",
         code: str = "SECURITY_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
     ):
         """Initialize the CoreSecurityError.
 
@@ -176,7 +176,7 @@ class CoreResourceNotFoundError(CoreTripSageError):
         self,
         message: str = "Resource not found",
         code: str = "RESOURCE_NOT_FOUND",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
     ):
         """Initialize the CoreResourceNotFoundError.
 
@@ -200,10 +200,10 @@ class CoreValidationError(CoreTripSageError):
         self,
         message: str = "Validation error",
         code: str = "VALIDATION_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        field: Optional[str] = None,
-        value: Optional[Any] = None,
-        constraint: Optional[str] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        field: str | None = None,
+        value: Any | None = None,
+        constraint: str | None = None,
     ):
         """Initialize the CoreValidationError.
 
@@ -246,8 +246,8 @@ class CoreConnectionError(CoreTripSageError):
         self,
         message: str = "Connection operation failed",
         code: str = "CONNECTION_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        connection_type: Optional[str] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        connection_type: str | None = None,
     ):
         """Initialize the CoreConnectionError.
 
@@ -281,8 +281,8 @@ class CoreServiceError(CoreTripSageError):
         self,
         message: str = "Service operation failed",
         code: str = "SERVICE_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        service: Optional[str] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        service: str | None = None,
     ):
         """Initialize the CoreServiceError.
 
@@ -316,8 +316,8 @@ class CoreRateLimitError(CoreTripSageError):
         self,
         message: str = "Rate limit exceeded",
         code: str = "RATE_LIMIT_EXCEEDED",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        retry_after: Optional[int] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        retry_after: int | None = None,
     ):
         """Initialize the CoreRateLimitError.
 
@@ -351,8 +351,8 @@ class CoreKeyValidationError(CoreTripSageError):
         self,
         message: str = "Invalid API key",
         code: str = "INVALID_API_KEY",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        key_service: Optional[str] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        key_service: str | None = None,
     ):
         """Initialize the CoreKeyValidationError.
 
@@ -387,9 +387,9 @@ class CoreDatabaseError(CoreTripSageError):
         self,
         message: str = "Database operation failed",
         code: str = "DATABASE_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        operation: Optional[str] = None,
-        table: Optional[str] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        operation: str | None = None,
+        table: str | None = None,
     ):
         """Initialize the CoreDatabaseError.
 
@@ -427,10 +427,10 @@ class CoreExternalAPIError(CoreTripSageError):
         self,
         message: str = "External API call failed",
         code: str = "EXTERNAL_API_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        api_service: Optional[str] = None,
-        api_status_code: Optional[int] = None,
-        api_response: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        api_service: str | None = None,
+        api_status_code: int | None = None,
+        api_response: dict[str, Any] | None = None,
     ):
         """Initialize the CoreExternalAPIError.
 
@@ -474,10 +474,10 @@ class CoreMCPError(CoreServiceError):
         self,
         message: str = "MCP server operation failed",
         code: str = "MCP_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        server: Optional[str] = None,
-        tool: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        server: str | None = None,
+        tool: str | None = None,
+        params: dict[str, Any] | None = None,
     ):
         """Initialize the CoreMCPError.
 
@@ -520,9 +520,9 @@ class CoreAgentError(CoreServiceError):
         self,
         message: str = "Agent operation failed",
         code: str = "AGENT_ERROR",
-        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
-        agent_type: Optional[str] = None,
-        operation: Optional[str] = None,
+        details: dict[str, Any] | ErrorDetails | None = None,
+        agent_type: str | None = None,
+        operation: str | None = None,
     ):
         """Initialize the CoreAgentError.
 
@@ -553,7 +553,7 @@ class CoreAgentError(CoreServiceError):
 
 
 # Utility Functions
-def format_exception(exc: Exception) -> Dict[str, Any]:
+def format_exception(exc: Exception) -> dict[str, Any]:
     """Format an exception into a standardized structure.
 
     Args:
@@ -578,7 +578,7 @@ def format_exception(exc: Exception) -> Dict[str, Any]:
 
 def create_error_response(
     exc: Exception, include_traceback: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Create a standardized error response for API endpoints.
 
     Args:
@@ -598,7 +598,7 @@ def create_error_response(
 
 def safe_execute(
     func: Callable[..., T], *args: Any, fallback: R = None, logger=None, **kwargs: Any
-) -> Union[T, R]:
+) -> T | R:
     """Execute a function with error handling and optional fallback.
 
     Args:
@@ -635,9 +635,9 @@ def with_error_handling(
         Decorator function
     """
 
-    def decorator(func: Callable[..., Union[T, Awaitable[T]]]):
+    def decorator(func: Callable[..., T | Awaitable[T]]):
         @functools.wraps(func)
-        def sync_wrapper(*args: Any, **kwargs: Any) -> Union[T, Any]:
+        def sync_wrapper(*args: Any, **kwargs: Any) -> T | Any:
             try:
                 return func(*args, **kwargs)
             except Exception as e:
@@ -648,7 +648,7 @@ def with_error_handling(
                 return fallback
 
         @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Union[T, Any]:
+        async def async_wrapper(*args: Any, **kwargs: Any) -> T | Any:
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
@@ -669,28 +669,28 @@ def with_error_handling(
 
 # Factory functions for common exceptions
 def create_authentication_error(
-    message: str = "Authentication failed", details: Optional[Dict[str, Any]] = None
+    message: str = "Authentication failed", details: dict[str, Any] | None = None
 ) -> CoreAuthenticationError:
     """Create an authentication error with standard parameters."""
     return CoreAuthenticationError(message=message, details=details)
 
 
 def create_authorization_error(
-    message: str = "Access denied", details: Optional[Dict[str, Any]] = None
+    message: str = "Access denied", details: dict[str, Any] | None = None
 ) -> CoreAuthorizationError:
     """Create an authorization error with standard parameters."""
     return CoreAuthorizationError(message=message, details=details)
 
 
 def create_validation_error(
-    message: str = "Validation failed", details: Optional[Dict[str, Any]] = None
+    message: str = "Validation failed", details: dict[str, Any] | None = None
 ) -> CoreValidationError:
     """Create a validation error with standard parameters."""
     return CoreValidationError(message=message, details=details)
 
 
 def create_not_found_error(
-    message: str = "Resource not found", details: Optional[Dict[str, Any]] = None
+    message: str = "Resource not found", details: dict[str, Any] | None = None
 ) -> CoreResourceNotFoundError:
     """Create a not found error with standard parameters."""
     return CoreResourceNotFoundError(message=message, details=details)

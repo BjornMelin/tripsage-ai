@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Enhanced Performance Benchmark Script for Database Service
+"""Enhanced Performance Benchmark Script for Database Service
 
 Modern performance benchmarking with:
 - Statistical analysis and confidence intervals
@@ -21,15 +20,17 @@ import logging
 import statistics
 import sys
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import psutil
 from pydantic import BaseModel, Field
+
 
 try:
     from tripsage_core.config import get_settings
@@ -84,15 +85,15 @@ class BenchmarkMetrics:
     end_time: float
     duration_ms: float
     success: bool
-    error_message: Optional[str] = None
-    memory_before_mb: Optional[float] = None
-    memory_after_mb: Optional[float] = None
-    memory_peak_mb: Optional[float] = None
-    cpu_percent: Optional[float] = None
-    connection_count: Optional[int] = None
-    query_complexity: Optional[str] = None
-    cache_hit: Optional[bool] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    error_message: str | None = None
+    memory_before_mb: float | None = None
+    memory_after_mb: float | None = None
+    memory_peak_mb: float | None = None
+    cpu_percent: float | None = None
+    connection_count: int | None = None
+    query_complexity: str | None = None
+    cache_hit: bool | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class BenchmarkStatistics(BaseModel):
@@ -115,16 +116,16 @@ class BenchmarkStatistics(BaseModel):
     p99_duration: float
 
     # Confidence intervals
-    confidence_interval_95: Tuple[float, float]
+    confidence_interval_95: tuple[float, float]
 
     # Memory statistics
-    mean_memory_usage: Optional[float] = None
-    peak_memory_usage: Optional[float] = None
+    mean_memory_usage: float | None = None
+    peak_memory_usage: float | None = None
 
     # Performance indicators
     operations_per_second: float
     is_regression: bool = False
-    regression_threshold_ms: Optional[float] = None
+    regression_threshold_ms: float | None = None
 
 
 class PerformanceRegression(BaseModel):
@@ -132,10 +133,10 @@ class PerformanceRegression(BaseModel):
 
     operation_name: str
     current_p95: float
-    baseline_p95: Optional[float]
+    baseline_p95: float | None
     threshold_ms: float
     is_regression: bool
-    regression_percentage: Optional[float] = None
+    regression_percentage: float | None = None
     severity: str  # "low", "medium", "high", "critical"
 
 
@@ -147,7 +148,7 @@ class EnhancedDatabaseBenchmark:
         iterations: int = 100,
         concurrent_users: int = 10,
         output_dir: str = "benchmark_results",
-        baseline_file: Optional[str] = None,
+        baseline_file: str | None = None,
     ):
         self.iterations = iterations
         self.concurrent_users = concurrent_users
@@ -158,9 +159,9 @@ class EnhancedDatabaseBenchmark:
         self.output_dir.mkdir(exist_ok=True)
 
         self.settings = get_settings()
-        self.metrics: List[BenchmarkMetrics] = []
-        self.statistics: Dict[str, BenchmarkStatistics] = {}
-        self.regressions: List[PerformanceRegression] = []
+        self.metrics: list[BenchmarkMetrics] = []
+        self.statistics: dict[str, BenchmarkStatistics] = {}
+        self.regressions: list[PerformanceRegression] = []
 
         # Performance thresholds (in milliseconds)
         self.performance_thresholds = {
@@ -177,9 +178,8 @@ class EnhancedDatabaseBenchmark:
     @asynccontextmanager
     async def measure_performance(
         self, operation_name: str
-    ) -> AsyncGenerator[BenchmarkMetrics, None]:
+    ) -> AsyncGenerator[BenchmarkMetrics]:
         """Context manager for measuring performance with detailed metrics."""
-
         # Get initial system metrics
         process = psutil.Process()
         memory_before = process.memory_info().rss / 1024 / 1024  # MB
@@ -219,7 +219,6 @@ class EnhancedDatabaseBenchmark:
 
     async def run_all_benchmarks(self):
         """Run comprehensive benchmarks with modern monitoring."""
-
         logger.info(f"Starting enhanced benchmarks with {self.iterations} iterations")
         logger.info(f"Concurrent users: {self.concurrent_users}")
         logger.info(f"Output directory: {self.output_dir}")
@@ -243,7 +242,6 @@ class EnhancedDatabaseBenchmark:
 
     async def benchmark_connection_performance(self):
         """Benchmark connection establishment and management."""
-
         logger.info("Benchmarking connection performance...")
 
         for i in range(min(20, self.iterations)):
@@ -255,7 +253,6 @@ class EnhancedDatabaseBenchmark:
 
     async def benchmark_query_performance(self):
         """Benchmark various query types with detailed analysis."""
-
         logger.info("Benchmarking query performance...")
 
         service = DatabaseService(settings=self.settings)
@@ -308,7 +305,6 @@ class EnhancedDatabaseBenchmark:
 
     async def benchmark_transaction_performance(self):
         """Benchmark transaction performance with rollback scenarios."""
-
         logger.info("Benchmarking transaction performance...")
 
         service = DatabaseService(settings=self.settings)
@@ -349,7 +345,6 @@ class EnhancedDatabaseBenchmark:
 
     async def benchmark_concurrent_performance(self):
         """Benchmark concurrent operations with load testing."""
-
         logger.info(
             f"Benchmarking concurrent performance with {self.concurrent_users} users..."
         )
@@ -387,7 +382,6 @@ class EnhancedDatabaseBenchmark:
 
     async def benchmark_memory_usage(self):
         """Benchmark memory usage patterns."""
-
         logger.info("Benchmarking memory usage...")
 
         service = DatabaseService(settings=self.settings)
@@ -422,7 +416,6 @@ class EnhancedDatabaseBenchmark:
 
     async def benchmark_vector_operations(self):
         """Benchmark vector search operations if available."""
-
         logger.info("Benchmarking vector operations...")
 
         service = DatabaseService(settings=self.settings)
@@ -471,7 +464,6 @@ class EnhancedDatabaseBenchmark:
 
     def calculate_statistics(self):
         """Calculate comprehensive statistics for all benchmarks."""
-
         logger.info("Calculating statistics...")
 
         # Group metrics by operation
@@ -545,14 +537,13 @@ class EnhancedDatabaseBenchmark:
 
     def detect_regressions(self):
         """Detect performance regressions against baselines."""
-
         logger.info("Detecting performance regressions...")
 
         # Load baseline if available
         baseline_stats = {}
         if self.baseline_file and Path(self.baseline_file).exists():
             try:
-                with open(self.baseline_file, "r") as f:
+                with open(self.baseline_file) as f:
                     baseline_data = json.load(f)
                     baseline_stats = baseline_data.get("statistics", {})
             except Exception as e:
@@ -602,8 +593,7 @@ class EnhancedDatabaseBenchmark:
 
     async def generate_comprehensive_report(self):
         """Generate comprehensive benchmark reports in multiple formats."""
-
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
         # Generate JSON report
         await self.generate_json_report(timestamp)
@@ -622,7 +612,6 @@ class EnhancedDatabaseBenchmark:
 
     async def generate_json_report(self, timestamp: str):
         """Generate detailed JSON report."""
-
         report_data = {
             "benchmark_info": {
                 "timestamp": timestamp,
@@ -654,7 +643,6 @@ class EnhancedDatabaseBenchmark:
 
     async def generate_csv_report(self, timestamp: str):
         """Generate CSV report for data analysis."""
-
         csv_file = self.output_dir / f"benchmark_data_{timestamp}.csv"
 
         with open(csv_file, "w", newline="") as f:
@@ -693,7 +681,6 @@ class EnhancedDatabaseBenchmark:
 
     async def generate_html_report(self, timestamp: str):
         """Generate HTML report with visualizations."""
-
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -821,7 +808,6 @@ class EnhancedDatabaseBenchmark:
 
     def generate_console_report(self):
         """Generate console report with key metrics."""
-
         print("\n" + "=" * 80)
         print("DATABASE BENCHMARK RESULTS")
         print("=" * 80)
@@ -869,7 +855,6 @@ class EnhancedDatabaseBenchmark:
 
     async def save_baseline(self, timestamp: str):
         """Save current results as baseline for future comparisons."""
-
         baseline_file = self.output_dir / f"baseline_{timestamp}.json"
         baseline_data = {
             "timestamp": timestamp,
@@ -892,7 +877,6 @@ class EnhancedDatabaseBenchmark:
 
 async def main():
     """Main benchmark execution with enhanced CLI."""
-
     import argparse
 
     parser = argparse.ArgumentParser(

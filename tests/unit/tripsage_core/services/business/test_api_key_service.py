@@ -1,11 +1,10 @@
-"""
-Comprehensive tests for ApiKeyService.
+"""Comprehensive tests for ApiKeyService.
 
 This module provides full test coverage for the modern API key service
 including validation, storage, rotation, and monitoring functionality.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -60,7 +59,7 @@ class TestApiKeyService:
                     return [self.inserted_data]
                 else:
                     # Fallback for tests that don't insert data
-                    now = datetime.now(timezone.utc).isoformat()
+                    now = datetime.now(UTC).isoformat()
                     return [
                         [
                             {
@@ -128,11 +127,11 @@ class TestApiKeyService:
             service=ServiceType.OPENAI,
             description="Key for GPT-4 access",
             is_valid=True,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
-            expires_at=datetime.now(timezone.utc) + timedelta(days=365),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            expires_at=datetime.now(UTC) + timedelta(days=365),
             last_used=None,
-            last_validated=datetime.now(timezone.utc),
+            last_validated=datetime.now(UTC),
             usage_count=0,
         )
 
@@ -145,13 +144,11 @@ class TestApiKeyService:
             "service": "openai",
             "description": "Key for GPT-4 access",
             "is_valid": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": (
-                datetime.now(timezone.utc) + timedelta(days=365)
-            ).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
+            "expires_at": (datetime.now(UTC) + timedelta(days=365)).isoformat(),
             "last_used": None,
-            "last_validated": datetime.now(timezone.utc).isoformat(),
+            "last_validated": datetime.now(UTC).isoformat(),
             "usage_count": 0,
         }
 
@@ -403,7 +400,7 @@ class TestApiKeyService:
                 "message": "Cached result",
                 "details": {},
                 "latency_ms": 0,
-                "validated_at": datetime.now(timezone.utc).isoformat(),
+                "validated_at": datetime.now(UTC).isoformat(),
                 "rate_limit_info": None,
                 "quota_info": None,
                 "capabilities": [],
@@ -542,7 +539,7 @@ class TestApiKeyService:
                     "message": "Cached result",
                     "details": {},
                     "latency_ms": 0,
-                    "validated_at": datetime.now(timezone.utc).isoformat(),
+                    "validated_at": datetime.now(UTC).isoformat(),
                     "rate_limit_info": None,
                     "quota_info": None,
                     "capabilities": [],

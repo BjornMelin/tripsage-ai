@@ -1,5 +1,4 @@
-"""
-Database service wrapper with monitoring integration and feature flags.
+"""Database service wrapper with monitoring integration and feature flags.
 
 This wrapper provides a transparent layer around the database service
 with optional monitoring, metrics collection, and graceful degradation.
@@ -8,7 +7,7 @@ with optional monitoring, metrics collection, and graceful degradation.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.monitoring.database_metrics import (
@@ -20,12 +19,12 @@ from tripsage_core.services.infrastructure.database_monitor import (
 )
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
+
 logger = logging.getLogger(__name__)
 
 
 class DatabaseServiceWrapper:
-    """
-    Enhanced database service with monitoring and feature flag support.
+    """Enhanced database service with monitoring and feature flag support.
 
     This wrapper provides:
     - Optional monitoring and metrics collection based on feature flags
@@ -34,7 +33,7 @@ class DatabaseServiceWrapper:
     - Automatic setup and teardown of monitoring components
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize database service wrapper.
 
         Args:
@@ -46,8 +45,8 @@ class DatabaseServiceWrapper:
         self.database_service = DatabaseService(settings=self.settings)
 
         # Optional monitoring components
-        self.metrics: Optional[DatabaseMetrics] = None
-        self.monitor: Optional[DatabaseConnectionMonitor] = None
+        self.metrics: DatabaseMetrics | None = None
+        self.monitor: DatabaseConnectionMonitor | None = None
 
         # Initialize monitoring components based on feature flags
         self._initialize_monitoring()
@@ -157,8 +156,8 @@ class DatabaseServiceWrapper:
     # Core database operations with optional metrics
 
     async def insert(
-        self, table: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]
-    ) -> List[Dict[str, Any]]:
+        self, table: str, data: dict[str, Any] | list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Insert data into table with metrics."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "INSERT", table):
@@ -170,11 +169,11 @@ class DatabaseServiceWrapper:
         self,
         table: str,
         columns: str = "*",
-        filters: Optional[Dict[str, Any]] = None,
-        order_by: Optional[str] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+        filters: dict[str, Any] | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[dict[str, Any]]:
         """Select data from table with metrics."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "SELECT", table):
@@ -187,8 +186,8 @@ class DatabaseServiceWrapper:
             )
 
     async def update(
-        self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+        self, table: str, data: dict[str, Any], filters: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Update data in table with metrics."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "UPDATE", table):
@@ -199,9 +198,9 @@ class DatabaseServiceWrapper:
     async def upsert(
         self,
         table: str,
-        data: Union[Dict[str, Any], List[Dict[str, Any]]],
-        on_conflict: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        data: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Upsert data in table with metrics."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "UPSERT", table):
@@ -209,7 +208,7 @@ class DatabaseServiceWrapper:
         else:
             return await self.database_service.upsert(table, data, on_conflict)
 
-    async def delete(self, table: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def delete(self, table: str, filters: dict[str, Any]) -> list[dict[str, Any]]:
         """Delete data from table with metrics."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "DELETE", table):
@@ -217,7 +216,7 @@ class DatabaseServiceWrapper:
         else:
             return await self.database_service.delete(table, filters)
 
-    async def count(self, table: str, filters: Optional[Dict[str, Any]] = None) -> int:
+    async def count(self, table: str, filters: dict[str, Any] | None = None) -> int:
         """Count records in table with metrics."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "COUNT", table):
@@ -239,21 +238,21 @@ class DatabaseServiceWrapper:
 
     # Pass-through methods (delegate to database service)
 
-    async def create_trip(self, trip_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_trip(self, trip_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new trip record."""
         return await self.database_service.create_trip(trip_data)
 
-    async def get_trip(self, trip_id: str) -> Optional[Dict[str, Any]]:
+    async def get_trip(self, trip_id: str) -> dict[str, Any] | None:
         """Get trip by ID."""
         return await self.database_service.get_trip(trip_id)
 
-    async def get_user_trips(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_trips(self, user_id: str) -> list[dict[str, Any]]:
         """Get all trips for a user."""
         return await self.database_service.get_user_trips(user_id)
 
     async def update_trip(
-        self, trip_id: str, trip_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, trip_id: str, trip_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update trip record."""
         return await self.database_service.update_trip(trip_id, trip_data)
 
@@ -261,79 +260,79 @@ class DatabaseServiceWrapper:
         """Delete trip record."""
         return await self.database_service.delete_trip(trip_id)
 
-    async def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_user(self, user_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new user record."""
         return await self.database_service.create_user(user_data)
 
-    async def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
+    async def get_user(self, user_id: str) -> dict[str, Any] | None:
         """Get user by ID."""
         return await self.database_service.get_user(user_id)
 
-    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+    async def get_user_by_email(self, email: str) -> dict[str, Any] | None:
         """Get user by email."""
         return await self.database_service.get_user_by_email(email)
 
     async def update_user(
-        self, user_id: str, user_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, user_id: str, user_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update user record."""
         return await self.database_service.update_user(user_id, user_data)
 
-    async def save_flight_search(self, search_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def save_flight_search(self, search_data: dict[str, Any]) -> dict[str, Any]:
         """Save flight search parameters."""
         return await self.database_service.save_flight_search(search_data)
 
-    async def save_flight_option(self, option_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def save_flight_option(self, option_data: dict[str, Any]) -> dict[str, Any]:
         """Save flight option."""
         return await self.database_service.save_flight_option(option_data)
 
-    async def get_user_flight_searches(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_flight_searches(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's flight searches."""
         return await self.database_service.get_user_flight_searches(user_id)
 
     async def save_accommodation_search(
-        self, search_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, search_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Save accommodation search parameters."""
         return await self.database_service.save_accommodation_search(search_data)
 
     async def save_accommodation_option(
-        self, option_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, option_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Save accommodation option."""
         return await self.database_service.save_accommodation_option(option_data)
 
     async def get_user_accommodation_searches(
         self, user_id: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get user's accommodation searches."""
         return await self.database_service.get_user_accommodation_searches(user_id)
 
-    async def create_chat_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_chat_session(self, session_data: dict[str, Any]) -> dict[str, Any]:
         """Create chat session."""
         return await self.database_service.create_chat_session(session_data)
 
-    async def save_chat_message(self, message_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def save_chat_message(self, message_data: dict[str, Any]) -> dict[str, Any]:
         """Save chat message."""
         return await self.database_service.save_chat_message(message_data)
 
     async def get_chat_history(
         self, session_id: str, limit: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get chat history for session."""
         return await self.database_service.get_chat_history(session_id, limit)
 
-    async def save_api_key(self, key_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def save_api_key(self, key_data: dict[str, Any]) -> dict[str, Any]:
         """Save API key configuration."""
         return await self.database_service.save_api_key(key_data)
 
-    async def get_user_api_keys(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_user_api_keys(self, user_id: str) -> list[dict[str, Any]]:
         """Get user's API keys."""
         return await self.database_service.get_user_api_keys(user_id)
 
     async def get_api_key(
         self, user_id: str, service_name: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get specific API key for user and service."""
         return await self.database_service.get_api_key(user_id, service_name)
 
@@ -347,19 +346,19 @@ class DatabaseServiceWrapper:
             user_id, service_name
         )
 
-    async def create_api_key(self, key_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def create_api_key(self, key_data: dict[str, Any]) -> dict[str, Any]:
         """Create a new API key."""
         return await self.database_service.create_api_key(key_data)
 
     async def get_api_key_for_service(
         self, user_id: str, service: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key for specific service."""
         return await self.database_service.get_api_key_for_service(user_id, service)
 
     async def get_api_key_by_id(
         self, key_id: str, user_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get API key by ID with user authorization."""
         return await self.database_service.get_api_key_by_id(key_id, user_id)
 
@@ -376,12 +375,12 @@ class DatabaseServiceWrapper:
         )
 
     async def update_api_key(
-        self, key_id: str, update_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, key_id: str, update_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update an API key with new data."""
         return await self.database_service.update_api_key(key_id, update_data)
 
-    async def log_api_key_usage(self, usage_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def log_api_key_usage(self, usage_data: dict[str, Any]) -> dict[str, Any]:
         """Log API key usage for audit trail."""
         return await self.database_service.log_api_key_usage(usage_data)
 
@@ -389,11 +388,11 @@ class DatabaseServiceWrapper:
         self,
         table: str,
         vector_column: str,
-        query_vector: List[float],
+        query_vector: list[float],
         limit: int = 10,
-        similarity_threshold: Optional[float] = None,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        similarity_threshold: float | None = None,
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         """Perform vector similarity search."""
         return await self.database_service.vector_search(
             table, vector_column, query_vector, limit, similarity_threshold, filters
@@ -401,40 +400,40 @@ class DatabaseServiceWrapper:
 
     async def vector_search_destinations(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         limit: int = 10,
         similarity_threshold: float = 0.7,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search destinations using vector similarity."""
         return await self.database_service.vector_search_destinations(
             query_vector, limit, similarity_threshold
         )
 
     async def save_destination_embedding(
-        self, destination_data: Dict[str, Any], embedding: List[float]
-    ) -> Dict[str, Any]:
+        self, destination_data: dict[str, Any], embedding: list[float]
+    ) -> dict[str, Any]:
         """Save destination with embedding."""
         return await self.database_service.save_destination_embedding(
             destination_data, embedding
         )
 
     async def execute_sql(
-        self, sql: str, params: Optional[Dict[str, Any]] = None
-    ) -> List[Dict[str, Any]]:
+        self, sql: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Execute raw SQL query."""
         return await self.database_service.execute_sql(sql, params)
 
     async def call_function(
-        self, function_name: str, params: Optional[Dict[str, Any]] = None
+        self, function_name: str, params: dict[str, Any] | None = None
     ) -> Any:
         """Call Supabase database function."""
         return await self.database_service.call_function(function_name, params)
 
-    async def get_user_stats(self, user_id: str) -> Dict[str, Any]:
+    async def get_user_stats(self, user_id: str) -> dict[str, Any]:
         """Get user statistics."""
         return await self.database_service.get_user_stats(user_id)
 
-    async def get_popular_destinations(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_popular_destinations(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get most popular destinations."""
         return await self.database_service.get_popular_destinations(limit)
 
@@ -442,47 +441,47 @@ class DatabaseServiceWrapper:
         """Check database connectivity."""
         return await self.database_service.health_check()
 
-    async def get_table_info(self, table: str) -> Dict[str, Any]:
+    async def get_table_info(self, table: str) -> dict[str, Any]:
         """Get table schema information."""
         return await self.database_service.get_table_info(table)
 
-    async def get_database_stats(self) -> Dict[str, Any]:
+    async def get_database_stats(self) -> dict[str, Any]:
         """Get database statistics."""
         return await self.database_service.get_database_stats()
 
-    async def get_trip_by_id(self, trip_id: str) -> Optional[Dict[str, Any]]:
+    async def get_trip_by_id(self, trip_id: str) -> dict[str, Any] | None:
         """Get trip by ID."""
         return await self.database_service.get_trip_by_id(trip_id)
 
     async def search_trips(
-        self, search_filters: Dict[str, Any], limit: int = 50, offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        self, search_filters: dict[str, Any], limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """Search trips with text and filters."""
         return await self.database_service.search_trips(search_filters, limit, offset)
 
-    async def get_trip_collaborators(self, trip_id: str) -> List[Dict[str, Any]]:
+    async def get_trip_collaborators(self, trip_id: str) -> list[dict[str, Any]]:
         """Get trip collaborators."""
         return await self.database_service.get_trip_collaborators(trip_id)
 
-    async def get_trip_related_counts(self, trip_id: str) -> Dict[str, int]:
+    async def get_trip_related_counts(self, trip_id: str) -> dict[str, int]:
         """Get counts of related trip data."""
         return await self.database_service.get_trip_related_counts(trip_id)
 
     async def add_trip_collaborator(
-        self, collaborator_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, collaborator_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Add trip collaborator."""
         return await self.database_service.add_trip_collaborator(collaborator_data)
 
     async def get_trip_collaborator(
         self, trip_id: str, user_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get specific trip collaborator."""
         return await self.database_service.get_trip_collaborator(trip_id, user_id)
 
     # Monitoring access methods
 
-    def get_monitoring_status(self) -> Optional[Dict[str, Any]]:
+    def get_monitoring_status(self) -> dict[str, Any] | None:
         """Get monitoring status if monitoring is enabled."""
         if self.monitor and self.settings.enable_database_monitoring:
             return self.monitor.get_monitoring_status()
@@ -494,13 +493,13 @@ class DatabaseServiceWrapper:
             return self.monitor.get_current_health()
         return None
 
-    def get_security_alerts(self, limit: Optional[int] = None):
+    def get_security_alerts(self, limit: int | None = None):
         """Get security alerts if monitoring is enabled."""
         if self.monitor and self.settings.enable_security_monitoring:
             return self.monitor.get_security_alerts(limit)
         return []
 
-    def get_metrics_summary(self) -> Optional[Dict[str, Any]]:
+    def get_metrics_summary(self) -> dict[str, Any] | None:
         """Get metrics summary if metrics are enabled."""
         if self.metrics and self.settings.enable_prometheus_metrics:
             return self.metrics.get_metrics_summary()
@@ -519,7 +518,7 @@ class DatabaseServiceWrapper:
 
 
 # Global wrapper instance
-_database_wrapper: Optional[DatabaseServiceWrapper] = None
+_database_wrapper: DatabaseServiceWrapper | None = None
 
 
 async def get_database_wrapper() -> DatabaseServiceWrapper:

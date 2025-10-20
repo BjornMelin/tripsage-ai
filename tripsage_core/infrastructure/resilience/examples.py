@@ -9,7 +9,7 @@ import asyncio
 import os
 import secrets
 import time
-from typing import Any, Dict
+from typing import Any
 
 from tripsage_core.config import apply_preset, get_enterprise_config
 from tripsage_core.infrastructure.resilience import (
@@ -29,7 +29,7 @@ class MockService:
         self.failure_count = 0
         self._random = secrets.SystemRandom()
 
-    async def unreliable_operation(self, operation_id: str) -> Dict[str, Any]:
+    async def unreliable_operation(self, operation_id: str) -> dict[str, Any]:
         """Simulate an unreliable operation that may fail."""
         self.call_count += 1
 
@@ -52,7 +52,7 @@ class MockService:
             "call_count": self.call_count,
         }
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get service statistics."""
         return {
             "name": self.name,

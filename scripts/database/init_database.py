@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-Database initialization script for TripSage.
+"""Database initialization script for TripSage.
 
 This script initializes the SQL database with:
 - Basic schema and tables
@@ -14,15 +13,16 @@ import os
 import sys
 from pathlib import Path
 
+
 # Add the project root to the Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # These imports rely on the path adjustments above
 from tripsage.mcp_abstraction.manager import MCPManager  # noqa: E402
-
 from tripsage_core.config import get_settings  # noqa: E402
 from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
+
 
 # Configure logging
 logger = configure_logging(__name__)

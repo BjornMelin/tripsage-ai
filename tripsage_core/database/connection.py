@@ -1,13 +1,12 @@
-"""
-Database connection utilities for TripSage with secure URL handling.
+"""Database connection utilities for TripSage with secure URL handling.
 
 Provides async database session management using SQLAlchemy with PostgreSQL,
 now with enhanced security through validated URL parsing and conversion.
 """
 
 import asyncio
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -24,13 +23,12 @@ from tripsage_core.utils.connection_utils import (
 from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.utils.url_converters import DatabaseURLConverter, DatabaseURLDetector
 
+
 logger = get_logger(__name__)
 
 
 class Base(DeclarativeBase):
     """Base class for SQLAlchemy models."""
-
-    pass
 
 
 # Global engine and session factory
@@ -63,8 +61,7 @@ async def create_secure_async_engine(
     echo: bool = False,
     **kwargs,
 ):
-    """
-    Create async SQLAlchemy engine with secure URL parsing and validation.
+    """Create async SQLAlchemy engine with secure URL parsing and validation.
 
     Args:
         database_url: Database connection URL (PostgreSQL or Supabase)
@@ -165,8 +162,7 @@ async def create_secure_async_engine(
 
 
 def get_engine():
-    """
-    Get or create the global async database engine with secure connection.
+    """Get or create the global async database engine with secure connection.
 
     This function now uses secure URL parsing and validation to ensure
     safe database connections.
@@ -234,9 +230,8 @@ def get_session_factory():
 
 
 @asynccontextmanager
-async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Get an async database session context manager with enhanced error handling.
+async def get_database_session() -> AsyncGenerator[AsyncSession]:
+    """Get an async database session context manager with enhanced error handling.
 
     This context manager ensures proper session lifecycle management with
     automatic rollback on errors and session cleanup.
@@ -255,8 +250,7 @@ async def get_database_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def test_connection() -> bool:
-    """
-    Test database connectivity with comprehensive validation.
+    """Test database connectivity with comprehensive validation.
 
     Returns:
         True if connection is valid and healthy, False otherwise
@@ -314,8 +308,7 @@ async def test_connection() -> bool:
 
 
 async def close_connections():
-    """
-    Close all database connections and cleanup resources.
+    """Close all database connections and cleanup resources.
 
     This function now properly disposes of the engine and resets
     the connection manager to ensure clean shutdown.
@@ -335,11 +328,10 @@ async def close_connections():
 
 
 async def get_engine_for_testing(
-    database_url: Optional[str] = None,
+    database_url: str | None = None,
     use_null_pool: bool = True,
 ) -> AsyncGenerator:
-    """
-    Create a test engine with NullPool for testing purposes.
+    """Create a test engine with NullPool for testing purposes.
 
     Args:
         database_url: Optional database URL override

@@ -1,5 +1,4 @@
-"""
-Test database connection factory implementation.
+"""Test database connection factory implementation.
 
 Tests the DatabaseConnectionFactory for secure connection handling,
 URL validation, and proper asyncpg pool management.
@@ -203,12 +202,14 @@ class TestDatabaseConnectionFactory:
     @pytest.mark.asyncio
     async def test_create_pool_connection_failure(self, factory):
         """Test pool creation handles connection failures."""
-        with patch(
-            "asyncpg.create_pool",
-            side_effect=asyncpg.PostgresError("Connection failed"),
+        with (
+            patch(
+                "asyncpg.create_pool",
+                side_effect=asyncpg.PostgresError("Connection failed"),
+            ),
+            pytest.raises(asyncpg.PostgresError),
         ):
-            with pytest.raises(asyncpg.PostgresError):
-                await factory.create_pool()
+            await factory.create_pool()
 
     @pytest.mark.asyncio
     async def test_get_connection(self, factory):

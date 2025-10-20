@@ -1,5 +1,4 @@
-"""
-Common validators for TripSage AI using Pydantic V2 best practices.
+"""Common validators for TripSage AI using Pydantic V2 best practices.
 
 This module provides reusable validators using the latest Pydantic V2 patterns including
 Annotated types, BeforeValidator, AfterValidator, and WrapValidator for maximum
@@ -7,7 +6,7 @@ code reuse and consistency across the application.
 """
 
 import re
-from typing import Annotated, Any, Optional
+from typing import Annotated, Any
 
 from pydantic import (
     AfterValidator,
@@ -16,8 +15,7 @@ from pydantic import (
 
 
 def validate_airport_code(value: str) -> str:
-    """
-    Validate and standardize IATA airport codes.
+    """Validate and standardize IATA airport codes.
 
     Args:
         value: The airport code to validate
@@ -42,9 +40,8 @@ def validate_airport_code(value: str) -> str:
     return value
 
 
-def validate_rating_range(value: Optional[float]) -> Optional[float]:
-    """
-    Validate that rating is between 0.0 and 5.0.
+def validate_rating_range(value: float | None) -> float | None:
+    """Validate that rating is between 0.0 and 5.0.
 
     Args:
         value: The rating value to validate
@@ -67,9 +64,8 @@ def validate_rating_range(value: Optional[float]) -> Optional[float]:
     return float(value)
 
 
-def validate_email_lowercase(value: Optional[str]) -> Optional[str]:
-    """
-    Validate and normalize email addresses to lowercase.
+def validate_email_lowercase(value: str | None) -> str | None:
+    """Validate and normalize email addresses to lowercase.
 
     Args:
         value: The email address to validate
@@ -86,9 +82,8 @@ def validate_email_lowercase(value: Optional[str]) -> Optional[str]:
     return value.strip().lower()
 
 
-def validate_positive_integer(value: Optional[int]) -> Optional[int]:
-    """
-    Validate that value is a positive integer.
+def validate_positive_integer(value: int | None) -> int | None:
+    """Validate that value is a positive integer.
 
     Args:
         value: The integer value to validate
@@ -111,9 +106,8 @@ def validate_positive_integer(value: Optional[int]) -> Optional[int]:
     return value
 
 
-def validate_non_negative_number(value: Optional[float]) -> Optional[float]:
-    """
-    Validate that value is a non-negative number.
+def validate_non_negative_number(value: float | None) -> float | None:
+    """Validate that value is a non-negative number.
 
     Args:
         value: The number value to validate
@@ -137,8 +131,7 @@ def validate_non_negative_number(value: Optional[float]) -> Optional[float]:
 
 
 def validate_currency_code(value: str) -> str:
-    """
-    Validate and standardize currency codes (ISO 4217).
+    """Validate and standardize currency codes (ISO 4217).
 
     Args:
         value: The currency code to validate
@@ -164,8 +157,7 @@ def validate_currency_code(value: str) -> str:
 
 
 def validate_string_length_range(min_len: int, max_len: int):
-    """
-    Create a validator for string length within a specific range.
+    """Create a validator for string length within a specific range.
 
     Args:
         min_len: Minimum allowed length
@@ -175,7 +167,7 @@ def validate_string_length_range(min_len: int, max_len: int):
         A validator function for string length
     """
 
-    def validator(value: Optional[str]) -> Optional[str]:
+    def validator(value: str | None) -> str | None:
         if value is None:
             return None
 
@@ -196,8 +188,7 @@ def validate_string_length_range(min_len: int, max_len: int):
 
 
 def validate_password_strength(value: str) -> str:
-    """
-    Validate password strength according to TripSage security requirements.
+    """Validate password strength according to TripSage security requirements.
 
     Requirements:
     - At least 8 characters long
@@ -237,9 +228,8 @@ def validate_password_strength(value: str) -> str:
     return value
 
 
-def validate_latitude(value: Optional[float]) -> Optional[float]:
-    """
-    Validate geographic latitude.
+def validate_latitude(value: float | None) -> float | None:
+    """Validate geographic latitude.
 
     Args:
         value: The latitude value to validate
@@ -262,9 +252,8 @@ def validate_latitude(value: Optional[float]) -> Optional[float]:
     return float(value)
 
 
-def validate_longitude(value: Optional[float]) -> Optional[float]:
-    """
-    Validate geographic longitude.
+def validate_longitude(value: float | None) -> float | None:
+    """Validate geographic longitude.
 
     Args:
         value: The longitude value to validate
@@ -288,8 +277,7 @@ def validate_longitude(value: Optional[float]) -> Optional[float]:
 
 
 def create_enum_validator(enum_class):
-    """
-    Create a validator for enum values with better error messages.
+    """Create a validator for enum values with better error messages.
 
     Args:
         enum_class: The enum class to validate against
@@ -319,8 +307,7 @@ def create_enum_validator(enum_class):
 
 
 def truncate_string(max_length: int):
-    """
-    Create a before validator that truncates strings to max length.
+    """Create a before validator that truncates strings to max length.
 
     Args:
         max_length: Maximum allowed length
@@ -341,26 +328,22 @@ def truncate_string(max_length: int):
 
 # Pre-configured common validators using Annotated types for reusability
 AirportCode = Annotated[str, AfterValidator(validate_airport_code)]
-Rating = Annotated[Optional[float], AfterValidator(validate_rating_range)]
-EmailLowercase = Annotated[Optional[str], AfterValidator(validate_email_lowercase)]
-PositiveInt = Annotated[Optional[int], AfterValidator(validate_positive_integer)]
-NonNegativeFloat = Annotated[
-    Optional[float], AfterValidator(validate_non_negative_number)
-]
+Rating = Annotated[float | None, AfterValidator(validate_rating_range)]
+EmailLowercase = Annotated[str | None, AfterValidator(validate_email_lowercase)]
+PositiveInt = Annotated[int | None, AfterValidator(validate_positive_integer)]
+NonNegativeFloat = Annotated[float | None, AfterValidator(validate_non_negative_number)]
 CurrencyCode = Annotated[str, AfterValidator(validate_currency_code)]
 PasswordStrength = Annotated[str, AfterValidator(validate_password_strength)]
-Latitude = Annotated[Optional[float], AfterValidator(validate_latitude)]
-Longitude = Annotated[Optional[float], AfterValidator(validate_longitude)]
+Latitude = Annotated[float | None, AfterValidator(validate_latitude)]
+Longitude = Annotated[float | None, AfterValidator(validate_longitude)]
 
 # Common string length validators
-ShortString = Annotated[
-    Optional[str], AfterValidator(validate_string_length_range(1, 50))
-]
+ShortString = Annotated[str | None, AfterValidator(validate_string_length_range(1, 50))]
 MediumString = Annotated[
-    Optional[str], AfterValidator(validate_string_length_range(1, 255))
+    str | None, AfterValidator(validate_string_length_range(1, 255))
 ]
 LongString = Annotated[
-    Optional[str], AfterValidator(validate_string_length_range(1, 1000))
+    str | None, AfterValidator(validate_string_length_range(1, 1000))
 ]
 
 # Truncating string validators for user input
@@ -369,8 +352,7 @@ TruncatedMediumString = Annotated[str, BeforeValidator(truncate_string(255))]
 
 
 class CommonValidators:
-    """
-    Collection of common validators for TripSage models.
+    """Collection of common validators for TripSage models.
 
     This class provides static methods and pre-configured Annotated types
     for consistent validation across the application.
@@ -394,8 +376,7 @@ class CommonValidators:
 
     @staticmethod
     def passwords_match(password: str, password_confirm: str) -> tuple[str, str]:
-        """
-        Validate that two passwords match.
+        """Validate that two passwords match.
 
         Args:
             password: The primary password
@@ -415,8 +396,7 @@ class CommonValidators:
     def passwords_different(
         current_password: str, new_password: str
     ) -> tuple[str, str]:
-        """
-        Validate that new password is different from current password.
+        """Validate that new password is different from current password.
 
         Args:
             current_password: The current password

@@ -1,5 +1,4 @@
-"""
-WebSocket message broadcasting service for TripSage Core.
+"""WebSocket message broadcasting service for TripSage Core.
 
 This module provides message broadcasting capabilities for WebSocket connections,
 including Redis/DragonflyDB integration for message persistence and scaling.
@@ -18,6 +17,7 @@ from pydantic import BaseModel, Field
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,8 +34,7 @@ class BroadcastMessage(BaseModel):
 
 
 class WebSocketBroadcaster:
-    """
-    WebSocket message broadcaster with Redis/DragonflyDB backend.
+    """WebSocket message broadcaster with Redis/DragonflyDB backend.
 
     This service provides:
     - Message broadcasting to different target types
@@ -108,7 +107,7 @@ class WebSocketBroadcaster:
         except Exception as e:
             logger.error(f"Failed to start WebSocket broadcaster: {e}")
             raise CoreServiceError(
-                message=f"Failed to start WebSocket broadcaster: {str(e)}",
+                message=f"Failed to start WebSocket broadcaster: {e!s}",
                 code="BROADCASTER_START_FAILED",
                 service="WebSocketBroadcaster",
             ) from e

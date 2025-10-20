@@ -9,7 +9,6 @@ class TestFlightsRouter:
     def setup_method(self):
         """Set up test data."""
         # FlightFactory methods are handled by mocks in conftest.py
-        pass
 
     # === SUCCESS TESTS ===
 

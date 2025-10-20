@@ -1,5 +1,4 @@
-"""
-Shared schemas and models for TripSage AI.
+"""Shared schemas and models for TripSage AI.
 
 This module contains common Pydantic models, enums, and schemas that are used
 across multiple parts of the TripSage application, including API layers,
@@ -79,6 +78,7 @@ from .travel import (
     TripPreferences,
     TripSummary,
 )
+
 
 __all__ = [
     # Base models
