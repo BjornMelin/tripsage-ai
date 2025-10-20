@@ -26,6 +26,7 @@ logs/
 **/.ruff_cache/
 **/.mypy_cache/
 **/.pytest_cache/
+**/.hypothesis/
 
 # Database and data files
 **/*.db
