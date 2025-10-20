@@ -112,12 +112,15 @@ class TestDatabaseMigration:
     @pytest.mark.asyncio
     async def test_checkpoint_manager_migration(self, mock_settings, mock_converter):
         """Test checkpoint manager uses secure URL conversion."""
-        with patch(
-            "tripsage.orchestration.checkpoint_manager.get_settings",
-            return_value=mock_settings,
-        ), patch(
-            "tripsage.orchestration.checkpoint_manager.DatabaseURLConverter",
-            return_value=mock_converter,
+        with (
+            patch(
+                "tripsage.orchestration.checkpoint_manager.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
+                "tripsage.orchestration.checkpoint_manager.DatabaseURLConverter",
+                return_value=mock_converter,
+            ),
         ):
             from tripsage.orchestration.checkpoint_manager import (
                 SupabaseCheckpointManager,
