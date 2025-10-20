@@ -12,14 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Modern, unified application configuration.
-
-    Single configuration class following 2025 best practices:
-    - Flat structure (no nested configs)
-    - Environment-based feature toggles
-    - Clear validation and defaults
-    - No backwards compatibility code
-    """
+    """Modern, unified application configuration."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -234,15 +227,16 @@ class Settings(BaseSettings):
             import re
 
             # Check test URL first to avoid regex matching issues
-            if self.database_url.startswith("https://test.supabase.com"):
+            db_url: str = str(self.database_url)
+            if db_url.startswith("https://test.supabase.com"):
                 # Special handling for test environment
                 url = "postgresql://postgres:password@127.0.0.1:5432/test_database"
-            elif self.database_url.startswith(("postgresql://", "postgres://")):
+            elif db_url.startswith(("postgresql://", "postgres://")):
                 # URL is already a PostgreSQL URL
-                url = self.database_url
+                url = db_url
             else:
                 # Try to match real Supabase URLs
-                match = re.match(r"https://([^.]+)\.supabase\.co$", self.database_url)
+                match = re.match(r"https://([^.]+)\.supabase\.co$", db_url)
                 if match:
                     project_ref = match.group(1)
                     # Construct PostgreSQL URL from Supabase project reference
