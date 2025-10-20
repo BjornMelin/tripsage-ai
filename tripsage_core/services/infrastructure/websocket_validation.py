@@ -74,13 +74,11 @@ class WebSocketBaseMessage(BaseModel):
     @classmethod
     def validate_message_id(cls, v):
         """Validate message ID format."""
-        if v is not None:
-            # Allow alphanumeric, hyphens, and underscores only
-            if not v.replace("-", "").replace("_", "").isalnum():
-                raise ValueError(
-                    "Message ID must contain only alphanumeric characters, "
-                    "hyphens, and underscores"
-                )
+        if v is not None and not v.replace("-", "").replace("_", "").isalnum():
+            raise ValueError(
+                "Message ID must contain only alphanumeric characters, "
+                "hyphens, and underscores"
+            )
         return v
 
 
@@ -95,7 +93,7 @@ class WebSocketAuthMessage(WebSocketBaseMessage):
     )
     session_id: UUID | None = Field(None, description="Optional session ID")
     channels: list[str] = Field(
-        default_factory=list, max_items=50, description="Channels to subscribe to"
+        default_factory=list, max_length=50, description="Channels to subscribe to"
     )
 
     @field_validator("token")
@@ -117,7 +115,7 @@ class WebSocketAuthMessage(WebSocketBaseMessage):
         if v:
             for channel in v:
                 if not isinstance(channel, str):
-                    raise ValueError("Channel names must be strings")
+                    raise TypeError("Channel names must be strings")
                 if len(channel) > 100:
                     raise ValueError("Channel name too long")
                 # Allow alphanumeric, colons, underscores, and hyphens only
@@ -203,10 +201,8 @@ class WebSocketChatMessage(WebSocketBaseMessage):
     @classmethod
     def validate_metadata(cls, v):
         """Validate metadata dictionary."""
-        if v:
-            # Limit metadata size
-            if len(json.dumps(v)) > 2048:  # 2KB max for metadata
-                raise ValueError("Metadata too large")
+        if v and len(json.dumps(v)) > 2048:  # 2KB max for metadata
+            raise ValueError("Metadata too large")
         return v
 
 
@@ -217,10 +213,10 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
         default=WebSocketMessageType.SUBSCRIBE, description="Message type"
     )
     channels: list[str] = Field(
-        default_factory=list, max_items=20, description="Channels to subscribe to"
+        default_factory=list, max_length=20, description="Channels to subscribe to"
     )
     unsubscribe_channels: list[str] = Field(
-        default_factory=list, max_items=20, description="Channels to unsubscribe from"
+        default_factory=list, max_length=20, description="Channels to unsubscribe from"
     )
 
     @field_validator("channels", "unsubscribe_channels")
@@ -230,7 +226,7 @@ class WebSocketSubscribeMessage(WebSocketBaseMessage):
         if v:
             for channel in v:
                 if not isinstance(channel, str):
-                    raise ValueError("Channel names must be strings")
+                    raise TypeError("Channel names must be strings")
                 if len(channel) > 100:
                     raise ValueError("Channel name too long")
                 # Allow alphanumeric, colons, underscores, and hyphens only
@@ -332,12 +328,7 @@ class WebSocketMessageValidator:
             WebSocketMessageType.ERROR: WebSocketErrorMessage,
         }
 
-        # Get appropriate validation model
-        if message_type in type_models:
-            model_class = type_models[message_type]
-        else:
-            # Use generic validation for unknown message types
-            model_class = WebSocketGenericMessage
+        model_class = type_models.get(message_type, WebSocketGenericMessage)
 
         # Validate using appropriate model
         try:
