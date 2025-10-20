@@ -8,6 +8,7 @@ Tests the complete WebSocket integration including:
 - Error handling
 """
 
+import contextlib
 import json
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -37,6 +38,7 @@ class MockWebSocket:
     """Mock WebSocket for testing."""
 
     def __init__(self):
+        """Initialize mock WebSocket state for tests."""
         self.messages_sent: list[str] = []
         self.closed = False
         self.close_code = None
@@ -120,7 +122,7 @@ def valid_jwt_token():
     }
     return jwt.encode(
         payload,
-        settings.database_jwt_secret.get_secret_value(),
+        settings.database_jwt_secret.get_secret_value(),  # type: ignore
         algorithm="HS256",
     )
 
@@ -142,6 +144,8 @@ class TestWebSocketAuthentication:
 
         # Create a proper serializable response object that supports model_dump
         class MockAuthResponse:
+            """Mock authentication response for testing."""
+
             def __init__(self):
                 self.success = True
                 self.connection_id = "test-connection-id"
@@ -149,6 +153,7 @@ class TestWebSocketAuthentication:
                 self.error = None
 
             def model_dump(self):
+                """Mock model_dump method."""
                 return {
                     "success": self.success,
                     "connection_id": self.connection_id,
@@ -174,11 +179,8 @@ class TestWebSocketAuthentication:
         # Mock database dependency
         mock_db = AsyncMock()
 
-        try:
-            await chat_websocket(mock_websocket, session_id, mock_db, MockChatService())
-        except Exception:
-            # Expected since we're not providing a full message loop
-            pass
+        with contextlib.suppress(Exception):
+            await chat_websocket(mock_websocket, session_id, mock_db, MockChatService())  # type: ignore  # type: ignore
 
         # Verify authentication was attempted
         mock_ws_manager.authenticate_connection.assert_called_once()
@@ -213,7 +215,7 @@ class TestWebSocketAuthentication:
 
         mock_db = AsyncMock()
 
-        await chat_websocket(mock_websocket, session_id, mock_db, MockChatService())
+        await chat_websocket(mock_websocket, session_id, mock_db, MockChatService())  # type: ignore
 
         # Verify error message was sent and connection was closed
         assert len(mock_websocket.messages_sent) > 0
@@ -231,7 +233,7 @@ class TestWebSocketAuthentication:
 
         mock_db = AsyncMock()
 
-        await chat_websocket(mock_websocket, session_id, mock_db, MockChatService())
+        await chat_websocket(mock_websocket, session_id, mock_db, MockChatService())  # type: ignore
 
         # Verify error message was sent and connection was closed
         assert len(mock_websocket.messages_sent) > 0
@@ -293,8 +295,8 @@ class TestWebSocketChatMessages:
             user_id=user_id,
             session_id=session_id,
             message_data=message_data,
-            chat_service=MockChatService(),
-            chat_agent=MockChatAgent(),
+            chat_service=MockChatService(),  # type: ignore
+            chat_agent=MockChatAgent(),  # type: ignore
         )
 
         # Verify error event was sent
@@ -324,8 +326,8 @@ class TestWebSocketChatMessages:
             user_id=user_id,
             session_id=session_id,
             message_data=message_data,
-            chat_service=MockChatService(),
-            chat_agent=MockChatAgent(),
+            chat_service=MockChatService(),  # type: ignore
+            chat_agent=MockChatAgent(),  # type: ignore
         )
 
         # Verify messages were sent
@@ -351,7 +353,7 @@ class TestWebSocketChatMessages:
             user_id=user_id,
             session_id=session_id,
             message_data=message_data,
-            chat_service=MockChatService(),
+            chat_service=MockChatService(),  # type: ignore
             chat_agent=mock_agent,
         )
 
@@ -389,11 +391,8 @@ class TestWebSocketAgentStatus:
         auth_data = {"token": valid_jwt_token, "channels": [f"agent_status:{user_id}"]}
         mock_websocket.receive_text = AsyncMock(return_value=json.dumps(auth_data))
 
-        try:
+        with contextlib.suppress(Exception):
             await agent_status_websocket(mock_websocket, user_id)
-        except Exception:
-            # Expected since we're not providing a full message loop
-            pass
 
         # Verify authentication was attempted
         mock_ws_manager.authenticate_connection.assert_called_once()
@@ -563,8 +562,8 @@ class TestWebSocketPerformance:
             user_id=user_id,
             session_id=session_id,
             message_data=message_data,
-            chat_service=MockChatService(),
-            chat_agent=MockChatAgent(),
+            chat_service=MockChatService(),  # type: ignore
+            chat_agent=MockChatAgent(),  # type: ignore
         )
 
         # Verify multiple chunks were sent (streaming simulation)
@@ -588,8 +587,8 @@ class TestWebSocketPerformance:
             user_id=user_id,
             session_id=session_id,
             message_data=message_data,
-            chat_service=MockChatService(),
-            chat_agent=MockChatAgent(),
+            chat_service=MockChatService(),  # type: ignore
+            chat_agent=MockChatAgent(),  # type: ignore
         )
 
         # Verify that send_to_session was called
