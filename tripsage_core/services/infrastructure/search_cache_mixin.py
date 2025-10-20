@@ -9,10 +9,11 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.infrastructure.cache_service import CacheService
 
 
@@ -23,7 +24,10 @@ SearchRequestType = TypeVar("SearchRequestType", bound=BaseModel)
 SearchResponseType = TypeVar("SearchResponseType", bound=BaseModel)
 
 
-class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
+class SearchCacheMixin[
+    SearchRequestType: BaseModel,
+    SearchResponseType: BaseModel,
+](ABC):
     """Mixin for standardized search caching patterns.
 
     This mixin provides:
@@ -75,14 +79,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
         """
 
     def generate_cache_key(self, request: SearchRequestType) -> str:
-        """Generate a consistent cache key for the search request.
-
-        Args:
-            request: The search request
-
-        Returns:
-            Cache key string
-        """
+        """Generate a consistent cache key for the search request."""
         # Get fields to include in cache key
         cache_fields = self.get_cache_fields(request)
 
@@ -101,14 +98,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
     async def get_cached_search(
         self, request: SearchRequestType
     ) -> SearchResponseType | None:
-        """Get cached search results if available.
-
-        Args:
-            request: The search request
-
-        Returns:
-            Cached response if available and valid, None otherwise
-        """
+        """Get cached search results if available."""
         if not self._cache_service:
             return None
 
@@ -141,13 +131,11 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
                 )
                 return None
 
-        except Exception as e:
+        except CoreServiceError as e:
+            # Limit noisy cache failures; surface as cache miss.
             logger.warning(
                 "Failed to get cached search results",
-                extra={
-                    "error": str(e),
-                    "service": self._cache_prefix,
-                },
+                extra={"error": str(e), "service": self._cache_prefix},
             )
             return None
 
@@ -206,7 +194,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
             return success
 
-        except Exception as e:
+        except CoreServiceError as e:
             logger.exception(
                 "Error caching search results",
                 extra={
@@ -217,14 +205,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return False
 
     async def invalidate_cache(self, request: SearchRequestType) -> bool:
-        """Invalidate cached results for a specific search request.
-
-        Args:
-            request: The search request to invalidate
-
-        Returns:
-            True if cache was invalidated, False otherwise
-        """
+        """Invalidate cached results for a specific search request."""
         if not self._cache_service:
             return False
 
@@ -243,7 +224,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
             return bool(deleted)
 
-        except Exception as e:
+        except CoreServiceError as e:
             logger.exception(
                 "Error invalidating cache",
                 extra={
@@ -281,7 +262,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
 
             return deleted
 
-        except Exception as e:
+        except CoreServiceError as e:
             logger.exception(
                 "Error invalidating cache pattern",
                 extra={
@@ -317,7 +298,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
                 "cache_info": info,
             }
 
-        except Exception as e:
+        except CoreServiceError as e:
             logger.exception(
                 "Error getting cache stats",
                 extra={

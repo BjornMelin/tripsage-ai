@@ -25,9 +25,10 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-import redis.asyncio as redis
 from fastapi import WebSocket
 from pydantic import BaseModel, Field
+from redis.asyncio import Redis as AsyncRedis, from_url
+from redis.asyncio.client import PubSub
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
@@ -230,6 +231,7 @@ class CircuitBreaker:
     """Circuit breaker for Redis operations."""
 
     def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 30):
+        """Initialize circuit breaker."""
         self.failure_threshold = failure_threshold
         self.recovery_timeout = recovery_timeout
         self.failure_count = 0
@@ -272,6 +274,7 @@ class ExponentialBackoff:
         max_attempts: int = 10,
         jitter: bool = True,
     ):
+        """Initialize exponential backoff."""
         self.base_delay = base_delay
         self.max_delay = max_delay
         self.max_attempts = max_attempts
@@ -314,8 +317,10 @@ class ExponentialBackoff:
 class RateLimiter:
     """Hierarchical rate limiter using Redis sliding window."""
 
-    def __init__(self, redis_client: redis.Redis | None, config: RateLimitConfig):
-        self.redis = redis_client
+    def __init__(self, redis_client: AsyncRedis | None, config: RateLimitConfig):
+        """Initialize rate limiter."""
+        # Use Any to accommodate redis-py asyncio stubs across versions.
+        self.redis: Any | None = redis_client
         self.config = config
         self.local_counters: dict[str, dict] = defaultdict(
             lambda: {"count": 0, "window_start": time.time()}
@@ -329,6 +334,7 @@ class RateLimiter:
         user_key = f"connections:user:{user_id}"
         session_key = f"connections:session:{session_id}" if session_id else None
 
+        assert self.redis is not None
         user_count = await self.redis.scard(user_key)
 
         if user_count >= self.config.max_connections_per_user:
@@ -352,20 +358,28 @@ class RateLimiter:
         window_start = now - self.config.window_seconds
 
         # Use Redis script for atomic rate limiting
-        result = await self.redis.eval(
+        assert self.redis is not None
+        result = await self.redis.execute_command(
+            "EVAL",
             RATE_LIMIT_LUA_SCRIPT,
-            2,
+            "2",
             user_key,
             conn_key,
-            window_start,
-            now,
-            self.config.max_messages_per_user_per_minute,
-            self.config.max_messages_per_connection_per_second
-            * self.config.window_seconds,
+            str(int(window_start)),
+            str(int(now)),
+            str(self.config.max_messages_per_user_per_minute),
+            str(
+                self.config.max_messages_per_connection_per_second
+                * self.config.window_seconds
+            ),
             secrets.token_hex(16),
         )
 
-        allowed, reason, user_count, conn_count = result
+        allowed_i, reason_s, user_count_s, conn_count_s = result
+        allowed = int(allowed_i)
+        reason = str(reason_s)
+        user_count = int(user_count_s)
+        conn_count = int(conn_count_s)
 
         return {
             "allowed": bool(allowed),
@@ -423,14 +437,15 @@ class WebSocketManager:
     """WebSocket connection manager with broadcasting integration."""
 
     def __init__(self, broadcaster=None):
+        """Initialize WebSocket manager."""
         # Extracted services
         self.connection_service = WebSocketConnectionService()
         self.auth_service = WebSocketAuthService()
         self.messaging_service = WebSocketMessagingService(self.auth_service)
 
         # Redis integration
-        self.redis_client: redis.Redis | None = None
-        self.redis_pubsub: redis.client.PubSub | None = None
+        self.redis_client: AsyncRedis | None = None
+        self.redis_pubsub: PubSub | None = None
         self.broadcaster = broadcaster
 
         # Rate limiting
@@ -562,12 +577,13 @@ class WebSocketManager:
             return
 
         try:
-            self.redis_client = redis.from_url(redis_url, decode_responses=True)
+            self.redis_client = from_url(redis_url, decode_responses=True)
             await self.redis_client.ping()
 
             self.redis_pubsub = self.redis_client.pubsub()
             # Subscribe to broadcast channels
-            await self.redis_pubsub.psubscribe("tripsage:websocket:broadcast:*")
+            if self.redis_pubsub is not None:
+                await self.redis_pubsub.psubscribe("tripsage:websocket:broadcast:*")
 
             logger.info("Redis connection initialized for WebSocket broadcasting")
 
@@ -672,6 +688,10 @@ class WebSocketManager:
 
         # Subscribe to new channels
         if subscribe_request.channels:
+            # Ensure user_id on connection is present
+            if connection.user_id is None:
+                return WebSocketSubscribeResponse(success=False, error="User not set")
+
             allowed_channels, denied_channels = (
                 self.auth_service.validate_channel_access(
                     connection.user_id, subscribe_request.channels
