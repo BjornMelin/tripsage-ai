@@ -216,7 +216,7 @@ class DatabaseBenchmark:
         for _ in range(self.iterations):
             start = time.time()
             try:
-                await service.execute_sql("SELECT 1 as test_column LIMIT 10")
+                await service.execute_sql("SELECT 1 as test_column LIMIT 10")  # type: ignore
                 duration = (time.time() - start) * 1000
                 result.add_result(duration)
             except Exception:  # noqa: BLE001
@@ -227,20 +227,22 @@ class DatabaseBenchmark:
         # Test table operations if available
         try:
             # Create test table for benchmarking
-            await service.execute_sql("""
+            await service.execute_sql(  # type: ignore  # type: ignore
+                """
                 CREATE TABLE IF NOT EXISTS test_benchmark (
                     id SERIAL PRIMARY KEY,
                     name TEXT,
                     created_at TIMESTAMP DEFAULT NOW()
                 )
-            """)
+            """
+            )
 
             # INSERT benchmark (fewer iterations to avoid spam)
             result = BenchmarkResult("Database - INSERT")
             for i in range(min(10, self.iterations)):
                 start = time.time()
                 try:
-                    await service.execute_sql(
+                    await service.execute_sql(  # type: ignore  # type: ignore
                         "INSERT INTO test_benchmark (name) VALUES ($1)",
                         (f"Benchmark {i}",),
                     )
@@ -256,7 +258,7 @@ class DatabaseBenchmark:
             for i in range(min(5, self.iterations)):
                 start = time.time()
                 try:
-                    await service.execute_sql(
+                    await service.execute_sql(  # type: ignore  # type: ignore
                         "UPDATE test_benchmark SET name = $1 WHERE id = $2",
                         (f"Updated {i}", i + 1),
                     )
@@ -278,8 +280,8 @@ class DatabaseBenchmark:
             start = time.time()
             try:
                 async with service.transaction():
-                    await service.execute_sql("SELECT 1")
-                    await service.execute_sql("SELECT 2")
+                    await service.execute_sql("SELECT 1")  # type: ignore
+                    await service.execute_sql("SELECT 2")  # type: ignore
                 duration = (time.time() - start) * 1000
                 result.add_result(duration)
             except Exception:  # noqa: BLE001
@@ -300,7 +302,7 @@ class DatabaseBenchmark:
         for i in range(min(20, self.iterations)):
             start = time.time()
             try:
-                await service.execute_sql(
+                await service.execute_sql(  # type: ignore
                     "SELECT * FROM information_schema.tables WHERE table_name = $1",
                     (f"table_{i % 5}",),  # Vary queries slightly
                 )
@@ -316,7 +318,7 @@ class DatabaseBenchmark:
         for i in range(min(20, self.iterations)):
             start = time.time()
             try:
-                await service.execute_sql(
+                await service.execute_sql(  # type: ignore
                     "SELECT * FROM information_schema.tables WHERE table_name = $1",
                     (f"table_{i % 5}",),  # Same queries to test cache hits
                 )
@@ -346,7 +348,7 @@ class DatabaseBenchmark:
             for _ in range(10):  # Each user makes 10 queries
                 start = time.time()
                 try:
-                    await service.execute_sql(
+                    await service.execute_sql(  # type: ignore  # type: ignore
                         "SELECT $1 as user_id, NOW() as timestamp", (user_id,)
                     )
                     duration = (time.time() - start) * 1000
@@ -381,7 +383,7 @@ class DatabaseBenchmark:
 
         # Check if pgvector extension is available
         try:
-            await service.execute_sql(
+            await service.execute_sql(  # type: ignore  # type: ignore
                 "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
             )
 
@@ -397,7 +399,7 @@ class DatabaseBenchmark:
                 start = time.time()
                 try:
                     # Test basic vector operations if available
-                    await service.execute_sql(
+                    await service.execute_sql(  # type: ignore  # type: ignore
                         "SELECT $1::vector <-> $2::vector as distance",
                         (query_vector, query_vector),
                     )
