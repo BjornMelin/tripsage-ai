@@ -4,6 +4,8 @@ This module handles updating persistent memory and session state with
 insights learned during conversation.
 """
 
+from collections import Counter
+
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
@@ -78,15 +80,19 @@ class MemoryUpdateNode(BaseAgentNode):
         if state.get("budget_constraints"):
             budget_info = state["budget_constraints"]
             if isinstance(budget_info, dict):
-                for key, value in budget_info.items():
-                    insights.append(f"Budget preference - {key}: {value}")
+                insights.extend(
+                    f"Budget preference - {key}: {value}"
+                    for key, value in budget_info.items()
+                )
             else:
                 insights.append(f"Budget constraint: {budget_info}")
 
         # Extract user preferences
         if state.get("user_preferences"):
-            for pref_type, value in state["user_preferences"].items():
-                insights.append(f"Travel preference - {pref_type}: {value}")
+            insights.extend(
+                f"Travel preference - {pref_type}: {value}"
+                for pref_type, value in state["user_preferences"].items()
+            )
 
         # Extract destination interests
         if state.get("destination_info"):
@@ -95,8 +101,10 @@ class MemoryUpdateNode(BaseAgentNode):
                 if dest_info.get("name"):
                     insights.append(f"Interested in destination: {dest_info['name']}")
                 if dest_info.get("preferences"):
-                    for pref in dest_info["preferences"]:
-                        insights.append(f"Destination preference: {pref}")
+                    insights.extend(
+                        f"Destination preference: {pref}"
+                        for pref in dest_info["preferences"]
+                    )
             else:
                 insights.append(f"Interested in destination: {dest_info}")
 
@@ -136,17 +144,14 @@ class MemoryUpdateNode(BaseAgentNode):
         if state.get("flight_searches"):
             flight_searches = state["flight_searches"]
 
-            # Analyze route preferences
-            routes = set()
-            for search in flight_searches:
-                params = search.get("parameters", {})
-                origin = params.get("origin")
-                destination = params.get("destination")
-                if origin and destination:
-                    routes.add(f"{origin}-{destination}")
+            routes = {
+                f"{params['origin']}-{params['destination']}"
+                for search in flight_searches
+                for params in [search.get("parameters", {})]
+                if params.get("origin") and params.get("destination")
+            }
 
-            for route in routes:
-                insights.append(f"Searched flight route: {route}")
+            insights.extend(f"Searched flight route: {route}" for route in routes)
 
             # Analyze search frequency
             if len(flight_searches) > 1:
@@ -156,31 +161,30 @@ class MemoryUpdateNode(BaseAgentNode):
         if state.get("accommodation_searches"):
             accommodation_searches = state["accommodation_searches"]
 
-            # Analyze location preferences
-            locations = set()
-            for search in accommodation_searches:
-                params = search.get("parameters", {})
-                location = params.get("location")
-                if location:
-                    locations.add(location)
+            locations = {
+                params["location"]
+                for search in accommodation_searches
+                for params in [search.get("parameters", {})]
+                if params.get("location")
+            }
 
-            for location in locations:
-                insights.append(f"Searched accommodation in: {location}")
+            insights.extend(f"Searched accommodation in: {location}" for location in locations)
 
         # Activity search patterns
         if state.get("activity_searches"):
             activity_searches = state["activity_searches"]
 
-            # Analyze activity preferences
-            activity_types = set()
-            for search in activity_searches:
-                params = search.get("parameters", {})
-                activity_type = params.get("type")
-                if activity_type:
-                    activity_types.add(activity_type)
+            activity_types = {
+                params["type"]
+                for search in activity_searches
+                for params in [search.get("parameters", {})]
+                if params.get("type")
+            }
 
-            for activity_type in activity_types:
-                insights.append(f"Interested in activity type: {activity_type}")
+            insights.extend(
+                f"Interested in activity type: {activity_type}"
+                for activity_type in activity_types
+            )
 
         return insights
 
@@ -198,15 +202,12 @@ class MemoryUpdateNode(BaseAgentNode):
         # Analyze agent usage patterns
         agent_history = state.get("agent_history", [])
         if agent_history:
-            # Count agent usage
-            agent_counts = {}
-            for agent in agent_history:
-                agent_counts[agent] = agent_counts.get(agent, 0) + 1
-
-            # Identify primary interests
-            for agent, count in agent_counts.items():
-                if count > 1:
-                    insights.append(f"Frequently used {agent} ({count} times)")
+            agent_counts = Counter(agent_history)
+            insights.extend(
+                f"Frequently used {agent} ({count} times)"
+                for agent, count in agent_counts.items()
+                if count > 1
+            )
 
         # Analyze conversation length and complexity
         message_count = len(state.get("messages", []))

@@ -1,9 +1,4 @@
-"""AI-powered document analysis service for travel-related document processing
-with TripSage Core integration.
-
-This service analyzes uploaded documents to extract travel-relevant information
-using AI models while following KISS principles and Core integration patterns.
-"""
+"""Document analysis service for travel-related document processing."""
 
 import asyncio
 import json
@@ -523,13 +518,7 @@ class DocumentAnalyzer:
         }
 
         text_lower = text.lower()
-        found_keywords = []
-
-        for keyword in travel_keywords:
-            if keyword in text_lower:
-                found_keywords.append(keyword)
-
-        return found_keywords
+        return [keyword for keyword in travel_keywords if keyword in text_lower]
 
     def _extract_travel_information(
         self, analysis_results: dict[str, Any], text: str
@@ -561,10 +550,10 @@ class DocumentAnalyzer:
 
             # Extract flight information
             if "flight_numbers" in entities:
-                flights = []
-                for flight_num in entities["flight_numbers"]:
-                    flights.append({"flight_number": flight_num, "type": "flight"})
-                travel_info.flights = flights
+                travel_info.flights = [
+                    {"flight_number": flight_num, "type": "flight"}
+                    for flight_num in entities["flight_numbers"]
+                ]
 
             # Extract budget information
             if "currency_amounts" in entities:
@@ -577,14 +566,13 @@ class DocumentAnalyzer:
                     }
 
             # Extract contact information
-            contacts = []
-            if "emails" in entities:
-                for email in entities["emails"]:
-                    contacts.append({"type": "email", "value": email})
-
-            if "phone_numbers" in entities:
-                for phone in entities["phone_numbers"]:
-                    contacts.append({"type": "phone", "value": phone})
+            contacts = [
+                {"type": "email", "value": email}
+                for email in entities.get("emails", [])
+            ] + [
+                {"type": "phone", "value": phone}
+                for phone in entities.get("phone_numbers", [])
+            ]
 
             travel_info.contact_info = contacts
 
@@ -606,14 +594,15 @@ class DocumentAnalyzer:
             ):
                 accommodations = []
                 for conf_num in entities["confirmation_numbers"]:
-                    accommodations.append(
+                    accommodations += [
                         {"confirmation_number": conf_num, "type": "accommodation"}
-                    )
+                        for conf_num in entities["confirmation_numbers"]
+                    ]
                 travel_info.accommodations = accommodations
 
             return travel_info
 
-        except Exception:
+        except ValueError:
             return None
 
     def _calculate_confidence_score(self, analysis_results: dict[str, Any]) -> float:
@@ -685,21 +674,20 @@ class DocumentAnalyzer:
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error results
-            final_results = []
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    error_result = DocumentAnalysisResult(
-                        file_id=contexts[i].file_id,
-                        analysis_type=analysis_type,
-                        extracted_text=None,
-                        key_information={"error": str(result)},
-                        travel_relevance=None,
-                        confidence_score=0.0,
-                        processing_time_ms=0,
-                    )
-                    final_results.append(error_result)
-                else:
-                    final_results.append(result)
+            final_results = [
+                DocumentAnalysisResult(
+                    file_id=contexts[i].file_id,
+                    analysis_type=analysis_type,
+                    extracted_text=None,
+                    key_information={"error": str(result)},
+                    travel_relevance=None,
+                    confidence_score=0.0,
+                    processing_time_ms=0,
+                )
+                if isinstance(result, Exception)
+                else result
+                for i, result in enumerate(results)
+            ]
 
             return final_results
 
@@ -744,7 +732,7 @@ class DocumentAnalyzer:
             # Test basic functionality
             analysis_types = await self.get_supported_analysis_types()
             return len(analysis_types) > 0
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:

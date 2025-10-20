@@ -192,12 +192,7 @@ from tripsage_core.services.infrastructure import (
 Common functionality used throughout the application:
 
 ```python
-from tripsage_core.utils import (
-    cache_utils,
-    error_handling_utils,
-    logging_utils,
-    database_utils
-)
+from tripsage_core.utils import cache_utils, error_handling_utils, logging_utils
 ```
 
 **Available Utilities:**
@@ -205,7 +200,6 @@ from tripsage_core.utils import (
 - **cache_utils** - Caching patterns and TTL management
 - **error_handling_utils** - Error recovery and retry logic
 - **logging_utils** - Structured logging and observability
-- **database_utils** - Database connection and transaction helpers
 - **file_utils** - File processing and validation
 - **session_utils** - Session management and security
 - **decorator_utils** - Common decorators for cross-cutting concerns

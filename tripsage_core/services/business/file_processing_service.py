@@ -528,25 +528,26 @@ class FileProcessingService:
                 )
 
             # Process files concurrently
-            tasks = []
             for file_request in batch_request.files:
                 if batch_request.trip_id and not file_request.trip_id:
                     file_request.trip_id = batch_request.trip_id
 
-                task = self.upload_file(user_id, file_request)
-                tasks.append(task)
+            tasks = [
+                self.upload_file(user_id, file_request)
+                for file_request in batch_request.files
+            ]
 
             # Wait for all uploads to complete
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            processed_files = []
-            errors = []
-
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    errors.append(f"File {batch_request.files[i].filename}: {result!s}")
-                else:
-                    processed_files.append(result)
+            errors = [
+                f"File {batch_request.files[i].filename}: {result!s}"
+                for i, result in enumerate(results)
+                if isinstance(result, Exception)
+            ]
+            processed_files = [
+                result for result in results if not isinstance(result, Exception)
+            ]
 
             if errors and not processed_files:
                 raise ServiceError(f"All files failed: {'; '.join(errors)}")
@@ -697,11 +698,7 @@ class FileProcessingService:
                 search_request.offset,
             )
 
-            processed_files = []
-            for result in results:
-                processed_files.append(ProcessedFile(**result))
-
-            return processed_files
+            return [ProcessedFile(**result) for result in results]
 
         except Exception as e:
             logger.exception(
@@ -814,11 +811,11 @@ class FileProcessingService:
             )
 
         # Check for suspicious patterns
-        for pattern in self.suspicious_patterns:
-            if pattern in filename.lower():
-                security_warnings.append(
-                    f"Filename contains suspicious pattern: {pattern}"
-                )
+        security_warnings.extend(
+            f"Filename contains suspicious pattern: {pattern}"
+            for pattern in self.suspicious_patterns
+            if pattern in filename.lower()
+        )
 
         # Extension validation
         file_path = Path(filename)
@@ -876,10 +873,8 @@ class FileProcessingService:
             return "image/gif"
         elif content.startswith(b"%PDF-"):
             return "application/pdf"
-        elif content.startswith(b"PK\x03\x04"):
-            # ZIP-based formats
-            if filename.lower().endswith(".docx"):
-                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # noqa: E501
+        elif content.startswith(b"PK\x03\x04") and filename.lower().endswith(".docx"):
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # noqa: E501
 
         return "application/octet-stream"
 
@@ -960,7 +955,7 @@ class FileProcessingService:
             if duplicate_data:
                 return ProcessedFile(**duplicate_data)
             return None
-        except Exception:
+        except self.db.DatabaseError:
             return None
 
     async def _create_file_reference(

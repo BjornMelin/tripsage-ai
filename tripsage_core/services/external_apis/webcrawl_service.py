@@ -383,7 +383,7 @@ class WebCrawlService:
                 },
             )
 
-        except Exception as e:
+        except CoreServiceError as e:
             return WebCrawlResult(
                 success=False,
                 url=url,
@@ -447,7 +447,7 @@ class WebCrawlService:
                 WebCrawlParams(use_cache=False, javascript_enabled=False, timeout=10),
             )
             return result.success
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:

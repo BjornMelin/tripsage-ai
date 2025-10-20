@@ -543,30 +543,25 @@ class DashboardService:
             # Get health checks for all services
             health_checks = await self.api_key_service.check_all_services_health()
 
-            services = []
-            for service_type, health_check in health_checks.items():
-                # Get usage data for this service
-                service_usage = await self._get_service_usage_data(
-                    service_type, time_range_hours
+            return [
+                ServiceAnalytics(
+                    service_name=service_type.value,
+                    service_type=service_type,
+                    total_requests=service_usage.get("requests", 0),
+                    total_errors=service_usage.get("errors", 0),
+                    success_rate=service_usage.get("success_rate", 1.0),
+                    avg_latency_ms=health_check.latency_ms,
+                    active_keys=service_usage.get("active_keys", 0),
+                    last_health_check=health_check.checked_at,
+                    health_status=health_check.status,
+                    rate_limit_hits=service_usage.get("rate_limit_hits", 0),
+                    quota_usage_percent=service_usage.get("quota_usage", 0.0),
                 )
-
-                services.append(
-                    ServiceAnalytics(
-                        service_name=service_type.value,
-                        service_type=service_type,
-                        total_requests=service_usage.get("requests", 0),
-                        total_errors=service_usage.get("errors", 0),
-                        success_rate=service_usage.get("success_rate", 1.0),
-                        avg_latency_ms=health_check.latency_ms,
-                        active_keys=service_usage.get("active_keys", 0),
-                        last_health_check=health_check.checked_at,
-                        health_status=health_check.status,
-                        rate_limit_hits=service_usage.get("rate_limit_hits", 0),
-                        quota_usage_percent=service_usage.get("quota_usage", 0.0),
-                    )
-                )
-
-            return services
+                for service_type, health_check in health_checks.items()
+                for service_usage in [
+                    await self._get_service_usage_data(service_type, time_range_hours)
+                ]
+            ]
 
         except Exception:
             logger.exception("Failed to get service analytics")
@@ -597,7 +592,8 @@ class DashboardService:
                     user_stats[user_id] = {
                         "request_count": 0,
                         "error_count": 0,
-                        "latencies": [],
+                        "latency_sum": 0.0,
+                        "latency_count": 0,
                         "services": set(),
                         "first_activity": log.get("timestamp"),
                         "last_activity": log.get("timestamp"),
@@ -610,7 +606,8 @@ class DashboardService:
                     stats["error_count"] += 1
 
                 if log.get("latency_ms"):
-                    stats["latencies"].append(log["latency_ms"])
+                    stats["latency_sum"] += log["latency_ms"]
+                    stats["latency_count"] += 1
 
                 if log.get("service"):
                     stats["services"].add(log["service"])
@@ -627,32 +624,29 @@ class DashboardService:
                         stats["last_activity"] = timestamp
 
             # Convert to UserActivityData objects
-            user_activities = []
-            for user_id, stats in user_stats.items():
-                success_rate = (
-                    (stats["request_count"] - stats["error_count"])
-                    / stats["request_count"]
-                    if stats["request_count"] > 0
-                    else 1.0
+            user_activities = [
+                UserActivityData(
+                    user_id=user_id,
+                    request_count=stats["request_count"],
+                    error_count=stats["error_count"],
+                    success_rate=(
+                        (stats["request_count"] - stats["error_count"])
+                        / stats["request_count"]
+                        if stats["request_count"] > 0
+                        else 1.0
+                    ),
+                    avg_latency_ms=(
+                        stats["latency_sum"] / stats["latency_count"]
+                        if stats["latency_count"]
+                        else 150.0
+                    ),
+                    services_used=list(stats["services"]),
+                    first_activity=stats["first_activity"],
+                    last_activity=stats["last_activity"],
+                    total_api_keys=len(stats["api_keys"]),
                 )
-
-                avg_latency = (
-                    statistics.mean(stats["latencies"]) if stats["latencies"] else 150.0
-                )
-
-                user_activities.append(
-                    UserActivityData(
-                        user_id=user_id,
-                        request_count=stats["request_count"],
-                        error_count=stats["error_count"],
-                        success_rate=success_rate,
-                        avg_latency_ms=avg_latency,
-                        services_used=list(stats["services"]),
-                        first_activity=stats["first_activity"],
-                        last_activity=stats["last_activity"],
-                        total_api_keys=len(stats["api_keys"]),
-                    )
-                )
+                for user_id, stats in user_stats.items()
+            ]
 
             # Sort by activity score and return top users
             user_activities.sort(key=lambda u: u.activity_score, reverse=True)
@@ -687,32 +681,28 @@ class DashboardService:
             end_time = datetime.now(UTC)
             start_time = end_time - timedelta(hours=time_range_hours)
 
-            # Create hourly buckets
-            trends = []
+            buckets = []
             current_time = start_time
-
             while current_time <= end_time:
                 bucket_end = current_time + timedelta(hours=1)
-
-                # Query usage for this hour
-                hour_usage = await self._query_usage_logs(current_time, bucket_end)
-
-                requests = len(hour_usage)
-                errors = sum(1 for log in hour_usage if not log.get("success", True))
-                success_rate = (requests - errors) / requests if requests > 0 else 1.0
-
-                trends.append(
-                    {
-                        "timestamp": current_time.isoformat(),
-                        "requests": requests,
-                        "errors": errors,
-                        "success_rate": success_rate,
-                    }
-                )
-
+                buckets.append((current_time, bucket_end))
                 current_time = bucket_end
 
-            return trends
+            return [
+                {
+                    "timestamp": bucket_start.isoformat(),
+                    "requests": requests,
+                    "errors": errors,
+                    "success_rate": success_rate,
+                }
+                for bucket_start, bucket_end in buckets
+                for hour_usage in [await self._query_usage_logs(bucket_start, bucket_end)]
+                for requests in [len(hour_usage)]
+                for errors in [sum(1 for log in hour_usage if not log.get("success", True))]
+                for success_rate in [
+                    (requests - errors) / requests if requests > 0 else 1.0
+                ]
+            ]
 
         except Exception:
             logger.exception("Failed to get usage trends")
@@ -855,26 +845,22 @@ class DashboardService:
     def _get_default_service_analytics(self) -> list[ServiceAnalytics]:
         """Get default service analytics when data is unavailable."""
         now = datetime.now(UTC)
-        services = []
-
-        for service_type in ServiceType:
-            services.append(
-                ServiceAnalytics(
-                    service_name=service_type.value,
-                    service_type=service_type,
-                    total_requests=200,
-                    total_errors=10,
-                    success_rate=0.95,
-                    avg_latency_ms=150.0,
-                    active_keys=2,
-                    last_health_check=now,
-                    health_status=ServiceHealthStatus.HEALTHY,
-                    rate_limit_hits=0,
-                    quota_usage_percent=45.0,
-                )
+        return [
+            ServiceAnalytics(
+                service_name=service_type.value,
+                service_type=service_type,
+                total_requests=200,
+                total_errors=10,
+                success_rate=0.95,
+                avg_latency_ms=150.0,
+                active_keys=2,
+                last_health_check=now,
+                health_status=ServiceHealthStatus.HEALTHY,
+                rate_limit_hits=0,
+                quota_usage_percent=45.0,
             )
-
-        return services
+            for service_type in ServiceType
+        ]
 
     async def _get_fallback_dashboard_data(
         self, timestamp: datetime, time_range_hours: int

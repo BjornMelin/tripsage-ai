@@ -959,11 +959,7 @@ class ItineraryService:
                 search_request.offset,
             )
 
-            itineraries = []
-            for result in results:
-                itineraries.append(Itinerary(**result))
-
-            return itineraries
+            return [Itinerary(**result) for result in results]
 
         except Exception as e:
             logger.exception(

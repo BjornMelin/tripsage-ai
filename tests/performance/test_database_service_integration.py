@@ -418,12 +418,7 @@ class TestDatabaseCacheIntegration:
         async def invalidate_cache_pattern():
             """Invalidate cache entries matching a pattern."""
             pattern = "key_1"
-            keys_to_remove = []
-
-            # Find keys matching pattern
-            for key in mock_cache:
-                if pattern in key:
-                    keys_to_remove.append(key)
+            keys_to_remove = [key for key in mock_cache if pattern in key]
 
             # Remove matching keys
             for key in keys_to_remove:

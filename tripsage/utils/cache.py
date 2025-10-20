@@ -209,11 +209,14 @@ class DragonflyCache:
             # Get all matching keys - scan_iter might not be available in unified cache
             # Fall back to basic pattern matching if needed
             try:
-                keys = []
                 # If scan_iter is available on the cache service
                 if hasattr(self._cache_service, "scan_iter"):
-                    async for key in self._cache_service.scan_iter(match=full_pattern):
-                        keys.append(key)
+                    keys = [
+                        key
+                        async for key in self._cache_service.scan_iter(
+                            match=full_pattern
+                        )
+                    ]
                 else:
                     # Alternative approach if scan_iter not available
                     logger.warning(
@@ -367,10 +370,7 @@ def cached(
             cache_prefix = f"{module_name}.{function_name}"
 
             # Join string args for query
-            query_components = []
-            for arg in args:
-                if isinstance(arg, str):
-                    query_components.append(arg)
+            query_components = [arg for arg in args if isinstance(arg, str)]
 
             query = ":".join(query_components) if query_components else function_name
             cache_key = generate_cache_key(
@@ -448,13 +448,10 @@ async def batch_cache_set(
     """
     settings = get_settings()
     if not use_redis or not settings.redis_url:
-        results = []
-        for item in items:
-            success = await memory_cache.set(
-                item["key"], item["value"], ttl=item.get("ttl")
-            )
-            results.append(success)
-        return results
+        return [
+            await memory_cache.set(item["key"], item["value"], ttl=item.get("ttl"))
+            for item in items
+        ]
 
     # DragonflyDB batch operations
     try:
@@ -462,35 +459,35 @@ async def batch_cache_set(
 
         # Use batch operations if available
         if hasattr(cache_service, "batch_set"):
-            # Convert to format expected by batch_set
-            batch_items = {}
-            ttl = None
-            for item in items:
-                key = (
+            batch_items = {
+                (
                     f"{namespace}:{item['key']}"
                     if not item["key"].startswith(f"{namespace}:")
                     else item["key"]
-                )
-                batch_items[key] = item["value"]
-                if "ttl" in item:
-                    ttl = item[
-                        "ttl"
-                    ]  # Use last TTL found - limitation of batch operation
+                ): item["value"]
+                for item in items
+            }
+            ttl_values = [item["ttl"] for item in items if "ttl" in item]
+            ttl = ttl_values[-1] if ttl_values else None
 
             success = await cache_service.batch_set(batch_items, ex=ttl)
             return [success] * len(items)  # Return same result for all items
 
         # Fallback to individual operations
-        results = []
-        for item in items:
-            key = (
-                f"{namespace}:{item['key']}"
-                if not item["key"].startswith(f"{namespace}:")
-                else item["key"]
+        return [
+            bool(
+                await cache_service.set(
+                    (
+                        f"{namespace}:{item['key']}"
+                        if not item["key"].startswith(f"{namespace}:")
+                        else item["key"]
+                    ),
+                    item["value"],
+                    ttl=item.get("ttl"),
+                )
             )
-            success = await cache_service.set(key, item["value"], ttl=item.get("ttl"))
-            results.append(bool(success))
-        return results
+            for item in items
+        ]
 
     except Exception:
         logger.exception("Batch cache set failed")
@@ -512,11 +509,7 @@ async def batch_cache_get(
     """
     settings = get_settings()
     if not use_redis or not settings.redis_url:
-        results = []
-        for key in keys:
-            value = await memory_cache.get(key)
-            results.append(value)
-        return results
+        return [await memory_cache.get(key) for key in keys]
 
     # DragonflyDB batch operations
     try:
@@ -534,11 +527,7 @@ async def batch_cache_get(
             return [result_dict.get(key) for key in full_keys]
 
         # Fallback to individual operations
-        results = []
-        for key in full_keys:
-            value = await cache_service.get(key)
-            results.append(value)
-        return results
+        return [await cache_service.get(key) for key in full_keys]
 
     except Exception:
         logger.exception("Batch cache get failed")

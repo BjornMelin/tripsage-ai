@@ -1,4 +1,4 @@
-"""Playwright Service for complex web scraping and browser automation
+"""Playwright Service for web scraping and browser automation
 with TripSage Core integration.
 
 This service provides direct Playwright SDK integration for scenarios requiring
@@ -311,7 +311,7 @@ class PlaywrightService:
                 if wait_for_selector:
                     try:
                         await page.wait_for_selector(wait_for_selector, timeout=timeout)
-                    except Exception as wait_error:
+                    except CoreServiceError as wait_error:
                         logger.debug(
                             "Playwright wait_for_selector '%s' failed on %s: %s",
                             wait_for_selector,
@@ -322,7 +322,7 @@ class PlaywrightService:
                 if wait_for_function:
                     try:
                         await page.wait_for_function(wait_for_function, timeout=timeout)
-                    except Exception as wait_error:
+                    except CoreServiceError as wait_error:
                         logger.debug(
                             "Playwright wait_for_function failed on %s: %s",
                             url,
@@ -455,7 +455,7 @@ class PlaywrightService:
             async with semaphore:
                 try:
                     return await self.scrape_url(url, **scrape_options)
-                except Exception as e:
+                except CoreServiceError as e:
                     return ScrapingResult(
                         url=url,
                         content="",
@@ -618,7 +618,7 @@ class PlaywrightService:
                 custom_timeout=10000,
             )
             return result.success
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:

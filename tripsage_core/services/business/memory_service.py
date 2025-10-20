@@ -20,11 +20,9 @@ from tripsage_core.exceptions import (
 )
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.utils.connection_utils import (
-    DatabaseConnectionError,
     DatabaseURLParser,
     DatabaseURLParsingError,
     DatabaseValidationError,
-    SecureDatabaseConnectionManager,
 )
 
 
@@ -156,11 +154,7 @@ class MemoryService:
         self.db = database_service
         self.cache_ttl = cache_ttl
 
-        # Initialize secure connection management
-        self.connection_manager = SecureDatabaseConnectionManager(
-            max_retries=connection_max_retries,
-            validation_timeout=connection_validation_timeout,
-        )
+        # Connection manager removed; rely on SQLAlchemy ping in engine init
 
         # Initialize memory backend
         self._initialize_memory_backend(memory_backend_config)
@@ -290,12 +284,6 @@ class MemoryService:
 
             settings = get_settings()
 
-            # Validate database connection before testing Mem0
-            logger.info("Validating database connection for memory service")
-            await self.connection_manager.parse_and_validate_url(
-                settings.effective_postgres_url
-            )
-
             # Test Mem0 memory backend with retry logic
             async def test_memory_operation():
                 return await asyncio.to_thread(
@@ -304,21 +292,12 @@ class MemoryService:
                     user_id="health_check_user",
                     limit=1,
                 )
-
-            # Execute with circuit breaker and retry protection
-            await self.connection_manager.circuit_breaker.call(
-                self.connection_manager.retry_handler.execute_with_retry,
-                test_memory_operation,
-            )
+            await test_memory_operation()
 
             self._connected = True
             logger.info("Memory service connected and validated successfully")
 
-        except (
-            DatabaseURLParsingError,
-            DatabaseValidationError,
-            DatabaseConnectionError,
-        ) as e:
+        except (DatabaseURLParsingError, DatabaseValidationError) as e:
             error_msg = f"Database connection validation failed: {e}"
             logger.exception(error_msg)
             raise ServiceError(error_msg) from e
@@ -433,23 +412,24 @@ class MemoryService:
             )
 
             # Convert to our result model
-            memory_results = []
-            for result in results.get("results", []):
-                memory_result = MemorySearchResult(
-                    id=result.get("id", ""),
-                    memory=result.get("memory", ""),
-                    metadata=result.get("metadata", {}),
-                    categories=result.get("categories", []),
-                    similarity=result.get("score", 0.0),
-                    created_at=self._parse_datetime(
-                        result.get("created_at", datetime.now(UTC).isoformat())
-                    ),
-                    user_id=user_id,
-                )
-
-                # Filter by similarity threshold
-                if memory_result.similarity >= search_request.similarity_threshold:
-                    memory_results.append(memory_result)
+            memory_results = [
+                memory_result
+                for result in results.get("results", [])
+                for memory_result in [
+                    MemorySearchResult(
+                        id=result.get("id", ""),
+                        memory=result.get("memory", ""),
+                        metadata=result.get("metadata", {}),
+                        categories=result.get("categories", []),
+                        similarity=result.get("score", 0.0),
+                        created_at=self._parse_datetime(
+                            result.get("created_at", datetime.now(UTC).isoformat())
+                        ),
+                        user_id=user_id,
+                    )
+                ]
+                if memory_result.similarity >= search_request.similarity_threshold
+            ]
 
             # Cache the results
             self._cache_result(cache_key, memory_results)
@@ -500,39 +480,50 @@ class MemoryService:
                 self.memory.get_all, user_id=user_id, limit=100
             )
 
-            # Organize by category
+            context_keys = [
+                "preferences",
+                "past_trips",
+                "saved_destinations",
+                "budget_patterns",
+                "travel_style",
+                "dietary_restrictions",
+                "accommodation_preferences",
+                "activity_preferences",
+            ]
+
+            processed_memories = [
+                (
+                    memory,
+                    set(memory.get("categories", [])),
+                    memory.get("memory", "").lower(),
+                )
+                for memory in all_memories.get("results", [])
+            ]
+
             context = {
-                "preferences": [],
-                "past_trips": [],
-                "saved_destinations": [],
-                "budget_patterns": [],
-                "travel_style": [],
-                "dietary_restrictions": [],
-                "accommodation_preferences": [],
-                "activity_preferences": [],
+                key: [memory for memory, categories, _content in processed_memories if key in categories]
+                for key in context_keys
             }
 
-            for memory in all_memories.get("results", []):
-                categories = memory.get("categories", [])
-                memory_content = memory.get("memory", "").lower()
+            preference_candidates = [
+                memory
+                for memory, categories, content in processed_memories
+                if "preferences" not in categories
+                and any(
+                    word in content for word in ["prefer", "like", "dislike", "favorite"]
+                )
+            ]
+            budget_candidates = [
+                memory
+                for memory, categories, content in processed_memories
+                if "budget_patterns" not in categories
+                and any(
+                    word in content for word in ["budget", "cost", "price", "expensive", "cheap"]
+                )
+            ]
 
-                # Categorize memories based on categories and content analysis
-                for category in categories:
-                    if category in context:
-                        context[category].append(memory)
-
-                # Additional categorization based on content
-                if any(
-                    word in memory_content
-                    for word in ["prefer", "like", "dislike", "favorite"]
-                ) and "preferences" not in list(categories):
-                    context["preferences"].append(memory)
-
-                if any(
-                    word in memory_content
-                    for word in ["budget", "cost", "price", "expensive", "cheap"]
-                ) and "budget_patterns" not in list(categories):
-                    context["budget_patterns"].append(memory)
+            context["preferences"] += preference_candidates
+            context["budget_patterns"] += budget_candidates
 
             # Add derived insights
             insights = await self._derive_travel_insights(context)
@@ -782,23 +773,23 @@ class MemoryService:
 
     def _analyze_destinations(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze destination preferences from context."""
-        destinations = []
-        for memory in context.get("past_trips", []) + context.get(
-            "saved_destinations", []
-        ):
-            content = memory.get("memory", "").lower()
-            # Simple destination extraction (could be enhanced with NER)
-            for word in content.split():
-                if word.capitalize() in [
-                    "Japan",
-                    "France",
-                    "Italy",
-                    "Spain",
-                    "Thailand",
-                    "USA",
-                    "UK",
-                ]:
-                    destinations.append(word.capitalize())
+        tracked_destinations = {
+            "Japan",
+            "France",
+            "Italy",
+            "Spain",
+            "Thailand",
+            "USA",
+            "UK",
+        }
+        destinations = [
+            word.capitalize()
+            for memory in (
+                context.get("past_trips", []) + context.get("saved_destinations", [])
+            )
+            for word in memory.get("memory", "").lower().split()
+            if word.capitalize() in tracked_destinations
+        ]
 
         return {
             "most_visited": list(set(destinations)),
@@ -807,14 +798,13 @@ class MemoryService:
 
     def _analyze_budgets(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze budget patterns from context."""
-        budgets = []
-        for memory in context.get("budget_patterns", []):
-            content = memory.get("memory", "")
-            # Extract budget numbers (simplified)
-            import re
+        import re
 
-            budget_matches = re.findall(r"\$(\d+)", content)
-            budgets.extend([int(b) for b in budget_matches])
+        budgets = [
+            int(amount)
+            for memory in context.get("budget_patterns", [])
+            for amount in re.findall(r"\$(\d+)", memory.get("memory", ""))
+        ]
 
         if budgets:
             return {
@@ -834,23 +824,24 @@ class MemoryService:
 
     def _analyze_activities(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze activity preferences from context."""
-        activities = []
-        for memory in context.get("activity_preferences", []) + context.get(
-            "preferences", []
-        ):
-            content = memory.get("memory", "").lower()
-            activity_keywords = [
-                "museum",
-                "beach",
-                "hiking",
-                "shopping",
-                "dining",
-                "nightlife",
-                "culture",
-            ]
-            for keyword in activity_keywords:
-                if keyword in content:
-                    activities.append(keyword)
+        activity_keywords = [
+            "museum",
+            "beach",
+            "hiking",
+            "shopping",
+            "dining",
+            "nightlife",
+            "culture",
+        ]
+        activities = [
+            keyword
+            for memory in (
+                context.get("activity_preferences", [])
+                + context.get("preferences", [])
+            )
+            for keyword in activity_keywords
+            if keyword in memory.get("memory", "").lower()
+        ]
 
         return {
             "preferred_activities": list(set(activities)),
@@ -930,9 +921,5 @@ class MemoryService:
 
 # Dependency function for FastAPI
 async def get_memory_service() -> MemoryService:
-    """Get memory service instance for dependency injection.
-
-    Returns:
-        MemoryService instance
-    """
+    """Get memory service instance for dependency injection."""
     return MemoryService()

@@ -756,9 +756,7 @@ class TestWebSocketAuthServiceIntegration:
         token = self.create_test_token(user_id)
 
         # Create multiple concurrent authentication tasks
-        tasks = []
-        for _i in range(10):
-            tasks.append(auth_service_real.authenticate_token(token))
+        tasks = [auth_service_real.authenticate_token(token) for _i in range(10)]
 
         # Execute all tasks concurrently
         results = await asyncio.gather(*tasks, return_exceptions=True)

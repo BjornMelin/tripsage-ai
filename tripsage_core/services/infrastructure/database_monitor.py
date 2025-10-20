@@ -76,8 +76,10 @@ class SecurityAlert:
 
 
 class DatabaseConnectionMonitor:
-    """Comprehensive database connection monitor with health checks,
-    security monitoring, and automatic recovery capabilities.
+    """Database connection monitor.
+
+    Includes health checks, security monitoring, and automatic
+    recovery capabilities.
 
     Features:
     - Real-time health monitoring
@@ -257,7 +259,7 @@ class DatabaseConnectionMonitor:
                 try:
                     stats = await self.database_service.get_database_stats()
                     details["database_stats"] = stats
-                except Exception as e:
+                except CoreServiceError as e:
                     details["stats_error"] = str(e)
 
             # Response time for simple query
@@ -265,11 +267,11 @@ class DatabaseConnectionMonitor:
             try:
                 await self.database_service.select("users", "id", limit=1)
                 details["query_response_time"] = time.time() - start_time
-            except Exception as e:
+            except CoreServiceError as e:
                 details["query_error"] = str(e)
                 details["query_response_time"] = time.time() - start_time
 
-        except Exception as e:
+        except CoreServiceError as e:
             details["collection_error"] = str(e)
 
         return details

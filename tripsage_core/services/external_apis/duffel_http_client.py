@@ -34,7 +34,14 @@ class DuffelAPIError(CoreAPIError):
         message: str,
         status_code: int | None = None,
         response_data: dict | None = None,
-    ):
+    ) -> None:
+        """Initialize the DuffelAPIError exception.
+
+        Args:
+            message: Error message.
+            status_code: HTTP status code.
+            response_data: Response data from API.
+        """
         super().__init__(
             message=message,
             code="DUFFEL_API_ERROR",
@@ -49,7 +56,13 @@ class DuffelAPIError(CoreAPIError):
 class DuffelRateLimitError(CoreRateLimitError):
     """Exception raised when rate limit is exceeded."""
 
-    def __init__(self, message: str, retry_after: int | None = None):
+    def __init__(self, message: str, retry_after: int | None = None) -> None:
+        """Initialize the DuffelRateLimitError exception.
+
+        Args:
+            message: Error message.
+            retry_after: Seconds to wait before retrying.
+        """
         super().__init__(
             message=message,
             code="DUFFEL_RATE_LIMIT_EXCEEDED",
@@ -69,16 +82,20 @@ class DuffelHTTPClient:
     - Integration with TripSage Core settings and exceptions
     """
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
         api_key: str | None = None,
         settings: Settings | None = None,
         base_url: str = "https://api.duffel.com",
+        /,
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_backoff: float = 1.0,
         max_connections: int = 10,
-    ):
+    ) -> None:
+        # pylint: disable=too-many-positional-arguments
         """Initialize the Duffel HTTP client.
 
         Args:
@@ -152,7 +169,7 @@ class DuffelHTTPClient:
         if self._client:
             try:
                 await self._client.aclose()
-            except Exception as close_error:
+            except CoreServiceError as close_error:
                 logger.warning(
                     "Error closing Duffel HTTP client: %s",
                     close_error,
@@ -224,7 +241,15 @@ class DuffelHTTPClient:
             DuffelAPIError: When API request fails
             DuffelRateLimitError: When rate limit is exceeded
         """
+        # pylint: disable=too-many-positional-arguments, disable=too-many-statements
         await self.ensure_connected()
+
+        if self._client is None:
+            raise CoreServiceError(
+                message="HTTP client not initialized",
+                code="CLIENT_NOT_READY",
+                service="DuffelHTTPClient",
+            )
 
         # Generate correlation ID if not provided
         if correlation_id is None:
@@ -302,26 +327,18 @@ class DuffelHTTPClient:
                     continue
                 break
 
-            except DuffelAPIError:
+            except DuffelAPIError as api_error:
                 # Don't retry API errors (4xx), only network/server errors
-                raise
+                raise api_error from None
 
-            except DuffelRateLimitError:
+            except DuffelRateLimitError as rate_error:
                 # Don't retry rate limit errors, let them propagate
-                raise
-
-            except Exception as e:
-                last_exception = e
-                if retry_count < self.max_retries:
-                    await asyncio.sleep(self.retry_backoff * (2**retry_count))
-                    retry_count += 1
-                    continue
-                break
+                raise rate_error from None
 
         # If we get here, we've exhausted retries
         raise DuffelAPIError(
             f"Request failed after {self.max_retries + 1} attempts. "
-            f"Last error: {last_exception!s}"
+            f"Last error: {str(last_exception) if last_exception else 'Unknown'}",
         )
 
     async def search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
@@ -415,7 +432,7 @@ class DuffelHTTPClient:
             # Use the aircraft endpoint as a simple health check
             await self.list_aircraft(limit=1)
             return True
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:
@@ -442,6 +459,7 @@ async def get_duffel_client() -> DuffelHTTPClient:
     Returns:
         Connected DuffelHTTPClient instance
     """
+    # pylint: disable=global-statement
     global _duffel_client
 
     if _duffel_client is None:
@@ -453,6 +471,7 @@ async def get_duffel_client() -> DuffelHTTPClient:
 
 async def close_duffel_client() -> None:
     """Close the global Duffel HTTP client instance."""
+    # pylint: disable=global-statement
     global _duffel_client
 
     if _duffel_client:

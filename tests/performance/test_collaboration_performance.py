@@ -519,12 +519,12 @@ class PerformanceRegressionTests:
         critical_columns = set(where_patterns + join_patterns)
 
         # Check if critical columns have indexes
-        missing_indexes = []
-        for column in critical_columns:
-            if column not in indexes_sql and not any(
-                col in column for col in ["auth.uid()", "id"]
-            ):
-                missing_indexes.append(column)
+        missing_indexes = [
+            column
+            for column in critical_columns
+            if column not in indexes_sql
+            and not any(col in column for col in ["auth.uid()", "id"])
+        ]
 
         # This is informational - indexes might exist with different names
         if missing_indexes:

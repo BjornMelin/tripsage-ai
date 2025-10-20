@@ -34,6 +34,7 @@ from tripsage.api.schemas.trips import (
 from tripsage_core.exceptions.exceptions import (
     CoreAuthorizationError,
     CoreSecurityError,
+    CoreServiceError,
 )
 from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
@@ -152,7 +153,7 @@ async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]
         user = await user_service.get_user_by_id(user_id)
         if user:
             return user.email, getattr(user, "full_name", None)
-    except Exception:
+    except (AttributeError, ValueError, CoreServiceError):
         logger.exception("Failed to get user details")
     return None, None
 
@@ -166,7 +167,7 @@ async def _resolve_user_by_email(email: str) -> tuple[str | None, str | None]:
         user = await user_service.get_user_by_email(email)
         if user:
             return str(user.id), getattr(user, "full_name", None)
-    except Exception:
+    except (AttributeError, ValueError, CoreServiceError):
         logger.exception("Failed to resolve user by email")
     return None, None
 
@@ -243,15 +244,15 @@ async def create_trip(
             coordinates: dict[str, float] | None = None
             if dest.coordinates:
                 coordinates = {
-                    "lat": dest.coordinates.latitude,
-                    "lng": dest.coordinates.longitude,
+                    "lat": dest.coordinates.latitude or 0.0,  # type: ignore[assignment]
+                    "lng": dest.coordinates.longitude or 0.0,  # type: ignore[assignment]
                 }
 
             trip_location = TripLocation(
                 name=dest.name,
                 country=dest.country,
                 city=dest.city,
-                coordinates=coordinates,
+                coordinates=coordinates,  # type: ignore[arg-type]
                 timezone=None,  # Could be populated if available
             )
             trip_locations.append(trip_location)
@@ -536,7 +537,7 @@ async def update_trip(
                     name=dest.name,
                     country=dest.country,
                     city=dest.city,
-                    coordinates=coordinates,
+                    coordinates=coordinates,  # type: ignore[arg-type]
                     timezone=None,
                 )
                 trip_locations.append(trip_location)
@@ -1277,7 +1278,7 @@ async def get_trip_suggestions(
                 len(user_memories),
             )
 
-    except Exception:
+    except (ValueError, KeyError, CoreServiceError):
         logger.exception("Failed to get personalized suggestions")
         suggestions = base_suggestions
 
@@ -1746,6 +1747,6 @@ async def _get_user_name_safely(user_id: str) -> str | None:
     try:
         _, full_name = await _get_user_details_by_id(user_id)
         return full_name
-    except Exception:
+    except (AttributeError, ValueError, CoreServiceError):
         logger.exception("Failed to get user name")
         return None

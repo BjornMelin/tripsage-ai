@@ -220,20 +220,19 @@ class ToolCallService:
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
             # Convert exceptions to error responses
-            processed_responses = []
-            for i, response in enumerate(responses):
-                if isinstance(response, Exception):
-                    error_response = ToolCallResponse(
-                        id=requests[i].id,
-                        status="error",
-                        error=f"Parallel execution failed: {response!s}",
-                        execution_time=0.0,
-                        service=requests[i].service,
-                        method=requests[i].method,
-                    )
-                    processed_responses.append(error_response)
-                else:
-                    processed_responses.append(response)
+            processed_responses = [
+                response
+                if not isinstance(response, Exception)
+                else ToolCallResponse(
+                    id=requests[i].id,
+                    status="error",
+                    error=f"Parallel execution failed: {response!s}",
+                    execution_time=0.0,
+                    service=requests[i].service,
+                    method=requests[i].method,
+                )
+                for i, response in enumerate(responses)
+            ]
 
             logger.info("Completed %s parallel tool calls", len(processed_responses))
             return processed_responses
@@ -419,43 +418,33 @@ class ToolCallService:
 
     async def _validate_flight_params(self, params: dict[str, Any]) -> list[str]:
         """Validate flight search parameters."""
-        errors = []
-
         required_fields = ["origin", "destination", "departure_date"]
-        for field in required_fields:
-            if field not in params:
-                errors.append(f"Missing required field: {field}")
-
-        return errors
+        return [
+            f"Missing required field: {field}"
+            for field in required_fields
+            if field not in params
+        ]
 
     async def _validate_accommodation_params(self, params: dict[str, Any]) -> list[str]:
         """Validate accommodation search parameters."""
-        errors = []
-
         required_fields = ["location", "check_in", "check_out"]
-        for field in required_fields:
-            if field not in params:
-                errors.append(f"Missing required field: {field}")
-
-        return errors
+        return [
+            f"Missing required field: {field}"
+            for field in required_fields
+            if field not in params
+        ]
 
     async def _validate_maps_params(self, params: dict[str, Any]) -> list[str]:
         """Validate maps API parameters."""
-        errors = []
-
         if "address" not in params and "location" not in params:
-            errors.append("Either 'address' or 'location' is required")
-
-        return errors
+            return ["Either 'address' or 'location' is required"]
+        return []
 
     async def _validate_weather_params(self, params: dict[str, Any]) -> list[str]:
         """Validate weather API parameters."""
-        errors = []
-
         if "location" not in params:
-            errors.append("'location' parameter is required")
-
-        return errors
+            return ["'location' parameter is required"]
+        return []
 
     async def _format_flight_results(self, result: dict[str, Any]) -> dict[str, Any]:
         """Format flight search results for chat display."""

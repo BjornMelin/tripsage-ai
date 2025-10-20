@@ -18,7 +18,6 @@ from tripsage_core.utils.connection_utils import (
     DatabaseURLParser,
     DatabaseURLParsingError,
     DatabaseValidationError,
-    SecureDatabaseConnectionManager,
 )
 from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.utils.url_converters import DatabaseURLConverter, DatabaseURLDetector
@@ -34,27 +33,13 @@ class Base(DeclarativeBase):
 # Global engine and session factory
 _engine = None
 _session_factory = None
-_connection_manager = None
-
-
-def get_connection_manager() -> SecureDatabaseConnectionManager:
-    """Get or create the global secure connection manager."""
-    global _connection_manager
-    if _connection_manager is None:
-        _connection_manager = SecureDatabaseConnectionManager(
-            max_retries=3,
-            circuit_breaker_threshold=5,
-            circuit_breaker_timeout=60.0,
-            validation_timeout=10.0,
-        )
-        logger.info("Secure connection manager initialized")
-    return _connection_manager
+_connection_manager = None  # legacy name removed; kept for local state only
 
 
 async def create_secure_async_engine(
     database_url: str,
     *,
-    poolclass=QueuePool,
+    poolclass: object = QueuePool,
     pool_size: int = 10,
     max_overflow: int = 20,
     pool_pre_ping: bool = True,
@@ -102,9 +87,9 @@ async def create_secure_async_engine(
             f"Unsupported database URL type: {url_info.get('type', 'unknown')}"
         )
 
-    # Parse and validate with security checks
-    manager = get_connection_manager()
-    credentials = await manager.parse_and_validate_url(postgres_url)
+    # Parse with basic validation (no connection attempts here)
+    parser = DatabaseURLParser()
+    credentials = parser.parse_url(postgres_url)
 
     # Convert to SQLAlchemy async format
     sqlalchemy_url = credentials.to_connection_string()
@@ -139,7 +124,7 @@ async def create_secure_async_engine(
         **kwargs,
     )
 
-    # Validate connection on startup
+    # Validate connection on startup (simple ping)
     try:
         async with engine.begin() as conn:
             await conn.execute(text("SELECT 1"))
@@ -174,39 +159,17 @@ def get_engine():
         # Use the effective PostgreSQL URL (handles auto-conversion)
         db_url = getattr(settings, "effective_postgres_url", settings.database_url)
 
-        # Create engine with security validation
-        # Run in a new event loop if needed
-        try:
-            loop = asyncio.get_running_loop()
-            # We're in an async context
-            _engine = asyncio.create_task(
-                create_secure_async_engine(
-                    db_url,
-                    echo=settings.debug,
-                    pool_size=10,
-                    max_overflow=20,
-                )
+        # Create engine with validation using a dedicated event loop
+        _engine = asyncio.run(
+            create_secure_async_engine(
+                db_url,
+                echo=settings.debug,
+                pool_size=10,
+                max_overflow=20,
             )
-        except RuntimeError:
-            # No running loop, create one
-            _engine = asyncio.run(
-                create_secure_async_engine(
-                    db_url,
-                    echo=settings.debug,
-                    pool_size=10,
-                    max_overflow=20,
-                )
-            )
+        )
 
         logger.info("Secure database engine created")
-
-    # Handle if _engine is a Task
-    if asyncio.iscoroutine(_engine) or asyncio.isfuture(_engine):
-        try:
-            loop = asyncio.get_running_loop()
-            return loop.run_until_complete(_engine)
-        except RuntimeError:
-            return asyncio.run(_engine)
 
     return _engine
 
@@ -321,10 +284,8 @@ async def close_connections():
         _session_factory = None
         logger.info("Database connections closed")
 
-    if _connection_manager:
-        # Connection manager doesn't need explicit cleanup but reset it
-        _connection_manager = None
-        logger.info("Connection manager reset")
+    _connection_manager = None
+    logger.info("Connection manager reset")
 
 
 async def get_engine_for_testing(

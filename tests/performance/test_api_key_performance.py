@@ -240,12 +240,12 @@ class TestApiKeyPerformance:
             mock_get.return_value = mock_response
 
             # Create validation tasks
-            tasks = []
-            for i in range(50):  # 50 concurrent validations
-                task = api_key_service.validate_api_key(
+            tasks = [
+                api_key_service.validate_api_key(
                     ServiceType.OPENAI, sample_api_keys[i], str(uuid.uuid4())
                 )
-                tasks.append(task)
+                for i in range(50)
+            ]  # 50 concurrent validations
 
             # Execute all validations concurrently
             results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -294,27 +294,33 @@ class TestApiKeyPerformance:
             )
 
             # Create multiple operations: create, read, list
-            tasks = []
+            create_tasks = [
+                (
+                    "create",
+                    api_key_service.create_api_key(
+                        sample_users[i % len(sample_users)],
+                        ApiKeyCreateRequest(
+                            name=f"Load Test Key {i}",
+                            service=ServiceType.OPENAI,
+                            key_value=sample_api_keys[i],
+                            description=f"Load test key {i}",
+                        ),
+                    ),
+                )
+                for i in range(30)
+            ]
 
-            # Create operations (30 concurrent)
-            for i in range(30):
-                request = ApiKeyCreateRequest(
-                    name=f"Load Test Key {i}",
-                    service=ServiceType.OPENAI,
-                    key_value=sample_api_keys[i],
-                    description=f"Load test key {i}",
+            list_tasks = [
+                (
+                    "list",
+                    api_key_service.list_user_keys(
+                        sample_users[i % len(sample_users)]
+                    ),
                 )
-                task = api_key_service.create_api_key(
-                    sample_users[i % len(sample_users)], request
-                )
-                tasks.append(("create", task))
+                for i in range(20)
+            ]
 
-            # List operations (20 concurrent)
-            for i in range(20):
-                task = api_key_service.list_user_keys(
-                    sample_users[i % len(sample_users)]
-                )
-                tasks.append(("list", task))
+            tasks = create_tasks + list_tasks
 
             # Execute all operations
             operation_tasks = [task for _, task in tasks]
@@ -433,14 +439,14 @@ class TestApiKeyPerformance:
             mock_get.return_value = mock_response
 
             # Create many validation tasks
-            tasks = []
-            for i in range(100):
-                task = api_key_service.validate_api_key(
+            tasks = [
+                api_key_service.validate_api_key(
                     ServiceType.OPENAI,
                     sample_api_keys[i % len(sample_api_keys)],
                     str(uuid.uuid4()),
                 )
-                tasks.append(task)
+                for i in range(100)
+            ]
 
             # Execute and measure memory
             await asyncio.gather(*tasks)
@@ -476,12 +482,12 @@ class TestApiKeyPerformance:
             mock_get.return_value = mock_response
 
             # Create extreme load: 200 concurrent operations
-            tasks = []
-            for i in range(200):
-                task = api_key_service.validate_api_key(
+            tasks = [
+                api_key_service.validate_api_key(
                     ServiceType.OPENAI, f"sk-stress_test_{i}", str(uuid.uuid4())
                 )
-                tasks.append(task)
+                for i in range(200)
+            ]
 
             start_time = time.time()
 
@@ -799,16 +805,19 @@ class TestApiKeyPerformance:
             user_id = str(uuid.uuid4())
 
             # Phase 1: Concurrent key creation (write-heavy)
-            creation_tasks = []
-            for i in range(25):  # 25 concurrent creations
-                key_data = {
-                    "id": str(uuid.uuid4()),
-                    "user_id": user_id,
-                    "name": f"Concurrent Key {i}",
-                    "service": "openai",
-                    "encrypted_key": f"encrypted_test_key_{i}",
-                }
-                creation_tasks.append(mock_db.insert("api_keys", key_data))
+            creation_tasks = [
+                mock_db.insert(
+                    "api_keys",
+                    {
+                        "id": str(uuid.uuid4()),
+                        "user_id": user_id,
+                        "name": f"Concurrent Key {i}",
+                        "service": "openai",
+                        "encrypted_key": f"encrypted_test_key_{i}",
+                    },
+                )
+                for i in range(25)
+            ]  # 25 concurrent creations
 
             creation_start = time.time()
             creation_results = await asyncio.gather(
@@ -821,9 +830,9 @@ class TestApiKeyPerformance:
             )
 
             # Phase 2: Concurrent key retrieval (read-heavy)
-            retrieval_tasks = []
-            for _ in range(50):  # 50 concurrent reads
-                retrieval_tasks.append(mock_db.select("api_keys", {"user_id": user_id}))
+            retrieval_tasks = [
+                mock_db.select("api_keys", {"user_id": user_id}) for _ in range(50)
+            ]  # 50 concurrent reads
 
             retrieval_start = time.time()
             retrieval_results = await asyncio.gather(
@@ -836,27 +845,29 @@ class TestApiKeyPerformance:
             )
 
             # Phase 3: Mixed operations (concurrent read/write)
-            mixed_tasks = []
-            for i in range(30):
-                if i % 3 == 0:  # 1/3 writes
-                    key_data = {
-                        "id": str(uuid.uuid4()),
-                        "user_id": user_id,
-                        "name": f"Mixed Key {i}",
-                        "service": "openai",
-                        "encrypted_key": f"encrypted_mixed_key_{i}",
-                    }
-                    mixed_tasks.append(mock_db.insert("api_keys", key_data))
-                elif i % 3 == 1:  # 1/3 updates
-                    mixed_tasks.append(
-                        mock_db.update(
-                            "api_keys",
-                            {"last_used": datetime.now(UTC).isoformat()},
-                            {"id": f"key_{i % 10}"},
-                        )
+            mixed_tasks = [
+                (
+                    mock_db.insert(
+                        "api_keys",
+                        {
+                            "id": str(uuid.uuid4()),
+                            "user_id": user_id,
+                            "name": f"Mixed Key {i}",
+                            "service": "openai",
+                            "encrypted_key": f"encrypted_mixed_key_{i}",
+                        },
                     )
-                else:  # 1/3 reads
-                    mixed_tasks.append(mock_db.select("api_keys", {"user_id": user_id}))
+                    if i % 3 == 0
+                    else mock_db.update(
+                        "api_keys",
+                        {"last_used": datetime.now(UTC).isoformat()},
+                        {"id": f"key_{i % 10}"},
+                    )
+                    if i % 3 == 1
+                    else mock_db.select("api_keys", {"user_id": user_id})
+                )
+                for i in range(30)
+            ]
 
             mixed_start = time.time()
             mixed_results = await asyncio.gather(*mixed_tasks, return_exceptions=True)
@@ -1588,13 +1599,12 @@ class TestApiKeyPerformance:
 
                 # Validation throughput
                 start = time.time()
-                validation_tasks = []
-                for i in range(50):
-                    validation_tasks.append(
-                        api_key_service.validate_api_key(
-                            ServiceType.OPENAI, f"sk-throughput_{i}", str(uuid.uuid4())
-                        )
+                validation_tasks = [
+                    api_key_service.validate_api_key(
+                        ServiceType.OPENAI, f"sk-throughput_{i}", str(uuid.uuid4())
                     )
+                    for i in range(50)
+                ]
 
                 await asyncio.gather(*validation_tasks)
                 validation_throughput_time = time.time() - start
@@ -1602,19 +1612,19 @@ class TestApiKeyPerformance:
 
                 # Creation throughput
                 start = time.time()
-                creation_tasks = []
                 user_id = str(uuid.uuid4())
-
-                for i in range(20):
-                    request = ApiKeyCreateRequest(
-                        name=f"Throughput Test {i}",
-                        service=ServiceType.OPENAI,
-                        key_value=f"sk-throughput_create_{i}",
-                        description="Throughput test",
+                creation_tasks = [
+                    api_key_service.create_api_key(
+                        user_id,
+                        ApiKeyCreateRequest(
+                            name=f"Throughput Test {i}",
+                            service=ServiceType.OPENAI,
+                            key_value=f"sk-throughput_create_{i}",
+                            description="Throughput test",
+                        ),
                     )
-                    creation_tasks.append(
-                        api_key_service.create_api_key(user_id, request)
-                    )
+                    for i in range(20)
+                ]
 
                 await asyncio.gather(*creation_tasks)
                 creation_throughput_time = time.time() - start

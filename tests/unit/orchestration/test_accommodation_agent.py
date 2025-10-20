@@ -327,18 +327,17 @@ class TestAccommodationAgentNode:
         )
 
         # Mock many results
-        listings = []
-        for i in range(10):
-            listings.append(
-                {
-                    "id": f"prop-{i}",
-                    "name": f"Hotel {i}",
-                    "property_type": "Hotel",
-                    "price": {"per_night": f"${100 + i * 50}"},
-                    "rating": 4.0 + i * 0.1,
-                    "amenities": ["wifi", "pool"],
-                }
-            )
+        listings = [
+            {
+                "id": f"prop-{i}",
+                "name": f"Hotel {i}",
+                "property_type": "Hotel",
+                "price": {"per_night": f"${100 + i * 50}"},
+                "rating": 4.0 + i * 0.1,
+                "amenities": ["wifi", "pool"],
+            }
+            for i in range(10)
+        ]
 
         accommodation_node.accommodation_service.search_accommodations.return_value = {
             "status": "success",

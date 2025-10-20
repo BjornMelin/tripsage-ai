@@ -595,7 +595,7 @@ class TimeService:
 
             return sorted(timezones)
 
-        except Exception:
+        except ValueError:
             # Fallback to major timezones
             return list(self._major_timezones.values())
 
@@ -657,7 +657,7 @@ class TimeService:
                 and timezone_info is not None
                 and timezone_info.name == "UTC"
             )
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:

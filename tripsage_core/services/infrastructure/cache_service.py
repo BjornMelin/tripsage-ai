@@ -124,7 +124,7 @@ class CacheService:
         if self._client:
             try:
                 await self._client.close()
-            except Exception as e:
+            except CoreServiceError as e:
                 logger.warning("Error closing DragonflyDB connection: %s", e)
             finally:
                 self._client = None
@@ -133,7 +133,7 @@ class CacheService:
         if self._connection_pool:
             try:
                 await self._connection_pool.disconnect()
-            except Exception as e:
+            except CoreServiceError as e:
                 logger.warning("Error closing DragonflyDB connection pool: %s", e)
             finally:
                 self._connection_pool = None
