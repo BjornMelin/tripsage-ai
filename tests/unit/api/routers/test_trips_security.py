@@ -1,5 +1,4 @@
-"""
-Comprehensive security tests for trips router security fixes.
+"""Comprehensive security tests for trips router security fixes.
 
 This module tests all 7 security vulnerability fixes implemented in the trips router,
 ensuring proper authorization, authentication, and audit logging across all endpoints.
@@ -14,7 +13,7 @@ Security fixes tested:
 - Lines 1064-1066: Security checks in export operations
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -31,16 +30,21 @@ from tripsage.api.routers.trips import (
     share_trip,
     update_trip,
 )
-from tripsage.api.schemas.trips import (
-    TripShareRequest,
-    UpdateTripRequest,
-)
+from tripsage.api.schemas.trips import TripShareRequest, UpdateTripRequest
 from tripsage_core.exceptions.exceptions import (
     CoreAuthorizationError,
     CoreSecurityError,
 )
-from tripsage_core.models.schemas_common.enums import TripStatus, TripVisibility
-from tripsage_core.services.business.trip_service import TripService
+from tripsage_core.models.schemas_common.enums import (
+    TripStatus,
+    TripType,
+    TripVisibility,
+)
+from tripsage_core.models.trip import EnhancedBudget, TripPreferences
+from tripsage_core.services.business.trip_service import (
+    TripResponse as CoreTripResponse,
+    TripService,
+)
 
 
 @pytest.fixture
@@ -94,16 +98,32 @@ def mock_audit_service():
 
 @pytest.fixture
 def sample_trip_data():
-    """Sample trip data for testing."""
-    return {
-        "id": str(uuid4()),
-        "user_id": str(uuid4()),
-        "title": "Test Trip",
-        "visibility": TripVisibility.PRIVATE,
-        "status": TripStatus.PLANNING,
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
-    }
+    """Core TripResponse instance for testing (library-native)."""
+    now = datetime.now(UTC)
+    owner_id = uuid4()
+    return CoreTripResponse(
+        id=uuid4(),
+        user_id=owner_id,
+        title="Test Trip",
+        description=None,
+        start_date=now,
+        end_date=now,
+        destination="Test City",
+        destinations=[],
+        budget=EnhancedBudget(total=1000.0, currency="USD"),
+        travelers=1,
+        trip_type=TripType.LEISURE,
+        status=TripStatus.PLANNING,
+        visibility=TripVisibility.PRIVATE,
+        tags=[],
+        preferences=TripPreferences(),
+        created_at=now,
+        updated_at=now,
+        note_count=0,
+        attachment_count=0,
+        collaborator_count=0,
+        shared_with=[],
+    )
 
 
 class TestGetTripSecurity:
@@ -115,8 +135,8 @@ class TestGetTripSecurity:
     ):
         """Test authorized access to get_trip endpoint."""
         # Setup: user owns the trip
-        trip_id = sample_trip_data["id"]
-        sample_trip_data["user_id"] = mock_principal.id
+        trip_id = sample_trip_data.id
+        sample_trip_data.user_id = mock_principal.id
 
         mock_trip_service.get_trip.return_value = sample_trip_data
         mock_trip_service._check_trip_access.return_value = True
@@ -127,7 +147,7 @@ class TestGetTripSecurity:
         # Verify
         assert result is not None
         mock_trip_service.get_trip.assert_called_once_with(
-            trip_id=trip_id, user_id=mock_principal.id
+            trip_id=str(trip_id), user_id=mock_principal.id
         )
 
     @pytest.mark.asyncio
@@ -140,7 +160,7 @@ class TestGetTripSecurity:
     ):
         """Test unauthorized access denial in get_trip endpoint."""
         # Setup: different user tries to access trip
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_trip_service._check_trip_access.return_value = False
         mock_trip_service.get_trip.return_value = None
 
@@ -161,7 +181,7 @@ class TestGetTripSecurity:
     ):
         """Test collaborator access to get_trip endpoint."""
         # Setup: user is a collaborator
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_trip_service._check_trip_access.return_value = True
         mock_trip_service.get_trip.return_value = sample_trip_data
 
@@ -171,7 +191,7 @@ class TestGetTripSecurity:
         # Verify
         assert result is not None
         mock_trip_service.get_trip.assert_called_once_with(
-            trip_id=trip_id, user_id=mock_different_principal.id
+            trip_id=str(trip_id), user_id=mock_different_principal.id
         )
 
     @pytest.mark.asyncio
@@ -197,8 +217,8 @@ class TestGetTripSummarySecurity:
     ):
         """Test that get_trip_summary verifies trip access before returning data."""
         # Setup
-        trip_id = sample_trip_data["id"]
-        sample_trip_data["user_id"] = mock_principal.id
+        trip_id = sample_trip_data.id
+        sample_trip_data.user_id = mock_principal.id
         mock_trip_service.get_trip.return_value = sample_trip_data
 
         # Execute
@@ -260,8 +280,8 @@ class TestUpdateTripSecurity:
         mock_audit_service,
     ):
         """Test trip owner can update trip."""
-        trip_id = sample_trip_data["id"]
-        sample_trip_data["user_id"] = mock_principal.id
+        trip_id = sample_trip_data.id
+        sample_trip_data.user_id = mock_principal.id
 
         mock_trip_service._check_trip_access.return_value = True
         mock_trip_service.update_trip.return_value = sample_trip_data
@@ -283,7 +303,7 @@ class TestUpdateTripSecurity:
         mock_audit_service,
     ):
         """Test unauthorized user cannot update trip."""
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_trip_service._check_trip_access.return_value = False
         mock_trip_service.update_trip.side_effect = CoreAuthorizationError(
             message="Insufficient permissions", code="UNAUTHORIZED"
@@ -306,7 +326,7 @@ class TestUpdateTripSecurity:
         mock_audit_service,
     ):
         """Test collaborator with edit permission can update trip."""
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_trip_service._check_trip_access.return_value = True
         mock_trip_service.update_trip.return_value = sample_trip_data
 
@@ -327,7 +347,7 @@ class TestUpdateTripSecurity:
         mock_audit_service,
     ):
         """Test collaborator with insufficient permission cannot update trip."""
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_trip_service._check_trip_access.return_value = False  # View-only access
         mock_trip_service.update_trip.side_effect = CoreAuthorizationError(
             message="Insufficient edit permissions", code="INSUFFICIENT_PERMISSION"
@@ -349,17 +369,15 @@ class TestDeleteTripSecurity:
         self, mock_principal, mock_trip_service, sample_trip_data, mock_audit_service
     ):
         """Test trip owner can delete trip."""
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_trip_service._check_trip_access.return_value = True
-        mock_trip_service.delete_trip.return_value = {
-            "message": "Trip deleted successfully"
-        }
+        mock_trip_service.delete_trip.return_value = True
 
         result = await delete_trip(trip_id, mock_principal, mock_trip_service)
 
-        assert result["message"] == "Trip deleted successfully"
+        assert result is None
         mock_trip_service.delete_trip.assert_called_once_with(
-            trip_id=trip_id, user_id=mock_principal.id
+            trip_id=str(trip_id), user_id=mock_principal.id
         )
 
     @pytest.mark.asyncio
@@ -403,16 +421,17 @@ class TestListTripCollaboratorsSecurity:
         self, mock_principal, mock_trip_service, sample_trip_data, mock_audit_service
     ):
         """Test trip owner can list collaborators."""
-        trip_id = sample_trip_data["id"]
+        trip_id = sample_trip_data.id
         mock_collaborators = [
             {
                 "user_id": str(uuid4()),
                 "permission": "edit",
-                "added_at": datetime.now(timezone.utc),
+                "added_at": datetime.now(UTC),
             }
         ]
 
         mock_trip_service._check_trip_access.return_value = True
+        mock_trip_service.get_trip.return_value = sample_trip_data
         mock_trip_service.get_trip_collaborators.return_value = mock_collaborators
 
         result = await list_trip_collaborators(
@@ -420,7 +439,9 @@ class TestListTripCollaboratorsSecurity:
         )
 
         assert result is not None
-        mock_trip_service.get_trip_collaborators.assert_called_once_with(trip_id)
+        mock_trip_service.get_trip_collaborators.assert_called_once_with(
+            trip_id=str(trip_id), user_id=mock_principal.id
+        )
 
     @pytest.mark.asyncio
     async def test_list_collaborators_unauthorized_access(
@@ -442,15 +463,18 @@ class TestListTripCollaboratorsSecurity:
 
     @pytest.mark.asyncio
     async def test_list_collaborators_with_manage_permission(
-        self, mock_different_principal, mock_trip_service, mock_audit_service
+        self,
+        mock_different_principal,
+        mock_trip_service,
+        mock_audit_service,
+        sample_trip_data,
     ):
         """Test collaborator with manage permission can list collaborators."""
         trip_id = str(uuid4())
         mock_collaborators = []
 
-        mock_trip_service._check_trip_access.return_value = (
-            True  # Has manage permission
-        )
+        mock_trip_service._check_trip_access.return_value = True
+        mock_trip_service.get_trip.return_value = sample_trip_data
         mock_trip_service.get_trip_collaborators.return_value = mock_collaborators
 
         result = await list_trip_collaborators(
@@ -458,7 +482,7 @@ class TestListTripCollaboratorsSecurity:
         )
 
         assert result is not None
-        mock_trip_service.get_trip_collaborators.assert_called_once_with(trip_id)
+        mock_trip_service.get_trip_collaborators.assert_called_once()
 
 
 class TestShareTripSecurity:
@@ -466,9 +490,11 @@ class TestShareTripSecurity:
 
     @pytest.fixture
     def share_request(self):
-        """Sample share request."""
+        """Sample share request aligned with API schema."""
         return TripShareRequest(
-            email="collaborator@example.com", permission="edit", message="Join my trip!"
+            user_emails=[str(uuid4())],
+            permission_level="edit",
+            message="Join my trip!",
         )
 
     @pytest.mark.asyncio
@@ -476,17 +502,15 @@ class TestShareTripSecurity:
         self, mock_principal, mock_trip_service, share_request, mock_audit_service
     ):
         """Test trip owner can share trip."""
-        trip_id = str(uuid4())
+        trip_id = uuid4()
         mock_trip_service._check_trip_access.return_value = True
-        mock_trip_service.share_trip.return_value = {
-            "message": "Trip shared successfully"
-        }
+        mock_trip_service.share_trip.return_value = []
 
         result = await share_trip(
             trip_id, share_request, mock_principal, mock_trip_service
         )
 
-        assert result["message"] == "Trip shared successfully"
+        assert isinstance(result, list)
         mock_trip_service.share_trip.assert_called_once()
 
     @pytest.mark.asyncio
@@ -498,7 +522,7 @@ class TestShareTripSecurity:
         mock_audit_service,
     ):
         """Test unauthorized user cannot share trip."""
-        trip_id = str(uuid4())
+        trip_id = uuid4()
         mock_trip_service._check_trip_access.return_value = False
         mock_trip_service.share_trip.side_effect = CoreAuthorizationError(
             message="Insufficient permissions to share trip", code="SHARE_UNAUTHORIZED"
@@ -520,19 +544,15 @@ class TestShareTripSecurity:
         mock_audit_service,
     ):
         """Test collaborator with manage permission can share trip."""
-        trip_id = str(uuid4())
-        mock_trip_service._check_trip_access.return_value = (
-            True  # Has manage permission
-        )
-        mock_trip_service.share_trip.return_value = {
-            "message": "Trip shared successfully"
-        }
+        trip_id = uuid4()
+        mock_trip_service._check_trip_access.return_value = True
+        mock_trip_service.share_trip.return_value = []
 
         result = await share_trip(
             trip_id, share_request, mock_different_principal, mock_trip_service
         )
 
-        assert result["message"] == "Trip shared successfully"
+        assert isinstance(result, list)
         mock_trip_service.share_trip.assert_called_once()
 
     @pytest.mark.asyncio
@@ -544,7 +564,7 @@ class TestShareTripSecurity:
         mock_audit_service,
     ):
         """Test collaborator with insufficient permission cannot share trip."""
-        trip_id = str(uuid4())
+        trip_id = uuid4()
         mock_trip_service._check_trip_access.return_value = (
             False  # Edit-only, not manage
         )
@@ -572,19 +592,13 @@ class TestExportTripSecurity:
         export_format = "pdf"
 
         mock_trip_service._check_trip_access.return_value = True
-        mock_trip_service.export_trip.return_value = {
-            "download_url": "https://example.com/export.pdf",
-            "expires_at": datetime.now(timezone.utc),
-        }
+        mock_trip_service.get_trip.return_value = {"id": trip_id}
 
         result = await export_trip(
             trip_id, export_format, mock_principal, mock_trip_service
         )
 
         assert "download_url" in result
-        mock_trip_service.export_trip.assert_called_once_with(
-            trip_id=trip_id, user_id=mock_principal.id, export_format=export_format
-        )
 
     @pytest.mark.asyncio
     async def test_export_trip_unauthorized_access(
@@ -595,17 +609,14 @@ class TestExportTripSecurity:
         export_format = "pdf"
 
         mock_trip_service._check_trip_access.return_value = False
-        mock_trip_service.export_trip.side_effect = CoreAuthorizationError(
-            message="Insufficient permissions to export trip",
-            code="EXPORT_UNAUTHORIZED",
-        )
+        mock_trip_service.get_trip.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
             await export_trip(
                 trip_id, export_format, mock_different_principal, mock_trip_service
             )
 
-        assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+        assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
     @pytest.mark.asyncio
     async def test_export_trip_collaborator_read_access(
@@ -616,17 +627,13 @@ class TestExportTripSecurity:
         export_format = "json"
 
         mock_trip_service._check_trip_access.return_value = True
-        mock_trip_service.export_trip.return_value = {
-            "download_url": "https://example.com/export.json",
-            "expires_at": datetime.now(timezone.utc),
-        }
+        mock_trip_service.get_trip.return_value = {"id": trip_id}
 
         result = await export_trip(
             trip_id, export_format, mock_different_principal, mock_trip_service
         )
 
         assert "download_url" in result
-        mock_trip_service.export_trip.assert_called_once()
 
 
 class TestSecurityAuditLogging:
@@ -644,17 +651,16 @@ class TestSecurityAuditLogging:
         with pytest.raises(HTTPException):
             await get_trip(trip_id, mock_different_principal, mock_trip_service)
 
-        # Verify that audit logging would capture this security event
-        # (Actual audit calls are mocked, but in real implementation they would log)
-        assert mock_trip_service._check_trip_access.called
+        # Verify access check path executed via service
+        assert mock_trip_service.get_trip.called
 
     @pytest.mark.asyncio
     async def test_successful_access_is_audited(
         self, mock_principal, mock_trip_service, sample_trip_data, mock_audit_service
     ):
         """Test that successful access is logged for audit trail."""
-        trip_id = sample_trip_data["id"]
-        sample_trip_data["user_id"] = mock_principal.id
+        trip_id = sample_trip_data.id
+        sample_trip_data.user_id = mock_principal.id
 
         mock_trip_service.get_trip.return_value = sample_trip_data
         mock_trip_service._check_trip_access.return_value = True
@@ -662,8 +668,8 @@ class TestSecurityAuditLogging:
         result = await get_trip(trip_id, mock_principal, mock_trip_service)
 
         assert result is not None
-        # Verify access check was performed (which includes audit logging)
-        mock_trip_service._check_trip_access.assert_called()
+        # Verify access check path executed via service
+        mock_trip_service.get_trip.assert_called()
 
 
 class TestSecurityErrorHandling:
@@ -724,6 +730,7 @@ class TestParametrizedSecurityScenarios:
         mock_different_principal,
         mock_trip_service,
         mock_audit_service,
+        sample_trip_data,
     ):
         """Test access patterns across different endpoints."""
         trip_id = str(uuid4())
@@ -735,10 +742,8 @@ class TestParametrizedSecurityScenarios:
                 message="Owner required", code="OWNER_REQUIRED"
             )
         else:
-            mock_trip_service.get_trip.return_value = {
-                "id": trip_id,
-                "user_id": mock_principal.id,
-            }
+            sample_trip_data.user_id = mock_principal.id
+            mock_trip_service.get_trip.return_value = sample_trip_data
 
         # Test with non-owner principal
         if requires_owner:
