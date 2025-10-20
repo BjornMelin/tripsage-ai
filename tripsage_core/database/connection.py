@@ -1,7 +1,7 @@
-"""Database connection utilities for TripSage with secure URL handling.
+"""Database connection utilities for TripSage.
 
-Provides async database session management using SQLAlchemy with PostgreSQL,
-now with enhanced security through validated URL parsing and conversion.
+Provides async session management using SQLAlchemy with PostgreSQL and secure
+URL detection/conversion.
 """
 
 import asyncio
@@ -152,7 +152,7 @@ def get_engine():
     This function now uses secure URL parsing and validation to ensure
     safe database connections.
     """
-    global _engine
+    global _engine  # pylint: disable=global-statement
     if _engine is None:
         settings = get_settings()
 
@@ -176,7 +176,7 @@ def get_engine():
 
 def get_session_factory():
     """Get or create the global session factory."""
-    global _session_factory
+    global _session_factory  # pylint: disable=global-statement
     if _session_factory is None:
         engine = get_engine()
         _session_factory = async_sessionmaker(
@@ -276,7 +276,7 @@ async def close_connections():
     This function now properly disposes of the engine and resets
     the connection manager to ensure clean shutdown.
     """
-    global _engine, _session_factory, _connection_manager
+    global _engine, _session_factory, _connection_manager  # pylint: disable=global-statement
 
     if _engine:
         await _engine.dispose()

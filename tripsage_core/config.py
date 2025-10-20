@@ -72,6 +72,12 @@ class Settings(BaseSettings):
         default=SecretStr("sk-test-1234567890"), description="OpenAI API key"
     )
     openai_model: str = "gpt-4o"
+    model_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="Default temperature for orchestrator LLMs",
+    )
 
     # Enhanced Rate Limiting Configuration
     rate_limit_enabled: bool = Field(

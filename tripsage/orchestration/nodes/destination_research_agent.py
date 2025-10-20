@@ -6,17 +6,24 @@ capabilities.
 """
 
 import json
-from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
-
+from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config import get_settings
 from tripsage_core.services.configuration_service import get_configuration_service
 from tripsage_core.utils.logging_utils import get_logger
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_core.tools import Tool
+    from langchain_openai import ChatOpenAI
+else:
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_core.tools import Tool
+    from langchain_openai import ChatOpenAI
 
 
 logger = get_logger(__name__)
@@ -42,21 +49,21 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
         # Store overrides for async config loading
         self.config_overrides = config_overrides
-        self.agent_config = None
-        self.llm = None
+        self.agent_config: dict[str, Any] | None = None
+        self.llm: ChatOpenAI | None = None
+        self.tool_map: dict[str, Tool] = {}
 
         super().__init__("destination_research_agent", service_registry)
 
-    async def _initialize_tools(self) -> None:
+    def _initialize_tools(self) -> None:
         """Initialize destination research tools using simple tool catalog."""
         from tripsage.orchestration.tools.simple_tools import get_tools_for_agent
 
-        # Load configuration from database if not already loaded
-        if self.agent_config is None:
-            await self._load_configuration()
-
         # Get tools for destination research agent using simple catalog
         self.available_tools = get_tools_for_agent("destination_research_agent")
+        self.tool_map = {tool.name: tool for tool in self.available_tools}
+        self._alias_tool("webcrawl_search", "web_search")
+        self._alias_tool("search_places", "geocode_location")
 
         # Bind tools to LLM for direct use
         if self.llm:
@@ -67,43 +74,70 @@ class DestinationResearchAgentNode(BaseAgentNode):
             len(self.available_tools),
         )
 
+    def _alias_tool(self, alias: str, canonical: str) -> None:
+        """Map a legacy tool alias to a canonical registered tool."""
+        tool = self.tool_map.get(canonical)
+        if tool:
+            self.tool_map[alias] = tool
+
+    def _get_tool(self, name: str) -> Tool | None:
+        """Return LangGraph tool by name with logging when missing."""
+        tool = self.tool_map.get(name)
+        if tool is None:
+            logger.warning("Destination research tool %s is not available", name)
+        return tool
+
     async def _load_configuration(self) -> None:
         """Load agent configuration from database with fallback to settings."""
         try:
-            # Get configuration from database with runtime overrides
             self.agent_config = await self.config_service.get_agent_config(
                 "destination_research_agent", **self.config_overrides
             )
+            fallback = get_default_config()
+            model_name = str(self.agent_config.get("model", fallback.default_model))
+            temperature = float(
+                self.agent_config.get("temperature", fallback.temperature)
+            )
+            # type: ignore # pylint: disable=no-member
+            api_key = (
+                self.agent_config.get("api_key")
+                or get_settings().openai_api_key.get_secret_value()
+            )
 
-            # Initialize LLM with loaded configuration
             self.llm = ChatOpenAI(
-                model=self.agent_config["model"],
-                temperature=self.agent_config["temperature"],
-                max_tokens=self.agent_config["max_tokens"],
-                top_p=self.agent_config["top_p"],
-                api_key=self.agent_config["api_key"],
+                model=model_name,
+                temperature=temperature,
+                api_key=api_key,  # type: ignore
             )
 
             logger.info(
-                "Loaded destination research agent configuration from database: temp=%s",
-                self.agent_config["temperature"],
+                "Loaded destination research agent config (temp=%s)",
+                temperature,
             )
 
         except Exception:
             logger.exception("Failed to load database configuration, using fallback")
 
             # Fallback to settings-based configuration
+            fallback = get_default_config()
             settings = get_settings()
-            self.agent_config = settings.get_agent_config(
-                "destination_research_agent", **self.config_overrides
+            # type: ignore # pylint: disable=no-member
+            api_key = (
+                settings.openai_api_key.get_secret_value()
+                if settings.openai_api_key
+                else ""
             )
+            self.agent_config = {
+                "model": fallback.default_model,
+                "temperature": fallback.temperature,
+                "api_key": api_key,
+                "top_p": 1.0,
+            }
 
             self.llm = ChatOpenAI(
-                model=self.agent_config["model"],
-                temperature=self.agent_config["temperature"],
-                max_tokens=self.agent_config["max_tokens"],
-                top_p=self.agent_config["top_p"],
-                api_key=self.agent_config["api_key"],
+                model=fallback.default_model,
+                temperature=fallback.temperature,
+                api_key=api_key,  # type: ignore
             )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
@@ -119,6 +153,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
         if self.agent_config is None:
             await self._load_configuration()
 
+        if self.llm is None:
+            raise RuntimeError("Destination research LLM is not initialized")
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract research parameters from user message and context
@@ -128,25 +165,12 @@ class DestinationResearchAgentNode(BaseAgentNode):
             # Perform destination research using MCP integration
             research_results = await self._research_destination(research_params, state)
 
-            # Update state with results
-            research_record = {
-                "timestamp": datetime.now(UTC).isoformat(),
-                "parameters": research_params,
-                "results": research_results,
-                "agent": "destination_research_agent",
-            }
-
-            if "destination_research" not in state:
-                state["destination_research"] = []
-            state["destination_research"].append(research_record)
-
             # Store research results in destination_info for other agents
-            if "destination_info" not in state:
-                state["destination_info"] = {}
-
             destination = research_params.get("destination", "")
             if destination:
-                state["destination_info"][destination] = research_results
+                destination_info = state.get("destination_info") or {}
+                state["destination_info"] = destination_info
+                destination_info[destination] = research_results
 
             # Generate user-friendly response
             response_message = await self._generate_research_response(
@@ -166,16 +190,12 @@ class DestinationResearchAgentNode(BaseAgentNode):
     async def _extract_research_parameters(
         self, message: str, state: TravelPlanningState
     ) -> dict[str, Any] | None:
-        """Extract destination research parameters from user message and conversation
-        context.
+        """Extract destination research parameters from conversation context."""
+        if self.llm is None:
+            raise RuntimeError("Destination research LLM is not initialized")
 
-        Args:
-            message: User message to analyze
-            state: Current conversation state for context
+        prior_destinations = list((state.get("destination_info") or {}).keys())
 
-        Returns:
-            Dictionary of research parameters or None if insufficient info
-        """
         # Use LLM to extract parameters and determine research type
         extraction_prompt = f"""
         Extract destination research parameters from this message and context.
@@ -183,11 +203,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
         User message: "{message}"
 
         Context from conversation:
-        - Previous destination research: {len(state.get("destination_research", []))}
         - Flight searches: {len(state.get("flight_searches", []))}
         - Accommodation searches: {len(state.get("accommodation_searches", []))}
         - User preferences: {state.get("user_preferences", "None")}
-        - Current destination info: {list(state.get("destination_info", {}).keys())}
+        - Known destinations: {prior_destinations}
 
         Determine the research type from these options:
         - "overview": General destination information and overview
@@ -223,18 +242,22 @@ class DestinationResearchAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-
-            # Parse the response
-            if response.content.strip().lower() in ["null", "none", "{}"]:
+            raw_content = response.content
+            if not isinstance(raw_content, str):
+                logger.warning(
+                    "Destination parameter extraction returned non-text content",
+                    extra={"content_type": type(raw_content).__name__},
+                )
                 return None
 
-            params = json.loads(response.content)
+            if raw_content.strip().lower() in {"null", "none", "{}"}:
+                return None
 
-            # Validate required fields
+            params = json.loads(raw_content)
+
             if params and params.get("destination"):
                 return params
-            else:
-                return None
+            return None
 
         except Exception:
             logger.exception("Error extracting research parameters")
@@ -269,31 +292,31 @@ class DestinationResearchAgentNode(BaseAgentNode):
             }
 
             # Use web crawling for comprehensive research
-            if research_type in ["overview", "all"]:
+            if research_type in ("overview", "all"):
                 overview_results = await self._research_overview(destination)
                 research_results["overview"] = overview_results
 
-            if research_type in ["attractions", "all"]:
+            if research_type in ("attractions", "all"):
                 attractions_results = await self._research_attractions(
                     destination, specific_interests
                 )
                 research_results["attractions"] = attractions_results
 
-            if research_type in ["activities", "all"]:
+            if research_type in ("activities", "all"):
                 activities_results = await self._research_activities(
                     destination, specific_interests
                 )
                 research_results["activities"] = activities_results
 
-            if research_type in ["practical", "all"]:
+            if research_type in ("practical", "all"):
                 practical_results = await self._research_practical_info(destination)
                 research_results["practical_info"] = practical_results
 
-            if research_type in ["culture", "all"]:
+            if research_type in ("culture", "all"):
                 cultural_results = await self._research_cultural_info(destination)
                 research_results["cultural_info"] = cultural_results
 
-            if research_type in ["weather", "all"]:
+            if research_type in ("weather", "all"):
                 weather_results = await self._research_weather_info(
                     destination, params.get("travel_dates")
                 )
@@ -313,63 +336,54 @@ class DestinationResearchAgentNode(BaseAgentNode):
     async def _research_overview(self, destination: str) -> dict[str, Any]:
         """Research general overview information about a destination."""
         try:
-            # Use web crawling tool for comprehensive overview
-            webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
+            webcrawl_tool = self._get_tool("webcrawl_search")
             if webcrawl_tool:
                 query = f"{destination} travel guide overview tourism information"
-                result = await webcrawl_tool._arun(query=query, max_results=3)
+                result = await webcrawl_tool.ainvoke({"query": query})
                 return {"overview_data": result, "sources": "web_research"}
-            else:
-                return {
-                    "overview_data": f"Overview research for {destination}",
-                    "sources": "placeholder",
-                }
-        except Exception as e:
+            return {
+                "overview_data": f"Overview research for {destination}",
+                "sources": "placeholder",
+            }
+        except Exception as exc:
             logger.exception("Overview research failed")
-            return {"error": str(e)}
+            return {"error": str(exc)}
 
     async def _research_attractions(self, destination: str, interests: list) -> list:
         """Research attractions and landmarks in a destination."""
         try:
-            # Use web crawling and maps tools for attractions
-            webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
+            webcrawl_tool = self._get_tool("webcrawl_search")
             if webcrawl_tool:
                 interest_str = " ".join(interests) if interests else "top attractions"
                 query = f"{destination} {interest_str} landmarks must-see attractions"
-                result = await webcrawl_tool._arun(query=query, max_results=5)
+                result = await webcrawl_tool.ainvoke({"query": query})
 
-                # Parse attractions from results
-                attractions = []
                 if isinstance(result, str):
-                    # Simple parsing - in real implementation this would be
-                    # more sophisticated
-                    attractions = [
+                    return [
                         {
                             "name": f"Attraction in {destination}",
                             "description": "Research result",
                             "type": "landmark",
                         }
-                        for _ in range(3)  # Placeholder
+                        for _ in range(3)
                     ]
 
-                return attractions
-            else:
-                return [
-                    {
-                        "name": f"Top attraction in {destination}",
-                        "description": "Placeholder",
-                        "type": "landmark",
-                    }
-                ]
-        except Exception as e:
+                return result
+            return [
+                {
+                    "name": f"Top attraction in {destination}",
+                    "description": "Placeholder",
+                    "type": "landmark",
+                }
+            ]
+        except Exception as exc:
             logger.exception("Attractions research failed")
-            return [{"error": str(e)}]
+            return [{"error": str(exc)}]
 
     async def _research_activities(self, destination: str, interests: list) -> list:
         """Research activities and experiences in a destination."""
         try:
-            # Use web crawling for activities research
-            webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
+            webcrawl_tool = self._get_tool("webcrawl_search")
             if webcrawl_tool:
                 interest_str = (
                     " ".join(interests) if interests else "activities experiences"
@@ -377,120 +391,105 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 query = (
                     f"{destination} {interest_str} things to do activities experiences"
                 )
-                result = await webcrawl_tool._arun(query=query, max_results=5)
-
-                # Parse activities from results
-                activities = []
+                result = await webcrawl_tool.ainvoke({"query": query})
                 if isinstance(result, str):
-                    # Simple parsing - in real implementation this would be
-                    # more sophisticated
-                    activities = [
+                    return [
                         {
                             "name": f"Activity in {destination}",
                             "description": "Research result",
                             "category": "experience",
                         }
-                        for _ in range(3)  # Placeholder
+                        for _ in range(3)
                     ]
-
-                return activities
-            else:
-                return [
-                    {
-                        "name": f"Activity in {destination}",
-                        "description": "Placeholder",
-                        "category": "experience",
-                    }
-                ]
-        except Exception as e:
+                return result
+            return [
+                {
+                    "name": f"Activity in {destination}",
+                    "description": "Placeholder",
+                    "category": "experience",
+                }
+            ]
+        except Exception as exc:
             logger.exception("Activities research failed")
-            return [{"error": str(e)}]
+            return [{"error": str(exc)}]
 
     async def _research_practical_info(self, destination: str) -> dict[str, Any]:
         """Research practical travel information for a destination."""
         try:
-            # Use web crawling for practical information
-            webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
+            webcrawl_tool = self._get_tool("webcrawl_search")
             if webcrawl_tool:
                 query = (
                     f"{destination} travel practical information currency "
                     f"transportation visa requirements"
                 )
-                result = await webcrawl_tool._arun(query=query, max_results=3)
+                result = await webcrawl_tool.ainvoke({"query": query})
                 return {"practical_data": result, "sources": "web_research"}
-            else:
-                return {
-                    "currency": "Local currency",
-                    "language": "Local language",
-                    "transportation": "Local transport info",
-                    "visa_requirements": "Visa information",
-                    "sources": "placeholder",
-                }
-        except Exception as e:
+            return {
+                "currency": "Local currency",
+                "language": "Local language",
+                "transportation": "Local transport info",
+                "visa_requirements": "Visa information",
+                "sources": "placeholder",
+            }
+        except Exception as exc:
             logger.exception("Practical info research failed")
-            return {"error": str(e)}
+            return {"error": str(exc)}
 
     async def _research_cultural_info(self, destination: str) -> dict[str, Any]:
         """Research cultural information and customs for a destination."""
         try:
-            # Use web crawling for cultural information
-            webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
+            webcrawl_tool = self._get_tool("webcrawl_search")
             if webcrawl_tool:
                 query = (
                     f"{destination} culture customs etiquette local traditions "
                     f"social norms"
                 )
-                result = await webcrawl_tool._arun(query=query, max_results=3)
+                result = await webcrawl_tool.ainvoke({"query": query})
                 return {"cultural_data": result, "sources": "web_research"}
-            else:
-                return {
-                    "customs": "Local customs",
-                    "etiquette": "Social etiquette",
-                    "traditions": "Cultural traditions",
-                    "sources": "placeholder",
-                }
-        except Exception as e:
+            return {
+                "customs": "Local customs",
+                "etiquette": "Social etiquette",
+                "traditions": "Cultural traditions",
+                "sources": "placeholder",
+            }
+        except Exception as exc:
             logger.exception("Cultural info research failed")
-            return {"error": str(e)}
+            return {"error": str(exc)}
 
     async def _research_weather_info(
         self, destination: str, travel_dates: str | None
     ) -> dict[str, Any]:
         """Research weather and climate information for a destination."""
         try:
-            # Use weather tools for climate information
-            weather_tool = self.tool_registry.get_tool("get_weather")
+            weather_tool = self._get_tool("get_weather")
             if weather_tool:
-                result = await weather_tool._arun(location=destination)
+                result = await weather_tool.ainvoke({"location": destination})
                 return {"weather_data": result, "travel_dates": travel_dates}
-            else:
-                return {
-                    "climate": "Climate information",
-                    "best_time_to_visit": "Seasonal recommendations",
-                    "travel_dates": travel_dates,
-                    "sources": "placeholder",
-                }
-        except Exception as e:
+            return {
+                "climate": "Climate information",
+                "best_time_to_visit": "Seasonal recommendations",
+                "travel_dates": travel_dates,
+                "sources": "placeholder",
+            }
+        except Exception as exc:
             logger.exception("Weather info research failed")
-            return {"error": str(e)}
+            return {"error": str(exc)}
 
     async def _get_location_data(self, destination: str) -> dict[str, Any]:
         """Get location data using Google Maps tools."""
         try:
-            # Use Google Maps for location information
-            maps_tool = self.tool_registry.get_tool("search_places")
+            maps_tool = self._get_tool("search_places")
             if maps_tool:
-                result = await maps_tool._arun(query=destination)
+                result = await maps_tool.ainvoke({"location": destination})
                 return {"location_data": result, "sources": "google_maps"}
-            else:
-                return {
-                    "coordinates": "Location coordinates",
-                    "region": "Geographic region",
-                    "sources": "placeholder",
-                }
-        except Exception as e:
+            return {
+                "coordinates": "Location coordinates",
+                "region": "Geographic region",
+                "sources": "placeholder",
+            }
+        except Exception as exc:
             logger.exception("Location data retrieval failed")
-            return {"error": str(e)}
+            return {"error": str(exc)}
 
     async def _generate_research_response(
         self,
@@ -514,84 +513,157 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 f"{params.get('destination', 'the destination')}: "
                 f"{research_results['error']}. Let me try a different approach."
             )
-        else:
-            destination = params.get("destination", "the destination")
-            research_type = params.get("research_type", "overview")
-
-            content = f"Here's what I found about {destination}:\n\n"
-
-            if research_type == "overview" or research_type == "all":
-                content += "**Overview:**\n"
-                overview = research_results.get("overview", {})
-                if overview.get("overview_data"):
-                    content += (
-                        f"Based on my research, {destination} offers a rich "
-                        f"travel experience. "
-                    )
-                content += "\n"
-
-            if research_type == "attractions" or research_type == "all":
-                attractions = research_results.get("attractions", [])
-                if attractions and not attractions[0].get("error"):
-                    content += "**Top Attractions:**\n"
-                    for i, attraction in enumerate(attractions[:5], 1):
-                        name = attraction.get("name", "Unnamed attraction")
-                        description = attraction.get("description", "")
-                        content += f"{i}. {name}\n"
-                        if description:
-                            content += f"   {description[:100]}...\n"
-                    content += "\n"
-
-            if research_type == "activities" or research_type == "all":
-                activities = research_results.get("activities", [])
-                if activities and not activities[0].get("error"):
-                    content += "**Recommended Activities:**\n"
-                    for i, activity in enumerate(activities[:5], 1):
-                        name = activity.get("name", "Unnamed activity")
-                        category = activity.get("category", "")
-                        content += f"{i}. {name}"
-                        if category:
-                            content += f" ({category})"
-                        content += "\n"
-                    content += "\n"
-
-            if research_type == "practical" or research_type == "all":
-                practical = research_results.get("practical_info", {})
-                if practical and not practical.get("error"):
-                    content += "**Practical Information:**\n"
-                    if practical.get("currency"):
-                        content += f"• Currency: {practical['currency']}\n"
-                    if practical.get("language"):
-                        content += f"• Language: {practical['language']}\n"
-                    content += "\n"
-
-            if research_type == "culture" or research_type == "all":
-                cultural = research_results.get("cultural_info", {})
-                if cultural and not cultural.get("error"):
-                    content += "**Cultural Tips:**\n"
-                    content += "Important cultural considerations for your visit.\n\n"
-
-            if research_type == "weather" or research_type == "all":
-                weather = research_results.get("weather_info", {})
-                if weather and not weather.get("error"):
-                    content += "**Weather Information:**\n"
-                    if weather.get("travel_dates"):
-                        content += f"For your travel dates: {weather['travel_dates']}\n"
-                    content += "Weather and seasonal recommendations.\n\n"
-
-            content += (
-                "Would you like me to provide more detailed information about "
-                "any specific aspect of your trip?"
+            return self._create_response_message(
+                content,
+                {
+                    "research_type": params.get("research_type"),
+                    "destination": params.get("destination"),
+                    "results_summary": research_results,
+                },
             )
 
+        destination = params.get("destination", "the destination")
+        research_type = params.get("research_type", "overview")
+        sections = [
+            self._format_overview_section(destination, research_type, research_results),
+            self._format_attractions_section(research_type, research_results),
+            self._format_activities_section(research_type, research_results),
+            self._format_practical_section(research_type, research_results),
+            self._format_cultural_section(research_type, research_results),
+            self._format_weather_section(research_type, research_results),
+        ]
+
+        body = "\n".join(filter(None, sections)).strip()
+        if body:
+            body = f"Here's what I found about {destination}:\n\n{body}\n\n"
+        else:
+            body = (
+                f"I reviewed the latest research for {destination} but did not "
+                "identify notable highlights yet.\n\n"
+            )
+
+        body += (
+            "Would you like me to provide more detailed information about "
+            "any specific aspect of your trip?"
+        )
+
         return self._create_response_message(
-            content,
+            body,
             {
-                "research_type": params.get("research_type"),
-                "destination": params.get("destination"),
+                "research_type": research_type,
+                "destination": destination,
                 "results_summary": research_results,
             },
         )
+
+    def _format_overview_section(
+        self, destination: str, research_type: str, research_results: dict[str, Any]
+    ) -> str:
+        """Render overview subsection."""
+        if research_type not in ("overview", "all"):
+            return ""
+
+        overview = research_results.get("overview", {})
+        if not overview:
+            return ""
+
+        details = (
+            f"Based on my research, {destination} offers a rich travel experience."
+            if overview.get("overview_data")
+            else ""
+        )
+        return f"**Overview:**\n{details}"
+
+    def _format_attractions_section(
+        self, research_type: str, research_results: dict[str, Any]
+    ) -> str:
+        """Render attractions subsection."""
+        if research_type not in ("attractions", "all"):
+            return ""
+
+        attractions = research_results.get("attractions", [])
+        if not attractions or attractions[0].get("error"):
+            return ""
+
+        lines = ["**Top Attractions:**"]
+        for index, attraction in enumerate(attractions[:5], 1):
+            name = attraction.get("name", "Unnamed attraction")
+            description = attraction.get("description", "")
+            snippet = f"{index}. {name}"
+            if description:
+                snippet += f"\n   {description[:100]}..."
+            lines.append(snippet)
+        return "\n".join(lines)
+
+    def _format_activities_section(
+        self, research_type: str, research_results: dict[str, Any]
+    ) -> str:
+        """Render activities subsection."""
+        if research_type not in ("activities", "all"):
+            return ""
+
+        activities = research_results.get("activities", [])
+        if not activities or activities[0].get("error"):
+            return ""
+
+        lines = ["**Recommended Activities:**"]
+        for index, activity in enumerate(activities[:5], 1):
+            name = activity.get("name", "Unnamed activity")
+            category = activity.get("category")
+            label = f"{index}. {name}"
+            if category:
+                label += f" ({category})"
+            lines.append(label)
+        return "\n".join(lines)
+
+    def _format_practical_section(
+        self, research_type: str, research_results: dict[str, Any]
+    ) -> str:
+        """Render practical information subsection."""
+        if research_type not in ("practical", "all"):
+            return ""
+
+        practical = research_results.get("practical_info", {})
+        if not practical or practical.get("error"):
+            return ""
+
+        lines = ["**Practical Information:**"]
+        if practical.get("currency"):
+            lines.append(f"• Currency: {practical['currency']}")
+        if practical.get("language"):
+            lines.append(f"• Language: {practical['language']}")
+        return "\n".join(lines)
+
+    def _format_cultural_section(
+        self, research_type: str, research_results: dict[str, Any]
+    ) -> str:
+        """Render cultural tips subsection."""
+        if research_type not in ("culture", "all"):
+            return ""
+
+        cultural = research_results.get("cultural_info", {})
+        if not cultural or cultural.get("error"):
+            return ""
+
+        return "**Cultural Tips:**\nImportant cultural considerations for your visit."
+
+    def _format_weather_section(
+        self, research_type: str, research_results: dict[str, Any]
+    ) -> str:
+        """Render weather insights subsection."""
+        if research_type not in ("weather", "all"):
+            return ""
+
+        weather = research_results.get("weather_info", {})
+        if not weather or weather.get("error"):
+            return ""
+
+        lines = ["**Weather Information:**"]
+        travel_dates = weather.get("travel_dates")
+        if travel_dates:
+            lines.append(f"For your travel dates: {travel_dates}")
+        lines.append("Weather and seasonal recommendations.")
+        return "\n".join(lines)
 
     async def _handle_general_research_inquiry(
         self, message: str, state: TravelPlanningState
@@ -623,6 +695,9 @@ class DestinationResearchAgentNode(BaseAgentNode):
         """
 
         try:
+            if self.llm is None:
+                raise RuntimeError("Destination research LLM is not initialized")
+
             messages = [
                 SystemMessage(
                     content="You are a helpful destination research assistant."
@@ -631,7 +706,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-            content = response.content
+            raw_content = response.content
+            content = raw_content if isinstance(raw_content, str) else str(raw_content)
 
         except Exception:
             logger.exception("Error generating research response")

@@ -1,17 +1,9 @@
-"""Comprehensive integration tests for enhanced Supabase schema and collaboration features.
+"""Integration tests for Supabase schema and collaboration features.
 
-This test suite covers:
-- RLS policy validation for collaborative access
-- Foreign key constraints and data integrity
-- Index performance and query optimization
-- Database function correctness
-- Migration compatibility and rollback safety
-- Collaboration workflow end-to-end testing
-- Multi-user scenarios with different permission levels
-- Security isolation and permission inheritance
-- Performance testing for collaboration queries
-
-Dependencies: PostgreSQL, pgvector, Supabase auth
+This test suite covers RLS policy validation, foreign key constraints,
+index performance, database functions, migration compatibility,
+collaboration workflows, multi-user scenarios, security isolation,
+and performance optimization.
 """
 
 from datetime import datetime
@@ -27,6 +19,7 @@ class MockSupabaseAuthUser:
     """Mock Supabase auth user for testing."""
 
     def __init__(self, user_id: UUID, email: str | None = None):
+        """Create a mock auth user with optional email."""
         self.id = user_id
         self.email = email or f"user{user_id.hex[:8]}@test.com"
         self.created_at = datetime.utcnow()
@@ -36,6 +29,7 @@ class MockDatabaseService:
     """Mock database service that simulates Supabase behavior."""
 
     def __init__(self):
+        """Initialize in-memory tables for mock DB service."""
         self.current_user_id: UUID | None = None
         self.tables = {
             "trips": [],
@@ -60,13 +54,17 @@ class MockDatabaseService:
     async def execute_query(self, query: str, *params) -> Any:
         """Mock query execution with basic RLS simulation."""
         # Simulate constraint violations
-        if "INSERT INTO" in query.upper() and "memories" in query:
-            if params and len(params) > 1:
-                user_id = params[1]
-                if not self._user_exists(user_id):
-                    raise Exception(
-                        'Foreign key constraint "memories_user_id_fkey" violated'
-                    )
+        if (
+            "INSERT INTO" in query.upper()
+            and "memories" in query
+            and params
+            and len(params) > 1
+        ):
+            user_id = params[1]
+            if not self._user_exists(user_id):
+                raise ValueError(
+                    'Foreign key constraint "memories_user_id_fkey" violated'
+                )
 
         # Simulate RLS filtering
         if "SELECT" in query.upper() and self.current_user_id:
@@ -84,10 +82,10 @@ class MockDatabaseService:
             }
 
         if "information_schema.table_constraints" in query:
-            return self._get_constraint_info(params[0] if params else None)
+            return self._get_constraint_info(params[0] if params else "")
 
         if "pg_policies" in query:
-            return self._get_policy_info(params[0] if params else None)
+            return self._get_policy_info(params[0] if params else "")
 
         return None
 
@@ -208,7 +206,7 @@ class MockDatabaseService:
 
 
 class TestSupabaseCollaborationSchema:
-    """Comprehensive test suite for enhanced Supabase schema and collaboration features."""
+    """Comprehensive test suite for enhanced Supabase schema and collab features."""
 
     @pytest.fixture
     def mock_db_service(self):
@@ -288,9 +286,7 @@ class TestRLSPolicyValidation:
         assert trips[0]["user_role"] == "collaborator"
 
     async def test_permission_level_inheritance(self, mock_db_service, test_users):
-        """Test that trip-related data inherits proper permissions from trip
-        collaboration.
-        """
+        """Test that trip-related data inherits permissions from trip collab."""
         editor = test_users["editor"]
         mock_db_service.set_current_user(editor.id)
 
