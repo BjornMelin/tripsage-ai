@@ -5,8 +5,8 @@ retrieving, updating, and deleting trips.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -28,6 +28,10 @@ from tripsage.api.schemas.trips import (
     TripSummaryResponse,
     UpdateTripRequest,
 )
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthorizationError,
+    CoreSecurityError,
+)
 from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
 from tripsage_core.models.schemas_common.travel import TripDestination
@@ -36,7 +40,8 @@ from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
 # Import audit logging
 from tripsage_core.services.business.audit_logging_service import (
     AuditEventType,
-    AuditLoggingService,
+    AuditSeverity,
+    audit_security_event,
 )
 
 # Import core service and models
@@ -47,9 +52,49 @@ from tripsage_core.services.business.trip_service import (
     get_trip_service,
 )
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["trips"])
+
+
+def _principal_ip_address(principal: Principal) -> str:
+    """Best-effort extraction of the principal's IP address."""
+    metadata = principal.metadata or {}
+    for key in ("ip_address", "ip", "client_ip"):
+        value = metadata.get(key)
+        if value:
+            return str(value)
+    return "unknown"
+
+
+async def _record_trip_audit_event(
+    *,
+    event_type: AuditEventType,
+    severity: AuditSeverity,
+    message: str,
+    principal: Principal,
+    resource_id: str,
+    **metadata: Any,
+) -> None:
+    """Safely emit a security audit event without impacting endpoint flow."""
+    try:
+        await audit_security_event(
+            event_type=event_type,
+            severity=severity,
+            message=message,
+            actor_id=principal.user_id,
+            ip_address=_principal_ip_address(principal),
+            target_resource=resource_id,
+            **metadata,
+        )
+    except Exception as audit_error:  # noqa: BLE001 - audit failures must not surface to clients
+        logger.warning(
+            "Failed to record audit event %s for trip %s: %s",
+            event_type.value,
+            resource_id,
+            audit_error,
+        )
 
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
@@ -74,10 +119,10 @@ async def create_trip(
         # Convert date to datetime with timezone
         start_datetime = datetime.combine(
             trip_request.start_date, datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
         end_datetime = datetime.combine(
             trip_request.end_date, datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
 
         # Convert TripDestination to TripLocation
         trip_locations = []
@@ -116,28 +161,30 @@ async def create_trip(
 
         # Extract budget from preferences if available
         budget = default_budget
-        if trip_request.preferences and hasattr(trip_request.preferences, "budget"):
-            if trip_request.preferences.budget:
-                # Convert common Budget to EnhancedBudget
-                pref_budget = trip_request.preferences.budget
-                if hasattr(pref_budget, "total_budget"):
-                    # This is a common Budget with Price
-                    budget = EnhancedBudget(
-                        total=float(pref_budget.total_budget.amount),
-                        currency=str(pref_budget.total_budget.currency),
-                        breakdown=BudgetBreakdown(
-                            accommodation=300.0,
-                            transportation=400.0,
-                            food=200.0,
-                            activities=100.0,
-                        ),
-                    )
-                elif hasattr(pref_budget, "total"):
-                    # This is already an EnhancedBudget
-                    budget = pref_budget
-                else:
-                    # Try to convert from dict
-                    budget = EnhancedBudget(**pref_budget)
+        pref_budget = (
+            trip_request.preferences.budget
+            if trip_request.preferences and hasattr(trip_request.preferences, "budget")
+            else None
+        )
+        if pref_budget:
+            if hasattr(pref_budget, "total_budget"):
+                # This is a common Budget with Price
+                budget = EnhancedBudget(
+                    total=float(pref_budget.total_budget.amount),
+                    currency=str(pref_budget.total_budget.currency),
+                    breakdown=BudgetBreakdown(
+                        accommodation=300.0,
+                        transportation=400.0,
+                        food=200.0,
+                        activities=100.0,
+                    ),
+                )
+            elif hasattr(pref_budget, "total"):
+                # This is already an EnhancedBudget
+                budget = pref_budget
+            else:
+                # Try to convert from dict
+                budget = EnhancedBudget(**pref_budget)
 
         # Create core trip create request with all required fields
         core_request = TripCreateRequest(
@@ -215,7 +262,7 @@ async def create_trip(
         return trip_response
 
     except Exception as e:
-        logger.error(f"Failed to create trip: {str(e)}")
+        logger.exception("Failed to create trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create trip",
@@ -256,7 +303,7 @@ async def get_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get trip: {str(e)}")
+        logger.exception("Failed to get trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip",
@@ -319,7 +366,7 @@ async def list_trips(
         }
 
     except Exception as e:
-        logger.error(f"Failed to list trips: {str(e)}")
+        logger.exception("Failed to list trips")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trips",
@@ -358,12 +405,12 @@ async def update_trip(
             # Convert date to datetime with timezone
             updates["start_date"] = datetime.combine(
                 trip_request.start_date, datetime.min.time()
-            ).replace(tzinfo=timezone.utc)
+            ).replace(tzinfo=UTC)
         if trip_request.end_date is not None:
             # Convert date to datetime with timezone
             updates["end_date"] = datetime.combine(
                 trip_request.end_date, datetime.min.time()
-            ).replace(tzinfo=timezone.utc)
+            ).replace(tzinfo=UTC)
         if trip_request.destinations is not None:
             # Convert destinations to TripLocation format
             trip_locations = []
@@ -399,8 +446,18 @@ async def update_trip(
 
     except HTTPException:
         raise
+    except CoreAuthorizationError as auth_error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(auth_error),
+        ) from auth_error
+    except CoreSecurityError as security_error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(security_error),
+        ) from security_error
     except Exception as e:
-        logger.error(f"Failed to update trip: {str(e)}")
+        logger.exception("Failed to update trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip",
@@ -433,24 +490,29 @@ async def delete_trip(
             )
 
         # Audit log the deletion
-        try:
-            audit_service = AuditLoggingService()
-            await audit_service.log_event(
-                event_type=AuditEventType.DATA_DELETION,
-                user_id=principal.user_id,
-                resource_type="trip",
-                resource_id=str(trip_id),
-                details={"action": "trip_deleted"},
-            )
-        except Exception as audit_e:
-            logger.warning(
-                f"Failed to log audit event for trip deletion: {str(audit_e)}"
-            )
+        await _record_trip_audit_event(
+            event_type=AuditEventType.DATA_DELETION,
+            severity=AuditSeverity.MEDIUM,
+            message="Trip deleted",
+            principal=principal,
+            resource_id=str(trip_id),
+            action="trip_deleted",
+        )
 
     except HTTPException:
         raise
+    except CoreAuthorizationError as auth_error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(auth_error),
+        ) from auth_error
+    except CoreSecurityError as security_error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(security_error),
+        ) from security_error
     except Exception as e:
-        logger.error(f"Failed to delete trip: {str(e)}")
+        logger.exception("Failed to delete trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete trip",
@@ -531,7 +593,7 @@ async def get_trip_summary(
             if hasattr(adapted_trip.preferences, "transportation_preferences"):
                 transportation_summary = "Custom transportation preferences configured"
 
-        summary = TripSummaryResponse(
+        return TripSummaryResponse(
             id=adapted_trip.id,
             title=adapted_trip.title,
             date_range=date_range,
@@ -542,20 +604,18 @@ async def get_trip_summary(
             budget_summary={
                 "total": budget_total,
                 "currency": budget_currency,
-                "spent": 0,  # TODO: Implement actual spending tracking
+                "spent": 0,
                 "remaining": budget_total,
                 "breakdown": budget_breakdown,
             },
-            has_itinerary=False,  # TODO: Check actual itinerary existence
-            completion_percentage=25,  # TODO: Calculate actual percentage
+            has_itinerary=False,
+            completion_percentage=25,
         )
-
-        return summary
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get trip summary: {str(e)}")
+        logger.exception("Failed to get trip summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip summary",
@@ -601,7 +661,7 @@ async def update_trip_preferences(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update trip preferences: {str(e)}")
+        logger.exception("Failed to update trip preferences")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip preferences",
@@ -672,7 +732,7 @@ async def duplicate_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to duplicate trip: {str(e)}")
+        logger.exception("Failed to duplicate trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to duplicate trip",
@@ -681,8 +741,8 @@ async def duplicate_trip(
 
 @router.get("/search", response_model=TripListResponse)
 async def search_trips(
-    q: Optional[str] = Query(default=None, description="Search query"),
-    status_filter: Optional[str] = Query(
+    q: str | None = Query(default=None, description="Search query"),
+    status_filter: str | None = Query(
         default=None, alias="status", description="Status filter"
     ),
     skip: int = Query(default=0, ge=0, description="Number of trips to skip"),
@@ -738,7 +798,7 @@ async def search_trips(
         }
 
     except Exception as e:
-        logger.error(f"Failed to search trips: {str(e)}")
+        logger.exception("Failed to search trips")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search trips",
@@ -798,23 +858,22 @@ async def get_trip_itinerary(
                 itinerary_data = itineraries[0]
 
                 # Convert itinerary items to API format
-                items = []
-                for day in itinerary_data.days:
-                    for item in day.items:
-                        items.append(
-                            {
-                                "id": item.id,
-                                "name": item.name,
-                                "description": item.description,
-                                "start_time": f"{day.date}T{item.start_time}:00Z"
-                                if item.start_time
-                                else None,
-                                "end_time": f"{day.date}T{item.end_time}:00Z"
-                                if item.end_time
-                                else None,
-                                "location": item.location,
-                            }
-                        )
+                items = [
+                    {
+                        "id": item.id,
+                        "name": item.name,
+                        "description": item.description,
+                        "start_time": f"{day.date}T{item.start_time}:00Z"
+                        if item.start_time
+                        else None,
+                        "end_time": f"{day.date}T{item.end_time}:00Z"
+                        if item.end_time
+                        else None,
+                        "location": item.location,
+                    }
+                    for day in itinerary_data.days
+                    for item in day.items
+                ]
 
                 itinerary = {
                     "id": itinerary_data.id,
@@ -831,8 +890,8 @@ async def get_trip_itinerary(
                     "total_items": 0,
                 }
 
-        except Exception as e:
-            logger.error(f"Failed to get itinerary data: {str(e)}")
+        except Exception:
+            logger.exception("Failed to get itinerary data")
             # Fallback to empty structure on error
             itinerary = {
                 "id": None,
@@ -846,7 +905,7 @@ async def get_trip_itinerary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get trip itinerary: {str(e)}")
+        logger.exception("Failed to get trip itinerary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip itinerary",
@@ -856,7 +915,7 @@ async def get_trip_itinerary(
 @router.post("/{trip_id}/export")
 async def export_trip(
     trip_id: UUID,
-    format: str = Query(default="pdf", description="Export format"),
+    export_format: str = Query(default="pdf", description="Export format"),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
@@ -864,7 +923,7 @@ async def export_trip(
 
     Args:
         trip_id: Trip ID
-        format: Export format
+        export_format: Export format requested by the caller
         principal: Current authenticated principal
         trip_service: Trip service instance
 
@@ -885,11 +944,11 @@ async def export_trip(
             )
 
         # Implement actual export functionality with authorization
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         # Validate export format
         allowed_formats = ["pdf", "csv", "json"]
-        if format not in allowed_formats:
+        if export_format not in allowed_formats:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Unsupported export format. Allowed formats: {allowed_formats}",
@@ -899,45 +958,40 @@ async def export_trip(
         import secrets
 
         export_token = secrets.token_urlsafe(32)
-        expiry_time = datetime.now(timezone.utc) + timedelta(hours=24)
+        expiry_time = datetime.now(UTC) + timedelta(hours=24)
 
         # Store export request in a temporary location (in production, proper queue)
         # For now, return a response indicating export is being processed
         export_data = {
-            "format": format,
+            "format": export_format,
             "trip_id": str(trip_id),
             "export_token": export_token,
             "status": "processing",
             "estimated_completion": (
-                datetime.now(timezone.utc) + timedelta(minutes=5)
+                datetime.now(UTC) + timedelta(minutes=5)
             ).isoformat(),
             "download_url": f"/api/trips/{trip_id}/export/{export_token}/download",
             "expires_at": expiry_time.isoformat(),
         }
 
         # Audit log the export request
-        try:
-            audit_service = AuditLoggingService()
-            await audit_service.log_event(
-                event_type=AuditEventType.DATA_EXPORT,
-                user_id=principal.user_id,
-                resource_type="trip",
-                resource_id=str(trip_id),
-                details={
-                    "action": "trip_export_requested",
-                    "format": format,
-                    "export_token": export_token,
-                },
-            )
-        except Exception as audit_e:
-            logger.warning(f"Failed to log audit event for trip export: {str(audit_e)}")
+        await _record_trip_audit_event(
+            event_type=AuditEventType.DATA_EXPORT,
+            severity=AuditSeverity.LOW,
+            message="Trip export requested",
+            principal=principal,
+            resource_id=str(trip_id),
+            action="trip_export_requested",
+            format=format,
+            export_token=export_token,
+        )
 
         return export_data
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to export trip: {str(e)}")
+        logger.exception("Failed to export trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to export trip",
@@ -945,11 +999,11 @@ async def export_trip(
 
 
 # Core endpoints
-@router.get("/suggestions", response_model=List[TripSuggestionResponse])
+@router.get("/suggestions", response_model=list[TripSuggestionResponse])
 async def get_trip_suggestions(
     limit: int = Query(4, ge=1, le=20, description="Number of suggestions to return"),
-    budget_max: Optional[float] = Query(None, description="Maximum budget filter"),
-    category: Optional[str] = Query(None, description="Filter by category"),
+    budget_max: float | None = Query(None, description="Maximum budget filter"),
+    category: str | None = Query(None, description="Filter by category"),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
@@ -1096,8 +1150,8 @@ async def get_trip_suggestions(
 
         # Apply user authentication is already verified via require_principal decorator
 
-    except Exception as e:
-        logger.error(f"Failed to get personalized suggestions: {str(e)}")
+    except Exception:
+        logger.exception("Failed to get personalized suggestions")
         # Fallback to base suggestions on error
         suggestions = base_suggestions
 
@@ -1115,9 +1169,7 @@ async def get_trip_suggestions(
         ]
 
     # Apply limit
-    filtered_suggestions = filtered_suggestions[:limit]
-
-    return filtered_suggestions
+    return filtered_suggestions[:limit]
 
 
 def _adapt_trip_response(core_response) -> TripResponse:
@@ -1163,9 +1215,13 @@ def _adapt_trip_response(core_response) -> TripResponse:
 
     # Convert string dates to datetime if needed
     if isinstance(created_at, str):
-        created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        created_at = datetime.fromisoformat(
+            f"{created_at[:-1]}+00:00" if created_at.endswith("Z") else created_at
+        )
     if isinstance(updated_at, str):
-        updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+        updated_at = datetime.fromisoformat(
+            f"{updated_at[:-1]}+00:00" if updated_at.endswith("Z") else updated_at
+        )
 
     # Convert core TripPreferences to common TripPreferences if needed
     api_preferences = None
@@ -1195,7 +1251,7 @@ def _adapt_trip_response(core_response) -> TripResponse:
 # ===== Trip Collaboration Endpoints =====
 
 
-@router.post("/{trip_id}/share", response_model=List[TripCollaboratorResponse])
+@router.post("/{trip_id}/share", response_model=list[TripCollaboratorResponse])
 async def share_trip(
     trip_id: UUID,
     share_request: TripShareRequest,
@@ -1240,43 +1296,35 @@ async def share_trip(
         )
 
         # Convert to API response models
-        response_collaborators = []
-        for collab in collaborators:
-            response_collaborators.append(
-                TripCollaboratorResponse(
-                    user_id=UUID(collab.user_id),
-                    email=collab.email,
-                    name=await _get_user_name_safely(collab.user_id),
-                    permission_level=collab.permission_level,
-                    added_by=UUID(principal.user_id),
-                    added_at=collab.added_at,
-                    is_active=True,
-                )
+        response_collaborators = [
+            TripCollaboratorResponse(
+                user_id=UUID(collab.user_id),
+                email=collab.email,
+                name=await _get_user_name_safely(collab.user_id),
+                permission_level=collab.permission_level,
+                added_by=UUID(principal.user_id),
+                added_at=collab.added_at,
+                is_active=True,
             )
+            for collab in collaborators
+        ]
 
         # Audit log the trip sharing
-        try:
-            audit_service = AuditLoggingService()
-            await audit_service.log_event(
-                event_type=AuditEventType.DATA_ACCESS,
-                user_id=principal.user_id,
-                resource_type="trip",
-                resource_id=str(trip_id),
-                details={
-                    "action": "trip_shared",
-                    "shared_with": share_request.user_emails,
-                    "permission_level": share_request.permission_level,
-                },
-            )
-        except Exception as audit_e:
-            logger.warning(
-                f"Failed to log audit event for trip sharing: {str(audit_e)}"
-            )
+        await _record_trip_audit_event(
+            event_type=AuditEventType.DATA_ACCESS,
+            severity=AuditSeverity.INFORMATIONAL,
+            message="Trip shared with collaborators",
+            principal=principal,
+            resource_id=str(trip_id),
+            action="trip_shared",
+            shared_with=share_request.user_emails,
+            permission_level=share_request.permission_level,
+        )
 
         return response_collaborators
 
     except Exception as e:
-        logger.error(f"Failed to share trip: {str(e)}")
+        logger.exception("Failed to share trip")
         if "permission" in str(e).lower() or "authorization" in str(e).lower():
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1333,19 +1381,18 @@ async def list_trip_collaborators(
         )
 
         # Convert to API response models
-        response_collaborators = []
-        for collab in collaborators:
-            response_collaborators.append(
-                TripCollaboratorResponse(
-                    user_id=UUID(collab.user_id),
-                    email=collab.email,
-                    name=await _get_user_name_safely(collab.user_id),
-                    permission_level=collab.permission_level,
-                    added_by=UUID(trip.user_id),
-                    added_at=collab.added_at,
-                    is_active=True,
-                )
+        response_collaborators = [
+            TripCollaboratorResponse(
+                user_id=UUID(collab.user_id),
+                email=collab.email,
+                name=await _get_user_name_safely(collab.user_id),
+                permission_level=collab.permission_level,
+                added_by=UUID(trip.user_id),
+                added_at=collab.added_at,
+                is_active=True,
             )
+            for collab in collaborators
+        ]
 
         return TripCollaboratorsListResponse(
             collaborators=response_collaborators,
@@ -1356,7 +1403,7 @@ async def list_trip_collaborators(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to list trip collaborators: {str(e)}")
+        logger.exception("Failed to list trip collaborators")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trip collaborators",
@@ -1391,10 +1438,8 @@ async def update_collaborator_permissions(
         HTTPException: If not authorized or collaborator not found
     """
     logger.info(
-        (
-            f"Updating collaborator {user_id} permissions for trip {trip_id} "
-            f"by user: {principal.user_id}"
-        )
+        f"Updating collaborator {user_id} permissions for trip {trip_id} "
+        f"by user: {principal.user_id}"
     )
 
     try:
@@ -1450,7 +1495,7 @@ async def update_collaborator_permissions(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update collaborator permissions: {str(e)}")
+        logger.exception("Failed to update collaborator permissions")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update collaborator permissions",
@@ -1480,10 +1525,8 @@ async def remove_collaborator(
         HTTPException: If not authorized or collaborator not found
     """
     logger.info(
-        (
-            f"Removing collaborator {user_id} from trip {trip_id} "
-            f"by user: {principal.user_id}"
-        )
+        f"Removing collaborator {user_id} from trip {trip_id} "
+        f"by user: {principal.user_id}"
     )
 
     try:
@@ -1514,14 +1557,14 @@ async def remove_collaborator(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to remove collaborator: {str(e)}")
+        logger.exception("Failed to remove collaborator")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove collaborator",
         ) from e
 
 
-async def _get_user_name_safely(user_id: str) -> Optional[str]:
+async def _get_user_name_safely(user_id: str) -> str | None:
     """Safely get user name with authorization check.
 
     Args:
@@ -1540,6 +1583,6 @@ async def _get_user_name_safely(user_id: str) -> Optional[str]:
             return user.full_name
         return None
 
-    except Exception as e:
-        logger.error(f"Failed to get user name for {user_id}: {str(e)}")
+    except Exception:
+        logger.exception("Failed to get user name")
         return None
