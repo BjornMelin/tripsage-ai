@@ -189,20 +189,24 @@ from tripsage_core.services.infrastructure import (
 
 ### Utilities (`utils/`)
 
-Common functionality used throughout the application:
+Common functionality used throughout the application.
+Import utilities directly from their submodules (no package-level re‑exports):
 
 ```python
-from tripsage_core.utils import cache_utils, error_handling_utils, logging_utils
+from tripsage_core.utils.cache_utils import cached, invalidate_pattern
+from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.decorator_utils import retry_on_failure
+from tripsage_core.utils.connection_utils import DatabaseURLParser
 ```
 
-**Available Utilities:**
+**Available Utilities (direct submodules):**
 
-- **cache_utils** - Caching patterns and TTL management
-- **error_handling_utils** - Error recovery and retry logic
-- **logging_utils** - Structured logging and observability
-- **file_utils** - File processing and validation
-- **session_utils** - Session management and security
-- **decorator_utils** - Common decorators for cross-cutting concerns
+- `cache_utils` — Caching patterns and TTL management.
+- `decorator_utils` — Common decorators (e.g., retries with Tenacity).
+- `logging_utils` — Lightweight logger helper.
+- `file_utils` — File validation helpers.
+- `connection_utils` — Database URL parsing and credentials.
+- `url_converters` — Supabase↔Postgres URL conversions + detection.
 
 ## Performance Optimizations
 
@@ -214,10 +218,9 @@ from tripsage_core.utils import cache_utils, error_handling_utils, logging_utils
 
 ### Memory System
 
-- **Mem0 integration** with pgvector backend
-- **91% faster performance** than traditional approaches
-- Vector similarity search for contextual retrieval
-- Automatic conversation context preservation
+- Mem0 integration with pgvector backend.
+- Vector similarity search for contextual retrieval.
+- Automatic conversation context preservation.
 
 ## Security Features
 
