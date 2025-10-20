@@ -3,7 +3,7 @@ name = "tripsage-ai"
 version = "0.1.0"
 description = "AI-powered travel planning system with multi-source data integration"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.13"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
     # Core web framework and async support
@@ -46,6 +46,7 @@ dependencies = [
     "google-auth-oauthlib>=1.2.2",
     "googlemaps>=4.10.0",
     "duffel-api>=0.6.2",
+    "email-validator>=2.3.0,<3.0.0",
     # Observability and monitoring
     "opentelemetry-api>=1.38.0,<1.39.0",
     "opentelemetry-sdk>=1.38.0,<1.39.0",
@@ -128,7 +129,6 @@ select = [
     # Logging and debugging
     "LOG",  # flake8-logging-format
     "T10",  # flake8-debugger
-    "T20",  # flake8-print
     # Exception handling
     "TRY",  # tryceratops
 ]
@@ -138,7 +138,6 @@ ignore = [
     "S101",  # asserts in tests
     "S108",  # insecure temp files (tests)
     "S311",  # non-crypto randomness (tests)
-    "T20",   # print statements in CLI
     # Formatter/semantics conflicts
     "COM812", "COM819",
     # Exception flow style
@@ -237,7 +236,7 @@ dev = [
 ]
 
 [tool.pyright]
-pythonVersion = "3.14"
+pythonVersion = "3.13"
 typeCheckingMode = "standard"
 include = ["tripsage", "tripsage_core", "scripts", "tests"]
 exclude = [
@@ -264,6 +263,7 @@ compile-bytecode = true
 link-mode = "copy"
 default-groups = ["dev"]
 preview = true
+override-dependencies = ["fastuuid==0.14.0"]
 
 [tool.pylint]
 [tool.pylint.main]

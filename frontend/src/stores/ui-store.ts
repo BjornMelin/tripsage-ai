@@ -199,7 +199,7 @@ export const useUIStore = create<UIState>()(
             try {
               const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
               return mediaQuery?.matches ?? false;
-            } catch (error) {
+            } catch {
               // Fallback for test environments
               return false;
             }
