@@ -160,6 +160,7 @@ ignore = [
     "FBT001", "FBT002", "FBT003",
     "ERA001",
     "TRY002",
+    "E402",  # Import not at top of file
 ]
 
 fixable = ["ALL"]
@@ -172,18 +173,13 @@ convention = "google"
     "S101",   # allow asserts
     "ARG001", # allow unused args in fixtures/mocks
     "F821",   # undefined names in mocking contexts
-    "BLE001",
-    "RUF043",
-    "RUF001",
 ]
 "scripts/cli/**/*" = ["T20"]
 "tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
 "tripsage/api/core/*.py" = ["B008"]     # Allow Depends() in FastAPI dependencies
 "tripsage_core/services/business/auth_service.py" = ["B008"]
 "tests/conftest.py" = ["E402"]          # Allow imports-after-exec for env setup
-"scripts/**/*" = [
-    "PTH123","PTH108","PTH120","PTH100","PTH118","PTH110",
-]
+"scripts/**/*" = []
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -228,8 +224,8 @@ test = [
 
 lint = [
     # Code formatting and linting
-"ruff>=0.14.1",
-"mypy>=1.18.2",
+    "ruff>=0.14.1",
+    "mypy>=1.18.2",
 ]
 
 dev = [
@@ -294,6 +290,7 @@ disable = [
     "too-many-arguments",
     "too-many-locals",
     "too-many-branches",
+    "consider-using-dict-items",
 ]
 
 [tool.coverage.run]
