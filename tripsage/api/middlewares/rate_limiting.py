@@ -270,7 +270,7 @@ class DragonflyRateLimiter(RateLimiter):
 
                 self.cache_service = await get_cache_service()
             except Exception as e:
-                logger.warning(f"Failed to initialize cache service: {e}")
+                logger.warning("Failed to initialize cache service: %s", e)
                 self.cache_service = None
 
     async def check_rate_limit(
@@ -333,7 +333,7 @@ class DragonflyRateLimiter(RateLimiter):
                 return window_result
 
             # If both algorithms disabled, allow request
-            logger.warning(f"Both rate limiting algorithms disabled for key {key}")
+            logger.warning("Both rate limiting algorithms disabled for key %s", key)
             return RateLimitResult(
                 is_limited=False,
                 limit_type="disabled",
@@ -539,7 +539,7 @@ class DragonflyRateLimiter(RateLimiter):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to track rate limit hit: {e}")
+                logger.warning("Failed to track rate limit hit: %s", e)
 
     async def _record_request(
         self,
@@ -565,7 +565,7 @@ class DragonflyRateLimiter(RateLimiter):
             await self.cache_service.expire(analytics_key, 86400)  # 24 hours
 
         except Exception as e:
-            logger.debug(f"Failed to record request analytics: {e}")
+            logger.debug("Failed to record request analytics: %s", e)
 
     async def reset_rate_limit(self, key: str) -> bool:
         """Reset all rate limits for a key."""
@@ -597,7 +597,7 @@ class DragonflyRateLimiter(RateLimiter):
             return True
 
         except Exception:
-            logger.exception(f"Failed to reset rate limits for {key}")
+            logger.exception("Failed to reset rate limits for %s", key)
             return False
 
 
@@ -643,7 +643,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
                 self.monitoring_service = ApiKeyMonitoringService()
             except Exception as e:
-                logger.warning(f"Failed to initialize monitoring service: {e}")
+                logger.warning("Failed to initialize monitoring service: %s", e)
 
         # Create rate limiter
         if use_dragonfly:
@@ -1096,7 +1096,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     },
                 )
             except Exception as e:
-                logger.warning(f"Failed to track rate limit violation: {e}")
+                logger.warning("Failed to track rate limit violation: %s", e)
 
         # Get client IP for audit logging
         client_ip = self._get_client_ip(request)
@@ -1140,7 +1140,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     user_agent=request.headers.get("User-Agent"),
                 )
         except Exception as e:
-            logger.warning(f"Failed to audit rate limit violation: {e}")
+            logger.warning("Failed to audit rate limit violation: %s", e)
 
         # Also log the violation
         logger.warning(
@@ -1200,7 +1200,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
                     },
                 )
             except Exception as e:
-                logger.debug(f"Failed to track successful request: {e}")
+                logger.debug("Failed to track successful request: %s", e)
 
 
 # Configuration helper functions
@@ -1302,7 +1302,7 @@ def create_middleware_from_settings(
 
             monitoring_service = ApiKeyMonitoringService()
         except Exception as e:
-            logger.warning(f"Failed to initialize monitoring service: {e}")
+            logger.warning("Failed to initialize monitoring service: %s", e)
 
     # Create middleware with settings-based configuration
     middleware = EnhancedRateLimitMiddleware(

@@ -241,7 +241,7 @@ class DatabaseConnectionMonitor:
             result.status == HealthStatus.HEALTHY,
         )
 
-        logger.debug(f"Health check completed: {result.status.value}")
+        logger.debug("Health check completed: %s", result.status.value)
         return result
 
     async def _collect_health_details(self) -> dict[str, Any]:
@@ -298,7 +298,7 @@ class DatabaseConnectionMonitor:
 
     async def _handle_critical_health(self, result: HealthCheckResult):
         """Handle critical health status."""
-        logger.warning(f"Critical database health detected: {result.message}")
+        logger.warning("Critical database health detected: %s", result.message)
 
         # Create security alert
         alert = SecurityAlert(
@@ -401,7 +401,7 @@ class DatabaseConnectionMonitor:
         for attempt in range(self._max_recovery_attempts):
             try:
                 logger.info(
-                    f"Recovery attempt {attempt + 1}/{self._max_recovery_attempts}"
+                    "Recovery attempt %s/%s", attempt + 1, self._max_recovery_attempts
                 )
 
                 # Close existing connection
@@ -429,7 +429,7 @@ class DatabaseConnectionMonitor:
                     return
 
             except Exception as e:
-                logger.exception(f"Recovery attempt {attempt + 1} failed")
+                logger.exception("Recovery attempt %s failed", attempt + 1)
 
                 if attempt == self._max_recovery_attempts - 1:
                     # Final attempt failed
@@ -457,7 +457,7 @@ class DatabaseConnectionMonitor:
             self._security_alerts = self._security_alerts[-self._max_security_history :]
 
         # Log alert
-        logger.warning(f"Security alert: {alert.event_type.value} - {alert.message}")
+        logger.warning("Security alert: %s - %s", alert.event_type.value, alert.message)
 
         # Call registered callbacks
         for callback in self._alert_callbacks:

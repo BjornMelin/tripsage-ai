@@ -98,6 +98,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class RollbackTestException(Exception):
+    """Exception raised during rollback testing."""
+
+
 @dataclass
 class BenchmarkMetrics:
     """Comprehensive benchmark metrics."""
@@ -115,7 +119,7 @@ class BenchmarkMetrics:
     connection_count: int | None = None
     query_complexity: str | None = None
     cache_hit: bool | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)  # noqa: RUF009
 
 
 class BenchmarkStatistics(BaseModel):
@@ -172,6 +176,14 @@ class EnhancedDatabaseBenchmark:
         output_dir: str = "benchmark_results",
         baseline_file: str | None = None,
     ):
+        """Initialize enhanced database benchmark.
+
+        Args:
+            iterations: Number of iterations per test
+            concurrent_users: Number of concurrent users to simulate
+            output_dir: Directory for output files
+            baseline_file: Optional baseline file for regression detection
+        """
         self.iterations = iterations
         self.concurrent_users = concurrent_users
         self.output_dir = Path(output_dir)
@@ -241,9 +253,9 @@ class EnhancedDatabaseBenchmark:
 
     async def run_all_benchmarks(self):
         """Run comprehensive benchmarks with modern monitoring."""
-        logger.info(f"Starting enhanced benchmarks with {self.iterations} iterations")
-        logger.info(f"Concurrent users: {self.concurrent_users}")
-        logger.info(f"Output directory: {self.output_dir}")
+        logger.info("Starting enhanced benchmarks with %s iterations", self.iterations)
+        logger.info("Concurrent users: %s", self.concurrent_users)
+        logger.info("Output directory: %s", self.output_dir)
 
         # Run benchmarks
         await self.benchmark_connection_performance()
@@ -350,7 +362,7 @@ class EnhancedDatabaseBenchmark:
                         async with service.transaction():
                             await service.execute_sql("SELECT 1")
                             if i % 3 == 0:  # Simulate occasional rollback
-                                raise Exception("Intentional rollback")
+                                raise RollbackTestException("Intentional rollback")
                     except Exception:  # noqa: BLE001
                         pass  # Expected for rollback test
 
@@ -368,7 +380,8 @@ class EnhancedDatabaseBenchmark:
     async def benchmark_concurrent_performance(self):
         """Benchmark concurrent operations with load testing."""
         logger.info(
-            f"Benchmarking concurrent performance with {self.concurrent_users} users..."
+            "Benchmarking concurrent performance with %s users...",
+            self.concurrent_users,
         )
 
         async def concurrent_user_simulation(user_id: int):
@@ -460,8 +473,9 @@ class EnhancedDatabaseBenchmark:
                 async with self.measure_performance("vector_search") as metrics:
                     if vector_available:
                         # Real vector operations
-                        vector1 = np.random.random(384).tolist()
-                        vector2 = np.random.random(384).tolist()
+                        rng = np.random.default_rng(42)
+                        vector1 = rng.random(384).tolist()
+                        vector2 = rng.random(384).tolist()
 
                         result = await service.execute_sql(
                             "SELECT $1::vector <-> $2::vector as distance",
@@ -569,7 +583,7 @@ class EnhancedDatabaseBenchmark:
                     baseline_data = json.load(f)
                     baseline_stats = baseline_data.get("statistics", {})
             except Exception as e:  # noqa: BLE001
-                logger.warning(f"Could not load baseline file: {e}")
+                logger.warning("Could not load baseline file: %s", e)
 
         # Check for regressions
         for operation_name, stats in self.statistics.items():
@@ -661,7 +675,7 @@ class EnhancedDatabaseBenchmark:
         with Path(json_file, "w").open() as f:
             json.dump(report_data, f, indent=2, default=str)
 
-        logger.info(f"JSON report saved to: {json_file}")
+        logger.info("JSON report saved to: %s", json_file)
 
     async def generate_csv_report(self, timestamp: str):
         """Generate CSV report for data analysis."""
@@ -699,7 +713,7 @@ class EnhancedDatabaseBenchmark:
                     ]
                 )
 
-        logger.info(f"CSV report saved to: {csv_file}")
+        logger.info("CSV report saved to: %s", csv_file)
 
     async def generate_html_report(self, timestamp: str):
         """Generate HTML report with visualizations."""
@@ -826,7 +840,7 @@ class EnhancedDatabaseBenchmark:
         with Path(html_file, "w").open() as f:
             f.write(html_content)
 
-        logger.info(f"HTML report saved to: {html_file}")
+        logger.info("HTML report saved to: %s", html_file)
 
     def generate_console_report(self):
         """Generate console report with key metrics."""
@@ -894,7 +908,7 @@ class EnhancedDatabaseBenchmark:
         with Path(latest_baseline, "w").open() as f:
             json.dump(baseline_data, f, indent=2, default=str)
 
-        logger.info(f"Baseline saved to: {baseline_file}")
+        logger.info("Baseline saved to: %s", baseline_file)
 
 
 async def main():
@@ -963,13 +977,13 @@ Examples:
             ]
             if critical_regressions:
                 logger.exception(
-                    f"Critical performance regressions detected: "
-                    f"{len(critical_regressions)}"
+                    "Critical performance regressions detected: %s",
+                    len(critical_regressions),
                 )
                 sys.exit(2)
             else:
                 logger.warning(
-                    f"Performance regressions detected: {len(benchmark.regressions)}"
+                    "Performance regressions detected: %s", len(benchmark.regressions)
                 )
                 sys.exit(1)
 

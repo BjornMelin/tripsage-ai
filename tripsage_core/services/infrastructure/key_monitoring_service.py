@@ -125,12 +125,14 @@ class KeyMonitoringService:
         # Log the operation with logging module
         if success:
             logger.info(
-                f"API key {operation.value}",
+                "API key %s",
+                operation.value,
                 extra=log_data,
             )
         else:
             logger.warning(
-                f"Failed API key {operation.value}",
+                "Failed API key %s",
+                operation.value,
                 extra=log_data,
             )
 

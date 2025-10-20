@@ -216,7 +216,7 @@ class SupabaseCheckpointManager:
             logger.info("Checkpoint tables setup completed (async)")
         except Exception as e:
             # Setup might fail if tables already exist, which is fine
-            logger.warning(f"Checkpoint table setup warning (async): {e}")
+            logger.warning("Checkpoint table setup warning (async): %s", e)
 
     def _setup_checkpoint_tables_sync(self) -> None:
         """Setup checkpoint tables using sync checkpointer."""
@@ -225,7 +225,7 @@ class SupabaseCheckpointManager:
             logger.info("Checkpoint tables setup completed (sync)")
         except Exception as e:
             # Setup might fail if tables already exist, which is fine
-            logger.warning(f"Checkpoint table setup warning (sync): {e}")
+            logger.warning("Checkpoint table setup warning (sync): %s", e)
 
     async def cleanup_old_checkpoints(self, days_old: int = 30) -> int:
         """Clean up checkpoints older than specified days.
@@ -254,7 +254,7 @@ class SupabaseCheckpointManager:
 
             deleted_count = len(deleted_rows) if deleted_rows else 0
             logger.info(
-                f"Cleaned up {deleted_count} checkpoints older than {days_old} days"
+                "Cleaned up %s checkpoints older than %s days", deleted_count, days_old
             )
             return deleted_count
 
@@ -304,7 +304,7 @@ class SupabaseCheckpointManager:
                     "daily_activity_percent": 0.0,
                 }
 
-            logger.debug(f"Checkpoint stats: {stats}")
+            logger.debug("Checkpoint stats: %s", stats)
             return stats
 
         except Exception as e:

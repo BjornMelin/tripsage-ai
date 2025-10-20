@@ -79,7 +79,7 @@ class MigrationRunner:
             logger.info(
                 "Migrations table needs to be created manually or via admin API"
             )
-            logger.info(f"SQL to create table:\n{create_table_sql}")
+            logger.info("SQL to create table:\\n%s", create_table_sql)
 
     async def get_applied_migrations(self) -> list[str]:
         """Get list of already applied migrations."""
@@ -96,7 +96,7 @@ class MigrationRunner:
             return []
         except Exception as e:
             logger.warning(
-                f"Could not get applied migrations (table may not exist): {e}"
+                "Could not get applied migrations (table may not exist): %s", e
             )
             return []
 
@@ -126,7 +126,7 @@ class MigrationRunner:
         examples/ and rollbacks/ per the new directory structure.
         """
         if not MIGRATIONS_DIR.exists():
-            logger.error(f"Migrations directory not found: {MIGRATIONS_DIR}")
+            logger.error("Migrations directory not found: %s", MIGRATIONS_DIR)
             raise FileNotFoundError(f"Migrations directory not found: {MIGRATIONS_DIR}")
 
         # Only get SQL files directly in the migrations directory
@@ -143,7 +143,7 @@ class MigrationRunner:
             ]
         )
 
-        logger.info(f"Found {len(migration_files)} migration files in main directory")
+        logger.info("Found %s migration files in main directory", len(migration_files))
         return migration_files
 
     async def apply_migration(self, filepath: Path) -> bool:
@@ -163,7 +163,7 @@ class MigrationRunner:
 
             checksum = self._calculate_checksum(content)
 
-            logger.info(f"Applying migration: {filename}")
+            logger.info("Applying migration: %s", filename)
 
             # Parse and execute SQL statements
             # Note: This is a simplified approach
@@ -172,15 +172,15 @@ class MigrationRunner:
             for statement in statements:
                 if statement:
                     # Log the statement for manual execution
-                    logger.info(f"Would execute SQL:\n{statement[:100]}...")
+                    logger.info("Would execute SQL:\\n%s...", statement[:100])
                     # In production, execute via proper database connection
 
             # Record the migration
             if await self.record_migration(filename, checksum):
-                logger.info(f"Migration {filename} recorded successfully")
+                logger.info("Migration %s recorded successfully", filename)
                 return True
             else:
-                logger.error(f"Failed to record migration {filename}")
+                logger.error("Failed to record migration %s", filename)
                 return False
 
         except Exception:
@@ -205,8 +205,9 @@ class MigrationRunner:
         applied_migrations = await self.get_applied_migrations()
 
         logger.info(
-            f"Found {len(migration_files)} migration files, "
-            f"{len(applied_migrations)} already applied"
+            "Found %s migration files, %s already applied",
+            len(migration_files),
+            len(applied_migrations),
         )
 
         succeeded = 0
@@ -214,15 +215,15 @@ class MigrationRunner:
 
         for migration_file in migration_files:
             if migration_file.name in applied_migrations:
-                logger.debug(f"Skipping already applied: {migration_file.name}")
+                logger.debug("Skipping already applied: %s", migration_file.name)
                 continue
 
             if up_to and migration_file.name > up_to:
-                logger.info(f"Stopping at requested migration: {up_to}")
+                logger.info("Stopping at requested migration: %s", up_to)
                 break
 
             if dry_run:
-                logger.info(f"[DRY RUN] Would apply: {migration_file.name}")
+                logger.info("[DRY RUN] Would apply: %s", migration_file.name)
                 succeeded += 1
                 continue
 
@@ -230,7 +231,7 @@ class MigrationRunner:
                 succeeded += 1
             else:
                 failed += 1
-                logger.error(f"Failed to apply: {migration_file.name}")
+                logger.error("Failed to apply: %s", migration_file.name)
                 # Stop on first failure
                 break
 
@@ -271,7 +272,7 @@ if __name__ == "__main__":
             project_id=args.project_id, dry_run=args.dry_run, up_to=args.up_to
         )
 
-        logger.info(f"Migration summary: {succeeded} succeeded, {failed} failed")
+        logger.info("Migration summary: %s succeeded, %s failed", succeeded, failed)
 
         if not args.dry_run and succeeded == 0 and failed == 0:
             logger.info("All migrations are already applied")

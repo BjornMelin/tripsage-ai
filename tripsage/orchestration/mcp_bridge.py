@@ -58,7 +58,7 @@ class LangGraphMCPBridge:
             await self._load_airbnb_tools()
             self._initialized = True
             logger.info(
-                f"Bridge initialized with {len(self._tool_metadata)} Airbnb tools"
+                "Bridge initialized with %s Airbnb tools", len(self._tool_metadata)
             )
         except Exception:
             logger.exception("Failed to initialize Airbnb MCP bridge")
@@ -197,7 +197,7 @@ class LangGraphMCPBridge:
             """Execute Airbnb tool via MCPManager."""
             try:
                 logger.debug(
-                    f"Executing Airbnb tool: {metadata.name} with params: {kwargs}"
+                    "Executing Airbnb tool: %s with params: %s", metadata.name, kwargs
                 )
 
                 # Use existing MCPManager for tool execution
@@ -213,7 +213,7 @@ class LangGraphMCPBridge:
                     return str(result)
 
             except Exception as e:
-                logger.exception(f"Airbnb tool {metadata.name} failed")
+                logger.exception("Airbnb tool %s failed", metadata.name)
                 return f"Tool execution failed: {e!s}"
 
         # Create LangGraph tool with proper metadata

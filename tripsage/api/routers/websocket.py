@@ -95,8 +95,10 @@ def validate_incoming_message_size(
 
         if message_size > max_size:
             logger.warning(
-                f"Message size exceeds limit for type '{message_type}': "
-                f"{message_size} > {max_size}"
+                "Message size exceeds limit for type '%s': %s > %s",
+                message_type,
+                message_size,
+                max_size,
             )
             return False
         return True
@@ -131,7 +133,7 @@ def validate_and_parse_message(message_data: str) -> tuple[bool, dict, str]:
         return True, message_dict, ""
 
     except ValueError as e:
-        logger.warning(f"Message validation failed: {e}")
+        logger.warning("Message validation failed: %s", e)
         return False, {}, str(e)
     except Exception:
         logger.exception("Unexpected error validating message")
@@ -176,7 +178,7 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
 
     # Check if origin is in allowed CORS origins
     if origin in settings.cors_origins:
-        logger.info(f"WebSocket connection from authorized origin: {origin}")
+        logger.info("WebSocket connection from authorized origin: %s", origin)
         return True
 
     # Additional check for wildcard origins if configured
@@ -188,7 +190,7 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
             return True
 
     logger.exception(
-        f"WebSocket connection rejected from unauthorized origin: {origin}"
+        "WebSocket connection rejected from unauthorized origin: %s", origin
     )
     return False
 
@@ -319,10 +321,9 @@ async def generic_websocket(websocket: WebSocket):
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
         logger.info(
-            (
-                f"Generic WebSocket authenticated: connection_id={connection_id}, "
-                f"user_id={user_id}"
-            ),
+            "Generic WebSocket authenticated: connection_id=%s, user_id=%s",
+            connection_id,
+            user_id,
         )
 
         # Basic message handling loop
@@ -455,12 +456,12 @@ async def generic_websocket(websocket: WebSocket):
 
             except WebSocketDisconnect:
                 logger.info(
-                    f"Generic WebSocket disconnected: connection_id={connection_id}",
+                    "Generic WebSocket disconnected: connection_id=%s", connection_id
                 )
                 break
             except json.JSONDecodeError:
                 logger.exception(
-                    f"Invalid JSON received from connection {connection_id}"
+                    "Invalid JSON received from connection %s", connection_id
                 )
                 error_event = ErrorEvent(
                     error_code="invalid_json",
@@ -470,7 +471,7 @@ async def generic_websocket(websocket: WebSocket):
                 await websocket_manager.send_to_connection(connection_id, error_event)
             except Exception as e:
                 logger.exception(
-                    f"Error handling message from connection {connection_id}",
+                    "Error handling message from connection %s", connection_id
                 )
                 error_event = ErrorEvent(
                     error_code="message_error",
@@ -519,7 +520,7 @@ async def chat_websocket(
 
         # Accept WebSocket connection
         await websocket.accept()
-        logger.info(f"WebSocket connection accepted for chat session {session_id}")
+        logger.info("WebSocket connection accepted for chat session %s", session_id)
 
         # Wait for authentication message
         auth_data = await websocket.receive_text()
@@ -595,10 +596,9 @@ async def chat_websocket(
         chat_agent = get_chat_agent()
 
         logger.info(
-            (
-                f"Chat WebSocket authenticated: connection_id={connection_id}, "
-                f"user_id={user_id}"
-            ),
+            "Chat WebSocket authenticated: connection_id=%s, user_id=%s",
+            connection_id,
+            user_id,
         )
 
         # Message handling loop
@@ -698,16 +698,16 @@ async def chat_websocket(
                         )
 
                 else:
-                    logger.warning(f"Unknown message type: {message_type}")
+                    logger.warning("Unknown message type: %s", message_type)
 
             except WebSocketDisconnect:
                 logger.info(
-                    f"Chat WebSocket disconnected: connection_id={connection_id}",
+                    "Chat WebSocket disconnected: connection_id=%s", connection_id
                 )
                 break
             except json.JSONDecodeError:
                 logger.exception(
-                    f"Invalid JSON received from connection {connection_id}"
+                    "Invalid JSON received from connection %s", connection_id
                 )
                 error_event = ErrorEvent(
                     error_code="invalid_json",
@@ -718,7 +718,7 @@ async def chat_websocket(
                 await websocket_manager.send_to_connection(connection_id, error_event)
             except Exception as e:
                 logger.exception(
-                    f"Error handling message from connection {connection_id}",
+                    "Error handling message from connection %s", connection_id
                 )
                 error_event = ErrorEvent(
                     error_code="message_error",
@@ -764,7 +764,7 @@ async def agent_status_websocket(
 
         # Accept WebSocket connection
         await websocket.accept()
-        logger.info(f"Agent status WebSocket connection accepted for user {user_id}")
+        logger.info("Agent status WebSocket connection accepted for user %s", user_id)
 
         # Wait for authentication message
         auth_data = await websocket.receive_text()
@@ -846,10 +846,9 @@ async def agent_status_websocket(
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
         logger.info(
-            (
-                f"Agent status WebSocket authenticated: connection_id={connection_id}, "
-                f"user_id={user_id}"
-            ),
+            "Agent status WebSocket authenticated: connection_id=%s, user_id=%s",
+            connection_id,
+            user_id,
         )
 
         # Message handling loop (mainly for heartbeats and subscription changes)
@@ -864,8 +863,9 @@ async def agent_status_websocket(
                 )
                 if not is_valid:
                     logger.warning(
-                        f"Message validation failed for agent status connection "
-                        f"{connection_id}: {error_msg}"
+                        "Message validation failed for agent status connection %s: %s",
+                        connection_id,
+                        error_msg,
                     )
                     continue
 
@@ -933,24 +933,24 @@ async def agent_status_websocket(
 
                 else:
                     logger.warning(
-                        f"Unknown message type for agent status: {message_type}",
+                        "Unknown message type for agent status: %s", message_type
                     )
 
             except WebSocketDisconnect:
                 logger.info(
-                    f"Agent status WebSocket disconnected: "
-                    f"connection_id={connection_id}"
+                    "Agent status WebSocket disconnected: connection_id=%s",
+                    connection_id,
                 )
                 break
             except json.JSONDecodeError:
                 logger.exception(
-                    f"Invalid JSON received from agent status connection "
-                    f"{connection_id}"
+                    "Invalid JSON received from agent status connection %s",
+                    connection_id,
                 )
             except Exception:
                 logger.exception(
-                    f"Error handling agent status message from connection "
-                    f"{connection_id}"
+                    "Error handling agent status message from connection %s",
+                    connection_id,
                 )
 
     except Exception:

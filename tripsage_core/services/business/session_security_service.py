@@ -912,7 +912,7 @@ class SessionSecurityService:
                     cleanup_count += 1
 
             if cleanup_count > 0:
-                logger.info(f"Cleaned up {cleanup_count} expired sessions")
+                logger.info("Cleaned up %s expired sessions", cleanup_count)
 
             return cleanup_count
 

@@ -72,7 +72,7 @@ async def add_conversation_memory(
 
     @with_error_handling()
     async def _do_add_conversation_memory() -> dict[str, Any]:
-        logger.info(f"Adding conversation memory for user {user_id}")
+        logger.info("Adding conversation memory for user %s", user_id)
 
         memory_service = service_registry.get_required_service("memory_service")
 
@@ -98,8 +98,9 @@ async def add_conversation_memory(
         )
 
         logger.info(
-            f"Successfully extracted {len(result.get('results', []))} "
-            f"memories for user {user_id}"
+            "Successfully extracted %s memories for user %s",
+            len(result.get("results", [])),
+            user_id,
         )
 
         return {
@@ -131,8 +132,9 @@ async def search_user_memories(
     """
     try:
         logger.info(
-            f"Searching memories for user {search_query.user_id} "
-            f"with query: {search_query.query}"
+            "Searching memories for user %s with query: %s",
+            search_query.user_id,
+            search_query.query,
         )
 
         memory_service = service_registry.get_required_service("memory_service")
@@ -170,7 +172,7 @@ async def get_user_context(
 
     @with_error_handling()
     async def _do_get_user_context() -> dict[str, Any]:
-        logger.info(f"Getting user context for user {user_id}")
+        logger.info("Getting user context for user %s", user_id)
 
         memory_service = service_registry.get_required_service("memory_service")
 
@@ -196,7 +198,7 @@ async def update_user_preferences(
     """
     try:
         user_id = preferences.user_id
-        logger.info(f"Updating preferences for user {user_id}")
+        logger.info("Updating preferences for user %s", user_id)
 
         memory_service = service_registry.get_required_service("memory_service")
 
@@ -236,7 +238,7 @@ async def save_session_summary(
         Dictionary with save status
     """
     try:
-        logger.info(f"Saving session summary for user {session_summary.user_id}")
+        logger.info("Saving session summary for user %s", session_summary.user_id)
 
         memory_service = service_registry.get_required_service("memory_service")
 
@@ -311,7 +313,7 @@ async def get_travel_insights(
         Dictionary with travel insights
     """
     try:
-        logger.info(f"Getting travel insights for user {user_id}")
+        logger.info("Getting travel insights for user %s", user_id)
 
         # Get user context first
         context_result = await get_user_context(user_id, service_registry)
@@ -354,7 +356,7 @@ async def find_similar_travelers(
         Dictionary with similar travelers
     """
     try:
-        logger.info(f"Finding similar travelers for user {user_id}")
+        logger.info("Finding similar travelers for user %s", user_id)
 
         # Get user's preferences
         context_result = await get_user_context(user_id, service_registry)
@@ -396,7 +398,7 @@ async def get_destination_memories(
         Dictionary with destination memories
     """
     try:
-        logger.info(f"Getting destination memories for: {destination}")
+        logger.info("Getting destination memories for: %s", destination)
 
         if user_id:
             # Get user-specific destination memories
@@ -443,7 +445,7 @@ async def track_user_activity(
         Dictionary with tracking status
     """
     try:
-        logger.info(f"Tracking activity for user {user_id}: {activity_type}")
+        logger.info("Tracking activity for user %s: %s", user_id, activity_type)
 
         # Create activity memory
         activity_messages = [

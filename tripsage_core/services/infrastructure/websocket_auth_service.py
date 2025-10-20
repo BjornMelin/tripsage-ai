@@ -291,7 +291,9 @@ class WebSocketAuthService:
         """
         # In a real implementation, this would track attempts in Redis/database
         # For testing, this is a no-op
-        logger.debug(f"Tracking connection attempt for user {user_id} from {source_ip}")
+        logger.debug(
+            "Tracking connection attempt for user %s from %s", user_id, source_ip
+        )
 
     def _get_user_session_count(self, user_id: UUID | str) -> int:
         """Get current session count for user.

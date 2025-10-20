@@ -152,7 +152,7 @@ async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
             )
 
         except Exception as e:
-            logger.warning(f"Error creating memory entities: {e!s}")
+            logger.warning("Error creating memory entities: %s", e)
             # Continue even if memory creation fails
 
         return {
@@ -254,7 +254,7 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
                 )
 
         except Exception as e:
-            logger.warning(f"Error updating memory entity: {e!s}")
+            logger.warning("Error updating memory entity: %s", e)
             # Continue even if memory update fails
 
         return {
@@ -679,7 +679,7 @@ async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
                     )
 
         except Exception as e:
-            logger.warning(f"Error updating memory entity: {e!s}")
+            logger.warning("Error updating memory entity: %s", e)
             # Continue even if memory update fails
 
         return {

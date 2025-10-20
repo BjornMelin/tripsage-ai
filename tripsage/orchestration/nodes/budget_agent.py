@@ -62,7 +62,7 @@ class BudgetAgentNode(BaseAgentNode):
         if self.llm:
             self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
-        logger.info(f"Initialized budget agent with {len(self.available_tools)} tools")
+        logger.info("Initialized budget agent with %s tools", len(self.available_tools))
 
     async def _load_configuration(self) -> None:
         """Load agent configuration from database with fallback to settings."""
@@ -82,8 +82,8 @@ class BudgetAgentNode(BaseAgentNode):
             )
 
             logger.info(
-                f"Loaded budget agent configuration from database: "
-                f"temp={self.agent_config['temperature']}"
+                "Loaded budget agent configuration from database: temp=%s",
+                self.agent_config["temperature"],
             )
 
         except Exception:

@@ -534,9 +534,10 @@ class DatabaseService:
             self._initialize_metrics()
 
         logger.info(
-            f"Consolidated Database Service initialized with "
-            f"pool_size={self.pool_size}, max_overflow={self.max_overflow}, "
-            f"LIFO={'enabled' if self.pool_use_lifo else 'disabled'}"
+            "Consolidated Database Service initialized with pool_size=%s, max_overflow=%s, LIFO=%s",
+            self.pool_size,
+            self.max_overflow,
+            "enabled" if self.pool_use_lifo else "disabled",
         )
 
     def _initialize_config(
@@ -785,9 +786,10 @@ class DatabaseService:
             self._connection_stats.connection_errors = 0
 
             logger.info(
-                f"Database service connected successfully in {duration:.2f}s. "
-                f"LIFO pooling enabled with pool_size={self.pool_size}, "
-                f"max_overflow={self.max_overflow}"
+                "Database service connected successfully in %.2fs. LIFO pooling enabled with pool_size=%s, max_overflow=%s",
+                duration,
+                self.pool_size,
+                self.max_overflow,
             )
 
         except Exception as e:
@@ -882,8 +884,9 @@ class DatabaseService:
                 self._setup_pool_event_listeners()
 
             logger.debug(
-                f"SQLAlchemy engine initialized with LIFO pooling "
-                f"(pool_size={self.pool_size}, max_overflow={self.max_overflow})"
+                "SQLAlchemy engine initialized with LIFO pooling (pool_size=%s, max_overflow=%s)",
+                self.pool_size,
+                self.max_overflow,
             )
 
         except Exception:
@@ -1048,8 +1051,8 @@ class DatabaseService:
         if self._circuit_breaker_failures >= self.circuit_breaker_threshold:
             self._circuit_breaker_open = True
             logger.warning(
-                f"Circuit breaker opened after {self._circuit_breaker_failures} "
-                f"failures"
+                "Circuit breaker opened after %s failures",
+                self._circuit_breaker_failures,
             )
 
     # Rate limiting implementation
@@ -1249,7 +1252,7 @@ class DatabaseService:
 
                 return result.data
             except Exception as e:
-                logger.exception(f"INSERT error for table '{table}'")
+                logger.exception("INSERT error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to insert into table '{table}'",
                     code="INSERT_FAILED",
@@ -1301,7 +1304,7 @@ class DatabaseService:
                 result = await asyncio.to_thread(lambda: query.execute())
                 return result.data
             except Exception as e:
-                logger.exception(f"SELECT error for table '{table}'")
+                logger.exception("SELECT error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to select from table '{table}'",
                     code="SELECT_FAILED",
@@ -1341,7 +1344,7 @@ class DatabaseService:
 
                 return result.data
             except Exception as e:
-                logger.exception(f"UPDATE error for table '{table}'")
+                logger.exception("UPDATE error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to update table '{table}'",
                     code="UPDATE_FAILED",
@@ -1380,7 +1383,7 @@ class DatabaseService:
 
                 return result.data
             except Exception as e:
-                logger.exception(f"UPSERT error for table '{table}'")
+                logger.exception("UPSERT error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to upsert into table '{table}'",
                     code="UPSERT_FAILED",
@@ -1419,7 +1422,7 @@ class DatabaseService:
 
                 return result.data
             except Exception as e:
-                logger.exception(f"DELETE error for table '{table}'")
+                logger.exception("DELETE error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to delete from table '{table}'",
                     code="DELETE_FAILED",
@@ -1449,7 +1452,7 @@ class DatabaseService:
                 result = await asyncio.to_thread(lambda: query.execute())
                 return result.count
             except Exception as e:
-                logger.exception(f"COUNT error for table '{table}'")
+                logger.exception("COUNT error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to count records in table '{table}'",
                     code="COUNT_FAILED",
@@ -1541,7 +1544,7 @@ class DatabaseService:
                     return result.data
 
             except Exception as e:
-                logger.exception(f"Vector search error for table '{table}'")
+                logger.exception("Vector search error for table '%s'", table)
                 raise CoreDatabaseError(
                     message=f"Failed to perform vector search on table '{table}'",
                     code="VECTOR_SEARCH_FAILED",
@@ -1973,7 +1976,7 @@ class DatabaseTransactionContext:
                 )
                 return result.data
             except Exception as e:
-                logger.exception(f"Function call error for '{function_name}'")
+                logger.exception("Function call error for '%s'", function_name)
                 raise CoreDatabaseError(
                     message=f"Failed to call database function '{function_name}'",
                     code="FUNCTION_CALL_FAILED",
@@ -1991,7 +1994,7 @@ class DatabaseTransactionContext:
             result = await self.select("trips", "*", {"id": trip_id}, user_id=user_id)
             return result[0] if result else None
         except Exception:
-            logger.exception(f"Failed to get trip by ID {trip_id}")
+            logger.exception("Failed to get trip by ID %s", trip_id)
             return None
 
     async def search_trips(
@@ -2077,7 +2080,7 @@ class DatabaseTransactionContext:
                 "trip_collaborators", "*", {"trip_id": trip_id}, user_id=user_id
             )
         except Exception as e:
-            logger.exception(f"Failed to get trip collaborators for trip {trip_id}")
+            logger.exception("Failed to get trip collaborators for trip %s", trip_id)
             raise CoreDatabaseError(
                 message=f"Failed to get collaborators for trip {trip_id}",
                 code="GET_COLLABORATORS_FAILED",
@@ -2121,7 +2124,7 @@ class DatabaseTransactionContext:
             return results
 
         except Exception as e:
-            logger.exception(f"Failed to get trip related counts for trip {trip_id}")
+            logger.exception("Failed to get trip related counts for trip %s", trip_id)
             raise CoreDatabaseError(
                 message=f"Failed to get related counts for trip {trip_id}",
                 code="GET_TRIP_COUNTS_FAILED",
@@ -2182,7 +2185,7 @@ class DatabaseTransactionContext:
 
         except Exception as e:
             logger.exception(
-                f"Failed to get trip collaborator for trip {trip_id}, user {user_id}"
+                "Failed to get trip collaborator for trip %s, user %s", trip_id, user_id
             )
             raise CoreDatabaseError(
                 message=(
@@ -2281,7 +2284,7 @@ class DatabaseTransactionContext:
             )
             return {"columns": result}
         except Exception as e:
-            logger.exception(f"Failed to get table info for '{table}'")
+            logger.exception("Failed to get table info for '%s'", table)
             raise CoreDatabaseError(
                 message=f"Failed to get schema info for table '{table}'",
                 code="TABLE_INFO_FAILED",
@@ -2413,9 +2416,12 @@ class DatabaseTransactionContext:
 
         # In a real implementation, this would write to an audit log table
         logger.info(
-            f"AUDIT: user={user_id}, action={action}, table={table}, "
-            f"records={records_affected}, "
-            f"timestamp={datetime.now(UTC).isoformat()}"
+            "AUDIT: user=%s, action=%s, table=%s, records=%s, timestamp=%s",
+            user_id,
+            action,
+            table,
+            records_affected,
+            datetime.now(UTC).isoformat(),
         )
 
     def _get_queries_by_type(self) -> dict[str, int]:

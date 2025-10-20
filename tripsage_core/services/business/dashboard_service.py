@@ -445,7 +445,7 @@ class DashboardService:
                 return self._get_default_rate_limit_status(key_id, window_minutes)
 
         except Exception:
-            logger.exception(f"Failed to get rate limit status for {key_id}")
+            logger.exception("Failed to get rate limit status for %s", key_id)
             return self._get_default_rate_limit_status(key_id, window_minutes)
 
     async def _get_real_time_metrics(self, time_range_hours: int) -> RealTimeMetrics:
@@ -800,7 +800,7 @@ class DashboardService:
             }
 
         except Exception:
-            logger.exception(f"Failed to get service usage data for {service_type}")
+            logger.exception("Failed to get service usage data for %s", service_type)
             return {
                 "requests": 0,
                 "errors": 0,
@@ -926,7 +926,7 @@ class DashboardService:
         )
 
         self._active_alerts[alert.alert_id] = alert
-        logger.info(f"Created alert {alert.alert_id}: {title}")
+        logger.info("Created alert %s: %s", alert.alert_id, title)
 
         return alert
 
@@ -939,7 +939,7 @@ class DashboardService:
             alert.acknowledged_at = datetime.now(UTC)
             alert.updated_at = datetime.now(UTC)
 
-            logger.info(f"Alert {alert_id} acknowledged by {user_id}")
+            logger.info("Alert %s acknowledged by %s", alert_id, user_id)
             return True
 
         return False
@@ -952,7 +952,7 @@ class DashboardService:
             alert.resolved_at = datetime.now(UTC)
             alert.updated_at = datetime.now(UTC)
 
-            logger.info(f"Alert {alert_id} resolved")
+            logger.info("Alert %s resolved", alert_id)
             return True
 
         return False

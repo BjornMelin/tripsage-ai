@@ -88,7 +88,7 @@ class DashboardConnectionManager:
             "connected_at": datetime.now(UTC),
         }
 
-        logger.info(f"Dashboard WebSocket connection established for user {user_id}")
+        logger.info("Dashboard WebSocket connection established for user %s", user_id)
 
     def disconnect(self, websocket: WebSocket) -> None:
         """Disconnect a dashboard client."""
@@ -96,7 +96,7 @@ class DashboardConnectionManager:
             self.active_connections.remove(websocket)
             metadata = self.connection_metadata.pop(websocket, {})
             user_id = metadata.get("user_id", "unknown")
-            logger.info(f"Dashboard WebSocket connection closed for user {user_id}")
+            logger.info("Dashboard WebSocket connection closed for user %s", user_id)
 
     async def send_personal_message(self, message: str, websocket: WebSocket) -> None:
         """Send message to specific connection."""

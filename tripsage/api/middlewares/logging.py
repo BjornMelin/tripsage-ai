@@ -74,7 +74,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
             # Log the response
             logger.info(
-                f"Request completed: {response.status_code}",
+                "Request completed: %s",
+                response.status_code,
                 extra={
                     "correlation_id": correlation_id,
                     "status_code": response.status_code,

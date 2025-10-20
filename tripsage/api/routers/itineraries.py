@@ -43,7 +43,7 @@ async def create_itinerary(
         user_id = get_principal_id(principal)
         return await itinerary_service.create_itinerary(user_id, request)
     except ValueError as e:
-        logger.warning(f"Invalid itinerary creation request: {e!s}")
+        logger.warning("Invalid itinerary creation request: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -82,7 +82,7 @@ async def get_itinerary(
         user_id = get_principal_id(principal)
         return await itinerary_service.get_itinerary(user_id, itinerary_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Itinerary not found: {itinerary_id}")
+        logger.warning("Itinerary not found: %s", itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -101,13 +101,13 @@ async def update_itinerary(
         user_id = get_principal_id(principal)
         return await itinerary_service.update_itinerary(user_id, itinerary_id, request)
     except ResourceNotFoundError as e:
-        logger.warning(f"Itinerary not found: {itinerary_id}")
+        logger.warning("Itinerary not found: %s", itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid itinerary update request: {e!s}")
+        logger.warning("Invalid itinerary update request: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -125,7 +125,7 @@ async def delete_itinerary(
         user_id = get_principal_id(principal)
         await itinerary_service.delete_itinerary(user_id, itinerary_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Itinerary not found: {itinerary_id}")
+        logger.warning("Itinerary not found: %s", itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -146,13 +146,13 @@ async def add_item_to_itinerary(
             user_id, itinerary_id, request
         )
     except ResourceNotFoundError as e:
-        logger.warning(f"Itinerary not found: {itinerary_id}")
+        logger.warning("Itinerary not found: %s", itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid item creation request: {e!s}")
+        logger.warning("Invalid item creation request: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -171,7 +171,7 @@ async def get_itinerary_item(
         user_id = get_principal_id(principal)
         return await itinerary_service.get_item(user_id, itinerary_id, item_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Item not found: {item_id} in itinerary {itinerary_id}")
+        logger.warning("Item not found: %s in itinerary %s", item_id, itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -193,13 +193,13 @@ async def update_itinerary_item(
             user_id, itinerary_id, item_id, request
         )
     except ResourceNotFoundError as e:
-        logger.warning(f"Item not found: {item_id} in itinerary {itinerary_id}")
+        logger.warning("Item not found: %s in itinerary %s", item_id, itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid item update request: {e!s}")
+        logger.warning("Invalid item update request: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
@@ -220,7 +220,7 @@ async def delete_itinerary_item(
         user_id = get_principal_id(principal)
         await itinerary_service.delete_item(user_id, itinerary_id, item_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Item not found: {item_id} in itinerary {itinerary_id}")
+        logger.warning("Item not found: %s in itinerary %s", item_id, itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -238,7 +238,7 @@ async def check_itinerary_conflicts(
         user_id = get_principal_id(principal)
         return await itinerary_service.check_conflicts(user_id, itinerary_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Itinerary not found: {itinerary_id}")
+        logger.warning("Itinerary not found: %s", itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -256,13 +256,13 @@ async def optimize_itinerary(
         user_id = get_principal_id(principal)
         return await itinerary_service.optimize_itinerary(user_id, request)
     except ResourceNotFoundError as e:
-        logger.warning(f"Itinerary not found: {request.itinerary_id}")
+        logger.warning("Itinerary not found: %s", request.itinerary_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
     except ValueError as e:
-        logger.warning(f"Invalid optimization request: {e!s}")
+        logger.warning("Invalid optimization request: %s", e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),

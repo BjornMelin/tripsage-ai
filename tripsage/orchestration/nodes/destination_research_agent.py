@@ -63,8 +63,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(
-            f"Initialized destination research agent with "
-            f"{len(self.available_tools)} tools"
+            "Initialized destination research agent with %s tools",
+            len(self.available_tools),
         )
 
     async def _load_configuration(self) -> None:
@@ -85,8 +85,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
             )
 
             logger.info(
-                f"Loaded destination research agent configuration from database: "
-                f"temp={self.agent_config['temperature']}"
+                "Loaded destination research agent configuration from database: temp=%s",
+                self.agent_config["temperature"],
             )
 
         except Exception:
@@ -303,11 +303,11 @@ class DestinationResearchAgentNode(BaseAgentNode):
             location_data = await self._get_location_data(destination)
             research_results["location_data"] = location_data
 
-            logger.info(f"Destination research completed for {destination}")
+            logger.info("Destination research completed for %s", destination)
             return research_results
 
         except Exception as e:
-            logger.exception(f"Destination research failed for {destination}")
+            logger.exception("Destination research failed for %s", destination)
             return {"error": f"Research failed: {e!s}", "destination": destination}
 
     async def _research_overview(self, destination: str) -> dict[str, Any]:

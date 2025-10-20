@@ -55,7 +55,7 @@ async def initialize_databases(
             result = supabase.rpc("version").execute()
             if result.data:
                 logger.info(
-                    f"SQL database connection verified: PostgreSQL {result.data}"
+                    "SQL database connection verified: PostgreSQL %s", result.data
                 )
             else:
                 logger.exception("SQL connection verification failed")
@@ -68,7 +68,7 @@ async def initialize_databases(
             # Run SQL migrations
             sql_succeeded, sql_failed = await run_migrations()
             logger.info(
-                f"SQL migrations: {sql_succeeded} succeeded, {sql_failed} failed"
+                "SQL migrations: %s succeeded, %s failed", sql_succeeded, sql_failed
             )
 
             if sql_failed > 0:
@@ -114,7 +114,7 @@ async def verify_database_schema() -> dict[str, Any]:
             ]
             results["sql"]["initialized"] = len(existing_tables) > 0
 
-        logger.info(f"Database schema verification completed: {results}")
+        logger.info("Database schema verification completed: %s", results)
         return results
 
     except Exception as e:
@@ -158,7 +158,7 @@ async def create_sample_data() -> bool:
         for user in sample_users:
             result = supabase.table("users").upsert(user).execute()
             if result.data:
-                logger.info(f"Created sample user: {user['email']}")
+                logger.info("Created sample user: %s", user["email"])
 
         # Create sample trips
         sample_trips = [
@@ -187,7 +187,7 @@ async def create_sample_data() -> bool:
         for trip in sample_trips:
             result = supabase.table("trips").upsert(trip).execute()
             if result.data:
-                logger.info(f"Created sample trip: {trip['title']}")
+                logger.info("Created sample trip: %s", trip["title"])
 
         logger.info("Sample data creation completed")
         logger.info("Note: Memory/graph data is now handled by Mem0 service")

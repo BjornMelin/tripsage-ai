@@ -171,10 +171,10 @@ class WebCrawlPersistence:
             response = await self.supabase.insert(table, data)
 
             if "error" in response:
-                logger.exception(f"Supabase storage error: {response.get('error')}")
+                logger.exception("Supabase storage error: %s", response.get("error"))
                 return False
 
-            logger.info(f"Successfully stored result in Supabase table: {table}")
+            logger.info("Successfully stored result in Supabase table: %s", table)
             return True
 
         except Exception:
@@ -242,14 +242,14 @@ class WebCrawlPersistence:
 
             if memory_result.get("status") == "success":
                 logger.info(
-                    f"Successfully stored web crawl result in memory: "
-                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                    "Successfully stored web crawl result in memory: %s memories extracted",
+                    memory_result.get("memories_extracted", 0),
                 )
                 return True
             else:
                 logger.warning(
-                    f"Memory storage completed with issues: "
-                    f"{memory_result.get('error', 'Unknown')}"
+                    "Memory storage completed with issues: %s",
+                    memory_result.get("error", "Unknown"),
                 )
                 return False
 
@@ -320,14 +320,15 @@ class WebCrawlPersistence:
 
             if memory_result.get("status") == "success":
                 logger.info(
-                    f"Successfully stored events in memory for {destination_name}: "
-                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                    "Successfully stored events in memory for %s: %s memories extracted",
+                    destination_name,
+                    memory_result.get("memories_extracted", 0),
                 )
                 return True
             else:
                 logger.warning(
-                    f"Events memory storage had issues: "
-                    f"{memory_result.get('error', 'Unknown')}"
+                    "Events memory storage had issues: %s",
+                    memory_result.get("error", "Unknown"),
                 )
                 return False
 
@@ -417,14 +418,15 @@ class WebCrawlPersistence:
 
             if memory_result.get("status") == "success":
                 logger.info(
-                    f"Successfully stored blog in memory from {url}: "
-                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                    "Successfully stored blog in memory from %s: %s memories extracted",
+                    url,
+                    memory_result.get("memories_extracted", 0),
                 )
                 return True
             else:
                 logger.warning(
-                    f"Blog memory storage had issues: "
-                    f"{memory_result.get('error', 'Unknown')}"
+                    "Blog memory storage had issues: %s",
+                    memory_result.get("error", "Unknown"),
                 )
                 return False
 
@@ -461,13 +463,13 @@ class WebCrawlPersistence:
 
             if "error" in response:
                 logger.exception(
-                    f"Supabase price history storage error: {response.get('error')}"
+                    "Supabase price history storage error: %s", response.get("error")
                 )
                 return False
 
             logger.info(
-                f"Successfully stored price history in Supabase for "
-                f"{item.get('title', '')}"
+                "Successfully stored price history in Supabase for %s",
+                item.get("title", ""),
             )
             return True
 

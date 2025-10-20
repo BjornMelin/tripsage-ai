@@ -863,7 +863,8 @@ class DestinationService:
                         )
                 except Exception as e:
                     logger.warning(
-                        f"Failed to get weather for {destination.name}",
+                        "Failed to get weather for %s",
+                        destination.name,
                         extra={"error": str(e)},
                     )
 
@@ -888,7 +889,8 @@ class DestinationService:
                 destination.travel_advisory = advisory
             except Exception as e:
                 logger.warning(
-                    f"Failed to get advisory for {destination.name}",
+                    "Failed to get advisory for %s",
+                    destination.name,
                     extra={"error": str(e)},
                 )
 
@@ -965,7 +967,8 @@ class DestinationService:
                     )
             except Exception as e:
                 logger.warning(
-                    f"Failed to get weather for {destination.name}",
+                    "Failed to get weather for %s",
+                    destination.name,
                     extra={"error": str(e)},
                 )
 

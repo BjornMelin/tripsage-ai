@@ -145,7 +145,7 @@ class SimpleCircuitBreaker:
         self.metrics = CircuitBreakerMetrics(name)
 
         logger.info(
-            f"Initialized simple circuit breaker '{name}' with {max_retries} retries"
+            "Initialized simple circuit breaker '%s' with %s retries", name, max_retries
         )
 
     def __call__(self, func: Callable) -> Callable:
@@ -177,8 +177,10 @@ class SimpleCircuitBreaker:
             except Exception as e:
                 self.metrics.record_failure(type(e).__name__)
                 logger.warning(
-                    f"Simple circuit breaker '{self.name}' failed after "
-                    f"{self.max_retries} retries: {e}"
+                    "Simple circuit breaker '%s' failed after %s retries: %s",
+                    self.name,
+                    self.max_retries,
+                    e,
                 )
                 raise
 
@@ -207,8 +209,10 @@ class SimpleCircuitBreaker:
             except Exception as e:
                 self.metrics.record_failure(type(e).__name__)
                 logger.warning(
-                    f"Simple circuit breaker '{self.name}' failed after "
-                    f"{self.max_retries} retries: {e}"
+                    "Simple circuit breaker '%s' failed after %s retries: %s",
+                    self.name,
+                    self.max_retries,
+                    e,
                 )
                 raise
 
@@ -259,8 +263,9 @@ class EnterpriseCircuitBreaker:
         )()
 
         logger.info(
-            f"Initialized enterprise circuit breaker '{name}' with "
-            f"failure_threshold={failure_threshold}"
+            "Initialized enterprise circuit breaker '%s' with failure_threshold=%s",
+            name,
+            failure_threshold,
         )
 
     def __call__(self, func: Callable) -> Callable:
@@ -298,8 +303,8 @@ class EnterpriseCircuitBreaker:
             # Reset failure count on success
             if self.failure_count > 0:
                 logger.debug(
-                    f"Circuit breaker '{self.name}' resetting failure count "
-                    f"after success"
+                    "Circuit breaker '%s' resetting failure count after success",
+                    self.name,
                 )
                 self.failure_count = 0
 
@@ -318,7 +323,9 @@ class EnterpriseCircuitBreaker:
     def _transition_to_open(self) -> None:
         """Transition circuit to OPEN state."""
         logger.warning(
-            f"Circuit breaker '{self.name}' opening after {self.failure_count} failures"
+            "Circuit breaker '%s' opening after %s failures",
+            self.name,
+            self.failure_count,
         )
         self.state = CircuitState.OPEN
         self.state_change_time = time.time()
@@ -330,8 +337,8 @@ class EnterpriseCircuitBreaker:
     def _transition_to_half_open(self) -> None:
         """Transition circuit to HALF_OPEN state."""
         logger.info(
-            f"Circuit breaker '{self.name}' transitioning to half-open "
-            f"for recovery testing"
+            "Circuit breaker '%s' transitioning to half-open for recovery testing",
+            self.name,
         )
         self.state = CircuitState.HALF_OPEN
         self.success_count = 0
@@ -343,8 +350,9 @@ class EnterpriseCircuitBreaker:
     def _transition_to_closed(self) -> None:
         """Transition circuit to CLOSED state."""
         logger.info(
-            f"Circuit breaker '{self.name}' closing after "
-            f"{self.success_count} successful recoveries"
+            "Circuit breaker '%s' closing after %s successful recoveries",
+            self.name,
+            self.success_count,
         )
         self.state = CircuitState.CLOSED
         self.failure_count = 0
@@ -366,7 +374,7 @@ class EnterpriseCircuitBreaker:
             "metrics": self.metrics.get_summary(),
             "timestamp": time.time(),
         }
-        logger.info(f"Circuit breaker analytics: {event_data}")
+        logger.info("Circuit breaker analytics: %s", event_data)
 
     def _wrap_sync(self, func: Callable) -> Callable:
         """Wrap synchronous function with enterprise circuit breaker."""
@@ -489,7 +497,7 @@ def circuit_breaker(
     circuit_breaker_mode = "simple"
 
     if circuit_breaker_mode == "enterprise":
-        logger.debug(f"Creating enterprise circuit breaker '{name}'")
+        logger.debug("Creating enterprise circuit breaker '%s'", name)
         return EnterpriseCircuitBreaker(
             name=name,
             failure_threshold=failure_threshold,
@@ -501,7 +509,7 @@ def circuit_breaker(
             exceptions=exceptions,
         )
     else:
-        logger.debug(f"Creating simple circuit breaker '{name}'")
+        logger.debug("Creating simple circuit breaker '%s'", name)
         return SimpleCircuitBreaker(
             name=name,
             max_retries=max_retries,

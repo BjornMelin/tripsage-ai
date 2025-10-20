@@ -45,7 +45,7 @@ class BenchmarkRunner:
         self.reporter = ReportGenerator(self.output_dir)
         self.start_time = time.time()
 
-        logger.info(f"Benchmark runner initialized with output dir: {self.output_dir}")
+        logger.info("Benchmark runner initialized with output dir: %s", self.output_dir)
 
     async def run_quick_test(self) -> dict[str, Any]:
         """Run quick performance test (2-3 minutes)."""
@@ -75,7 +75,7 @@ class BenchmarkRunner:
             report_path = await self.reporter.generate_report(report_data, "quick_test")
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Quick test completed. Report: {report_path}")
+            logger.info("Quick test completed. Report: %s", report_path)
             return report_data
 
         except Exception:
@@ -110,7 +110,7 @@ class BenchmarkRunner:
             )
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Database-only test completed. Report: {report_path}")
+            logger.info("Database-only test completed. Report: %s", report_path)
             return report_data
 
         except Exception:
@@ -145,7 +145,7 @@ class BenchmarkRunner:
             )
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Vector-only test completed. Report: {report_path}")
+            logger.info("Vector-only test completed. Report: %s", report_path)
             return report_data
 
         except Exception:
@@ -197,7 +197,7 @@ class BenchmarkRunner:
             report_path = await self.reporter.generate_report(report_data, "full_suite")
             report_data["report_path"] = str(report_path)
 
-            logger.info(f"Full suite completed. Report: {report_path}")
+            logger.info("Full suite completed. Report: %s", report_path)
             return report_data
 
         except Exception:
@@ -232,7 +232,7 @@ class BenchmarkRunner:
             operation_count += 1
 
             if i % 100 == 0:
-                logger.debug(f"Completed {i}/{iterations} operations")
+                logger.debug("Completed %s/%s operations", i, iterations)
 
         results["scenarios_completed"] = 1
         results["total_operations"] = operation_count
@@ -250,8 +250,9 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Run database-focused scenarios."""
         logger.info(
-            f"Running database scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
+            "Running database scenarios: %s iterations, %s users",
+            iterations,
+            concurrent_users,
         )
 
         # For real implementation, this would test actual database operations
@@ -264,8 +265,9 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Run vector search scenarios."""
         logger.info(
-            f"Running vector scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
+            "Running vector scenarios: %s iterations, %s users",
+            iterations,
+            concurrent_users,
         )
 
         # For real implementation, this would test pgvector operations
@@ -278,8 +280,9 @@ class BenchmarkRunner:
     ) -> dict[str, Any]:
         """Run mixed workload scenarios."""
         logger.info(
-            f"Running mixed scenarios: {iterations} iterations, "
-            f"{concurrent_users} users"
+            "Running mixed scenarios: %s iterations, %s users",
+            iterations,
+            concurrent_users,
         )
 
         # For real implementation, this would test combined workloads

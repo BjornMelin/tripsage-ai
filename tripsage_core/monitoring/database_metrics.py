@@ -148,8 +148,10 @@ class DatabaseMetrics:
         self.connection_duration.labels(service=service).observe(duration)
 
         logger.debug(
-            f"Recorded connection attempt: service={service}, success={success}, "
-            f"duration={duration:.3f}s"
+            "Recorded connection attempt: service=%s, success=%s, duration=%.3fs",
+            service,
+            success,
+            duration,
         )
 
     def set_active_connections(self, service: str, count: int):
@@ -196,8 +198,12 @@ class DatabaseMetrics:
             ).inc()
 
         logger.debug(
-            f"Recorded query: service={service}, operation={operation}, "
-            f"table={table}, duration={duration:.3f}s, success={success}"
+            "Recorded query: service=%s, operation=%s, table=%s, duration=%.3fs, success=%s",
+            service,
+            operation,
+            table,
+            duration,
+            success,
         )
 
     @contextmanager
@@ -237,7 +243,7 @@ class DatabaseMetrics:
         self.health_status.labels(service=service).set(1 if healthy else 0)
         self.last_health_check.labels(service=service).set(time.time())
 
-        logger.debug(f"Recorded health check: service={service}, healthy={healthy}")
+        logger.debug("Recorded health check: service=%s, healthy=%s", service, healthy)
 
     def set_pool_metrics(self, service: str, size: int, available: int):
         """Set connection pool metrics.
@@ -294,7 +300,7 @@ class DatabaseMetrics:
             duration = time.time() - start_time
             self.transaction_duration.labels(service=service).observe(duration)
             logger.debug(
-                f"Recorded transaction: service={service}, duration={duration:.3f}s"
+                "Recorded transaction: service=%s, duration=%.3fs", service, duration
             )
 
     def get_metrics_summary(self) -> dict[str, any]:
@@ -339,7 +345,7 @@ class DatabaseMetrics:
         """
         try:
             start_http_server(port, registry=self.registry)
-            logger.info(f"Metrics server started on port {port}")
+            logger.info("Metrics server started on port %s", port)
         except Exception:
             logger.exception("Failed to start metrics server")
             raise

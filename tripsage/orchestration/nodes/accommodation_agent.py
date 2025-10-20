@@ -49,7 +49,7 @@ class AccommodationAgentNode(BaseAgentNode):
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(
-            f"Initialized accommodation agent with {len(self.available_tools)} tools"
+            "Initialized accommodation agent with %s tools", len(self.available_tools)
         )
 
         logger.info("Initialized accommodation agent with service-based architecture")
@@ -190,9 +190,9 @@ class AccommodationAgentNode(BaseAgentNode):
 
             if result.get("status") == "success":
                 properties_found = len(result.get("listings", []))
-                logger.info(f"Search completed: {properties_found} properties found")
+                logger.info("Search completed: %s properties found", properties_found)
             else:
-                logger.warning(f"Accommodation search failed: {result.get('error')}")
+                logger.warning("Accommodation search failed: %s", result.get("error"))
 
             return result
 

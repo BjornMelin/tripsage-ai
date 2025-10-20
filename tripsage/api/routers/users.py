@@ -35,7 +35,7 @@ async def get_user_preferences(
         HTTPException: If user is not found
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Getting preferences for user: {user_id}")
+    logger.info("Getting preferences for user: %s", user_id)
 
     try:
         user = await user_service.get_user_by_id(user_id)
@@ -82,7 +82,7 @@ async def update_user_preferences(
         HTTPException: If update fails
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Updating preferences for user: {user_id}")
+    logger.info("Updating preferences for user: %s", user_id)
 
     try:
         # Update preferences (service handles merging)

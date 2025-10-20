@@ -423,7 +423,7 @@ async def get_rate_limits_status(
                     )
 
             except Exception as e:
-                logger.warning(f"Failed to get rate limit for key {key_id}: {e}")
+                logger.warning("Failed to get rate limit for key %s: %s", key_id, e)
                 continue
 
         return rate_limits
@@ -547,7 +547,7 @@ async def acknowledge_alert(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to acknowledge alert {alert_id}")
+        logger.exception("Failed to acknowledge alert %s", alert_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to acknowledge alert: {e!s}",
@@ -593,7 +593,7 @@ async def dismiss_alert(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to dismiss alert {alert_id}")
+        logger.exception("Failed to dismiss alert %s", alert_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to dismiss alert: {e!s}",
@@ -734,7 +734,7 @@ async def get_trend_data(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to get trend data for {metric_type}")
+        logger.exception("Failed to get trend data for %s", metric_type)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve trend data: {e!s}",

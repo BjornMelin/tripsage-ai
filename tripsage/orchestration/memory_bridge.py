@@ -48,7 +48,7 @@ class SessionMemoryBridge:
             return state
 
         try:
-            logger.debug(f"Hydrating state for user: {user_id}")
+            logger.debug("Hydrating state for user: %s", user_id)
 
             # Load session memory data
             session_data = await initialize_session_memory(user_id)
@@ -56,12 +56,12 @@ class SessionMemoryBridge:
             # Map session data to LangGraph state format
             if session_data:
                 state = await self._map_session_to_state(state, session_data)
-                logger.info(f"Successfully hydrated state for user {user_id}")
+                logger.info("Successfully hydrated state for user %s", user_id)
             else:
-                logger.info(f"No existing session data found for user {user_id}")
+                logger.info("No existing session data found for user %s", user_id)
 
         except Exception:
-            logger.exception(f"Failed to hydrate state for user {user_id}")
+            logger.exception("Failed to hydrate state for user %s", user_id)
             # Continue without memory data rather than failing
 
         return state
@@ -217,7 +217,7 @@ class SessionMemoryBridge:
             return {}
 
         try:
-            logger.debug(f"Extracting insights for user: {user_id}")
+            logger.debug("Extracting insights for user: %s", user_id)
 
             # Extract insights from current state
             insights = await self._extract_insights_from_state(state)
@@ -225,14 +225,14 @@ class SessionMemoryBridge:
             if insights:
                 # Update session memory with new insights
                 result = await update_session_memory(user_id, insights)
-                logger.info(f"Successfully persisted insights for user {user_id}")
+                logger.info("Successfully persisted insights for user %s", user_id)
                 return result
             else:
-                logger.debug(f"No new insights to persist for user {user_id}")
+                logger.debug("No new insights to persist for user %s", user_id)
                 return {}
 
         except Exception as e:
-            logger.exception(f"Failed to persist insights for user {user_id}")
+            logger.exception("Failed to persist insights for user %s", user_id)
             return {"error": str(e)}
 
     async def _extract_insights_from_state(
@@ -421,7 +421,7 @@ class SessionMemoryBridge:
             )
 
             logger.debug(
-                f"Stored checkpoint reference {checkpoint_id} for user {user_id}"
+                "Stored checkpoint reference %s for user %s", checkpoint_id, user_id
             )
 
         except Exception:

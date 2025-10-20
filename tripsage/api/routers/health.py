@@ -177,7 +177,7 @@ async def database_health_check(db_service: DatabaseDep):
             pool_stats = await db_service.get_pool_stats()
             health.details.update(pool_stats)
         except Exception as e:
-            logger.warning(f"Failed to get pool stats: {e}")
+            logger.warning("Failed to get pool stats: %s", e)
 
     return health
 
@@ -205,7 +205,7 @@ async def cache_health_check(cache_service: CacheDep):
                 }
             )
         except Exception as e:
-            logger.warning(f"Failed to get cache info: {e}")
+            logger.warning("Failed to get cache info: %s", e)
 
     return health
 

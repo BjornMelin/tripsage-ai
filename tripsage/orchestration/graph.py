@@ -99,8 +99,8 @@ class TripSageOrchestrator:
                 logger.info("Initialized PostgreSQL checkpointer")
             except Exception as e:
                 logger.warning(
-                    f"Failed to initialize PostgreSQL checkpointer, "
-                    f"using MemorySaver: {e}"
+                    "Failed to initialize PostgreSQL checkpointer, using MemorySaver: %s",
+                    e,
                 )
                 self.checkpointer = MemorySaver()
 
@@ -321,7 +321,7 @@ class TripSageOrchestrator:
         """
 
         async def stub_node(state: TravelPlanningState) -> TravelPlanningState:
-            logger.info(f"Executing stub node: {node_name}")
+            logger.info("Executing stub node: %s", node_name)
 
             # Add a simple response message
             response_message = {
@@ -402,9 +402,9 @@ class TripSageOrchestrator:
             # Hydrate state with user context and preferences from memory
             try:
                 initial_state = await self.memory_bridge.hydrate_state(initial_state)
-                logger.debug(f"Hydrated state with user context for user {user_id}")
+                logger.debug("Hydrated state with user context for user %s", user_id)
             except Exception as e:
-                logger.warning(f"Failed to hydrate state from memory: {e}")
+                logger.warning("Failed to hydrate state from memory: %s", e)
 
             # Configure for session-based persistence
             config = {"configurable": {"thread_id": session_id}}
@@ -415,9 +415,9 @@ class TripSageOrchestrator:
             # Extract and persist insights from the conversation
             try:
                 insights = await self.memory_bridge.extract_and_persist_insights(result)
-                logger.debug(f"Persisted conversation insights: {insights}")
+                logger.debug("Persisted conversation insights: %s", insights)
             except Exception as e:
-                logger.warning(f"Failed to persist insights to memory: {e}")
+                logger.warning("Failed to persist insights to memory: %s", e)
 
             # Extract response from the last assistant message
             response_content = "I'm ready to help with your travel planning!"
@@ -426,7 +426,7 @@ class TripSageOrchestrator:
                     response_content = msg["content"]
                     break
 
-            logger.info(f"Successfully processed message for user {user_id}")
+            logger.info("Successfully processed message for user %s", user_id)
 
             return {
                 "response": response_content,

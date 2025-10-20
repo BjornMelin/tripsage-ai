@@ -64,7 +64,7 @@ async def search_airbnb_rentals_tool(
     Returns:
         Search results with available Airbnb rental options
     """
-    logger.info(f"Searching Airbnb rentals in {location}")
+    logger.info("Searching Airbnb rentals in %s", location)
 
     # Get accommodation service from registry
     accommodation_service = service_registry.get_required_service(
@@ -170,7 +170,7 @@ async def get_airbnb_listing_details_tool(
     Returns:
         Detailed information about the Airbnb listing
     """
-    logger.info(f"Getting details for Airbnb listing: {listing_id}")
+    logger.info("Getting details for Airbnb listing: %s", listing_id)
 
     # Get accommodation service from registry
     accommodation_service = service_registry.get_required_service(
@@ -252,7 +252,7 @@ async def search_accommodations_tool(
     Returns:
         Search results with available accommodation options
     """
-    logger.info(f"Searching {source} accommodations in {location}")
+    logger.info("Searching %s accommodations in %s", source, location)
 
     # Currently, delegate to airbnb search
     if source.lower() == "airbnb":
@@ -308,7 +308,7 @@ async def book_accommodation_tool(
     Returns:
         Booking initiation result
     """
-    logger.info(f"Initiating booking for {source} listing: {listing_id}")
+    logger.info("Initiating booking for %s listing: %s", source, listing_id)
 
     # Get accommodation service from registry
     accommodation_service = service_registry.get_required_service(

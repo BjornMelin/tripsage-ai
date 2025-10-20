@@ -75,9 +75,10 @@ class MonitoredDeque(deque):
         if self.maxlen and len(self) >= self.maxlen:
             self.dropped_count += 1
             logger.warning(
-                f"Message dropped from {self.priority_name} priority queue "
-                f"for connection {self.connection_id}. "
-                f"Total dropped: {self.dropped_count}"
+                "Message dropped from %s priority queue for connection %s. Total dropped: %s",
+                self.priority_name,
+                self.connection_id,
+                self.dropped_count,
             )
         super().append(item)
 
@@ -85,9 +86,10 @@ class MonitoredDeque(deque):
         if self.maxlen and len(self) >= self.maxlen:
             self.dropped_count += 1
             logger.warning(
-                f"Message dropped from {self.priority_name} priority queue "
-                f"for connection {self.connection_id}. "
-                f"Total dropped: {self.dropped_count}"
+                "Message dropped from %s priority queue for connection %s. Total dropped: %s",
+                self.priority_name,
+                self.connection_id,
+                self.dropped_count,
             )
         super().appendleft(item)
 
@@ -206,14 +208,18 @@ class WebSocketConnection:
         if current_size >= threshold and not self.backpressure_active:
             self.backpressure_active = True
             logger.warning(
-                f"Backpressure activated for connection {self.connection_id}. "
-                f"Queue size: {current_size}/{self.MAX_TOTAL_QUEUE_SIZE}"
+                "Backpressure activated for connection %s. Queue size: %s/%s",
+                self.connection_id,
+                current_size,
+                self.MAX_TOTAL_QUEUE_SIZE,
             )
         elif current_size < threshold / 2 and self.backpressure_active:
             self.backpressure_active = False
             logger.info(
-                f"Backpressure deactivated for connection {self.connection_id}. "
-                f"Queue size: {current_size}/{self.MAX_TOTAL_QUEUE_SIZE}"
+                "Backpressure deactivated for connection %s. Queue size: %s/%s",
+                self.connection_id,
+                current_size,
+                self.MAX_TOTAL_QUEUE_SIZE,
             )
 
         return self.backpressure_active
@@ -233,9 +239,9 @@ class WebSocketConnection:
             if priority == 3:  # Low priority
                 self.dropped_messages_count += 1
                 logger.warning(
-                    f"Dropped low priority message for connection "
-                    f"{self.connection_id}. "
-                    f"Total dropped: {self.dropped_messages_count}"
+                    "Dropped low priority message for connection %s. Total dropped: %s",
+                    self.connection_id,
+                    self.dropped_messages_count,
                 )
                 return True  # Event was "handled" by being dropped
 
@@ -247,18 +253,18 @@ class WebSocketConnection:
                     low_priority_queue.popleft()  # Drop oldest low priority message
                     self.dropped_messages_count += 1
                     logger.warning(
-                        f"Dropped low priority message to make space for "
-                        f"priority {priority} message on connection "
-                        f"{self.connection_id}"
+                        "Dropped low priority message to make space for priority %s message on connection %s",
+                        priority,
+                        self.connection_id,
                     )
                     # Now add the higher priority message
                     self.priority_queue[priority].append(event)
                     return True
                 # No low priority messages to drop, reject the new message
                 logger.exception(
-                    f"Queue full and no low priority messages to drop for "
-                    f"connection {self.connection_id}. "
-                    f"Rejecting priority {priority} message."
+                    "Queue full and no low priority messages to drop for connection %s. Rejecting priority %s message.",
+                    self.connection_id,
+                    priority,
                 )
                 return False
 
@@ -345,7 +351,7 @@ class WebSocketConnection:
                         code="MESSAGE_TOO_LARGE",
                     )
             except (TypeError, ValueError) as e:
-                logger.warning(f"Failed to validate message size: {e}")
+                logger.warning("Failed to validate message size: %s", e)
                 # Continue without size validation if serialization fails
 
         if self.state not in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]:
@@ -360,8 +366,9 @@ class WebSocketConnection:
                 pass
             else:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} in "
-                    f"state {self.state}"
+                    "Cannot send to connection %s in state %s",
+                    self.connection_id,
+                    self.state,
                 )
                 return False
 
@@ -372,8 +379,8 @@ class WebSocketConnection:
             # circuit breaker, fail
             if self.state == ConnectionState.ERROR:
                 logger.warning(
-                    f"Cannot send to connection {self.connection_id} - "
-                    "circuit breaker OPEN and in ERROR state"
+                    "Cannot send to connection %s - circuit breaker OPEN and in ERROR state",
+                    self.connection_id,
                 )
                 return False
 
@@ -398,8 +405,8 @@ class WebSocketConnection:
                 # Drop low priority messages during backpressure
                 self.dropped_messages_count += 1
                 logger.debug(
-                    f"Dropped low priority message due to backpressure on "
-                    f"connection {self.connection_id}"
+                    "Dropped low priority message due to backpressure on connection %s",
+                    self.connection_id,
                 )
                 return False
 
@@ -436,13 +443,13 @@ class WebSocketConnection:
                 if self.state == ConnectionState.ERROR:
                     self.state = ConnectionState.CONNECTED
                     logger.info(
-                        f"Connection {self.connection_id} recovered from ERROR state"
+                        "Connection %s recovered from ERROR state", self.connection_id
                     )
 
                 return True
 
             except Exception:
-                logger.exception(f"Failed to send message to {self.connection_id}")
+                logger.exception("Failed to send message to %s", self.connection_id)
                 self.error_count += 1
                 self.state = ConnectionState.ERROR
 
@@ -507,7 +514,7 @@ class WebSocketConnection:
             for pid in timed_out_pings:
                 del self.ping_sent_times[pid]
                 logger.warning(
-                    f"Ping {pid} timed out for connection {self.connection_id}"
+                    "Ping %s timed out for connection %s", pid, self.connection_id
                 )
 
             # Track this ping
@@ -522,7 +529,7 @@ class WebSocketConnection:
             return success
 
         except Exception:
-            logger.exception(f"Failed to send ping to {self.connection_id}")
+            logger.exception("Failed to send ping to %s", self.connection_id)
             self.state = ConnectionState.ERROR
             return False
 
@@ -550,8 +557,8 @@ class WebSocketConnection:
             self.latency_samples.append(latency)
         else:
             logger.debug(
-                f"Received pong but no outstanding pings for "
-                f"connection {self.connection_id}"
+                "Received pong but no outstanding pings for connection %s",
+                self.connection_id,
             )
 
         # Clear compatibility attribute when all pings are handled (for tests)
@@ -680,12 +687,12 @@ class WebSocketConnection:
     def subscribe_to_channel(self, channel: str) -> None:
         """Subscribe to a channel."""
         self.subscribed_channels.add(channel)
-        logger.debug(f"Connection {self.connection_id} subscribed to {channel}")
+        logger.debug("Connection %s subscribed to %s", self.connection_id, channel)
 
     def unsubscribe_from_channel(self, channel: str) -> None:
         """Unsubscribe from a channel."""
         self.subscribed_channels.discard(channel)
-        logger.debug(f"Connection {self.connection_id} unsubscribed from {channel}")
+        logger.debug("Connection %s unsubscribed from %s", self.connection_id, channel)
 
     def is_subscribed_to_channel(self, channel: str) -> bool:
         """Check if subscribed to a channel."""
@@ -725,7 +732,7 @@ class WebSocketConnectionService:
         connection = self.connections.pop(connection_id, None)
         if connection:
             connection.state = ConnectionState.DISCONNECTED
-            logger.info(f"Removed WebSocket connection {connection_id}")
+            logger.info("Removed WebSocket connection %s", connection_id)
 
     def get_connection(self, connection_id: str) -> WebSocketConnection | None:
         """Get a connection by ID with better encapsulation."""

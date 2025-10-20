@@ -187,9 +187,9 @@ class SecurityValidator:
     def _report_results(self, settings: Settings) -> None:
         """Report validation results."""
         logger.info("📊 Security validation report:")
-        logger.info(f"  Environment: {settings.environment}")
-        logger.info(f"  Debug mode: {settings.debug}")
-        logger.info(f"  Log level: {settings.log_level}")
+        logger.info("  Environment: %s", settings.environment)
+        logger.info("  Debug mode: %s", settings.debug)
+        logger.info("  Log level: %s", settings.log_level)
 
         # Get overall security report
         security_report = settings.get_security_report()
@@ -201,15 +201,15 @@ class SecurityValidator:
 
         # Report issues
         if self.issues:
-            logger.exception(f"❌ {len(self.issues)} security issue(s) found:")
+            logger.exception("❌ %s security issue(s) found:", len(self.issues))
             for issue in self.issues:
-                logger.exception(f" - {issue}")
+                logger.exception(" - %s", issue)
 
         # Report warnings
         if self.warnings:
-            logger.warning(f"⚠️ {len(self.warnings)} security warning(s):")
+            logger.warning("⚠️ %s security warning(s):", len(self.warnings))
             for warning in self.warnings:
-                logger.warning(f"  - {warning}")
+                logger.warning("  - %s", warning)
 
         if not self.issues and not self.warnings:
             logger.info("✅ No security issues or warnings found")
@@ -274,7 +274,7 @@ def main():
         template_path = Path(".env.secure.template")
         with open(template_path, "w") as f:
             f.write(template)
-        logger.info(f"✅ Secure configuration template saved to {template_path}")
+        logger.info("✅ Secure configuration template saved to %s", template_path)
 
     # Exit with appropriate code
     if is_secure:

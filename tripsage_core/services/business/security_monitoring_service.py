@@ -728,7 +728,8 @@ class SecurityMonitoringService:
 
         # TODO: Send to external alerting systems (Slack, email, PagerDuty, etc.)
         logger.warning(
-            f"SECURITY ALERT: {threat.description}",
+            "SECURITY ALERT: %s",
+            threat.description,
             extra={
                 "incident_id": incident.incident_id,
                 "threat_category": threat.threat_category.value,

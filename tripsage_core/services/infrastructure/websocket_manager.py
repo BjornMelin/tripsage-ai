@@ -83,8 +83,9 @@ def redis_with_fallback(fallback_method: str | None = None):
                     )
                 else:
                     logger.warning(
-                        f"No Redis client and no fallback method {fallback_name} "
-                        f"found for {func.__name__}"
+                        "No Redis client and no fallback method %s found for %s",
+                        fallback_name,
+                        func.__name__,
                     )
                     return None
 
@@ -92,7 +93,7 @@ def redis_with_fallback(fallback_method: str | None = None):
                 return await func(self, *args, **kwargs)
             except Exception:
                 logger.exception(
-                    f"Redis operation failed in {func.__name__}, using fallback"
+                    "Redis operation failed in %s, using fallback", func.__name__
                 )
                 fallback_name = fallback_method or f"_local_{func.__name__}"
                 if hasattr(self, fallback_name):
@@ -104,7 +105,9 @@ def redis_with_fallback(fallback_method: str | None = None):
                     )
                 else:
                     logger.exception(
-                        f"No fallback method {fallback_name} found for {func.__name__}"
+                        "No fallback method %s found for %s",
+                        fallback_name,
+                        func.__name__,
                     )
                     raise
 
@@ -635,7 +638,9 @@ class WebSocketManager:
             connection.state = ConnectionState.AUTHENTICATED
 
             logger.info(
-                f"Authenticated WebSocket connection {connection_id} for user {user_id}"
+                "Authenticated WebSocket connection %s for user %s",
+                connection_id,
+                user_id,
             )
 
             return WebSocketAuthResponse(
@@ -730,10 +735,10 @@ class WebSocketManager:
             # Remove from connection service
             await self.connection_service.remove_connection(connection_id)
 
-            logger.info(f"Disconnected WebSocket connection {connection_id}")
+            logger.info("Disconnected WebSocket connection %s", connection_id)
 
         except Exception:
-            logger.exception(f"Error disconnecting connection {connection_id}")
+            logger.exception("Error disconnecting connection %s", connection_id)
 
     async def send_to_connection(
         self, connection_id: str, event: WebSocketEvent
@@ -844,7 +849,7 @@ class WebSocketManager:
                 stale_connections = self.connection_service.get_stale_connections()
 
                 for connection_id in stale_connections:
-                    logger.info(f"Cleaning up stale connection {connection_id}")
+                    logger.info("Cleaning up stale connection %s", connection_id)
                     await self.disconnect_connection(connection_id)
 
                 # Create non-blocking sleep task for cleanup interval
@@ -913,7 +918,7 @@ class WebSocketManager:
                 # Log performance metrics every 5 minutes
                 if int(time.time()) % 300 == 0:
                     stats = self.get_connection_stats()
-                    logger.info(f"WebSocket Performance Metrics: {stats}")
+                    logger.info("WebSocket Performance Metrics: %s", stats)
 
                 # Create non-blocking sleep task for performance monitoring interval
                 performance_sleep_task = asyncio.create_task(asyncio.sleep(30))

@@ -106,12 +106,13 @@ def with_error_handling(
                             extra_context = log_extra_func(*args, **kwargs)
                         except Exception as context_error:
                             logger.warning(
-                                f"Failed to generate logging context: {context_error}"
+                                "Failed to generate logging context: %s", context_error
                             )
 
                     # Log operation start
                     logger.info(
-                        f"Starting operation: {operation_name}",
+                        "Starting operation: %s",
+                        operation_name,
                         extra={"operation": operation_name, **extra_context},
                     )
 
@@ -121,7 +122,8 @@ def with_error_handling(
                     # Log successful completion with execution time
                     execution_time = time.time() - start_time
                     logger.info(
-                        f"Operation completed successfully: {operation_name}",
+                        "Operation completed successfully: %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "execution_time_ms": round(execution_time * 1000, 2),
@@ -135,7 +137,9 @@ def with_error_handling(
                     # Always re-raise critical errors
                     execution_time = time.time() - start_time
                     logger.critical(
-                        f"Critical error in {operation_name}: {e!s}",
+                        "Critical error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -150,7 +154,9 @@ def with_error_handling(
                     # Handle expected errors gracefully
                     execution_time = time.time() - start_time
                     logger.warning(
-                        f"Expected error in {operation_name}: {e!s}",
+                        "Expected error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -180,7 +186,8 @@ def with_error_handling(
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
                     logger.exception(
-                        f"Unexpected error in {operation_name}",
+                        "Unexpected error in %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -230,12 +237,13 @@ def with_error_handling(
                             extra_context = log_extra_func(*args, **kwargs)
                         except Exception as context_error:
                             logger.warning(
-                                f"Failed to generate logging context: {context_error}"
+                                "Failed to generate logging context: %s", context_error
                             )
 
                     # Log operation start
                     logger.info(
-                        f"Starting operation: {operation_name}",
+                        "Starting operation: %s",
+                        operation_name,
                         extra={"operation": operation_name, **extra_context},
                     )
 
@@ -245,7 +253,8 @@ def with_error_handling(
                     # Log successful completion with execution time
                     execution_time = time.time() - start_time
                     logger.info(
-                        f"Operation completed successfully: {operation_name}",
+                        "Operation completed successfully: %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "execution_time_ms": round(execution_time * 1000, 2),
@@ -259,7 +268,9 @@ def with_error_handling(
                     # Always re-raise critical errors
                     execution_time = time.time() - start_time
                     logger.critical(
-                        f"Critical error in {operation_name}: {e!s}",
+                        "Critical error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -274,7 +285,9 @@ def with_error_handling(
                     # Handle expected errors gracefully
                     execution_time = time.time() - start_time
                     logger.warning(
-                        f"Expected error in {operation_name}: {e!s}",
+                        "Expected error in %s: %s",
+                        operation_name,
+                        e,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -304,7 +317,8 @@ def with_error_handling(
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
                     logger.exception(
-                        f"Unexpected error in {operation_name}",
+                        "Unexpected error in %s",
+                        operation_name,
                         extra={
                             "operation": operation_name,
                             "error_type": type(e).__name__,
@@ -388,7 +402,7 @@ def ensure_memory_client_initialized[F: Callable[..., Any]](func: F) -> F:
         except Exception as e:
             # Get function name for better error logging
             func_name = func.__name__
-            logger.exception(f"Error in {func_name}")
+            logger.exception("Error in %s", func_name)
             log_exception(e)
 
             # Return error response in the expected format for agent tools
@@ -436,14 +450,19 @@ def retry_on_failure(
                         last_exception = e
                         if attempt < max_attempts - 1:
                             logger.warning(
-                                f"{func.__name__} failed "
-                                f"(attempt {attempt + 1}/{max_attempts}): {e}"
+                                "%s failed (attempt %s/%s): %s",
+                                func.__name__,
+                                attempt + 1,
+                                max_attempts,
+                                e,
                             )
                             await asyncio.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
                             logger.exception(
-                                f"{func.__name__} failed after {max_attempts} attempts"
+                                "%s failed after %s attempts",
+                                func.__name__,
+                                max_attempts,
                             )
                             raise
 
@@ -466,8 +485,11 @@ def retry_on_failure(
                         last_exception = e
                         if attempt < max_attempts - 1:
                             logger.warning(
-                                f"{func.__name__} failed "
-                                f"(attempt {attempt + 1}/{max_attempts}): {e}"
+                                "%s failed (attempt %s/%s): %s",
+                                func.__name__,
+                                attempt + 1,
+                                max_attempts,
+                                e,
                             )
                             import time
 
@@ -475,7 +497,9 @@ def retry_on_failure(
                             current_delay *= backoff_factor
                         else:
                             logger.exception(
-                                f"{func.__name__} failed after {max_attempts} attempts"
+                                "%s failed after %s attempts",
+                                func.__name__,
+                                max_attempts,
                             )
                             raise
 

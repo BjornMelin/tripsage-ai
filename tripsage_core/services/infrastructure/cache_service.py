@@ -91,7 +91,7 @@ class CacheService:
                 )
 
             safe_url = redis_url.replace(self.settings.redis_password or "", "***")
-            logger.info(f"Connecting to DragonflyDB at {safe_url}")
+            logger.info("Connecting to DragonflyDB at %s", safe_url)
 
             # Create connection pool for better performance
             self._connection_pool = redis.ConnectionPool.from_url(
@@ -125,7 +125,7 @@ class CacheService:
             try:
                 await self._client.close()
             except Exception as e:
-                logger.warning(f"Error closing DragonflyDB connection: {e}")
+                logger.warning("Error closing DragonflyDB connection: %s", e)
             finally:
                 self._client = None
                 self._is_connected = False
@@ -134,7 +134,7 @@ class CacheService:
             try:
                 await self._connection_pool.disconnect()
             except Exception as e:
-                logger.warning(f"Error closing DragonflyDB connection pool: {e}")
+                logger.warning("Error closing DragonflyDB connection pool: %s", e)
             finally:
                 self._connection_pool = None
 
@@ -173,7 +173,7 @@ class CacheService:
             result = await self._client.set(key, json_value, ex=ttl)
             return result is True
         except Exception as e:
-            logger.exception(f"Failed to set JSON value for key {key}")
+            logger.exception("Failed to set JSON value for key %s", key)
             raise CoreServiceError(
                 message=f"Failed to set cache value for key '{key}'",
                 code="CACHE_SET_FAILED",
@@ -203,10 +203,10 @@ class CacheService:
                 return default
             return json.loads(value)
         except json.JSONDecodeError:
-            logger.exception(f"Failed to decode JSON value for key {key}")
+            logger.exception("Failed to decode JSON value for key %s", key)
             return default
         except Exception as e:
-            logger.exception(f"Failed to get JSON value for key {key}")
+            logger.exception("Failed to get JSON value for key %s", key)
             raise CoreServiceError(
                 message=f"Failed to get cache value for key '{key}'",
                 code="CACHE_GET_FAILED",
@@ -239,7 +239,7 @@ class CacheService:
 
             return await self._client.setex(key, ttl, value)
         except Exception as e:
-            logger.exception(f"Failed to set key {key}")
+            logger.exception("Failed to set key %s", key)
             raise CoreServiceError(
                 message=f"Failed to set cache key '{key}'",
                 code="CACHE_SET_FAILED",
@@ -266,7 +266,7 @@ class CacheService:
             value = await self._client.get(key)
             return value.decode("utf-8") if value else None
         except Exception as e:
-            logger.exception(f"Failed to get key {key}")
+            logger.exception("Failed to get key %s", key)
             raise CoreServiceError(
                 message=f"Failed to get cache key '{key}'",
                 code="CACHE_GET_FAILED",
@@ -294,7 +294,7 @@ class CacheService:
         try:
             return await self._client.delete(*keys)
         except Exception as e:
-            logger.exception(f"Failed to delete keys {keys}")
+            logger.exception("Failed to delete keys %s", keys)
             raise CoreServiceError(
                 message="Failed to delete cache keys",
                 code="CACHE_DELETE_FAILED",
@@ -320,7 +320,7 @@ class CacheService:
         try:
             return await self._client.exists(*keys)
         except Exception as e:
-            logger.exception(f"Failed to check existence of keys {keys}")
+            logger.exception("Failed to check existence of keys %s", keys)
             raise CoreServiceError(
                 message="Failed to check cache key existence",
                 code="CACHE_EXISTS_FAILED",
@@ -347,7 +347,7 @@ class CacheService:
         try:
             return await self._client.expire(key, seconds)
         except Exception as e:
-            logger.exception(f"Failed to set expiration for key {key}")
+            logger.exception("Failed to set expiration for key %s", key)
             raise CoreServiceError(
                 message=f"Failed to set expiration for cache key '{key}'",
                 code="CACHE_EXPIRE_FAILED",
@@ -373,7 +373,7 @@ class CacheService:
         try:
             return await self._client.ttl(key)
         except Exception:
-            logger.exception(f"Failed to get TTL for key {key}")
+            logger.exception("Failed to get TTL for key %s", key)
             return -2
 
     # Atomic operations
@@ -396,7 +396,7 @@ class CacheService:
         try:
             return await self._client.incr(key)
         except Exception:
-            logger.exception(f"Failed to increment key {key}")
+            logger.exception("Failed to increment key %s", key)
             return None
 
     async def decr(self, key: str) -> int | None:
@@ -417,7 +417,7 @@ class CacheService:
         try:
             return await self._client.decr(key)
         except Exception:
-            logger.exception(f"Failed to decrement key {key}")
+            logger.exception("Failed to decrement key %s", key)
             return None
 
     # Batch operations
@@ -513,7 +513,7 @@ class CacheService:
             keys = await self._client.keys(pattern)
             return [k.decode("utf-8") for k in keys]
         except Exception:
-            logger.exception(f"Failed to get keys with pattern {pattern}")
+            logger.exception("Failed to get keys with pattern %s", pattern)
             return []
 
     async def delete_pattern(self, pattern: str) -> int:

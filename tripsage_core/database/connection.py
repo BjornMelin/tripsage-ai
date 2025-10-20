@@ -293,7 +293,7 @@ async def test_connection() -> bool:
             )
 
             installed_extensions = {row.extname: row.extversion for row in extensions}
-            logger.info(f"Installed extensions: {installed_extensions}")
+            logger.info("Installed extensions: %s", installed_extensions)
 
             if "vector" not in installed_extensions:
                 logger.warning(

@@ -276,7 +276,7 @@ class DatabaseServiceExtensions:
             return
 
         # In a real implementation, this would write to audit log storage
-        logger.info(f"AUDIT: {audit_entry}")
+        logger.info("AUDIT: %s", audit_entry)
 
     def _get_audit_logs(self) -> list[dict[str, Any]]:
         """Get recent audit logs."""

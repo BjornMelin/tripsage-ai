@@ -14,6 +14,7 @@ Validates ULTRATHINK consolidation performance improvements.
 
 import asyncio
 import json
+import logging
 import statistics
 import time
 from datetime import datetime
@@ -24,6 +25,8 @@ import numpy as np
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
+
+logger = logging.getLogger(__name__)
 
 
 # Simple table formatting function if tabulate is not available
@@ -406,7 +409,7 @@ class DatabaseBenchmark:
 
         except Exception as e:  # noqa: BLE001
             result.metadata["note"] = "pgvector extension not available"
-            logger.info(f"Vector search benchmark skipped: {e}")
+            logger.info("Vector search benchmark skipped: %s", e)
 
         self.results[result.name] = result
 

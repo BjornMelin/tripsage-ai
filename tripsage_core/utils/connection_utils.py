@@ -123,7 +123,8 @@ class DatabaseURLParser:
             credentials = ConnectionCredentials(**components)
 
             self.logger.debug(
-                f"Successfully parsed database URL for hostname: {credentials.hostname}"
+                "Successfully parsed database URL for hostname: %s",
+                credentials.hostname,
             )
 
             return credentials
@@ -289,7 +290,7 @@ class ConnectionCircuitBreaker:
         if self.failure_count >= self.failure_threshold:
             self.state = ConnectionState.OPEN
             self.logger.exception(
-                f"Circuit breaker opening after {self.failure_count} failures"
+                "Circuit breaker opening after %s failures", self.failure_count
             )
 
 
@@ -362,7 +363,7 @@ class ExponentialBackoffRetry:
             try:
                 result = await operation(*args, **kwargs)
                 if attempt > 0:
-                    self.logger.info(f"Operation succeeded on attempt {attempt + 1}")
+                    self.logger.info("Operation succeeded on attempt %s", attempt + 1)
                 return result
 
             except Exception as e:
@@ -371,12 +372,15 @@ class ExponentialBackoffRetry:
                 if attempt < self.max_retries:
                     delay = self.calculate_delay(attempt)
                     self.logger.warning(
-                        f"Attempt {attempt + 1} failed, retrying in {delay:.2f}s: {e}"
+                        "Attempt %s failed, retrying in %.2fs: %s",
+                        attempt + 1,
+                        delay,
+                        e,
                     )
                     await asyncio.sleep(delay)
                 else:
                     self.logger.exception(
-                        f"All {self.max_retries + 1} attempts failed. Last error"
+                        "All %s attempts failed. Last error", self.max_retries + 1
                     )
 
         raise last_exception
@@ -440,7 +444,7 @@ class DatabaseConnectionValidator:
 
                 # Check PostgreSQL version
                 version = await conn.fetchval("SELECT version()")
-                self.logger.debug(f"Connected to: {version}")
+                self.logger.debug("Connected to: %s", version)
 
                 # Check for pgvector extension (if needed for Mem0)
                 has_vector = await conn.fetchval(

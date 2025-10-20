@@ -477,8 +477,9 @@ class ApiKeyService:
             expires_at = datetime.fromisoformat(result["expires_at"])
             if datetime.now(UTC) > expires_at:
                 logger.info(
-                    f"API key expired for user {user_id}, service "
-                    f"{self._get_service_value(service)}"
+                    "API key expired for user %s, service %s",
+                    user_id,
+                    self._get_service_value(service),
                 )
                 return None
 
@@ -596,7 +597,8 @@ class ApiKeyService:
 
         except Exception as e:
             logger.exception(
-                f"API key validation error for {self._get_service_value(service)}",
+                "API key validation error for %s",
+                self._get_service_value(service),
                 extra={"service": self._get_service_value(service), "error": str(e)},
             )
 
@@ -1297,7 +1299,7 @@ class ApiKeyService:
                 return ValidationResult.model_validate_json(cached_data)
 
         except Exception as e:
-            logger.warning(f"Cache retrieval error: {e}")
+            logger.warning("Cache retrieval error: %s", e)
 
         return None
 
@@ -1322,7 +1324,7 @@ class ApiKeyService:
             )
 
         except Exception as e:
-            logger.warning(f"Cache storage error: {e}")
+            logger.warning("Cache storage error: %s", e)
 
     async def _audit_key_creation(
         self,
@@ -1348,7 +1350,7 @@ class ApiKeyService:
                 validation_result=validation_result.is_valid,
             )
         except Exception as e:
-            logger.warning(f"Audit logging failed for key creation: {e}")
+            logger.warning("Audit logging failed for key creation: %s", e)
 
     async def _audit_key_deletion(
         self, key_id: str, user_id: str, key_data: dict[str, Any]
@@ -1365,7 +1367,7 @@ class ApiKeyService:
                 user_id=user_id,
             )
         except Exception as e:
-            logger.warning(f"Audit logging failed for key deletion: {e}")
+            logger.warning("Audit logging failed for key deletion: %s", e)
 
     def _db_result_to_response(self, result: dict[str, Any]) -> ApiKeyResponse:
         """Convert database result to modern response model with optimized parsing.

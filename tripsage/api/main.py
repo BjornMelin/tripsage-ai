@@ -90,8 +90,8 @@ async def lifespan(app: FastAPI):
 
     available_mcps = mcp_manager.get_available_mcps()
     initialized_mcps = mcp_manager.get_initialized_mcps()
-    logger.info(f"Available MCPs: {available_mcps}")
-    logger.info(f"Initialized MCPs: {initialized_mcps}")
+    logger.info("Available MCPs: %s", available_mcps)
+    logger.info("Initialized MCPs: %s", initialized_mcps)
 
     # Initialize WebSocket Broadcaster first
     logger.info("Starting WebSocket Broadcaster")
@@ -191,7 +191,7 @@ def create_app() -> FastAPI:
     async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):
         """Handle rate limit errors."""
         logger.warning(
-            f"Rate limit exceeded: {exc.message}", extra={"path": request.url.path}
+            "Rate limit exceeded: %s", exc.message, extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
@@ -221,7 +221,7 @@ def create_app() -> FastAPI:
     async def validation_error_handler(request: Request, exc: CoreValidationError):
         """Handle validation errors."""
         logger.warning(
-            f"Validation error: {exc.message}", extra={"path": request.url.path}
+            "Validation error: %s", exc.message, extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -252,7 +252,7 @@ def create_app() -> FastAPI:
         ]
 
         logger.warning(
-            f"Validation errors: {len(errors)}", extra={"path": request.url.path}
+            "Validation errors: %s", len(errors), extra={"path": request.url.path}
         )
 
         return JSONResponse(
@@ -270,7 +270,7 @@ def create_app() -> FastAPI:
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """Handle HTTP exceptions."""
         logger.warning(
-            f"HTTP {exc.status_code}: {exc.detail}", extra={"path": request.url.path}
+            "HTTP %s: %s", exc.status_code, exc.detail, extra={"path": request.url.path}
         )
         return JSONResponse(
             status_code=exc.status_code,
@@ -344,7 +344,7 @@ def create_app() -> FastAPI:
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)
 
-    logger.info(f"FastAPI application configured with {len(app.routes)} routes")
+    logger.info("FastAPI application configured with %s routes", len(app.routes))
     return app
 
 

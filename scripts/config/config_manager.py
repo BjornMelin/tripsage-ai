@@ -27,6 +27,7 @@ class ConfigManager:
     """Configuration management utilities for TripSage."""
 
     def __init__(self):
+        """Initialize configuration manager."""
         self.settings: Settings | None = None
 
     def load_settings(self) -> Settings:
@@ -48,14 +49,14 @@ class ConfigManager:
             security_report = settings.get_security_report()
 
             logger.info("✅ Configuration validation passed")
-            logger.info(f"Environment: {settings.environment}")
-            logger.info(f"Debug mode: {settings.debug}")
-            logger.info(f"Production ready: {security_report['production_ready']}")
+            logger.info("Environment: %s", settings.environment)
+            logger.info("Debug mode: %s", settings.debug)
+            logger.info("Production ready: %s", security_report["production_ready"])
 
             if security_report["warnings"]:
                 logger.warning("⚠️ Security warnings:")
                 for warning in security_report["warnings"]:
-                    logger.warning(f"  - {warning}")
+                    logger.warning("  - %s", warning)
 
             return True
 
@@ -77,7 +78,7 @@ class ConfigManager:
             with output_path.open(encoding="utf-8") as f:
                 f.write(template)
 
-            logger.info(f"✅ Template saved to {output_path}")
+            logger.info("✅ Template saved to %s", output_path)
 
             if include_secrets:
                 logger.warning("⚠️ Template contains actual secrets - handle securely!")
@@ -90,12 +91,12 @@ class ConfigManager:
 
     def generate_secrets(self, count: int = 1, length: int = 32) -> bool:
         """Generate cryptographically secure secrets."""
-        logger.info(f"🔐 Generating {count} secure secret(s) (length: {length})...")
+        logger.info("🔐 Generating %s secure secret(s) (length: %s)...", count, length)
 
         try:
             for i in range(count):
                 secret = secrets.token_urlsafe(length)
-                logger.info(f"Secret {i + 1}: {secret}")
+                logger.info("Secret %s: %s", i + 1, secret)
 
             logger.info("✅ Secrets generated successfully")
             logger.warning(
@@ -214,15 +215,16 @@ class ConfigManager:
 
     def check_environment(self, target_env: str) -> bool:
         """Check if configuration is suitable for target environment."""
-        logger.info(f"🎯 Checking configuration for {target_env} environment...")
+        logger.info("🎯 Checking configuration for %s environment...", target_env)
 
         try:
             settings = self.load_settings()
 
             if settings.environment != target_env:
                 logger.warning(
-                    f"⚠️ Current environment ({settings.environment}) != "
-                    f"target ({target_env})"
+                    "⚠️ Current environment (%s) != target (%s)",
+                    settings.environment,
+                    target_env,
                 )
 
             issues = []
@@ -236,12 +238,12 @@ class ConfigManager:
                     issues.extend(security_report.get("warnings", []))
 
             if issues:
-                logger.exception(f"❌ Configuration not suitable for {target_env}:")
+                logger.exception("❌ Configuration not suitable for %s:", target_env)
                 for issue in issues:
-                    logger.exception(f" - {issue}")
+                    logger.exception(" - %s", issue)
                 return False
 
-            logger.info(f"✅ Configuration is suitable for {target_env}")
+            logger.info("✅ Configuration is suitable for %s", target_env)
             return True
 
         except Exception:
@@ -251,7 +253,7 @@ class ConfigManager:
     def export_config(self, output_file: str, format_type: str = "env") -> bool:
         """Export configuration in various formats."""
         logger.info(
-            f"📤 Exporting configuration to {output_file} (format: {format_type})..."
+            "📤 Exporting configuration to %s (format: %s)...", output_file, format_type
         )
 
         try:
@@ -372,7 +374,7 @@ Examples:
         elif args.command == "export":
             success = manager.export_config(args.output, args.format)
         else:
-            logger.exception(f"❌ Unknown command: {args.command}")
+            logger.exception("❌ Unknown command: %s", args.command)
             success = False
 
     except KeyboardInterrupt:

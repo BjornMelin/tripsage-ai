@@ -645,7 +645,7 @@ class MemoryService:
                         await asyncio.to_thread(self.memory.delete, memory_id=memory_id)
                         deleted_count += 1
                     except Exception as e:
-                        logger.warning(f"Failed to delete memory {memory_id}: {e!s}")
+                        logger.warning("Failed to delete memory %s: %s", memory_id, e)
             else:
                 # Delete all user memories
                 all_memories = await asyncio.to_thread(
@@ -662,7 +662,7 @@ class MemoryService:
                         deleted_count += 1
                     except Exception as e:
                         logger.warning(
-                            f"Failed to delete memory {memory.get('id')}: {e!s}"
+                            "Failed to delete memory %s: %s", memory.get("id"), e
                         )
 
             # Clear user's cache

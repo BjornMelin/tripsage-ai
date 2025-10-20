@@ -171,7 +171,7 @@ class MFAService:
                 on_conflict="user_id",
             )
 
-            logger.info(f"MFA setup initiated for user {user_id}")
+            logger.info("MFA setup initiated for user %s", user_id)
 
             return MFASetupResponse(
                 secret=secret,
@@ -181,7 +181,7 @@ class MFAService:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to setup MFA for user {user_id}")
+            logger.exception("Failed to setup MFA for user %s", user_id)
             raise CoreServiceError(
                 message="Failed to setup MFA",
                 code="MFA_SETUP_FAILED",
@@ -241,7 +241,7 @@ class MFAService:
                 {"enabled": True, "enrolled_at": "now()", "last_used": "now()"},
             )
 
-            logger.info(f"MFA enrolled successfully for user {request.user_id}")
+            logger.info("MFA enrolled successfully for user %s", request.user_id)
 
             return MFAEnrollmentResponse(
                 backup_codes=mfa_settings["backup_codes"],
@@ -252,7 +252,7 @@ class MFAService:
         except (CoreValidationError, CoreServiceError):
             raise
         except Exception as e:
-            logger.exception(f"Failed to enroll MFA for user {request.user_id}")
+            logger.exception("Failed to enroll MFA for user %s", request.user_id)
             raise CoreServiceError(
                 message="Failed to enroll MFA",
                 code="MFA_ENROLLMENT_FAILED",
@@ -311,7 +311,7 @@ class MFAService:
                     {"backup_codes": backup_codes, "last_used": "now()"},
                 )
 
-                logger.info(f"Backup code used for user {request.user_id}")
+                logger.info("Backup code used for user %s", request.user_id)
 
                 return MFAVerificationResponse(
                     valid=True,
@@ -323,7 +323,7 @@ class MFAService:
             return MFAVerificationResponse(valid=False, code_type="invalid")
 
         except Exception as e:
-            logger.exception(f"Failed to verify MFA for user {request.user_id}")
+            logger.exception("Failed to verify MFA for user %s", request.user_id)
             raise CoreServiceError(
                 message="Failed to verify MFA",
                 code="MFA_VERIFICATION_FAILED",
@@ -360,7 +360,7 @@ class MFAService:
             )
 
         except Exception:
-            logger.exception(f"Failed to get MFA status for user {user_id}")
+            logger.exception("Failed to get MFA status for user %s", user_id)
             return MFAStatus(enabled=False)
 
     async def disable_mfa(self, user_id: str) -> bool:
@@ -377,11 +377,11 @@ class MFAService:
 
             result = await self.db.delete("user_mfa_settings", {"user_id": user_id})
 
-            logger.info(f"MFA disabled for user {user_id}")
+            logger.info("MFA disabled for user %s", user_id)
             return len(result) > 0
 
         except Exception:
-            logger.exception(f"Failed to disable MFA for user {user_id}")
+            logger.exception("Failed to disable MFA for user %s", user_id)
             return False
 
     async def regenerate_backup_codes(self, user_id: str) -> list[str]:
@@ -421,13 +421,13 @@ class MFAService:
                 {"backup_codes": backup_codes},
             )
 
-            logger.info(f"Backup codes regenerated for user {user_id}")
+            logger.info("Backup codes regenerated for user %s", user_id)
             return backup_codes
 
         except CoreServiceError:
             raise
         except Exception as e:
-            logger.exception(f"Failed to regenerate backup codes for user {user_id}")
+            logger.exception("Failed to regenerate backup codes for user %s", user_id)
             raise CoreServiceError(
                 message="Failed to regenerate backup codes",
                 code="BACKUP_CODES_REGENERATION_FAILED",

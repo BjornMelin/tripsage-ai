@@ -71,7 +71,7 @@ class SearchHistoryService:
             return searches
 
         except Exception:
-            logger.exception(f"Error getting recent searches for user {user_id}")
+            logger.exception("Error getting recent searches for user %s", user_id)
             raise
 
     async def save_search(
@@ -142,7 +142,7 @@ class SearchHistoryService:
             }
 
         except Exception:
-            logger.exception(f"Error saving search for user {user_id}")
+            logger.exception("Error saving search for user %s", user_id)
             raise
 
     async def delete_saved_search(self, user_id: str, search_id: str) -> bool:
@@ -165,7 +165,7 @@ class SearchHistoryService:
             return len(result) > 0
 
         except Exception:
-            logger.exception(f"Error deleting search {search_id} for user {user_id}")
+            logger.exception("Error deleting search %s for user %s", search_id, user_id)
             raise
 
     def _determine_search_type(self, resource_types: list[str] | None) -> str:

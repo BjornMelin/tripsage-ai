@@ -100,7 +100,7 @@ class SimpleMCPService:
             return result
 
         except Exception as e:
-            logger.exception(f"MCP method '{method_name}' failed")
+            logger.exception("MCP method '%s' failed", method_name)
             raise Exception(f"MCP method '{method_name}' failed: {e!s}") from e
 
     def _convert_to_airbnb_params(self, params: dict[str, Any]) -> dict[str, Any]:

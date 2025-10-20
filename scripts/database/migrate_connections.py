@@ -53,7 +53,7 @@ class ConnectionMigrationTester:
     async def test_supabase_api_connection(self) -> bool:
         """Test Supabase API connection using client library."""
         test_name = "supabase_api"
-        logger.info(f"Testing {test_name} connection...")
+        logger.info("Testing %s connection...", test_name)
 
         try:
             from supabase import create_client
@@ -71,7 +71,7 @@ class ConnectionMigrationTester:
                 "message": "Supabase API connection successful",
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.info(f"✅ {test_name} connection successful")
+            logger.info("✅ %s connection successful", test_name)
             return True
 
         except Exception as e:
@@ -81,13 +81,13 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed")
+            logger.exception("❌ %s connection failed", test_name)
             return False
 
     async def test_postgres_direct_connection(self) -> bool:
         """Test direct PostgreSQL connection with secure URL conversion."""
         test_name = "postgres_direct"
-        logger.info(f"Testing {test_name} connection...")
+        logger.info("Testing %s connection...", test_name)
 
         try:
             # Convert Supabase URL to PostgreSQL
@@ -131,7 +131,7 @@ class ConnectionMigrationTester:
                     "database": credentials.database,
                     "duration_ms": self._get_duration_ms(),
                 }
-                logger.info(f"✅ {test_name} connection successful")
+                logger.info("✅ %s connection successful", test_name)
                 return True
 
             finally:
@@ -144,13 +144,13 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed")
+            logger.exception("❌ %s connection failed", test_name)
             return False
 
     async def test_postgres_pooler_connection(self) -> bool:
         """Test PostgreSQL connection via pooler."""
         test_name = "postgres_pooler"
-        logger.info(f"Testing {test_name} connection...")
+        logger.info("Testing %s connection...", test_name)
 
         try:
             # Convert to pooler URL
@@ -184,7 +184,7 @@ class ConnectionMigrationTester:
                     "hostname": credentials.hostname,
                     "duration_ms": self._get_duration_ms(),
                 }
-                logger.info(f"✅ {test_name} connection successful")
+                logger.info("✅ %s connection successful", test_name)
                 return True
 
             finally:
@@ -197,13 +197,13 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed")
+            logger.exception("❌ %s connection failed", test_name)
             return False
 
     async def test_memory_service_connection(self) -> bool:
         """Test memory service connection using migrated utilities."""
         test_name = "memory_service"
-        logger.info(f"Testing {test_name} connection...")
+        logger.info("Testing %s connection...", test_name)
 
         try:
             # Test via the standard database session
@@ -230,7 +230,7 @@ class ConnectionMigrationTester:
                 "tables": memory_tables,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.info(f"✅ {test_name} connection successful")
+            logger.info("✅ %s connection successful", test_name)
             return True
 
         except Exception as e:
@@ -240,13 +240,13 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed")
+            logger.exception("❌ %s connection failed", test_name)
             return False
 
     async def test_checkpoint_manager_connection(self) -> bool:
         """Test checkpoint manager connection after migration."""
         test_name = "checkpoint_manager"
-        logger.info(f"Testing {test_name} connection...")
+        logger.info("Testing %s connection...", test_name)
 
         try:
             from tripsage.orchestration.checkpoint_manager import (
@@ -260,7 +260,7 @@ class ConnectionMigrationTester:
                     "error": "PostgreSQL checkpoint dependencies not available",
                     "duration_ms": self._get_duration_ms(),
                 }
-                logger.warning(f"⚠️  {test_name} skipped - dependencies not available")
+                logger.warning("⚠️  %s skipped - dependencies not available", test_name)
                 return False
 
             manager = SupabaseCheckpointManager()
@@ -287,7 +287,7 @@ class ConnectionMigrationTester:
                 "checkpoint_stats": stats,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.info(f"✅ {test_name} connection successful")
+            logger.info("✅ %s connection successful", test_name)
 
             # Cleanup
             await manager.close()
@@ -300,13 +300,13 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed")
+            logger.exception("❌ %s connection failed", test_name)
             return False
 
     async def test_connection_security_features(self) -> bool:
         """Test security features of the connection utilities."""
         test_name = "security_features"
-        logger.info(f"Testing {test_name}...")
+        logger.info("Testing %s...", test_name)
 
         security_checks = {
             "url_validation": False,
@@ -390,9 +390,9 @@ class ConnectionMigrationTester:
             }
 
             if passed == total:
-                logger.info(f"✅ {test_name} all checks passed")
+                logger.info("✅ %s all checks passed", test_name)
             else:
-                logger.warning(f"⚠️  {test_name} {passed}/{total} checks passed")
+                logger.warning("⚠️  %s %s/%s checks passed", test_name, passed, total)
 
             return passed == total
 
@@ -403,7 +403,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} failed")
+            logger.exception("❌ %s failed", test_name)
             return False
 
     def _get_duration_ms(self) -> float:
@@ -460,27 +460,27 @@ class ConnectionMigrationTester:
         passed = sum(1 for r in self.results.values() if r.get("success", False))
         failed = total - passed
 
-        logger.info(f"Total Tests: {total}")
-        logger.info(f"Passed: {passed} ✅")
-        logger.info(f"Failed: {failed} ❌")
-        logger.info(f"Success Rate: {(passed / total) * 100:.1f}%")
+        logger.info("Total Tests: %s", total)
+        logger.info("Passed: %s ✅", passed)
+        logger.info("Failed: %s ❌", failed)
+        logger.info("Success Rate: %.1f%%", (passed / total) * 100)
         logger.info("-" * 60)
 
         # Detailed results
         for test_name, result in self.results.items():
             status = "✅ PASS" if result.get("success") else "❌ FAIL"
             duration = result.get("duration_ms", 0)
-            logger.info(f"\n{test_name}: {status} ({duration:.1f}ms)")
+            logger.info("\\n%s: %s (%.1fms)", test_name, status, duration)
 
             if result.get("success"):
                 # Show success details
                 for key, value in result.items():
                     if key not in ["success", "duration_ms", "message"]:
-                        logger.info(f"  {key}: {value}")
+                        logger.info("  %s: %s", key, value)
             else:
                 # Show error details
-                logger.exception(f" Error: {result.get('error', 'Unknown error')}")
-                logger.exception(f" Type: {result.get('error_type', 'Unknown')}")
+                logger.exception(" Error: %s", result.get("error", "Unknown error"))
+                logger.exception(" Type: %s", result.get("error_type", "Unknown"))
 
         logger.info("\n" + "=" * 60)
 

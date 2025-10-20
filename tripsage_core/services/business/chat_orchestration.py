@@ -86,7 +86,7 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If session creation fails
         """
         try:
-            self.logger.info(f"Creating chat session for user {user_id}")
+            self.logger.info("Creating chat session for user %s", user_id)
 
             # Sanitize values to prevent SQL injection
             safe_user_id = self._sanitize_sql_value(user_id)
@@ -118,7 +118,7 @@ class ChatOrchestrationService:
                 "status": "active",
             }
 
-            self.logger.info(f"Chat session created: {session_data['session_id']}")
+            self.logger.info("Chat session created: %s", session_data["session_id"])
             return session_data
 
         except Exception as e:
@@ -148,7 +148,7 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If message saving fails
         """
         try:
-            self.logger.info(f"Saving message to session {session_id}")
+            self.logger.info("Saving message to session %s", session_id)
 
             # Validate role to prevent injection
             valid_roles = {"user", "assistant", "system"}
@@ -187,7 +187,7 @@ class ChatOrchestrationService:
                 "metadata": metadata or {},
             }
 
-            self.logger.info(f"Message saved: {message_data['message_id']}")
+            self.logger.info("Message saved: %s", message_data["message_id"])
             return message_data
 
         except Exception as e:
@@ -280,7 +280,7 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If location lookup fails
         """
         try:
-            self.logger.info(f"Getting location info for: {location}")
+            self.logger.info("Getting location info for: %s", location)
 
             result = await self.mcp_manager.invoke(
                 mcp_name="google_maps",
@@ -316,7 +316,7 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If parallel execution fails
         """
         try:
-            self.logger.info(f"Executing {len(tool_calls)} tool calls in parallel")
+            self.logger.info("Executing %s tool calls in parallel", len(tool_calls))
 
             # Convert to structured tool call requests
             requests = []
@@ -349,7 +349,7 @@ class ChatOrchestrationService:
                     }
 
             self.logger.info(
-                f"Parallel tool execution completed: {len(results)} results"
+                "Parallel tool execution completed: %s results", len(results)
             )
             return {
                 "results": results,
@@ -495,7 +495,7 @@ class ChatOrchestrationService:
             )
 
         except Exception as e:
-            self.logger.warning(f"Failed to store search result in memory: {e}")
+            self.logger.warning("Failed to store search result in memory: %s", e)
 
     @with_error_handling()
     async def _store_location_data(self, location: str, data: dict[str, Any]) -> None:
@@ -528,7 +528,7 @@ class ChatOrchestrationService:
             )
 
         except Exception as e:
-            self.logger.warning(f"Failed to store location data in memory: {e}")
+            self.logger.warning("Failed to store location data in memory: %s", e)
 
     @with_error_handling()
     async def get_chat_history(
@@ -548,7 +548,7 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If history retrieval fails
         """
         try:
-            self.logger.info(f"Getting chat history for session {session_id}")
+            self.logger.info("Getting chat history for session %s", session_id)
 
             # Validate and sanitize inputs
             if limit < 1 or limit > 100:
@@ -579,7 +579,7 @@ class ChatOrchestrationService:
 
             messages = result if isinstance(result, list) else []
 
-            self.logger.info(f"Retrieved {len(messages)} messages from history")
+            self.logger.info("Retrieved %s messages from history", len(messages))
             return messages
 
         except Exception as e:
@@ -600,7 +600,7 @@ class ChatOrchestrationService:
             ChatOrchestrationError: If session ending fails
         """
         try:
-            self.logger.info(f"Ending chat session {session_id}")
+            self.logger.info("Ending chat session %s", session_id)
 
             # Sanitize session_id to prevent SQL injection
             safe_session_id = self._sanitize_sql_value(session_id)
@@ -619,7 +619,7 @@ class ChatOrchestrationService:
             )
 
             if result:
-                self.logger.info(f"Chat session {session_id} ended successfully")
+                self.logger.info("Chat session %s ended successfully", session_id)
                 return True
             else:
                 raise ChatOrchestrationError(f"Session {session_id} not found")

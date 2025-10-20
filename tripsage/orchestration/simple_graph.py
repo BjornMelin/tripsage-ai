@@ -50,7 +50,7 @@ class SimpleTripSageOrchestrator:
         )
 
         logger.info(
-            f"Initialized SimpleTripSageOrchestrator with {len(self.tools)} tools"
+            "Initialized SimpleTripSageOrchestrator with %s tools", len(self.tools)
         )
 
     def _get_system_prompt(self) -> str:

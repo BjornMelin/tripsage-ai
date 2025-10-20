@@ -47,7 +47,7 @@ async def main():
     succeeded, failed = await run_migrations(
         project_id=args.project_id, up_to=args.up_to, dry_run=args.dry_run
     )
-    logger.info(f"SQL migrations completed: {succeeded} succeeded, {failed} failed")
+    logger.info("SQL migrations completed: %s succeeded, %s failed", succeeded, failed)
 
     if failed > 0:
         logger.exception("Some migrations failed")
@@ -55,7 +55,7 @@ async def main():
     elif succeeded == 0:
         logger.info("No migrations were applied")
     else:
-        logger.info(f"Successfully applied {succeeded} migrations")
+        logger.info("Successfully applied %s migrations", succeeded)
 
 
 if __name__ == "__main__":

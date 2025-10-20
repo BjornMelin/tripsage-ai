@@ -631,7 +631,7 @@ class SecurityAuditLogger:
                                 continue
 
                 except Exception as e:
-                    logger.warning(f"Failed to read log file {log_file}: {e}")
+                    logger.warning("Failed to read log file %s: %s", log_file, e)
 
             current_date += timedelta(days=1)
 
@@ -725,7 +725,7 @@ class SecurityAuditLogger:
 
             except Exception as e:
                 self.stats["external_forward_errors"] += 1
-                logger.warning(f"Failed to forward to {endpoint}: {e}")
+                logger.warning("Failed to forward to %s: %s", endpoint, e)
 
     async def _cleanup_loop(self):
         """Background task to clean up old log files."""
@@ -758,10 +758,10 @@ class SecurityAuditLogger:
 
                     if file_date < cutoff_date:
                         log_file.unlink()
-                        logger.info(f"Cleaned up old log file: {log_file}")
+                        logger.info("Cleaned up old log file: %s", log_file)
 
             except Exception as e:
-                logger.warning(f"Failed to process log file {log_file}: {e}")
+                logger.warning("Failed to process log file %s: %s", log_file, e)
 
     def _determine_auth_severity(
         self, event_type: AuditEventType, outcome: AuditOutcome

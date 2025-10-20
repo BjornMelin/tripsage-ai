@@ -216,15 +216,16 @@ class SchemaTestRunner:
 
         for suite in test_suites:
             if suite["name"] in self.config["test_types"]:
-                self.logger.info(f"Running {suite['name']}: {suite['description']}")
+                self.logger.info("Running %s: %s", suite["name"], suite["description"])
 
                 suite_result = await self._run_test_suite(suite)
                 results[suite["name"]] = suite_result
 
                 self.logger.info(
-                    f"Completed {suite['name']}: "
-                    f"{'PASSED' if suite_result['success'] else 'FAILED'} "
-                    f"({suite_result['duration']:.2f}s)"
+                    "Completed %s: %s (%.2fs)",
+                    suite["name"],
+                    "PASSED" if suite_result["success"] else "FAILED",
+                    suite_result["duration"],
                 )
 
         return results
@@ -428,7 +429,7 @@ class SchemaTestRunner:
         with open(report_file, "w") as f:
             json.dump(report, f, indent=2, default=str)
 
-        self.logger.info(f"Test report saved to: {report_file}")
+        self.logger.info("Test report saved to: %s", report_file)
 
         # Generate human-readable summary
         self._print_test_summary(analysis)

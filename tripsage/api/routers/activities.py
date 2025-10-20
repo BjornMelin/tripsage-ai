@@ -44,14 +44,14 @@ async def search_activities(request: ActivitySearchRequest):
     This endpoint searches for activities, attractions, and points of interest
     in the specified destination using real-time data from Google Maps.
     """
-    logger.info(f"Activity search request: {request.destination}")
+    logger.info("Activity search request: %s", request.destination)
 
     try:
         activity_service = await get_activity_service()
         result = await activity_service.search_activities(request)
 
         logger.info(
-            f"Found {len(result.activities)} activities for {request.destination}"
+            "Found %s activities for %s", len(result.activities), request.destination
         )
         return result
 
@@ -76,7 +76,7 @@ async def get_activity_details(activity_id: str):
     Retrieves comprehensive details for an activity including enhanced
     information from Google Maps Places API.
     """
-    logger.info(f"Get activity details request: {activity_id}")
+    logger.info("Get activity details request: %s", activity_id)
 
     try:
         activity_service = await get_activity_service()
@@ -88,7 +88,7 @@ async def get_activity_details(activity_id: str):
                 detail=f"Activity with ID {activity_id} not found",
             )
 
-        logger.info(f"Retrieved details for activity: {activity_id}")
+        logger.info("Retrieved details for activity: %s", activity_id)
         return activity
 
     except ActivityServiceError as e:
@@ -123,7 +123,7 @@ async def save_activity(
     - Audit logging for save operations
     - Database persistence with user isolation
     """
-    logger.info(f"Save activity request: {request.activity_id}")
+    logger.info("Save activity request: %s", request.activity_id)
 
     try:
         user_id = get_principal_id(principal)
@@ -193,7 +193,7 @@ async def save_activity(
             trip_id=request.trip_id,
         )
 
-        logger.info(f"Activity {request.activity_id} saved for user {user_id}")
+        logger.info("Activity %s saved for user %s", request.activity_id, user_id)
 
         return SavedActivityResponse(
             activity_id=request.activity_id,
@@ -206,7 +206,7 @@ async def save_activity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to save activity {request.activity_id}")
+        logger.exception("Failed to save activity %s", request.activity_id)
 
         # Log system error
         await audit_security_event(
@@ -296,7 +296,7 @@ async def get_saved_activities(
         )
 
         logger.info(
-            f"Retrieved {len(saved_activities)} saved activities for user {user_id}"
+            "Retrieved %s saved activities for user %s", len(saved_activities), user_id
         )
 
         return saved_activities
@@ -337,7 +337,7 @@ async def delete_saved_activity(
     - Audit logging for deletion operations
     - Data integrity checks
     """
-    logger.info(f"Delete saved activity request: {activity_id}")
+    logger.info("Delete saved activity request: %s", activity_id)
 
     try:
         user_id = get_principal_id(principal)
@@ -411,7 +411,7 @@ async def delete_saved_activity(
                 )
                 deleted_count += 1
             except Exception as delete_error:
-                logger.warning(f"Failed to delete item {item['id']}: {delete_error}")
+                logger.warning("Failed to delete item %s: %s", item["id"], delete_error)
 
         if deleted_count == 0:
             raise HTTPException(
@@ -434,14 +434,16 @@ async def delete_saved_activity(
         )
 
         logger.info(
-            f"Deleted {deleted_count} saved activity entries for activity "
-            f"{activity_id} by user {user_id}"
+            "Deleted %s saved activity entries for activity %s by user %s",
+            deleted_count,
+            activity_id,
+            user_id,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to delete saved activity {activity_id}")
+        logger.exception("Failed to delete saved activity %s", activity_id)
 
         # Log system error
         await audit_security_event(

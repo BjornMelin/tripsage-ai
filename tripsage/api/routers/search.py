@@ -39,7 +39,7 @@ async def unified_search(
     Results are aggregated, filtered, sorted, and cached for performance.
     """
     user_id = principal.id if principal else None
-    logger.info(f"Unified search request: {request.query} (user: {user_id})")
+    logger.info("Unified search request: %s (user: %s)", request.query, user_id)
 
     try:
         search_service = await get_unified_search_service()
@@ -54,14 +54,14 @@ async def unified_search(
             try:
                 cached_result = await cache_service.get(cache_key)
                 if cached_result:
-                    logger.info(f"Cache hit for search query: {request.query}")
+                    logger.info("Cache hit for search query: %s", request.query)
                     # Track cache hit analytics
                     await _track_search_analytics(
                         user_id, request.query, "cache_hit", cache_service
                     )
                     return cached_result
             except Exception as e:
-                logger.warning(f"Cache retrieval failed: {e}")
+                logger.warning("Cache retrieval failed: %s", e)
 
         # Perform actual search
         result = await search_service.unified_search(request)
@@ -71,7 +71,7 @@ async def unified_search(
             try:
                 await cache_service.set(cache_key, result, ttl=300)
             except Exception as e:
-                logger.warning(f"Cache storage failed: {e}")
+                logger.warning("Cache storage failed: %s", e)
 
         # Track search analytics
         await _track_search_analytics(
@@ -82,8 +82,9 @@ async def unified_search(
         )
 
         logger.info(
-            f"Unified search completed: {result.metadata.returned_results} results "
-            f"in {result.metadata.search_time_ms}ms"
+            "Unified search completed: %s results in %sms",
+            result.metadata.returned_results,
+            result.metadata.search_time_ms,
         )
         return result
 
@@ -127,7 +128,7 @@ async def _track_search_analytics(
         await cache_service.set(analytics_key, existing_analytics, ttl=86400)
 
     except Exception as e:
-        logger.warning(f"Failed to track search analytics: {e}")
+        logger.warning("Failed to track search analytics: %s", e)
 
 
 @router.get("/suggest", response_model=list[str])
@@ -143,13 +144,13 @@ async def search_suggestions(
     destinations, activity types, and common search patterns to help users
     discover travel options.
     """
-    logger.info(f"Search suggestions request: '{query}' (limit: {limit})")
+    logger.info("Search suggestions request: '%s' (limit: %s)", query, limit)
 
     try:
         search_service = await get_unified_search_service()
         suggestions = await search_service.get_search_suggestions(query, limit)
 
-        logger.info(f"Generated {len(suggestions)} suggestions for query: '{query}'")
+        logger.info("Generated %s suggestions for query: '%s'", len(suggestions), query)
         return suggestions
 
     except UnifiedSearchServiceError as e:
@@ -178,7 +179,7 @@ async def get_recent_searches(
     Returns the user's search history ordered by most recent first.
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Get recent searches request for user: {user_id} (limit: {limit})")
+    logger.info("Get recent searches request for user: %s (limit: %s)", user_id, limit)
 
     try:
         search_history_service = await get_search_history_service()
@@ -186,7 +187,7 @@ async def get_recent_searches(
             user_id, limit=limit
         )
 
-        logger.info(f"Retrieved {len(searches)} recent searches for user: {user_id}")
+        logger.info("Retrieved %s recent searches for user: %s", len(searches), user_id)
         return searches
 
     except Exception as e:
@@ -208,13 +209,13 @@ async def save_search(
     quick access and personalization.
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Save search request for user {user_id}: {request.query}")
+    logger.info("Save search request for user %s: %s", user_id, request.query)
 
     try:
         search_history_service = await get_search_history_service()
         saved_search = await search_history_service.save_search(user_id, request)
 
-        logger.info(f"Saved search {saved_search['id']} for user: {user_id}")
+        logger.info("Saved search %s for user: %s", saved_search["id"], user_id)
         return {
             "id": saved_search["id"],
             "message": "Search saved successfully",
@@ -238,7 +239,7 @@ async def delete_saved_search(
     Removes the specified search from the user's search history.
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Delete saved search request from user {user_id}: {search_id}")
+    logger.info("Delete saved search request from user %s: %s", user_id, search_id)
 
     try:
         search_history_service = await get_search_history_service()
@@ -250,7 +251,7 @@ async def delete_saved_search(
                 detail="Saved search not found",
             )
 
-        logger.info(f"Deleted saved search {search_id} for user: {user_id}")
+        logger.info("Deleted saved search %s for user: %s", search_id, user_id)
         # Return 204 No Content (no response body)
 
     except HTTPException:
@@ -275,7 +276,7 @@ async def bulk_search(
     Results are processed in parallel for optimal performance.
     """
     user_id = principal.id if principal else None
-    logger.info(f"Bulk search request: {len(requests)} queries (user: {user_id})")
+    logger.info("Bulk search request: %s queries (user: %s)", len(requests), user_id)
 
     if len(requests) > 10:  # Limit bulk searches
         raise HTTPException(
@@ -341,7 +342,7 @@ async def bulk_search(
         successful_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.exception(f"Search {i} failed: {result}")
+                logger.exception("Search %s failed: %s", i, result)
                 # Add placeholder for failed search
                 successful_results.append(None)
             else:
@@ -351,7 +352,7 @@ async def bulk_search(
         valid_results = [r for r in successful_results if r is not None]
 
         logger.info(
-            f"Bulk search completed: {len(valid_results)}/{len(requests)} successful"
+            "Bulk search completed: %s/%s successful", len(valid_results), len(requests)
         )
         return valid_results
 
@@ -373,7 +374,7 @@ async def get_search_analytics(
     Only available to authenticated users for their own analytics.
     """
     user_id = get_principal_id(principal)
-    logger.info(f"Search analytics request for {date} by user: {user_id}")
+    logger.info("Search analytics request for %s by user: %s", date, user_id)
 
     try:
         cache_service = await get_cache_service()

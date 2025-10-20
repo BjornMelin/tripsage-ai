@@ -262,7 +262,8 @@ class TripSageErrorContext:
     def __enter__(self):
         """Enter the error context."""
         self.logger.debug(
-            f"Starting operation: {self.operation}",
+            "Starting operation: %s",
+            self.operation,
             extra={
                 "service": self.service,
                 "user_id": self.user_id,
@@ -290,7 +291,8 @@ class TripSageErrorContext:
 
         else:
             self.logger.debug(
-                f"Completed operation: {self.operation}",
+                "Completed operation: %s",
+                self.operation,
                 extra={
                     "service": self.service,
                     "user_id": self.user_id,

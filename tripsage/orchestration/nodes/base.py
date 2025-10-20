@@ -48,7 +48,7 @@ class BaseAgentNode(ABC):
         # Initialize node-specific tools
         self._initialize_tools()
 
-        self.logger.info(f"Initialized {node_name} node with service injection")
+        self.logger.info("Initialized %s node with service injection", node_name)
 
     @property
     def name(self) -> str:
@@ -94,7 +94,7 @@ class BaseAgentNode(ABC):
             Updated state after processing
         """
         try:
-            self.logger.info(f"Executing {self.node_name} node")
+            self.logger.info("Executing %s node", self.node_name)
 
             # Process the state using node-specific logic
             updated_state = await self.process(state)
@@ -103,11 +103,11 @@ class BaseAgentNode(ABC):
             updated_state["agent_history"].append(self.node_name)
             updated_state = update_state_timestamp(updated_state)
 
-            self.logger.info(f"Successfully completed {self.node_name} node execution")
+            self.logger.info("Successfully completed %s node execution", self.node_name)
             return updated_state
 
         except Exception as e:
-            self.logger.exception(f"Error in {self.node_name} node")
+            self.logger.exception("Error in %s node", self.node_name)
             log_exception(e, logger_name=f"orchestration.{self.node_name}")
             return self._handle_error(state, e)
 

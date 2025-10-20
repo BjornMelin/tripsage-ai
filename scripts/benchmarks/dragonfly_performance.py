@@ -20,6 +20,7 @@ class DragonflyBenchmark:
     """Benchmark suite for DragonflyDB performance testing."""
 
     def __init__(self):
+        """Initialize DragonflyDB performance benchmark."""
         self.settings = get_settings()
         self.cache_service = CacheService(self.settings)
         self.results: dict[str, list[float]] = {}
@@ -99,7 +100,7 @@ class DragonflyBenchmark:
         """Benchmark bulk operations."""
         print(
             f"\nBenchmarking bulk operations "
-            f"({batch_size} items × {batches} batches)..."
+            f"({batch_size} items x {batches} batches)..."
         )
         times = []
 
@@ -183,7 +184,7 @@ class DragonflyBenchmark:
             # Print results
             self.print_summary()
 
-        except (CoreServiceError, RedisError, asyncio.TimeoutError) as exc:
+        except (TimeoutError, CoreServiceError, RedisError) as exc:
             print(f"Benchmark error: {exc}")
         finally:
             await self.teardown()

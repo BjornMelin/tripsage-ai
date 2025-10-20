@@ -203,8 +203,7 @@ class PerformanceBenchmark:
                     "avg_time_ms": (duration / self.iterations) * 1000,
                 }
                 print(
-                    f"   {operations_per_second:,.0f} ops/sec "
-                    f"({duration:.3f}s total)"
+                    f"   {operations_per_second:,.0f} ops/sec ({duration:.3f}s total)"
                 )
             print()
 
@@ -276,12 +275,12 @@ async def main():
 
     # Save results to file
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    results_file = f"/tmp/api_key_service_benchmark_{timestamp}.json"
+    results_file = Path(f"/tmp/api_key_service_benchmark_{timestamp}.json")
 
-    with Path(results_file).open("w") as f:
+    with Path(results_file).open(encoding="utf-8") as f:
         json.dump(results, f, indent=2, default=str)
 
-    print(f"📁 Results saved to: {results_file}")
+    print("Results saved to: %s", results_file)
 
 
 if __name__ == "__main__":

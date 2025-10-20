@@ -107,7 +107,7 @@ async def create_trip(
     Returns:
         Created trip details
     """
-    logger.info(f"Creating trip for user: {principal.user_id}")
+    logger.info("Creating trip for user: %s", principal.user_id)
 
     try:
         # Convert date to datetime with timezone
@@ -204,8 +204,10 @@ async def get_trip(
         Trip details with access information
     """
     logger.info(
-        f"Getting trip {trip_id} for user {principal.user_id} "
-        f"(access level: {access_result.access_level})"
+        "Getting trip %s for user %s (access level: %s)",
+        trip_id,
+        principal.user_id,
+        access_result.access_level,
     )
 
     try:
@@ -261,7 +263,7 @@ async def list_trips(
     Returns:
         List of trips accessible to the user
     """
-    logger.info(f"Listing trips for user: {principal.user_id}")
+    logger.info("Listing trips for user: %s", principal.user_id)
 
     try:
         trips_response = await trip_service.get_user_trips(
@@ -309,8 +311,10 @@ async def update_trip(
         Updated trip details
     """
     logger.info(
-        f"Updating trip {trip_id} for user {principal.user_id} "
-        f"(permission: {access_result.permission_granted})"
+        "Updating trip %s for user %s (permission: %s)",
+        trip_id,
+        principal.user_id,
+        access_result.permission_granted,
     )
 
     try:
@@ -371,7 +375,7 @@ async def delete_trip(
         principal: Current authenticated principal
         trip_service: Trip service instance
     """
-    logger.info(f"Deleting trip {trip_id} for owner {principal.user_id}")
+    logger.info("Deleting trip %s for owner %s", trip_id, principal.user_id)
 
     try:
         success = await trip_service.delete_trip(
@@ -383,7 +387,7 @@ async def delete_trip(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
             )
 
-        logger.info(f"Trip {trip_id} successfully deleted by {principal.user_id}")
+        logger.info("Trip %s successfully deleted by %s", trip_id, principal.user_id)
 
     except HTTPException:
         raise
@@ -409,7 +413,7 @@ async def list_collaborators(
 
     Requires collaborator access (owner or any collaborator can view).
     """
-    logger.info(f"Listing collaborators for trip {trip_id}")
+    logger.info("Listing collaborators for trip %s", trip_id)
 
     try:
         collaborators = await trip_service.get_trip_collaborators(str(trip_id))
@@ -452,8 +456,10 @@ async def add_collaborator(
     Requires manage permission (owner or collaborator with manage access).
     """
     logger.info(
-        f"Adding collaborator to trip {trip_id} by user {principal.user_id} "
-        f"(permission: {access_result.permission_granted})"
+        "Adding collaborator to trip %s by user %s (permission: %s)",
+        trip_id,
+        principal.user_id,
+        access_result.permission_granted,
     )
 
     try:
@@ -501,7 +507,7 @@ async def remove_collaborator(
 
     Requires owner access - only the trip owner can remove collaborators.
     """
-    logger.info(f"Removing collaborator {user_id} from trip {trip_id}")
+    logger.info("Removing collaborator %s from trip %s", user_id, trip_id)
 
     try:
         success = await trip_service.unshare_trip(
@@ -515,7 +521,7 @@ async def remove_collaborator(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Collaborator not found"
             )
 
-        logger.info(f"Collaborator {user_id} removed from trip {trip_id}")
+        logger.info("Collaborator %s removed from trip %s", user_id, trip_id)
 
     except HTTPException:
         raise
@@ -537,7 +543,9 @@ async def get_trip_permissions(
 
     This endpoint doesn't require pre-verification as it's used to check permissions.
     """
-    logger.info(f"Getting permissions for trip {trip_id} and user {principal.user_id}")
+    logger.info(
+        "Getting permissions for trip %s and user %s", trip_id, principal.user_id
+    )
 
     try:
         permissions = await get_user_trip_permissions(
@@ -569,7 +577,7 @@ async def get_trip_summary(
 
     Requires read access (public trips, collaborators, or owner).
     """
-    logger.info(f"Getting summary for trip {trip_id}")
+    logger.info("Getting summary for trip %s", trip_id)
 
     try:
         trip_response = await trip_service.get_trip(

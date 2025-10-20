@@ -45,8 +45,10 @@ class ErrorRecoveryNode(BaseAgentNode):
         current_agent = state.get("current_agent", "")
 
         logger.info(
-            f"Processing error recovery: count={error_info.error_count}, "
-            f"agent={current_agent}, last_error={error_info.last_error}"
+            "Processing error recovery: count=%s, agent=%s, last_error=%s",
+            error_info.error_count,
+            current_agent,
+            error_info.last_error,
         )
 
         # Determine recovery strategy based on error severity and patterns
@@ -72,7 +74,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         current_agent = state.get("current_agent", "")
         retry_count = error_info.retry_attempts.get(current_agent, 0)
 
-        logger.info(f"Attempting retry #{retry_count + 1} for {current_agent}")
+        logger.info("Attempting retry #%s for %s", retry_count + 1, current_agent)
 
         # Update error info for retry
         error_info.last_error = None
@@ -143,7 +145,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         """
         current_agent = state.get("current_agent", "")
 
-        logger.info(f"Attempting fallback strategy for {current_agent}")
+        logger.info("Attempting fallback strategy for %s", current_agent)
 
         # Determine appropriate fallback agent
         fallback_agent = self._get_fallback_agent(current_agent)
@@ -184,7 +186,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             State with escalation information
         """
         logger.warning(
-            f"Escalating to human support for session {state.get('session_id')}"
+            "Escalating to human support for session %s", state.get("session_id")
         )
 
         escalation_message = {
