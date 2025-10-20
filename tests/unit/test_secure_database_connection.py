@@ -1,4 +1,4 @@
-"""Unit tests for secure database connection module."""
+"""Unit tests for database connection module (final-only)."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -10,7 +10,6 @@ from tripsage_core.database.connection import (
     Base,
     close_connections,
     create_secure_async_engine,
-    get_connection_manager,
     get_database_session,
     get_engine,
     get_engine_for_testing,
@@ -20,11 +19,10 @@ from tripsage_core.database.connection import (
 from tripsage_core.utils.connection_utils import (
     DatabaseURLParsingError,
     DatabaseValidationError,
-    SecureDatabaseConnectionManager,
 )
 
 
-class TestSecureDatabaseConnection:
+class TestDatabaseConnection:
     """Test secure database connection functionality."""
 
     @pytest.fixture
@@ -54,83 +52,77 @@ class TestSecureDatabaseConnection:
 
     def test_base_declarative_class(self):
         """Test Base declarative class is properly defined."""
-        assert hasattr(Base, "__tablename__")
+        # DeclarativeBase itself doesn't define __tablename__; subclasses do.
         assert hasattr(Base, "metadata")
 
         # Should be usable as base for models
+        from sqlalchemy import Integer
+        from sqlalchemy.orm import Mapped, mapped_column
+
         class TestModel(Base):
             __tablename__ = "test"
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
         assert TestModel.__tablename__ == "test"
-
-    def test_get_connection_manager_singleton(self):
-        """Test connection manager is a singleton."""
-        manager1 = get_connection_manager()
-        manager2 = get_connection_manager()
-
-        assert manager1 is manager2
-        assert isinstance(manager1, SecureDatabaseConnectionManager)
-
-        # Check configuration
-        assert manager1.retry_handler.max_retries == 3
-        assert manager1.circuit_breaker.failure_threshold == 5
-        assert manager1.circuit_breaker.recovery_timeout == 60.0
-        assert manager1.validator.timeout == 10.0
 
     @pytest.mark.asyncio
     async def test_create_secure_async_engine_with_supabase(
         self, mock_settings, mock_credentials
     ):
         """Test engine creation with Supabase URL."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
                 "tripsage_core.database.connection.DatabaseURLDetector"
-            ) as mock_detector:
-                with patch(
-                    "tripsage_core.database.connection.DatabaseURLConverter"
-                ) as mock_converter:
-                    with patch(
-                        "tripsage_core.database.connection.get_connection_manager"
-                    ) as mock_mgr:
-                        with patch(
-                            "tripsage_core.database.connection.create_async_engine"
-                        ) as mock_create:
-                            # Setup mocks
-                            mock_detector.return_value.detect_url_type.return_value = {
-                                "type": "supabase"
-                            }
+            ) as mock_detector,
+            patch(
+                "tripsage_core.database.connection.DatabaseURLConverter"
+            ) as mock_converter,
+            patch(
+                "tripsage_core.database.connection.create_async_engine"
+            ) as mock_create,
+        ):
+            # Setup mocks
+            mock_detector.return_value.detect_url_type.return_value = {
+                "type": "supabase"
+            }
 
-                            mock_converter.return_value.supabase_to_postgres.return_value = (  # noqa: E501
-                                "postgresql://postgres:key@test.supabase.co:5432/postgres"
-                            )
+            mock_converter.return_value.supabase_to_postgres.return_value = (
+                "postgresql://postgres:key@test.supabase.co:5432/postgres"
+            )
 
-                            mock_mgr.return_value.parse_and_validate_url = AsyncMock(
-                                return_value=mock_credentials
-                            )
+            mock_engine = AsyncMock()
+            # Configure begin() to be an async context manager (no coroutine)
+            begin_ctx = AsyncMock()
+            begin_conn = AsyncMock()
+            begin_conn.execute = AsyncMock()
+            begin_ctx.__aenter__.return_value = begin_conn
+            begin_ctx.__aexit__.return_value = AsyncMock()
 
-                            mock_engine = AsyncMock()
-                            mock_create.return_value = mock_engine
+            mock_engine.begin = MagicMock(return_value=begin_ctx)
+            mock_create.return_value = mock_engine
 
-                            # Test creation
-                            await create_secure_async_engine(
-                                "https://test.supabase.co",
-                                pool_size=20,
-                                echo=True,
-                            )
+            # Test creation
+            await create_secure_async_engine(
+                "https://test.supabase.co",
+                pool_size=20,
+                echo=True,
+            )
 
-                            # Verify Supabase conversion
-                            mock_converter.return_value.supabase_to_postgres.assert_called_once()
+            # Verify Supabase conversion
+            mock_converter.return_value.supabase_to_postgres.assert_called_once()
 
-                            # Verify engine configuration
-                            mock_create.assert_called_once()
-                            call_kwargs = mock_create.call_args[1]
-                            assert call_kwargs["pool_size"] == 20
-                            assert call_kwargs["echo"] is True
-                            assert call_kwargs["pool_pre_ping"] is True
-                            assert call_kwargs["pool_recycle"] == 3600
-                            assert call_kwargs["pool_timeout"] == 30
+            # Verify engine configuration
+            mock_create.assert_called_once()
+            call_kwargs = mock_create.call_args[1]
+            assert call_kwargs["pool_size"] == 20
+            assert call_kwargs["echo"] is True
+            assert call_kwargs["pool_pre_ping"] is True
+            assert call_kwargs["pool_recycle"] == 3600
+            assert call_kwargs["pool_timeout"] == 30
 
     @pytest.mark.asyncio
     async def test_create_secure_async_engine_with_invalid_url(self):
@@ -157,9 +149,6 @@ class TestSecureDatabaseConnection:
                 "tripsage_core.database.connection.DatabaseURLDetector"
             ) as mock_detector,
             patch(
-                "tripsage_core.database.connection.get_connection_manager"
-            ) as mock_mgr,
-            patch(
                 "tripsage_core.database.connection.create_async_engine"
             ) as mock_create,
         ):
@@ -167,10 +156,6 @@ class TestSecureDatabaseConnection:
             mock_detector.return_value.detect_url_type.return_value = {
                 "type": "postgresql"
             }
-
-            mock_mgr.return_value.parse_and_validate_url = AsyncMock(
-                return_value=mock_credentials
-            )
 
             mock_engine = AsyncMock()
             # Make validation fail
@@ -208,31 +193,33 @@ class TestSecureDatabaseConnection:
 
     def test_get_session_factory(self, mock_settings):
         """Test session factory creation."""
-        with patch("tripsage_core.database.connection.get_engine") as mock_get_engine:
-            with patch(
+        with (
+            patch("tripsage_core.database.connection.get_engine") as mock_get_engine,
+            patch(
                 "tripsage_core.database.connection.async_sessionmaker"
-            ) as mock_maker:
-                mock_engine = MagicMock()
-                mock_get_engine.return_value = mock_engine
+            ) as mock_maker,
+        ):
+            mock_engine = MagicMock()
+            mock_get_engine.return_value = mock_engine
 
-                mock_factory = MagicMock()
-                mock_maker.return_value = mock_factory
+            mock_factory = MagicMock()
+            mock_maker.return_value = mock_factory
 
-                # Clear cached factory
-                import tripsage_core.database.connection as conn_module
+            # Clear cached factory
+            import tripsage_core.database.connection as conn_module
 
-                conn_module._session_factory = None
+            conn_module._session_factory = None
 
-                factory = get_session_factory()
+            factory = get_session_factory()
 
-                assert factory == mock_factory
-                mock_maker.assert_called_once_with(
-                    mock_engine,
-                    class_=AsyncSession,
-                    expire_on_commit=False,
-                    autoflush=False,
-                    autocommit=False,
-                )
+            assert factory == mock_factory
+            mock_maker.assert_called_once_with(
+                mock_engine,
+                class_=AsyncSession,
+                expire_on_commit=False,
+                autoflush=False,
+                autocommit=False,
+            )
 
     @pytest.mark.asyncio
     async def test_get_database_session_context(self):
@@ -248,7 +235,7 @@ class TestSecureDatabaseConnection:
             # Setup factory context manager
             mock_session_ctx = AsyncMock()
             mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session_ctx.__aexit__ = AsyncMock()
+            mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
 
             mock_factory.return_value.return_value = mock_session_ctx
 
@@ -273,7 +260,7 @@ class TestSecureDatabaseConnection:
             # Setup factory context manager
             mock_session_ctx = AsyncMock()
             mock_session_ctx.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session_ctx.__aexit__ = AsyncMock()
+            mock_session_ctx.__aexit__ = AsyncMock(return_value=False)
 
             mock_factory.return_value.return_value = mock_session_ctx
 
@@ -324,7 +311,7 @@ class TestSecureDatabaseConnection:
             mock_session_ctx.return_value.__aenter__ = AsyncMock(
                 return_value=mock_session
             )
-            mock_session_ctx.return_value.__aexit__ = AsyncMock()
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
 
             result = await test_connection()
 

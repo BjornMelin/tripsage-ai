@@ -288,6 +288,7 @@ async def close_connections():
     logger.info("Connection manager reset")
 
 
+@asynccontextmanager
 async def get_engine_for_testing(
     database_url: str | None = None,
     use_null_pool: bool = True,
