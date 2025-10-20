@@ -23,18 +23,22 @@ class MockService(ServiceProtocol):
     """Mock service for testing."""
 
     def __init__(self):
+        """Initialize mock service state."""
         self.connected = False
         self.operations = []
 
     async def connect(self) -> None:
+        """Simulate connecting the mock service."""
         self.connected = True
         self.operations.append("connect")
 
     async def close(self) -> None:
+        """Simulate closing the mock service."""
         self.connected = False
         self.operations.append("close")
 
     async def operation(self, value: str) -> str:
+        """Record an operation and return a result."""
         self.operations.append(f"operation:{value}")
         return f"result:{value}"
 
@@ -43,6 +47,7 @@ class MockAdapter(ServiceAdapter):
     """Mock adapter for testing."""
 
     def __init__(self, service_name="airbnb"):
+        """Initialize adapter with a default service name."""
         super().__init__(service_name)
         self.mcp_service = MockService()
         self.direct_service = MockService()
@@ -57,10 +62,12 @@ class MockAdapter(ServiceAdapter):
             return self.mcp_service
 
     async def get_mcp_client(self):
+        """Return a connected MCP client instance."""
         await self.mcp_service.connect()
         return self.mcp_service
 
     async def get_direct_service(self):
+        """Return a connected direct service instance."""
         await self.direct_service.connect()
         return self.direct_service
 
@@ -239,7 +246,7 @@ class TestCacheServiceIntegration:
             assert result == "test_value" or result is None  # Use the result
             # Clean up
             await cache_service.delete("test_key")
-        except Exception:
+        except (ConnectionError, TimeoutError, RuntimeError):
             # Skip if cache service is not available in test environment
             pytest.skip("Cache service not available in test environment")
 

@@ -5,18 +5,27 @@ using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
 import json
-from datetime import UTC, datetime
-from typing import Any
-
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_openai import ChatOpenAI
+from datetime import UTC, date, datetime
+from typing import TYPE_CHECKING, Any
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools import get_tools_for_agent
 from tripsage_core.config import get_settings
+from tripsage_core.services.business.accommodation_service import (
+    AccommodationSearchRequest,
+    AccommodationSearchResponse,
+    AccommodationService,
+)
 from tripsage_core.utils.logging_utils import get_logger
 
+
+if TYPE_CHECKING:  # pragma: no cover
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_openai import ChatOpenAI
+else:
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_openai import ChatOpenAI
 
 logger = get_logger(__name__)
 
@@ -30,15 +39,19 @@ class AccommodationAgentNode(BaseAgentNode):
 
     def __init__(self, service_registry):
         """Initialize the accommodation agent node."""
-        super().__init__("accommodation_agent", service_registry)
-
-        # Initialize LLM for accommodation-specific tasks
         settings = get_settings()
+        # type: ignore # pylint: disable=no-member
+        api_key_str = settings.openai_api_key.get_secret_value()
         self.llm = ChatOpenAI(
             model=settings.openai_model,
             temperature=settings.model_temperature,
-            api_key=settings.openai_api_key.get_secret_value(),
+            api_key=api_key_str,  # type: ignore
         )
+        super().__init__("accommodation_agent", service_registry)
+        self.accommodation_service: AccommodationService = self.get_service(
+            "accommodation_service"
+        )
+        self.memory_service = self.get_optional_service("memory_service")
 
     def _initialize_tools(self) -> None:
         """Initialize accommodation-specific tools using simple tool catalog."""
@@ -78,7 +91,7 @@ class AccommodationAgentNode(BaseAgentNode):
             accommodation_search_record = {
                 "timestamp": datetime.now(UTC).isoformat(),
                 "parameters": search_params,
-                "results": search_results,
+                "results": search_results.model_dump(),
                 "agent": "accommodation_agent",
             }
 
@@ -154,18 +167,22 @@ class AccommodationAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-
-            # Parse the response
-            if response.content.strip().lower() in ["null", "none", "{}"]:
+            raw_content = response.content
+            if not isinstance(raw_content, str):
+                logger.warning(
+                    "Accommodation parameter extraction returned non-text content",
+                    extra={"content_type": type(raw_content).__name__},
+                )
                 return None
 
-            params = json.loads(response.content)
+            if raw_content.strip().lower() in {"null", "none", "{}"}:
+                return None
 
-            # Validate required fields
+            params = json.loads(raw_content)
+
             if params and params.get("location"):
                 return params
-            else:
-                return None
+            return None
 
         except Exception:
             logger.exception("Error extracting accommodation parameters")
@@ -173,36 +190,47 @@ class AccommodationAgentNode(BaseAgentNode):
 
     async def _search_accommodations(
         self, search_params: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Perform accommodation search using service layer.
-
-        Args:
-            search_params: Accommodation search parameters
-
-        Returns:
-            Accommodation search results
-        """
+    ) -> AccommodationSearchResponse:
+        """Perform accommodation search using service layer."""
         try:
-            # Use accommodation service to search
+            search_request = self._build_search_request(search_params)
             result = await self.accommodation_service.search_accommodations(
-                **search_params
+                search_request
             )
 
-            if result.get("status") == "success":
-                properties_found = len(result.get("listings", []))
-                logger.info("Search completed: %s properties found", properties_found)
-            else:
-                logger.warning("Accommodation search failed: %s", result.get("error"))
+            logger.info(
+                "Accommodation search completed",
+                extra={
+                    "search_id": result.search_id,
+                    "results": result.results_returned,
+                    "cached": result.cached,
+                },
+            )
 
             return result
 
-        except Exception as e:
+        except Exception:
             logger.exception("Accommodation search failed")
-            return {"error": f"Accommodation search failed: {e!s}"}
+            raise
+
+    def _build_search_request(
+        self, search_params: dict[str, Any]
+    ) -> AccommodationSearchRequest:
+        """Convert extracted parameters into a typed search request."""
+        normalized = search_params.copy()
+        check_in_str = normalized.pop("check_in_date", None)
+        check_out_str = normalized.pop("check_out_date", None)
+
+        if check_in_str:
+            normalized["check_in"] = date.fromisoformat(check_in_str)
+        if check_out_str:
+            normalized["check_out"] = date.fromisoformat(check_out_str)
+
+        return AccommodationSearchRequest(**normalized)
 
     async def _generate_accommodation_response(
         self,
-        search_results: dict[str, Any],
+        search_results: AccommodationSearchResponse,
         search_params: dict[str, Any],
         state: TravelPlanningState,
     ) -> dict[str, Any]:
@@ -216,71 +244,60 @@ class AccommodationAgentNode(BaseAgentNode):
         Returns:
             Formatted response message
         """
-        if search_results.get("error"):
+        listings = search_results.listings
+        location = search_params.get("location", "your destination")
+        check_in = search_params.get("check_in_date")
+        check_out = search_params.get("check_out_date")
+
+        if not listings:
             content = (
-                f"I apologize, but I encountered an issue searching: "
-                f"{search_results['error']}. Let me help you try a different approach."
+                "I couldn't find accommodations in "
+                f"{location} for the specified dates. "
+                "Would you like to adjust the dates or preferences?"
             )
-        else:
-            accommodations = search_results.get("listings", [])
+            return self._create_response_message(
+                content,
+                {
+                    "search_params": search_params,
+                    "results_count": search_results.results_returned,
+                },
+            )
 
-            if accommodations:
-                # Format accommodation results
-                location = search_params.get("location", "your destination")
-                check_in = search_params.get("check_in_date", "")
-                check_out = search_params.get("check_out_date", "")
+        content = f"I found {len(listings)} accommodations in {location}"
 
-                content = f"I found {len(accommodations)} accommodations in {location}"
+        if check_in and check_out:
+            content += f" for {check_in} to {check_out}"
 
-                if check_in and check_out:
-                    content += f" for {check_in} to {check_out}"
+        content += ":\n\n"
 
-                content += ":\n\n"
+        for index, listing in enumerate(listings[:3], 1):
+            price = f"${listing.price_per_night:,.0f}"
+            rating = (
+                f"{listing.rating:.1f}" if listing.rating is not None else "No rating"
+            )
+            amenities = (
+                ", ".join(amenity.name for amenity in listing.amenities[:3] if amenity)
+                or "No amenities listed"
+            )
+            content += (
+                f"{index}. {listing.name} ({listing.property_type})\n"
+                f"   Rating: {rating} | Price: {price}/night\n"
+                f"   Amenities: {amenities}\n\n"
+            )
 
-                for i, property in enumerate(
-                    accommodations[:3], 1
-                ):  # Show top 3 results
-                    name = property.get("name", "Unknown Property")
-                    property_type = property.get("property_type", "Property")
-                    price = property.get("price", {}).get(
-                        "per_night", "Price not available"
-                    )
-                    rating = property.get("rating", "No rating")
+        remaining = len(listings) - min(len(listings), 3)
+        if remaining > 0:
+            content += f"... and {remaining} more options available.\n\n"
 
-                    content += (
-                        f"{i}. {name} ({property_type})\n"
-                        f"   Rating: {rating} | Price: {price}/night\n"
-                    )
-
-                    amenities = property.get("amenities", [])
-                    if amenities:
-                        amenities_str = ", ".join(amenities[:3])
-                        content += f"   Amenities: {amenities_str}\n"
-
-                    content += "\n"
-
-                if len(accommodations) > 3:
-                    content += (
-                        f"... and {len(accommodations) - 3} more options available.\n\n"
-                    )
-
-                content += (
-                    "Would you like details about any properties or search with "
-                    "different criteria?"
-                )
-            else:
-                location = search_params.get("location", "the specified location")
-                content = (
-                    f"I couldn't find any accommodations in {location} "
-                    f"for the specified dates. "
-                    f"Would you like to try different dates or adjust preferences?"
-                )
+        content += (
+            "Would you like details about any properties or refine your criteria?"
+        )
 
         return self._create_response_message(
             content,
             {
                 "search_params": search_params,
-                "results_count": len(search_results.get("listings", [])),
+                "results_count": search_results.results_returned,
             },
         )
 
@@ -313,6 +330,9 @@ class AccommodationAgentNode(BaseAgentNode):
         """
 
         try:
+            if self.llm is None:
+                raise RuntimeError("Accommodation LLM is not initialized")
+
             messages = [
                 SystemMessage(
                     content="You are a helpful accommodation booking assistant."
@@ -321,7 +341,8 @@ class AccommodationAgentNode(BaseAgentNode):
             ]
 
             response = await self.llm.ainvoke(messages)
-            content = response.content
+            raw_content = response.content
+            content = raw_content if isinstance(raw_content, str) else str(raw_content)
 
         except Exception:
             logger.exception("Error generating accommodation response")
