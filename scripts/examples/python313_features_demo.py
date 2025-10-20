@@ -11,7 +11,14 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+
+try:
+    from pydantic import BaseModel, Field
+except ImportError as exc:  # pragma: no cover - dependency guard
+    raise RuntimeError(
+        "Pydantic is required for python313_features_demo. "
+        "Run `uv sync` to install project dependencies."
+    ) from exc
 
 
 logging.basicConfig(
@@ -298,8 +305,7 @@ async def demonstrate_concurrent_database_operations() -> DatabaseOperationsSumm
     logger.info("Demonstrating concurrent database operations")
 
     async def simulate_db_query(
-        query_type: str,
-        delay: float = 0.1,
+        query_type: str, delay: float = 0.1
     ) -> DatabaseOperationResult:
         await asyncio.sleep(delay)
         return DatabaseOperationResult(

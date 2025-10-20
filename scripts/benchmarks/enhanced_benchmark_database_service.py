@@ -33,8 +33,10 @@ from pydantic import BaseModel, Field
 
 
 try:
-    from tripsage_core.config import get_settings
-    from tripsage_core.services.infrastructure.database_service import DatabaseService
+    from tripsage_core.config import get_settings  # type: ignore
+    from tripsage_core.services.infrastructure.database_service import (
+        DatabaseService,  # type: ignore
+    )
 except ImportError as e:
     print(f"Warning: Could not import TripSage modules: {e}")
     print("Running in mock mode for demonstration.")
@@ -70,12 +72,18 @@ except ImportError as e:
             """Close mock database connection."""
             await asyncio.sleep(0.001)
 
-        async def execute_sql(self, query, params=None):
+        async def execute_sql(
+            self,
+            query: str,
+            params: dict[str, Any] | None = None,
+            user_id: str | None = None,
+        ) -> list[dict[str, Any]]:
             """Execute mock SQL query.
 
             Args:
                 query: SQL query string
                 params: Query parameters
+                user_id: User ID for auditing
 
             Returns:
                 Mock query result
@@ -305,7 +313,7 @@ class EnhancedDatabaseBenchmark:
             for i in range(self.iterations):
                 async with self.measure_performance("parameterized_query") as metrics:
                     result = await service.execute_sql(
-                        "SELECT $1::text as param_value", (f"param_{i}",)
+                        "SELECT $1::text as param_value", {"param": f"param_{i}"}
                     )
                     metrics.metadata.update(
                         {
@@ -396,7 +404,7 @@ class EnhancedDatabaseBenchmark:
                     ) as metrics:
                         await service.execute_sql(
                             "SELECT $1::int as user_id, $2::int as operation_id",
-                            (user_id, operation_id),
+                            {"user_id": user_id, "operation_id": operation_id},
                         )
                         metrics.metadata.update(
                             {
@@ -479,7 +487,7 @@ class EnhancedDatabaseBenchmark:
 
                         result = await service.execute_sql(
                             "SELECT $1::vector <-> $2::vector as distance",
-                            (vector1, vector2),
+                            {"vector1": vector1, "vector2": vector2},
                         )
                     else:
                         # Mock vector operations
@@ -579,7 +587,7 @@ class EnhancedDatabaseBenchmark:
         baseline_stats = {}
         if self.baseline_file and Path(self.baseline_file).exists():
             try:
-                with Path(self.baseline_file).open() as f:
+                with Path(self.baseline_file).open(encoding="utf-8") as f:
                     baseline_data = json.load(f)
                     baseline_stats = baseline_data.get("statistics", {})
             except Exception as e:  # noqa: BLE001
@@ -672,7 +680,7 @@ class EnhancedDatabaseBenchmark:
         }
 
         json_file = self.output_dir / f"benchmark_report_{timestamp}.json"
-        with Path(json_file, "w").open() as f:
+        with Path(json_file).open(encoding="utf-8") as f:
             json.dump(report_data, f, indent=2, default=str)
 
         logger.info("JSON report saved to: %s", json_file)
@@ -681,7 +689,7 @@ class EnhancedDatabaseBenchmark:
         """Generate CSV report for data analysis."""
         csv_file = self.output_dir / f"benchmark_data_{timestamp}.csv"
 
-        with Path(csv_file, "w", newline="").open() as f:
+        with Path(csv_file).open(newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
 
             # Write header
@@ -837,7 +845,7 @@ class EnhancedDatabaseBenchmark:
         """
 
         html_file = self.output_dir / f"benchmark_report_{timestamp}.html"
-        with Path(html_file, "w").open() as f:
+        with Path(html_file).open(encoding="utf-8") as f:
             f.write(html_content)
 
         logger.info("HTML report saved to: %s", html_file)
@@ -900,12 +908,12 @@ class EnhancedDatabaseBenchmark:
             "performance_thresholds": self.performance_thresholds,
         }
 
-        with Path(baseline_file, "w").open() as f:
+        with Path(baseline_file).open(encoding="utf-8") as f:
             json.dump(baseline_data, f, indent=2, default=str)
 
         # Also save as latest baseline
         latest_baseline = self.output_dir / "baseline_latest.json"
-        with Path(latest_baseline, "w").open() as f:
+        with Path(latest_baseline).open(encoding="utf-8") as f:
             json.dump(baseline_data, f, indent=2, default=str)
 
         logger.info("Baseline saved to: %s", baseline_file)
