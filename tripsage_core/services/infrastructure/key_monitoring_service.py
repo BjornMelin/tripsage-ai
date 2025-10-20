@@ -219,7 +219,7 @@ class KeyMonitoringService:
         )
 
         # Log the alert
-        logger.error(
+        logger.exception(
             alert_message,
             extra={
                 "operation": operation.value,
@@ -602,7 +602,7 @@ async def check_key_expiration(
         )
         return result
     except Exception as e:
-        logger.error(f"Failed to check key expiration: {e}")
+        logger.exception(f"Failed to check key expiration: {e}")
         return []
 
 
@@ -666,7 +666,7 @@ async def get_key_health_metrics() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"Failed to get key health metrics: {e}")
+        logger.exception(f"Failed to get key health metrics: {e}")
         return {
             "error": str(e),
             "total_count": 0,

@@ -446,7 +446,7 @@ class SecurityAuditLogger:
         except Exception as e:
             self.stats["errors"] += 1
             self._handle_circuit_breaker_failure()
-            logger.error(f"Failed to log audit event: {e}")
+            logger.exception(f"Failed to log audit event: {e}")
             return False
 
     async def log_authentication_event(
@@ -659,7 +659,7 @@ class SecurityAuditLogger:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in flush loop: {e}")
+                logger.exception(f"Error in flush loop: {e}")
 
     async def _flush_buffer(self):
         """Flush buffered events to storage."""
@@ -680,7 +680,7 @@ class SecurityAuditLogger:
             self.stats["buffer_flushes"] += 1
 
         except Exception as e:
-            logger.error(f"Failed to flush events: {e}")
+            logger.exception(f"Failed to flush events: {e}")
             # Re-add events to buffer for retry
             async with self._buffer_lock:
                 self._buffer.extend(events_to_flush)
@@ -739,7 +739,7 @@ class SecurityAuditLogger:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Error in cleanup loop: {e}")
+                logger.exception(f"Error in cleanup loop: {e}")
 
     async def _cleanup_old_logs(self):
         """Clean up old log files based on retention policy."""

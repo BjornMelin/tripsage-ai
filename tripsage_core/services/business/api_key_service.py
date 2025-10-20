@@ -420,7 +420,7 @@ class ApiKeyService:
             return self._db_result_to_response(result)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create API key",
                 extra={
                     "user_id": user_id,
@@ -595,7 +595,7 @@ class ApiKeyService:
             return result_with_latency
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"API key validation error for {self._get_service_value(service)}",
                 extra={"service": self._get_service_value(service), "error": str(e)},
             )
@@ -758,7 +758,7 @@ class ApiKeyService:
             return base64.urlsafe_b64encode(combined).decode("ascii")
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "API key encryption failed",
                 extra={
                     "error": str(e),
@@ -812,7 +812,7 @@ class ApiKeyService:
             return decrypted_value.decode("utf-8")
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "API key decryption failed",
                 extra={
                     "error": str(e),

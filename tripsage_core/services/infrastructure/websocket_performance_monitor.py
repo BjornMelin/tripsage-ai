@@ -194,7 +194,7 @@ class WebSocketPerformanceMonitor:
             self._check_performance_alerts(connection, health)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 f"Failed to collect metrics for connection "
                 f"{connection.connection_id}: {e}"
             )
@@ -348,7 +348,7 @@ class WebSocketPerformanceMonitor:
                 await asyncio.sleep(self.collection_interval)
 
             except Exception as e:
-                logger.error(f"Error in performance monitor loop: {e}")
+                logger.exception(f"Error in performance monitor loop: {e}")
                 await asyncio.sleep(self.collection_interval)
 
     async def _aggregation_loop(self) -> None:
@@ -359,7 +359,7 @@ class WebSocketPerformanceMonitor:
                 await self._aggregate_metrics()
 
             except Exception as e:
-                logger.error(f"Error in aggregation loop: {e}")
+                logger.exception(f"Error in aggregation loop: {e}")
                 await asyncio.sleep(self.aggregation_interval)
 
     async def _cleanup_loop(self) -> None:
@@ -370,7 +370,7 @@ class WebSocketPerformanceMonitor:
                 await self._cleanup_old_data()
 
             except Exception as e:
-                logger.error(f"Error in cleanup loop: {e}")
+                logger.exception(f"Error in cleanup loop: {e}")
                 await asyncio.sleep(3600)
 
     async def _aggregate_metrics(self) -> None:

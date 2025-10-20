@@ -140,7 +140,7 @@ Start by greeting the user and asking how you can help with their travel plannin
             return {"messages": response_messages, "success": True}
 
         except Exception as e:
-            logger.error(f"Error processing conversation: {e}")
+            logger.exception(f"Error processing conversation: {e}")
             return {
                 "messages": messages
                 + [
@@ -200,7 +200,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 yield chunk
 
         except Exception as e:
-            logger.error(f"Error streaming conversation: {e}")
+            logger.exception(f"Error streaming conversation: {e}")
             yield {
                 "error": str(e),
                 "messages": [{"role": "assistant", "content": f"Error: {e!s}"}],
@@ -224,7 +224,7 @@ Start by greeting the user and asking how you can help with their travel plannin
                 ),
             }
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.exception(f"Health check failed: {e}")
             return {"status": "unhealthy", "agent_responsive": False, "error": str(e)}
 
 

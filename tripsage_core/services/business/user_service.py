@@ -203,7 +203,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create user",
                 extra={"email": str(user_data.email), "error": str(e)},
             )
@@ -236,7 +236,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user by ID", extra={"user_id": user_id, "error": str(e)}
             )
             return None
@@ -268,7 +268,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user by email", extra={"email": email, "error": str(e)}
             )
             return None
@@ -300,7 +300,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user by username",
                 extra={"username": username, "error": str(e)},
             )
@@ -368,7 +368,7 @@ class UserService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to update user", extra={"user_id": user_id, "error": str(e)}
             )
             raise
@@ -415,7 +415,7 @@ class UserService:
         except (NotFoundError, AuthenticationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to change password",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -466,7 +466,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to verify credentials",
                 extra={"identifier": identifier, "error": str(e)},
             )
@@ -494,7 +494,7 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to deactivate user",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -522,7 +522,7 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to activate user", extra={"user_id": user_id, "error": str(e)}
             )
             return False
@@ -576,7 +576,7 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to update user preferences",
                 extra={"user_id": user_id, "error": str(e)},
             )

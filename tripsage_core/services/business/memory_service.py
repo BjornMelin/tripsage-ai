@@ -192,7 +192,7 @@ class MemoryService:
             logger.warning("Mem0 not available, using fallback memory implementation")
             self.memory = None
         except Exception as e:
-            logger.error(f"Failed to initialize memory backend: {e!s}")
+            logger.exception(f"Failed to initialize memory backend: {e!s}")
             self.memory = None
 
     def _get_default_config(self) -> dict[str, Any]:
@@ -262,11 +262,11 @@ class MemoryService:
 
         except DatabaseURLParsingError as e:
             error_msg = f"Failed to parse database URL: {e}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise ServiceError(error_msg) from e
         except Exception as e:
             error_msg = f"Failed to create Mem0 configuration: {e}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise ServiceError(error_msg) from e
 
     async def connect(self) -> None:
@@ -320,11 +320,11 @@ class MemoryService:
             DatabaseConnectionError,
         ) as e:
             error_msg = f"Database connection validation failed: {e}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise ServiceError(error_msg) from e
         except Exception as e:
             error_msg = f"Failed to connect memory service: {e}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             raise ServiceError(error_msg) from e
 
     async def close(self) -> None:
@@ -338,7 +338,7 @@ class MemoryService:
             logger.info("Memory service closed successfully")
 
         except Exception as e:
-            logger.error(f"Error closing memory service: {e!s}")
+            logger.exception(f"Error closing memory service: {e!s}")
 
     async def add_conversation_memory(
         self, user_id: str, memory_request: ConversationMemoryRequest
@@ -396,7 +396,7 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Memory extraction failed", extra={"user_id": user_id, "error": str(e)}
             )
             return {"results": [], "error": str(e)}
@@ -469,7 +469,7 @@ class MemoryService:
             return enriched_results
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Memory search failed",
                 extra={
                     "user_id": user_id,
@@ -554,7 +554,7 @@ class MemoryService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user context",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -616,7 +616,7 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to update user preferences",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -678,7 +678,7 @@ class MemoryService:
             return {"deleted_count": deleted_count, "success": True}
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to delete user memories",
                 extra={"user_id": user_id, "error": str(e)},
             )

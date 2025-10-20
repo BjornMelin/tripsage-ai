@@ -41,11 +41,11 @@ async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool
             logger.info("Connected to SQL database successfully")
             return True
 
-        logger.error("Failed to connect to SQL database")
+        logger.exception("Failed to connect to SQL database")
         return False
 
     except Exception as e:
-        logger.error(f"SQL connection check failed: {e}")
+        logger.exception(f"SQL connection check failed: {e}")
         return False
 
 
@@ -75,7 +75,7 @@ async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
         )
 
         if result.error:
-            logger.error(f"Failed to create users table: {result.error}")
+            logger.exception(f"Failed to create users table: {result.error}")
             return False
 
         # Create trips table if not exists
@@ -103,14 +103,14 @@ async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
         )
 
         if result.error:
-            logger.error(f"Failed to create trips table: {result.error}")
+            logger.exception(f"Failed to create trips table: {result.error}")
             return False
 
         logger.info("SQL database initialized successfully")
         return True
 
     except Exception as e:
-        logger.error(f"SQL initialization failed: {e}")
+        logger.exception(f"SQL initialization failed: {e}")
         return False
 
 
@@ -141,7 +141,7 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Sample data loading failed: {e}")
+        logger.exception(f"Sample data loading failed: {e}")
         return False
 
 
@@ -169,13 +169,13 @@ async def main():
         # Check SQL connection
         sql_connected = await check_sql_connection(mcp_manager, args.project_id)
         if not sql_connected:
-            logger.error("Failed to connect to SQL database")
+            logger.exception("Failed to connect to SQL database")
             return False
 
         # Initialize SQL database
         success = await init_sql_database(mcp_manager, args.project_id)
         if not success:
-            logger.error("SQL database initialization failed")
+            logger.exception("SQL database initialization failed")
             return False
 
         # Load sample data if requested
@@ -188,7 +188,7 @@ async def main():
         return True
 
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.exception(f"Database initialization failed: {e}")
         return False
 
     finally:

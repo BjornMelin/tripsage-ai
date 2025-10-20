@@ -320,7 +320,7 @@ async def verify_trip_access(
     except (CoreResourceNotFoundError, CoreSecurityError):
         raise
     except Exception as e:
-        logger.error(
+        logger.exception(
             "Unexpected error during trip access verification",
             extra={
                 "trip_id": context.trip_id,

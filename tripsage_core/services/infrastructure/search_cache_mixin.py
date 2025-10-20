@@ -207,7 +207,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return success
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Error caching search results",
                 extra={
                     "error": str(e),
@@ -244,7 +244,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return bool(deleted)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Error invalidating cache",
                 extra={
                     "error": str(e),
@@ -282,7 +282,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             return deleted
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Error invalidating cache pattern",
                 extra={
                     "error": str(e),
@@ -318,7 +318,7 @@ class SearchCacheMixin(Generic[SearchRequestType, SearchResponseType], ABC):
             }
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Error getting cache stats",
                 extra={
                     "error": str(e),

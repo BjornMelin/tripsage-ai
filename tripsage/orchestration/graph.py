@@ -436,7 +436,7 @@ class TripSageOrchestrator:
             }
 
         except Exception as e:
-            logger.error(f"Error processing message: {e!s}")
+            logger.exception(f"Error processing message: {e!s}")
             return {
                 "response": (
                     "I apologize, but I encountered an error processing your request. "
@@ -460,5 +460,5 @@ class TripSageOrchestrator:
             state = self.compiled_graph.get_state(config)
             return state.values if state else None
         except Exception as e:
-            logger.error(f"Error retrieving session state: {e!s}")
+            logger.exception(f"Error retrieving session state: {e!s}")
             return None

@@ -214,7 +214,7 @@ async def get_system_overview(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get system overview: {e}")
+        logger.exception(f"Failed to get system overview: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system overview: {e!s}",
@@ -278,7 +278,7 @@ async def get_services_status(
         return services_status
 
     except Exception as e:
-        logger.error(f"Failed to get services status: {e}")
+        logger.exception(f"Failed to get services status: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve services status: {e!s}",
@@ -357,7 +357,7 @@ async def get_usage_metrics(
         )
 
     except Exception as e:
-        logger.error(f"Failed to get usage metrics: {e}")
+        logger.exception(f"Failed to get usage metrics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve usage metrics: {e!s}",
@@ -437,7 +437,7 @@ async def get_rate_limits_status(
         return rate_limits
 
     except Exception as e:
-        logger.error(f"Failed to get rate limits status: {e}")
+        logger.exception(f"Failed to get rate limits status: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve rate limits status: {e!s}",
@@ -509,7 +509,7 @@ async def get_alerts(
         return alerts[:limit]
 
     except Exception as e:
-        logger.error(f"Failed to get alerts: {e}")
+        logger.exception(f"Failed to get alerts: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve alerts: {e!s}",
@@ -555,7 +555,7 @@ async def acknowledge_alert(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to acknowledge alert {alert_id}: {e}")
+        logger.exception(f"Failed to acknowledge alert {alert_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to acknowledge alert: {e!s}",
@@ -601,7 +601,7 @@ async def dismiss_alert(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to dismiss alert {alert_id}: {e}")
+        logger.exception(f"Failed to dismiss alert {alert_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to dismiss alert: {e!s}",
@@ -667,7 +667,7 @@ async def get_user_activity(
         return user_activities
 
     except Exception as e:
-        logger.error(f"Failed to get user activity: {e}")
+        logger.exception(f"Failed to get user activity: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve user activity: {e!s}",
@@ -742,7 +742,7 @@ async def get_trend_data(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get trend data for {metric_type}: {e}")
+        logger.exception(f"Failed to get trend data for {metric_type}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve trend data: {e!s}",
@@ -849,7 +849,7 @@ async def get_analytics_summary(
         return summary
 
     except Exception as e:
-        logger.error(f"Failed to get analytics summary: {e}")
+        logger.exception(f"Failed to get analytics summary: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve analytics summary: {e!s}",

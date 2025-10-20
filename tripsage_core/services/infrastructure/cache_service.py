@@ -110,7 +110,7 @@ class CacheService:
             logger.info("Successfully connected to DragonflyDB cache service")
 
         except Exception as e:
-            logger.error(f"Failed to connect to DragonflyDB: {e}")
+            logger.exception(f"Failed to connect to DragonflyDB: {e}")
             self._is_connected = False
             raise CoreServiceError(
                 message=f"Failed to connect to cache service: {e!s}",
@@ -173,7 +173,7 @@ class CacheService:
             result = await self._client.set(key, json_value, ex=ttl)
             return result is True
         except Exception as e:
-            logger.error(f"Failed to set JSON value for key {key}: {e}")
+            logger.exception(f"Failed to set JSON value for key {key}: {e}")
             raise CoreServiceError(
                 message=f"Failed to set cache value for key '{key}'",
                 code="CACHE_SET_FAILED",
@@ -203,10 +203,10 @@ class CacheService:
                 return default
             return json.loads(value)
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode JSON value for key {key}: {e}")
+            logger.exception(f"Failed to decode JSON value for key {key}: {e}")
             return default
         except Exception as e:
-            logger.error(f"Failed to get JSON value for key {key}: {e}")
+            logger.exception(f"Failed to get JSON value for key {key}: {e}")
             raise CoreServiceError(
                 message=f"Failed to get cache value for key '{key}'",
                 code="CACHE_GET_FAILED",
@@ -239,7 +239,7 @@ class CacheService:
 
             return await self._client.setex(key, ttl, value)
         except Exception as e:
-            logger.error(f"Failed to set key {key}: {e}")
+            logger.exception(f"Failed to set key {key}: {e}")
             raise CoreServiceError(
                 message=f"Failed to set cache key '{key}'",
                 code="CACHE_SET_FAILED",
@@ -266,7 +266,7 @@ class CacheService:
             value = await self._client.get(key)
             return value.decode("utf-8") if value else None
         except Exception as e:
-            logger.error(f"Failed to get key {key}: {e}")
+            logger.exception(f"Failed to get key {key}: {e}")
             raise CoreServiceError(
                 message=f"Failed to get cache key '{key}'",
                 code="CACHE_GET_FAILED",
@@ -294,7 +294,7 @@ class CacheService:
         try:
             return await self._client.delete(*keys)
         except Exception as e:
-            logger.error(f"Failed to delete keys {keys}: {e}")
+            logger.exception(f"Failed to delete keys {keys}: {e}")
             raise CoreServiceError(
                 message="Failed to delete cache keys",
                 code="CACHE_DELETE_FAILED",
@@ -320,7 +320,7 @@ class CacheService:
         try:
             return await self._client.exists(*keys)
         except Exception as e:
-            logger.error(f"Failed to check existence of keys {keys}: {e}")
+            logger.exception(f"Failed to check existence of keys {keys}: {e}")
             raise CoreServiceError(
                 message="Failed to check cache key existence",
                 code="CACHE_EXISTS_FAILED",
@@ -347,7 +347,7 @@ class CacheService:
         try:
             return await self._client.expire(key, seconds)
         except Exception as e:
-            logger.error(f"Failed to set expiration for key {key}: {e}")
+            logger.exception(f"Failed to set expiration for key {key}: {e}")
             raise CoreServiceError(
                 message=f"Failed to set expiration for cache key '{key}'",
                 code="CACHE_EXPIRE_FAILED",
@@ -373,7 +373,7 @@ class CacheService:
         try:
             return await self._client.ttl(key)
         except Exception as e:
-            logger.error(f"Failed to get TTL for key {key}: {e}")
+            logger.exception(f"Failed to get TTL for key {key}: {e}")
             return -2
 
     # Atomic operations
@@ -396,7 +396,7 @@ class CacheService:
         try:
             return await self._client.incr(key)
         except Exception as e:
-            logger.error(f"Failed to increment key {key}: {e}")
+            logger.exception(f"Failed to increment key {key}: {e}")
             return None
 
     async def decr(self, key: str) -> int | None:
@@ -417,7 +417,7 @@ class CacheService:
         try:
             return await self._client.decr(key)
         except Exception as e:
-            logger.error(f"Failed to decrement key {key}: {e}")
+            logger.exception(f"Failed to decrement key {key}: {e}")
             return None
 
     # Batch operations
@@ -458,7 +458,7 @@ class CacheService:
             values = await self._client.mget(keys)
             return [v.decode("utf-8") if v else None for v in values]
         except Exception as e:
-            logger.error(f"Failed to mget keys: {e}")
+            logger.exception(f"Failed to mget keys: {e}")
             raise CoreServiceError(
                 message="Failed to get multiple cache keys",
                 code="CACHE_MGET_FAILED",
@@ -484,7 +484,7 @@ class CacheService:
         try:
             return await self._client.mset(mapping)
         except Exception as e:
-            logger.error(f"Failed to mset: {e}")
+            logger.exception(f"Failed to mset: {e}")
             raise CoreServiceError(
                 message="Failed to set multiple cache keys",
                 code="CACHE_MSET_FAILED",
@@ -513,7 +513,7 @@ class CacheService:
             keys = await self._client.keys(pattern)
             return [k.decode("utf-8") for k in keys]
         except Exception as e:
-            logger.error(f"Failed to get keys with pattern {pattern}: {e}")
+            logger.exception(f"Failed to get keys with pattern {pattern}: {e}")
             return []
 
     async def delete_pattern(self, pattern: str) -> int:
@@ -546,7 +546,7 @@ class CacheService:
             result = await self._client.flushdb()
             return result is True
         except Exception as e:
-            logger.error(f"Failed to flush database: {e}")
+            logger.exception(f"Failed to flush database: {e}")
             return False
 
     async def info(self, section: str | None = None) -> dict[str, Any]:
@@ -570,7 +570,7 @@ class CacheService:
                     info_dict[key] = value
             return info_dict
         except Exception as e:
-            logger.error(f"Failed to get server info: {e}")
+            logger.exception(f"Failed to get server info: {e}")
             return {}
 
     # Health check
@@ -590,7 +590,7 @@ class CacheService:
 
             return await self._client.ping()
         except Exception as e:
-            logger.error(f"Cache health check failed: {e}")
+            logger.exception(f"Cache health check failed: {e}")
             return False
 
     # Convenience methods with TTL presets

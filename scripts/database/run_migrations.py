@@ -50,7 +50,7 @@ async def main():
     logger.info(f"SQL migrations completed: {succeeded} succeeded, {failed} failed")
 
     if failed > 0:
-        logger.error("Some migrations failed")
+        logger.exception("Some migrations failed")
         sys.exit(1)
     elif succeeded == 0:
         logger.info("No migrations were applied")

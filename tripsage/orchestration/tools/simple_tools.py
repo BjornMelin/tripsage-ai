@@ -95,7 +95,7 @@ async def search_flights(
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Flight search failed: {e}")
+        logger.exception(f"Flight search failed: {e}")
         return json.dumps({"error": f"Flight search failed: {e!s}"})
 
 
@@ -127,7 +127,7 @@ async def search_accommodations(
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Accommodation search failed: {e}")
+        logger.exception(f"Accommodation search failed: {e}")
         return json.dumps({"error": f"Accommodation search failed: {e!s}"})
 
 
@@ -141,7 +141,7 @@ async def geocode_location(location: str) -> str:
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Geocoding failed: {e}")
+        logger.exception(f"Geocoding failed: {e}")
         return json.dumps({"error": f"Geocoding failed: {e!s}"})
 
 
@@ -155,7 +155,7 @@ async def get_weather(location: str) -> str:
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Weather lookup failed: {e}")
+        logger.exception(f"Weather lookup failed: {e}")
         return json.dumps({"error": f"Weather lookup failed: {e!s}"})
 
 
@@ -171,7 +171,7 @@ async def web_search(query: str, location: str | None = None) -> str:
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Web search failed: {e}")
+        logger.exception(f"Web search failed: {e}")
         return json.dumps({"error": f"Web search failed: {e!s}"})
 
 
@@ -187,7 +187,7 @@ async def add_memory(content: str, category: str | None = None) -> str:
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Memory addition failed: {e}")
+        logger.exception(f"Memory addition failed: {e}")
         return json.dumps({"error": f"Memory addition failed: {e!s}"})
 
 
@@ -203,7 +203,7 @@ async def search_memories(content: str, category: str | None = None) -> str:
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
-        logger.error(f"Memory search failed: {e}")
+        logger.exception(f"Memory search failed: {e}")
         return json.dumps({"error": f"Memory search failed: {e!s}"})
 
 

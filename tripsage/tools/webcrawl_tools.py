@@ -96,7 +96,7 @@ async def crawl_website_content(
         return result
 
     except Exception as e:
-        logger.error(f"Direct Crawl4AI failed for {url}: {e!s}")
+        logger.exception(f"Direct Crawl4AI failed for {url}: {e!s}")
 
         # Try Playwright fallback if enabled
         if enable_playwright_fallback:
@@ -116,7 +116,7 @@ async def crawl_website_content(
                 return fallback_result
 
             except Exception as fallback_error:
-                logger.error(
+                logger.exception(
                     f"Playwright fallback also failed for {url}: {fallback_error!s}"
                 )
 

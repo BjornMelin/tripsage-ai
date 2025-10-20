@@ -196,7 +196,7 @@ async def update_sensitive_data(
         return {"message": "Sensitive data updated"}
     except Exception as e:
         # Handle any additional errors
-        logger.error(f"Failed to update sensitive data: {e}")
+        logger.exception(f"Failed to update sensitive data: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip data"

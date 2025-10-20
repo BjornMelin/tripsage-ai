@@ -346,7 +346,7 @@ class TestUtilityFunctions:
         result = safe_execute(test_func, fallback="fallback", logger=mock_logger)
 
         assert result == "fallback"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     def test_with_error_handling_decorator_sync(self):
         """Test with_error_handling decorator for sync functions."""
@@ -359,7 +359,7 @@ class TestUtilityFunctions:
         result = test_func()
 
         assert result == "error_result"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_with_error_handling_decorator_async(self):
@@ -373,7 +373,7 @@ class TestUtilityFunctions:
         result = await test_func()
 
         assert result == "error_result"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     def test_with_error_handling_re_raise(self):
         """Test with_error_handling decorator with re_raise=True."""
@@ -386,7 +386,7 @@ class TestUtilityFunctions:
         with pytest.raises(ValueError, match="Test error"):
             test_func()
 
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
 
 class TestExceptionInheritance:

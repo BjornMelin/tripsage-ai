@@ -216,7 +216,7 @@ class ItineraryAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.error(f"Error extracting itinerary parameters: {e!s}")
+            logger.exception(f"Error extracting itinerary parameters: {e!s}")
             return None
 
     async def _create_itinerary(
@@ -288,7 +288,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.error(f"Itinerary creation failed: {e!s}")
+            logger.exception(f"Itinerary creation failed: {e!s}")
             return {"error": f"Failed to create itinerary: {e!s}"}
 
     async def _generate_daily_schedule(
@@ -493,7 +493,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.error(f"Itinerary optimization failed: {e!s}")
+            logger.exception(f"Itinerary optimization failed: {e!s}")
             return {"error": f"Failed to optimize itinerary: {e!s}"}
 
     async def _modify_itinerary(
@@ -565,7 +565,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.error(f"Itinerary modification failed: {e!s}")
+            logger.exception(f"Itinerary modification failed: {e!s}")
             return {"error": f"Failed to modify itinerary: {e!s}"}
 
     async def _create_calendar_events(
@@ -618,7 +618,7 @@ class ItineraryAgentNode(BaseAgentNode):
             }
 
         except Exception as e:
-            logger.error(f"Calendar events creation failed: {e!s}")
+            logger.exception(f"Calendar events creation failed: {e!s}")
             return {"error": f"Failed to create calendar events: {e!s}"}
 
     async def _generate_itinerary_response(
@@ -824,7 +824,7 @@ class ItineraryAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.error(f"Error generating itinerary response: {e!s}")
+            logger.exception(f"Error generating itinerary response: {e!s}")
             content = (
                 "I'd be happy to help you create a detailed itinerary! To get started, "
                 "I'll need to know your destination, travel dates, interests, and "

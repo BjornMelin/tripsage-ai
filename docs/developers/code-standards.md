@@ -601,7 +601,7 @@ async def search_all_providers(params: SearchParams) -> List[SearchResult]:
     valid_results = []
     for result in results:
         if isinstance(result, Exception):
-            logger.error(f"Provider search failed: {result}")
+            logger.exception(f"Provider search failed: {result}")
         else:
             valid_results.extend(result)
     

@@ -503,7 +503,7 @@ class TestErrorHandling:
             )
 
             # Verify error was logged
-            mock_logger.error.assert_called()
+            mock_logger.exception.assert_called()
             assert response.status == "error"
 
     @pytest.mark.asyncio

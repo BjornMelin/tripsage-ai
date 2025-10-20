@@ -131,7 +131,7 @@ async def debug_async_operation():
         
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                logger.error(f"Task {i} failed: {result}")
+                logger.exception(f"Task {i} failed: {result}")
             else:
                 logger.debug(f"Task {i} completed: {type(result)}")
         

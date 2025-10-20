@@ -38,7 +38,7 @@ class ChatAgent(BaseAgent):
             self.orchestrator = TripSageOrchestrator(self.service_registry)
             logger.info("Chat agent orchestrator initialized successfully")
         except Exception as e:
-            logger.error(f"Failed to initialize chat agent orchestrator: {e}")
+            logger.exception(f"Failed to initialize chat agent orchestrator: {e}")
             self.orchestrator = None
 
     async def process_message(
@@ -60,7 +60,7 @@ class ChatAgent(BaseAgent):
             Processing result with agent response
         """
         if not self.orchestrator:
-            logger.error("Chat agent orchestrator not initialized")
+            logger.exception("Chat agent orchestrator not initialized")
             return {
                 "error": "Chat system not available",
                 "message": (
@@ -82,7 +82,7 @@ class ChatAgent(BaseAgent):
             return result
 
         except Exception as e:
-            logger.error(f"Error processing chat message: {e}")
+            logger.exception(f"Error processing chat message: {e}")
             return {
                 "error": str(e),
                 "message": (
@@ -143,7 +143,7 @@ class ChatAgent(BaseAgent):
             yield {"type": "response", "data": result}
 
         except Exception as e:
-            logger.error(f"Error in streaming chat message: {e}")
+            logger.exception(f"Error in streaming chat message: {e}")
             yield {
                 "type": "error",
                 "data": {
@@ -177,7 +177,7 @@ class ChatAgent(BaseAgent):
                 return []
 
         except Exception as e:
-            logger.error(f"Error retrieving conversation history: {e}")
+            logger.exception(f"Error retrieving conversation history: {e}")
             return []
 
     async def clear_conversation(self, user_id: str, session_id: str) -> bool:
@@ -200,7 +200,7 @@ class ChatAgent(BaseAgent):
                 return False
 
         except Exception as e:
-            logger.error(f"Error clearing conversation: {e}")
+            logger.exception(f"Error clearing conversation: {e}")
             return False
 
     def get_available_agents(self) -> list[str]:

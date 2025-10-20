@@ -130,11 +130,11 @@ class DatabaseURLParser:
 
         except ValidationError as e:
             error_msg = f"Invalid database URL components: {e}"
-            self.logger.error(error_msg)
+            self.logger.exception(error_msg)
             raise DatabaseURLParsingError(error_msg) from e
         except Exception as e:
             error_msg = f"Failed to parse database URL: {e}"
-            self.logger.error(error_msg)
+            self.logger.exception(error_msg)
             raise DatabaseURLParsingError(error_msg) from e
 
     def _validate_url_security(self, url: str) -> None:
@@ -288,7 +288,7 @@ class ConnectionCircuitBreaker:
 
         if self.failure_count >= self.failure_threshold:
             self.state = ConnectionState.OPEN
-            self.logger.error(
+            self.logger.exception(
                 f"Circuit breaker opening after {self.failure_count} failures"
             )
 
@@ -375,7 +375,7 @@ class ExponentialBackoffRetry:
                     )
                     await asyncio.sleep(delay)
                 else:
-                    self.logger.error(
+                    self.logger.exception(
                         f"All {self.max_retries + 1} attempts failed. Last error: {e}"
                     )
 
@@ -461,11 +461,11 @@ class DatabaseConnectionValidator:
 
         except TimeoutError as e:
             error_msg = f"Connection validation timed out after {self.timeout}s"
-            self.logger.error(error_msg)
+            self.logger.exception(error_msg)
             raise DatabaseValidationError(error_msg) from e
         except Exception as e:
             error_msg = f"Connection validation failed: {e}"
-            self.logger.error(error_msg, extra={"hostname": credentials.hostname})
+            self.logger.exception(error_msg, extra={"hostname": credentials.hostname})
             raise DatabaseValidationError(error_msg) from e
 
 

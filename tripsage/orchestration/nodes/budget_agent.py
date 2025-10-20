@@ -87,7 +87,9 @@ class BudgetAgentNode(BaseAgentNode):
             )
 
         except Exception as e:
-            logger.error(f"Failed to load database configuration, using fallback: {e}")
+            logger.exception(
+                f"Failed to load database configuration, using fallback: {e}"
+            )
 
             # Fallback to settings-based configuration
             settings = get_settings()
@@ -245,7 +247,7 @@ class BudgetAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.error(f"Error extracting budget parameters: {e!s}")
+            logger.exception(f"Error extracting budget parameters: {e!s}")
             return None
 
     async def _optimize_budget(
@@ -720,7 +722,7 @@ class BudgetAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.error(f"Error generating budget response: {e!s}")
+            logger.exception(f"Error generating budget response: {e!s}")
             content = (
                 "I'd be happy to help you optimize your travel budget! To get started, "
                 "I'll need to know your total budget, trip length, destination, and "

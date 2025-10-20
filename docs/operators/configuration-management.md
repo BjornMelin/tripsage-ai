@@ -264,7 +264,7 @@ security_report = settings.get_security_report()
 
 if not security_report['production_ready']:
     # Alert monitoring system
-    logger.error("Production configuration security issues detected")
+    logger.exception("Production configuration security issues detected")
 ```
 
 ## Troubleshooting

@@ -179,7 +179,7 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.error(
+                    logger.exception(
                         f"Unexpected error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
@@ -303,7 +303,7 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.error(
+                    logger.exception(
                         f"Unexpected error in {operation_name}: {e!s}",
                         extra={
                             "operation": operation_name,
@@ -388,7 +388,7 @@ def ensure_memory_client_initialized(func: F) -> F:
         except Exception as e:
             # Get function name for better error logging
             func_name = func.__name__
-            logger.error(f"Error in {func_name}: {e!s}")
+            logger.exception(f"Error in {func_name}: {e!s}")
             log_exception(e)
 
             # Return error response in the expected format for agent tools
@@ -442,7 +442,7 @@ def retry_on_failure(
                             await asyncio.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.error(
+                            logger.exception(
                                 f"{func.__name__} failed after {max_attempts} attempts"
                             )
                             raise
@@ -473,7 +473,7 @@ def retry_on_failure(
                             time.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.error(
+                            logger.exception(
                                 f"{func.__name__} failed after {max_attempts} attempts"
                             )
                             raise

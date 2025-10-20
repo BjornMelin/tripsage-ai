@@ -58,14 +58,14 @@ class TriggerDeploymentService:
                 )
 
                 if not result[0]["exists"]:
-                    logger.error(f"Required table '{table}' does not exist")
+                    logger.exception(f"Required table '{table}' does not exist")
                     return False
 
             logger.info("All prerequisite tables found")
             return True
 
         except Exception as e:
-            logger.error(f"Error checking prerequisites: {e}")
+            logger.exception(f"Error checking prerequisites: {e}")
             return False
 
     async def check_existing_triggers(self) -> dict:
@@ -98,7 +98,7 @@ class TriggerDeploymentService:
             return trigger_info
 
         except Exception as e:
-            logger.error(f"Error checking existing triggers: {e}")
+            logger.exception(f"Error checking existing triggers: {e}")
             return {}
 
     async def check_existing_functions(self) -> list:
@@ -122,7 +122,7 @@ class TriggerDeploymentService:
             return function_names
 
         except Exception as e:
-            logger.error(f"Error checking existing functions: {e}")
+            logger.exception(f"Error checking existing functions: {e}")
             return []
 
     async def deploy_trigger_migration(self) -> bool:
@@ -133,7 +133,7 @@ class TriggerDeploymentService:
             )
 
             if not migration_file.exists():
-                logger.error(f"Migration file not found: {migration_file}")
+                logger.exception(f"Migration file not found: {migration_file}")
                 return False
 
             logger.info(f"Reading migration file: {migration_file}")
@@ -147,7 +147,7 @@ class TriggerDeploymentService:
             return True
 
         except Exception as e:
-            logger.error(f"Error deploying trigger migration: {e}")
+            logger.exception(f"Error deploying trigger migration: {e}")
             return False
 
     async def validate_trigger_deployment(self) -> bool:
@@ -187,7 +187,7 @@ class TriggerDeploymentService:
                     missing_triggers.append(f"{table}.{trigger_name}")
 
             if missing_triggers:
-                logger.error(f"Missing triggers: {', '.join(missing_triggers)}")
+                logger.exception(f"Missing triggers: {', '.join(missing_triggers)}")
                 return False
 
             # Expected functions to be created
@@ -224,14 +224,14 @@ class TriggerDeploymentService:
                     missing_functions.append(function_name)
 
             if missing_functions:
-                logger.error(f"Missing functions: {', '.join(missing_functions)}")
+                logger.exception(f"Missing functions: {', '.join(missing_functions)}")
                 return False
 
             logger.info("All expected triggers and functions are present")
             return True
 
         except Exception as e:
-            logger.error(f"Error validating trigger deployment: {e}")
+            logger.exception(f"Error validating trigger deployment: {e}")
             return False
 
     async def test_trigger_functionality(self) -> bool:
@@ -307,7 +307,7 @@ class TriggerDeploymentService:
                 if "Cannot modify your own permission level" in str(e):
                     logger.info("Permission validation trigger working correctly")
                 else:
-                    logger.error(f"Unexpected error in permission validation: {e}")
+                    logger.exception(f"Unexpected error in permission validation: {e}")
                     return False
 
             # Cleanup test data
@@ -322,7 +322,7 @@ class TriggerDeploymentService:
             return True
 
         except Exception as e:
-            logger.error(f"Error testing trigger functionality: {e}")
+            logger.exception(f"Error testing trigger functionality: {e}")
             return False
 
     async def setup_pg_cron_jobs(self) -> bool:
@@ -384,13 +384,13 @@ class TriggerDeploymentService:
                     )
 
                 except Exception as e:
-                    logger.error(f"Error scheduling job '{job_name}': {e}")
+                    logger.exception(f"Error scheduling job '{job_name}': {e}")
 
             logger.info("pg_cron jobs setup completed")
             return True
 
         except Exception as e:
-            logger.error(f"Error setting up pg_cron jobs: {e}")
+            logger.exception(f"Error setting up pg_cron jobs: {e}")
             return False
 
     async def generate_deployment_report(self) -> dict:
@@ -437,7 +437,7 @@ class TriggerDeploymentService:
             return report
 
         except Exception as e:
-            logger.error(f"Error generating deployment report: {e}")
+            logger.exception(f"Error generating deployment report: {e}")
             return {"error": str(e)}
 
 
@@ -456,7 +456,7 @@ async def main():
         # Check prerequisites
         logger.info("Checking prerequisites...")
         if not await deployment_service.check_prerequisites():
-            logger.error("Prerequisites not met - aborting deployment")
+            logger.exception("Prerequisites not met - aborting deployment")
             return False
 
         # Show current state
@@ -470,19 +470,19 @@ async def main():
         # Deploy triggers
         logger.info("Deploying trigger migration...")
         if not await deployment_service.deploy_trigger_migration():
-            logger.error("Trigger deployment failed")
+            logger.exception("Trigger deployment failed")
             return False
 
         # Validate deployment
         logger.info("Validating deployment...")
         if not await deployment_service.validate_trigger_deployment():
-            logger.error("Trigger deployment validation failed")
+            logger.exception("Trigger deployment validation failed")
             return False
 
         # Test functionality
         logger.info("Testing trigger functionality...")
         if not await deployment_service.test_trigger_functionality():
-            logger.error("Trigger functionality tests failed")
+            logger.exception("Trigger functionality tests failed")
             return False
 
         # Setup scheduled jobs
@@ -508,7 +508,7 @@ async def main():
         return True
 
     except Exception as e:
-        logger.error(f"Deployment failed with error: {e}")
+        logger.exception(f"Deployment failed with error: {e}")
         return False
 
     finally:

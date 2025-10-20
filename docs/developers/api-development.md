@@ -506,7 +506,7 @@ class RateLimitExceeded(TripSageException):
 
 async def tripsage_exception_handler(request: Request, exc: TripSageException):
     """Handle custom TripSage exceptions."""
-    logger.error(f"TripSage error: {exc.message}", exc_info=True)
+    logger.exception(f"TripSage error: {exc.message}", exc_info=True)
     
     return JSONResponse(
         status_code=400,
@@ -775,7 +775,7 @@ async def process_trip_optimization(trip_id: str, user_id: str):
         )
         
     except Exception as e:
-        logger.error(f"Trip optimization failed: {e}")
+        logger.exception(f"Trip optimization failed: {e}")
         await websocket_manager.send_to_user(
             user_id,
             {
@@ -1220,7 +1220,7 @@ async def debug_middleware(request: Request, call_next):
             response = await call_next(request)
             return response
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Unhandled exception",
                 extra={
                     "error": str(e),

@@ -86,7 +86,7 @@ async def get_agent_config(agent_type: str):
             updated_at=datetime.now(UTC),
         )
     except Exception as e:
-        logger.error(f"Error getting agent config for {agent_type}: {e}")
+        logger.exception(f"Error getting agent config for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -159,7 +159,7 @@ async def update_agent_config(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        logger.error(f"Error updating agent config for {agent_type}: {e}")
+        logger.exception(f"Error updating agent config for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -184,7 +184,7 @@ async def get_agent_config_versions(
         return []
 
     except Exception as e:
-        logger.error(f"Error getting config versions for {agent_type}: {e}")
+        logger.exception(f"Error getting config versions for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -223,7 +223,7 @@ async def rollback_agent_config(
         )
 
     except Exception as e:
-        logger.error(f"Error rolling back config for {agent_type}: {e}")
+        logger.exception(f"Error rolling back config for {agent_type}: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -263,5 +263,5 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
     except Exception as e:
-        logger.error(f"Configuration WebSocket error: {e}")
+        logger.exception(f"Configuration WebSocket error: {e}")
         ws_manager.disconnect(websocket)

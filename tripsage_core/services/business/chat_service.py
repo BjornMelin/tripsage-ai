@@ -285,7 +285,7 @@ class ChatService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create chat session",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -337,7 +337,7 @@ class ChatService:
             return sessions
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user sessions",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -429,7 +429,7 @@ class ChatService:
         except (ValidationError, NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to add message",
                 extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
             )
@@ -503,7 +503,7 @@ class ChatService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get recent messages",
                 extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
             )
@@ -547,7 +547,7 @@ class ChatService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to end session",
                 extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
             )
@@ -601,7 +601,7 @@ class ChatService:
                 return None
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to update tool call status",
                 extra={"tool_call_id": tool_call_id, "status": status, "error": str(e)},
             )
@@ -830,7 +830,7 @@ class ChatService:
             }
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Chat completion failed",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -913,7 +913,7 @@ class ChatService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get chat session",
                 extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
             )
@@ -956,7 +956,7 @@ class ChatService:
             return messages
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get messages",
                 extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
             )

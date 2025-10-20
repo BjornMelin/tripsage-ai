@@ -177,7 +177,7 @@ class ConfigurableDeploymentOrchestrator:
             else:
                 result.status = DeploymentStatus.FAILED
                 result.error_message = f"Deployment failed in phase: {metrics.phase}"
-                logger.error(
+                logger.exception(
                     f"Deployment {deployment_id} failed in phase: {metrics.phase}"
                 )
 
@@ -203,7 +203,7 @@ class ConfigurableDeploymentOrchestrator:
                             f"Auto-rollback successful for deployment {deployment_id}"
                         )
                     else:
-                        logger.error(
+                        logger.exception(
                             f"Auto-rollback failed for deployment {deployment_id}"
                         )
 
@@ -217,7 +217,7 @@ class ConfigurableDeploymentOrchestrator:
             return result
 
         except Exception as e:
-            logger.error(f"Deployment {deployment_id} failed with exception: {e}")
+            logger.exception(f"Deployment {deployment_id} failed with exception: {e}")
 
             result.status = DeploymentStatus.FAILED
             result.error_message = str(e)
@@ -261,7 +261,7 @@ class ConfigurableDeploymentOrchestrator:
 
         if not deployment:
             error_msg = f"Deployment {deployment_id} not found"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return DeploymentResult(
                 deployment_id=f"{deployment_id}_rollback",
                 status=DeploymentStatus.FAILED,
@@ -309,7 +309,7 @@ class ConfigurableDeploymentOrchestrator:
             return rollback_result
 
         except Exception as e:
-            logger.error(f"Rollback {deployment_id} failed with exception: {e}")
+            logger.exception(f"Rollback {deployment_id} failed with exception: {e}")
 
             return DeploymentResult(
                 deployment_id=f"{deployment_id}_rollback",
@@ -489,7 +489,9 @@ class ConfigurableDeploymentOrchestrator:
                     break
 
             except Exception as e:
-                logger.error(f"Monitoring error for deployment {deployment_id}: {e}")
+                logger.exception(
+                    f"Monitoring error for deployment {deployment_id}: {e}"
+                )
                 break
 
         logger.info(f"Monitoring completed for deployment {deployment_id}")

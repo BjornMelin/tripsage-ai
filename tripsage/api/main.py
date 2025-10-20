@@ -171,7 +171,7 @@ def create_app() -> FastAPI:
         request: Request, exc: CoreAuthenticationError
     ):
         """Handle authentication errors."""
-        logger.error(
+        logger.exception(
             f"Authentication error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
@@ -184,7 +184,7 @@ def create_app() -> FastAPI:
         request: Request, exc: CoreKeyValidationError
     ):
         """Handle API key validation errors."""
-        logger.error(
+        logger.exception(
             f"Key validation error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
@@ -207,7 +207,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreMCPError)
     async def mcp_error_handler(request: Request, exc: CoreMCPError):
         """Handle MCP server errors."""
-        logger.error(f"MCP error: {exc.message}", extra={"path": request.url.path})
+        logger.exception(f"MCP error: {exc.message}", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),
@@ -216,7 +216,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreExternalAPIError)
     async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
         """Handle external API errors."""
-        logger.error(
+        logger.exception(
             f"External API error: {exc.message}", extra={"path": request.url.path}
         )
         return JSONResponse(
@@ -238,7 +238,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(CoreTripSageError)
     async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):
         """Handle all other core TripSage exceptions."""
-        logger.error(f"Core error: {exc.message}", extra={"path": request.url.path})
+        logger.exception(f"Core error: {exc.message}", extra={"path": request.url.path})
         return JSONResponse(
             status_code=exc.status_code,
             content=format_error_response(exc, request),

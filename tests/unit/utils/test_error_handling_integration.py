@@ -77,8 +77,8 @@ class TestUpdatedUtilityFunctions:
         log_exception(exc)
 
         # Should log error with MCP-specific details
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0]
+        mock_logger.exception.assert_called_once()
+        call_args = mock_logger.exception.call_args[0]
         assert "MCP Error" in call_args[0]
         assert "flights-mcp" in call_args
         assert "search_flights" in call_args
@@ -99,8 +99,8 @@ class TestUpdatedUtilityFunctions:
         log_exception(exc)
 
         # Should log error with API-specific details
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0]
+        mock_logger.exception.assert_called_once()
+        call_args = mock_logger.exception.call_args[0]
         assert "API Error" in call_args[0]
         assert "openai" in call_args
         assert 429 in call_args
@@ -133,8 +133,8 @@ class TestUpdatedUtilityFunctions:
         log_exception(exc)
 
         # Should log error for system errors
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args[0]
+        mock_logger.exception.assert_called_once()
+        call_args = mock_logger.exception.call_args[0]
         assert "System error" in call_args[0]
         assert "ValueError" in call_args[1]
         assert "Standard error" in call_args[2]
@@ -167,7 +167,7 @@ class TestUpdatedUtilityFunctions:
 
         result = test_func()
         assert result == "error_result"
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
 
 class TestFactoryFunctions:
@@ -434,7 +434,7 @@ class TestIntegrationScenarios:
         result = get_users()
 
         assert result == []
-        mock_logger.error.assert_called_once()
+        mock_logger.exception.assert_called_once()
 
     def test_api_error_response_creation(self):
         """Test creating API responses from exceptions."""

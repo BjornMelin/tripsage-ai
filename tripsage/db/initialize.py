@@ -58,7 +58,7 @@ async def initialize_databases(
                     f"SQL database connection verified: PostgreSQL {result.data}"
                 )
             else:
-                logger.error("SQL connection verification failed")
+                logger.exception("SQL connection verification failed")
                 return False
 
         # Run migrations if requested
@@ -80,7 +80,7 @@ async def initialize_databases(
         return True
 
     except Exception as e:
-        logger.error(f"Error initializing databases: {e}")
+        logger.exception(f"Error initializing databases: {e}")
         return False
 
 
@@ -118,7 +118,7 @@ async def verify_database_schema() -> dict[str, Any]:
         return results
 
     except Exception as e:
-        logger.error(f"Error verifying database schema: {e}")
+        logger.exception(f"Error verifying database schema: {e}")
         return {"sql": {"error": str(e)}}
 
 
@@ -194,7 +194,7 @@ async def create_sample_data() -> bool:
         return True
 
     except Exception as e:
-        logger.error(f"Error creating sample data: {e}")
+        logger.exception(f"Error creating sample data: {e}")
         return False
 
 
@@ -221,7 +221,7 @@ if __name__ == "__main__":
                 verify_connections=args.verify,
             )
             if not success:
-                logger.error("Database initialization failed")
+                logger.exception("Database initialization failed")
                 return
 
         if args.sample_data:

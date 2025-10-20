@@ -182,7 +182,7 @@ class ToolCallService:
                 method=request.method,
             )
         except Exception as e:
-            logger.error(f"Tool call execution failed for {request.id}: {e!s}")
+            logger.exception(f"Tool call execution failed for {request.id}: {e!s}")
             return ToolCallResponse(
                 id=request.id,
                 status="error",
@@ -239,7 +239,7 @@ class ToolCallService:
             return processed_responses
 
         except Exception as e:
-            logger.error(f"Parallel tool call execution failed: {e!s}")
+            logger.exception(f"Parallel tool call execution failed: {e!s}")
             raise ToolCallError(f"Parallel execution failed: {e!s}") from e
 
     async def validate_tool_call(

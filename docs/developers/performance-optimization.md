@@ -191,7 +191,7 @@ class DragonflyDBService(CacheService):
                 return value
                 
         except Exception as e:
-            logger.error(f"Cache get failed for key {key}: {str(e)}")
+            logger.exception(f"Cache get failed for key {key}: {str(e)}")
             return None
     
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
@@ -211,7 +211,7 @@ class DragonflyDBService(CacheService):
             return True
             
         except Exception as e:
-            logger.error(f"Cache set failed for key {key}: {str(e)}")
+            logger.exception(f"Cache set failed for key {key}: {str(e)}")
             return False
     
     async def batch_get(self, keys: List[str]) -> Dict[str, Any]:
@@ -230,7 +230,7 @@ class DragonflyDBService(CacheService):
             return result
             
         except Exception as e:
-            logger.error(f"Cache batch_get failed: {str(e)}")
+            logger.exception(f"Cache batch_get failed: {str(e)}")
             return {}
     
     async def batch_set(self, items: Dict[str, Any], ttl: Optional[int] = None) -> bool:
@@ -257,7 +257,7 @@ class DragonflyDBService(CacheService):
             return True
             
         except Exception as e:
-            logger.error(f"Cache batch_set failed: {str(e)}")
+            logger.exception(f"Cache batch_set failed: {str(e)}")
             return False
 ```
 
