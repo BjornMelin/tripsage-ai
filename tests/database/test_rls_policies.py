@@ -516,18 +516,14 @@ class RLSPolicyTester:
 
         # User B tries to read User A's trip
         start_time = time.time()
-        error = None
-        try:
-            other_trips = (
-                user_b.client.table("trips")
-                .select("*")
-                .eq("id", trip_a.data[0]["id"])
-                .execute()
-            )
-            access_granted = len(other_trips.data) > 0
-        except Exception as e:
-            access_granted = False
-            error = str(e)
+        other_trips = (
+            user_b.client.table("trips")
+            .select("*")
+            .eq("id", trip_a.data[0]["id"])
+            .execute()
+        )
+        access_granted = len(other_trips.data) > 0
+        error = None if not access_granted else "Unexpected trip access granted"
         perf_ms = (time.time() - start_time) * 1000
 
         results.append(
@@ -556,16 +552,13 @@ class RLSPolicyTester:
             .execute()
         )
 
-        try:
-            other_memories = (
-                user_b.client.table("memories")
-                .select("*")
-                .eq("id", memory_a.data[0]["id"])
-                .execute()
-            )
-            access_granted = len(other_memories.data) > 0
-        except Exception:
-            access_granted = False
+        other_memories = (
+            user_b.client.table("memories")
+            .select("*")
+            .eq("id", memory_a.data[0]["id"])
+            .execute()
+        )
+        access_granted = len(other_memories.data) > 0
 
         results.append(
             self.record_result(
@@ -644,16 +637,13 @@ class RLSPolicyTester:
         )
 
         # User B tries to update the trip (should fail)
-        try:
-            update_result = (
-                user_b.client.table("trips")
-                .update({"name": "Modified by User B"})
-                .eq("id", trip_id)
-                .execute()
-            )
-            update_allowed = len(update_result.data) > 0
-        except Exception:
-            update_allowed = False
+        update_result = (
+            user_b.client.table("trips")
+            .update({"name": "Modified by User B"})
+            .eq("id", trip_id)
+            .execute()
+        )
+        update_allowed = len(update_result.data) > 0
 
         results.append(
             self.record_result(
@@ -672,16 +662,13 @@ class RLSPolicyTester:
         ).eq("trip_id", trip_id).eq("user_id", user_b.id).execute()
 
         # User B can now update the trip
-        try:
-            update_result = (
-                user_b.client.table("trips")
-                .update({"name": "Modified by Editor"})
-                .eq("id", trip_id)
-                .execute()
-            )
-            update_allowed = len(update_result.data) > 0
-        except Exception:
-            update_allowed = False
+        update_result = (
+            user_b.client.table("trips")
+            .update({"name": "Modified by Editor"})
+            .eq("id", trip_id)
+            .execute()
+        )
+        update_allowed = len(update_result.data) > 0
 
         results.append(
             self.record_result(
@@ -695,13 +682,8 @@ class RLSPolicyTester:
         )
 
         # User C cannot access the trip
-        try:
-            no_access = (
-                user_c.client.table("trips").select("*").eq("id", trip_id).execute()
-            )
-            access_granted = len(no_access.data) > 0
-        except Exception:
-            access_granted = False
+        no_access = user_c.client.table("trips").select("*").eq("id", trip_id).execute()
+        access_granted = len(no_access.data) > 0
 
         results.append(
             self.record_result(
@@ -756,13 +738,10 @@ class RLSPolicyTester:
         flight_id = flight.data[0]["id"]
 
         # User B cannot see the flight
-        try:
-            no_access = (
-                user_b.client.table("flights").select("*").eq("id", flight_id).execute()
-            )
-            access_granted = len(no_access.data) > 0
-        except Exception:
-            access_granted = False
+        no_access = (
+            user_b.client.table("flights").select("*").eq("id", flight_id).execute()
+        )
+        access_granted = len(no_access.data) > 0
 
         results.append(
             self.record_result(
@@ -859,11 +838,8 @@ class RLSPolicyTester:
         ]
 
         for table in tables_to_test:
-            try:
-                data = anon_client.table(table).select("*").limit(1).execute()
-                access_granted = len(data.data) > 0
-            except Exception:
-                access_granted = False
+            data = anon_client.table(table).select("*").limit(1).execute()
+            access_granted = len(data.data) > 0
 
             results.append(
                 self.record_result(
@@ -896,16 +872,13 @@ class RLSPolicyTester:
         ).execute()
 
         # User B cannot see User A's search cache
-        try:
-            other_cache = (
-                user_b.client.table("search_destinations")
-                .select("*")
-                .eq("query_hash", "abc123")
-                .execute()
-            )
-            access_granted = len(other_cache.data) > 0
-        except Exception:
-            access_granted = False
+        other_cache = (
+            user_b.client.table("search_destinations")
+            .select("*")
+            .eq("query_hash", "abc123")
+            .execute()
+        )
+        access_granted = len(other_cache.data) > 0
 
         results.append(
             self.record_result(
@@ -963,16 +936,13 @@ class RLSPolicyTester:
             )
 
             # User B cannot see User A's notification
-            try:
-                user_b_notif = (
-                    user_b.client.table("notifications")
-                    .select("*")
-                    .eq("id", notification_id)
-                    .execute()
-                )
-                access_granted = len(user_b_notif.data) > 0
-            except Exception:
-                access_granted = False
+            user_b_notif = (
+                user_b.client.table("notifications")
+                .select("*")
+                .eq("id", notification_id)
+                .execute()
+            )
+            access_granted = len(user_b_notif.data) > 0
 
             results.append(
                 self.record_result(
@@ -986,16 +956,13 @@ class RLSPolicyTester:
             )
 
             # User A can mark their notification as read
-            try:
-                update_result = (
-                    user_a.client.table("notifications")
-                    .update({"read": True})
-                    .eq("id", notification_id)
-                    .execute()
-                )
-                update_allowed = len(update_result.data) > 0
-            except Exception:
-                update_allowed = False
+            update_result = (
+                user_a.client.table("notifications")
+                .update({"read": True})
+                .eq("id", notification_id)
+                .execute()
+            )
+            update_allowed = len(update_result.data) > 0
 
             results.append(
                 self.record_result(
@@ -1009,16 +976,13 @@ class RLSPolicyTester:
             )
 
             # User B cannot update User A's notification
-            try:
-                update_result = (
-                    user_b.client.table("notifications")
-                    .update({"read": True})
-                    .eq("id", notification_id)
-                    .execute()
-                )
-                update_allowed = len(update_result.data) > 0
-            except Exception:
-                update_allowed = False
+            update_result = (
+                user_b.client.table("notifications")
+                .update({"read": True})
+                .eq("id", notification_id)
+                .execute()
+            )
+            update_allowed = len(update_result.data) > 0
 
             results.append(
                 self.record_result(
@@ -1039,11 +1003,8 @@ class RLSPolicyTester:
         user = self.test_users[0]
 
         # Test that users cannot access system_metrics directly
-        try:
-            metrics = user.client.table("system_metrics").select("*").execute()
-            access_granted = len(metrics.data) > 0
-        except Exception:
-            access_granted = False
+        metrics = user.client.table("system_metrics").select("*").execute()
+        access_granted = len(metrics.data) > 0
 
         results.append(
             self.record_result(
@@ -1057,11 +1018,8 @@ class RLSPolicyTester:
         )
 
         # Test that users cannot access webhook_configs
-        try:
-            configs = user.client.table("webhook_configs").select("*").execute()
-            access_granted = len(configs.data) > 0
-        except Exception:
-            access_granted = False
+        configs = user.client.table("webhook_configs").select("*").execute()
+        access_granted = len(configs.data) > 0
 
         results.append(
             self.record_result(
@@ -1075,11 +1033,8 @@ class RLSPolicyTester:
         )
 
         # Test that users cannot access webhook_logs
-        try:
-            logs = user.client.table("webhook_logs").select("*").execute()
-            access_granted = len(logs.data) > 0
-        except Exception:
-            access_granted = False
+        logs = user.client.table("webhook_logs").select("*").execute()
+        access_granted = len(logs.data) > 0
 
         results.append(
             self.record_result(

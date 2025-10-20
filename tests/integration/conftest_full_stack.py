@@ -12,6 +12,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import redis.asyncio as redis
+from redis.exceptions import RedisError
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -76,7 +77,7 @@ async def integration_redis():
         await redis_client.flushdb()
         await redis_client.close()
 
-    except Exception as e:
+    except (RedisError, OSError) as e:
         # Fallback to mock for CI environments without Redis
         print(f"Redis not available, using mock: {e}")
         mock_redis = AsyncMock()
@@ -353,7 +354,7 @@ async def cleanup_redis_after_test(integration_redis):
     try:
         if hasattr(integration_redis, "flushdb"):
             await integration_redis.flushdb()
-    except Exception:
+    except RedisError:
         pass  # Ignore cleanup errors
 
 

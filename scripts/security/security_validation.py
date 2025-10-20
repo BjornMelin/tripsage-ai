@@ -6,7 +6,6 @@ across the application.
 """
 
 import json
-import os
 import re
 import subprocess
 import sys
@@ -78,7 +77,7 @@ def check_hardcoded_secrets():
             ".",
         ]
 
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.getcwd())
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=Path.cwd())
 
         if result.returncode == 0 and result.stdout.strip():
             lines = result.stdout.strip().split("\n")

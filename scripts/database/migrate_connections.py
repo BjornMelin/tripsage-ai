@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Helper script to test and validate migrated database connections with secure utilities.
+"""Helper script to test and validate migrated database connections.
 
 This script validates all database connection methods after migration to ensure
 they're using the secure URL parsing and validation utilities correctly.
@@ -44,6 +44,7 @@ class ConnectionMigrationTester:
     """Test all database connections after migration to secure utilities."""
 
     def __init__(self):
+        """Initialize database connection tester."""
         self.settings = get_settings()
         self.manager = SecureDatabaseConnectionManager()
         self.converter = DatabaseURLConverter()

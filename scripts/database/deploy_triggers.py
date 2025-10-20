@@ -25,6 +25,7 @@ class TriggerDeploymentService:
     """Service for deploying database triggers."""
 
     def __init__(self, database_service: DatabaseService):
+        """Initialize trigger deployment service."""
         self.db_service = database_service
         self.migrations_dir = (
             Path(__file__).parent.parent.parent / "supabase" / "migrations"
@@ -341,7 +342,8 @@ class TriggerDeploymentService:
 
             if not result[0]["exists"]:
                 logger.warning(
-                    "pg_cron extension not available - scheduled jobs will not be configured"
+                    "pg_cron extension not available - scheduled jobs will not be "
+                    "configured"
                 )
                 return True
 

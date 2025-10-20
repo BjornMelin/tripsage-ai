@@ -181,8 +181,8 @@ $$;
             self.log_step("Migration File Created", True, f"File: {migration_file}")
             return migration_file
 
-        except Exception as e:
-            self.log_step("Migration Creation", False, f"Error: {e}")
+        except (OSError, ValueError) as exc:
+            self.log_step("Migration Creation", False, f"Error: {exc}")
             return None
 
     def deploy_to_local(self) -> bool:

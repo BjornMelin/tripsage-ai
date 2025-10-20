@@ -40,6 +40,7 @@ class SchemaValidator:
     """Validates PostgreSQL schema files for consistency."""
 
     def __init__(self, schema_dir: str):
+        """Initialize schema validator."""
         self.schema_dir = Path(schema_dir)
         self.issues: list[SchemaIssue] = []
         self.tables: dict[str, TableDefinition] = {}
@@ -231,22 +232,23 @@ class SchemaValidator:
 
         for table_name, table_def in self.tables.items():
             for col_name, col_type in table_def.columns.items():
-                if uuid_pattern.match(col_name) and "TEXT" in col_type.upper():
-                    # Allow external_id and tool_id fields to be TEXT
-                    # (they're not UUIDs)
-                    if col_name not in ["external_id", "tool_id"]:
-                        self.issues.append(
-                            SchemaIssue(
-                                file_path=table_def.file_path,
-                                line_number=table_def.line_number,
-                                issue_type="text_uuid",
-                                description=(
-                                    f"Column {table_name}.{col_name} uses TEXT type "
-                                    f"but appears to be a UUID field"
-                                ),
-                                severity="warning",
-                            )
+                if (
+                    uuid_pattern.match(col_name)
+                    and "TEXT" in col_type.upper()
+                    and col_name not in ["external_id", "tool_id"]
+                ):
+                    self.issues.append(
+                        SchemaIssue(
+                            file_path=table_def.file_path,
+                            line_number=table_def.line_number,
+                            issue_type="text_uuid",
+                            description=(
+                                f"Column {table_name}.{col_name} uses TEXT type "
+                                f"but appears to be a UUID field"
+                            ),
+                            severity="warning",
                         )
+                    )
 
     def _validate_migration_consistency(self):
         """Validate that migration file references all schema files."""

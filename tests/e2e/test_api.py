@@ -215,103 +215,85 @@ async def get_flights_for_trip(
 
 async def run_tests():
     """Run a series of tests against the API."""
-    try:
-        # Initialize the database
-        await initialize_db()
+    # Initialize the database
+    await initialize_db()
 
-        # Create a test client
-        async with httpx.AsyncClient() as client:
-            # Create a test user
-            test_user = UserModel(
-                email=TEST_USER_EMAIL,
-                password=TEST_USER_PASSWORD,
-                full_name="Test User",
-            )
+    # Create a test client
+    async with httpx.AsyncClient() as client:
+        # Create a test user
+        test_user = UserModel(
+            email=TEST_USER_EMAIL,
+            password=TEST_USER_PASSWORD,
+            full_name="Test User",
+        )
 
-            # Register and login the user
-            if not await register_user(client, test_user):
-                return
-            if not await login_user(client, test_user):
-                return
+        # Register and login the user
+        if not await register_user(client, test_user):
+            return
+        if not await login_user(client, test_user):
+            return
 
-            # Create a test trip
-            today = date.today()
-            test_trip = TripModel(
-                name="Test Vacation",
-                start_date=today + timedelta(days=30),
-                end_date=today + timedelta(days=37),
-                destination="Hawaii",
-                budget=2000.0,
-                travelers=2,
-            )
+        # Create a test trip
+        today = date.today()
+        test_trip = TripModel(
+            name="Test Vacation",
+            start_date=today + timedelta(days=30),
+            end_date=today + timedelta(days=37),
+            destination="Hawaii",
+            budget=2000.0,
+            travelers=2,
+        )
 
-            if not await create_trip(client, test_user, test_trip):
-                return
+        if not await create_trip(client, test_user, test_trip):
+            return
 
-            # Get all trips
-            trips = await get_trips(client, test_user)
-            if not trips:
-                return
+        # Get all trips
+        trips = await get_trips(client, test_user)
+        if not trips:
+            return
 
-            # Create a test flight
-            departure_time = datetime.combine(
-                test_trip.start_date, datetime.min.time()
-            ) + timedelta(hours=10)
-            arrival_time = departure_time + timedelta(hours=6)
+        # Create a test flight
+        departure_time = datetime.combine(
+            test_trip.start_date, datetime.min.time()
+        ) + timedelta(hours=10)
+        arrival_time = departure_time + timedelta(hours=6)
 
-            test_flight = FlightModel(
-                trip_id=test_trip.id,
-                origin="SFO",
-                destination="HNL",
-                departure_time=departure_time,
-                arrival_time=arrival_time,
-                airline="Hawaiian Airlines",
-                price=450.0,
-            )
+        test_flight = FlightModel(
+            trip_id=test_trip.id,
+            origin="SFO",
+            destination="HNL",
+            departure_time=departure_time,
+            arrival_time=arrival_time,
+            airline="Hawaiian Airlines",
+            price=450.0,
+        )
 
-            if not await create_flight(client, test_user, test_flight):
-                return
+        if not await create_flight(client, test_user, test_flight):
+            return
 
-            # Get all flights for the trip
-            flights = await get_flights_for_trip(client, test_user, test_trip.id)
-            if not flights:
-                return
+        # Get all flights for the trip
+        flights = await get_flights_for_trip(client, test_user, test_trip.id)
+        if not flights:
+            return
 
-            print("\nAll tests completed successfully!")
-    except Exception as e:
-        print(f"Test failed with error: {e}")
+        print("\nAll tests completed successfully!")
 
 
 async def main():
     """Main function to run the test script."""
-    # Start the FastAPI server in a separate thread
-    server_process = None
+    print("Starting API server...")
+
+    config = uvicorn.Config(app=app, host="127.0.0.1", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    server_task = asyncio.create_task(server.serve())
+
     try:
-        print("Starting API server...")
-
-        # Use uvicorn to start the server
-        config = uvicorn.Config(app=app, host="127.0.0.1", port=8000, log_level="info")
-        server = uvicorn.Server(config)
-
-        # Start the server in a separate task
-        server_task = asyncio.create_task(server.serve())
-
-        # Wait for server to start
         time.sleep(1)
-
-        # Run the tests
         await run_tests()
-
-        # Stop the server
+    finally:
         print("Stopping API server...")
         server.should_exit = True
         await server_task
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        # Ensure server is stopped
-        if server_process:
-            server_process.terminate()
 
 
 if __name__ == "__main__":

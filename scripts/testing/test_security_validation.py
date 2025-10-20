@@ -342,7 +342,7 @@ class TestSecurityValidationIntegration(unittest.TestCase):
                 Path(temp_dir, filename).write_text(content)
 
             # Change to temp directory for the test
-            original_cwd = os.getcwd()
+            original_cwd = Path.cwd()
             try:
                 os.chdir(temp_dir)
 

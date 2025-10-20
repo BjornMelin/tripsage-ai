@@ -17,7 +17,10 @@ import time
 from datetime import datetime, timedelta
 
 import pytest
-from supabase import create_client
+from supabase import AuthError, PostgrestAPIError, SupabaseException, create_client
+
+
+SUPABASE_ERRORS = (SupabaseException, AuthError, PostgrestAPIError, ValueError)
 
 from tripsage_core.models.base_core_model import TripSageModel
 
@@ -79,8 +82,8 @@ class RealRLSPolicyTester:
                     await self._sign_in_user(user_data)
                     test_users.append(user_data)
 
-            except Exception as e:
-                print(f"Failed to create test user {email}: {e}")
+            except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
+                print(f"Failed to create test user {email}: {exc}")
                 continue
 
         if len(test_users) < 2:
@@ -97,8 +100,8 @@ class RealRLSPolicyTester:
             )
             if response.user:
                 print(f"Successfully signed in user: {user_data['email']}")
-        except Exception as e:
-            print(f"Failed to sign in user {user_data['email']}: {e}")
+        except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
+            print(f"Failed to sign in user {user_data['email']}: {exc}")
             raise
 
     async def cleanup_test_data(self) -> None:
@@ -109,8 +112,8 @@ class RealRLSPolicyTester:
                 table = cleanup_item["table"]
                 record_id = cleanup_item["id"]
                 self.admin_client.table(table).delete().eq("id", record_id).execute()
-            except Exception as e:
-                print(f"Failed to cleanup {cleanup_item}: {e}")
+            except (SupabaseException, PostgrestAPIError, AuthError, ValueError) as exc:
+                print(f"Failed to cleanup {cleanup_item}: {exc}")
 
         # Clean up test users
         for user in self.test_users:
@@ -118,8 +121,8 @@ class RealRLSPolicyTester:
                 user["client"].auth.sign_out()
                 # Note: In production, you'd use admin client to delete users
                 # self.admin_client.auth.admin.delete_user(user["id"])
-            except Exception as e:
-                print(f"Failed to cleanup user {user['email']}: {e}")
+            except (SupabaseException, AuthError, PostgrestAPIError, ValueError) as exc:
+                print(f"Failed to cleanup user {user['email']}: {exc}")
 
     def record_result(
         self,
@@ -181,7 +184,7 @@ class RealRLSPolicyTester:
             if trip_id:
                 self.cleanup_data.append({"table": "trips", "id": trip_id})
 
-        except Exception:
+        except SUPABASE_ERRORS:
             trip_created = False
             trip_id = None
 
@@ -212,9 +215,9 @@ class RealRLSPolicyTester:
                 )
                 access_granted = len(other_trip_response.data) > 0
                 error = None
-            except Exception as e:
+            except SUPABASE_ERRORS as exc:
                 access_granted = False
-                error = str(e)
+                error = str(exc)
 
             perf_ms = (time.time() - start_time) * 1000
 
@@ -248,7 +251,7 @@ class RealRLSPolicyTester:
             memory_id = memory_response.data[0]["id"] if memory_response.data else None
             if memory_id:
                 self.cleanup_data.append({"table": "memories", "id": memory_id})
-        except Exception:
+        except SUPABASE_ERRORS:
             memory_id = None
 
         # Test 4: User B tries to read User A's memory (should fail)
@@ -262,7 +265,7 @@ class RealRLSPolicyTester:
                     .execute()
                 )
                 access_granted = len(other_memory_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 access_granted = False
 
             results.append(
@@ -312,9 +315,9 @@ class RealRLSPolicyTester:
             trip_id = trip_response.data[0]["id"] if trip_response.data else None
             if trip_id:
                 self.cleanup_data.append({"table": "trips", "id": trip_id})
-        except Exception as e:
+        except SUPABASE_ERRORS as exc:
             trip_id = None
-            print(f"Failed to create collaborative trip: {e}")
+            print(f"Failed to create collaborative trip: {exc}")
 
         if not trip_id:
             return results
@@ -341,9 +344,9 @@ class RealRLSPolicyTester:
                 )
 
             collaboration_created = bool(collab_response.data)
-        except Exception as e:
+        except SUPABASE_ERRORS as exc:
             collaboration_created = False
-            print(f"Failed to create collaboration: {e}")
+            print(f"Failed to create collaboration: {exc}")
 
         results.append(
             self.record_result(
@@ -357,13 +360,10 @@ class RealRLSPolicyTester:
         )
 
         # User B can view the shared trip
-        try:
-            shared_trip_response = (
-                user_b["client"].table("trips").select("*").eq("id", trip_id).execute()
-            )
-            can_view = len(shared_trip_response.data) > 0
-        except Exception:
-            can_view = False
+        shared_trip_response = (
+            user_b["client"].table("trips").select("*").eq("id", trip_id).execute()
+        )
+        can_view = len(shared_trip_response.data) > 0
 
         results.append(
             self.record_result(
@@ -377,18 +377,15 @@ class RealRLSPolicyTester:
         )
 
         # User B tries to update the trip (should fail - viewers can't edit)
-        try:
-            update_response = (
-                user_b["client"]
-                .table("trips")
-                .update({"name": "Modified by Viewer"})
-                .eq("id", trip_id)
-                .execute()
-            )
+        update_response = (
+            user_b["client"]
+            .table("trips")
+            .update({"name": "Modified by Viewer"})
+            .eq("id", trip_id)
+            .execute()
+        )
 
-            can_update = len(update_response.data) > 0
-        except Exception:
-            can_update = False
+        can_update = len(update_response.data) > 0
 
         results.append(
             self.record_result(
@@ -402,13 +399,10 @@ class RealRLSPolicyTester:
         )
 
         # User C (non-collaborator) cannot access the trip
-        try:
-            no_access_response = (
-                user_c["client"].table("trips").select("*").eq("id", trip_id).execute()
-            )
-            unauthorized_access = len(no_access_response.data) > 0
-        except Exception:
-            unauthorized_access = False
+        no_access_response = (
+            user_c["client"].table("trips").select("*").eq("id", trip_id).execute()
+        )
+        unauthorized_access = len(no_access_response.data) > 0
 
         results.append(
             self.record_result(
@@ -453,7 +447,7 @@ class RealRLSPolicyTester:
             trip_id = trip_response.data[0]["id"] if trip_response.data else None
             if trip_id:
                 self.cleanup_data.append({"table": "trips", "id": trip_id})
-        except Exception:
+        except SUPABASE_ERRORS:
             trip_id = None
 
         if not trip_id:
@@ -479,7 +473,7 @@ class RealRLSPolicyTester:
             flight_id = flight_response.data[0]["id"] if flight_response.data else None
             if flight_id:
                 self.cleanup_data.append({"table": "flights", "id": flight_id})
-        except Exception:
+        except SUPABASE_ERRORS:
             flight_id = None
 
         if flight_id:
@@ -493,7 +487,7 @@ class RealRLSPolicyTester:
                     .execute()
                 )
                 unauthorized_access = len(no_access_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 unauthorized_access = False
 
             results.append(
@@ -541,10 +535,10 @@ class RealRLSPolicyTester:
                     {"table": "search_destinations", "id": search_id}
                 )
                 query_hash = search_response.data[0]["query_hash"]
-        except Exception as e:
+        except SUPABASE_ERRORS as exc:
             search_id = None
             query_hash = None
-            print(f"Failed to create search cache: {e}")
+            print(f"Failed to create search cache: {exc}")
 
         if search_id and query_hash:
             # User B cannot see User A's search cache
@@ -557,7 +551,7 @@ class RealRLSPolicyTester:
                     .execute()
                 )
                 unauthorized_access = len(other_cache_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 unauthorized_access = False
 
             results.append(
@@ -607,9 +601,9 @@ class RealRLSPolicyTester:
                 self.cleanup_data.append(
                     {"table": "notifications", "id": notification_id}
                 )
-        except Exception as e:
+        except SUPABASE_ERRORS as exc:
             notification_id = None
-            print(f"Failed to create notification: {e}")
+            print(f"Failed to create notification: {exc}")
 
         if notification_id:
             # User A can see their notification
@@ -622,7 +616,7 @@ class RealRLSPolicyTester:
                     .execute()
                 )
                 can_view_own = len(own_notif_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 can_view_own = False
 
             results.append(
@@ -646,7 +640,7 @@ class RealRLSPolicyTester:
                     .execute()
                 )
                 unauthorized_access = len(other_notif_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 unauthorized_access = False
 
             results.append(
@@ -671,7 +665,7 @@ class RealRLSPolicyTester:
                 )
 
                 can_update_own = len(update_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 can_update_own = False
 
             results.append(
@@ -696,7 +690,7 @@ class RealRLSPolicyTester:
                 )
 
                 unauthorized_update = len(unauthorized_update_response.data) > 0
-            except Exception:
+            except SUPABASE_ERRORS:
                 unauthorized_update = False
 
             results.append(
