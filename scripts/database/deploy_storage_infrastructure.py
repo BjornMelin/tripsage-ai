@@ -64,7 +64,7 @@ class StorageDeployment:
 
         except Exception as e:  # noqa: BLE001
             print(f"❌ Deployment failed: {e}")
-            return {"error": str(e)}
+            return {"deployment": False}
 
     async def run_storage_migration(self) -> bool:
         """Run the storage infrastructure migration."""
@@ -334,6 +334,11 @@ async def main():
         print("   - SUPABASE_SERVICE_ROLE_KEY")
         print("   - DATABASE_URL")
         sys.exit(1)
+
+    # Narrow Optional[str] types for static checkers
+    assert supabase_url is not None
+    assert supabase_key is not None
+    assert db_url is not None
 
     # Run deployment
     deployment = StorageDeployment(supabase_url, supabase_key, db_url)

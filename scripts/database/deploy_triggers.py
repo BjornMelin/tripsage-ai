@@ -9,9 +9,13 @@ import contextlib
 import logging
 import sys
 from pathlib import Path
+from typing import Any
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tripsage_core.config import get_settings
-from tripsage_core.services.infrastructure.database_service import DatabaseService
+from tripsage_core.database.connection import create_secure_async_engine
 
 
 # Configure logging
@@ -24,12 +28,26 @@ logger = logging.getLogger(__name__)
 class TriggerDeploymentService:
     """Service for deploying database triggers."""
 
-    def __init__(self, database_service: DatabaseService):
-        """Initialize trigger deployment service."""
-        self.db_service = database_service
+    def __init__(self, engine: AsyncEngine):
+        """Initialize trigger deployment service backed by SQLAlchemy engine."""
+        self.engine = engine
         self.migrations_dir = (
             Path(__file__).parent.parent.parent / "supabase" / "migrations"
         )
+
+    async def _fetch(
+        self, sql: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
+        """Execute a read-only query and return rows as dictionaries."""
+        async with self.engine.begin() as conn:
+            result = await conn.execute(text(sql), params or {})
+            rows = result.fetchall()
+            return [dict(r._mapping) for r in rows]
+
+    async def _exec(self, sql: str, params: dict[str, Any] | None = None) -> None:
+        """Execute a write/DDL statement."""
+        async with self.engine.begin() as conn:
+            await conn.execute(text(sql), params or {})
 
     async def check_prerequisites(self) -> bool:
         """Check if database is ready for trigger deployment."""
@@ -49,15 +67,14 @@ class TriggerDeploymentService:
             ]
 
             for table in required_tables:
-                result = await self.db_service.fetch_query(
+                result = await self._fetch(
                     """
                     SELECT EXISTS (
                         SELECT FROM information_schema.tables
-                        WHERE table_schema = 'public'
-                        AND table_name = $1
-                    )
+                        WHERE table_schema = 'public' AND table_name = :tname
+                    ) AS exists
                     """,
-                    table,
+                    {"tname": table},
                 )
 
                 if not result[0]["exists"]:
@@ -74,7 +91,7 @@ class TriggerDeploymentService:
     async def check_existing_triggers(self) -> dict:
         """Check what triggers already exist."""
         try:
-            existing_triggers = await self.db_service.fetch_query(
+            existing_triggers = await self._fetch(
                 """
                 SELECT trigger_name, event_object_table, action_timing,
                        event_manipulation
@@ -107,7 +124,7 @@ class TriggerDeploymentService:
     async def check_existing_functions(self) -> list:
         """Check what trigger functions already exist."""
         try:
-            existing_functions = await self.db_service.fetch_query(
+            existing_functions = await self._fetch(
                 """
                 SELECT routine_name, routine_type
                 FROM information_schema.routines
@@ -144,7 +161,10 @@ class TriggerDeploymentService:
 
             # Execute the migration
             logger.info("Executing trigger migration...")
-            await self.db_service.execute_query(migration_sql)
+            # Best-effort execution: split on semicolons for multi-statement files.
+            statements = [s.strip() for s in migration_sql.split(";") if s.strip()]
+            for stmt in statements:
+                await self._exec(stmt)
 
             logger.info("Trigger migration executed successfully")
             return True
@@ -173,17 +193,16 @@ class TriggerDeploymentService:
             missing_triggers = []
 
             for table, trigger_name in expected_triggers:
-                result = await self.db_service.fetch_query(
+                result = await self._fetch(
                     """
                     SELECT EXISTS (
                         SELECT FROM information_schema.triggers
                         WHERE trigger_schema = 'public'
-                        AND event_object_table = $1
-                        AND trigger_name = $2
+                        AND event_object_table = :tname
+                        AND trigger_name = :trg
                     )
                     """,
-                    table,
-                    trigger_name,
+                    {"tname": table, "trg": trigger_name},
                 )
 
                 if not result[0]["exists"]:
@@ -211,16 +230,16 @@ class TriggerDeploymentService:
             missing_functions = []
 
             for function_name in expected_functions:
-                result = await self.db_service.fetch_query(
+                result = await self._fetch(
                     """
                     SELECT EXISTS (
                         SELECT FROM information_schema.routines
                         WHERE routine_schema = 'public'
-                        AND routine_name = $1
+                        AND routine_name = :fname
                         AND routine_type = 'FUNCTION'
                     )
                     """,
-                    function_name,
+                    {"fname": function_name},
                 )
 
                 if not result[0]["exists"]:
@@ -247,46 +266,49 @@ class TriggerDeploymentService:
             user_id = "550e8400-e29b-41d4-a716-446655440000"
             owner_id = "550e8400-e29b-41d4-a716-446655440001"
 
-            trip_result = await self.db_service.execute_query(
+            trip_rows_before = await self._fetch(
                 """
                 INSERT INTO trips (
                     user_id, name, destination, start_date, end_date, status
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES (:owner_id, :name, :dest, :start_date, :end_date, :status)
                 RETURNING id
                 """,
-                owner_id,
-                "Trigger Test Trip",
-                "Test City",
-                "2025-12-01",
-                "2025-12-10",
-                "planning",
+                {
+                    "owner_id": owner_id,
+                    "name": "Trigger Test Trip",
+                    "dest": "Test City",
+                    "start_date": "2025-12-01",
+                    "end_date": "2025-12-10",
+                    "status": "planning",
+                },
             )
-
-            trip_id = trip_result[0]["id"]
+            trip_id = trip_rows_before[0]["id"]
 
             # Test collaboration trigger (should work without errors)
-            await self.db_service.execute_query(
+            await self._exec(
                 """
                 INSERT INTO trip_collaborators
                 (trip_id, user_id, added_by, permission_level)
-                VALUES ($1, $2, $3, $4)
+                VALUES (:trip_id, :user_id, :added_by, :perm)
                 """,
-                trip_id,
-                user_id,
-                owner_id,
-                "view",
+                {
+                    "trip_id": trip_id,
+                    "user_id": user_id,
+                    "added_by": owner_id,
+                    "perm": "view",
+                },
             )
 
             # Test cache invalidation trigger
             logger.info("Testing cache invalidation triggers...")
 
-            await self.db_service.execute_query(
+            await self._exec(
                 """
                 UPDATE trips SET destination = 'Updated Test City'
                 WHERE id = $1
                 """,
-                trip_id,
+                {"id": trip_id},
             )
 
             # Test permission validation trigger
@@ -294,14 +316,13 @@ class TriggerDeploymentService:
 
             try:
                 # This should fail due to permission validation
-                await self.db_service.execute_query(
+                await self._exec(
                     """
                     UPDATE trip_collaborators
                     SET permission_level = 'admin', added_by = $1
                     WHERE trip_id = $2 AND user_id = $1
                     """,
-                    user_id,
-                    trip_id,
+                    {"p_user": user_id, "p_trip": trip_id},
                 )
                 logger.warning(
                     "Permission validation trigger did not prevent invalid operation"
@@ -314,12 +335,10 @@ class TriggerDeploymentService:
                     return False
 
             # Cleanup test data
-            await self.db_service.execute_query(
-                "DELETE FROM trip_collaborators WHERE trip_id = $1", trip_id
+            await self._exec(
+                "DELETE FROM trip_collaborators WHERE trip_id = :id", {"id": trip_id}
             )
-            await self.db_service.execute_query(
-                "DELETE FROM trips WHERE id = $1", trip_id
-            )
+            await self._exec("DELETE FROM trips WHERE id = :id", {"id": trip_id})
 
             logger.info("Trigger functionality tests passed")
             return True
@@ -332,7 +351,7 @@ class TriggerDeploymentService:
         """Setup pg_cron scheduled jobs if extension is available."""
         try:
             # Check if pg_cron extension is available
-            result = await self.db_service.fetch_query(
+            result = await self._fetch(
                 """
                 SELECT EXISTS (
                     SELECT FROM pg_extension WHERE extname = 'pg_cron'
@@ -369,8 +388,8 @@ class TriggerDeploymentService:
             for job_name, schedule, command in jobs:
                 try:
                     # Check if job already exists
-                    existing = await self.db_service.fetch_query(
-                        "SELECT jobid FROM cron.job WHERE jobname = $1", job_name
+                    existing = await self._fetch(
+                        "SELECT jobid FROM cron.job WHERE jobname = :j", {"j": job_name}
                     )
 
                     if existing:
@@ -378,8 +397,9 @@ class TriggerDeploymentService:
                         continue
 
                     # Schedule the job
-                    await self.db_service.execute_query(
-                        "SELECT cron.schedule($1, $2, $3)", job_name, schedule, command
+                    await self._exec(
+                        "SELECT cron.schedule(:name, :sched, :cmd)",
+                        {"name": job_name, "sched": schedule, "cmd": command},
                     )
 
                     logger.info(
@@ -407,7 +427,7 @@ class TriggerDeploymentService:
 
             # Check pg_cron status
             try:
-                result = await self.db_service.fetch_query(
+                result = await self._fetch(
                     "SELECT COUNT(*) as job_count FROM cron.job "
                     "WHERE jobname LIKE '%cleanup%' OR jobname LIKE '%maintenance%'"
                 )
@@ -417,7 +437,7 @@ class TriggerDeploymentService:
 
             # Get recent maintenance logs
             try:
-                logs = await self.db_service.fetch_query(
+                logs = await self._fetch(
                     """
                     SELECT content, metadata, created_at
                     FROM session_memories
@@ -451,10 +471,8 @@ async def main():
     try:
         # Initialize services
         settings = get_settings()
-        db_service = DatabaseService(settings)
-        await db_service.initialize()
-
-        deployment_service = TriggerDeploymentService(db_service)
+        engine = await create_secure_async_engine(settings.database_url)
+        deployment_service = TriggerDeploymentService(engine)
 
         # Check prerequisites
         logger.info("Checking prerequisites...")
@@ -518,7 +536,8 @@ async def main():
 
     finally:
         with contextlib.suppress(Exception):
-            await db_service.close()
+            if "engine" in locals():
+                await engine.dispose()
 
 
 if __name__ == "__main__":

@@ -15,14 +15,15 @@ import asyncio
 import os
 import time
 from datetime import datetime, timedelta
+from typing import cast
 
 import pytest
 from supabase import AuthError, PostgrestAPIError, SupabaseException, create_client
 
+from tripsage_core.models.base_core_model import TripSageModel
+
 
 SUPABASE_ERRORS = (SupabaseException, AuthError, PostgrestAPIError, ValueError)
-
-from tripsage_core.models.base_core_model import TripSageModel
 
 
 class RLSTestResult(TripSageModel):
@@ -43,13 +44,20 @@ class RealRLSPolicyTester:
     """Real RLS policy testing against actual Supabase database."""
 
     def __init__(self):
+        """Initialize Supabase clients and test state."""
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_anon_key = os.getenv("SUPABASE_ANON_KEY")
 
         if not self.supabase_url or not self.supabase_anon_key:
             pytest.skip("Supabase credentials not available for RLS testing")
 
-        self.admin_client = create_client(self.supabase_url, self.supabase_anon_key)
+        # Narrow Optional[str] after skip for static type checkers.
+        assert self.supabase_url is not None
+        assert self.supabase_anon_key is not None
+
+        self.admin_client = create_client(
+            cast(str, self.supabase_url), cast(str, self.supabase_anon_key)
+        )
         self.test_users: list[dict] = []
         self.test_results: list[RLSTestResult] = []
         self.cleanup_data: list[dict] = []
@@ -74,7 +82,8 @@ class RealRLSPolicyTester:
                         "email": email,
                         "password": password,
                         "client": create_client(
-                            self.supabase_url, self.supabase_anon_key
+                            cast(str, self.supabase_url),
+                            cast(str, self.supabase_anon_key),
                         ),
                     }
 
