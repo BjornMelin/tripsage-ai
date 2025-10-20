@@ -1,1 +1,1 @@
-# Tests for TripSage Core business services
+"""Business services unit tests package."""

@@ -1,1 +1,1 @@
-# Unit tests for tripsage.api package
+"""TripSage API unit tests package."""

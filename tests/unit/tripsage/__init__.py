@@ -1,1 +1,1 @@
-# Unit tests for tripsage package
+"""TripSage unit tests package."""

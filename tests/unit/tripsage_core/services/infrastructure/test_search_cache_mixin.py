@@ -43,6 +43,7 @@ class MockSearchService(SearchCacheMixin[MockSearchRequest, MockSearchResponse])
     """Mock service implementing SearchCacheMixin for testing."""
 
     def __init__(self, cache_service: CacheService | None = None):
+        """Bind optional cache service and default TTL."""
         self._cache_service = cache_service
         self._cache_ttl = 300  # 5 minutes
         self._cache_prefix = "test_search"
@@ -67,6 +68,7 @@ class MockSimpleService(SimpleCacheMixin):
     """Test service implementing SimpleCacheMixin."""
 
     def __init__(self, cache_service: CacheService | None = None):
+        """Bind optional cache service and default TTL for simple cache tests."""
         self._cache_service = cache_service
         self._cache_ttl = 600  # 10 minutes
         self._cache_prefix = "test_simple"

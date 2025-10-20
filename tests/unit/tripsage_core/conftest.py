@@ -12,7 +12,7 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 # Import the core module to ensure it's available
-import tripsage_core  # noqa: E402, F401
+import tripsage_core  # noqa: F401
 
 
 @pytest.fixture(autouse=True)
