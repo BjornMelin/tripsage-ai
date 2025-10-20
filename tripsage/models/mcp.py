@@ -5,7 +5,7 @@ MCP (Model Context Protocol) servers and validation of requests and responses.
 """
 
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import ConfigDict, Field, field_validator, model_validator
 
@@ -158,7 +158,7 @@ class TimeZoneRequest(MCPRequestBase):
 T = TypeVar("T")
 
 
-class GenericResponse(MCPResponseBase, Generic[T]):
+class GenericResponse[T](MCPResponseBase):
     """Generic response model for any data type."""
 
     data: T = Field(..., description="Response data")

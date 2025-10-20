@@ -213,7 +213,7 @@ class TestEnhancedHandoffCoordinator:
         )
 
         assert handoff_result is not None
-        next_agent, handoff_context = handoff_result
+        next_agent, _handoff_context = handoff_result
         assert next_agent == "itinerary_agent"
 
     def test_error_recovery_handoff(self, handoff_coordinator, sample_state):
@@ -230,7 +230,7 @@ class TestEnhancedHandoffCoordinator:
         )
 
         assert handoff_result is not None
-        next_agent, handoff_context = handoff_result
+        next_agent, _handoff_context = handoff_result
         assert next_agent == "general"
 
     def test_handoff_context_preservation(self, handoff_coordinator, sample_state):
@@ -243,7 +243,7 @@ class TestEnhancedHandoffCoordinator:
         )
 
         if handoff_result:
-            next_agent, handoff_context = handoff_result
+            _next_agent, handoff_context = handoff_result
             preserved_context = handoff_context.preserved_context
 
             # Check that relevant context is preserved based on rule
@@ -384,16 +384,14 @@ class TestRoutingIntegration:
         handoff_coordinator = AgentHandoffCoordinator()
 
         # Get valid agents from router validation
-        router_agents = set(
-            [
-                "flight_agent",
-                "accommodation_agent",
-                "budget_agent",
-                "itinerary_agent",
-                "destination_research_agent",
-                "general_agent",
-            ]
-        )
+        router_agents = {
+            "flight_agent",
+            "accommodation_agent",
+            "budget_agent",
+            "itinerary_agent",
+            "destination_research_agent",
+            "general_agent",
+        }
 
         # Get agents from handoff coordinator capabilities
         handoff_agents = set(handoff_coordinator.agent_capabilities.keys())

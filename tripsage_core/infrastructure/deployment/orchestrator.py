@@ -177,7 +177,9 @@ class ConfigurableDeploymentOrchestrator:
             else:
                 result.status = DeploymentStatus.FAILED
                 result.error_message = f"Deployment failed in phase: {metrics.phase}"
-                logger.exception( f"Deployment {deployment_id} failed in phase: {metrics.phase}")
+                logger.exception(
+                    f"Deployment {deployment_id} failed in phase: {metrics.phase}"
+                )
 
                 # Auto-rollback if enabled and not already rolled back
                 if (
@@ -201,7 +203,9 @@ class ConfigurableDeploymentOrchestrator:
                             f"Auto-rollback successful for deployment {deployment_id}"
                         )
                     else:
-                        logger.exception( f"Auto-rollback failed for deployment {deployment_id}")
+                        logger.exception(
+                            f"Auto-rollback failed for deployment {deployment_id}"
+                        )
 
             result.end_time = time.time()
 
@@ -484,8 +488,8 @@ class ConfigurableDeploymentOrchestrator:
                     )
                     break
 
-            except Exception as e:
-                logger.exception( f"Monitoring error for deployment {deployment_id}")
+            except Exception:
+                logger.exception(f"Monitoring error for deployment {deployment_id}")
                 break
 
         logger.info(f"Monitoring completed for deployment {deployment_id}")

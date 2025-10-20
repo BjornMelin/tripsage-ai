@@ -758,19 +758,15 @@ class TestTripSecurityIntegration:
             trip_service = MockTripService.return_value
             trip_service._check_trip_access.return_value = True
             trip_service.get_trip.return_value = Trip(
-                **{
-                    "id": int(
-                        trip_data["id"].replace("-", "")[:10]
-                    ),  # Convert to int for Trip model
-                    "name": trip_data["name"],
-                    "destination": trip_data["destination"],
-                    "start_date": trip_data["start_date"],
-                    "end_date": trip_data["end_date"],
-                    "budget": trip_data["budget"],
-                    "travelers": trip_data["travelers"],
-                    "status": TripStatus.PLANNING,
-                    "trip_type": TripType.LEISURE,
-                }
+                id=int(trip_data["id"].replace("-", "")[:10]),
+                name=trip_data["name"],
+                destination=trip_data["destination"],
+                start_date=trip_data["start_date"],
+                end_date=trip_data["end_date"],
+                budget=trip_data["budget"],
+                travelers=trip_data["travelers"],
+                status=TripStatus.PLANNING,
+                trip_type=TripType.LEISURE,
             )
 
             # Test 1: Authorized access succeeds

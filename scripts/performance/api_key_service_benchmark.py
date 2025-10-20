@@ -46,8 +46,7 @@ class PerformanceBenchmark:
         cache.get.return_value = None
         cache.set.return_value = True
 
-        service = ApiKeyService(db=db, cache=cache, validation_timeout=5)
-        return service
+        return ApiKeyService(db=db, cache=cache, validation_timeout=5)
 
     def _sample_db_result(self) -> dict[str, Any]:
         """Generate sample database result."""

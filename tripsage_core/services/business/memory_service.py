@@ -191,8 +191,8 @@ class MemoryService:
         except ImportError:
             logger.warning("Mem0 not available, using fallback memory implementation")
             self.memory = None
-        except Exception as e:
-            logger.exception(f"Failed to initialize memory backend")
+        except Exception:
+            logger.exception("Failed to initialize memory backend")
             self.memory = None
 
     def _get_default_config(self) -> dict[str, Any]:
@@ -337,8 +337,8 @@ class MemoryService:
             self._cache.clear()
             logger.info("Memory service closed successfully")
 
-        except Exception as e:
-            logger.exception(f"Error closing memory service")
+        except Exception:
+            logger.exception("Error closing memory service")
 
     async def add_conversation_memory(
         self, user_id: str, memory_request: ConversationMemoryRequest
@@ -396,7 +396,9 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.exception( "Memory extraction failed", extra={"user_id": user_id, "error": str(e)})
+            logger.exception(
+                "Memory extraction failed", extra={"user_id": user_id, "error": str(e)}
+            )
             return {"results": [], "error": str(e)}
 
     async def search_memories(
@@ -467,7 +469,14 @@ class MemoryService:
             return enriched_results
 
         except Exception as e:
-            logger.exception( "Memory search failed", extra={ "user_id": user_id, "query": search_request.query, "error": str(e), },)
+            logger.exception(
+                "Memory search failed",
+                extra={
+                    "user_id": user_id,
+                    "query": search_request.query,
+                    "error": str(e),
+                },
+            )
             return []
 
     async def get_user_context(
@@ -516,16 +525,14 @@ class MemoryService:
                 if any(
                     word in memory_content
                     for word in ["prefer", "like", "dislike", "favorite"]
-                ):
-                    if "preferences" not in [cat for cat in categories]:
-                        context["preferences"].append(memory)
+                ) and "preferences" not in list(categories):
+                    context["preferences"].append(memory)
 
                 if any(
                     word in memory_content
                     for word in ["budget", "cost", "price", "expensive", "cheap"]
-                ):
-                    if "budget_patterns" not in [cat for cat in categories]:
-                        context["budget_patterns"].append(memory)
+                ) and "budget_patterns" not in list(categories):
+                    context["budget_patterns"].append(memory)
 
             # Add derived insights
             insights = await self._derive_travel_insights(context)
@@ -545,7 +552,10 @@ class MemoryService:
             )
 
         except Exception as e:
-            logger.exception( "Failed to get user context", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get user context",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return UserContextResponse(summary="Error retrieving user context")
 
     async def update_user_preferences(
@@ -604,7 +614,10 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.exception( "Failed to update user preferences", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to update user preferences",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return {"error": str(e)}
 
     async def delete_user_memories(
@@ -663,7 +676,10 @@ class MemoryService:
             return {"deleted_count": deleted_count, "success": True}
 
         except Exception as e:
-            logger.exception( "Failed to delete user memories", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to delete user memories",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return {"error": str(e), "success": False}
 
     async def _ensure_connected(self) -> bool:
@@ -714,7 +730,7 @@ class MemoryService:
         """Invalidate cache entries for a specific user."""
         keys_to_remove = [
             key
-            for key in self._cache.keys()
+            for key in self._cache
             if any(cached_user_id == user_id for cached_user_id, *_ in [key.split(":")])
         ]
         for key in keys_to_remove:
@@ -723,7 +739,7 @@ class MemoryService:
     def _parse_datetime(self, dt_string: str) -> datetime:
         """Parse datetime string safely."""
         try:
-            return datetime.fromisoformat(dt_string.replace("Z", "+00:00"))
+            return datetime.fromisoformat(dt_string)
         except Exception:
             return datetime.now(UTC)
 
@@ -756,15 +772,13 @@ class MemoryService:
 
     async def _derive_travel_insights(self, context: dict[str, list]) -> dict[str, Any]:
         """Derive insights from user's travel history and preferences."""
-        insights = {
+        return {
             "preferred_destinations": self._analyze_destinations(context),
             "budget_range": self._analyze_budgets(context),
             "travel_frequency": self._analyze_frequency(context),
             "preferred_activities": self._analyze_activities(context),
             "travel_style": self._analyze_travel_style(context),
         }
-
-        return insights
 
     def _analyze_destinations(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze destination preferences from context."""

@@ -152,12 +152,11 @@ class WebSocketHeartbeatMessage(WebSocketBaseMessage):
     @classmethod
     def validate_ping_id(cls, v):
         """Validate ping ID format."""
-        if v is not None:
-            if not v.replace("_", "").replace("-", "").isalnum():
-                raise ValueError(
-                    "Ping ID must contain only alphanumeric characters, "
-                    "hyphens, and underscores"
-                )
+        if v is not None and not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError(
+                "Ping ID must contain only alphanumeric characters, "
+                "hyphens, and underscores"
+            )
         return v
 
 

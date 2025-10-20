@@ -36,32 +36,27 @@ class TestItineraryService:
     @pytest.fixture
     def mock_database_service(self):
         """Mock database service."""
-        db = AsyncMock()
-        return db
+        return AsyncMock()
 
     @pytest.fixture
     def mock_optimization_service(self):
         """Mock optimization service."""
-        optimization = AsyncMock()
-        return optimization
+        return AsyncMock()
 
     @pytest.fixture
     def mock_maps_service(self):
         """Mock maps service."""
-        maps = AsyncMock()
-        return maps
+        return AsyncMock()
 
     @pytest.fixture
     def mock_activity_service(self):
         """Mock activity service."""
-        activity = AsyncMock()
-        return activity
+        return AsyncMock()
 
     @pytest.fixture
     def mock_collaboration_service(self):
         """Mock collaboration service."""
-        collaboration = AsyncMock()
-        return collaboration
+        return AsyncMock()
 
     @pytest.fixture
     def itinerary_service(

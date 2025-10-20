@@ -179,7 +179,15 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.exception( f"Unexpected error in {operation_name}", extra={ "operation": operation_name, "error_type": type(e).__name__, "execution_time_ms": round(execution_time * 1000, 2), **extra_context, },)
+                    logger.exception(
+                        f"Unexpected error in {operation_name}",
+                        extra={
+                            "operation": operation_name,
+                            "error_type": type(e).__name__,
+                            "execution_time_ms": round(execution_time * 1000, 2),
+                            **extra_context,
+                        },
+                    )
                     log_exception(e, operation_name)
 
                     # Wrap unexpected errors in CoreServiceError
@@ -295,7 +303,15 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.exception( f"Unexpected error in {operation_name}", extra={ "operation": operation_name, "error_type": type(e).__name__, "execution_time_ms": round(execution_time * 1000, 2), **extra_context, },)
+                    logger.exception(
+                        f"Unexpected error in {operation_name}",
+                        extra={
+                            "operation": operation_name,
+                            "error_type": type(e).__name__,
+                            "execution_time_ms": round(execution_time * 1000, 2),
+                            **extra_context,
+                        },
+                    )
                     log_exception(e, operation_name)
 
                     # Wrap unexpected errors in CoreServiceError
@@ -325,7 +341,7 @@ def with_error_handling(
     return decorator
 
 
-def ensure_memory_client_initialized(func: F) -> F:
+def ensure_memory_client_initialized[F: Callable[..., Any]](func: F) -> F:
     """Decorator to ensure memory service is initialized.
 
     This decorator ensures that the memory service is initialized before
@@ -426,11 +442,14 @@ def retry_on_failure(
                             await asyncio.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.exception( f"{func.__name__} failed after {max_attempts} attempts")
+                            logger.exception(
+                                f"{func.__name__} failed after {max_attempts} attempts"
+                            )
                             raise
 
                 if last_exception:
                     raise last_exception
+                return None
 
             return cast(F, async_wrapper)
         else:
@@ -455,11 +474,14 @@ def retry_on_failure(
                             time.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.exception( f"{func.__name__} failed after {max_attempts} attempts")
+                            logger.exception(
+                                f"{func.__name__} failed after {max_attempts} attempts"
+                            )
                             raise
 
                 if last_exception:
                     raise last_exception
+                return None
 
             return cast(F, sync_wrapper)
 

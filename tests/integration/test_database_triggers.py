@@ -65,7 +65,7 @@ class TestCollaborationTriggers:
             # Add collaborator
             await db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators 
+                INSERT INTO trip_collaborators
                 (trip_id, user_id, added_by, permission_level)
                 VALUES ($1, $2, $3, $4)
                 """,
@@ -93,7 +93,7 @@ class TestCollaborationTriggers:
         # Add user1 as admin collaborator
         await db_service.execute_query(
             """
-            INSERT INTO trip_collaborators 
+            INSERT INTO trip_collaborators
             (trip_id, user_id, added_by, permission_level)
             VALUES ($1, $2, $3, $4)
             """,
@@ -109,7 +109,7 @@ class TestCollaborationTriggers:
         ):
             await db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators 
+                INSERT INTO trip_collaborators
                 (trip_id, user_id, added_by, permission_level)
                 VALUES ($1, $2, $3, $4)
                 """,
@@ -123,7 +123,7 @@ class TestCollaborationTriggers:
         with pytest.raises(Exception, match="Cannot modify your own permission level"):
             await db_service.execute_query(
                 """
-                UPDATE trip_collaborators 
+                UPDATE trip_collaborators
                 SET permission_level = 'view'
                 WHERE trip_id = $1 AND user_id = $2 AND added_by = $2
                 """,
@@ -138,7 +138,7 @@ class TestCollaborationTriggers:
         # Add collaborator
         await db_service.execute_query(
             """
-            INSERT INTO trip_collaborators 
+            INSERT INTO trip_collaborators
             (trip_id, user_id, added_by, permission_level)
             VALUES ($1, $2, $3, $4)
             """,
@@ -151,7 +151,7 @@ class TestCollaborationTriggers:
         # Update collaboration permission
         await db_service.execute_query(
             """
-            UPDATE trip_collaborators 
+            UPDATE trip_collaborators
             SET permission_level = 'edit'
             WHERE trip_id = $1 AND user_id = $2
             """,
@@ -162,8 +162,8 @@ class TestCollaborationTriggers:
         # Check audit trail
         audit_records = await db_service.fetch_query(
             """
-            SELECT content, metadata 
-            FROM session_memories 
+            SELECT content, metadata
+            FROM session_memories
             WHERE metadata->>'type' = 'collaboration_audit'
             AND metadata->'event_data'->>'trip_id' = $1
             ORDER BY created_at DESC
@@ -189,7 +189,7 @@ class TestCacheInvalidationTriggers:
         # Create test trip
         trip_id = await db_service.execute_query(
             """
-            INSERT INTO trips 
+            INSERT INTO trips
             (user_id, name, destination, start_date, end_date, status)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
@@ -210,7 +210,7 @@ class TestCacheInvalidationTriggers:
             # Update trip
             await db_service.execute_query(
                 """
-                UPDATE trips 
+                UPDATE trips
                 SET destination = 'Edinburgh'
                 WHERE id = $1
                 """,
@@ -230,7 +230,7 @@ class TestCacheInvalidationTriggers:
         # Create test trip
         trip_id = await db_service.execute_query(
             """
-            INSERT INTO trips 
+            INSERT INTO trips
             (user_id, name, destination, start_date, end_date, status)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
@@ -258,7 +258,7 @@ class TestCacheInvalidationTriggers:
         # Update trip destination (should trigger cache cleanup)
         await db_service.execute_query(
             """
-            UPDATE trips 
+            UPDATE trips
             SET destination = 'Rome'
             WHERE id = $1
             """,
@@ -268,7 +268,7 @@ class TestCacheInvalidationTriggers:
         # Verify search cache was cleaned up
         remaining_cache = await db_service.fetch_query(
             """
-            SELECT * FROM search_destinations 
+            SELECT * FROM search_destinations
             WHERE metadata->>'destination' = 'Paris'
             """
         )
@@ -311,7 +311,7 @@ class TestBusinessLogicTriggers:
             # Update session (should trigger expiration check)
             await db_service.execute_query(
                 """
-                UPDATE chat_sessions 
+                UPDATE chat_sessions
                 SET updated_at = NOW() - INTERVAL '25 hours'
                 WHERE id = $1
                 """,
@@ -335,7 +335,7 @@ class TestBusinessLogicTriggers:
         # Create test trip
         trip_id = await db_service.execute_query(
             """
-            INSERT INTO trips 
+            INSERT INTO trips
             (user_id, name, destination, start_date, end_date, status)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
@@ -351,7 +351,7 @@ class TestBusinessLogicTriggers:
         # Add confirmed flight booking
         await db_service.execute_query(
             """
-            INSERT INTO flights 
+            INSERT INTO flights
             (trip_id, origin, destination, departure_time, arrival_time, booking_status)
             VALUES ($1, $2, $3, $4, $5, $6)
             """,
@@ -366,7 +366,7 @@ class TestBusinessLogicTriggers:
         # Add confirmed accommodation booking
         await db_service.execute_query(
             """
-            INSERT INTO accommodations 
+            INSERT INTO accommodations
             (trip_id, name, location, check_in_date, check_out_date, booking_status)
             VALUES ($1, $2, $3, $4, $5, $6)
             """,
@@ -391,7 +391,7 @@ class TestBusinessLogicTriggers:
         # Cancel a booking and verify status change
         await db_service.execute_query(
             """
-            UPDATE flights 
+            UPDATE flights
             SET booking_status = 'cancelled'
             WHERE trip_id = $1
             """,
@@ -426,7 +426,7 @@ class TestBusinessLogicTriggers:
         attachment_id = str(uuid4())
         await db_service.execute_query(
             """
-            INSERT INTO file_attachments 
+            INSERT INTO file_attachments
             (id, filename, file_path, file_size, content_type)
             VALUES ($1, $2, $3, $4, $5)
             """,
@@ -479,7 +479,7 @@ class TestScheduledJobFunctions:
         orphaned_attachment_id = str(uuid4())
         await db_service.execute_query(
             """
-            INSERT INTO file_attachments 
+            INSERT INTO file_attachments
             (id, filename, file_path, file_size, content_type, metadata, created_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             """,
@@ -521,7 +521,7 @@ class TestScheduledJobFunctions:
         # Verify maintenance log was created
         maintenance_logs = await db_service.fetch_query(
             """
-            SELECT * FROM session_memories 
+            SELECT * FROM session_memories
             WHERE metadata->>'job' = 'weekly_maintenance'
             AND created_at > NOW() - INTERVAL '1 minute'
             """
@@ -561,7 +561,7 @@ class TestScheduledJobFunctions:
         # Verify cleanup log was created
         cleanup_logs = await db_service.fetch_query(
             """
-            SELECT * FROM session_memories 
+            SELECT * FROM session_memories
             WHERE metadata->>'job' = 'monthly_cleanup'
             AND created_at > NOW() - INTERVAL '1 minute'
             """
@@ -579,7 +579,7 @@ class TestTriggerPerformance:
         # Create test trip
         trip_id = await db_service.execute_query(
             """
-            INSERT INTO trips 
+            INSERT INTO trips
             (user_id, name, destination, start_date, end_date, status)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
@@ -602,7 +602,7 @@ class TestTriggerPerformance:
         for user_id in user_ids:
             await db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators 
+                INSERT INTO trip_collaborators
                 (trip_id, user_id, added_by, permission_level)
                 VALUES ($1, $2, $3, $4)
                 """,
@@ -635,7 +635,7 @@ class TestTriggerPerformance:
         for i in range(50):
             result = await db_service.execute_query(
                 """
-                INSERT INTO trips 
+                INSERT INTO trips
                 (user_id, name, destination, start_date, end_date, status)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
@@ -669,7 +669,7 @@ class TestTriggerPerformance:
         # Verify all trips were updated
         updated_count = await db_service.fetch_query(
             """
-            SELECT COUNT(*) as count FROM trips 
+            SELECT COUNT(*) as count FROM trips
             WHERE destination = 'Updated Destination'
             """
         )

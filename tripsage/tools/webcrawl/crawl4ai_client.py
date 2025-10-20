@@ -104,12 +104,11 @@ class Crawl4AIClient:
                     error_msg = result.get(
                         "error", "Unknown error in Crawl4AI scraping"
                     )
-                    logger.exception(f"Crawl4AI scraping error")
+                    logger.exception("Crawl4AI scraping error")
                     return {"success": False, "error": error_msg}
 
                 # Extract and format the result
-                parsed_result = self._format_result(result, url)
-                return parsed_result
+                return self._format_result(result, url)
 
         except httpx.RequestError as e:
             error_msg = f"Crawl4AI network error: {e!s}"
@@ -213,12 +212,11 @@ class Crawl4AIClient:
                     error_msg = result.get(
                         "error", "Unknown error in Crawl4AI blog crawl"
                     )
-                    logger.exception(f"Crawl4AI blog crawl error")
+                    logger.exception("Crawl4AI blog crawl error")
                     return {"success": False, "error": error_msg}
 
                 # Process the blog-specific results based on extract_type
-                formatted_result = self._format_blog_result(result, url, extract_type)
-                return formatted_result
+                return self._format_blog_result(result, url, extract_type)
 
         except Exception as e:
             error_msg = f"Crawl4AI blog crawl error: {e!s}"
@@ -247,7 +245,7 @@ class Crawl4AIClient:
             result["data"][0] if isinstance(result["data"], list) else result["data"]
         )
 
-        formatted_result = {
+        return {
             "success": True,
             "url": url,
             "items": [
@@ -263,8 +261,6 @@ class Crawl4AIClient:
             ],
             "formatted": f"Successfully extracted content from {url}",
         }
-
-        return formatted_result
 
     def _format_blog_result(
         self, result: dict[str, Any], url: str, extract_type: str
@@ -358,7 +354,7 @@ class Crawl4AIClient:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to extract travel insights")
+            logger.exception("Failed to extract travel insights")
             return {"success": False, "url": url, "error": str(e), "insights": {}}
 
     def _parse_travel_insights(
@@ -484,14 +480,12 @@ class Crawl4AIClient:
             )
 
         # Combine results
-        combined_result = {
+        return {
             **scrape_result,
             "memory_extraction": insights_result,
             "has_insights": insights_result.get("success", False),
             "insights_count": insights_result.get("extracted_count", 0),
         }
-
-        return combined_result
 
 
 # Singleton instance

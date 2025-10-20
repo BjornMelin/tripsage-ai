@@ -359,11 +359,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             "/api/auth/token",  # OAuth2 token endpoint
         ]
 
-        for skip_path in skip_paths:
-            if path.startswith(skip_path):
-                return True
-
-        return False
+        return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     async def _authenticate_jwt(self, token: str) -> Principal:
         """Authenticate using JWT token.
@@ -414,11 +410,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
         except jwt.ExpiredSignatureError:
             raise AuthenticationError("Token has expired") from None
-        except jwt.InvalidTokenError as e:
-            logger.exception(f"JWT InvalidTokenError")
+        except jwt.InvalidTokenError:
+            logger.exception("JWT InvalidTokenError")
             raise AuthenticationError("Invalid token") from None
         except Exception as e:
-            logger.exception(f"JWT authentication error")
+            logger.exception("JWT authentication error")
             raise AuthenticationError("Invalid authentication token") from e
 
     async def _authenticate_api_key(self, api_key: str) -> Principal:
@@ -507,7 +503,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         except (AuthenticationError, KeyValidationError):
             raise
         except Exception as e:
-            logger.exception(f"API key authentication error")
+            logger.exception("API key authentication error")
             raise AuthenticationError("Invalid API key") from e
 
     def _create_auth_error_response(

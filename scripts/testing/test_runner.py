@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Simple test runner to verify imports and basic functionality
+"""Simple test runner to verify imports and basic functionality.
+
 without requiring full pytest installation.
 """
 

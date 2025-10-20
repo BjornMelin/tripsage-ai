@@ -243,7 +243,7 @@ class ErrorRecoveryService:
             return result
 
         except Exception as fallback_error:
-            logger.exception(f"Fallback handling failed: {fallback_error!s}")
+            logger.exception("Fallback handling failed")
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.FAIL_FAST,

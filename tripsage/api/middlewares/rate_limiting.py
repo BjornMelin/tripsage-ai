@@ -344,8 +344,10 @@ class DragonflyRateLimiter(RateLimiter):
                 algorithm="disabled",
             )
 
-        except Exception as e:
-            logger.exception( f"DragonflyDB rate limiting failed, falling back to in-memory")
+        except Exception:
+            logger.exception(
+                "DragonflyDB rate limiting failed, falling back to in-memory"
+            )
             return await self.fallback_limiter.check_rate_limit(
                 key, config, service, endpoint, cost
             )
@@ -594,7 +596,7 @@ class DragonflyRateLimiter(RateLimiter):
 
             return True
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to reset rate limits for {key}")
             return False
 

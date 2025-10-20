@@ -433,7 +433,7 @@ class DestinationFactory(BaseFactory):
     def create_details_response(cls, **kwargs) -> dict[str, Any]:
         """Create a destination details response."""
         base_destination = cls.create(**kwargs)
-        details = {
+        return {
             **base_destination,
             "attractions": [
                 {"name": "Tokyo Tower", "type": "landmark"},
@@ -448,7 +448,6 @@ class DestinationFactory(BaseFactory):
                 "Get a JR Pass for train travel",
             ],
         }
-        return details
 
     @classmethod
     def create_saved_destination(cls, **kwargs) -> dict[str, Any]:

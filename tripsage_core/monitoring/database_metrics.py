@@ -340,8 +340,8 @@ class DatabaseMetrics:
         try:
             start_http_server(port, registry=self.registry)
             logger.info(f"Metrics server started on port {port}")
-        except Exception as e:
-            logger.exception(f"Failed to start metrics server")
+        except Exception:
+            logger.exception("Failed to start metrics server")
             raise
 
 

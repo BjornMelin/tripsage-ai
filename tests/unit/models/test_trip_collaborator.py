@@ -343,7 +343,7 @@ class TestTripCollaboratorCreate:
 
         errors = exc_info.value.errors()
         required_fields = {"trip_id", "user_id", "added_by"}
-        error_fields = {tuple(error["loc"])[0] for error in errors}
+        error_fields = {next(iter(error["loc"])) for error in errors}
         assert required_fields.issubset(error_fields)
 
     def test_create_collaborator_uuid_validation_custom(self, base_create_data):

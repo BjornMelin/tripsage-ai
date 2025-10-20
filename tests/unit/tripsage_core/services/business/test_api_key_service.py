@@ -85,14 +85,12 @@ class TestApiKeyService:
     @pytest.fixture
     def mock_cache_service(self):
         """Mock cache service."""
-        cache = AsyncMock()
-        return cache
+        return AsyncMock()
 
     @pytest.fixture
     def mock_audit_service(self):
         """Mock audit service."""
-        audit = AsyncMock()
-        return audit
+        return AsyncMock()
 
     @pytest.fixture
     def mock_settings(self):

@@ -137,17 +137,15 @@ async def search_user_memories(
 
         memory_service = service_registry.get_required_service("memory_service")
 
-        results = await memory_service.search_memories(
+        return await memory_service.search_memories(
             query=search_query.query,
             user_id=search_query.user_id,
             limit=search_query.limit,
             category_filter=search_query.category_filter,
         )
 
-        return results
-
-    except Exception as e:
-        logger.exception(f"Error searching user memories")
+    except Exception:
+        logger.exception("Error searching user memories")
         return []
 
 
@@ -176,9 +174,7 @@ async def get_user_context(
 
         memory_service = service_registry.get_required_service("memory_service")
 
-        context = await memory_service.get_user_context(user_id)
-
-        return context
+        return await memory_service.get_user_context(user_id)
 
     return await _do_get_user_context()
 
@@ -220,7 +216,7 @@ async def update_user_preferences(
         }
 
     except Exception as e:
-        logger.exception(f"Error updating user preferences")
+        logger.exception("Error updating user preferences")
         return {"status": "error", "error": str(e)}
 
 
@@ -293,7 +289,7 @@ async def save_session_summary(
         }
 
     except Exception as e:
-        logger.exception(f"Error saving session summary")
+        logger.exception("Error saving session summary")
         return {"status": "error", "error": str(e)}
 
 
@@ -336,7 +332,7 @@ async def get_travel_insights(
         return {"status": "success", "insights": insights}
 
     except Exception as e:
-        logger.exception(f"Error getting travel insights")
+        logger.exception("Error getting travel insights")
         return {"status": "error", "error": str(e), "insights": {}}
 
 
@@ -378,7 +374,7 @@ async def find_similar_travelers(
         }
 
     except Exception as e:
-        logger.exception(f"Error finding similar travelers")
+        logger.exception("Error finding similar travelers")
         return {"status": "error", "error": str(e), "similar_travelers": []}
 
 
@@ -423,7 +419,7 @@ async def get_destination_memories(
         }
 
     except Exception as e:
-        logger.exception(f"Error getting destination memories")
+        logger.exception("Error getting destination memories")
         return {"status": "error", "error": str(e), "memories": []}
 
 
@@ -477,7 +473,7 @@ async def track_user_activity(
         }
 
     except Exception as e:
-        logger.exception(f"Error tracking user activity")
+        logger.exception("Error tracking user activity")
         return {"status": "error", "error": str(e)}
 
 
@@ -504,7 +500,7 @@ async def memory_health_check(service_registry: ServiceRegistry) -> dict[str, An
         }
 
     except Exception as e:
-        logger.exception(f"Memory health check failed")
+        logger.exception("Memory health check failed")
         return {
             "status": "unhealthy",
             "service": "Mem0 Memory Service",

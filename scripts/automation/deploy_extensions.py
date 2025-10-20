@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Deploy Supabase Extensions and Automation
+"""Deploy Supabase Extensions and Automation.
+
 Applies all extension configurations and sets up automation features.
 """
 
@@ -17,7 +18,15 @@ console = Console()
 
 
 class ExtensionDeployer:
+    """Service for deploying Supabase extensions and automation features."""
+
     def __init__(self, database_url: str, schema_path: Path):
+        """Initialize extension deployer.
+
+        Args:
+            database_url: Database connection URL
+            schema_path: Path to schema files
+        """
         self.database_url = database_url
         self.schema_path = schema_path
         self.connection = None
@@ -36,10 +45,12 @@ class ExtensionDeployer:
         if self.connection:
             await self.connection.close()
 
-    async def execute_sql_file(self, file_path: Path, description: str = None) -> bool:
+    async def execute_sql_file(
+        self, file_path: Path, description: str | None = None
+    ) -> bool:
         """Execute SQL file."""
         try:
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 sql_content = f.read()
 
             console.print(f"📝 Executing: {description or file_path.name}")
@@ -177,7 +188,7 @@ class ExtensionDeployer:
         # Check extensions
         try:
             extensions_query = """
-            SELECT extname FROM pg_extension 
+            SELECT extname FROM pg_extension
             WHERE extname IN ('pg_cron', 'pg_net', 'vector', 'uuid-ossp', 'pgcrypto')
             """
             extensions = await self.connection.fetch(extensions_query)
@@ -190,7 +201,7 @@ class ExtensionDeployer:
         # Check automation tables
         try:
             tables_query = """
-            SELECT table_name FROM information_schema.tables 
+            SELECT table_name FROM information_schema.tables
             WHERE table_name IN (
                 'notifications', 'system_metrics', 'webhook_configs', 'webhook_logs'
             )
@@ -205,7 +216,7 @@ class ExtensionDeployer:
         # Check realtime publication
         try:
             realtime_query = """
-            SELECT COUNT(*) as table_count FROM pg_publication_tables 
+            SELECT COUNT(*) as table_count FROM pg_publication_tables
             WHERE pubname = 'supabase_realtime'
             """
             result = await self.connection.fetchval(realtime_query)
@@ -220,7 +231,7 @@ class ExtensionDeployer:
             functions_query = """
             SELECT COUNT(*) FROM pg_proc p
             JOIN pg_namespace n ON p.pronamespace = n.oid
-            WHERE n.nspname = 'public' 
+            WHERE n.nspname = 'public'
             AND p.proname IN (
                 'verify_extensions', 'send_webhook_with_retry', 'list_scheduled_jobs'
             )
@@ -243,7 +254,7 @@ class ExtensionDeployer:
             supabase_url = os.getenv("SUPABASE_URL", "https://your-project.supabase.co")
 
             update_query = """
-            UPDATE webhook_configs 
+            UPDATE webhook_configs
             SET url = REPLACE(url, 'https://your-domain.supabase.co', $1)
             WHERE url LIKE '%your-domain.supabase.co%'
             """

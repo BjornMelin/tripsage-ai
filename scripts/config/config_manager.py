@@ -140,8 +140,8 @@ class ConfigManager:
 
             return True
 
-        except Exception as e:
-            logger.exception(f"❌ Security report generation failed")
+        except Exception:
+            logger.exception("❌ Security report generation failed")
             return False
 
     def _get_security_recommendations(self, settings: Settings) -> list[str]:

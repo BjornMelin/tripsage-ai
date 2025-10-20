@@ -125,8 +125,7 @@ class TestUnifiedSearchService:
     @pytest.fixture
     def unified_search_service(self, mock_cache_service):
         """Create UnifiedSearchService instance with mocked dependencies."""
-        service = UnifiedSearchService(cache_service=mock_cache_service)
-        return service
+        return UnifiedSearchService(cache_service=mock_cache_service)
 
     @pytest.fixture
     def sample_search_request(self):

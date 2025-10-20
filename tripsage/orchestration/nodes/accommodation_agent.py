@@ -116,16 +116,16 @@ class AccommodationAgentNode(BaseAgentNode):
         # Use LLM to extract parameters
         extraction_prompt = f"""
         Extract accommodation search parameters from this message and context.
-        
+
         User message: "{message}"
-        
+
         Context from conversation:
         - Previous searches: {len(state.get("accommodation_searches", []))}
         - User preferences: {state.get("user_preferences", "None")}
         - Travel dates mentioned: {state.get("travel_dates", "None")}
         - Destination info: {state.get("destination_info", "None")}
         - Flight searches: {len(state.get("flight_searches", []))}
-        
+
         Extract these parameters if mentioned:
         - location (city, neighborhood, or specific address)
         - check_in_date (YYYY-MM-DD format)
@@ -137,11 +137,11 @@ class AccommodationAgentNode(BaseAgentNode):
         - max_price (maximum price per night)
         - amenities (list of required amenities like wifi, pool, kitchen)
         - rating_min (minimum guest rating)
-        
-        Respond with JSON only. If insufficient information for an accommodation 
+
+        Respond with JSON only. If insufficient information for an accommodation
         search, return null.
-        
-        Example: {{"location": "Paris", "check_in_date": "2024-03-15", 
+
+        Example: {{"location": "Paris", "check_in_date": "2024-03-15",
                    "check_out_date": "2024-03-20", "guests": 2}}
         """
 
@@ -167,8 +167,8 @@ class AccommodationAgentNode(BaseAgentNode):
             else:
                 return None
 
-        except Exception as e:
-            logger.exception(f"Error extracting accommodation parameters")
+        except Exception:
+            logger.exception("Error extracting accommodation parameters")
             return None
 
     async def _search_accommodations(
@@ -197,7 +197,7 @@ class AccommodationAgentNode(BaseAgentNode):
             return result
 
         except Exception as e:
-            logger.exception(f"Accommodation search failed")
+            logger.exception("Accommodation search failed")
             return {"error": f"Accommodation search failed: {e!s}"}
 
     async def _generate_accommodation_response(
@@ -298,17 +298,17 @@ class AccommodationAgentNode(BaseAgentNode):
         """
         # Use LLM to generate helpful response for general accommodation questions
         response_prompt = f"""
-        The user is asking about accommodations but hasn't provided enough specific 
+        The user is asking about accommodations but hasn't provided enough specific
         information for a search.
-        
+
         User message: "{message}"
-        
+
         Provide a helpful response that:
         1. Acknowledges their accommodation interest
         2. Asks for the specific information needed (location, dates, preferences)
         3. Offers to help with the search once they provide details
         4. Mentions accommodation types we can help find (hotels, apartments, houses)
-        
+
         Keep the response friendly and concise.
         """
 
@@ -323,8 +323,8 @@ class AccommodationAgentNode(BaseAgentNode):
             response = await self.llm.ainvoke(messages)
             content = response.content
 
-        except Exception as e:
-            logger.exception(f"Error generating accommodation response")
+        except Exception:
+            logger.exception("Error generating accommodation response")
             content = (
                 "I'd be happy to help you find accommodations! I'll need "
                 "your destination, check-in/check-out dates, and preferences "

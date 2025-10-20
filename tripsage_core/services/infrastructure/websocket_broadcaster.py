@@ -5,6 +5,7 @@ including Redis/DragonflyDB integration for message persistence and scaling.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 from datetime import datetime
@@ -105,7 +106,7 @@ class WebSocketBroadcaster:
             logger.info("WebSocket broadcaster started")
 
         except Exception as e:
-            logger.exception(f"Failed to start WebSocket broadcaster")
+            logger.exception("Failed to start WebSocket broadcaster")
             raise CoreServiceError(
                 message=f"Failed to start WebSocket broadcaster: {e!s}",
                 code="BROADCASTER_START_FAILED",
@@ -119,17 +120,13 @@ class WebSocketBroadcaster:
         # Cancel background tasks
         if self._broadcast_task:
             self._broadcast_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._broadcast_task
-            except asyncio.CancelledError:
-                pass
 
         if self._subscription_task:
             self._subscription_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._subscription_task
-            except asyncio.CancelledError:
-                pass
 
         # Close Redis connections
         if self.pubsub:
@@ -195,7 +192,7 @@ class WebSocketBroadcaster:
                 f"with channels: {channels}"
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to register connection {connection_id}")
 
     async def unregister_connection(self, connection_id: str) -> None:
@@ -244,7 +241,7 @@ class WebSocketBroadcaster:
 
             logger.info(f"Unregistered connection {connection_id}")
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to unregister connection {connection_id}")
 
     async def broadcast_to_channel(
@@ -350,8 +347,8 @@ class WebSocketBroadcaster:
                 f"{message.target_type}:{message.target_id}"
             )
 
-        except Exception as e:
-            logger.exception(f"Failed to queue broadcast message")
+        except Exception:
+            logger.exception("Failed to queue broadcast message")
 
     async def _process_broadcast_queue(self) -> None:
         """Background task to process queued broadcast messages."""
@@ -373,8 +370,8 @@ class WebSocketBroadcaster:
                         # priority ordering
                         break
 
-            except Exception as e:
-                logger.exception(f"Error processing broadcast queue")
+            except Exception:
+                logger.exception("Error processing broadcast queue")
                 await asyncio.sleep(1)
 
     async def _deliver_broadcast_message(self, message: BroadcastMessage) -> None:
@@ -412,7 +409,7 @@ class WebSocketBroadcaster:
                 f"Delivered message {message.id} to {len(connection_ids)} connections"
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to deliver broadcast message {message.id}")
 
     async def _handle_subscriptions(self) -> None:
@@ -437,11 +434,11 @@ class WebSocketBroadcaster:
                             f"Received broadcast for connection {connection_id}"
                         )
 
-                    except Exception as e:
-                        logger.exception(f"Error handling subscription message")
+                    except Exception:
+                        logger.exception("Error handling subscription message")
 
-        except Exception as e:
-            logger.exception(f"Error in subscription handler")
+        except Exception:
+            logger.exception("Error in subscription handler")
 
     def get_stats(self) -> dict[str, Any]:
         """Get broadcaster statistics.

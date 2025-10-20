@@ -5,6 +5,7 @@ Compares previous baseline performance with current DragonflyDB operations.
 """
 
 import asyncio
+import contextlib
 import time
 from statistics import mean, median
 
@@ -72,10 +73,8 @@ async def dragonfly_service():
     yield service
     # Cleanup if needed
     if hasattr(service, "disconnect"):
-        try:
+        with contextlib.suppress(Exception):
             await service.close()
-        except Exception:
-            pass
 
 
 @pytest.fixture

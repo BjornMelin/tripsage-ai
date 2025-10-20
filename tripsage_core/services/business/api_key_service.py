@@ -420,7 +420,14 @@ class ApiKeyService:
             return self._db_result_to_response(result)
 
         except Exception as e:
-            logger.exception( "Failed to create API key", extra={ "user_id": user_id, "service": self._get_service_value(key_data.service), "error": str(e), },)
+            logger.exception(
+                "Failed to create API key",
+                extra={
+                    "user_id": user_id,
+                    "service": self._get_service_value(key_data.service),
+                    "error": str(e),
+                },
+            )
             raise ServiceError(f"Failed to create API key: {e!s}") from e
 
     async def list_user_keys(self, user_id: str) -> list[ApiKeyResponse]:
@@ -588,7 +595,10 @@ class ApiKeyService:
             return result_with_latency
 
         except Exception as e:
-            logger.exception( f"API key validation error for {self._get_service_value(service)}", extra={"service": self._get_service_value(service), "error": str(e)},)
+            logger.exception(
+                f"API key validation error for {self._get_service_value(service)}",
+                extra={"service": self._get_service_value(service), "error": str(e)},
+            )
 
             return ValidationResult(
                 is_valid=False,
@@ -748,7 +758,13 @@ class ApiKeyService:
             return base64.urlsafe_b64encode(combined).decode("ascii")
 
         except Exception as e:
-            logger.exception( "API key encryption failed", extra={ "error": str(e), "key_length": len(key_value) if key_value else 0, },)
+            logger.exception(
+                "API key encryption failed",
+                extra={
+                    "error": str(e),
+                    "key_length": len(key_value) if key_value else 0,
+                },
+            )
             raise ServiceError("Encryption failed - unable to secure API key") from e
 
     def _decrypt_api_key(self, encrypted_key: str) -> str:
@@ -796,7 +812,13 @@ class ApiKeyService:
             return decrypted_value.decode("utf-8")
 
         except Exception as e:
-            logger.exception( "API key decryption failed", extra={ "error": str(e), "encrypted_key_length": len(encrypted_key) if encrypted_key else 0, },)
+            logger.exception(
+                "API key decryption failed",
+                extra={
+                    "error": str(e),
+                    "encrypted_key_length": len(encrypted_key) if encrypted_key else 0,
+                },
+            )
             raise ServiceError("Decryption failed - unable to recover API key") from e
 
     async def _validate_openai_key(self, key_value: str) -> ValidationResult:

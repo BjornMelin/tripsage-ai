@@ -262,6 +262,6 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
-    except Exception as e:
-        logger.exception(f"Configuration WebSocket error")
+    except Exception:
+        logger.exception("Configuration WebSocket error")
         ws_manager.disconnect(websocket)

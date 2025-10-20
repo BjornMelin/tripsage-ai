@@ -5,6 +5,7 @@ security monitoring, and automatic recovery capabilities.
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from collections.abc import Callable
@@ -149,10 +150,8 @@ class DatabaseConnectionMonitor:
 
         if self._monitor_task and not self._monitor_task.done():
             self._monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitor_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("Database monitoring stopped")
 
@@ -180,8 +179,8 @@ class DatabaseConnectionMonitor:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in monitor loop")
+            except Exception:
+                logger.exception("Error in monitor loop")
                 await asyncio.sleep(10.0)  # Longer sleep on error
 
     async def _perform_health_check(self) -> HealthCheckResult:
@@ -225,7 +224,7 @@ class DatabaseConnectionMonitor:
                 details={"error": str(e)},
             )
 
-            logger.exception(f"Health check failed")
+            logger.exception("Health check failed")
             await self._handle_critical_health(result)
 
         # Update tracking
@@ -331,8 +330,8 @@ class DatabaseConnectionMonitor:
             # Monitor for rate limiting
             await self._check_rate_limits()
 
-        except Exception as e:
-            logger.exception(f"Security check error")
+        except Exception:
+            logger.exception("Security check error")
 
     async def _check_connection_patterns(self):
         """Check for suspicious connection patterns."""
@@ -464,8 +463,8 @@ class DatabaseConnectionMonitor:
         for callback in self._alert_callbacks:
             try:
                 callback(alert)
-            except Exception as e:
-                logger.exception(f"Alert callback error")
+            except Exception:
+                logger.exception("Alert callback error")
 
     def add_alert_callback(self, callback: Callable[[SecurityAlert], None]):
         """Add alert callback function.

@@ -79,8 +79,8 @@ async def initialize_databases(
         logger.info("Memory management is handled by Mem0 direct SDK integration")
         return True
 
-    except Exception as e:
-        logger.exception(f"Error initializing databases")
+    except Exception:
+        logger.exception("Error initializing databases")
         return False
 
 
@@ -98,9 +98,9 @@ async def verify_database_schema() -> dict[str, Any]:
 
         # Get list of tables
         table_query = """
-        SELECT tablename 
-        FROM pg_tables 
-        WHERE schemaname = 'public' 
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
         AND tablename IN ('users', 'trips', 'migrations');
         """
 
@@ -118,7 +118,7 @@ async def verify_database_schema() -> dict[str, Any]:
         return results
 
     except Exception as e:
-        logger.exception(f"Error verifying database schema")
+        logger.exception("Error verifying database schema")
         return {"sql": {"error": str(e)}}
 
 
@@ -193,8 +193,8 @@ async def create_sample_data() -> bool:
         logger.info("Note: Memory/graph data is now handled by Mem0 service")
         return True
 
-    except Exception as e:
-        logger.exception(f"Error creating sample data")
+    except Exception:
+        logger.exception("Error creating sample data")
         return False
 
 

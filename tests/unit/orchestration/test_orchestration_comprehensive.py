@@ -234,11 +234,10 @@ def optimized_orchestrator(
         ),
         patch("tripsage.orchestration.graph.get_default_config"),
     ):
-        orchestrator = TripSageOrchestrator(
+        return TripSageOrchestrator(
             service_registry=comprehensive_service_registry,
             checkpointer=MemorySaver(),
         )
-        return orchestrator
 
 
 class TestBaseAgentNodeComprehensive:

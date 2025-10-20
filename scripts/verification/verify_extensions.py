@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Supabase Extensions Verification Script
+"""Supabase Extensions Verification Script.
+
 Verifies that all required extensions are properly installed and configured.
 """
 
@@ -45,7 +46,14 @@ REALTIME_TABLES = [
 
 
 class ExtensionVerifier:
+    """Verifier for Supabase extensions and automation features."""
+
     def __init__(self, database_url: str):
+        """Initialize extension verifier.
+
+        Args:
+            database_url: Database connection URL
+        """
         self.database_url = database_url
         self.connection: asyncpg.Connection | None = None
 
@@ -68,8 +76,8 @@ class ExtensionVerifier:
         console.print("\n🔍 Checking Extensions...", style="bold blue")
 
         query = """
-        SELECT extname, extversion 
-        FROM pg_extension 
+        SELECT extname, extversion
+        FROM pg_extension
         WHERE extname = ANY($1)
         ORDER BY extname
         """
@@ -103,9 +111,9 @@ class ExtensionVerifier:
         console.print("\n🔍 Checking Automation Tables...", style="bold blue")
 
         query = """
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' 
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
         AND table_name = ANY($1)
         """
 
@@ -153,8 +161,8 @@ class ExtensionVerifier:
 
         # Check tables in publication
         tables_query = """
-        SELECT schemaname, tablename 
-        FROM pg_publication_tables 
+        SELECT schemaname, tablename
+        FROM pg_publication_tables
         WHERE pubname = 'supabase_realtime'
         ORDER BY tablename
         """
@@ -196,8 +204,8 @@ class ExtensionVerifier:
 
         try:
             query = """
-            SELECT jobname, schedule, command, active 
-            FROM cron.job 
+            SELECT jobname, schedule, command, active
+            FROM cron.job
             ORDER BY jobname
             """
 
@@ -237,7 +245,7 @@ class ExtensionVerifier:
         try:
             query = """
             SELECT name, url, is_active, array_length(events, 1) as event_count
-            FROM webhook_configs 
+            FROM webhook_configs
             ORDER BY name
             """
 

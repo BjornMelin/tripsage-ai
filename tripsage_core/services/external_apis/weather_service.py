@@ -179,8 +179,7 @@ class WeatherService:
             "lang": lang,
         }
 
-        data = await self._make_request("weather", params)
-        return data
+        return await self._make_request("weather", params)
 
     async def get_forecast(
         self,
@@ -213,8 +212,7 @@ class WeatherService:
             "exclude": "minutely,alerts" if not include_hourly else "minutely,alerts",
         }
 
-        data = await self._make_request("onecall", params, use_v3=True)
-        return data
+        return await self._make_request("onecall", params, use_v3=True)
 
     async def get_air_quality(
         self,
@@ -235,8 +233,7 @@ class WeatherService:
             "lon": longitude,
         }
 
-        data = await self._make_request("air_pollution", params)
-        return data
+        return await self._make_request("air_pollution", params)
 
     async def get_weather_alerts(
         self,
@@ -286,8 +283,7 @@ class WeatherService:
         if dt:
             params["dt"] = int(dt.timestamp())
 
-        data = await self._make_request(endpoint, params)
-        return data
+        return await self._make_request(endpoint, params)
 
     async def get_travel_weather_summary(
         self,

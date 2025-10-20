@@ -79,8 +79,8 @@ class ConfigurationService:
                 )
                 return fallback_config
 
-        except Exception as e:
-            logger.exception(f"Error getting agent config from database")
+        except Exception:
+            logger.exception("Error getting agent config from database")
             # Fallback to settings-based config
             return self.settings.get_agent_config(agent_type, **overrides)
 
@@ -93,9 +93,9 @@ class ConfigurationService:
                 text("""
                     SELECT temperature, max_tokens, top_p, timeout_seconds, model,
                            description, updated_at, updated_by
-                    FROM configuration_profiles 
-                    WHERE agent_type = :agent_type 
-                      AND environment = :environment 
+                    FROM configuration_profiles
+                    WHERE agent_type = :agent_type
+                      AND environment = :environment
                       AND is_active = true
                     LIMIT 1
                 """),
@@ -174,8 +174,8 @@ class ConfigurationService:
                 )
                 return updated_config
 
-        except Exception as e:
-            logger.exception(f"Error updating agent config")
+        except Exception:
+            logger.exception("Error updating agent config")
             raise
 
     async def _create_new_config_profile(
@@ -198,7 +198,7 @@ class ConfigurationService:
         result = await session.execute(
             text("""
                 INSERT INTO configuration_profiles (
-                    agent_type, temperature, max_tokens, top_p, timeout_seconds, 
+                    agent_type, temperature, max_tokens, top_p, timeout_seconds,
                     model, environment, description, created_by, updated_by
                 ) VALUES (
                     :agent_type, :temperature, :max_tokens, :top_p, :timeout_seconds,
@@ -219,8 +219,7 @@ class ConfigurationService:
             },
         )
 
-        config_id = result.fetchone()[0]
-        return config_id
+        return result.fetchone()[0]
 
     async def _update_existing_config_profile(
         self,
@@ -260,10 +259,10 @@ class ConfigurationService:
 
         # Execute update
         query = f"""
-            UPDATE configuration_profiles 
+            UPDATE configuration_profiles
             SET {", ".join(update_fields)}, updated_by = :updated_by, updated_at = NOW()
-            WHERE agent_type = :agent_type 
-              AND environment = :environment 
+            WHERE agent_type = :agent_type
+              AND environment = :environment
               AND is_active = true
             RETURNING id
         """
@@ -291,9 +290,9 @@ class ConfigurationService:
                     SELECT cv.version_id, cv.config_snapshot, cv.description,
                            cv.created_at, cv.created_by, cv.is_current
                     FROM configuration_versions cv
-                    JOIN configuration_profiles cp 
+                    JOIN configuration_profiles cp
                         ON cv.configuration_profile_id = cp.id
-                    WHERE cp.agent_type = :agent_type 
+                    WHERE cp.agent_type = :agent_type
                       AND cp.environment = :environment
                     ORDER BY cv.created_at DESC
                     LIMIT :limit
@@ -334,7 +333,7 @@ class ConfigurationService:
                     text("""
                         SELECT cv.config_snapshot, cp.id as profile_id
                         FROM configuration_versions cv
-                        JOIN configuration_profiles cp 
+                        JOIN configuration_profiles cp
                             ON cv.configuration_profile_id = cp.id
                         WHERE cv.version_id = :version_id
                           AND cp.agent_type = :agent_type
@@ -396,8 +395,8 @@ class ConfigurationService:
                 # Return updated configuration
                 return await self.get_agent_config(agent_type, environment)
 
-        except Exception as e:
-            logger.exception(f"Error rolling back configuration")
+        except Exception:
+            logger.exception("Error rolling back configuration")
             raise
 
     async def get_all_agent_configs(
@@ -415,7 +414,7 @@ class ConfigurationService:
                 configs[agent_type] = await self.get_agent_config(
                     agent_type, environment
                 )
-            except Exception as e:
+            except Exception:
                 logger.exception(f"Error getting config for {agent_type}")
                 # Use fallback
                 configs[agent_type] = self.settings.get_agent_config(agent_type)
@@ -438,8 +437,8 @@ class ConfigurationService:
                 result = await session.execute(
                     text("""
                         SELECT id FROM configuration_profiles
-                        WHERE agent_type = :agent_type 
-                          AND environment = :environment 
+                        WHERE agent_type = :agent_type
+                          AND environment = :environment
                           AND is_active = true
                     """),
                     {"agent_type": agent_type, "environment": environment},
@@ -459,13 +458,13 @@ class ConfigurationService:
                 await session.execute(
                     text("""
                         INSERT INTO configuration_performance_metrics (
-                            configuration_profile_id, average_response_time, 
+                            configuration_profile_id, average_response_time,
                             success_rate,
                             error_rate, token_usage, cost_estimate, sample_size,
                             measurement_period_start, measurement_period_end
                         ) VALUES (
-                            :profile_id, :avg_response_time, :success_rate, 
-                            :error_rate, :token_usage, :cost_estimate, 
+                            :profile_id, :avg_response_time, :success_rate,
+                            :error_rate, :token_usage, :cost_estimate,
                             :sample_size, :period_start, :period_end
                         )
                     """),
@@ -486,8 +485,8 @@ class ConfigurationService:
 
                 logger.debug(f"Performance metrics recorded for {agent_type}")
 
-        except Exception as e:
-            logger.exception(f"Error recording performance metrics")
+        except Exception:
+            logger.exception("Error recording performance metrics")
 
 
 # Global service instance

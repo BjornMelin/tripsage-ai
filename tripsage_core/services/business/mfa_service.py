@@ -359,7 +359,7 @@ class MFAService:
                 last_used=mfa_settings.get("last_used"),
             )
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to get MFA status for user {user_id}")
             return MFAStatus(enabled=False)
 
@@ -380,7 +380,7 @@ class MFAService:
             logger.info(f"MFA disabled for user {user_id}")
             return len(result) > 0
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to disable MFA for user {user_id}")
             return False
 
@@ -427,7 +427,7 @@ class MFAService:
         except CoreServiceError:
             raise
         except Exception as e:
-            logger.exception( f"Failed to regenerate backup codes for user {user_id}")
+            logger.exception(f"Failed to regenerate backup codes for user {user_id}")
             raise CoreServiceError(
                 message="Failed to regenerate backup codes",
                 code="BACKUP_CODES_REGENERATION_FAILED",

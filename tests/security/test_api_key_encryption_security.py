@@ -29,8 +29,7 @@ class TestApiKeyEncryptionSecurity:
         mock_settings = Mock()
         mock_settings.secret_key = "test-master-secret-key-for-encryption"
 
-        service = ApiKeyService(db=mock_db, cache=mock_cache, settings=mock_settings)
-        return service
+        return ApiKeyService(db=mock_db, cache=mock_cache, settings=mock_settings)
 
     @pytest.fixture
     def secure_api_keys(self):

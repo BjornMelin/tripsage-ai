@@ -1,4 +1,4 @@
-"""Inter-Agent Handoff Coordinator for LangGraph
+"""Inter-Agent Handoff Coordinator for LangGraph.
 
 This module provides intelligent agent handoff coordination within the LangGraph
 orchestration system, enabling seamless context preservation and task routing

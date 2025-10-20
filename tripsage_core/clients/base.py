@@ -1,6 +1,6 @@
 """Base client implementations for external services and MCPs."""
 
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -23,7 +23,7 @@ class BaseClient:
         self.api_key = api_key
 
 
-class BaseMCPClient(Generic[T, R]):
+class BaseMCPClient[T: BaseModel, R: BaseModel]:
     """Base client for MCP service integrations."""
 
     def __init__(self, base_url: str, api_key: str | None = None):

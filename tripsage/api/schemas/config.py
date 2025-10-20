@@ -517,7 +517,7 @@ class ConfigurationImport(BaseConfigModel):
 
         # Validate agent types
         valid_agent_types = [e.value for e in AgentType]
-        for agent_type in self.agent_configurations.keys():
+        for agent_type in self.agent_configurations:
             if agent_type not in valid_agent_types:
                 raise ValueError(f"Invalid agent type: {agent_type}")
 

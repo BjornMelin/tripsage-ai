@@ -492,7 +492,14 @@ class FileProcessingService:
         except (ValidationError, ServiceError):
             raise
         except Exception as e:
-            logger.exception( "File upload failed", extra={ "user_id": user_id, "filename": upload_request.filename, "error": str(e), },)
+            logger.exception(
+                "File upload failed",
+                extra={
+                    "user_id": user_id,
+                    "filename": upload_request.filename,
+                    "error": str(e),
+                },
+            )
             raise ServiceError(f"File upload failed: {e!s}") from e
 
     async def upload_batch(
@@ -559,7 +566,9 @@ class FileProcessingService:
         except (ValidationError, ServiceError):
             raise
         except Exception as e:
-            logger.exception( "Batch upload failed", extra={"user_id": user_id, "error": str(e)})
+            logger.exception(
+                "Batch upload failed", extra={"user_id": user_id, "error": str(e)}
+            )
             raise ServiceError(f"Batch upload failed: {e!s}") from e
 
     async def get_file(
@@ -597,7 +606,10 @@ class FileProcessingService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.exception( "Failed to get file", extra={"file_id": file_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get file",
+                extra={"file_id": file_id, "user_id": user_id, "error": str(e)},
+            )
             return None
 
     async def get_file_content(self, file_id: str, user_id: str) -> bytes | None:
@@ -623,10 +635,7 @@ class FileProcessingService:
             else:
                 # Local storage fallback
                 file_path = self.storage_root / processed_file.storage_path
-                if file_path.exists():
-                    content = file_path.read_bytes()
-                else:
-                    content = None
+                content = file_path.read_bytes() if file_path.exists() else None
 
             if content:
                 # Update download count
@@ -636,7 +645,10 @@ class FileProcessingService:
             return content
 
         except Exception as e:
-            logger.exception( "Failed to get file content", extra={"file_id": file_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get file content",
+                extra={"file_id": file_id, "user_id": user_id, "error": str(e)},
+            )
             return None
 
     async def search_files(
@@ -692,7 +704,9 @@ class FileProcessingService:
             return processed_files
 
         except Exception as e:
-            logger.exception( "File search failed", extra={"user_id": user_id, "error": str(e)})
+            logger.exception(
+                "File search failed", extra={"user_id": user_id, "error": str(e)}
+            )
             return []
 
     async def delete_file(self, file_id: str, user_id: str) -> bool:
@@ -737,7 +751,10 @@ class FileProcessingService:
         except (NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.exception( "Failed to delete file", extra={"file_id": file_id, "user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to delete file",
+                extra={"file_id": file_id, "user_id": user_id, "error": str(e)},
+            )
             return False
 
     async def get_usage_stats(self, user_id: str) -> FileUsageStats:
@@ -754,7 +771,10 @@ class FileProcessingService:
             return FileUsageStats(**stats_data)
 
         except Exception as e:
-            logger.exception( "Failed to get usage stats", extra={"user_id": user_id, "error": str(e)},)
+            logger.exception(
+                "Failed to get usage stats",
+                extra={"user_id": user_id, "error": str(e)},
+            )
             return FileUsageStats(
                 total_files=0,
                 total_size=0,
@@ -852,7 +872,7 @@ class FileProcessingService:
             return "image/jpeg"
         elif content.startswith(b"\x89PNG\r\n\x1a\n"):
             return "image/png"
-        elif content.startswith(b"GIF87a") or content.startswith(b"GIF89a"):
+        elif content.startswith((b"GIF87a", b"GIF89a")):
             return "image/gif"
         elif content.startswith(b"%PDF-"):
             return "application/pdf"
@@ -885,7 +905,7 @@ class FileProcessingService:
         elif mime_type == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
             return False, "Invalid PNG header"
         elif mime_type == "image/gif" and not (
-            content.startswith(b"GIF87a") or content.startswith(b"GIF89a")
+            content.startswith((b"GIF87a", b"GIF89a"))
         ):
             return False, "Invalid GIF header"
 
@@ -1077,7 +1097,10 @@ class FileProcessingService:
             )
 
         except Exception as e:
-            logger.exception( "File analysis failed", extra={"file_id": processed_file.id, "error": str(e)},)
+            logger.exception(
+                "File analysis failed",
+                extra={"file_id": processed_file.id, "error": str(e)},
+            )
 
             # Mark as failed
             processed_file.processing_status = ProcessingStatus.FAILED
@@ -1096,10 +1119,7 @@ class FileProcessingService:
             return True
 
         # Check if public
-        if processed_file.visibility == FileVisibility.PUBLIC:
-            return True
-
-        return False
+        return processed_file.visibility == FileVisibility.PUBLIC
 
     async def _store_file_record(self, processed_file: ProcessedFile) -> None:
         """Store file record in database."""
@@ -1107,7 +1127,10 @@ class FileProcessingService:
             file_data = processed_file.model_dump()
             await self.db.store_file(file_data)
         except Exception as e:
-            logger.exception( "Failed to store file record", extra={"file_id": processed_file.id, "error": str(e)},)
+            logger.exception(
+                "Failed to store file record",
+                extra={"file_id": processed_file.id, "error": str(e)},
+            )
             raise
 
     async def _update_file_record(self, processed_file: ProcessedFile) -> None:
@@ -1116,7 +1139,10 @@ class FileProcessingService:
             file_data = processed_file.model_dump()
             await self.db.update_file(processed_file.id, file_data)
         except Exception as e:
-            logger.exception( "Failed to update file record", extra={"file_id": processed_file.id, "error": str(e)},)
+            logger.exception(
+                "Failed to update file record",
+                extra={"file_id": processed_file.id, "error": str(e)},
+            )
 
 
 # Dependency function for FastAPI

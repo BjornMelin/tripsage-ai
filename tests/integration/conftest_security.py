@@ -590,7 +590,7 @@ def security_mock_user_service(
             return None
 
         if user["locked_until"] and datetime.fromisoformat(
-            user["locked_until"].replace("Z", "+00:00")
+            user["locked_until"]
         ) > datetime.now(UTC):
             return None
 

@@ -197,10 +197,7 @@ class TimeService:
             if timezone_name.upper() in self._major_timezones:
                 timezone_name = self._major_timezones[timezone_name.upper()]
 
-            if timezone_name == "UTC":
-                tz = UTC
-            else:
-                tz = ZoneInfo(timezone_name)
+            tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
 
             current_time = datetime.now(tz)
 
@@ -256,9 +253,7 @@ class TimeService:
             if isinstance(time_to_convert, str):
                 # Try to parse ISO format
                 try:
-                    parsed_time = datetime.fromisoformat(
-                        time_to_convert.replace("Z", "+00:00")
-                    )
+                    parsed_time = datetime.fromisoformat(time_to_convert)
                 except ValueError:
                     # Try other common formats
                     for fmt in [
@@ -298,10 +293,7 @@ class TimeService:
                 source_time = parsed_time
 
             # Convert to target timezone
-            if target_timezone == "UTC":
-                target_tz = UTC
-            else:
-                target_tz = ZoneInfo(target_timezone)
+            target_tz = UTC if target_timezone == "UTC" else ZoneInfo(target_timezone)
             target_time = source_time.astimezone(target_tz)
 
             # Calculate time difference
@@ -399,10 +391,7 @@ class TimeService:
                         # Assume it's already a timezone name
                         timezone_name = city
 
-                    if timezone_name == "UTC":
-                        tz = UTC
-                    else:
-                        tz = ZoneInfo(timezone_name)
+                    tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
 
                     current_time = datetime.now(tz)
 
@@ -455,9 +444,7 @@ class TimeService:
             # Parse target time
             if isinstance(target_time, str):
                 try:
-                    parsed_time = datetime.fromisoformat(
-                        target_time.replace("Z", "+00:00")
-                    )
+                    parsed_time = datetime.fromisoformat(target_time)
                 except ValueError:
                     parsed_time = datetime.strptime(
                         target_time, self.default_datetime_format
@@ -471,10 +458,7 @@ class TimeService:
             # Ensure both times have timezone info
             if parsed_time.tzinfo is None:
                 if timezone_name:
-                    if timezone_name == "UTC":
-                        tz = UTC
-                    else:
-                        tz = ZoneInfo(timezone_name)
+                    tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
                     parsed_time = parsed_time.replace(tzinfo=tz)
                 else:
                     if self.default_timezone == "UTC":
@@ -641,10 +625,7 @@ class TimeService:
 
             # Convert timezone if requested
             if timezone_name:
-                if timezone_name == "UTC":
-                    target_tz = UTC
-                else:
-                    target_tz = ZoneInfo(timezone_name)
+                target_tz = UTC if timezone_name == "UTC" else ZoneInfo(timezone_name)
                 target_dt = dt.astimezone(target_tz)
 
             # Use custom format or default from settings

@@ -110,7 +110,7 @@ class CacheService:
             logger.info("Successfully connected to DragonflyDB cache service")
 
         except Exception as e:
-            logger.exception(f"Failed to connect to DragonflyDB")
+            logger.exception("Failed to connect to DragonflyDB")
             self._is_connected = False
             raise CoreServiceError(
                 message=f"Failed to connect to cache service: {e!s}",
@@ -202,7 +202,7 @@ class CacheService:
             if value is None:
                 return default
             return json.loads(value)
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             logger.exception(f"Failed to decode JSON value for key {key}")
             return default
         except Exception as e:
@@ -372,7 +372,7 @@ class CacheService:
 
         try:
             return await self._client.ttl(key)
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to get TTL for key {key}")
             return -2
 
@@ -395,7 +395,7 @@ class CacheService:
 
         try:
             return await self._client.incr(key)
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to increment key {key}")
             return None
 
@@ -416,7 +416,7 @@ class CacheService:
 
         try:
             return await self._client.decr(key)
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to decrement key {key}")
             return None
 
@@ -458,7 +458,7 @@ class CacheService:
             values = await self._client.mget(keys)
             return [v.decode("utf-8") if v else None for v in values]
         except Exception as e:
-            logger.exception(f"Failed to mget keys")
+            logger.exception("Failed to mget keys")
             raise CoreServiceError(
                 message="Failed to get multiple cache keys",
                 code="CACHE_MGET_FAILED",
@@ -484,7 +484,7 @@ class CacheService:
         try:
             return await self._client.mset(mapping)
         except Exception as e:
-            logger.exception(f"Failed to mset")
+            logger.exception("Failed to mset")
             raise CoreServiceError(
                 message="Failed to set multiple cache keys",
                 code="CACHE_MSET_FAILED",
@@ -512,7 +512,7 @@ class CacheService:
         try:
             keys = await self._client.keys(pattern)
             return [k.decode("utf-8") for k in keys]
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to get keys with pattern {pattern}")
             return []
 
@@ -545,8 +545,8 @@ class CacheService:
         try:
             result = await self._client.flushdb()
             return result is True
-        except Exception as e:
-            logger.exception(f"Failed to flush database")
+        except Exception:
+            logger.exception("Failed to flush database")
             return False
 
     async def info(self, section: str | None = None) -> dict[str, Any]:
@@ -569,8 +569,8 @@ class CacheService:
                     key, value = line.split(":", 1)
                     info_dict[key] = value
             return info_dict
-        except Exception as e:
-            logger.exception(f"Failed to get server info")
+        except Exception:
+            logger.exception("Failed to get server info")
             return {}
 
     # Health check
@@ -589,8 +589,8 @@ class CacheService:
                 return False
 
             return await self._client.ping()
-        except Exception as e:
-            logger.exception(f"Cache health check failed")
+        except Exception:
+            logger.exception("Cache health check failed")
             return False
 
     # Convenience methods with TTL presets

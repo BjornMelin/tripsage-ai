@@ -60,11 +60,10 @@ class TestApiKeyServiceCoverageFocused:
         """Create ApiKeyService with injected dependencies."""
         with patch("tripsage_core.config.get_settings") as mock_settings:
             mock_settings.return_value.secret_key = "test-secret-key-for-testing"
-            service = ApiKeyService(
+            return ApiKeyService(
                 db=mock_dependencies["db"],
                 cache=mock_dependencies["cache"],
             )
-            return service
 
     # PHASE 1: Encryption/Decryption Edge Cases (Lines 623-686)
 

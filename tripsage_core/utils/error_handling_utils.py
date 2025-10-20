@@ -46,7 +46,6 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
             exc.details.service,
             details.get("tool"),
             details.get("params"),
-            exc_info=True,
         )
     elif isinstance(exc, CoreExternalAPIError):
         # Extract API-specific details from the core exception
@@ -57,7 +56,6 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
             exc.details.service,
             details.get("api_status_code"),
             details.get("api_response"),
-            exc_info=True,
         )
     elif isinstance(exc, CoreTripSageError):
         # Use warning level for expected application errors
@@ -73,11 +71,10 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
             "System error: %s - %s",
             exc.__class__.__name__,
             str(exc),
-            exc_info=True,
         )
 
 
-def safe_execute_with_logging(
+def safe_execute_with_logging[T, R](
     func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any
 ) -> T | R:
     """Execute a function with error handling and TripSage logging.

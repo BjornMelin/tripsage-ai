@@ -133,8 +133,7 @@ class TestMemoryWorkflowIntegration:
     @pytest.fixture
     def chat_agent(self):
         """Chat agent for testing."""
-        agent = ChatAgent()
-        return agent
+        return ChatAgent()
 
     @pytest.mark.asyncio
     async def test_complete_memory_workflow(self, mock_memory_service):

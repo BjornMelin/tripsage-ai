@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Schema Consistency Validation Script
+"""Schema Consistency Validation Script.
 
 Validates that all database schema files follow consistent patterns:
 - All user_id fields are UUID type with foreign key constraints
@@ -67,7 +67,7 @@ class SchemaValidator:
 
     def _parse_sql_file(self, file_path: Path):
         """Parse SQL file for table definitions."""
-        with open(file_path) as f:
+        with file_path.open() as f:
             content = f.read()
             lines = content.split("\n")
 
@@ -258,7 +258,7 @@ class SchemaValidator:
             / "20250609_02_consolidated_production_schema.sql"
         )
         if migration_file.exists():
-            with open(migration_file) as f:
+            with migration_file.open() as f:
                 migration_content = f.read()
 
             # Check that all schema files are referenced

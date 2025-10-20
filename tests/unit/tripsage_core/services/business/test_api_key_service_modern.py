@@ -91,7 +91,7 @@ class TestApiKeyServiceModern:
             await asyncio.sleep(0.0001)  # 0.1ms cache latency
             return cache_data.get(key)
 
-        async def mock_set(key: str, value: Any, ttl: int = None):
+        async def mock_set(key: str, value: Any, ttl: int | None = None):
             await asyncio.sleep(0.0001)
             cache_data[key] = value
             return True
@@ -120,10 +120,7 @@ class TestApiKeyServiceModern:
         self, mock_database, mock_cache, mock_settings
     ) -> ApiKeyService:
         """Create API key service with mocked dependencies."""
-        service = ApiKeyService(
-            db=mock_database, cache=mock_cache, settings=mock_settings
-        )
-        return service
+        return ApiKeyService(db=mock_database, cache=mock_cache, settings=mock_settings)
 
     @pytest.fixture
     def valid_api_key_data(self) -> dict[str, Any]:

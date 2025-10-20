@@ -1,4 +1,4 @@
-"""Database Service Extensions for Comprehensive Testing
+"""Database Service Extensions for Comprehensive Testing.
 
 This module contains additional methods and functionality for the DatabaseService
 that support comprehensive testing and advanced features. These methods are
@@ -83,8 +83,8 @@ class DatabaseServiceExtensions:
                 self._sqlalchemy_engine.pool, "recreate"
             ):
                 self._sqlalchemy_engine.pool.recreate()
-        except Exception as e:
-            logger.exception(f"Failed to recycle connections")
+        except Exception:
+            logger.exception("Failed to recycle connections")
 
     # Vector Operations Methods
 
@@ -170,7 +170,9 @@ class DatabaseServiceExtensions:
         if len(self._query_metrics) > 1000:
             self._query_metrics = self._query_metrics[-1000:]
 
-    def _get_slow_queries(self, threshold_ms: float = None) -> list[QueryMetrics]:
+    def _get_slow_queries(
+        self, threshold_ms: float | None = None
+    ) -> list[QueryMetrics]:
         """Get queries that exceeded the slow query threshold."""
         threshold = threshold_ms or (self.slow_query_threshold * 1000)
         return [m for m in self._query_metrics if m.duration_ms > threshold]

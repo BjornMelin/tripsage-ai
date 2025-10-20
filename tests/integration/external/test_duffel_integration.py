@@ -25,17 +25,15 @@ class TestDuffelAPIIntegration:
     @pytest.fixture
     def mock_duffel_client(self):
         """Mock Duffel HTTP client."""
-        client = AsyncMock(spec=DuffelHTTPClient)
-        return client
+        return AsyncMock(spec=DuffelHTTPClient)
 
     @pytest.fixture
     def flights_service(self, mock_duffel_client):
         """Create flights service with mocked Duffel client."""
         mock_db = AsyncMock()
-        service = FlightService(
+        return FlightService(
             database_service=mock_db, external_flight_service=mock_duffel_client
         )
-        return service
 
     @pytest.fixture
     def sample_flight_search_request(self):

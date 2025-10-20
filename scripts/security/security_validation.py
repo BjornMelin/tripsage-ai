@@ -16,7 +16,7 @@ SECURITY_CHECKS = {"critical": [], "high": [], "medium": [], "low": [], "info": 
 
 
 def log_finding(
-    severity: str, category: str, message: str, details: dict[str, Any] = None
+    severity: str, category: str, message: str, details: dict[str, Any] | None = None
 ):
     """Log a security finding."""
     finding = {"category": category, "message": message, "details": details or {}}
@@ -291,7 +291,7 @@ def check_input_validation():
     validation_found = False
     for file_path in model_files:
         try:
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 content = f.read()
 
             if "field_validator" in content or "validator" in content:
@@ -311,7 +311,7 @@ def check_input_validation():
     # Check for specific security validations
     session_service_path = "tripsage_core/services/business/session_security_service.py"
     try:
-        with open(session_service_path) as f:
+        with Path(session_service_path).open() as f:
             content = f.read()
 
         if "validate_ip_address" in content:
@@ -345,7 +345,7 @@ def check_cors_configuration():
     cors_found = False
     for file_path in api_files:
         try:
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 content = f.read()
 
             if "CORSMiddleware" in content or "allow_origins" in content:
@@ -394,7 +394,7 @@ def check_https_enforcement():
     https_found = False
     for file_path in config_files:
         try:
-            with open(file_path) as f:
+            with Path(file_path).open() as f:
                 content = f.read()
 
             if "Strict-Transport-Security" in content:
@@ -508,7 +508,7 @@ def main():
     }
 
     try:
-        with open("security_validation_report.json", "w") as f:
+        with Path("security_validation_report.json").open("w") as f:
             json.dump(report_data, f, indent=2)
         print("\n📄 Full report saved to: security_validation_report.json")
     except Exception as e:

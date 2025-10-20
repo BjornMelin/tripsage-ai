@@ -238,7 +238,7 @@ class RouterNode(BaseAgentNode):
             return classification
 
         except Exception as e:
-            self.logger.exception(f"Intent classification failed")
+            self.logger.exception("Intent classification failed")
             # Fallback to general travel agent
             return {
                 "agent": "travel_agent",
@@ -268,21 +268,21 @@ class RouterNode(BaseAgentNode):
 
         return f"""
         Analyze this travel-related message and classify the primary intent.
-        
+
         Message: "{message}"
-        
+
         Context:
         {context_str}
-        
+
         Available agents and their specialties:
         - flight_agent: Flight search, booking, changes, airline information
         - accommodation_agent: Hotels, rentals, lodging, accommodation booking
         - budget_agent: Budget planning, cost analysis, expense tracking
         - itinerary_agent: Trip planning, scheduling, activities, day-by-day planning
         - destination_agent: Destination research, recommendations, local information
-        - travel_agent: General travel assistance, documentation, travel tips, 
+        - travel_agent: General travel assistance, documentation, travel tips,
           multi-domain queries
-        
+
         Classification Rules:
         1. If asking about specific flights, airlines, or flight booking → flight_agent
         2. If asking about hotels, accommodations, places to stay → accommodation_agent
@@ -290,7 +290,7 @@ class RouterNode(BaseAgentNode):
         4. If asking about itineraries, schedules, daily plans → itinerary_agent
         5. If asking about destinations, attractions, local info → destination_agent
         6. For general travel questions or unclear intent → travel_agent
-        
+
         Respond with valid JSON only:
         {{"agent": "agent_name", "confidence": 0.9, "reasoning": "brief explanation"}}
         """
@@ -405,8 +405,8 @@ class RouterNode(BaseAgentNode):
 
             return classification
 
-        except Exception as e:
-            logger.exception(f"Enhanced classification failed")
+        except Exception:
+            logger.exception("Enhanced classification failed")
             return self._get_safe_fallback_classification()
 
     def _keyword_based_classification(self, message: str) -> dict[str, Any]:

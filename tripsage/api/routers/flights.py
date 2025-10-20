@@ -61,8 +61,7 @@ async def search_flights(
     )
 
     # Search for flights using unified schema
-    results = await flight_service.search_flights(request)
-    return results
+    return await flight_service.search_flights(request)
 
 
 @router.post("/search/multi-city", response_model=FlightSearchResponse)
@@ -82,8 +81,7 @@ async def search_multi_city_flights(
         Flight search results
     """
     # Search for multi-city flights
-    results = await flight_service.search_multi_city_flights(request)
-    return results
+    return await flight_service.search_multi_city_flights(request)
 
 
 @router.post("/airports/search", response_model=AirportSearchResponse)
@@ -103,8 +101,7 @@ async def search_airports(
         Airport search results
     """
     # Search for airports
-    results = await flight_service.search_airports(request)
-    return results
+    return await flight_service.search_airports(request)
 
 
 @router.get("/offers/{offer_id}", response_model=FlightOffer)
@@ -244,17 +241,15 @@ async def get_upcoming_flights(
 
     try:
         # Get upcoming flights with trip context
-        upcoming_flights = await flight_service.get_upcoming_flights_with_trip_context(
+        return await flight_service.get_upcoming_flights_with_trip_context(
             user_id=user_id,
             limit=limit,
             date_range_days=date_range_days,
             include_collaborations=include_trip_context,
         )
 
-        return upcoming_flights
-
-    except Exception as e:
-        logger.exception(f"Failed to get upcoming flights")
+    except Exception:
+        logger.exception("Failed to get upcoming flights")
 
         # Fallback to enhanced mock data with trip context
         from datetime import datetime, timedelta

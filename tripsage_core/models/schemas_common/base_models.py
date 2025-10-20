@@ -5,7 +5,7 @@ schemas used across API endpoints and services.
 """
 
 from datetime import datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import Field
 
@@ -52,7 +52,7 @@ class PaginationMeta(TripSageModel):
     has_prev: bool = Field(description="Whether there are previous pages")
 
 
-class PaginatedResponse(BaseResponse, Generic[T]):
+class PaginatedResponse[T](BaseResponse):
     """Paginated response with metadata."""
 
     data: list[T] = Field(description="List of items")

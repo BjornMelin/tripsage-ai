@@ -1,4 +1,4 @@
-"""Session Memory Bridge for LangGraph Integration
+"""Session Memory Bridge for LangGraph Integration.
 
 This module provides integration between LangGraph state management and TripSage's
 existing session memory utilities, enabling seamless memory persistence and retrieval
@@ -60,7 +60,7 @@ class SessionMemoryBridge:
             else:
                 logger.info(f"No existing session data found for user {user_id}")
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to hydrate state for user {user_id}")
             # Continue without memory data rather than failing
 
@@ -424,8 +424,8 @@ class SessionMemoryBridge:
                 f"Stored checkpoint reference {checkpoint_id} for user {user_id}"
             )
 
-        except Exception as e:
-            logger.exception(f"Failed to store checkpoint reference")
+        except Exception:
+            logger.exception("Failed to store checkpoint reference")
 
 
 # Global bridge instance

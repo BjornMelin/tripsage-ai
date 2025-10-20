@@ -245,8 +245,8 @@ class MemoryUpdateNode(BaseAgentNode):
             await self.memory_tool._arun(**memory_data)
             logger.info(f"Updated knowledge graph with {len(insights)} insights")
 
-        except Exception as e:
-            logger.exception(f"Failed to update knowledge graph")
+        except Exception:
+            logger.exception("Failed to update knowledge graph")
 
     async def _update_session_data(self, state: TravelPlanningState) -> None:
         """Update session data in Supabase.
@@ -272,5 +272,5 @@ class MemoryUpdateNode(BaseAgentNode):
 
             logger.info(f"Updated session data for {session_id}")
 
-        except Exception as e:
-            logger.exception(f"Failed to update session data")
+        except Exception:
+            logger.exception("Failed to update session data")

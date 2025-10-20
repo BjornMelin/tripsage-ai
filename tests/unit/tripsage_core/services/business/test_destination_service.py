@@ -35,14 +35,12 @@ class TestDestinationService:
     @pytest.fixture
     def mock_database_service(self):
         """Mock database service."""
-        db = AsyncMock()
-        return db
+        return AsyncMock()
 
     @pytest.fixture
     def mock_external_api_service(self):
         """Mock external API service."""
-        api = AsyncMock()
-        return api
+        return AsyncMock()
 
     @pytest.fixture
     def destination_service(self, mock_database_service, mock_external_api_service):

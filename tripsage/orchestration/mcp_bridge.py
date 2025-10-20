@@ -1,4 +1,4 @@
-"""LangGraph-MCP Bridge Layer for Airbnb Integration
+"""LangGraph-MCP Bridge Layer for Airbnb Integration.
 
 This module provides integration between LangGraph and the Airbnb MCP,
 allowing LangGraph agents to use Airbnb accommodation tools while
@@ -60,8 +60,8 @@ class LangGraphMCPBridge:
             logger.info(
                 f"Bridge initialized with {len(self._tool_metadata)} Airbnb tools"
             )
-        except Exception as e:
-            logger.exception(f"Failed to initialize Airbnb MCP bridge")
+        except Exception:
+            logger.exception("Failed to initialize Airbnb MCP bridge")
             raise
 
     async def _load_airbnb_tools(self) -> None:
@@ -207,7 +207,7 @@ class LangGraphMCPBridge:
                 )
 
                 # Convert result to string for LangGraph compatibility
-                if isinstance(result, dict) or isinstance(result, list):
+                if isinstance(result, (dict, list)):
                     return str(result)
                 else:
                     return str(result)

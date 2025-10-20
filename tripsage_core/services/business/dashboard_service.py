@@ -398,8 +398,8 @@ class DashboardService:
                 usage_by_service=legacy_usage_by_service,
             )
 
-        except Exception as e:
-            logger.exception(f"Failed to get dashboard data")
+        except Exception:
+            logger.exception("Failed to get dashboard data")
             # Return minimal data on error
             now = datetime.now(UTC)
             return await self._get_fallback_dashboard_data(now, time_range_hours)
@@ -444,7 +444,7 @@ class DashboardService:
                 # No cached data, return defaults
                 return self._get_default_rate_limit_status(key_id, window_minutes)
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Failed to get rate limit status for {key_id}")
             return self._get_default_rate_limit_status(key_id, window_minutes)
 
@@ -499,10 +499,10 @@ class DashboardService:
 
             # Get unique counts
             unique_users = len(
-                set(log.get("user_id") for log in usage_logs if log.get("user_id"))
+                {log.get("user_id") for log in usage_logs if log.get("user_id")}
             )
             unique_keys = len(
-                set(log.get("key_id") for log in usage_logs if log.get("key_id"))
+                {log.get("key_id") for log in usage_logs if log.get("key_id")}
             )
 
             # Calculate requests per minute
@@ -531,8 +531,8 @@ class DashboardService:
 
             return metrics
 
-        except Exception as e:
-            logger.exception(f"Failed to get real-time metrics")
+        except Exception:
+            logger.exception("Failed to get real-time metrics")
             return self._get_default_metrics(time_range_hours)
 
     async def _get_service_analytics(
@@ -568,8 +568,8 @@ class DashboardService:
 
             return services
 
-        except Exception as e:
-            logger.exception(f"Failed to get service analytics")
+        except Exception:
+            logger.exception("Failed to get service analytics")
             return self._get_default_service_analytics()
 
     async def _get_user_activity_data(
@@ -658,8 +658,8 @@ class DashboardService:
             user_activities.sort(key=lambda u: u.activity_score, reverse=True)
             return user_activities[:limit]
 
-        except Exception as e:
-            logger.exception(f"Failed to get user activity data")
+        except Exception:
+            logger.exception("Failed to get user activity data")
             return []
 
     async def _get_recent_alerts(self) -> list[AlertData]:
@@ -674,8 +674,8 @@ class DashboardService:
 
             return alerts[:50]  # Limit to most recent/important
 
-        except Exception as e:
-            logger.exception(f"Failed to get recent alerts")
+        except Exception:
+            logger.exception("Failed to get recent alerts")
             return []
 
     async def _get_usage_trends(self, time_range_hours: int) -> list[dict[str, Any]]:
@@ -714,8 +714,8 @@ class DashboardService:
 
             return trends
 
-        except Exception as e:
-            logger.exception(f"Failed to get usage trends")
+        except Exception:
+            logger.exception("Failed to get usage trends")
             return []
 
     async def _get_cache_statistics(self) -> dict[str, Any]:
@@ -725,7 +725,7 @@ class DashboardService:
                 return {}
 
             # Get cache info (DragonflyDB/Redis compatible)
-            stats = {
+            return {
                 "connected": self.cache.is_connected,
                 "hit_rate": 0.85,  # Would be calculated from real metrics
                 "memory_usage_mb": 128.5,  # Would be from Redis INFO
@@ -734,10 +734,8 @@ class DashboardService:
                 "evicted_keys": 12,  # Would be tracked
             }
 
-            return stats
-
-        except Exception as e:
-            logger.exception(f"Failed to get cache statistics")
+        except Exception:
+            logger.exception("Failed to get cache statistics")
             return {}
 
     async def _query_usage_logs(
@@ -754,13 +752,12 @@ class DashboardService:
                 "timestamp__lte": end_time.isoformat(),
             }
 
-            logs = await self.db.select(
+            return await self.db.select(
                 "api_key_usage_logs", filters=filters, limit=10000
             )
-            return logs
 
-        except Exception as e:
-            logger.exception(f"Failed to query usage logs")
+        except Exception:
+            logger.exception("Failed to query usage logs")
             return []
 
     async def _get_service_usage_data(
@@ -790,7 +787,7 @@ class DashboardService:
             errors = sum(1 for log in service_logs if not log.get("success", True))
             success_rate = (requests - errors) / requests if requests > 0 else 1.0
             active_keys = len(
-                set(log.get("key_id") for log in service_logs if log.get("key_id"))
+                {log.get("key_id") for log in service_logs if log.get("key_id")}
             )
 
             return {
@@ -802,8 +799,8 @@ class DashboardService:
                 "quota_usage": 0.0,  # Would be calculated from quotas
             }
 
-        except Exception as e:
-            logger.exception( f"Failed to get service usage data for {service_type}")
+        except Exception:
+            logger.exception(f"Failed to get service usage data for {service_type}")
             return {
                 "requests": 0,
                 "errors": 0,

@@ -42,8 +42,8 @@ class BaseAgent:
         name: str,
         instructions: str,
         service_registry: ServiceRegistry,
-        model: str = None,
-        temperature: float = None,
+        model: str | None = None,
+        temperature: float | None = None,
         tools: list[Callable] | None = None,
         metadata: dict[str, str] | None = None,
     ):

@@ -62,8 +62,7 @@ class TestRealTimeWebSocketIntegration:
         """Create a WebSocket manager with mocked dependencies."""
         with patch("tripsage_core.config.get_settings", return_value=mock_settings):
             with patch("redis.asyncio.from_url", return_value=mock_redis_client):
-                manager = WebSocketManager()
-                return manager
+                return WebSocketManager()
 
     @pytest.fixture
     def mock_websocket(self):

@@ -629,10 +629,10 @@ class TestWebSocketPerformanceMonitorIntegration:
             await monitor.stop()
             assert monitor._running is False
 
-        except Exception as e:
+        except Exception:
             # Clean up on error
             await monitor.stop()
-            raise e
+            raise
 
     @pytest.mark.asyncio
     async def test_concurrent_metrics_collection(self):

@@ -53,9 +53,9 @@ class MigrationRunner:
             # We'll use the RPC method if available, or fall back to direct API calls
             # For now, we'll use table operations where possible
             return {"success": True, "data": None}
-        except Exception as e:
-            logger.error(f"SQL execution failed: {e}")
-            return {"success": False, "error": str(e)}
+        except Exception as exc:
+            logger.exception("SQL execution failed")
+            return {"success": False, "error": str(exc)}
 
     async def ensure_migrations_table(self) -> None:
         """Ensure the migrations table exists."""
@@ -115,8 +115,8 @@ class MigrationRunner:
                 .execute()
             )
             return bool(result.data)
-        except Exception as e:
-            logger.error(f"Failed to record migration {filename}: {e}")
+        except Exception:
+            logger.exception("Failed to record migration %s", filename)
             return False
 
     def get_migration_files(self) -> list[Path]:
@@ -183,8 +183,8 @@ class MigrationRunner:
                 logger.error(f"Failed to record migration {filename}")
                 return False
 
-        except Exception as e:
-            logger.error(f"Error applying migration {filename}: {e}")
+        except Exception:
+            logger.exception("Error applying migration %s", filename)
             return False
 
     async def run_migrations(

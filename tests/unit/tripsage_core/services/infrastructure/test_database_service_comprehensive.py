@@ -1,4 +1,4 @@
-"""Comprehensive Database Service Tests - Advanced Features
+"""Comprehensive Database Service Tests - Advanced Features.
 
 This module provides comprehensive test coverage for advanced database service features
 that were not covered in the base test suite, specifically targeting:

@@ -128,10 +128,10 @@ class AirbnbMCPClient:
 
             return result.get("result", {})
 
-        except httpx.HTTPError as e:
+        except httpx.HTTPError:
             logger.exception(f"HTTP error invoking {tool_name}")
             raise
-        except Exception as e:
+        except Exception:
             logger.exception(f"Error invoking {tool_name}")
             raise
 
@@ -223,11 +223,9 @@ class AirbnbMCPClient:
         )
 
         logger.info(f"Fetching details for Airbnb listing {listing_id}")
-        result = await self._invoke_tool(
+        return await self._invoke_tool(
             "airbnb_listing_details", params.model_dump(exclude_none=True)
         )
-
-        return result
 
     async def batch_search(
         self, search_requests: list[dict[str, Any]]
@@ -273,6 +271,6 @@ class AirbnbMCPClient:
 
             response = await self._client.get("/health")
             return response.status_code == 200
-        except Exception as e:
-            logger.exception(f"Health check failed")
+        except Exception:
+            logger.exception("Health check failed")
             return False

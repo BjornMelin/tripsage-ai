@@ -988,3 +988,4 @@ def simulate_malicious_request(
         return client.put(endpoint, json={}, headers=malicious_headers)
     elif method == "DELETE":
         return client.delete(endpoint, headers=malicious_headers)
+    return None

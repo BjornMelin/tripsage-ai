@@ -94,7 +94,7 @@ class MockCacheService:
     async def get_json(self, key: str) -> Any:
         return self._storage.get(key)
 
-    async def set_json(self, key: str, value: Any, ttl: int = None) -> bool:
+    async def set_json(self, key: str, value: Any, ttl: int | None = None) -> bool:
         self._storage[key] = value
         return True
 
@@ -123,13 +123,13 @@ class MockDatabaseService:
     async def get_session(self):
         return MagicMock()
 
-    async def execute(self, query: str, params: dict = None):
+    async def execute(self, query: str, params: dict | None = None):
         return MagicMock()
 
-    async def fetch_one(self, query: str, params: dict = None):
+    async def fetch_one(self, query: str, params: dict | None = None):
         return None
 
-    async def fetch_all(self, query: str, params: dict = None):
+    async def fetch_all(self, query: str, params: dict | None = None):
         return []
 
     async def health_check(self) -> bool:

@@ -439,13 +439,11 @@ class TestMemoryServiceCaching:
             service._invalidate_user_cache("123")
 
             # User 123 cache should be cleared, 456 should remain
-            remaining_keys = [k for k in service._cache.keys() if k.startswith("123:")]
+            remaining_keys = [k for k in service._cache if k.startswith("123:")]
             assert len(remaining_keys) == 0
 
             # User 456 should still be there
-            remaining_456_keys = [
-                k for k in service._cache.keys() if k.startswith("456:")
-            ]
+            remaining_456_keys = [k for k in service._cache if k.startswith("456:")]
             assert len(remaining_456_keys) == 1
 
 

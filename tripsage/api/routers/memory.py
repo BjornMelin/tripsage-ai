@@ -75,11 +75,10 @@ async def add_conversation_memory(
             ),
         )
 
-        result = await memory_service.add_conversation_memory(user_id, core_request)
-        return result
+        return await memory_service.add_conversation_memory(user_id, core_request)
 
     except Exception as e:
-        logger.exception(f"Add conversation memory failed")
+        logger.exception("Add conversation memory failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add conversation memory",
@@ -102,11 +101,10 @@ async def get_user_context(
     """
     try:
         user_id = get_principal_id(principal)
-        context = await memory_service.get_user_context(user_id)
-        return context
+        return await memory_service.get_user_context(user_id)
 
     except Exception as e:
-        logger.exception(f"Get user context failed")
+        logger.exception("Get user context failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user context",
@@ -139,7 +137,7 @@ async def search_memories(
         return {"results": memories, "query": request.query, "total": len(memories)}
 
     except Exception as e:
-        logger.exception(f"Search memories failed")
+        logger.exception("Search memories failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search memories",
@@ -164,13 +162,12 @@ async def update_preferences(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.update_user_preferences(
+        return await memory_service.update_user_preferences(
             user_id, request.preferences
         )
-        return result
 
     except Exception as e:
-        logger.exception(f"Update preferences failed")
+        logger.exception("Update preferences failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update preferences",
@@ -199,11 +196,10 @@ async def add_preference(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.add_user_preference(user_id, key, value, category)
-        return result
+        return await memory_service.add_user_preference(user_id, key, value, category)
 
     except Exception as e:
-        logger.exception(f"Add preference failed")
+        logger.exception("Add preference failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add preference",
@@ -240,7 +236,7 @@ async def delete_memory(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Delete memory failed")
+        logger.exception("Delete memory failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete memory",
@@ -263,11 +259,10 @@ async def get_memory_stats(
     """
     try:
         user_id = get_principal_id(principal)
-        stats = await memory_service.get_memory_stats(user_id)
-        return stats
+        return await memory_service.get_memory_stats(user_id)
 
     except Exception as e:
-        logger.exception(f"Get memory stats failed")
+        logger.exception("Get memory stats failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get memory stats",
@@ -292,11 +287,10 @@ async def clear_user_memory(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.clear_user_memory(user_id, confirm)
-        return result
+        return await memory_service.clear_user_memory(user_id, confirm)
 
     except Exception as e:
-        logger.exception(f"Clear memory failed")
+        logger.exception("Clear memory failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to clear memory",

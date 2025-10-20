@@ -218,9 +218,9 @@ async def test_user_factory(integration_db_session):
     """Factory for creating test users."""
 
     async def create_user(
-        email: str = None,
-        username: str = None,
-        full_name: str = None,
+        email: str | None = None,
+        username: str | None = None,
+        full_name: str | None = None,
         is_active: bool = True,
         is_verified: bool = True,
     ) -> dict[str, Any]:

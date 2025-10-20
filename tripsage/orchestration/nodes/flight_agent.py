@@ -114,28 +114,28 @@ class FlightAgentNode(BaseAgentNode):
         # Use LLM to extract parameters
         extraction_prompt = f"""
         Extract flight search parameters from this message and context.
-        
+
         User message: "{message}"
-        
+
         Context from conversation:
         - Previous flight searches: {len(state.get("flight_searches", []))}
         - User preferences: {state.get("user_preferences", "None")}
         - Travel dates mentioned: {state.get("travel_dates", "None")}
         - Destination info: {state.get("destination_info", "None")}
-        
+
         Extract these parameters if mentioned:
         - origin (airport code, city, or airport name)
-        - destination (airport code, city, or airport name)  
+        - destination (airport code, city, or airport name)
         - departure_date (YYYY-MM-DD format)
         - return_date (YYYY-MM-DD format, if round trip)
         - passengers (number of travelers)
         - class_preference (economy, business, first)
         - airline_preference (specific airline)
-        
-        Respond with JSON only. If insufficient information for a flight 
+
+        Respond with JSON only. If insufficient information for a flight
         search, return null.
-        
-        Example: {{"origin": "NYC", "destination": "LAX", 
+
+        Example: {{"origin": "NYC", "destination": "LAX",
                    "departure_date": "2024-03-15", "passengers": 2}}
         """
 
@@ -161,8 +161,8 @@ class FlightAgentNode(BaseAgentNode):
             else:
                 return None
 
-        except Exception as e:
-            logger.exception(f"Error extracting flight parameters")
+        except Exception:
+            logger.exception("Error extracting flight parameters")
             return None
 
     async def _search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
@@ -189,7 +189,7 @@ class FlightAgentNode(BaseAgentNode):
             return result
 
         except Exception as e:
-            logger.exception(f"Flight search failed")
+            logger.exception("Flight search failed")
             return {"error": f"Flight search failed: {e!s}"}
 
     async def _generate_flight_response(
@@ -267,16 +267,16 @@ class FlightAgentNode(BaseAgentNode):
         """
         # Use LLM to generate helpful response for general flight questions
         response_prompt = f"""
-        The user is asking about flights but hasn't provided enough specific 
+        The user is asking about flights but hasn't provided enough specific
         information for a search.
-        
+
         User message: "{message}"
-        
+
         Provide a helpful response that:
         1. Acknowledges their flight interest
         2. Asks for the specific information needed (origin, destination, dates)
         3. Offers to help with the search once they provide details
-        
+
         Keep the response friendly and concise.
         """
 
@@ -289,8 +289,8 @@ class FlightAgentNode(BaseAgentNode):
             response = await self.llm.ainvoke(messages)
             content = response.content
 
-        except Exception as e:
-            logger.exception(f"Error generating flight response")
+        except Exception:
+            logger.exception("Error generating flight response")
             content = (
                 "I'd be happy to help you find flights! To get started, I'll need "
                 "to know your departure city, destination, and travel dates. "

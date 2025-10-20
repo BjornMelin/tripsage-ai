@@ -56,7 +56,7 @@ class UnifiedCrawlResult(BaseModel):
         timestamp = self.metadata.get("crawl_timestamp")
         if timestamp and isinstance(timestamp, str):
             try:
-                return datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                return datetime.fromisoformat(timestamp)
             except (ValueError, AttributeError):
                 pass
         elif isinstance(timestamp, datetime):

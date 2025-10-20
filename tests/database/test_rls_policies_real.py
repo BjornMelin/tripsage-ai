@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real RLS (Row Level Security) Policy Tests
+"""Real RLS (Row Level Security) Policy Tests.
 
 Tests RLS policies against actual Supabase database to ensure:
 - Users can only access their own data

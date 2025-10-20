@@ -219,7 +219,15 @@ class KeyMonitoringService:
         )
 
         # Log the alert
-        logger.exception( alert_message, extra={ "operation": operation.value, "user_id": user_id, "count": log_data.get("count"), "timeframe": self.pattern_timeframe, },)
+        logger.exception(
+            alert_message,
+            extra={
+                "operation": operation.value,
+                "user_id": user_id,
+                "count": log_data.get("count"),
+                "timeframe": self.pattern_timeframe,
+            },
+        )
 
         # Store the alert in cache
         alert_key = "key_alerts"
@@ -378,9 +386,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
             )
 
         # Process the request
-        response = await call_next(request)
-
-        return response
+        return await call_next(request)
 
     def _get_key_operation(self, request: Request) -> KeyOperation | None:
         """Get the key operation from the request.
@@ -442,7 +448,7 @@ def monitor_key_operation(
                     break
 
             if not monitoring_service:
-                for _, value in kwargs.items():
+                for value in kwargs.values():
                     if isinstance(value, KeyMonitoringService):
                         monitoring_service = value
                         break
@@ -587,14 +593,13 @@ async def check_key_expiration(
 
     # Get expiring keys from database
     try:
-        result = await monitoring_service.database_service.select(
+        return await monitoring_service.database_service.select(
             "api_keys",
             "*",
             {"expires_at": {"lte": threshold.isoformat()}},
         )
-        return result
-    except Exception as e:
-        logger.exception(f"Failed to check key expiration")
+    except Exception:
+        logger.exception("Failed to check key expiration")
         return []
 
 
@@ -658,7 +663,7 @@ async def get_key_health_metrics() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Failed to get key health metrics")
+        logger.exception("Failed to get key health metrics")
         return {
             "error": str(e),
             "total_count": 0,

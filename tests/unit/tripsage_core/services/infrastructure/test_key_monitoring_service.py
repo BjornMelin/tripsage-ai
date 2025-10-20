@@ -50,8 +50,7 @@ class TestKeyMonitoringService:
     @pytest.fixture
     def mock_settings(self):
         """Create mock settings."""
-        settings = Mock(spec=Settings)
-        return settings
+        return Mock(spec=Settings)
 
     @pytest.fixture
     def mock_cache_service(self):

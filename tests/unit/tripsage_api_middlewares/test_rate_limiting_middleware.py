@@ -19,8 +19,7 @@ from tripsage.api.middlewares.rate_limiting import (
 @pytest.fixture
 def mock_app():
     """Create a mock ASGI app."""
-    app = MagicMock(spec=ASGIApp)
-    return app
+    return MagicMock(spec=ASGIApp)
 
 
 @pytest.fixture
@@ -222,8 +221,7 @@ class TestDragonflyRateLimiter:
     @pytest.fixture
     def mock_cache_service(self):
         """Create a mock cache service."""
-        service = AsyncMock()
-        return service
+        return AsyncMock()
 
     async def test_token_bucket_initialization(self, limiter, mock_cache_service):
         """Test token bucket initialization."""

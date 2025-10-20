@@ -64,9 +64,8 @@ class AccommodationSearchRequest(BaseModel):
             v is not None
             and "min_price" in info.data
             and info.data["min_price"] is not None
-        ):
-            if v < info.data["min_price"]:
-                raise ValueError("Maximum price must be greater than minimum price")
+        ) and v < info.data["min_price"]:
+            raise ValueError("Maximum price must be greater than minimum price")
         return v
 
 
@@ -91,9 +90,8 @@ class AccommodationDetailsRequest(BaseModel):
             v is not None
             and "check_in" in info.data
             and info.data["check_in"] is not None
-        ):
-            if v <= info.data["check_in"]:
-                raise ValueError("Check-out date must be after check-in date")
+        ) and v <= info.data["check_in"]:
+            raise ValueError("Check-out date must be after check-in date")
         return v
 
 

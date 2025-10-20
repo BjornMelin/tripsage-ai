@@ -86,8 +86,8 @@ class BudgetAgentNode(BaseAgentNode):
                 f"temp={self.agent_config['temperature']}"
             )
 
-        except Exception as e:
-            logger.exception( f"Failed to load database configuration, using fallback")
+        except Exception:
+            logger.exception("Failed to load database configuration, using fallback")
 
             # Fallback to settings-based configuration
             settings = get_settings()
@@ -185,22 +185,22 @@ class BudgetAgentNode(BaseAgentNode):
         extraction_prompt = f"""
         Extract budget-related parameters from this message and context, and determine
         the type of budget operation requested.
-        
+
         User message: "{message}"
-        
+
         Context from conversation:
         - Previous budget analyses: {len(state.get("budget_analyses", []))}
         - Flight searches: {len(state.get("flight_searches", []))}
         - Accommodation searches: {len(state.get("accommodation_searches", []))}
         - User preferences: {state.get("user_preferences", "None")}
         - Destination info: {state.get("destination_info", "None")}
-        
+
         Determine the operation type from these options:
         - "optimize": Budget optimization and allocation
         - "track": Expense tracking and recording
         - "compare": Cost comparison between options
         - "analyze": Spending analysis and reporting
-        
+
         Extract these parameters if mentioned:
         - operation: One of the operation types above
         - total_budget: Total available budget
@@ -211,10 +211,10 @@ class BudgetAgentNode(BaseAgentNode):
         - expenses: List of expenses (for tracking)
         - options: Items to compare (for comparison)
         - preferences: Budget preferences and priorities
-        
+
         Respond with JSON only. If this doesn't seem budget-related, return null.
-        
-        Example: {{"operation": "optimize", "total_budget": 5000, 
+
+        Example: {{"operation": "optimize", "total_budget": 5000,
                    "trip_length": 10, "travelers": 2, "destination": "Paris"}}
         """
 
@@ -244,8 +244,8 @@ class BudgetAgentNode(BaseAgentNode):
             else:
                 return None
 
-        except Exception as e:
-            logger.exception(f"Error extracting budget parameters")
+        except Exception:
+            logger.exception("Error extracting budget parameters")
             return None
 
     async def _optimize_budget(
@@ -692,11 +692,11 @@ class BudgetAgentNode(BaseAgentNode):
         """
         # Use LLM to generate helpful response for general budget questions
         response_prompt = f"""
-        The user is asking about travel budgeting but hasn't provided enough specific 
+        The user is asking about travel budgeting but hasn't provided enough specific
         information for analysis.
-        
+
         User message: "{message}"
-        
+
         Provide a helpful response that:
         1. Acknowledges their budget interest
         2. Asks for specific information needed (total budget, trip length,
@@ -704,7 +704,7 @@ class BudgetAgentNode(BaseAgentNode):
         3. Explains what budget services you can provide (optimization, tracking,
         analysis)
         4. Offers to help once they provide details
-        
+
         Keep the response friendly and concise.
         """
 
@@ -719,8 +719,8 @@ class BudgetAgentNode(BaseAgentNode):
             response = await self.llm.ainvoke(messages)
             content = response.content
 
-        except Exception as e:
-            logger.exception(f"Error generating budget response")
+        except Exception:
+            logger.exception("Error generating budget response")
             content = (
                 "I'd be happy to help you optimize your travel budget! To get started, "
                 "I'll need to know your total budget, trip length, destination, and "

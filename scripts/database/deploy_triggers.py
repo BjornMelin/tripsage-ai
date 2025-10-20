@@ -4,6 +4,7 @@ Applies business logic and automation triggers to the database.
 """
 
 import asyncio
+import contextlib
 import logging
 import sys
 from pathlib import Path
@@ -49,8 +50,8 @@ class TriggerDeploymentService:
                 result = await self.db_service.fetch_query(
                     """
                     SELECT EXISTS (
-                        SELECT FROM information_schema.tables 
-                        WHERE table_schema = 'public' 
+                        SELECT FROM information_schema.tables
+                        WHERE table_schema = 'public'
                         AND table_name = $1
                     )
                     """,
@@ -64,8 +65,8 @@ class TriggerDeploymentService:
             logger.info("All prerequisite tables found")
             return True
 
-        except Exception as e:
-            logger.exception(f"Error checking prerequisites")
+        except Exception:
+            logger.exception("Error checking prerequisites")
             return False
 
     async def check_existing_triggers(self) -> dict:
@@ -73,7 +74,7 @@ class TriggerDeploymentService:
         try:
             existing_triggers = await self.db_service.fetch_query(
                 """
-                SELECT trigger_name, event_object_table, action_timing, 
+                SELECT trigger_name, event_object_table, action_timing,
                        event_manipulation
                 FROM information_schema.triggers
                 WHERE trigger_schema = 'public'
@@ -97,8 +98,8 @@ class TriggerDeploymentService:
             logger.info(f"Found {len(existing_triggers)} existing triggers")
             return trigger_info
 
-        except Exception as e:
-            logger.exception(f"Error checking existing triggers")
+        except Exception:
+            logger.exception("Error checking existing triggers")
             return {}
 
     async def check_existing_functions(self) -> list:
@@ -110,8 +111,8 @@ class TriggerDeploymentService:
                 FROM information_schema.routines
                 WHERE routine_schema = 'public'
                 AND routine_type = 'FUNCTION'
-                AND (routine_name LIKE '%trigger%' 
-                     OR routine_name LIKE '%cleanup%' 
+                AND (routine_name LIKE '%trigger%'
+                     OR routine_name LIKE '%cleanup%'
                      OR routine_name LIKE '%notify%')
                 ORDER BY routine_name
                 """
@@ -121,8 +122,8 @@ class TriggerDeploymentService:
             logger.info(f"Found {len(function_names)} trigger-related functions")
             return function_names
 
-        except Exception as e:
-            logger.exception(f"Error checking existing functions")
+        except Exception:
+            logger.exception("Error checking existing functions")
             return []
 
     async def deploy_trigger_migration(self) -> bool:
@@ -146,8 +147,8 @@ class TriggerDeploymentService:
             logger.info("Trigger migration executed successfully")
             return True
 
-        except Exception as e:
-            logger.exception(f"Error deploying trigger migration")
+        except Exception:
+            logger.exception("Error deploying trigger migration")
             return False
 
     async def validate_trigger_deployment(self) -> bool:
@@ -230,8 +231,8 @@ class TriggerDeploymentService:
             logger.info("All expected triggers and functions are present")
             return True
 
-        except Exception as e:
-            logger.exception(f"Error validating trigger deployment")
+        except Exception:
+            logger.exception("Error validating trigger deployment")
             return False
 
     async def test_trigger_functionality(self) -> bool:
@@ -265,7 +266,7 @@ class TriggerDeploymentService:
             # Test collaboration trigger (should work without errors)
             await self.db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators 
+                INSERT INTO trip_collaborators
                 (trip_id, user_id, added_by, permission_level)
                 VALUES ($1, $2, $3, $4)
                 """,
@@ -280,7 +281,7 @@ class TriggerDeploymentService:
 
             await self.db_service.execute_query(
                 """
-                UPDATE trips SET destination = 'Updated Test City' 
+                UPDATE trips SET destination = 'Updated Test City'
                 WHERE id = $1
                 """,
                 trip_id,
@@ -293,7 +294,7 @@ class TriggerDeploymentService:
                 # This should fail due to permission validation
                 await self.db_service.execute_query(
                     """
-                    UPDATE trip_collaborators 
+                    UPDATE trip_collaborators
                     SET permission_level = 'admin', added_by = $1
                     WHERE trip_id = $2 AND user_id = $1
                     """,
@@ -307,7 +308,7 @@ class TriggerDeploymentService:
                 if "Cannot modify your own permission level" in str(e):
                     logger.info("Permission validation trigger working correctly")
                 else:
-                    logger.exception(f"Unexpected error in permission validation")
+                    logger.exception("Unexpected error in permission validation")
                     return False
 
             # Cleanup test data
@@ -321,8 +322,8 @@ class TriggerDeploymentService:
             logger.info("Trigger functionality tests passed")
             return True
 
-        except Exception as e:
-            logger.exception(f"Error testing trigger functionality")
+        except Exception:
+            logger.exception("Error testing trigger functionality")
             return False
 
     async def setup_pg_cron_jobs(self) -> bool:
@@ -383,14 +384,14 @@ class TriggerDeploymentService:
                         f"Scheduled job '{job_name}' with schedule '{schedule}'"
                     )
 
-                except Exception as e:
+                except Exception:
                     logger.exception(f"Error scheduling job '{job_name}'")
 
             logger.info("pg_cron jobs setup completed")
             return True
 
-        except Exception as e:
-            logger.exception(f"Error setting up pg_cron jobs")
+        except Exception:
+            logger.exception("Error setting up pg_cron jobs")
             return False
 
     async def generate_deployment_report(self) -> dict:
@@ -437,7 +438,7 @@ class TriggerDeploymentService:
             return report
 
         except Exception as e:
-            logger.exception(f"Error generating deployment report")
+            logger.exception("Error generating deployment report")
             return {"error": str(e)}
 
 
@@ -507,15 +508,13 @@ async def main():
         logger.info("Database trigger deployment completed successfully!")
         return True
 
-    except Exception as e:
-        logger.exception(f"Deployment failed with error")
+    except Exception:
+        logger.exception("Deployment failed with error")
         return False
 
     finally:
-        try:
+        with contextlib.suppress(Exception):
             await db_service.close()
-        except Exception:
-            pass
 
 
 if __name__ == "__main__":

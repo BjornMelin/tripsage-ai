@@ -67,7 +67,7 @@ class TestConfig:
 class TestUser:
     """Test user representation for collaboration testing."""
 
-    def __init__(self, role: str = "user", email: str = None):
+    def __init__(self, role: str = "user", email: str | None = None):
         self.id = uuid4()
         self.role = role
         self.email = email or f"{role}_{self.id.hex[:8]}@test.com"
@@ -112,7 +112,7 @@ class TestUser:
 class TestTrip:
     """Test trip representation for collaboration testing."""
 
-    def __init__(self, owner: TestUser, name: str = None):
+    def __init__(self, owner: TestUser, name: str | None = None):
         self.id = abs(hash(str(uuid4()))) % (10**9)  # Simple integer ID
         self.owner = owner
         self.name = name or f"Test Trip {self.id}"
@@ -233,7 +233,7 @@ class MockSupabaseClient:
         # User can see collaborations they're part of or trips they own
         accessible_collabs = []
 
-        for _collab_key, collab_data in self.data_store["trip_collaborators"].items():
+        for collab_data in self.data_store["trip_collaborators"].values():
             trip_id = collab_data["trip_id"]
 
             # User is the collaborator
@@ -254,7 +254,7 @@ class MockSupabaseClient:
         # User can only see their own memories
         user_memories = []
 
-        for _memory_id, memory_data in self.data_store["memories"].items():
+        for memory_data in self.data_store["memories"].values():
             if memory_data.get("user_id") == str(self.current_user_id):
                 user_memories.append(memory_data)
 
@@ -515,7 +515,7 @@ async def populated_database(mock_supabase_client, test_users, test_trips):
         pass
 
     # Add test trips
-    for _, trip in test_trips.items():
+    for trip in test_trips.values():
         client.set_current_user(trip.owner.id)
         await client.execute_sql(
             "INSERT INTO trips (id, user_id, name) VALUES ($1, $2, $3)",

@@ -146,9 +146,7 @@ class BaseAgentNode(ABC):
         state["messages"].append(error_message)
 
         # Update timestamp
-        state = update_state_timestamp(state)
-
-        return state
+        return update_state_timestamp(state)
 
     def _extract_user_intent(self, message: str) -> dict[str, Any]:
         """Extract user intent from a message (default implementation).

@@ -104,8 +104,8 @@ class DuffelFlightsService(BaseService):
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
-            error_data = e.response.json() if e.response.content else {}
-            logger.exception(f"Duffel API error")
+            e.response.json() if e.response.content else {}
+            logger.exception("Duffel API error")
             raise
 
         return response.json()

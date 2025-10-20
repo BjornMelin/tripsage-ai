@@ -44,8 +44,8 @@ async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool
         logger.exception("Failed to connect to SQL database")
         return False
 
-    except Exception as e:
-        logger.exception(f"SQL connection check failed")
+    except Exception:
+        logger.exception("SQL connection check failed")
         return False
 
 
@@ -109,8 +109,8 @@ async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
         logger.info("SQL database initialized successfully")
         return True
 
-    except Exception as e:
-        logger.exception(f"SQL initialization failed")
+    except Exception:
+        logger.exception("SQL initialization failed")
         return False
 
 
@@ -122,7 +122,7 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
         # Add sample user to SQL
         sample_user_sql = """
         INSERT INTO users (email, username, full_name, preferences)
-        VALUES ('demo@tripsage.ai', 'demo_user', 'Demo User', 
+        VALUES ('demo@tripsage.ai', 'demo_user', 'Demo User',
                 '{"currency": "USD", "language": "en"}')
         ON CONFLICT (email) DO NOTHING
         RETURNING id;
@@ -140,8 +140,8 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
         logger.info("Sample data loaded successfully")
         return True
 
-    except Exception as e:
-        logger.exception(f"Sample data loading failed")
+    except Exception:
+        logger.exception("Sample data loading failed")
         return False
 
 
@@ -187,8 +187,8 @@ async def main():
         logger.info("Database initialization completed successfully!")
         return True
 
-    except Exception as e:
-        logger.exception(f"Database initialization failed")
+    except Exception:
+        logger.exception("Database initialization failed")
         return False
 
     finally:

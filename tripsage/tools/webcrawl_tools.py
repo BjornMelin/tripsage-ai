@@ -115,8 +115,11 @@ async def crawl_website_content(
                 logger.info(f"Playwright fallback succeeded for {url}")
                 return fallback_result
 
-            except Exception as fallback_error:
-                logger.exception( f"Playwright fallback also failed for {url}: {fallback_error!s}")
+            except Exception:
+                logger.exception(
+                    "Playwright fallback also failed for %s",
+                    url,
+                )
 
                 # Record fallback failure in metrics
                 metrics = get_performance_metrics()

@@ -24,7 +24,7 @@ class TestableAgentNode(BaseAgentNode):
         service_registry: ServiceRegistry,
         process_func=None,
         initialize_func=None,
-        config: dict[str, Any] = None,
+        config: dict[str, Any] | None = None,
     ):
         """Initialize with optional custom functions."""
         self.process_func = process_func

@@ -29,20 +29,20 @@ from tripsage_core.models.schemas_common.flight_schemas import (
 
 
 __all__ = [
-    # Request schemas
-    "FlightSearchRequest",
-    "MultiCityFlightSearchRequest",
-    "MultiCityFlightSegment",
-    "AirportSearchRequest",
-    "SavedFlightRequest",
-    "FlightPassenger",
-    # Response schemas
-    "FlightSearchResponse",
-    "AirportSearchResponse",
-    "SavedFlightResponse",
-    "UpcomingFlightResponse",
-    "FlightOffer",
     "Airport",
+    "AirportSearchRequest",
+    "AirportSearchResponse",
     # Enums
     "CabinClass",
+    "FlightOffer",
+    "FlightPassenger",
+    # Request schemas
+    "FlightSearchRequest",
+    # Response schemas
+    "FlightSearchResponse",
+    "MultiCityFlightSearchRequest",
+    "MultiCityFlightSegment",
+    "SavedFlightRequest",
+    "SavedFlightResponse",
+    "UpcomingFlightResponse",
 ]

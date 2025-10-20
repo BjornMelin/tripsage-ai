@@ -179,7 +179,7 @@ class TestNonNegativeNumberValidation:
     @given(st.floats(min_value=0.0, max_value=float("inf")))
     def test_valid_non_negative_numbers(self, value: float):
         """Test valid non-negative numbers."""
-        assume(not (value != value))  # Filter out NaN
+        assume(value == value)  # Filter out NaN
         result = validate_non_negative_number(value)
         assert result == value
         assert result >= 0

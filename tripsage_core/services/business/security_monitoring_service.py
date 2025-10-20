@@ -14,6 +14,7 @@ Features:
 """
 
 import asyncio
+import contextlib
 import time
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
@@ -289,10 +290,8 @@ class SecurityMonitoringService:
 
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
 
         logger.info("Security monitoring service stopped")
 
@@ -754,8 +753,8 @@ class SecurityMonitoringService:
 
             except asyncio.CancelledError:
                 break
-            except Exception as e:
-                logger.exception(f"Error in monitoring loop")
+            except Exception:
+                logger.exception("Error in monitoring loop")
                 await asyncio.sleep(60)
 
     async def _cleanup_old_data(self):

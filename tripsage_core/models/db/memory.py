@@ -417,9 +417,8 @@ class MemoryUpdate(BaseModel):
     @classmethod
     def validate_relevance_score(cls, v: float | None) -> float | None:
         """Validate relevance score is between 0.0 and 1.0 if provided."""
-        if v is not None:
-            if not (0.0 <= v <= 1.0):
-                raise ValueError("Relevance score must be between 0.0 and 1.0")
+        if v is not None and not (0.0 <= v <= 1.0):
+            raise ValueError("Relevance score must be between 0.0 and 1.0")
         return v
 
     @field_validator("metadata", mode="before")

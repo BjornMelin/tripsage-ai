@@ -137,9 +137,8 @@ class Trip(TripSageModel):
     def validate_tags(cls, v: list[str]) -> list[str]:
         """Validate and clean trip tags."""
         # Remove duplicates and empty strings
-        cleaned = list(set(tag.strip() for tag in v if tag.strip()))
+        return list({tag.strip() for tag in v if tag.strip()})
         # max_items constraint already enforces the limit
-        return cleaned
 
     @property
     def duration_days(self) -> int:

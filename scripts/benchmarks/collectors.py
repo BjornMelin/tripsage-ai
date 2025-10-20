@@ -278,7 +278,7 @@ class ReportGenerator:
 
         # Save JSON report
         json_path = self.output_dir / f"benchmark_{report_type}_{timestamp}.json"
-        with open(json_path, "w") as f:
+        with json_path.open("w") as f:
             json.dump(report_data, f, indent=2, default=str)
 
         # Save CSV summary for easy analysis
@@ -388,7 +388,7 @@ class ReportGenerator:
         csv_lines.append(f"execution_time_seconds,{exec_time:.2f},seconds")
 
         # Write CSV
-        with open(csv_path, "w") as f:
+        with csv_path.open("w") as f:
             f.write("\n".join(csv_lines))
 
         return csv_path
@@ -409,17 +409,17 @@ class ReportGenerator:
     <title>TripSage Benchmark Report - {report_type.title()}</title>
     <style>
         body {{ font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }}
-        .container {{ 
-            max-width: 800px; margin: 0 auto; background: white; 
-            padding: 30px; border-radius: 8px; 
+        .container {{
+            max-width: 800px; margin: 0 auto; background: white;
+            padding: 30px; border-radius: 8px;
         }}
-        .header {{ 
-            text-align: center; border-bottom: 2px solid #007bff; 
-            padding-bottom: 20px; margin-bottom: 30px; 
+        .header {{
+            text-align: center; border-bottom: 2px solid #007bff;
+            padding-bottom: 20px; margin-bottom: 30px;
         }}
-        .metric {{ 
-            margin: 15px 0; padding: 15px; background: #f8f9fa; 
-            border-radius: 5px; 
+        .metric {{
+            margin: 15px 0; padding: 15px; background: #f8f9fa;
+            border-radius: 5px;
         }}
         .metric-label {{ font-weight: bold; color: #495057; }}
         .metric-value {{ font-size: 1.2em; color: #007bff; }}
@@ -441,7 +441,7 @@ class ReportGenerator:
         }</p>
             <p>Execution time: {summary.get("execution_time_formatted", "Unknown")}</p>
         </div>
-        
+
         <div class="metrics">
             <h3>📊 Performance Metrics</h3>
 """
@@ -488,10 +488,10 @@ class ReportGenerator:
 
             html_content += f"""
         </div>
-        
+
         <div class="validation {success_class}">
             <h3>🎯 Optimization Claims Validation: {status_text}</h3>
-            <p><strong>Claims Validated:</strong> 
+            <p><strong>Claims Validated:</strong>
                {summary.get("claims_validated", "0/4")}</p>
 """
 
@@ -506,8 +506,8 @@ class ReportGenerator:
 
         html_content += """
         </div>
-        
-        <div style="margin-top: 40px; text-align: center; color: #6c757d; 
+
+        <div style="margin-top: 40px; text-align: center; color: #6c757d;
                     border-top: 1px solid #dee2e6; padding-top: 20px;">
             <p>TripSage Database Performance Benchmarking Suite</p>
             <p>Simplified reporting focused on core optimization claims</p>
@@ -517,7 +517,7 @@ class ReportGenerator:
 </html>"""
 
         # Write HTML file
-        with open(html_path, "w") as f:
+        with html_path.open("w") as f:
             f.write(html_content)
 
         return html_path

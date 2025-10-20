@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""TripSage Database Connection Verification Script
+"""TripSage Database Connection Verification Script.
 
 This script verifies the connection to the Supabase database
 and checks that the required tables exist.
@@ -8,12 +8,11 @@ Usage: python verify_connection.py
 """
 
 import asyncio
-import os
 import sys
 
 
 # Add the project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, Path(__file__).parent.parent.resolve())
 
 from src.db.client import get_supabase_client
 from src.utils.logging import configure_logging
