@@ -7,6 +7,7 @@ a function to get a configured logger for a module.
 
 import logging
 import sys
+from collections.abc import MutableMapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -21,7 +22,9 @@ _loggers: dict[str, logging.Logger] = {}
 class ContextAdapter(logging.LoggerAdapter):
     """Adapter that adds context information to log records."""
 
-    def process(self, msg: str, kwargs: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    def process(
+        self, msg: str, kwargs: MutableMapping[str, Any]
+    ) -> tuple[str, MutableMapping[str, Any]]:
         """Process the log record by adding context information.
 
         Args:
@@ -83,17 +86,18 @@ def configure_logging(
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    # Clear existing handlers if any
-    if logger.handlers:
-        logger.handlers.clear()
-
-    # Create console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
+    # Avoid clearing handlers to respect global configuration
+    if not logger.handlers:
+        # Create console handler once
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        console_handler.setFormatter(console_formatter)
+        logger.addHandler(console_handler)
+    # Ensure console handler level aligns
+    for h in logger.handlers:
+        h.setLevel(level)
 
     # Add file handler if requested and not in testing
     settings = get_settings()
@@ -175,26 +179,16 @@ def configure_root_logger(level: int | None = None) -> None:
     if level is None:
         level = _get_log_level()
 
-    # Clear any existing handlers
     root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-
-    # Configure root logger
     root_logger.setLevel(level)
-
-    # Create console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(level)
-
-    # Create formatter
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    console_handler.setFormatter(formatter)
-
-    # Add handler to root logger
-    root_logger.addHandler(console_handler)
+    if not root_logger.handlers:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(level)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
 
 
 # Utility function for structured logging
