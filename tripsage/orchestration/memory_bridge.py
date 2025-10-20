@@ -1,8 +1,7 @@
-"""Session Memory Bridge for LangGraph Integration.
+"""Session Memory Bridge for LangGraph integration.
 
-This module provides integration between LangGraph state management and TripSage's
-existing session memory utilities, enabling seamless memory persistence and retrieval
-across agent interactions.
+Reads user context via MemoryService and maps it into the
+LangGraph state. Legacy utils-based session functions have been removed.
 """
 
 import logging
@@ -10,7 +9,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
+from tripsage_core.services.business.memory_service import (
+    ConversationMemoryRequest,
+    MemoryService,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -25,9 +27,16 @@ class SessionMemoryBridge:
     - User preferences and learned insights
     """
 
-    def __init__(self, mcp_manager: MCPManager | None = None):
+    def __init__(self, memory_service: MemoryService | None = None):
         """Initialize the memory bridge."""
-        self.mcp_manager = mcp_manager or MCPManager()
+        self._memory_service = memory_service
+
+    async def _get_service(self) -> MemoryService:
+        """Get or create a MemoryService instance (lazy)."""
+        if self._memory_service is None:
+            self._memory_service = MemoryService()
+            await self._memory_service.connect()
+        return self._memory_service
 
     async def hydrate_state(self, state: TravelPlanningState) -> TravelPlanningState:
         """Load user context and preferences into LangGraph state.
@@ -45,22 +54,11 @@ class SessionMemoryBridge:
 
         try:
             logger.debug("Hydrating state for user: %s", user_id)
+            svc = await self._get_service()
+            context = await svc.get_user_context(user_id)
 
-            # Load session memory data via MemoryService (simplified hydration)
-            session_data = {
-                "user": {"id": user_id},
-                "preferences": {},
-                "recent_trips": [],
-                "insights": {},
-            }
-            # Optionally: call MemoryService to enrich preferences (future work)
-
-            # Map session data to LangGraph state format
-            if session_data:
-                state = await self._map_session_to_state(state, session_data)
-                logger.info("Successfully hydrated state for user %s", user_id)
-            else:
-                logger.info("No existing session data found for user %s", user_id)
+            state = await self._map_user_context_to_state(state, context.model_dump())
+            logger.info("Successfully hydrated state for user %s", user_id)
 
         except Exception:
             logger.exception("Failed to hydrate state for user %s", user_id)
@@ -68,79 +66,35 @@ class SessionMemoryBridge:
 
         return state
 
-    async def _map_session_to_state(
-        self, state: TravelPlanningState, session_data: dict[str, Any]
+    async def _map_user_context_to_state(
+        self, state: TravelPlanningState, context: dict[str, Any]
     ) -> TravelPlanningState:
-        """Map session memory data to LangGraph state format.
+        """Map MemoryService user context response to state."""
+        prefs = context.get("preferences", [])
+        if prefs:
+            # Store raw items into user_preferences (schema allows dict)
+            state["user_preferences"] = {"items": prefs}
 
-        Args:
-            state: Current state
-            session_data: Data from session memory
-
-        Returns:
-            Updated state with memory data
-        """
-        # Extract user preferences
-        preferences = session_data.get("preferences", {})
-        if preferences:
-            state["user_preferences"] = {
-                "accommodation_type": preferences.get("preferred_accommodation_type"),
-                "budget_level": preferences.get("budget_preference"),
-                "travel_style": preferences.get("travel_style"),
-                "dietary_restrictions": preferences.get("dietary_restrictions", []),
-                "accessibility_needs": preferences.get("accessibility_needs", []),
-                "language_preferences": preferences.get("language_preferences", []),
-            }
-
-        # Extract recent destinations and travel patterns
-        recent_trips = session_data.get("recent_trips", [])
-        if recent_trips:
+        # Past trips and destinations
+        past_trips = context.get("past_trips", [])
+        if past_trips:
             state["destination_info"] = {
                 "recent_destinations": [
-                    trip.get("destination")
-                    for trip in recent_trips[-5:]  # Last 5 trips
-                ],
-                "favorite_destinations": self._extract_favorite_destinations(
-                    recent_trips
-                ),
-                "travel_frequency": len(recent_trips),
+                    t.get("destination") for t in past_trips if isinstance(t, dict)
+                ][:5],
             }
 
-        # Extract budget insights
-        budget_history = session_data.get("budget_history", [])
-        if budget_history:
-            state["budget_constraints"] = {
-                "typical_range": self._calculate_typical_budget_range(budget_history),
-                "last_budget": budget_history[-1].get("total_budget")
-                if budget_history
-                else None,
-                "spending_patterns": self._analyze_spending_patterns(budget_history),
-            }
-
-        # Extract learned insights and facts
-        insights = session_data.get("insights", [])
+        # Derived insights/summary
+        insights = context.get("insights", {})
+        summary = context.get("summary")
         if insights:
-            state["user_insights"] = {
-                "learned_facts": [insight.get("fact") for insight in insights],
-                "preferences_learned": [
-                    insight.get("preference")
-                    for insight in insights
-                    if insight.get("type") == "preference"
-                ],
-                "dislikes": [
-                    insight.get("dislike")
-                    for insight in insights
-                    if insight.get("type") == "dislike"
-                ],
+            state["extracted_entities"] = {
+                **state.get("extracted_entities", {}),
+                "insights": insights,
+                "memory_loaded_at": datetime.now(UTC).isoformat(),
             }
-
-        # Add session metadata
-        state["session_metadata"] = {
-            "last_activity": session_data.get("last_activity"),
-            "session_count": session_data.get("session_count", 0),
-            "memory_loaded_at": datetime.now(UTC).isoformat(),
-        }
-
+        if summary:
+            state["conversation_summary"] = summary
         return state
 
     def _extract_favorite_destinations(self, trips: list[dict[str, Any]]) -> list[str]:
@@ -225,8 +179,21 @@ class SessionMemoryBridge:
             insights = await self._extract_insights_from_state(state)
 
             if insights:
-                # Update session memory with new insights
-                result = await update_session_memory(user_id, insights)
+                # Persist insights via MemoryService as a structured note
+                svc = await self._get_service()
+                payload = ConversationMemoryRequest(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Store state insights for personalization.",
+                        },
+                        {"role": "user", "content": str(insights)},
+                    ],
+                    session_id=state.get("session_id"),
+                    trip_id=None,
+                    metadata={"type": "state_insights"},
+                )
+                result = await svc.add_conversation_memory(user_id, payload)
                 logger.info("Successfully persisted insights for user %s", user_id)
                 return result
             else:
@@ -266,8 +233,7 @@ class SessionMemoryBridge:
             search_history.extend(state["flight_searches"])
         if state.get("accommodation_searches"):
             search_history.extend(state["accommodation_searches"])
-        if state.get("destination_searches"):
-            search_history.extend(state["destination_searches"])
+        # Destination searches are folded into activity or other agent results.
 
         if search_history:
             insights["search_history"] = search_history[-10:]  # Keep last 10 searches
@@ -379,7 +345,12 @@ class SessionMemoryBridge:
         Returns:
             Restored TravelPlanningState
         """
-        state = TravelPlanningState()
+        # Initialize minimal state using available IDs
+        user_id = checkpoint_data.get("user_id", "restored_user")
+        session_id = checkpoint_data.get("session_id")
+        from tripsage.orchestration.state import create_initial_state
+
+        state = create_initial_state(user_id=user_id, message="", session_id=session_id)
 
         # Restore basic state
         for key, value in checkpoint_data.items():
@@ -418,9 +389,20 @@ class SessionMemoryBridge:
             }
 
             # Store in session memory as checkpoint reference
-            await update_session_memory(
-                user_id, {"checkpoint_references": [checkpoint_ref]}
+            svc = await self._get_service()
+            payload = ConversationMemoryRequest(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Store checkpoint reference",
+                    },
+                    {"role": "user", "content": str(checkpoint_ref)},
+                ],
+                session_id=session_id,
+                trip_id=None,
+                metadata={"type": "checkpoint_reference"},
             )
+            await svc.add_conversation_memory(user_id, payload)
 
             logger.debug(
                 "Stored checkpoint reference %s for user %s", checkpoint_id, user_id
@@ -436,7 +418,7 @@ _global_memory_bridge: SessionMemoryBridge | None = None
 
 def get_memory_bridge() -> SessionMemoryBridge:
     """Get the global session memory bridge instance."""
-    global _global_memory_bridge
+    global _global_memory_bridge  # pylint: disable=global-statement
     if _global_memory_bridge is None:
         _global_memory_bridge = SessionMemoryBridge()
     return _global_memory_bridge

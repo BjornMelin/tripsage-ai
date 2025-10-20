@@ -71,12 +71,5 @@ def configure_opentelemetry(
 
 
 def get_tracer(component_name: str) -> trace.Tracer:
-    """Get a tracer for a specific component.
-
-    Args:
-        component_name: Name of the component (usually __name__)
-
-    Returns:
-        A tracer instance for the component
-    """
+    """Get a tracer for a specific component."""
     return trace.get_tracer(component_name)
