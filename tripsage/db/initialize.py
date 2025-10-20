@@ -80,7 +80,7 @@ async def initialize_databases(
         return True
 
     except Exception as e:
-        logger.exception(f"Error initializing databases: {e}")
+        logger.exception(f"Error initializing databases")
         return False
 
 
@@ -118,7 +118,7 @@ async def verify_database_schema() -> dict[str, Any]:
         return results
 
     except Exception as e:
-        logger.exception(f"Error verifying database schema: {e}")
+        logger.exception(f"Error verifying database schema")
         return {"sql": {"error": str(e)}}
 
 
@@ -194,7 +194,7 @@ async def create_sample_data() -> bool:
         return True
 
     except Exception as e:
-        logger.exception(f"Error creating sample data: {e}")
+        logger.exception(f"Error creating sample data")
         return False
 
 

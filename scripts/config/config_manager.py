@@ -59,8 +59,8 @@ class ConfigManager:
 
             return True
 
-        except Exception as e:
-            logger.exception(f"❌ Validation error: {e}")
+        except Exception:
+            logger.exception("❌ Validation error")
             return False
 
     def generate_template(
@@ -84,8 +84,8 @@ class ConfigManager:
 
             return True
 
-        except Exception as e:
-            logger.exception(f"❌ Template generation failed: {e}")
+        except Exception:
+            logger.exception("❌ Template generation failed")
             return False
 
     def generate_secrets(self, count: int = 1, length: int = 32) -> bool:
@@ -104,8 +104,8 @@ class ConfigManager:
 
             return True
 
-        except Exception as e:
-            logger.exception(f"❌ Secret generation failed: {e}")
+        except Exception:
+            logger.exception("❌ Secret generation failed")
             return False
 
     def security_report(self, output_format: str = "json") -> bool:
@@ -141,7 +141,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.exception(f"❌ Security report generation failed: {e}")
+            logger.exception(f"❌ Security report generation failed")
             return False
 
     def _get_security_recommendations(self, settings: Settings) -> list[str]:
@@ -238,14 +238,14 @@ class ConfigManager:
             if issues:
                 logger.exception(f"❌ Configuration not suitable for {target_env}:")
                 for issue in issues:
-                    logger.exception(f"  - {issue}")
+                    logger.exception(f" - {issue}")
                 return False
 
             logger.info(f"✅ Configuration is suitable for {target_env}")
             return True
 
-        except Exception as e:
-            logger.exception(f"❌ Environment check failed: {e}")
+        except Exception:
+            logger.exception("❌ Environment check failed")
             return False
 
     def export_config(self, output_file: str, format_type: str = "env") -> bool:
@@ -280,8 +280,8 @@ class ConfigManager:
             logger.info(f"✅ Configuration exported to {output_path}")
             return True
 
-        except Exception as e:
-            logger.exception(f"❌ Export failed: {e}")
+        except Exception:
+            logger.exception("❌ Export failed")
             return False
 
 
@@ -378,8 +378,8 @@ Examples:
     except KeyboardInterrupt:
         logger.info("\n⏹️ Operation cancelled by user")
         success = False
-    except Exception as e:
-        logger.exception(f"❌ Unexpected error: {e}")
+    except Exception:
+        logger.exception("❌ Unexpected error")
         success = False
 
     sys.exit(0 if success else 1)

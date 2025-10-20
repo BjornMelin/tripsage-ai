@@ -65,7 +65,7 @@ class TriggerDeploymentService:
             return True
 
         except Exception as e:
-            logger.exception(f"Error checking prerequisites: {e}")
+            logger.exception(f"Error checking prerequisites")
             return False
 
     async def check_existing_triggers(self) -> dict:
@@ -98,7 +98,7 @@ class TriggerDeploymentService:
             return trigger_info
 
         except Exception as e:
-            logger.exception(f"Error checking existing triggers: {e}")
+            logger.exception(f"Error checking existing triggers")
             return {}
 
     async def check_existing_functions(self) -> list:
@@ -122,7 +122,7 @@ class TriggerDeploymentService:
             return function_names
 
         except Exception as e:
-            logger.exception(f"Error checking existing functions: {e}")
+            logger.exception(f"Error checking existing functions")
             return []
 
     async def deploy_trigger_migration(self) -> bool:
@@ -147,7 +147,7 @@ class TriggerDeploymentService:
             return True
 
         except Exception as e:
-            logger.exception(f"Error deploying trigger migration: {e}")
+            logger.exception(f"Error deploying trigger migration")
             return False
 
     async def validate_trigger_deployment(self) -> bool:
@@ -231,7 +231,7 @@ class TriggerDeploymentService:
             return True
 
         except Exception as e:
-            logger.exception(f"Error validating trigger deployment: {e}")
+            logger.exception(f"Error validating trigger deployment")
             return False
 
     async def test_trigger_functionality(self) -> bool:
@@ -307,7 +307,7 @@ class TriggerDeploymentService:
                 if "Cannot modify your own permission level" in str(e):
                     logger.info("Permission validation trigger working correctly")
                 else:
-                    logger.exception(f"Unexpected error in permission validation: {e}")
+                    logger.exception(f"Unexpected error in permission validation")
                     return False
 
             # Cleanup test data
@@ -322,7 +322,7 @@ class TriggerDeploymentService:
             return True
 
         except Exception as e:
-            logger.exception(f"Error testing trigger functionality: {e}")
+            logger.exception(f"Error testing trigger functionality")
             return False
 
     async def setup_pg_cron_jobs(self) -> bool:
@@ -384,13 +384,13 @@ class TriggerDeploymentService:
                     )
 
                 except Exception as e:
-                    logger.exception(f"Error scheduling job '{job_name}': {e}")
+                    logger.exception(f"Error scheduling job '{job_name}'")
 
             logger.info("pg_cron jobs setup completed")
             return True
 
         except Exception as e:
-            logger.exception(f"Error setting up pg_cron jobs: {e}")
+            logger.exception(f"Error setting up pg_cron jobs")
             return False
 
     async def generate_deployment_report(self) -> dict:
@@ -437,7 +437,7 @@ class TriggerDeploymentService:
             return report
 
         except Exception as e:
-            logger.exception(f"Error generating deployment report: {e}")
+            logger.exception(f"Error generating deployment report")
             return {"error": str(e)}
 
 
@@ -508,7 +508,7 @@ async def main():
         return True
 
     except Exception as e:
-        logger.exception(f"Deployment failed with error: {e}")
+        logger.exception(f"Deployment failed with error")
         return False
 
     finally:

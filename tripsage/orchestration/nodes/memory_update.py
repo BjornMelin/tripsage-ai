@@ -246,7 +246,7 @@ class MemoryUpdateNode(BaseAgentNode):
             logger.info(f"Updated knowledge graph with {len(insights)} insights")
 
         except Exception as e:
-            logger.exception(f"Failed to update knowledge graph: {e!s}")
+            logger.exception(f"Failed to update knowledge graph")
 
     async def _update_session_data(self, state: TravelPlanningState) -> None:
         """Update session data in Supabase.
@@ -273,4 +273,4 @@ class MemoryUpdateNode(BaseAgentNode):
             logger.info(f"Updated session data for {session_id}")
 
         except Exception as e:
-            logger.exception(f"Failed to update session data: {e!s}")
+            logger.exception(f"Failed to update session data")

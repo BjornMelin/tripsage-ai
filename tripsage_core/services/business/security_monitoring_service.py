@@ -755,7 +755,7 @@ class SecurityMonitoringService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in monitoring loop: {e}")
+                logger.exception(f"Error in monitoring loop")
                 await asyncio.sleep(60)
 
     async def _cleanup_old_data(self):

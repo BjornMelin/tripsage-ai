@@ -122,7 +122,7 @@ class ChatOrchestrationService:
             return session_data
 
         except Exception as e:
-            self.logger.exception(f"Failed to create chat session: {e}")
+            self.logger.exception(f"Failed to create chat session")
             raise ChatOrchestrationError(f"Failed to create chat session: {e!s}") from e
 
     @with_error_handling()
@@ -191,7 +191,7 @@ class ChatOrchestrationService:
             return message_data
 
         except Exception as e:
-            self.logger.exception(f"Failed to save message: {e}")
+            self.logger.exception(f"Failed to save message")
             raise ChatOrchestrationError(f"Failed to save message: {e!s}") from e
 
     @with_error_handling()
@@ -227,7 +227,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Flight search failed: {e}")
+            self.logger.exception(f"Flight search failed")
             raise ChatOrchestrationError(f"Flight search failed: {e!s}") from e
 
     @with_error_handling()
@@ -263,7 +263,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Accommodation search failed: {e}")
+            self.logger.exception(f"Accommodation search failed")
             raise ChatOrchestrationError(f"Accommodation search failed: {e!s}") from e
 
     @with_error_handling()
@@ -299,7 +299,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Location lookup failed: {e}")
+            self.logger.exception(f"Location lookup failed")
             raise ChatOrchestrationError(f"Location lookup failed: {e!s}") from e
 
     @with_error_handling()
@@ -367,7 +367,7 @@ class ChatOrchestrationService:
             }
 
         except Exception as e:
-            self.logger.exception(f"Parallel tool execution failed: {e}")
+            self.logger.exception(f"Parallel tool execution failed")
             raise ChatOrchestrationError(
                 f"Parallel tool execution failed: {e!s}"
             ) from e
@@ -406,7 +406,7 @@ class ChatOrchestrationService:
             return response
 
         except Exception as e:
-            self.logger.exception(f"Structured tool call failed: {e}")
+            self.logger.exception(f"Structured tool call failed")
             raise ChatOrchestrationError(f"Structured tool call failed: {e!s}") from e
 
     @with_error_handling()
@@ -441,7 +441,7 @@ class ChatOrchestrationService:
             return formatted
 
         except Exception as e:
-            self.logger.exception(f"Tool response formatting failed: {e}")
+            self.logger.exception(f"Tool response formatting failed")
             raise ChatOrchestrationError(
                 f"Tool response formatting failed: {e!s}"
             ) from e
@@ -584,7 +584,7 @@ class ChatOrchestrationService:
             return messages
 
         except Exception as e:
-            self.logger.exception(f"Failed to get chat history: {e}")
+            self.logger.exception(f"Failed to get chat history")
             raise ChatOrchestrationError(f"Failed to get chat history: {e!s}") from e
 
     @with_error_handling()
@@ -626,7 +626,7 @@ class ChatOrchestrationService:
                 raise ChatOrchestrationError(f"Session {session_id} not found")
 
         except Exception as e:
-            self.logger.exception(f"Failed to end chat session: {e}")
+            self.logger.exception(f"Failed to end chat session")
             raise ChatOrchestrationError(f"Failed to end chat session: {e!s}") from e
 
 

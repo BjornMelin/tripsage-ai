@@ -268,7 +268,7 @@ class ConfigurationAuditService:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in periodic scan: {e}")
+                logger.exception(f"Error in periodic scan")
 
     async def _scan_for_changes(self):
         """Scan for configuration changes."""

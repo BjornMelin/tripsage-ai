@@ -203,10 +203,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to create user",
-                extra={"email": str(user_data.email), "error": str(e)},
-            )
+            logger.exception( "Failed to create user", extra={"email": str(user_data.email), "error": str(e)},)
             raise
 
     async def get_user_by_id(self, user_id: str) -> UserResponse | None:
@@ -236,9 +233,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to get user by ID", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.exception( "Failed to get user by ID", extra={"user_id": user_id, "error": str(e)})
             return None
 
     async def get_user_by_email(self, email: str) -> UserResponse | None:
@@ -268,9 +263,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to get user by email", extra={"email": email, "error": str(e)}
-            )
+            logger.exception( "Failed to get user by email", extra={"email": email, "error": str(e)})
             return None
 
     async def get_user_by_username(self, username: str) -> UserResponse | None:
@@ -300,10 +293,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to get user by username",
-                extra={"username": username, "error": str(e)},
-            )
+            logger.exception( "Failed to get user by username", extra={"username": username, "error": str(e)},)
             return None
 
     async def update_user(
@@ -368,9 +358,7 @@ class UserService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to update user", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.exception( "Failed to update user", extra={"user_id": user_id, "error": str(e)})
             raise
 
     async def change_password(
@@ -415,10 +403,7 @@ class UserService:
         except (NotFoundError, AuthenticationError):
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to change password",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to change password", extra={"user_id": user_id, "error": str(e)},)
             raise
 
     async def verify_user_credentials(
@@ -466,10 +451,7 @@ class UserService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to verify credentials",
-                extra={"identifier": identifier, "error": str(e)},
-            )
+            logger.exception( "Failed to verify credentials", extra={"identifier": identifier, "error": str(e)},)
             return None
 
     async def deactivate_user(self, user_id: str) -> bool:
@@ -494,10 +476,7 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to deactivate user",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to deactivate user", extra={"user_id": user_id, "error": str(e)},)
             return False
 
     async def activate_user(self, user_id: str) -> bool:
@@ -522,9 +501,7 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to activate user", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.exception( "Failed to activate user", extra={"user_id": user_id, "error": str(e)})
             return False
 
     async def update_user_preferences(
@@ -576,10 +553,7 @@ class UserService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to update user preferences",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to update user preferences", extra={"user_id": user_id, "error": str(e)},)
             raise
 
     def _merge_preferences(

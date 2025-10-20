@@ -345,9 +345,7 @@ class DragonflyRateLimiter(RateLimiter):
             )
 
         except Exception as e:
-            logger.exception(
-                f"DragonflyDB rate limiting failed: {e}, falling back to in-memory"
-            )
+            logger.exception( f"DragonflyDB rate limiting failed, falling back to in-memory")
             return await self.fallback_limiter.check_rate_limit(
                 key, config, service, endpoint, cost
             )
@@ -597,7 +595,7 @@ class DragonflyRateLimiter(RateLimiter):
             return True
 
         except Exception as e:
-            logger.exception(f"Failed to reset rate limits for {key}: {e}")
+            logger.exception(f"Failed to reset rate limits for {key}")
             return False
 
 
@@ -637,9 +635,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         # Initialize monitoring service if not provided
         if not self.monitoring_service and use_dragonfly:
             try:
-                from tripsage_core.services.infrastructure import (
-                    key_monitoring_service,
-                )
+                from tripsage_core.services.infrastructure import key_monitoring_service
 
                 ApiKeyMonitoringService = key_monitoring_service.KeyMonitoringService
 

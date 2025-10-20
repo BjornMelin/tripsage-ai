@@ -168,7 +168,7 @@ class AccommodationAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.exception(f"Error extracting accommodation parameters: {e!s}")
+            logger.exception(f"Error extracting accommodation parameters")
             return None
 
     async def _search_accommodations(
@@ -197,7 +197,7 @@ class AccommodationAgentNode(BaseAgentNode):
             return result
 
         except Exception as e:
-            logger.exception(f"Accommodation search failed: {e!s}")
+            logger.exception(f"Accommodation search failed")
             return {"error": f"Accommodation search failed: {e!s}"}
 
     async def _generate_accommodation_response(
@@ -324,7 +324,7 @@ class AccommodationAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.exception(f"Error generating accommodation response: {e!s}")
+            logger.exception(f"Error generating accommodation response")
             content = (
                 "I'd be happy to help you find accommodations! I'll need "
                 "your destination, check-in/check-out dates, and preferences "

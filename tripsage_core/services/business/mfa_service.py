@@ -181,7 +181,7 @@ class MFAService:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to setup MFA for user {user_id}: {e}")
+            logger.exception(f"Failed to setup MFA for user {user_id}")
             raise CoreServiceError(
                 message="Failed to setup MFA",
                 code="MFA_SETUP_FAILED",
@@ -252,7 +252,7 @@ class MFAService:
         except (CoreValidationError, CoreServiceError):
             raise
         except Exception as e:
-            logger.exception(f"Failed to enroll MFA for user {request.user_id}: {e}")
+            logger.exception(f"Failed to enroll MFA for user {request.user_id}")
             raise CoreServiceError(
                 message="Failed to enroll MFA",
                 code="MFA_ENROLLMENT_FAILED",
@@ -323,7 +323,7 @@ class MFAService:
             return MFAVerificationResponse(valid=False, code_type="invalid")
 
         except Exception as e:
-            logger.exception(f"Failed to verify MFA for user {request.user_id}: {e}")
+            logger.exception(f"Failed to verify MFA for user {request.user_id}")
             raise CoreServiceError(
                 message="Failed to verify MFA",
                 code="MFA_VERIFICATION_FAILED",
@@ -360,7 +360,7 @@ class MFAService:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to get MFA status for user {user_id}: {e}")
+            logger.exception(f"Failed to get MFA status for user {user_id}")
             return MFAStatus(enabled=False)
 
     async def disable_mfa(self, user_id: str) -> bool:
@@ -381,7 +381,7 @@ class MFAService:
             return len(result) > 0
 
         except Exception as e:
-            logger.exception(f"Failed to disable MFA for user {user_id}: {e}")
+            logger.exception(f"Failed to disable MFA for user {user_id}")
             return False
 
     async def regenerate_backup_codes(self, user_id: str) -> list[str]:
@@ -427,9 +427,7 @@ class MFAService:
         except CoreServiceError:
             raise
         except Exception as e:
-            logger.exception(
-                f"Failed to regenerate backup codes for user {user_id}: {e}"
-            )
+            logger.exception( f"Failed to regenerate backup codes for user {user_id}")
             raise CoreServiceError(
                 message="Failed to regenerate backup codes",
                 code="BACKUP_CODES_REGENERATION_FAILED",

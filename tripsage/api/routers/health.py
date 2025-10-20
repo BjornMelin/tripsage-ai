@@ -14,11 +14,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from tripsage.api.core.dependencies import (
-    CacheDep,
-    DatabaseDep,
-    SettingsDep,
-)
+from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
 
 
 logger = logging.getLogger(__name__)

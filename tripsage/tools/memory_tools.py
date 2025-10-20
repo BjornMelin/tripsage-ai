@@ -147,7 +147,7 @@ async def search_user_memories(
         return results
 
     except Exception as e:
-        logger.exception(f"Error searching user memories: {e!s}")
+        logger.exception(f"Error searching user memories")
         return []
 
 
@@ -220,7 +220,7 @@ async def update_user_preferences(
         }
 
     except Exception as e:
-        logger.exception(f"Error updating user preferences: {e!s}")
+        logger.exception(f"Error updating user preferences")
         return {"status": "error", "error": str(e)}
 
 
@@ -293,7 +293,7 @@ async def save_session_summary(
         }
 
     except Exception as e:
-        logger.exception(f"Error saving session summary: {e!s}")
+        logger.exception(f"Error saving session summary")
         return {"status": "error", "error": str(e)}
 
 
@@ -336,7 +336,7 @@ async def get_travel_insights(
         return {"status": "success", "insights": insights}
 
     except Exception as e:
-        logger.exception(f"Error getting travel insights: {e!s}")
+        logger.exception(f"Error getting travel insights")
         return {"status": "error", "error": str(e), "insights": {}}
 
 
@@ -378,7 +378,7 @@ async def find_similar_travelers(
         }
 
     except Exception as e:
-        logger.exception(f"Error finding similar travelers: {e!s}")
+        logger.exception(f"Error finding similar travelers")
         return {"status": "error", "error": str(e), "similar_travelers": []}
 
 
@@ -423,7 +423,7 @@ async def get_destination_memories(
         }
 
     except Exception as e:
-        logger.exception(f"Error getting destination memories: {e!s}")
+        logger.exception(f"Error getting destination memories")
         return {"status": "error", "error": str(e), "memories": []}
 
 
@@ -477,7 +477,7 @@ async def track_user_activity(
         }
 
     except Exception as e:
-        logger.exception(f"Error tracking user activity: {e!s}")
+        logger.exception(f"Error tracking user activity")
         return {"status": "error", "error": str(e)}
 
 
@@ -504,7 +504,7 @@ async def memory_health_check(service_registry: ServiceRegistry) -> dict[str, An
         }
 
     except Exception as e:
-        logger.exception(f"Memory health check failed: {e!s}")
+        logger.exception(f"Memory health check failed")
         return {
             "status": "unhealthy",
             "service": "Mem0 Memory Service",

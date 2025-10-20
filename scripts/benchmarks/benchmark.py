@@ -78,8 +78,8 @@ class BenchmarkRunner:
             logger.info(f"Quick test completed. Report: {report_path}")
             return report_data
 
-        except Exception as e:
-            logger.exception(f"Quick test failed: {e}")
+        except Exception:
+            logger.exception("Quick test failed")
             raise
 
     async def run_database_only(self) -> dict[str, Any]:
@@ -113,8 +113,8 @@ class BenchmarkRunner:
             logger.info(f"Database-only test completed. Report: {report_path}")
             return report_data
 
-        except Exception as e:
-            logger.exception(f"Database-only test failed: {e}")
+        except Exception:
+            logger.exception("Database-only test failed")
             raise
 
     async def run_vector_only(self) -> dict[str, Any]:
@@ -148,8 +148,8 @@ class BenchmarkRunner:
             logger.info(f"Vector-only test completed. Report: {report_path}")
             return report_data
 
-        except Exception as e:
-            logger.exception(f"Vector-only test failed: {e}")
+        except Exception:
+            logger.exception("Vector-only test failed")
             raise
 
     async def run_full_suite(self) -> dict[str, Any]:
@@ -200,8 +200,8 @@ class BenchmarkRunner:
             logger.info(f"Full suite completed. Report: {report_path}")
             return report_data
 
-        except Exception as e:
-            logger.exception(f"Full suite failed: {e}")
+        except Exception:
+            logger.exception("Full suite failed")
             raise
 
     async def _run_core_scenarios(

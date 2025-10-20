@@ -353,7 +353,7 @@ class BaseAgent:
             logger.info("Session initialized with memory data")
             return self.session_data
         except Exception as e:
-            logger.exception("Error initializing session: %s", str(e))
+            logger.exception("Error initializing session: %s")
             log_exception(e)
             return {}
 
@@ -384,7 +384,7 @@ class BaseAgent:
                 )
             logger.info("Session summary saved")
         except Exception as e:
-            logger.exception("Error saving session summary: %s", str(e))
+            logger.exception("Error saving session summary: %s")
             log_exception(e)
 
     async def run(
@@ -516,7 +516,7 @@ class BaseAgent:
             return response
 
         except Exception as e:
-            logger.exception("Error running agent: %s", str(e))
+            logger.exception("Error running agent: %s")
             log_exception(e)
 
             error_message = "An error occurred while processing your request."

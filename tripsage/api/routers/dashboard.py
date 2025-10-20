@@ -18,22 +18,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
-from tripsage.api.core.dependencies import (
-    CacheDep,
-    DatabaseDep,
-    SettingsDep,
-)
+from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.exceptions.exceptions import (
-    CoreAuthenticationError,
-)
-from tripsage_core.services.business.api_key_service import (
-    ServiceHealthStatus,
-)
+from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.services.business.api_key_service import ServiceHealthStatus
 from tripsage_core.services.business.dashboard_service import (
-    ApiKeyValidator,  # Compatibility wrapper for validation
-    DashboardService,  # Production-ready dashboard service
-)
+    ApiKeyValidator,
+    DashboardService,
+)  # Compatibility wrapper for validation  # Production-ready dashboard service
 
 
 logger = logging.getLogger(__name__)
@@ -214,7 +206,7 @@ async def get_system_overview(
         )
 
     except Exception as e:
-        logger.exception(f"Failed to get system overview: {e}")
+        logger.exception(f"Failed to get system overview")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve system overview: {e!s}",
@@ -278,7 +270,7 @@ async def get_services_status(
         return services_status
 
     except Exception as e:
-        logger.exception(f"Failed to get services status: {e}")
+        logger.exception(f"Failed to get services status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve services status: {e!s}",
@@ -357,7 +349,7 @@ async def get_usage_metrics(
         )
 
     except Exception as e:
-        logger.exception(f"Failed to get usage metrics: {e}")
+        logger.exception(f"Failed to get usage metrics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve usage metrics: {e!s}",
@@ -437,7 +429,7 @@ async def get_rate_limits_status(
         return rate_limits
 
     except Exception as e:
-        logger.exception(f"Failed to get rate limits status: {e}")
+        logger.exception(f"Failed to get rate limits status")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve rate limits status: {e!s}",
@@ -509,7 +501,7 @@ async def get_alerts(
         return alerts[:limit]
 
     except Exception as e:
-        logger.exception(f"Failed to get alerts: {e}")
+        logger.exception(f"Failed to get alerts")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve alerts: {e!s}",
@@ -555,7 +547,7 @@ async def acknowledge_alert(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to acknowledge alert {alert_id}: {e}")
+        logger.exception(f"Failed to acknowledge alert {alert_id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to acknowledge alert: {e!s}",
@@ -601,7 +593,7 @@ async def dismiss_alert(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to dismiss alert {alert_id}: {e}")
+        logger.exception(f"Failed to dismiss alert {alert_id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to dismiss alert: {e!s}",
@@ -667,7 +659,7 @@ async def get_user_activity(
         return user_activities
 
     except Exception as e:
-        logger.exception(f"Failed to get user activity: {e}")
+        logger.exception(f"Failed to get user activity")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve user activity: {e!s}",
@@ -742,7 +734,7 @@ async def get_trend_data(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to get trend data for {metric_type}: {e}")
+        logger.exception(f"Failed to get trend data for {metric_type}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve trend data: {e!s}",
@@ -849,7 +841,7 @@ async def get_analytics_summary(
         return summary
 
     except Exception as e:
-        logger.exception(f"Failed to get analytics summary: {e}")
+        logger.exception(f"Failed to get analytics summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve analytics summary: {e!s}",

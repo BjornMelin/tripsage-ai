@@ -10,11 +10,7 @@ from typing import Any
 from pydantic import Field
 
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
-from tripsage_core.models.domain.memory import (
-    Entity,
-    Relation,
-    SessionMemory,
-)
+from tripsage_core.models.domain.memory import Entity, Relation, SessionMemory
 
 
 # Entity and Relation moved to tripsage_core.models.domain.memory

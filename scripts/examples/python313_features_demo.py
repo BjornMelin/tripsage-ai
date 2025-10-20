@@ -169,7 +169,7 @@ async def demonstrate_enhanced_error_handling():
         # Python 3.11+ exception groups - works great with TaskGroup
         logger.exception(f"TaskGroup caught {len(eg.exceptions)} exceptions:")
         for exc in eg.exceptions:
-            logger.exception(f"  - {type(exc).__name__}: {exc}")
+            logger.exception(f" - {type(exc).__name__}")
 
     # Demonstrate that partial results can still be processed
     results = {}
@@ -189,7 +189,7 @@ async def demonstrate_enhanced_error_handling():
         logger.info(f"✅ Successfully processed {len(results)} safe tasks")
 
     except Exception as e:
-        logger.exception(f"Unexpected error: {e}")
+        logger.exception(f"Unexpected error")
 
     return results
 
@@ -316,7 +316,7 @@ async def main():
         logger.info("✨ All demonstrations completed successfully!")
 
     except Exception as e:
-        logger.exception(f"Demo failed: {e}")
+        logger.exception(f"Demo failed")
         raise
 
 

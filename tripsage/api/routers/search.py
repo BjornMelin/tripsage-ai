@@ -88,13 +88,13 @@ async def unified_search(
         return result
 
     except UnifiedSearchServiceError as e:
-        logger.exception(f"Unified search service error: {e}")
+        logger.exception(f"Unified search service error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Search failed: {e.message}",
         ) from e
     except Exception as e:
-        logger.exception(f"Unexpected error in unified search: {e}")
+        logger.exception(f"Unexpected error in unified search")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while performing the search",
@@ -153,13 +153,13 @@ async def search_suggestions(
         return suggestions
 
     except UnifiedSearchServiceError as e:
-        logger.exception(f"Search suggestions service error: {e}")
+        logger.exception(f"Search suggestions service error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get suggestions: {e.message}",
         ) from e
     except Exception as e:
-        logger.exception(f"Unexpected error getting search suggestions: {e}")
+        logger.exception(f"Unexpected error getting search suggestions")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while generating suggestions",
@@ -190,7 +190,7 @@ async def get_recent_searches(
         return searches
 
     except Exception as e:
-        logger.exception(f"Error retrieving search history: {e}")
+        logger.exception(f"Error retrieving search history")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve search history",
@@ -221,7 +221,7 @@ async def save_search(
         }
 
     except Exception as e:
-        logger.exception(f"Error saving search: {e}")
+        logger.exception(f"Error saving search")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to save search",
@@ -256,7 +256,7 @@ async def delete_saved_search(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Error deleting saved search: {e}")
+        logger.exception(f"Error deleting saved search")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete saved search",
@@ -356,7 +356,7 @@ async def bulk_search(
         return valid_results
 
     except Exception as e:
-        logger.exception(f"Bulk search failed: {e}")
+        logger.exception(f"Bulk search failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Bulk search operation failed",
@@ -415,7 +415,7 @@ async def get_search_analytics(
         }
 
     except Exception as e:
-        logger.exception(f"Failed to get search analytics: {e}")
+        logger.exception(f"Failed to get search analytics")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve search analytics",

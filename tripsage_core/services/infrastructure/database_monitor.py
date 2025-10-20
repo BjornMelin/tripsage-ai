@@ -181,7 +181,7 @@ class DatabaseConnectionMonitor:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(f"Error in monitor loop: {e}")
+                logger.exception(f"Error in monitor loop")
                 await asyncio.sleep(10.0)  # Longer sleep on error
 
     async def _perform_health_check(self) -> HealthCheckResult:
@@ -225,7 +225,7 @@ class DatabaseConnectionMonitor:
                 details={"error": str(e)},
             )
 
-            logger.exception(f"Health check failed: {e}")
+            logger.exception(f"Health check failed")
             await self._handle_critical_health(result)
 
         # Update tracking
@@ -332,7 +332,7 @@ class DatabaseConnectionMonitor:
             await self._check_rate_limits()
 
         except Exception as e:
-            logger.exception(f"Security check error: {e}")
+            logger.exception(f"Security check error")
 
     async def _check_connection_patterns(self):
         """Check for suspicious connection patterns."""
@@ -430,7 +430,7 @@ class DatabaseConnectionMonitor:
                     return
 
             except Exception as e:
-                logger.exception(f"Recovery attempt {attempt + 1} failed: {e}")
+                logger.exception(f"Recovery attempt {attempt + 1} failed")
 
                 if attempt == self._max_recovery_attempts - 1:
                     # Final attempt failed
@@ -465,7 +465,7 @@ class DatabaseConnectionMonitor:
             try:
                 callback(alert)
             except Exception as e:
-                logger.exception(f"Alert callback error: {e}")
+                logger.exception(f"Alert callback error")
 
     def add_alert_callback(self, callback: Callable[[SecurityAlert], None]):
         """Add alert callback function.

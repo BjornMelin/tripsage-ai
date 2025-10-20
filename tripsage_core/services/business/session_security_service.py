@@ -353,10 +353,7 @@ class SessionSecurityService:
             return session
 
         except Exception as e:
-            logger.exception(
-                "Failed to create session",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to create session", extra={"user_id": user_id, "error": str(e)},)
             raise CoreSecurityError(
                 message="Failed to create session",
                 code="SESSION_CREATION_FAILED",
@@ -435,10 +432,7 @@ class SessionSecurityService:
             return session
 
         except Exception as e:
-            logger.exception(
-                "Session validation failed",
-                extra={"error": str(e)},
-            )
+            logger.exception( "Session validation failed", extra={"error": str(e)},)
             return None
 
     async def terminate_session(
@@ -495,10 +489,7 @@ class SessionSecurityService:
             return bool(result)
 
         except Exception as e:
-            logger.exception(
-                "Failed to terminate session",
-                extra={"session_id": session_id, "error": str(e)},
-            )
+            logger.exception( "Failed to terminate session", extra={"session_id": session_id, "error": str(e)},)
             return False
 
     async def get_active_sessions(self, user_id: str) -> list[UserSession]:
@@ -533,10 +524,7 @@ class SessionSecurityService:
             return sessions
 
         except Exception as e:
-            logger.exception(
-                "Failed to get active sessions",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to get active sessions", extra={"user_id": user_id, "error": str(e)},)
             return []
 
     async def log_security_event(
@@ -597,10 +585,7 @@ class SessionSecurityService:
             return event
 
         except Exception as e:
-            logger.exception(
-                "Failed to log security event",
-                extra={"event_type": event_type, "error": str(e)},
-            )
+            logger.exception( "Failed to log security event", extra={"event_type": event_type, "error": str(e)},)
             # Don't raise exception for logging failures
             return event
 
@@ -694,10 +679,7 @@ class SessionSecurityService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to get security metrics",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to get security metrics", extra={"user_id": user_id, "error": str(e)},)
             return SessionSecurityMetrics(user_id=user_id)
 
     def _calculate_login_risk_score(self, user_id: str, ip_address: str | None) -> int:
@@ -819,15 +801,7 @@ class SessionSecurityService:
 
         except Exception as e:
             # Handle any unexpected errors gracefully
-            logger.exception(
-                "Unexpected error during IP validation",
-                extra={
-                    "ip_address": str(ip_address)[:100] if ip_address else "None",
-                    "user_id": user_id,
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
-            )
+            logger.exception( "Unexpected error during IP validation", extra={ "ip_address": str(ip_address)[:100] if ip_address else "None", "user_id": user_id, "error": str(e), "error_type": type(e).__name__, },)
             return 35  # Higher risk for unexpected errors
 
         return 0  # Default to no additional risk
@@ -919,7 +893,7 @@ class SessionSecurityService:
             return cleanup_count
 
         except Exception as e:
-            logger.exception(f"Failed to cleanup expired sessions: {e}")
+            logger.exception(f"Failed to cleanup expired sessions")
             return 0
 
 

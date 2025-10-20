@@ -179,15 +179,7 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.exception(
-                        f"Unexpected error in {operation_name}: {e!s}",
-                        extra={
-                            "operation": operation_name,
-                            "error_type": type(e).__name__,
-                            "execution_time_ms": round(execution_time * 1000, 2),
-                            **extra_context,
-                        },
-                    )
+                    logger.exception( f"Unexpected error in {operation_name}", extra={ "operation": operation_name, "error_type": type(e).__name__, "execution_time_ms": round(execution_time * 1000, 2), **extra_context, },)
                     log_exception(e, operation_name)
 
                     # Wrap unexpected errors in CoreServiceError
@@ -303,15 +295,7 @@ def with_error_handling(
                 except Exception as e:
                     # Handle unexpected errors
                     execution_time = time.time() - start_time
-                    logger.exception(
-                        f"Unexpected error in {operation_name}: {e!s}",
-                        extra={
-                            "operation": operation_name,
-                            "error_type": type(e).__name__,
-                            "execution_time_ms": round(execution_time * 1000, 2),
-                            **extra_context,
-                        },
-                    )
+                    logger.exception( f"Unexpected error in {operation_name}", extra={ "operation": operation_name, "error_type": type(e).__name__, "execution_time_ms": round(execution_time * 1000, 2), **extra_context, },)
                     log_exception(e, operation_name)
 
                     # Wrap unexpected errors in CoreServiceError
@@ -388,7 +372,7 @@ def ensure_memory_client_initialized(func: F) -> F:
         except Exception as e:
             # Get function name for better error logging
             func_name = func.__name__
-            logger.exception(f"Error in {func_name}: {e!s}")
+            logger.exception(f"Error in {func_name}")
             log_exception(e)
 
             # Return error response in the expected format for agent tools
@@ -442,9 +426,7 @@ def retry_on_failure(
                             await asyncio.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.exception(
-                                f"{func.__name__} failed after {max_attempts} attempts"
-                            )
+                            logger.exception( f"{func.__name__} failed after {max_attempts} attempts")
                             raise
 
                 if last_exception:
@@ -473,9 +455,7 @@ def retry_on_failure(
                             time.sleep(current_delay)
                             current_delay *= backoff_factor
                         else:
-                            logger.exception(
-                                f"{func.__name__} failed after {max_attempts} attempts"
-                            )
+                            logger.exception( f"{func.__name__} failed after {max_attempts} attempts")
                             raise
 
                 if last_exception:

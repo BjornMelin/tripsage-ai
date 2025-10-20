@@ -121,8 +121,8 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
                 f"trips for user {user_id}"
             )
 
-        except Exception as e:
-            logger.exception(f"Error loading user context for {user_id}: {e!s}")
+        except Exception:
+            logger.exception("Error loading user context for %s", user_id)
             # Continue with default session data
 
     return session_data
@@ -180,10 +180,10 @@ async def update_session_memory(
                 user_id, updates["conversation_context"], result, memory_service
             )
 
-    except Exception as e:
-        logger.exception(f"Error updating session memory: {e!s}")
+    except Exception as exc:
+        logger.exception("Error updating session memory for %s", user_id)
         result["success"] = False
-        result["errors"].append(str(e))
+        result["errors"].append(str(exc))
 
     # Check if any errors occurred in helper functions
     if result["errors"]:
@@ -257,9 +257,9 @@ async def store_session_summary(
                 "memories_created": 0,
             }
 
-    except Exception as e:
-        logger.exception(f"Error storing session summary: {e!s}")
-        return {"status": "error", "error": str(e), "memories_created": 0}
+    except Exception as exc:
+        logger.exception( "Error storing session summary for user %s, session %s", user_id, session_id,)
+        return {"status": "error", "error": str(exc), "memories_created": 0}
 
 
 # Private helper functions
@@ -294,9 +294,9 @@ async def _update_user_preferences_memory(
         else:
             result["errors"].append("Failed to update preferences")
 
-    except Exception as e:
-        logger.exception(f"Error updating preferences: {e!s}")
-        result["errors"].append(f"Preference processing error: {e!s}")
+    except Exception as exc:
+        logger.exception("Error updating preferences for %s", user_id)
+        result["errors"].append(f"Preference processing error: {exc!s}")
 
 
 async def _process_learned_facts(
@@ -324,9 +324,9 @@ async def _process_learned_facts(
 
         result["facts_processed"] = len(facts)
 
-    except Exception as e:
-        logger.exception(f"Error processing learned facts: {e!s}")
-        result["errors"].append(f"Facts processing error: {e!s}")
+    except Exception as exc:
+        logger.exception("Error processing learned facts for %s", user_id)
+        result["errors"].append(f"Facts processing error: {exc!s}")
 
 
 async def _process_conversation_context(
@@ -365,9 +365,9 @@ async def _process_conversation_context(
             if memory_id:
                 result["memories_created"] += 1
 
-    except Exception as e:
-        logger.exception(f"Error processing conversation context: {e!s}")
-        result["errors"].append(f"Context processing error: {e!s}")
+    except Exception as exc:
+        logger.exception("Error processing conversation context for %s", user_id)
+        result["errors"].append(f"Context processing error: {exc!s}")
 
 
 # Simple SessionMemory utility class for API dependencies

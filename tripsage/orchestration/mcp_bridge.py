@@ -61,7 +61,7 @@ class LangGraphMCPBridge:
                 f"Bridge initialized with {len(self._tool_metadata)} Airbnb tools"
             )
         except Exception as e:
-            logger.exception(f"Failed to initialize Airbnb MCP bridge: {e}")
+            logger.exception(f"Failed to initialize Airbnb MCP bridge")
             raise
 
     async def _load_airbnb_tools(self) -> None:
@@ -213,7 +213,7 @@ class LangGraphMCPBridge:
                     return str(result)
 
             except Exception as e:
-                logger.exception(f"Airbnb tool {metadata.name} failed: {e}")
+                logger.exception(f"Airbnb tool {metadata.name} failed")
                 return f"Tool execution failed: {e!s}"
 
         # Create LangGraph tool with proper metadata

@@ -209,7 +209,7 @@ class CachedWebSearchTool(WebSearchTool):
                 return result
 
         except Exception as e:
-            logger.exception(f"Error in CachedWebSearchTool._run: {e!s}")
+            logger.exception(f"Error in CachedWebSearchTool._run")
             log_exception(e)
             # Return error information in the format expected by the agents SDK
             return {
@@ -332,7 +332,7 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         logger.info(f"Invalidated {count} cache entries for query: {query}")
         return count
     except Exception as e:
-        logger.exception(f"Error invalidating web cache for query '{query}': {e!s}")
+        logger.exception(f"Error invalidating web cache for query '{query}'")
         return 0
 
 
@@ -392,7 +392,7 @@ async def batch_web_search(
 
         return final_results
     except Exception as e:
-        logger.exception(f"Error in batch_web_search: {e!s}")
+        logger.exception(f"Error in batch_web_search")
         log_exception(e)
         return [
             {"status": "error", "error": {"message": str(e)}, "search_results": []}

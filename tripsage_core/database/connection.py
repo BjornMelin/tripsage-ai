@@ -243,7 +243,7 @@ async def get_database_session() -> AsyncGenerator[AsyncSession]:
             yield session
         except Exception as e:
             await session.rollback()
-            logger.exception(f"Database session error, rolling back: {e}")
+            logger.exception(f"Database session error, rolling back")
             raise
         finally:
             await session.close()
@@ -303,7 +303,7 @@ async def test_connection() -> bool:
             return True
 
     except Exception as e:
-        logger.exception(f"Database connection test failed: {e}")
+        logger.exception(f"Database connection test failed")
         return False
 
 

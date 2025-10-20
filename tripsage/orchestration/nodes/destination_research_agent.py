@@ -90,9 +90,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             )
 
         except Exception as e:
-            logger.exception(
-                f"Failed to load database configuration, using fallback: {e}"
-            )
+            logger.exception( f"Failed to load database configuration, using fallback")
 
             # Fallback to settings-based configuration
             settings = get_settings()
@@ -239,7 +237,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.exception(f"Error extracting research parameters: {e!s}")
+            logger.exception(f"Error extracting research parameters")
             return None
 
     async def _research_destination(
@@ -309,7 +307,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             return research_results
 
         except Exception as e:
-            logger.exception(f"Destination research failed for {destination}: {e!s}")
+            logger.exception(f"Destination research failed for {destination}")
             return {"error": f"Research failed: {e!s}", "destination": destination}
 
     async def _research_overview(self, destination: str) -> dict[str, Any]:
@@ -327,7 +325,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Overview research failed: {e!s}")
+            logger.exception(f"Overview research failed")
             return {"error": str(e)}
 
     async def _research_attractions(self, destination: str, interests: list) -> list:
@@ -364,7 +362,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     }
                 ]
         except Exception as e:
-            logger.exception(f"Attractions research failed: {e!s}")
+            logger.exception(f"Attractions research failed")
             return [{"error": str(e)}]
 
     async def _research_activities(self, destination: str, interests: list) -> list:
@@ -405,7 +403,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     }
                 ]
         except Exception as e:
-            logger.exception(f"Activities research failed: {e!s}")
+            logger.exception(f"Activities research failed")
             return [{"error": str(e)}]
 
     async def _research_practical_info(self, destination: str) -> dict[str, Any]:
@@ -429,7 +427,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Practical info research failed: {e!s}")
+            logger.exception(f"Practical info research failed")
             return {"error": str(e)}
 
     async def _research_cultural_info(self, destination: str) -> dict[str, Any]:
@@ -452,7 +450,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Cultural info research failed: {e!s}")
+            logger.exception(f"Cultural info research failed")
             return {"error": str(e)}
 
     async def _research_weather_info(
@@ -473,7 +471,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Weather info research failed: {e!s}")
+            logger.exception(f"Weather info research failed")
             return {"error": str(e)}
 
     async def _get_location_data(self, destination: str) -> dict[str, Any]:
@@ -491,7 +489,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.exception(f"Location data retrieval failed: {e!s}")
+            logger.exception(f"Location data retrieval failed")
             return {"error": str(e)}
 
     async def _generate_research_response(
@@ -636,7 +634,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.exception(f"Error generating research response: {e!s}")
+            logger.exception(f"Error generating research response")
             content = (
                 "I'd be happy to help you research destinations! Please let me know "
                 "which destination you're interested in, and I can provide information "

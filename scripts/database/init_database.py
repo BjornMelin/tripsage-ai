@@ -45,7 +45,7 @@ async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool
         return False
 
     except Exception as e:
-        logger.exception(f"SQL connection check failed: {e}")
+        logger.exception(f"SQL connection check failed")
         return False
 
 
@@ -110,7 +110,7 @@ async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
         return True
 
     except Exception as e:
-        logger.exception(f"SQL initialization failed: {e}")
+        logger.exception(f"SQL initialization failed")
         return False
 
 
@@ -141,7 +141,7 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
         return True
 
     except Exception as e:
-        logger.exception(f"Sample data loading failed: {e}")
+        logger.exception(f"Sample data loading failed")
         return False
 
 
@@ -188,7 +188,7 @@ async def main():
         return True
 
     except Exception as e:
-        logger.exception(f"Database initialization failed: {e}")
+        logger.exception(f"Database initialization failed")
         return False
 
     finally:

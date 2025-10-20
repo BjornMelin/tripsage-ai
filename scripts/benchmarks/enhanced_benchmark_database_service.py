@@ -199,9 +199,9 @@ class EnhancedDatabaseBenchmark:
             yield metrics
             metrics.success = True
 
-        except Exception as e:
-            metrics.error_message = str(e)
-            logger.exception(f"Benchmark {operation_name} failed: {e}")
+        except Exception as exc:
+            metrics.error_message = str(exc)
+            logger.exception("Benchmark %s failed", operation_name)
 
         finally:
             # Calculate final metrics
@@ -940,10 +940,7 @@ Examples:
                 r for r in benchmark.regressions if r.severity == "critical"
             ]
             if critical_regressions:
-                logger.exception(
-                    f"Critical performance regressions detected: "
-                    f"{len(critical_regressions)}"
-                )
+                logger.exception( f"Critical performance regressions detected: " f"{len(critical_regressions)}")
                 sys.exit(2)
             else:
                 logger.warning(
@@ -953,8 +950,8 @@ Examples:
 
         logger.info("All benchmarks completed successfully with no regressions")
 
-    except Exception as e:
-        logger.exception(f"Benchmark failed: {e}")
+    except Exception:
+        logger.exception("Benchmark failed")
         sys.exit(3)
 
 

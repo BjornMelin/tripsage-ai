@@ -493,14 +493,7 @@ class ItineraryService:
             return itinerary
 
         except Exception as e:
-            logger.exception(
-                "Failed to create itinerary",
-                extra={
-                    "user_id": user_id,
-                    "title": create_request.title,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to create itinerary", extra={ "user_id": user_id, "title": create_request.title, "error": str(e), },)
             raise ServiceError(f"Failed to create itinerary: {e!s}") from e
 
     async def get_itinerary(
@@ -543,14 +536,7 @@ class ItineraryService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to get itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to get itinerary", extra={ "itinerary_id": itinerary_id, "user_id": user_id, "error": str(e), },)
             return None
 
     async def update_itinerary(
@@ -589,14 +575,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError, ValidationError):
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to update itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to update itinerary", extra={ "itinerary_id": itinerary_id, "user_id": user_id, "error": str(e), },)
             raise ServiceError(f"Failed to update itinerary: {e!s}") from e
 
     async def _validate_itinerary_access(
@@ -770,14 +749,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError, ValidationError):
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to add item to itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to add item to itinerary", extra={ "itinerary_id": itinerary_id, "user_id": user_id, "error": str(e), },)
             raise ServiceError(f"Failed to add item: {e!s}") from e
 
     async def detect_conflicts(
@@ -827,10 +799,7 @@ class ItineraryService:
             return conflicts
 
         except Exception as e:
-            logger.exception(
-                "Failed to detect conflicts",
-                extra={"itinerary_id": itinerary_id, "error": str(e)},
-            )
+            logger.exception( "Failed to detect conflicts", extra={"itinerary_id": itinerary_id, "error": str(e)},)
             return []
 
     async def optimize_itinerary(
@@ -909,14 +878,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to optimize itinerary",
-                extra={
-                    "itinerary_id": optimize_request.itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to optimize itinerary", extra={ "itinerary_id": optimize_request.itinerary_id, "user_id": user_id, "error": str(e), },)
             raise ServiceError(f"Failed to optimize itinerary: {e!s}") from e
 
     async def search_itineraries(
@@ -966,10 +928,7 @@ class ItineraryService:
             return itineraries
 
         except Exception as e:
-            logger.exception(
-                "Failed to search itineraries",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to search itineraries", extra={"user_id": user_id, "error": str(e)},)
             return []
 
     async def delete_itinerary(self, itinerary_id: str, user_id: str) -> bool:
@@ -1008,14 +967,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to delete itinerary",
-                extra={
-                    "itinerary_id": itinerary_id,
-                    "user_id": user_id,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to delete itinerary", extra={ "itinerary_id": itinerary_id, "user_id": user_id, "error": str(e), },)
             return False
 
     async def _apply_template(
@@ -1321,10 +1273,7 @@ class ItineraryService:
             await self.db.store_itinerary(itinerary_data)
 
         except Exception as e:
-            logger.exception(
-                "Failed to store itinerary",
-                extra={"itinerary_id": itinerary.id, "error": str(e)},
-            )
+            logger.exception( "Failed to store itinerary", extra={"itinerary_id": itinerary.id, "error": str(e)},)
             raise
 
 

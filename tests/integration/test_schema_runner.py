@@ -99,7 +99,7 @@ class SchemaTestRunner:
             }
 
         except Exception as e:
-            self.logger.exception(f"Test execution failed: {e!s}")
+            self.logger.exception(f"Test execution failed")
             return {
                 "success": False,
                 "error": str(e),

@@ -441,10 +441,7 @@ class DestinationService:
                     )
                     destinations.extend(external_destinations)
                 except Exception as e:
-                    logger.exception(
-                        "External destination search failed",
-                        extra={"error": str(e), "search_id": search_id},
-                    )
+                    logger.exception( "External destination search failed", extra={"error": str(e), "search_id": search_id},)
 
             # Fallback to mock destinations
             if not destinations:
@@ -495,10 +492,7 @@ class DestinationService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Destination search failed",
-                extra={"error": str(e), "query": search_request.query},
-            )
+            logger.exception( "Destination search failed", extra={"error": str(e), "query": search_request.query},)
             raise ServiceError(f"Destination search failed: {e!s}") from e
 
     async def get_destination_details(
@@ -571,10 +565,7 @@ class DestinationService:
             return destination
 
         except Exception as e:
-            logger.exception(
-                "Failed to get destination details",
-                extra={"destination_id": destination_id, "error": str(e)},
-            )
+            logger.exception( "Failed to get destination details", extra={"destination_id": destination_id, "error": str(e)},)
             return None
 
     async def save_destination(
@@ -633,14 +624,7 @@ class DestinationService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.exception(
-                "Failed to save destination",
-                extra={
-                    "user_id": user_id,
-                    "destination_id": save_request.destination_id,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Failed to save destination", extra={ "user_id": user_id, "destination_id": save_request.destination_id, "error": str(e), },)
             raise ServiceError(f"Failed to save destination: {e!s}") from e
 
     async def get_saved_destinations(
@@ -670,10 +654,7 @@ class DestinationService:
             return saved_destinations
 
         except Exception as e:
-            logger.exception(
-                "Failed to get saved destinations",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to get saved destinations", extra={"user_id": user_id, "error": str(e)},)
             return []
 
     async def get_destination_recommendations(
@@ -709,10 +690,7 @@ class DestinationService:
             return recommendations
 
         except Exception as e:
-            logger.exception(
-                "Failed to generate recommendations",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to generate recommendations", extra={"user_id": user_id, "error": str(e)},)
             return []
 
     async def _search_external_destinations(
@@ -743,9 +721,7 @@ class DestinationService:
             return converted_destinations
 
         except Exception as e:
-            logger.exception(
-                "External destination search failed", extra={"error": str(e)}
-            )
+            logger.exception( "External destination search failed", extra={"error": str(e)})
             return []
 
     async def _convert_external_destination(self, external_dest) -> Destination:
@@ -1189,10 +1165,7 @@ class DestinationService:
             await self.db.store_saved_destination(saved_data)
 
         except Exception as e:
-            logger.exception(
-                "Failed to store saved destination",
-                extra={"saved_id": saved_destination.id, "error": str(e)},
-            )
+            logger.exception( "Failed to store saved destination", extra={"saved_id": saved_destination.id, "error": str(e)},)
             raise
 
 

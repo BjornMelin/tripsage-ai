@@ -105,7 +105,7 @@ class WebSocketBroadcaster:
             logger.info("WebSocket broadcaster started")
 
         except Exception as e:
-            logger.exception(f"Failed to start WebSocket broadcaster: {e}")
+            logger.exception(f"Failed to start WebSocket broadcaster")
             raise CoreServiceError(
                 message=f"Failed to start WebSocket broadcaster: {e!s}",
                 code="BROADCASTER_START_FAILED",
@@ -196,7 +196,7 @@ class WebSocketBroadcaster:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to register connection {connection_id}: {e}")
+            logger.exception(f"Failed to register connection {connection_id}")
 
     async def unregister_connection(self, connection_id: str) -> None:
         """Unregister a WebSocket connection.
@@ -245,7 +245,7 @@ class WebSocketBroadcaster:
             logger.info(f"Unregistered connection {connection_id}")
 
         except Exception as e:
-            logger.exception(f"Failed to unregister connection {connection_id}: {e}")
+            logger.exception(f"Failed to unregister connection {connection_id}")
 
     async def broadcast_to_channel(
         self, channel: str, event: dict[str, Any], priority: int = 2
@@ -351,7 +351,7 @@ class WebSocketBroadcaster:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to queue broadcast message: {e}")
+            logger.exception(f"Failed to queue broadcast message")
 
     async def _process_broadcast_queue(self) -> None:
         """Background task to process queued broadcast messages."""
@@ -374,7 +374,7 @@ class WebSocketBroadcaster:
                         break
 
             except Exception as e:
-                logger.exception(f"Error processing broadcast queue: {e}")
+                logger.exception(f"Error processing broadcast queue")
                 await asyncio.sleep(1)
 
     async def _deliver_broadcast_message(self, message: BroadcastMessage) -> None:
@@ -413,7 +413,7 @@ class WebSocketBroadcaster:
             )
 
         except Exception as e:
-            logger.exception(f"Failed to deliver broadcast message {message.id}: {e}")
+            logger.exception(f"Failed to deliver broadcast message {message.id}")
 
     async def _handle_subscriptions(self) -> None:
         """Background task to handle Redis pub/sub subscriptions."""
@@ -438,10 +438,10 @@ class WebSocketBroadcaster:
                         )
 
                     except Exception as e:
-                        logger.exception(f"Error handling subscription message: {e}")
+                        logger.exception(f"Error handling subscription message")
 
         except Exception as e:
-            logger.exception(f"Error in subscription handler: {e}")
+            logger.exception(f"Error in subscription handler")
 
     def get_stats(self) -> dict[str, Any]:
         """Get broadcaster statistics.

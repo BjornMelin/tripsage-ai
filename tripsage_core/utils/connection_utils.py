@@ -288,9 +288,7 @@ class ConnectionCircuitBreaker:
 
         if self.failure_count >= self.failure_threshold:
             self.state = ConnectionState.OPEN
-            self.logger.exception(
-                f"Circuit breaker opening after {self.failure_count} failures"
-            )
+            self.logger.exception( f"Circuit breaker opening after {self.failure_count} failures")
 
 
 class ExponentialBackoffRetry:
@@ -375,9 +373,7 @@ class ExponentialBackoffRetry:
                     )
                     await asyncio.sleep(delay)
                 else:
-                    self.logger.exception(
-                        f"All {self.max_retries + 1} attempts failed. Last error: {e}"
-                    )
+                    self.logger.exception( f"All {self.max_retries + 1} attempts failed. Last error")
 
         raise last_exception
 
