@@ -188,12 +188,14 @@ class WebSocketBroadcaster:
                 await self.redis_client.sadd(f"channel:{channel}", connection_id)
 
             logger.info(
-                f"Registered connection {connection_id} for user {user_id} "
-                f"with channels: {channels}"
+                "Registered connection %s for user %s with channels: %s",
+                connection_id,
+                user_id,
+                channels,
             )
 
         except Exception:
-            logger.exception(f"Failed to register connection {connection_id}")
+            logger.exception("Failed to register connection %s", connection_id)
 
     async def unregister_connection(self, connection_id: str) -> None:
         """Unregister a WebSocket connection.
@@ -239,10 +241,10 @@ class WebSocketBroadcaster:
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}"
             )
 
-            logger.info(f"Unregistered connection {connection_id}")
+            logger.info("Unregistered connection %s", connection_id)
 
         except Exception:
-            logger.exception(f"Failed to unregister connection {connection_id}")
+            logger.exception("Failed to unregister connection %s", connection_id)
 
     async def broadcast_to_channel(
         self, channel: str, event: dict[str, Any], priority: int = 2
@@ -319,7 +321,7 @@ class WebSocketBroadcaster:
 
         # Check for duplicate messages
         if message.id in self._recent_message_ids:
-            logger.debug(f"Skipping duplicate message {message.id}")
+            logger.debug("Skipping duplicate message %s", message.id)
             return
 
         # Track message ID for deduplication
@@ -343,8 +345,10 @@ class WebSocketBroadcaster:
             await self.redis_client.lpush(priority_key, message_data)
 
             logger.debug(
-                f"Queued broadcast message {message.id} for "
-                f"{message.target_type}:{message.target_id}"
+                "Queued broadcast message %s for %s:%s",
+                message.id,
+                message.target_type,
+                message.target_id,
             )
 
         except Exception:
@@ -397,7 +401,7 @@ class WebSocketBroadcaster:
                     f"channel:{message.target_id}"
                 )
             else:
-                logger.warning(f"Unknown broadcast target: {message.target_type}")
+                logger.warning("Unknown broadcast target: %s", message.target_type)
                 return
 
             # Publish to Redis pub/sub for each connection
@@ -406,11 +410,13 @@ class WebSocketBroadcaster:
                 await self.redis_client.publish(channel, message.event)
 
             logger.debug(
-                f"Delivered message {message.id} to {len(connection_ids)} connections"
+                "Delivered message %s to %s connections",
+                message.id,
+                len(connection_ids),
             )
 
         except Exception:
-            logger.exception(f"Failed to deliver broadcast message {message.id}")
+            logger.exception("Failed to deliver broadcast message %s", message.id)
 
     async def _handle_subscriptions(self) -> None:
         """Background task to handle Redis pub/sub subscriptions."""
@@ -431,7 +437,7 @@ class WebSocketBroadcaster:
                         # Forward message to local WebSocket manager
                         # This would be handled by the WebSocketManager
                         logger.debug(
-                            f"Received broadcast for connection {connection_id}"
+                            "Received broadcast for connection %s", connection_id
                         )
 
                     except Exception:

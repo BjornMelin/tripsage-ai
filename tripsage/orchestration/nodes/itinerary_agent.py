@@ -64,7 +64,7 @@ class ItineraryAgentNode(BaseAgentNode):
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
         logger.info(
-            f"Initialized itinerary agent with {len(self.available_tools)} tools"
+            "Initialized itinerary agent with %s tools", len(self.available_tools)
         )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:

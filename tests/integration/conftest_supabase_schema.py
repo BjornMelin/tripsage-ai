@@ -179,7 +179,7 @@ class MockSupabaseClient:
         elif query_upper.startswith("DELETE"):
             return await self._handle_delete(query, params)
         else:
-            logger.info(f"Unhandled query type: {query[:50]}...")
+            logger.info("Unhandled query type: %s...", query[:50])
             return None
 
     async def _handle_select(self, query: str, params: tuple) -> list[dict[str, Any]]:
@@ -350,11 +350,11 @@ class MockSupabaseClient:
 
     async def _handle_update(self, query: str, params: tuple) -> None:
         """Handle UPDATE queries with RLS validation."""
-        logger.info(f"UPDATE query: {query[:50]}... with params: {params}")
+        logger.info("UPDATE query: %s... with params: %s", query[:50], params)
 
     async def _handle_delete(self, query: str, params: tuple) -> None:
         """Handle DELETE queries with RLS validation."""
-        logger.info(f"DELETE query: {query[:50]}... with params: {params}")
+        logger.info("DELETE query: %s... with params: %s", query[:50], params)
 
 
 class SchemaValidator:

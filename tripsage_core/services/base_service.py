@@ -86,7 +86,8 @@ class BaseService:
 
         # Log successful initialization
         self.logger.info(
-            f"Service initialized: {self.service_name}",
+            "Service initialized: %s",
+            self.service_name,
             extra={
                 "service": self.service_name,
                 "has_database": self.db is not None,
@@ -133,7 +134,8 @@ class BaseService:
 
         except ImportError as e:
             self.logger.warning(
-                f"Database service not available: {e}",
+                "Database service not available: %s",
+                e,
                 extra={"service": self.service_name, "error": str(e)},
             )
             return None
@@ -166,7 +168,8 @@ class BaseService:
 
         except ImportError as e:
             self.logger.warning(
-                f"Cache service not available: {e}",
+                "Cache service not available: %s",
+                e,
                 extra={"service": self.service_name, "error": str(e)},
             )
             return None
@@ -205,14 +208,17 @@ class BaseService:
             external_service = service_class()
 
             self.logger.debug(
-                f"External service initialized: {class_name}",
+                "External service initialized: %s",
+                class_name,
                 extra={"service": self.service_name, "external_service": class_name},
             )
             return external_service
 
         except ImportError as e:
             self.logger.warning(
-                f"External service {class_name} not available: {e}",
+                "External service %s not available: %s",
+                class_name,
+                e,
                 extra={
                     "service": self.service_name,
                     "external_service": class_name,
@@ -222,7 +228,10 @@ class BaseService:
             return None
         except AttributeError as e:
             self.logger.warning(
-                f"External service class {class_name} not found in {module_name}: {e}",
+                "External service class %s not found in %s: %s",
+                class_name,
+                module_name,
+                e,
                 extra={
                     "service": self.service_name,
                     "external_service": class_name,
@@ -233,7 +242,8 @@ class BaseService:
             return None
         except Exception as e:
             self.logger.exception(
-                f"Failed to initialize external service {class_name}",
+                "Failed to initialize external service %s",
+                class_name,
                 extra={
                     "service": self.service_name,
                     "external_service": class_name,

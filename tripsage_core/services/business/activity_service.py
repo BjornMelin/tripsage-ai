@@ -107,7 +107,7 @@ class ActivityService:
         await self.ensure_services()
 
         try:
-            logger.info(f"Searching activities for destination: {request.destination}")
+            logger.info("Searching activities for destination: %s", request.destination)
 
             # First, geocode the destination to get coordinates
             geocode_results = await self.google_maps_service.geocode(
@@ -115,7 +115,7 @@ class ActivityService:
             )
             if not geocode_results:
                 logger.warning(
-                    f"No geocoding results for destination: {request.destination}"
+                    "No geocoding results for destination: %s", request.destination
                 )
                 return ActivitySearchResponse(
                     activities=[],
@@ -131,7 +131,7 @@ class ActivityService:
             lat, lng = location["lat"], location["lng"]
             search_location = (lat, lng)
 
-            logger.debug(f"Geocoded {request.destination} to ({lat}, {lng})")
+            logger.debug("Geocoded %s to (%s, %s)", request.destination, lat, lng)
 
             # Determine place types based on requested categories
             place_types = self._get_place_types_for_categories(request.categories or [])
@@ -150,7 +150,7 @@ class ActivityService:
                         )
                         activities.extend(results)
                     except Exception as e:
-                        logger.warning(f"Failed to search for {place_type}: {e}")
+                        logger.warning("Failed to search for %s: %s", place_type, e)
                         continue
             else:
                 # General activity search
@@ -178,7 +178,9 @@ class ActivityService:
                                 if isinstance(result, ActivityResponse):
                                     activities.append(result)
                                 elif isinstance(result, Exception):
-                                    logger.warning(f"Failed to convert place: {result}")
+                                    logger.warning(
+                                        "Failed to convert place: %s", result
+                                    )
 
                 except Exception:
                     logger.exception("General activity search failed")
@@ -203,7 +205,7 @@ class ActivityService:
 
             search_id = str(uuid.uuid4())
             logger.info(
-                f"Found {len(page_activities)} activities for {request.destination}"
+                "Found %s activities for %s", len(page_activities), request.destination
             )
 
             return ActivitySearchResponse(
@@ -267,7 +269,7 @@ class ActivityService:
 
             return activities
         except Exception as e:
-            logger.warning(f"Failed to search places by type {place_type}: {e}")
+            logger.warning("Failed to search places by type %s: %s", place_type, e)
             return []
 
     async def _convert_place_to_activity(
@@ -336,7 +338,7 @@ class ActivityService:
             )
 
         except Exception as e:
-            logger.warning(f"Failed to convert place to activity: {e}")
+            logger.warning("Failed to convert place to activity: %s", e)
             raise
 
     def _get_place_types_for_categories(self, categories: list[str]) -> list[str]:
@@ -485,14 +487,14 @@ class ActivityService:
                     )
 
             # For non-Google Maps activities, this would query your database
-            logger.warning(f"Activity details not found for ID: {activity_id}")
+            logger.warning("Activity details not found for ID: %s", activity_id)
             return None
 
         except GoogleMapsServiceError as e:
             logger.exception("Google Maps API error getting activity details")
             raise ActivityServiceError(f"Maps API error: {e}", e) from e
         except Exception as e:
-            logger.exception(f"Error getting activity details for {activity_id}")
+            logger.exception("Error getting activity details for %s", activity_id)
             raise ActivityServiceError(f"Failed to get activity details: {e}", e) from e
 
     async def _convert_detailed_place_to_activity(

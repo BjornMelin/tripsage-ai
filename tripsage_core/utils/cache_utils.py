@@ -232,13 +232,13 @@ class DragonflyCache:
                 if keys:
                     count = await self._cache_service.delete(*keys)
                     logger.info(
-                        f"Invalidated {count} keys matching pattern {full_pattern}"
+                        "Invalidated %s keys matching pattern %s", count, full_pattern
                     )
                     return count
                 return 0
 
             except Exception as scan_error:
-                logger.warning(f"Pattern scan failed: {scan_error}")
+                logger.warning("Pattern scan failed: %s", scan_error)
                 return 0
 
         except Exception:
@@ -390,11 +390,11 @@ def cached(
             # Try to get from cache
             cached_result = await cache.get(cache_key)
             if cached_result is not None:
-                logger.debug(f"Cache hit for {function_name}")
+                logger.debug("Cache hit for %s", function_name)
                 return cached_result
 
             # Call the function
-            logger.debug(f"Cache miss for {function_name}")
+            logger.debug("Cache miss for %s", function_name)
             result = await func(*args, **kwargs)
 
             # Determine TTL

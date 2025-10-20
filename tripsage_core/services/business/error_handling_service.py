@@ -188,7 +188,7 @@ class ErrorRecoveryService:
             register_circuit_breaker(breaker)
 
         logger.info(
-            f"Initialized {len(self.circuit_breakers)} configurable circuit breakers"
+            "Initialized %s configurable circuit breakers", len(self.circuit_breakers)
         )
 
     @with_error_handling()
@@ -229,7 +229,7 @@ class ErrorRecoveryService:
             )
             self.error_history.append(mcp_error)
 
-            logger.exception(f"MCP operation failed: {service}.{method}")
+            logger.exception("MCP operation failed: %s.%s", service, method)
 
             # Determine fallback strategy
             strategy = self._determine_fallback_strategy(mcp_error, params)
@@ -318,7 +318,7 @@ class ErrorRecoveryService:
 
             result = await protected_operation()
 
-            logger.info(f"Circuit breaker retry succeeded for {service}.{method}")
+            logger.info("Circuit breaker retry succeeded for %s.%s", service, method)
             return FallbackResult(
                 success=True,
                 strategy_used=FallbackStrategy.RETRY,
@@ -333,7 +333,7 @@ class ErrorRecoveryService:
             )
 
         except CircuitBreakerError as cb_error:
-            logger.warning(f"Circuit breaker {service} is open: {cb_error}")
+            logger.warning("Circuit breaker %s is open: %s", service, cb_error)
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.RETRY,
@@ -348,7 +348,10 @@ class ErrorRecoveryService:
 
         except Exception as retry_error:
             logger.warning(
-                f"Circuit breaker retry failed for {service}.{method}: {retry_error!s}"
+                "Circuit breaker retry failed for %s.%s: %s",
+                service,
+                method,
+                retry_error,
             )
             return FallbackResult(
                 success=False,
@@ -388,7 +391,7 @@ class ErrorRecoveryService:
 
             except Exception as retry_error:
                 logger.warning(
-                    f"Simple retry attempt {attempt + 1} failed: {retry_error!s}"
+                    "Simple retry attempt %s failed: %s", attempt + 1, retry_error
                 )
                 continue
 
@@ -430,7 +433,7 @@ class ErrorRecoveryService:
 
             except Exception as alt_error:
                 logger.warning(
-                    f"Alternative service {alt_service} failed: {alt_error!s}"
+                    "Alternative service %s failed: %s", alt_service, alt_error
                 )
                 continue
 
@@ -452,7 +455,7 @@ class ErrorRecoveryService:
 
             # Check if cache is still valid (1 hour TTL)
             if time.time() - cached_result.get("timestamp", 0) < 3600:
-                logger.info(f"Using cached response for {service}.{method}")
+                logger.info("Using cached response for %s.%s", service, method)
                 return FallbackResult(
                     success=True,
                     strategy_used=FallbackStrategy.CACHED_RESPONSE,
@@ -480,7 +483,7 @@ class ErrorRecoveryService:
             degraded_response["fallback_data"]["original_params"] = params
             degraded_response["fallback_data"]["timestamp"] = time.time()
 
-            logger.info(f"Providing graceful degradation for {service}.{method}")
+            logger.info("Providing graceful degradation for %s.%s", service, method)
             return FallbackResult(
                 success=True,
                 strategy_used=FallbackStrategy.GRACEFUL_DEGRADATION,
@@ -621,7 +624,7 @@ class ErrorRecoveryService:
                     del self.fallback_cache[key]
 
         except Exception as e:
-            logger.warning(f"Failed to cache result: {e!s}")
+            logger.warning("Failed to cache result: %s", e)
 
     def get_error_statistics(self) -> dict[str, Any]:
         """Get error statistics for monitoring."""

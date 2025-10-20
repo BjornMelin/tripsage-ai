@@ -189,8 +189,10 @@ class RouterNode(BaseAgentNode):
         }
 
         self.logger.info(
-            f"Routed to {classification['agent']} with confidence "
-            f"{classification['confidence']:.2f}: {classification['reasoning']}"
+            "Routed to %s with confidence %.2f: %s",
+            classification["agent"],
+            classification["confidence"],
+            classification["reasoning"],
         )
 
         return state
@@ -351,13 +353,13 @@ class RouterNode(BaseAgentNode):
 
         # Check required keys
         if not all(key in classification for key in required_keys):
-            logger.warning(f"Classification missing required keys: {classification}")
+            logger.warning("Classification missing required keys: %s", classification)
             return False
 
         # Check agent is valid
         if classification["agent"] not in valid_agents:
             logger.warning(
-                f"Invalid agent in classification: {classification['agent']}"
+                "Invalid agent in classification: %s", classification["agent"]
             )
             return False
 
@@ -366,7 +368,7 @@ class RouterNode(BaseAgentNode):
             not isinstance(classification["confidence"], (int, float))
             or not 0 <= classification["confidence"] <= 1
         ):
-            logger.warning(f"Invalid confidence score: {classification['confidence']}")
+            logger.warning("Invalid confidence score: %s", classification["confidence"])
             return False
 
         # Additional validation: ensure reasoning is not empty
@@ -397,9 +399,9 @@ class RouterNode(BaseAgentNode):
                 keyword_classification = self._keyword_based_classification(message)
                 if keyword_classification["confidence"] > classification["confidence"]:
                     logger.info(
-                        f"Using keyword-based classification over LLM: "
-                        f"{keyword_classification['agent']} "
-                        f"(confidence: {keyword_classification['confidence']})"
+                        "Using keyword-based classification over LLM: %s (confidence: %s)",
+                        keyword_classification["agent"],
+                        keyword_classification["confidence"],
                     )
                     return keyword_classification
 

@@ -69,7 +69,7 @@ async def get_destination_details(
     try:
         return await destination_service.get_destination_details(destination_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Destination not found: {destination_id}")
+        logger.warning("Destination not found: %s", destination_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -90,7 +90,7 @@ async def save_destination(
             user_id, destination_id, notes
         )
     except ResourceNotFoundError as e:
-        logger.warning(f"Destination not found: {destination_id}")
+        logger.warning("Destination not found: %s", destination_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -118,7 +118,7 @@ async def delete_saved_destination(
         user_id = get_principal_id(principal)
         await destination_service.delete_saved_destination(user_id, destination_id)
     except ResourceNotFoundError as e:
-        logger.warning(f"Saved destination not found: {destination_id}")
+        logger.warning("Saved destination not found: %s", destination_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),

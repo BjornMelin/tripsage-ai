@@ -67,7 +67,7 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
     Returns:
         Dictionary with session memory data
     """
-    logger.info(f"Initializing session memory for user: {user_id}")
+    logger.info("Initializing session memory for user: %s", user_id)
 
     # Default session data structure
     session_data = {
@@ -117,8 +117,10 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
             )
 
             logger.info(
-                f"Loaded {len(preferences)} preferences and {len(recent_trips)} "
-                f"trips for user {user_id}"
+                "Loaded %s preferences and %s trips for user %s",
+                len(preferences),
+                len(recent_trips),
+                user_id,
             )
 
         except Exception:
@@ -146,7 +148,7 @@ async def update_session_memory(
     Returns:
         Dictionary with update status
     """
-    logger.info(f"Updating session memory for user {user_id}")
+    logger.info("Updating session memory for user %s", user_id)
 
     result = {
         "preferences_updated": 0,
@@ -213,7 +215,7 @@ async def store_session_summary(
     Returns:
         Dictionary with storage status
     """
-    logger.info(f"Storing session summary for user {user_id}, session {session_id}")
+    logger.info("Storing session summary for user %s, session %s", user_id, session_id)
 
     try:
         # Import here to avoid circular dependencies
@@ -242,7 +244,7 @@ async def store_session_summary(
 
         if memory_id:
             logger.info(
-                f"Successfully stored session summary with memory ID: {memory_id}"
+                "Successfully stored session summary with memory ID: %s", memory_id
             )
             return {
                 "status": "success",

@@ -348,7 +348,7 @@ class WebSocketMessagingService:
             )
         if target_type == "broadcast":
             return await self.broadcast_to_all(event, rate_limiter, message_limits)
-        logger.warning(f"Unknown target type: {target_type}")
+        logger.warning("Unknown target type: %s", target_type)
         return 0
 
     def get_connection_stats(self) -> dict[str, Any]:

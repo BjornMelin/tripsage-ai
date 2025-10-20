@@ -53,7 +53,7 @@ class ConfigurationService:
         )
         cached_config = await get_cache(cache_key_str)
         if cached_config and not overrides:
-            logger.debug(f"Using cached config for {agent_type} in {environment}")
+            logger.debug("Using cached config for %s in %s", agent_type, environment)
             return cached_config
 
         try:
@@ -67,7 +67,9 @@ class ConfigurationService:
                 # Cache the database result (without overrides)
                 await set_cache(cache_key_str, db_config, ttl=self._cache_ttl)
 
-                logger.debug(f"Using database config for {agent_type} in {environment}")
+                logger.debug(
+                    "Using database config for %s in %s", agent_type, environment
+                )
                 return final_config
             else:
                 # Fallback to settings-based config
@@ -75,7 +77,7 @@ class ConfigurationService:
                     agent_type, **overrides
                 )
                 logger.warning(
-                    f"No database config found for {agent_type}, using fallback"
+                    "No database config found for %s, using fallback", agent_type
                 )
                 return fallback_config
 
@@ -169,8 +171,10 @@ class ConfigurationService:
                 updated_config = await self.get_agent_config(agent_type, environment)
 
                 logger.info(
-                    f"Agent config updated for {agent_type} in {environment} "
-                    f"by {updated_by}"
+                    "Agent config updated for %s in %s by %s",
+                    agent_type,
+                    environment,
+                    updated_by,
                 )
                 return updated_config
 
@@ -388,8 +392,10 @@ class ConfigurationService:
                 await delete_cache(cache_key_str)
 
                 logger.info(
-                    f"Configuration rolled back to {version_id} for {agent_type} "
-                    f"by {rolled_back_by}"
+                    "Configuration rolled back to %s for %s by %s",
+                    version_id,
+                    agent_type,
+                    rolled_back_by,
                 )
 
                 # Return updated configuration
@@ -415,7 +421,7 @@ class ConfigurationService:
                     agent_type, environment
                 )
             except Exception:
-                logger.exception(f"Error getting config for {agent_type}")
+                logger.exception("Error getting config for %s", agent_type)
                 # Use fallback
                 configs[agent_type] = self.settings.get_agent_config(agent_type)
 
@@ -447,8 +453,8 @@ class ConfigurationService:
                 row = result.fetchone()
                 if not row:
                     logger.warning(
-                        f"No configuration profile found for metrics recording: "
-                        f"{agent_type}"
+                        "No configuration profile found for metrics recording: %s",
+                        agent_type,
                     )
                     return
 
@@ -483,7 +489,7 @@ class ConfigurationService:
 
                 await session.commit()
 
-                logger.debug(f"Performance metrics recorded for {agent_type}")
+                logger.debug("Performance metrics recorded for %s", agent_type)
 
         except Exception:
             logger.exception("Error recording performance metrics")

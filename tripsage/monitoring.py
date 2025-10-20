@@ -58,14 +58,15 @@ def configure_opentelemetry(
             headers=None,  # Add authentication headers if needed
         )
         provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-        logger.info(f"OTLP exporter configured for endpoint: {otlp_endpoint}")
+        logger.info("OTLP exporter configured for endpoint: %s", otlp_endpoint)
 
     # Set the global tracer provider
     trace.set_tracer_provider(provider)
 
     logger.info(
-        f"OpenTelemetry configured for service '{service_name}' "
-        f"version '{service_version}'"
+        "OpenTelemetry configured for service '%s' version '%s'",
+        service_name,
+        service_version,
     )
 
 

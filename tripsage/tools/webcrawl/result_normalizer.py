@@ -237,7 +237,7 @@ class ResultNormalizer:
             source_crawler="playwright_mcp",
         )
 
-        logger.debug(f"Normalized Playwright MCP output for {original_url}")
+        logger.debug("Normalized Playwright MCP output for %s", original_url)
         return result
 
     async def normalize_direct_crawl4ai_output(
@@ -298,11 +298,11 @@ class ResultNormalizer:
                 status="success",
             )
 
-            logger.debug(f"Normalized direct Crawl4AI output for {url}")
+            logger.debug("Normalized direct Crawl4AI output for %s", url)
             return result
 
         except Exception as e:
-            logger.exception(f"Error normalizing direct Crawl4AI output for {url}")
+            logger.exception("Error normalizing direct Crawl4AI output for %s", url)
             return UnifiedCrawlResult(
                 url=url,
                 status="error",

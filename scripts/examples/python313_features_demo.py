@@ -98,7 +98,7 @@ class ModernAsyncProcessor[T]:
         results: dict[str, ProcessingResult[T]] = {}
         for i, result in enumerate(results_list):
             if isinstance(result, Exception):
-                logger.exception(f"Task {i} failed: {result}")
+                logger.exception("Task %s failed: %s", i, result)
                 continue
             results[f"item_{i}"] = result
 
@@ -119,8 +119,9 @@ async def demonstrate_taskgroup_benefits():
     taskgroup_duration = time.time() - start_time
 
     logger.info(
-        f"✅ TaskGroup processed {len(taskgroup_results)} items in "
-        f"{taskgroup_duration:.3f}s"
+        "✅ TaskGroup processed %s items in %.3fs",
+        len(taskgroup_results),
+        taskgroup_duration,
     )
 
     # Reset processor state
@@ -132,13 +133,14 @@ async def demonstrate_taskgroup_benefits():
     traditional_duration = time.time() - start_time
 
     logger.info(
-        f"⚡ Traditional processed {len(traditional_results)} items in "
-        f"{traditional_duration:.3f}s"
+        "⚡ Traditional processed %s items in %.3fs",
+        len(traditional_results),
+        traditional_duration,
     )
 
     # Compare results
     performance_diff = abs(taskgroup_duration - traditional_duration)
-    logger.info(f"📊 Performance difference: {performance_diff:.3f}s")
+    logger.info("📊 Performance difference: %.3fs", performance_diff)
 
     return taskgroup_results, traditional_results
 
@@ -167,9 +169,9 @@ async def demonstrate_enhanced_error_handling():
 
     except* ValueError as eg:
         # Python 3.11+ exception groups - works great with TaskGroup
-        logger.exception(f"TaskGroup caught {len(eg.exceptions)} exceptions:")
+        logger.exception("TaskGroup caught %s exceptions:", len(eg.exceptions))
         for exc in eg.exceptions:
-            logger.exception(f" - {type(exc).__name__}")
+            logger.exception(" - %s", type(exc).__name__)
 
     # Demonstrate that partial results can still be processed
     results = {}
@@ -186,7 +188,7 @@ async def demonstrate_enhanced_error_handling():
         for task, task_id in task_map.items():
             results[task_id] = task.result()
 
-        logger.info(f"✅ Successfully processed {len(results)} safe tasks")
+        logger.info("✅ Successfully processed %s safe tasks", len(results))
 
     except Exception:
         logger.exception("Unexpected error")
@@ -238,15 +240,16 @@ async def demonstrate_concurrent_database_operations():
     }
 
     logger.info(
-        f"🎯 Completed {len(operations)} concurrent DB operations in "
-        f"{total_duration:.3f}s"
+        "🎯 Completed %s concurrent DB operations in %.3fs",
+        len(operations),
+        total_duration,
     )
 
     # Calculate sequential time for comparison
     sequential_time = sum(op["execution_time_ms"] for op in operations.values()) / 1000
     speedup = sequential_time / total_duration
 
-    logger.info(f"📈 Speedup: {speedup:.2f}x (Sequential: {sequential_time:.3f}s)")
+    logger.info("📈 Speedup: %.2fx (Sequential: %.3fs)", speedup, sequential_time)
 
     return operations
 
@@ -280,8 +283,8 @@ def demonstrate_type_safety():
         ["Paris", "Tokyo", "New York"], (1000, 5000)
     )
 
-    logger.info(f"👤 {process_user_data(user)}")
-    logger.info(f"🔍 Search filters: {filters}")
+    logger.info("👤 %s", process_user_data(user))
+    logger.info("🔍 Search filters: %s", filters)
 
     return user, filters
 

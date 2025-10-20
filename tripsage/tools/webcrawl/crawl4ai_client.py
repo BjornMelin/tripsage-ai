@@ -34,7 +34,7 @@ class Crawl4AIClient:
         if not self.base_url:
             # Use default MCP base URL if not specified
             self.base_url = "http://localhost:11235"
-            logger.info(f"Using default Crawl4AI MCP base URL: {self.base_url}")
+            logger.info("Using default Crawl4AI MCP base URL: %s", self.base_url)
 
         # Initialize memory service for content extraction
         self.memory_service = MemoryService()
@@ -287,7 +287,7 @@ class Crawl4AIClient:
                 self._memory_initialized = True
                 logger.debug("Memory service initialized for Crawl4AI client")
             except Exception as e:
-                logger.warning(f"Failed to initialize memory service: {e}")
+                logger.warning("Failed to initialize memory service: %s", e)
 
     async def extract_travel_insights(
         self,
@@ -342,7 +342,7 @@ class Crawl4AIClient:
 
             insight_count = len(insights.get("insights", []))
             logger.info(
-                f"Extracted travel insights from {url}", insights_count=insight_count
+                "Extracted travel insights from %s", url, insights_count=insight_count
             )
 
             return {

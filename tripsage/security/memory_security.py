@@ -209,7 +209,7 @@ class RateLimiter:
             return True
 
         # Log rate limit hit
-        logger.warning(f"Rate limit hit for user {user_id} on operation {operation}")
+        logger.warning("Rate limit hit for user %s on operation %s", user_id, operation)
         telemetry.record_memory_operation(
             operation=operation,
             duration_ms=0,
@@ -278,7 +278,7 @@ class AuditLogger:
         )
 
         # Log to monitoring
-        logger.info(f"Audit: {audit_entry.model_dump_json()}")
+        logger.info("Audit: %s", audit_entry.model_dump_json())
 
         # Check for suspicious patterns
         await self._check_suspicious_patterns(user_id, operation)
@@ -305,8 +305,9 @@ class AuditLogger:
 
         if count > 20:  # More than 20 operations in a minute
             logger.warning(
-                f"Suspicious activity detected for user {user_id}: "
-                f"{count} operations in 60s"
+                "Suspicious activity detected for user %s: %s operations in 60s",
+                user_id,
+                count,
             )
             telemetry.record_memory_operation(
                 operation="suspicious_activity",

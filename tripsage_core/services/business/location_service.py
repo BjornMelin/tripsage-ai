@@ -45,10 +45,10 @@ class LocationService:
             LocationServiceError: If geocoding fails
         """
         try:
-            logger.debug(f"Geocoding address: {address}")
+            logger.debug("Geocoding address: %s", address)
             return await self.google_maps_service.geocode(address, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.exception(f"Geocoding failed for address '{address}'")
+            logger.exception("Geocoding failed for address '%s'", address)
             raise LocationServiceError(f"Geocoding failed: {e}") from e
 
     @with_error_handling()
@@ -69,10 +69,12 @@ class LocationService:
             LocationServiceError: If reverse geocoding fails
         """
         try:
-            logger.debug(f"Reverse geocoding coordinates: ({lat}, {lng})")
+            logger.debug("Reverse geocoding coordinates: (%s, %s)", lat, lng)
             return await self.google_maps_service.reverse_geocode(lat, lng, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.exception(f"Reverse geocoding failed for coordinates ({lat}, {lng})")
+            logger.exception(
+                "Reverse geocoding failed for coordinates (%s, %s)", lat, lng
+            )
             raise LocationServiceError(f"Reverse geocoding failed: {e}") from e
 
     @with_error_handling()
@@ -98,12 +100,12 @@ class LocationService:
             LocationServiceError: If place search fails
         """
         try:
-            logger.debug(f"Searching places: {query}")
+            logger.debug("Searching places: %s", query)
             return await self.google_maps_service.search_places(
                 query, location, radius, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.exception(f"Place search failed for query '{query}'")
+            logger.exception("Place search failed for query '%s'", query)
             raise LocationServiceError(f"Place search failed: {e}") from e
 
     @with_error_handling()
@@ -124,12 +126,12 @@ class LocationService:
             LocationServiceError: If place details request fails
         """
         try:
-            logger.debug(f"Getting place details: {place_id}")
+            logger.debug("Getting place details: %s", place_id)
             return await self.google_maps_service.get_place_details(
                 place_id, fields, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.exception(f"Place details request failed for place_id '{place_id}'")
+            logger.exception("Place details request failed for place_id '%s'", place_id)
             raise LocationServiceError(f"Place details request failed: {e}") from e
 
     @with_error_handling()
@@ -151,13 +153,13 @@ class LocationService:
             LocationServiceError: If directions request fails
         """
         try:
-            logger.debug(f"Getting directions: {origin} to {destination}")
+            logger.debug("Getting directions: %s to %s", origin, destination)
             return await self.google_maps_service.get_directions(
                 origin, destination, mode, **kwargs
             )
         except GoogleMapsServiceError as e:
             logger.exception(
-                f"Directions request failed from '{origin}' to '{destination}'"
+                "Directions request failed from '%s' to '%s'", origin, destination
             )
             raise LocationServiceError(f"Directions request failed: {e}") from e
 
@@ -233,12 +235,12 @@ class LocationService:
             LocationServiceError: If timezone request fails
         """
         try:
-            logger.debug(f"Getting timezone data for location: {location}")
+            logger.debug("Getting timezone data for location: %s", location)
             return await self.google_maps_service.get_timezone(
                 location, timestamp, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.exception(f"Timezone request failed for location {location}")
+            logger.exception("Timezone request failed for location %s", location)
             raise LocationServiceError(f"Timezone request failed: {e}") from e
 
 

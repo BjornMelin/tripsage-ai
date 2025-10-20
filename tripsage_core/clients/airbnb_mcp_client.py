@@ -86,7 +86,7 @@ class AirbnbMCPClient:
             self._client = httpx.AsyncClient(
                 base_url=self.endpoint, timeout=self.timeout
             )
-            logger.info(f"Connected to Airbnb MCP server at {self.endpoint}")
+            logger.info("Connected to Airbnb MCP server at %s", self.endpoint)
 
     async def disconnect(self):
         """Disconnect from the MCP server."""
@@ -129,10 +129,10 @@ class AirbnbMCPClient:
             return result.get("result", {})
 
         except httpx.HTTPError:
-            logger.exception(f"HTTP error invoking {tool_name}")
+            logger.exception("HTTP error invoking %s", tool_name)
             raise
         except Exception:
-            logger.exception(f"Error invoking {tool_name}")
+            logger.exception("Error invoking %s", tool_name)
             raise
 
     async def search_accommodations(
@@ -178,13 +178,13 @@ class AirbnbMCPClient:
             cursor=cursor,
         )
 
-        logger.info(f"Searching Airbnb accommodations in {location}")
+        logger.info("Searching Airbnb accommodations in %s", location)
         result = await self._invoke_tool(
             "airbnb_search", params.model_dump(exclude_none=True)
         )
 
         listings = result.get("listings", [])
-        logger.info(f"Found {len(listings)} Airbnb listings")
+        logger.info("Found %s Airbnb listings", len(listings))
 
         return listings
 
@@ -222,7 +222,7 @@ class AirbnbMCPClient:
             pets=pets,
         )
 
-        logger.info(f"Fetching details for Airbnb listing {listing_id}")
+        logger.info("Fetching details for Airbnb listing %s", listing_id)
         return await self._invoke_tool(
             "airbnb_listing_details", params.model_dump(exclude_none=True)
         )

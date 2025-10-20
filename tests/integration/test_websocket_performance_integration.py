@@ -667,9 +667,9 @@ class TestWebSocketEndToEndPerformance:
         assert len(report_data["aggregated_metrics"]) > 0
 
         logger.info("End-to-end WebSocket performance test completed successfully")
-        logger.info(f"Final health score: {summary['health_score']}")
-        logger.info(f"Total connections: {summary['connection_count']}")
-        logger.info(f"Total messages: {summary['total_messages']}")
+        logger.info("Final health score: %s", summary["health_score"])
+        logger.info("Total connections: %s", summary["connection_count"])
+        logger.info("Total messages: %s", summary["total_messages"])
 
 
 if __name__ == "__main__":

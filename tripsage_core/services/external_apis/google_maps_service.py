@@ -119,10 +119,10 @@ class GoogleMapsService:
 
         try:
             result = await asyncio.to_thread(self.client.geocode, address, **kwargs)
-            logger.debug(f"Geocoded address '{address}' with {len(result)} results")
+            logger.debug("Geocoded address '%s' with %s results", address, len(result))
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Geocoding failed for address '{address}'")
+            logger.exception("Geocoding failed for address '%s'", address)
             raise GoogleMapsServiceError(f"Geocoding failed: {e}", e) from e
 
     async def reverse_geocode(
@@ -149,12 +149,16 @@ class GoogleMapsService:
                 self.client.reverse_geocode, latlng, **kwargs
             )
             logger.debug(
-                f"Reverse geocoded coordinates ({lat}, {lng}) with "
-                f"{len(result)} results"
+                "Reverse geocoded coordinates (%s, %s) with %s results",
+                lat,
+                lng,
+                len(result),
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Reverse geocoding failed for coordinates ({lat}, {lng})")
+            logger.exception(
+                "Reverse geocoding failed for coordinates (%s, %s)", lat, lng
+            )
             raise GoogleMapsServiceError(f"Reverse geocoding failed: {e}", e) from e
 
     async def search_places(
@@ -191,12 +195,13 @@ class GoogleMapsService:
 
             result = await asyncio.to_thread(self.client.places, **search_kwargs)
             logger.debug(
-                f"Place search for '{query}' returned "
-                f"{len(result.get('results', []))} results"
+                "Place search for '%s' returned %s results",
+                query,
+                len(result.get("results", [])),
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Place search failed for query '{query}'")
+            logger.exception("Place search failed for query '%s'", query)
             raise GoogleMapsServiceError(f"Place search failed: {e}", e) from e
 
     async def get_place_details(
@@ -224,10 +229,10 @@ class GoogleMapsService:
             details_kwargs.update(kwargs)
 
             result = await asyncio.to_thread(self.client.place, **details_kwargs)
-            logger.debug(f"Retrieved place details for place_id '{place_id}'")
+            logger.debug("Retrieved place details for place_id '%s'", place_id)
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Place details request failed for place_id '{place_id}'")
+            logger.exception("Place details request failed for place_id '%s'", place_id)
             raise GoogleMapsServiceError(f"Place details request failed: {e}", e) from e
 
     async def get_directions(
@@ -261,12 +266,12 @@ class GoogleMapsService:
                 self.client.directions, **directions_kwargs
             )
             logger.debug(
-                f"Retrieved directions from '{origin}' to '{destination}' ({mode})"
+                "Retrieved directions from '%s' to '%s' (%s)", origin, destination, mode
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
             logger.exception(
-                f"Directions request failed from '{origin}' to '{destination}'"
+                "Directions request failed from '%s' to '%s'", origin, destination
             )
             raise GoogleMapsServiceError(f"Directions request failed: {e}", e) from e
 
@@ -305,8 +310,9 @@ class GoogleMapsService:
                 self.client.distance_matrix, **matrix_kwargs
             )
             logger.debug(
-                f"Calculated distance matrix for {len(origins)} origins to "
-                f"{len(destinations)} destinations"
+                "Calculated distance matrix for %s origins to %s destinations",
+                len(origins),
+                len(destinations),
             )
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
@@ -334,7 +340,7 @@ class GoogleMapsService:
 
         try:
             result = await asyncio.to_thread(self.client.elevation, locations, **kwargs)
-            logger.debug(f"Retrieved elevation data for {len(locations)} locations")
+            logger.debug("Retrieved elevation data for %s locations", len(locations))
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
             logger.exception("Elevation request failed")
@@ -365,10 +371,10 @@ class GoogleMapsService:
             timezone_kwargs.update(kwargs)
 
             result = await asyncio.to_thread(self.client.timezone, **timezone_kwargs)
-            logger.debug(f"Retrieved timezone data for location {location}")
+            logger.debug("Retrieved timezone data for location %s", location)
             return result
         except (ApiError, HTTPError, Timeout, TransportError) as e:
-            logger.exception(f"Timezone request failed for location {location}")
+            logger.exception("Timezone request failed for location %s", location)
             raise GoogleMapsServiceError(f"Timezone request failed: {e}", e) from e
 
     async def health_check(self) -> bool:

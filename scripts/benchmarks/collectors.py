@@ -259,7 +259,7 @@ class ReportGenerator:
         """Initialize report generator."""
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Report generator initialized with output dir: {output_dir}")
+        logger.info("Report generator initialized with output dir: %s", output_dir)
 
     async def generate_report(self, data: dict[str, Any], report_type: str) -> Path:
         """Generate JSON report with key metrics."""
@@ -290,9 +290,9 @@ class ReportGenerator:
         )
 
         logger.info("Reports generated:")
-        logger.info(f"  JSON: {json_path}")
-        logger.info(f"  CSV:  {csv_path}")
-        logger.info(f"  HTML: {html_path}")
+        logger.info("  JSON: %s", json_path)
+        logger.info("  CSV:  %s", csv_path)
+        logger.info("  HTML: %s", html_path)
 
         return html_path  # Return main report path
 

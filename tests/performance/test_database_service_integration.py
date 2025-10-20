@@ -171,7 +171,7 @@ class TestDatabaseQueryPerformance:
                 result = await database_service.execute_sql("SELECT 1 as test_value")
                 return len(result) if result else 0
             except Exception as e:
-                logger.warning(f"Query failed: {e}")
+                logger.warning("Query failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -192,7 +192,7 @@ class TestDatabaseQueryPerformance:
                 )
                 return len(result) if result else 0
             except Exception as e:
-                logger.warning(f"Parameterized query failed: {e}")
+                logger.warning("Parameterized query failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -218,7 +218,7 @@ class TestDatabaseQueryPerformance:
                 result = await database_service.execute_sql(query)
                 return len(result) if result else 0
             except Exception as e:
-                logger.warning(f"Complex join failed: {e}")
+                logger.warning("Complex join failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(execute_complex_join, rounds=20, iterations=1)
@@ -239,7 +239,7 @@ class TestDatabaseQueryPerformance:
                 )
             """)
         except Exception as e:
-            logger.warning(f"Table creation failed: {e}")
+            logger.warning("Table creation failed: %s", e)
 
         async def execute_bulk_insert():
             """Execute bulk insert operations."""
@@ -252,7 +252,7 @@ class TestDatabaseQueryPerformance:
                     )
                 return 5
             except Exception as e:
-                logger.warning(f"Bulk insert failed: {e}")
+                logger.warning("Bulk insert failed: %s", e)
                 return 0
             finally:
                 # Cleanup
@@ -281,7 +281,7 @@ class TestDatabaseTransactionPerformance:
                     await database_service.execute_sql("SELECT 2")
                 return True
             except Exception as e:
-                logger.warning(f"Transaction failed: {e}")
+                logger.warning("Transaction failed: %s", e)
                 return False
 
         result = await benchmark.pedantic(
@@ -328,7 +328,7 @@ class TestDatabaseTransactionPerformance:
 
                 return len(result) if result else 0
             except Exception as e:
-                logger.warning(f"Complex transaction failed: {e}")
+                logger.warning("Complex transaction failed: %s", e)
                 return 0
             finally:
                 # Cleanup
@@ -392,7 +392,7 @@ class TestDatabaseCacheIntegration:
                 mock_cache[cache_key] = result
                 return result
             except Exception as e:
-                logger.warning(f"Cached query failed: {e}")
+                logger.warning("Cached query failed: %s", e)
                 return []
 
         # First run - should hit database
@@ -467,7 +467,7 @@ class TestDatabaseVectorSearchPerformance:
                 return len(result) if result else 0
 
             except Exception as e:
-                logger.warning(f"Vector search not available: {e}")
+                logger.warning("Vector search not available: %s", e)
                 # Return mock result for testing
                 return 1
 
@@ -489,7 +489,7 @@ class TestDatabaseVectorSearchPerformance:
                 await asyncio.sleep(0.002)  # Simulate index usage
                 return True
             except Exception as e:
-                logger.warning(f"Vector index test failed: {e}")
+                logger.warning("Vector index test failed: %s", e)
                 return False
 
         result = await benchmark.pedantic(
@@ -529,7 +529,7 @@ class TestDatabaseMemoryUsage:
 
                 return processed_count
             except Exception as e:
-                logger.warning(f"Large resultset test failed: {e}")
+                logger.warning("Large resultset test failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -598,7 +598,7 @@ class TestDatabaseErrorHandlingPerformance:
                 return len(result) if result else 0
 
             except Exception as e:
-                logger.warning(f"Connection recovery failed: {e}")
+                logger.warning("Connection recovery failed: %s", e)
                 return 0
             finally:
                 await service.close()
@@ -629,7 +629,7 @@ class TestDatabaseErrorHandlingPerformance:
                 # Handle timeout gracefully
                 return -1
             except Exception as e:
-                logger.warning(f"Query timeout test failed: {e}")
+                logger.warning("Query timeout test failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(test_query_timeout, rounds=20, iterations=1)
@@ -691,7 +691,7 @@ class TestDatabaseIntegrationWorkflows:
                 return 1
 
             except Exception as e:
-                logger.warning(f"CRUD workflow failed: {e}")
+                logger.warning("CRUD workflow failed: %s", e)
                 return 0
 
         result = await benchmark.pedantic(
@@ -727,7 +727,7 @@ class TestDatabaseIntegrationWorkflows:
                 return []
 
             except Exception as e:
-                logger.warning(f"Database cache workflow failed: {e}")
+                logger.warning("Database cache workflow failed: %s", e)
                 return []
 
         # First run (database hit)

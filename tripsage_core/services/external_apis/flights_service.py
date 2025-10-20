@@ -216,7 +216,7 @@ class DuffelFlightsService(BaseService):
                 offer = FlightOffer(**offer_data)
                 offers.append(offer)
             except PydanticValidationError as e:
-                logger.warning(f"Failed to parse offer: {e}")
+                logger.warning("Failed to parse offer: %s", e)
                 continue
 
         return offers
@@ -319,7 +319,7 @@ class DuffelFlightsService(BaseService):
             try:
                 orders.append(FlightOrder(**order_data))
             except PydanticValidationError as e:
-                logger.warning(f"Failed to parse order: {e}")
+                logger.warning("Failed to parse order: %s", e)
                 continue
 
         return orders
@@ -361,7 +361,7 @@ class DuffelFlightsService(BaseService):
             try:
                 seat_maps.append(SeatMap(**seat_map_data))
             except PydanticValidationError as e:
-                logger.warning(f"Failed to parse seat map: {e}")
+                logger.warning("Failed to parse seat map: %s", e)
                 continue
 
         return seat_maps
@@ -427,7 +427,7 @@ class DuffelFlightsService(BaseService):
         flexible_results = {}
         for date, result in zip(date_range, results, strict=False):
             if isinstance(result, Exception):
-                logger.warning(f"Search failed for {date}: {result}")
+                logger.warning("Search failed for %s: %s", date, result)
                 flexible_results[date.isoformat()] = []
             else:
                 flexible_results[date.isoformat()] = result
@@ -568,5 +568,5 @@ class DuffelFlightsService(BaseService):
             payment=payment,
         )
 
-        logger.info(f"Created flight order {order.id} for trip {trip_id}")
+        logger.info("Created flight order %s for trip %s", order.id, trip_id)
         return order

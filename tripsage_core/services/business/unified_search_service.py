@@ -148,8 +148,9 @@ class UnifiedSearchService(
 
         try:
             logger.info(
-                f"Unified search request: '{request.query}' across types: "
-                f"{request.types}"
+                "Unified search request: '%s' across types: %s",
+                request.query,
+                request.types,
             )
 
             start_time = datetime.now()
@@ -158,7 +159,7 @@ class UnifiedSearchService(
             cached_result = await self.get_cached_search(request)
             if cached_result:
                 logger.info(
-                    f"Returning cached unified search results for: {request.query}"
+                    "Returning cached unified search results for: %s", request.query
                 )
                 return cached_result
 
@@ -199,14 +200,16 @@ class UnifiedSearchService(
                     search_tasks.keys(), search_results, strict=False
                 ):
                     if isinstance(result, Exception):
-                        logger.warning(f"Search failed for {search_type}: {result}")
+                        logger.warning("Search failed for %s: %s", search_type, result)
                         provider_errors[search_type] = str(result)
                         results_by_type[search_type] = []
                     else:
                         type_results = result or []
                         all_results.extend(type_results)
                         results_by_type[search_type] = type_results
-                        logger.debug(f"Found {len(type_results)} {search_type} results")
+                        logger.debug(
+                            "Found %s %s results", len(type_results), search_type
+                        )
             else:
                 all_results = []
                 results_by_type = {}
@@ -245,7 +248,7 @@ class UnifiedSearchService(
             await self.cache_search_results(request, response)
 
             logger.info(
-                f"Unified search completed: {len(sorted_results)} total results"
+                "Unified search completed: %s total results", len(sorted_results)
             )
             return response
 
@@ -292,7 +295,7 @@ class UnifiedSearchService(
 
             return results
         except Exception as e:
-            logger.warning(f"Destination search failed: {e}")
+            logger.warning("Destination search failed: %s", e)
             return []
 
     async def _search_activities(
@@ -352,7 +355,7 @@ class UnifiedSearchService(
 
             return results
         except Exception as e:
-            logger.warning(f"Activity search failed: {e}")
+            logger.warning("Activity search failed: %s", e)
             return []
 
     async def _search_flights(
@@ -365,7 +368,7 @@ class UnifiedSearchService(
             logger.debug("Flight search not yet implemented in unified search")
             return []
         except Exception as e:
-            logger.warning(f"Flight search failed: {e}")
+            logger.warning("Flight search failed: %s", e)
             return []
 
     async def _search_accommodations(
@@ -378,7 +381,7 @@ class UnifiedSearchService(
             logger.debug("Accommodation search not yet implemented in unified search")
             return []
         except Exception as e:
-            logger.warning(f"Accommodation search failed: {e}")
+            logger.warning("Accommodation search failed: %s", e)
             return []
 
     def _apply_unified_filters(

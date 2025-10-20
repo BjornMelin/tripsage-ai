@@ -615,7 +615,7 @@ def safe_execute[T, R](
         return func(*args, **kwargs)
     except Exception:
         if logger:
-            logger.exception(f"Error executing {func.__name__}")
+            logger.exception("Error executing %s", func.__name__)
         return fallback
 
 
@@ -642,7 +642,7 @@ def with_error_handling(
                 return func(*args, **kwargs)
             except Exception:
                 if logger:
-                    logger.exception(f"Error in {func.__name__}", exc_info=True)
+                    logger.exception("Error in %s", func.__name__, exc_info=True)
                 if re_raise:
                     raise
                 return fallback
@@ -653,7 +653,7 @@ def with_error_handling(
                 return await func(*args, **kwargs)
             except Exception:
                 if logger:
-                    logger.exception(f"Error in {func.__name__}", exc_info=True)
+                    logger.exception("Error in %s", func.__name__, exc_info=True)
                 if re_raise:
                     raise
                 return fallback

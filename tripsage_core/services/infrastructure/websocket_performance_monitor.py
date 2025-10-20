@@ -194,7 +194,7 @@ class WebSocketPerformanceMonitor:
 
         except Exception:
             logger.exception(
-                f"Failed to collect metrics for connection {connection.connection_id}"
+                "Failed to collect metrics for connection %s", connection.connection_id
             )
 
     def _check_performance_alerts(
@@ -334,7 +334,7 @@ class WebSocketPerformanceMonitor:
         self.alert_history.append(alert)
 
         logger.warning(
-            f"Performance alert: {alert.message} (connection: {connection_id})"
+            "Performance alert: %s (connection: %s)", alert.message, connection_id
         )
 
     async def _monitor_loop(self) -> None:
@@ -418,9 +418,10 @@ class WebSocketPerformanceMonitor:
         self.aggregated_metrics.append(aggregated)
 
         logger.info(
-            f"Aggregated metrics: {aggregated.connection_count} connections, "
-            f"avg latency {aggregated.avg_latency_ms:.1f}ms, "
-            f"p95 latency {aggregated.p95_latency_ms:.1f}ms"
+            "Aggregated metrics: %s connections, avg latency %.1fms, p95 latency %.1fms",
+            aggregated.connection_count,
+            aggregated.avg_latency_ms,
+            aggregated.p95_latency_ms,
         )
 
     async def _cleanup_old_data(self) -> None:
@@ -470,9 +471,11 @@ class WebSocketPerformanceMonitor:
                 del self.active_alerts[alert_key]
 
         logger.info(
-            f"Cleaned up old metrics: snapshots {old_snapshot_count} -> "
-            f"{len(self.snapshots)}, "
-            f"aggregated {old_aggregated_count} -> {len(self.aggregated_metrics)}"
+            "Cleaned up old metrics: snapshots %s -> %s, aggregated %s -> %s",
+            old_snapshot_count,
+            len(self.snapshots),
+            old_aggregated_count,
+            len(self.aggregated_metrics),
         )
 
     def get_performance_summary(self) -> dict[str, Any]:

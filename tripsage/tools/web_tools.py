@@ -130,7 +130,7 @@ class CachedWebSearchTool(WebSearchTool):
             search_context_size=search_context_size,
         )
         self.namespace = namespace
-        logger.info(f"Initialized CachedWebSearchTool with namespace '{namespace}'")
+        logger.info("Initialized CachedWebSearchTool with namespace '%s'", namespace)
 
     async def _run(self, query: str, *, skip_cache: bool = False, **kwargs: Any) -> Any:
         """Execute the web search with caching.
@@ -148,7 +148,7 @@ class CachedWebSearchTool(WebSearchTool):
 
             # Skip cache if explicitly requested
             if skip_cache:
-                logger.debug(f"Skipping cache for query: {query}")
+                logger.debug("Skipping cache for query: %s", query)
                 return await super()._run(query, **kwargs)
 
             # Generate cache key
@@ -170,14 +170,16 @@ class CachedWebSearchTool(WebSearchTool):
                 cached_result = await get_cache(cache_key, namespace=self.namespace)
                 if cached_result is not None:
                     logger.info(
-                        f"Cache hit for web search query: {query} "
-                        f"(key: {cache_key.split(':')[-1][:8]}...)"
+                        "Cache hit for web search query: %s (key: %s...)",
+                        query,
+                        cache_key.split(":")[-1][:8],
                     )
                     return cached_result
 
                 logger.info(
-                    f"Cache miss for web search query: {query} "
-                    f"(key: {cache_key.split(':')[-1][:8]}...)"
+                    "Cache miss for web search query: %s (key: %s...)",
+                    query,
+                    cache_key.split(":")[-1][:8],
                 )
 
                 # Execute the actual search
@@ -186,7 +188,7 @@ class CachedWebSearchTool(WebSearchTool):
                 # Determine content type
                 content_type = self._determine_content_type(query, result)
                 logger.debug(
-                    f"Determined content type {content_type} for query: {query}"
+                    "Determined content type %s for query: %s", content_type, query
                 )
 
                 # Store in cache
@@ -200,7 +202,7 @@ class CachedWebSearchTool(WebSearchTool):
                 # Log execution time
                 execution_time = time.time() - start_time
                 logger.debug(
-                    f"Web search for '{query}' completed in {execution_time:.2f}s"
+                    "Web search for '%s' completed in %.2fs", query, execution_time
                 )
 
                 # Prefetch related queries if available
@@ -286,14 +288,16 @@ class CachedWebSearchTool(WebSearchTool):
 
             if related_queries:
                 logger.debug(
-                    f"Prefetching {len(related_queries)} related queries for '{query}'"
+                    "Prefetching %s related queries for '%s'",
+                    len(related_queries),
+                    query,
                 )
                 # Generate cache keys for all related queries
                 prefetch_pattern = f"{self.namespace}:websearch:*"
                 await prefetch_cache_keys(prefetch_pattern, namespace=self.namespace)
         except Exception as e:
             # Don't let prefetching errors affect the main flow
-            logger.debug(f"Error prefetching related queries: {e!s}")
+            logger.debug("Error prefetching related queries: %s", e)
 
 
 async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
@@ -329,10 +333,10 @@ async def invalidate_web_cache_for_query(query: str) -> int:
         pattern = f"*{query_hash}*"
         count = await invalidate_pattern(pattern, namespace=WEB_CACHE_NAMESPACE)
 
-        logger.info(f"Invalidated {count} cache entries for query: {query}")
+        logger.info("Invalidated %s cache entries for query: %s", count, query)
         return count
     except Exception:
-        logger.exception(f"Error invalidating web cache for query '{query}'")
+        logger.exception("Error invalidating web cache for query '%s'", query)
         return 0
 
 

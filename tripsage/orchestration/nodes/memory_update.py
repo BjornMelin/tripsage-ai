@@ -56,8 +56,9 @@ class MemoryUpdateNode(BaseAgentNode):
             await self._update_session_data(state)
 
             logger.info(
-                f"Updated memory with {len(insights)} insights for user "
-                f"{state['user_id']}"
+                "Updated memory with %s insights for user %s",
+                len(insights),
+                state["user_id"],
             )
 
         return state
@@ -243,7 +244,7 @@ class MemoryUpdateNode(BaseAgentNode):
 
             # Execute memory update
             await self.memory_tool._arun(**memory_data)
-            logger.info(f"Updated knowledge graph with {len(insights)} insights")
+            logger.info("Updated knowledge graph with %s insights", len(insights))
 
         except Exception:
             logger.exception("Failed to update knowledge graph")
@@ -270,7 +271,7 @@ class MemoryUpdateNode(BaseAgentNode):
             # }
             # await supabase_client.update_session(session_summary)
 
-            logger.info(f"Updated session data for {session_id}")
+            logger.info("Updated session data for %s", session_id)
 
         except Exception:
             logger.exception("Failed to update session data")

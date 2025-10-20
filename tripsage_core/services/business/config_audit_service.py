@@ -186,8 +186,8 @@ class ConfigurationAuditService:
         asyncio.create_task(self._periodic_scan_loop())
 
         logger.info(
-            f"Configuration audit service started, monitoring "
-            f"{len(self.config_paths)} paths"
+            "Configuration audit service started, monitoring %s paths",
+            len(self.config_paths),
         )
 
         # Log service startup
@@ -253,7 +253,7 @@ class ConfigurationAuditService:
                     file_hash = await self._calculate_file_hash(config_path)
                     self._file_hashes[config_path] = file_hash
             except Exception as e:
-                logger.warning(f"Failed to hash file {config_path}: {e}")
+                logger.warning("Failed to hash file %s: %s", config_path, e)
 
         # Snapshot environment variables
         self._env_vars = dict(os.environ)
@@ -355,7 +355,7 @@ class ConfigurationAuditService:
                     del self._file_hashes[config_path]
 
             except Exception as e:
-                logger.warning(f"Failed to check file {config_path}: {e}")
+                logger.warning("Failed to check file %s: %s", config_path, e)
 
     async def _handle_file_change(self, file_path: str, change_type: str):
         """Handle a file system change."""
@@ -421,7 +421,8 @@ class ConfigurationAuditService:
         )
         logger.log(
             log_level,
-            f"Configuration change detected: {change.config_path}",
+            "Configuration change detected: %s",
+            change.config_path,
             extra={
                 "change_id": change.change_id,
                 "change_type": change.change_type.value,
@@ -620,7 +621,7 @@ class ConfigurationAuditService:
                     hasher.update(chunk)
             return hasher.hexdigest()
         except Exception as e:
-            logger.warning(f"Failed to hash file {file_path}: {e}")
+            logger.warning("Failed to hash file %s: %s", file_path, e)
             return ""
 
     async def record_manual_change(

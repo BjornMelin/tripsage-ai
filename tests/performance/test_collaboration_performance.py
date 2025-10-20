@@ -500,7 +500,7 @@ class PerformanceRegressionTests:
 
             logger = logging.getLogger(__name__)
             for warning in performance_warnings:
-                logger.warning(f"Performance consideration: {warning}")
+                logger.warning("Performance consideration: %s", warning)
 
     def test_index_coverage_analysis(self, schema_files):
         """Analyze index coverage for performance-critical queries."""
@@ -531,7 +531,7 @@ class PerformanceRegressionTests:
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.info(f"Columns that might benefit from indexing: {missing_indexes}")
+            logger.info("Columns that might benefit from indexing: %s", missing_indexes)
 
     async def test_performance_baseline_establishment(self, performance_tracker):
         """Establish performance baselines for regression testing."""
@@ -560,7 +560,7 @@ class PerformanceRegressionTests:
         import logging
 
         logger = logging.getLogger(__name__)
-        logger.info(f"Performance summary: {summary}")
+        logger.info("Performance summary: %s", summary)
 
 
 # Test configuration

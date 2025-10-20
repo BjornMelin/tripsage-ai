@@ -55,7 +55,7 @@ class FlightAgentNode(BaseAgentNode):
         # Bind tools to LLM for direct use
         self.llm_with_tools = self.llm.bind_tools(self.available_tools)
 
-        logger.info(f"Initialized flight agent with {len(self.available_tools)} tools")
+        logger.info("Initialized flight agent with %s tools", len(self.available_tools))
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """Process flight-related requests.
@@ -185,7 +185,7 @@ class FlightAgentNode(BaseAgentNode):
             flights_count = (
                 len(result.get("flights", [])) if isinstance(result, dict) else 0
             )
-            logger.info(f"Flight search completed: {flights_count} flights found")
+            logger.info("Flight search completed: %s flights found", flights_count)
             return result
 
         except Exception as e:

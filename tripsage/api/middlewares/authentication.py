@@ -197,7 +197,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 )
 
                 logger.warning(
-                    f"JWT authentication failed: {e}",
+                    "JWT authentication failed: %s",
+                    e,
                     extra={
                         "ip_address": self._get_client_ip(request),
                         "user_agent": request.headers.get("User-Agent", "Unknown")[
@@ -264,7 +265,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     )
 
                     logger.warning(
-                        f"API key authentication failed: {e}",
+                        "API key authentication failed: %s",
+                        e,
                         extra={
                             "ip_address": self._get_client_ip(request),
                             "user_agent": user_agent,

@@ -53,7 +53,7 @@ async def crawl_website_content(
     Returns:
         UnifiedCrawlResult with normalized content from direct SDK
     """
-    logger.info(f"Starting direct Crawl4AI SDK crawl for {url}")
+    logger.info("Starting direct Crawl4AI SDK crawl for %s", url)
 
     # Get optimized configuration based on content type
     selector = WebCrawlSourceSelector()
@@ -91,16 +91,16 @@ async def crawl_website_content(
         )
 
         logger.info(
-            f"Direct Crawl4AI completed for {url} - Success: {direct_result.success}"
+            "Direct Crawl4AI completed for %s - Success: %s", url, direct_result.success
         )
         return result
 
     except Exception as e:
-        logger.exception(f"Direct Crawl4AI failed for {url}")
+        logger.exception("Direct Crawl4AI failed for %s", url)
 
         # Try Playwright fallback if enabled
         if enable_playwright_fallback:
-            logger.info(f"Attempting Playwright fallback for {url}")
+            logger.info("Attempting Playwright fallback for %s", url)
             try:
                 fallback_result = await _crawl_with_playwright_fallback(
                     url=url,
@@ -112,7 +112,7 @@ async def crawl_website_content(
                 metrics = get_performance_metrics()
                 metrics.add_playwright_fallback_result(True)
 
-                logger.info(f"Playwright fallback succeeded for {url}")
+                logger.info("Playwright fallback succeeded for %s", url)
                 return fallback_result
 
             except Exception:
@@ -233,7 +233,7 @@ async def _crawl_with_playwright_fallback(
     Returns:
         UnifiedCrawlResult with content from Playwright
     """
-    logger.info(f"Starting Playwright fallback crawl for {url}")
+    logger.info("Starting Playwright fallback crawl for %s", url)
 
     async with async_playwright() as p:
         # Launch browser with optimized settings
@@ -344,7 +344,7 @@ async def _crawl_with_playwright_fallback(
                 },
             )
 
-            logger.info(f"Playwright fallback completed successfully for {url}")
+            logger.info("Playwright fallback completed successfully for %s", url)
             return result
 
         finally:

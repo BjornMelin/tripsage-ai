@@ -104,8 +104,8 @@ class ConfigurableDeploymentOrchestrator:
         self.deployment_history: list[DeploymentResult] = []
 
         logger.info(
-            f"Initialized deployment orchestrator with strategy: "
-            f"{self.enterprise_config.deployment_strategy}"
+            "Initialized deployment orchestrator with strategy: %s",
+            self.enterprise_config.deployment_strategy,
         )
 
     async def deploy(
@@ -129,7 +129,7 @@ class ConfigurableDeploymentOrchestrator:
         deployment_id = str(uuid.uuid4())[:8]
 
         logger.info(
-            f"Starting deployment {deployment_id}: {image_tag} to {environment}"
+            "Starting deployment %s: %s to %s", deployment_id, image_tag, environment
         )
 
         # Create deployment result
@@ -157,7 +157,9 @@ class ConfigurableDeploymentOrchestrator:
 
             # Execute deployment
             logger.info(
-                f"Executing {deployment_strategy.name} deployment for {deployment_id}"
+                "Executing %s deployment for %s",
+                deployment_strategy.name,
+                deployment_id,
             )
 
             metrics = await deployment_strategy.deploy(
@@ -173,12 +175,12 @@ class ConfigurableDeploymentOrchestrator:
             if metrics.phase == DeploymentPhase.COMPLETED:
                 result.status = DeploymentStatus.COMPLETED
                 result.success = True
-                logger.info(f"Deployment {deployment_id} completed successfully")
+                logger.info("Deployment %s completed successfully", deployment_id)
             else:
                 result.status = DeploymentStatus.FAILED
                 result.error_message = f"Deployment failed in phase: {metrics.phase}"
                 logger.exception(
-                    f"Deployment {deployment_id} failed in phase: {metrics.phase}"
+                    "Deployment %s failed in phase: %s", deployment_id, metrics.phase
                 )
 
                 # Auto-rollback if enabled and not already rolled back
@@ -187,7 +189,7 @@ class ConfigurableDeploymentOrchestrator:
                     and metrics.phase != DeploymentPhase.ROLLING_BACK
                 ):
                     logger.info(
-                        f"Triggering auto-rollback for deployment {deployment_id}"
+                        "Triggering auto-rollback for deployment %s", deployment_id
                     )
                     result.auto_rollback_triggered = True
 
@@ -200,11 +202,11 @@ class ConfigurableDeploymentOrchestrator:
                     if rollback_result.success:
                         result.status = DeploymentStatus.ROLLED_BACK
                         logger.info(
-                            f"Auto-rollback successful for deployment {deployment_id}"
+                            "Auto-rollback successful for deployment %s", deployment_id
                         )
                     else:
                         logger.exception(
-                            f"Auto-rollback failed for deployment {deployment_id}"
+                            "Auto-rollback failed for deployment %s", deployment_id
                         )
 
             result.end_time = time.time()
@@ -217,7 +219,7 @@ class ConfigurableDeploymentOrchestrator:
             return result
 
         except Exception as e:
-            logger.exception(f"Deployment {deployment_id} failed with exception")
+            logger.exception("Deployment %s failed with exception", deployment_id)
 
             result.status = DeploymentStatus.FAILED
             result.error_message = str(e)
@@ -246,7 +248,7 @@ class ConfigurableDeploymentOrchestrator:
         Returns:
             DeploymentResult for rollback operation
         """
-        logger.info(f"Rolling back deployment {deployment_id}: {reason}")
+        logger.info("Rolling back deployment %s: %s", deployment_id, reason)
 
         # Find the deployment to rollback
         deployment = None
@@ -279,7 +281,7 @@ class ConfigurableDeploymentOrchestrator:
             )
 
             logger.info(
-                f"Executing {deployment_strategy.name} rollback for {deployment_id}"
+                "Executing %s rollback for %s", deployment_strategy.name, deployment_id
             )
 
             # Execute rollback
@@ -309,7 +311,7 @@ class ConfigurableDeploymentOrchestrator:
             return rollback_result
 
         except Exception as e:
-            logger.exception(f"Rollback {deployment_id} failed with exception")
+            logger.exception("Rollback %s failed with exception", deployment_id)
 
             return DeploymentResult(
                 deployment_id=f"{deployment_id}_rollback",
@@ -454,10 +456,10 @@ class ConfigurableDeploymentOrchestrator:
 
         deployment = await self.get_deployment_status(deployment_id)
         if not deployment:
-            logger.warning(f"Deployment {deployment_id} not found for monitoring")
+            logger.warning("Deployment %s not found for monitoring", deployment_id)
             return
 
-        logger.info(f"Starting monitoring for deployment {deployment_id}")
+        logger.info("Starting monitoring for deployment %s", deployment_id)
 
         start_time = time.time()
 
@@ -465,7 +467,7 @@ class ConfigurableDeploymentOrchestrator:
             # Check if deployment is still active
             if deployment_id not in self.active_deployments:
                 logger.info(
-                    f"Deployment {deployment_id} completed, stopping monitoring"
+                    "Deployment %s completed, stopping monitoring", deployment_id
                 )
                 break
 
@@ -475,7 +477,7 @@ class ConfigurableDeploymentOrchestrator:
                 # For now, we'll simulate monitoring
                 await asyncio.sleep(check_interval)
 
-                logger.debug(f"Monitoring check for deployment {deployment_id}")
+                logger.debug("Monitoring check for deployment %s", deployment_id)
 
                 # Check deployment status
                 current_deployment = self.active_deployments.get(deployment_id)
@@ -484,15 +486,15 @@ class ConfigurableDeploymentOrchestrator:
                     and current_deployment.status == DeploymentStatus.FAILED
                 ):
                     logger.warning(
-                        f"Deployment {deployment_id} failed, stopping monitoring"
+                        "Deployment %s failed, stopping monitoring", deployment_id
                     )
                     break
 
             except Exception:
-                logger.exception(f"Monitoring error for deployment {deployment_id}")
+                logger.exception("Monitoring error for deployment %s", deployment_id)
                 break
 
-        logger.info(f"Monitoring completed for deployment {deployment_id}")
+        logger.info("Monitoring completed for deployment %s", deployment_id)
 
 
 # Global orchestrator instance

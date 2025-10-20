@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Deploy Database Triggers Script
+"""Deploy Database Triggers Script.
+
 Applies business logic and automation triggers to the database.
 """
 
@@ -59,7 +60,7 @@ class TriggerDeploymentService:
                 )
 
                 if not result[0]["exists"]:
-                    logger.exception(f"Required table '{table}' does not exist")
+                    logger.exception("Required table '%s' does not exist", table)
                     return False
 
             logger.info("All prerequisite tables found")
@@ -95,7 +96,7 @@ class TriggerDeploymentService:
                     }
                 )
 
-            logger.info(f"Found {len(existing_triggers)} existing triggers")
+            logger.info("Found %s existing triggers", len(existing_triggers))
             return trigger_info
 
         except Exception:
@@ -119,7 +120,7 @@ class TriggerDeploymentService:
             )
 
             function_names = [f["routine_name"] for f in existing_functions]
-            logger.info(f"Found {len(function_names)} trigger-related functions")
+            logger.info("Found %s trigger-related functions", len(function_names))
             return function_names
 
         except Exception:
@@ -134,10 +135,10 @@ class TriggerDeploymentService:
             )
 
             if not migration_file.exists():
-                logger.exception(f"Migration file not found: {migration_file}")
+                logger.exception("Migration file not found: %s", migration_file)
                 return False
 
-            logger.info(f"Reading migration file: {migration_file}")
+            logger.info("Reading migration file: %s", migration_file)
             migration_sql = migration_file.read_text()
 
             # Execute the migration
@@ -188,7 +189,7 @@ class TriggerDeploymentService:
                     missing_triggers.append(f"{table}.{trigger_name}")
 
             if missing_triggers:
-                logger.exception(f"Missing triggers: {', '.join(missing_triggers)}")
+                logger.exception("Missing triggers: %s", ", ".join(missing_triggers))
                 return False
 
             # Expected functions to be created
@@ -225,7 +226,7 @@ class TriggerDeploymentService:
                     missing_functions.append(function_name)
 
             if missing_functions:
-                logger.exception(f"Missing functions: {', '.join(missing_functions)}")
+                logger.exception("Missing functions: %s", ", ".join(missing_functions))
                 return False
 
             logger.info("All expected triggers and functions are present")
@@ -340,8 +341,7 @@ class TriggerDeploymentService:
 
             if not result[0]["exists"]:
                 logger.warning(
-                    "pg_cron extension not available - "
-                    "scheduled jobs will not be configured"
+                    "pg_cron extension not available - scheduled jobs will not be configured"
                 )
                 return True
 
@@ -372,7 +372,7 @@ class TriggerDeploymentService:
                     )
 
                     if existing:
-                        logger.info(f"Job '{job_name}' already exists, skipping")
+                        logger.info("Job '%s' already exists, skipping", job_name)
                         continue
 
                     # Schedule the job
@@ -381,11 +381,11 @@ class TriggerDeploymentService:
                     )
 
                     logger.info(
-                        f"Scheduled job '{job_name}' with schedule '{schedule}'"
+                        "Scheduled job '%s' with schedule '%s'", job_name, schedule
                     )
 
                 except Exception:
-                    logger.exception(f"Error scheduling job '{job_name}'")
+                    logger.exception("Error scheduling job '%s'", job_name)
 
             logger.info("pg_cron jobs setup completed")
             return True
@@ -465,8 +465,8 @@ async def main():
         triggers = await deployment_service.check_existing_triggers()
         functions = await deployment_service.check_existing_functions()
 
-        logger.info(f"Existing triggers: {sum(len(t) for t in triggers.values())}")
-        logger.info(f"Existing functions: {len(functions)}")
+        logger.info("Existing triggers: %s", sum(len(t) for t in triggers.values()))
+        logger.info("Existing functions: %s", len(functions))
 
         # Deploy triggers
         logger.info("Deploying trigger migration...")
@@ -496,14 +496,16 @@ async def main():
 
         logger.info("=== DEPLOYMENT REPORT ===")
         total_triggers = sum(len(t) for t in report["triggers"].values())
-        logger.info(f"Total triggers deployed: {total_triggers}")
-        logger.info(f"Total functions deployed: {len(report['functions'])}")
-        logger.info(f"Scheduled jobs: {report['scheduled_jobs']}")
+        logger.info("Total triggers deployed: %s", total_triggers)
+        logger.info("Total functions deployed: %s", len(report["functions"]))
+        logger.info("Scheduled jobs: %s", report["scheduled_jobs"])
 
         if report.get("recent_maintenance"):
             logger.info("Recent maintenance activity found:")
             for maintenance in report["recent_maintenance"][:3]:
-                logger.info(f"  {maintenance['timestamp']}: {maintenance['content']}")
+                logger.info(
+                    "  %s: %s", maintenance["timestamp"], maintenance["content"]
+                )
 
         logger.info("Database trigger deployment completed successfully!")
         return True

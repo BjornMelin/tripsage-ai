@@ -53,8 +53,8 @@ async def search_flights(
     Returns:
         Flight search results
     """
-    logger.debug(f"Received flight search request: {request}")
-    logger.debug(f"Request type: {type(request)}")
+    logger.debug("Received flight search request: %s", request)
+    logger.debug("Request type: %s", type(request))
     logger.debug(
         "Request fields: %s",
         request.model_fields if hasattr(request, "model_fields") else "No model_fields",

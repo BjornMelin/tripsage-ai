@@ -182,7 +182,7 @@ class ToolCallService:
                 method=request.method,
             )
         except Exception as e:
-            logger.exception(f"Tool call execution failed for {request.id}")
+            logger.exception("Tool call execution failed for %s", request.id)
             return ToolCallResponse(
                 id=request.id,
                 status="error",
@@ -211,7 +211,7 @@ class ToolCallService:
             return []
 
         try:
-            logger.info(f"Executing {len(requests)} tool calls in parallel")
+            logger.info("Executing %s tool calls in parallel", len(requests))
 
             # Create tasks for all requests
             tasks = [self.execute_tool_call(request) for request in requests]
@@ -235,7 +235,7 @@ class ToolCallService:
                 else:
                     processed_responses.append(response)
 
-            logger.info(f"Completed {len(processed_responses)} parallel tool calls")
+            logger.info("Completed %s parallel tool calls", len(processed_responses))
             return processed_responses
 
         except Exception as e:

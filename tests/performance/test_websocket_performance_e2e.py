@@ -64,7 +64,7 @@ async def authenticated_websocket_connection(websocket_settings):
             websocket = await websockets.connect(uri)
             yield websocket
         except Exception as e:
-            logger.warning(f"Could not establish WebSocket connection: {e}")
+            logger.warning("Could not establish WebSocket connection: %s", e)
             # Yield a mock WebSocket for testing
             mock_ws = AsyncMock()
             mock_ws.send = AsyncMock()

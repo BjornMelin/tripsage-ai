@@ -208,7 +208,7 @@ class AgentHandoffCoordinator:
         ]
 
         self.handoff_rules.extend(default_rules)
-        logger.info(f"Initialized {len(default_rules)} default handoff rules")
+        logger.info("Initialized %s default handoff rules", len(default_rules))
 
     def _initialize_agent_capabilities(self) -> None:
         """Initialize agent capability mappings."""
@@ -243,7 +243,7 @@ class AgentHandoffCoordinator:
         self.handoff_rules.append(rule)
         # Sort by priority (higher priority first)
         self.handoff_rules.sort(key=lambda r: r.priority, reverse=True)
-        logger.debug(f"Added handoff rule: {rule.from_agent} -> {rule.to_agent}")
+        logger.debug("Added handoff rule: %s -> %s", rule.from_agent, rule.to_agent)
 
     def determine_next_agent(
         self,
@@ -262,7 +262,7 @@ class AgentHandoffCoordinator:
             Tuple of (next_agent_name, handoff_context) or None if no handoff needed
         """
         logger.debug(
-            f"Determining next agent from {current_agent} with trigger {trigger}"
+            "Determining next agent from %s with trigger %s", current_agent, trigger
         )
 
         # Analyze state and find matching rules
@@ -273,12 +273,14 @@ class AgentHandoffCoordinator:
                 )
 
                 logger.info(
-                    f"Handoff determined: {current_agent} -> {rule.to_agent} "
-                    f"({trigger})"
+                    "Handoff determined: %s -> %s (%s)",
+                    current_agent,
+                    rule.to_agent,
+                    trigger,
                 )
                 return rule.to_agent, handoff_context
 
-        logger.debug(f"No handoff needed for {current_agent}")
+        logger.debug("No handoff needed for %s", current_agent)
         return None
 
     def _matches_rule(
@@ -467,8 +469,9 @@ class AgentHandoffCoordinator:
             Updated state with handoff information
         """
         logger.info(
-            f"Executing handoff: {handoff_context.from_agent} -> "
-            f"{handoff_context.to_agent}"
+            "Executing handoff: %s -> %s",
+            handoff_context.from_agent,
+            handoff_context.to_agent,
         )
 
         # Update state with handoff information
@@ -494,7 +497,7 @@ class AgentHandoffCoordinator:
         for key, value in handoff_context.preserved_context.items():
             state[key] = value
 
-        logger.debug(f"Handoff executed successfully to {handoff_context.to_agent}")
+        logger.debug("Handoff executed successfully to %s", handoff_context.to_agent)
         return state
 
     def get_agent_capabilities(self, agent_name: str) -> set[AgentCapability]:

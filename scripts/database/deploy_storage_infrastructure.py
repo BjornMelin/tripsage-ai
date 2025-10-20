@@ -19,6 +19,7 @@ class StorageDeployment:
     """Handles deployment of storage infrastructure to Supabase."""
 
     def __init__(self, supabase_url: str, supabase_key: str, db_url: str):
+        """Initialize storage deployment with Supabase credentials."""
         self.supabase: Client = create_client(supabase_url, supabase_key)
         self.db_url = db_url
         self.project_root = Path(__file__).parent.parent.parent

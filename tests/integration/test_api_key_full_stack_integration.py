@@ -956,7 +956,7 @@ class TestApiKeyPerformance:
             created_keys = await asyncio.gather(*tasks)
 
             creation_time = (datetime.now() - start_time).total_seconds()
-            logger.info(f"Created 50 keys in {creation_time:.2f} seconds")
+            logger.info("Created 50 keys in %.2f seconds", creation_time)
 
             # Performance assertion (should complete within reasonable time)
             assert creation_time < 10.0  # 10 seconds max for 50 keys
@@ -991,7 +991,7 @@ class TestApiKeyPerformance:
 
             total_time = (datetime.now() - start_time).total_seconds()
             logger.info(
-                f"Completed 20 concurrent validations in {total_time:.2f} seconds"
+                "Completed 20 concurrent validations in %.2f seconds", total_time
             )
 
             # Should complete concurrently (not sequentially)
