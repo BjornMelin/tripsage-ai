@@ -79,7 +79,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed: {e}")
+            logger.exception(f"❌ {test_name} connection failed")
             return False
 
     async def test_postgres_direct_connection(self) -> bool:
@@ -142,7 +142,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed: {e}")
+            logger.exception(f"❌ {test_name} connection failed")
             return False
 
     async def test_postgres_pooler_connection(self) -> bool:
@@ -195,7 +195,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed: {e}")
+            logger.exception(f"❌ {test_name} connection failed")
             return False
 
     async def test_memory_service_connection(self) -> bool:
@@ -238,7 +238,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed: {e}")
+            logger.exception(f"❌ {test_name} connection failed")
             return False
 
     async def test_checkpoint_manager_connection(self) -> bool:
@@ -298,7 +298,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} connection failed: {e}")
+            logger.exception(f"❌ {test_name} connection failed")
             return False
 
     async def test_connection_security_features(self) -> bool:
@@ -403,7 +403,7 @@ class ConnectionMigrationTester:
                 "error_type": type(e).__name__,
                 "duration_ms": self._get_duration_ms(),
             }
-            logger.exception(f"❌ {test_name} failed: {e}")
+            logger.exception(f"❌ {test_name} failed")
             return False
 
     def _get_duration_ms(self) -> float:
@@ -479,8 +479,8 @@ class ConnectionMigrationTester:
                         logger.info(f"  {key}: {value}")
             else:
                 # Show error details
-                logger.exception(f"  Error: {result.get('error', 'Unknown error')}")
-                logger.exception(f"  Type: {result.get('error_type', 'Unknown')}")
+                logger.exception(f" Error: {result.get('error', 'Unknown error')}")
+                logger.exception(f" Type: {result.get('error_type', 'Unknown')}")
 
         logger.info("\n" + "=" * 60)
 

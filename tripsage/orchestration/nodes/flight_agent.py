@@ -162,7 +162,7 @@ class FlightAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.exception(f"Error extracting flight parameters: {e!s}")
+            logger.exception(f"Error extracting flight parameters")
             return None
 
     async def _search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
@@ -189,7 +189,7 @@ class FlightAgentNode(BaseAgentNode):
             return result
 
         except Exception as e:
-            logger.exception(f"Flight search failed: {e!s}")
+            logger.exception(f"Flight search failed")
             return {"error": f"Flight search failed: {e!s}"}
 
     async def _generate_flight_response(
@@ -290,7 +290,7 @@ class FlightAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.exception(f"Error generating flight response: {e!s}")
+            logger.exception(f"Error generating flight response")
             content = (
                 "I'd be happy to help you find flights! To get started, I'll need "
                 "to know your departure city, destination, and travel dates. "

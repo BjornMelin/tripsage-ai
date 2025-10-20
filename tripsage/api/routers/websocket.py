@@ -10,12 +10,7 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from pydantic import Field, ValidationError
 
 from tripsage.agents.chat import ChatAgent
@@ -26,9 +21,7 @@ from tripsage.api.schemas.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
 )
-from tripsage_core.models.schemas_common.chat import (
-    ChatMessage as WebSocketMessage,
-)
+from tripsage_core.models.schemas_common.chat import ChatMessage as WebSocketMessage
 from tripsage_core.services.business.chat_service import (
     ChatService as CoreChatService,
     MessageCreateRequest,
@@ -108,7 +101,7 @@ def validate_incoming_message_size(
             return False
         return True
     except Exception as e:
-        logger.exception(f"Error validating message size: {e}")
+        logger.exception(f"Error validating message size")
         return True  # Allow message if validation fails
 
 
@@ -141,7 +134,7 @@ def validate_and_parse_message(message_data: str) -> tuple[bool, dict, str]:
         logger.warning(f"Message validation failed: {e}")
         return False, {}, str(e)
     except Exception as e:
-        logger.exception(f"Unexpected error validating message: {e}")
+        logger.exception(f"Unexpected error validating message")
         return False, {}, "Message validation error"
 
 
@@ -175,9 +168,7 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
         # In production, you might want to be more strict
         logger.warning("WebSocket connection attempted without Origin header")
         if settings.is_production:
-            logger.exception(
-                "Origin header missing in production - rejecting connection"
-            )
+            logger.exception( "Origin header missing in production - rejecting connection")
             return False
         return True
 
@@ -194,9 +185,7 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
             )
             return True
 
-    logger.exception(
-        f"WebSocket connection rejected from unauthorized origin: {origin}"
-    )
+    logger.exception( f"WebSocket connection rejected from unauthorized origin: {origin}")
     return False
 
 
@@ -466,9 +455,7 @@ async def generic_websocket(websocket: WebSocket):
                 )
                 break
             except json.JSONDecodeError:
-                logger.exception(
-                    f"Invalid JSON received from connection {connection_id}"
-                )
+                logger.exception( f"Invalid JSON received from connection {connection_id}")
                 error_event = ErrorEvent(
                     error_code="invalid_json",
                     error_message="Invalid JSON format",
@@ -476,9 +463,7 @@ async def generic_websocket(websocket: WebSocket):
                 )
                 await websocket_manager.send_to_connection(connection_id, error_event)
             except Exception as e:
-                logger.exception(
-                    f"Error handling message from connection {connection_id}: {e}",
-                )
+                logger.exception( f"Error handling message from connection {connection_id}",)
                 error_event = ErrorEvent(
                     error_code="message_error",
                     error_message=str(e),
@@ -487,7 +472,7 @@ async def generic_websocket(websocket: WebSocket):
                 await websocket_manager.send_to_connection(connection_id, error_event)
 
     except Exception as e:
-        logger.exception(f"Generic WebSocket error: {e}")
+        logger.exception(f"Generic WebSocket error")
         if connection_id:
             error_event = ErrorEvent(
                 error_code="websocket_error",
@@ -713,9 +698,7 @@ async def chat_websocket(
                 )
                 break
             except json.JSONDecodeError:
-                logger.exception(
-                    f"Invalid JSON received from connection {connection_id}"
-                )
+                logger.exception( f"Invalid JSON received from connection {connection_id}")
                 error_event = ErrorEvent(
                     error_code="invalid_json",
                     error_message="Invalid JSON format",
@@ -724,9 +707,7 @@ async def chat_websocket(
                 )
                 await websocket_manager.send_to_connection(connection_id, error_event)
             except Exception as e:
-                logger.exception(
-                    f"Error handling message from connection {connection_id}: {e}",
-                )
+                logger.exception( f"Error handling message from connection {connection_id}",)
                 error_event = ErrorEvent(
                     error_code="message_error",
                     error_message=str(e),
@@ -736,7 +717,7 @@ async def chat_websocket(
                 await websocket_manager.send_to_connection(connection_id, error_event)
 
     except Exception as e:
-        logger.exception(f"Chat WebSocket error: {e}")
+        logger.exception(f"Chat WebSocket error")
         if connection_id:
             error_event = ErrorEvent(
                 error_code="websocket_error",
@@ -950,18 +931,12 @@ async def agent_status_websocket(
                 )
                 break
             except json.JSONDecodeError:
-                logger.exception(
-                    f"Invalid JSON received from agent status connection "
-                    f"{connection_id}"
-                )
+                logger.exception( f"Invalid JSON received from agent status connection " f"{connection_id}")
             except Exception as e:
-                logger.exception(
-                    f"Error handling agent status message from connection "
-                    f"{connection_id}: {e}"
-                )
+                logger.exception( f"Error handling agent status message from connection " f"{connection_id}")
 
     except Exception as e:
-        logger.exception(f"Agent status WebSocket error: {e}")
+        logger.exception(f"Agent status WebSocket error")
 
     finally:
         # Clean up connection
@@ -1128,7 +1103,7 @@ async def handle_chat_message(
         )
 
     except Exception as e:
-        logger.exception(f"Error handling chat message: {e}")
+        logger.exception(f"Error handling chat message")
         error_event = ErrorEvent(
             error_code="chat_error",
             error_message=str(e),

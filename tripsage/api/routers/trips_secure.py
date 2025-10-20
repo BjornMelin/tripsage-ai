@@ -10,10 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import (
-    RequiredPrincipalDep,
-    TripServiceDep,
-)
+from tripsage.api.core.dependencies import RequiredPrincipalDep, TripServiceDep
 from tripsage.api.core.trip_security import (
     TripAccessLevel,
     TripAccessPermission,
@@ -179,7 +176,7 @@ async def create_trip(
         return _adapt_trip_response(trip_response)
 
     except Exception as e:
-        logger.exception(f"Failed to create trip: {e!s}")
+        logger.exception(f"Failed to create trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create trip",
@@ -234,7 +231,7 @@ async def get_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to get trip: {e!s}")
+        logger.exception(f"Failed to get trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip",
@@ -282,7 +279,7 @@ async def list_trips(
         )
 
     except Exception as e:
-        logger.exception(f"Failed to list trips: {e!s}")
+        logger.exception(f"Failed to list trips")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trips",
@@ -350,7 +347,7 @@ async def update_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to update trip: {e!s}")
+        logger.exception(f"Failed to update trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip",
@@ -391,7 +388,7 @@ async def delete_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to delete trip: {e!s}")
+        logger.exception(f"Failed to delete trip")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete trip",
@@ -435,7 +432,7 @@ async def list_collaborators(
         )
 
     except Exception as e:
-        logger.exception(f"Failed to list collaborators: {e!s}")
+        logger.exception(f"Failed to list collaborators")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list collaborators",
@@ -483,7 +480,7 @@ async def add_collaborator(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to add collaborator: {e!s}")
+        logger.exception(f"Failed to add collaborator")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add collaborator",
@@ -523,7 +520,7 @@ async def remove_collaborator(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to remove collaborator: {e!s}")
+        logger.exception(f"Failed to remove collaborator")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove collaborator",
@@ -554,7 +551,7 @@ async def get_trip_permissions(
         }
 
     except Exception as e:
-        logger.exception(f"Failed to get trip permissions: {e!s}")
+        logger.exception(f"Failed to get trip permissions")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip permissions",
@@ -597,7 +594,7 @@ async def get_trip_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to get trip summary: {e!s}")
+        logger.exception(f"Failed to get trip summary")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip summary",

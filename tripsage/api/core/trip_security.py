@@ -23,10 +23,7 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, Request, status
 from pydantic import ConfigDict, Field, field_validator
 
-from tripsage.api.core.dependencies import (
-    get_principal_id,
-    require_principal,
-)
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError,
@@ -320,16 +317,7 @@ async def verify_trip_access(
     except (CoreResourceNotFoundError, CoreSecurityError):
         raise
     except Exception as e:
-        logger.exception(
-            "Unexpected error during trip access verification",
-            extra={
-                "trip_id": context.trip_id,
-                "principal_id": context.principal_id,
-                "operation": context.operation,
-                "error": str(e),
-            },
-            exc_info=True,
-        )
+        logger.exception( "Unexpected error during trip access verification", extra={ "trip_id": context.trip_id, "principal_id": context.principal_id, "operation": context.operation, "error": str(e), }, exc_info=True,)
 
         # Log security event for unexpected errors
         await audit_security_event(

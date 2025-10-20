@@ -34,7 +34,7 @@ class SimpleMCPService:
                 await self._airbnb_client.connect()
                 logger.info("Airbnb MCP client initialized")
             except Exception as e:
-                logger.exception(f"Failed to initialize Airbnb client: {e}")
+                logger.exception(f"Failed to initialize Airbnb client")
                 return None
 
         return self._airbnb_client
@@ -100,7 +100,7 @@ class SimpleMCPService:
             return result
 
         except Exception as e:
-            logger.exception(f"MCP method '{method_name}' failed: {e}")
+            logger.exception(f"MCP method '{method_name}' failed")
             raise Exception(f"MCP method '{method_name}' failed: {e!s}") from e
 
     def _convert_to_airbnb_params(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -210,7 +210,7 @@ class SimpleMCPService:
                 self._airbnb_client = None
                 logger.info("Airbnb MCP client disconnected")
             except Exception as e:
-                logger.exception(f"Error disconnecting Airbnb client: {e}")
+                logger.exception(f"Error disconnecting Airbnb client")
 
 
 # Global instance

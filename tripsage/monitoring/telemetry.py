@@ -77,7 +77,7 @@ class TelemetryService:
             logger.info("Telemetry service initialized successfully")
 
         except Exception as e:
-            logger.exception(f"Failed to initialize telemetry: {e}")
+            logger.exception(f"Failed to initialize telemetry")
 
     def _setup_tracing(self) -> None:
         """Set up distributed tracing with OTLP exporter."""

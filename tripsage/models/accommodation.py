@@ -10,9 +10,7 @@ from datetime import datetime
 from pydantic import Field, field_validator, model_validator
 
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
-from tripsage_core.models.domain.accommodation import (
-    AccommodationListing,
-)
+from tripsage_core.models.domain.accommodation import AccommodationListing
 from tripsage_core.models.schemas_common.enums import AccommodationType as PropertyType
 
 

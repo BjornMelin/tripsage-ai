@@ -11,11 +11,7 @@ import json
 import time
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from typing import (
-    Any,
-    TypeVar,
-    cast,
-)
+from typing import Any, TypeVar, cast
 
 from pydantic import BaseModel, Field
 
@@ -161,7 +157,7 @@ class DragonflyCache:
             return None
 
         except Exception as e:
-            logger.exception(f"Error getting cache value: {e}")
+            logger.exception(f"Error getting cache value")
             return None
 
     async def set(
@@ -185,7 +181,7 @@ class DragonflyCache:
             return bool(result)
 
         except Exception as e:
-            logger.exception(f"Error setting cache value: {e}")
+            logger.exception(f"Error setting cache value")
             return False
 
     async def delete(self, key: str) -> bool:
@@ -201,7 +197,7 @@ class DragonflyCache:
             return False
 
         except Exception as e:
-            logger.exception(f"Error deleting cache value: {e}")
+            logger.exception(f"Error deleting cache value")
             return False
 
     async def invalidate_pattern(self, pattern: str) -> int:
@@ -238,7 +234,7 @@ class DragonflyCache:
                 return 0
 
         except Exception as e:
-            logger.exception(f"Error invalidating pattern: {e}")
+            logger.exception(f"Error invalidating pattern")
             return 0
 
     async def _increment_stat(self, stat: str) -> None:
@@ -304,7 +300,7 @@ class DragonflyCache:
             return stats
 
         except Exception as e:
-            logger.exception(f"Error getting cache stats: {e}")
+            logger.exception(f"Error getting cache stats")
             return CacheStats()
 
 
@@ -497,7 +493,7 @@ async def batch_cache_set(
         return results
 
     except Exception as e:
-        logger.exception(f"Batch cache set failed: {e}")
+        logger.exception(f"Batch cache set failed")
         return [False] * len(items)
 
 
@@ -545,7 +541,7 @@ async def batch_cache_get(
         return results
 
     except Exception as e:
-        logger.exception(f"Batch cache get failed: {e}")
+        logger.exception(f"Batch cache get failed")
         return [None] * len(keys)
 
 

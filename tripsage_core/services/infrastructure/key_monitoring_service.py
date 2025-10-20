@@ -219,15 +219,7 @@ class KeyMonitoringService:
         )
 
         # Log the alert
-        logger.exception(
-            alert_message,
-            extra={
-                "operation": operation.value,
-                "user_id": user_id,
-                "count": log_data.get("count"),
-                "timeframe": self.pattern_timeframe,
-            },
-        )
+        logger.exception( alert_message, extra={ "operation": operation.value, "user_id": user_id, "count": log_data.get("count"), "timeframe": self.pattern_timeframe, },)
 
         # Store the alert in cache
         alert_key = "key_alerts"
@@ -602,7 +594,7 @@ async def check_key_expiration(
         )
         return result
     except Exception as e:
-        logger.exception(f"Failed to check key expiration: {e}")
+        logger.exception(f"Failed to check key expiration")
         return []
 
 
@@ -666,7 +658,7 @@ async def get_key_health_metrics() -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Failed to get key health metrics: {e}")
+        logger.exception(f"Failed to get key health metrics")
         return {
             "error": str(e),
             "total_count": 0,

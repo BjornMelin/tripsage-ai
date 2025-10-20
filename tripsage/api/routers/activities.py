@@ -56,13 +56,13 @@ async def search_activities(request: ActivitySearchRequest):
         return result
 
     except ActivityServiceError as e:
-        logger.exception(f"Activity service error: {e}")
+        logger.exception(f"Activity service error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Activity search failed: {e.message}",
         ) from e
     except Exception as e:
-        logger.exception(f"Unexpected error in activity search: {e}")
+        logger.exception(f"Unexpected error in activity search")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while searching for activities",
@@ -92,7 +92,7 @@ async def get_activity_details(activity_id: str):
         return activity
 
     except ActivityServiceError as e:
-        logger.exception(f"Activity service error: {e}")
+        logger.exception(f"Activity service error")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get activity details: {e.message}",
@@ -101,7 +101,7 @@ async def get_activity_details(activity_id: str):
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        logger.exception(f"Unexpected error getting activity details: {e}")
+        logger.exception(f"Unexpected error getting activity details")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while retrieving activity details",
@@ -206,7 +206,7 @@ async def save_activity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to save activity {request.activity_id}: {e!s}")
+        logger.exception(f"Failed to save activity {request.activity_id}")
 
         # Log system error
         await audit_security_event(
@@ -302,7 +302,7 @@ async def get_saved_activities(
         return saved_activities
 
     except Exception as e:
-        logger.exception(f"Failed to get saved activities: {e!s}")
+        logger.exception(f"Failed to get saved activities")
 
         # Log system error
         await audit_security_event(
@@ -441,7 +441,7 @@ async def delete_saved_activity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to delete saved activity {activity_id}: {e!s}")
+        logger.exception(f"Failed to delete saved activity {activity_id}")
 
         # Log system error
         await audit_security_event(

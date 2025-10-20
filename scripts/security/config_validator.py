@@ -57,7 +57,7 @@ class SecurityValidator:
             return len(self.issues) == 0
 
         except Exception as e:
-            logger.exception(f"❌ Security validation failed with error: {e}")
+            logger.exception(f"❌ Security validation failed with error")
             self.issues.append(f"Validation error: {e}")
             return False
 
@@ -203,7 +203,7 @@ class SecurityValidator:
         if self.issues:
             logger.exception(f"❌ {len(self.issues)} security issue(s) found:")
             for issue in self.issues:
-                logger.exception(f"  - {issue}")
+                logger.exception(f" - {issue}")
 
         # Report warnings
         if self.warnings:
@@ -256,7 +256,7 @@ ENABLE_DATABASE_MONITORING=true
         return security_template
 
     except Exception as e:
-        logger.exception(f"Failed to generate secure config template: {e}")
+        logger.exception(f"Failed to generate secure config template")
         return ""
 
 

@@ -192,7 +192,7 @@ class MemoryService:
             logger.warning("Mem0 not available, using fallback memory implementation")
             self.memory = None
         except Exception as e:
-            logger.exception(f"Failed to initialize memory backend: {e!s}")
+            logger.exception(f"Failed to initialize memory backend")
             self.memory = None
 
     def _get_default_config(self) -> dict[str, Any]:
@@ -338,7 +338,7 @@ class MemoryService:
             logger.info("Memory service closed successfully")
 
         except Exception as e:
-            logger.exception(f"Error closing memory service: {e!s}")
+            logger.exception(f"Error closing memory service")
 
     async def add_conversation_memory(
         self, user_id: str, memory_request: ConversationMemoryRequest
@@ -396,9 +396,7 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.exception(
-                "Memory extraction failed", extra={"user_id": user_id, "error": str(e)}
-            )
+            logger.exception( "Memory extraction failed", extra={"user_id": user_id, "error": str(e)})
             return {"results": [], "error": str(e)}
 
     async def search_memories(
@@ -469,14 +467,7 @@ class MemoryService:
             return enriched_results
 
         except Exception as e:
-            logger.exception(
-                "Memory search failed",
-                extra={
-                    "user_id": user_id,
-                    "query": search_request.query,
-                    "error": str(e),
-                },
-            )
+            logger.exception( "Memory search failed", extra={ "user_id": user_id, "query": search_request.query, "error": str(e), },)
             return []
 
     async def get_user_context(
@@ -554,10 +545,7 @@ class MemoryService:
             )
 
         except Exception as e:
-            logger.exception(
-                "Failed to get user context",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to get user context", extra={"user_id": user_id, "error": str(e)},)
             return UserContextResponse(summary="Error retrieving user context")
 
     async def update_user_preferences(
@@ -616,10 +604,7 @@ class MemoryService:
             return result
 
         except Exception as e:
-            logger.exception(
-                "Failed to update user preferences",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to update user preferences", extra={"user_id": user_id, "error": str(e)},)
             return {"error": str(e)}
 
     async def delete_user_memories(
@@ -678,10 +663,7 @@ class MemoryService:
             return {"deleted_count": deleted_count, "success": True}
 
         except Exception as e:
-            logger.exception(
-                "Failed to delete user memories",
-                extra={"user_id": user_id, "error": str(e)},
-            )
+            logger.exception( "Failed to delete user memories", extra={"user_id": user_id, "error": str(e)},)
             return {"error": str(e), "success": False}
 
     async def _ensure_connected(self) -> bool:

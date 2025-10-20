@@ -110,8 +110,8 @@ class MetricsCollector:
 
         except asyncio.CancelledError:
             logger.debug("Monitoring loop cancelled")
-        except Exception as e:
-            logger.exception(f"Error in monitoring loop: {e}")
+        except Exception:
+            logger.exception("Error in monitoring loop")
 
     def _get_process_memory_mb(self) -> float:
         """Get current process memory usage in MB."""

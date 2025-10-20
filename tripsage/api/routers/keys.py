@@ -97,7 +97,7 @@ async def create_key(
         user_id = get_principal_id(principal)
         return await key_service.create_key(user_id, key_data)
     except Exception as e:
-        logger.exception(f"Error creating API key: {e}")
+        logger.exception(f"Error creating API key")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create API key: {e!s}",

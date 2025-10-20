@@ -88,13 +88,5 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             process_time = time.time() - start_time
 
             # Log the exception
-            logger.exception(
-                f"Request failed: {e!s}",
-                extra={
-                    "correlation_id": correlation_id,
-                    "processing_time_ms": int(process_time * 1000),
-                    "exception": str(e),
-                    "exception_type": type(e).__name__,
-                },
-            )
+            logger.exception( f"Request failed", extra={ "correlation_id": correlation_id, "processing_time_ms": int(process_time * 1000), "exception": str(e), "exception_type": type(e).__name__, },)
             raise

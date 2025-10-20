@@ -138,10 +138,7 @@ class BaseService:
             )
             return None
         except Exception as e:
-            self.logger.exception(
-                f"Failed to initialize database service: {e}",
-                extra={"service": self.service_name, "error": str(e)},
-            )
+            self.logger.exception( f"Failed to initialize database service", extra={"service": self.service_name, "error": str(e)},)
             return None
 
     def _initialize_cache_service(self, service: Any | None) -> Any | None:
@@ -171,10 +168,7 @@ class BaseService:
             )
             return None
         except Exception as e:
-            self.logger.exception(
-                f"Failed to initialize cache service: {e}",
-                extra={"service": self.service_name, "error": str(e)},
-            )
+            self.logger.exception( f"Failed to initialize cache service", extra={"service": self.service_name, "error": str(e)},)
             return None
 
     def _initialize_external_service(
@@ -232,14 +226,7 @@ class BaseService:
             )
             return None
         except Exception as e:
-            self.logger.exception(
-                f"Failed to initialize external service {class_name}: {e}",
-                extra={
-                    "service": self.service_name,
-                    "external_service": class_name,
-                    "error": str(e),
-                },
-            )
+            self.logger.exception( f"Failed to initialize external service {class_name}", extra={ "service": self.service_name, "external_service": class_name, "error": str(e), },)
             return None
 
     @with_error_handling(operation_name="health_check")

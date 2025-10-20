@@ -128,7 +128,7 @@ async def upload_file(
         )
 
     except Exception as e:
-        logger.exception(f"File processing failed for {file.filename}: {e!s}")
+        logger.exception(f"File processing failed for {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="File processing failed",
@@ -204,7 +204,7 @@ async def upload_files_batch(
             )
 
         except Exception as e:
-            logger.exception(f"Failed to process file {file.filename}: {e!s}")
+            logger.exception(f"Failed to process file {file.filename}")
             errors.append(f"{file.filename}: Processing failed")
 
     if errors and not processed_files:
@@ -252,7 +252,7 @@ async def get_file_metadata(
         return file_info
 
     except Exception as e:
-        logger.exception(f"Failed to get file info for {file_id}: {e!s}")
+        logger.exception(f"Failed to get file info for {file_id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file information",
@@ -282,7 +282,7 @@ async def delete_file(
         return {"message": "File deleted successfully", "file_id": file_id}
 
     except Exception as e:
-        logger.exception(f"Failed to delete file {file_id}: {e!s}")
+        logger.exception(f"Failed to delete file {file_id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete file",
@@ -313,7 +313,7 @@ async def list_user_files(
         }
 
     except Exception as e:
-        logger.exception(f"Failed to list files for user {user_id}: {e!s}")
+        logger.exception(f"Failed to list files for user {user_id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",
@@ -375,7 +375,7 @@ async def download_file(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to download file {file_id}: {e!s}")
+        logger.exception(f"Failed to download file {file_id}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to download file",
@@ -463,7 +463,7 @@ async def list_trip_attachments(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception(f"Failed to list trip attachments for trip {trip_id}: {e!s}")
+        logger.exception(f"Failed to list trip attachments for trip {trip_id}")
 
         # Log system error
         await audit_security_event(

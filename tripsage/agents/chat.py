@@ -38,7 +38,7 @@ class ChatAgent(BaseAgent):
             self.orchestrator = TripSageOrchestrator(self.service_registry)
             logger.info("Chat agent orchestrator initialized successfully")
         except Exception as e:
-            logger.exception(f"Failed to initialize chat agent orchestrator: {e}")
+            logger.exception(f"Failed to initialize chat agent orchestrator")
             self.orchestrator = None
 
     async def process_message(
@@ -82,7 +82,7 @@ class ChatAgent(BaseAgent):
             return result
 
         except Exception as e:
-            logger.exception(f"Error processing chat message: {e}")
+            logger.exception(f"Error processing chat message")
             return {
                 "error": str(e),
                 "message": (
@@ -143,7 +143,7 @@ class ChatAgent(BaseAgent):
             yield {"type": "response", "data": result}
 
         except Exception as e:
-            logger.exception(f"Error in streaming chat message: {e}")
+            logger.exception(f"Error in streaming chat message")
             yield {
                 "type": "error",
                 "data": {
@@ -177,7 +177,7 @@ class ChatAgent(BaseAgent):
                 return []
 
         except Exception as e:
-            logger.exception(f"Error retrieving conversation history: {e}")
+            logger.exception(f"Error retrieving conversation history")
             return []
 
     async def clear_conversation(self, user_id: str, session_id: str) -> bool:
@@ -200,7 +200,7 @@ class ChatAgent(BaseAgent):
                 return False
 
         except Exception as e:
-            logger.exception(f"Error clearing conversation: {e}")
+            logger.exception(f"Error clearing conversation")
             return False
 
     def get_available_agents(self) -> list[str]:

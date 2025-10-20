@@ -415,10 +415,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         except jwt.ExpiredSignatureError:
             raise AuthenticationError("Token has expired") from None
         except jwt.InvalidTokenError as e:
-            logger.exception(f"JWT InvalidTokenError: {e}")
+            logger.exception(f"JWT InvalidTokenError")
             raise AuthenticationError("Invalid token") from None
         except Exception as e:
-            logger.exception(f"JWT authentication error: {e}")
+            logger.exception(f"JWT authentication error")
             raise AuthenticationError("Invalid authentication token") from e
 
     async def _authenticate_api_key(self, api_key: str) -> Principal:
@@ -507,7 +507,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         except (AuthenticationError, KeyValidationError):
             raise
         except Exception as e:
-            logger.exception(f"API key authentication error: {e}")
+            logger.exception(f"API key authentication error")
             raise AuthenticationError("Invalid API key") from e
 
     def _create_auth_error_response(

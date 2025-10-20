@@ -84,7 +84,7 @@ class DatabaseServiceExtensions:
             ):
                 self._sqlalchemy_engine.pool.recreate()
         except Exception as e:
-            logger.exception(f"Failed to recycle connections: {e}")
+            logger.exception(f"Failed to recycle connections")
 
     # Vector Operations Methods
 

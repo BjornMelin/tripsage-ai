@@ -104,7 +104,7 @@ class Crawl4AIClient:
                     error_msg = result.get(
                         "error", "Unknown error in Crawl4AI scraping"
                     )
-                    logger.exception(f"Crawl4AI scraping error: {error_msg}")
+                    logger.exception(f"Crawl4AI scraping error")
                     return {"success": False, "error": error_msg}
 
                 # Extract and format the result
@@ -213,7 +213,7 @@ class Crawl4AIClient:
                     error_msg = result.get(
                         "error", "Unknown error in Crawl4AI blog crawl"
                     )
-                    logger.exception(f"Crawl4AI blog crawl error: {error_msg}")
+                    logger.exception(f"Crawl4AI blog crawl error")
                     return {"success": False, "error": error_msg}
 
                 # Process the blog-specific results based on extract_type
@@ -358,7 +358,7 @@ class Crawl4AIClient:
             }
 
         except Exception as e:
-            logger.exception(f"Failed to extract travel insights: {e}")
+            logger.exception(f"Failed to extract travel insights")
             return {"success": False, "url": url, "error": str(e), "insights": {}}
 
     def _parse_travel_insights(

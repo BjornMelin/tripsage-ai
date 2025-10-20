@@ -5,7 +5,7 @@ following best practices for maintainability and reusability.
 """
 
 from .memory_models import (
-    BudgetRange,
+    BudgetRange,  # Type aliases for reuse
     ConversationMessage,
     MemoryCategory,
     MemorySearchQuery,
@@ -16,7 +16,6 @@ from .memory_models import (
     SummaryText,
     TravelMemoryQuery,
     TravelStyle,
-    # Type aliases for reuse
     UserId,
     UserPreferences,
 )

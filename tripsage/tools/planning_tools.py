@@ -163,7 +163,7 @@ async def create_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Error creating travel plan: {e!s}")
+        logger.exception(f"Error creating travel plan")
         log_exception(e)
         return {"success": False, "error": f"Travel plan creation error: {e!s}"}
 
@@ -265,7 +265,7 @@ async def update_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Error updating travel plan: {e!s}")
+        logger.exception(f"Error updating travel plan")
         log_exception(e)
         return {"success": False, "error": f"Travel plan update error: {e!s}"}
 
@@ -390,7 +390,7 @@ async def combine_search_results(params: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Error combining search results: {e!s}")
+        logger.exception(f"Error combining search results")
         log_exception(e)
         return {"success": False, "error": f"Result combination error: {e!s}"}
 
@@ -450,7 +450,7 @@ async def generate_travel_summary(params: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Error generating travel summary: {e!s}")
+        logger.exception(f"Error generating travel summary")
         log_exception(e)
         return {"success": False, "error": f"Summary generation error: {e!s}"}
 
@@ -694,6 +694,6 @@ async def save_travel_plan(params: dict[str, Any]) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception(f"Error saving travel plan: {e!s}")
+        logger.exception(f"Error saving travel plan")
         log_exception(e)
         return {"success": False, "error": f"Travel plan save error: {e!s}"}
