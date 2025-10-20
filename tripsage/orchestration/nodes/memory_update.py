@@ -168,7 +168,9 @@ class MemoryUpdateNode(BaseAgentNode):
                 if params.get("location")
             }
 
-            insights.extend(f"Searched accommodation in: {location}" for location in locations)
+            insights.extend(
+                f"Searched accommodation in: {location}" for location in locations
+            )
 
         # Activity search patterns
         if state.get("activity_searches"):

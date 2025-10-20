@@ -282,7 +282,7 @@ class MemoryService:
             # Get database URL for validation
             from tripsage_core.config import get_settings
 
-            settings = get_settings()
+            get_settings()
 
             # Test Mem0 memory backend with retry logic
             async def test_memory_operation():
@@ -292,6 +292,7 @@ class MemoryService:
                     user_id="health_check_user",
                     limit=1,
                 )
+
             await test_memory_operation()
 
             self._connected = True
@@ -501,7 +502,11 @@ class MemoryService:
             ]
 
             context = {
-                key: [memory for memory, categories, _content in processed_memories if key in categories]
+                key: [
+                    memory
+                    for memory, categories, _content in processed_memories
+                    if key in categories
+                ]
                 for key in context_keys
             }
 
@@ -510,7 +515,8 @@ class MemoryService:
                 for memory, categories, content in processed_memories
                 if "preferences" not in categories
                 and any(
-                    word in content for word in ["prefer", "like", "dislike", "favorite"]
+                    word in content
+                    for word in ["prefer", "like", "dislike", "favorite"]
                 )
             ]
             budget_candidates = [
@@ -518,7 +524,8 @@ class MemoryService:
                 for memory, categories, content in processed_memories
                 if "budget_patterns" not in categories
                 and any(
-                    word in content for word in ["budget", "cost", "price", "expensive", "cheap"]
+                    word in content
+                    for word in ["budget", "cost", "price", "expensive", "cheap"]
                 )
             ]
 
@@ -836,8 +843,7 @@ class MemoryService:
         activities = [
             keyword
             for memory in (
-                context.get("activity_preferences", [])
-                + context.get("preferences", [])
+                context.get("activity_preferences", []) + context.get("preferences", [])
             )
             for keyword in activity_keywords
             if keyword in memory.get("memory", "").lower()

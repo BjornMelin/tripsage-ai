@@ -473,9 +473,7 @@ class ChatService:
                     content=result["content"],
                     created_at=datetime.fromisoformat(result["created_at"]),
                     metadata=result.get("metadata", {}),
-                    tool_calls=list(
-                        await self.db.get_message_tool_calls(result["id"])
-                    ),
+                    tool_calls=list(await self.db.get_message_tool_calls(result["id"])),
                     estimated_tokens=result.get(
                         "estimated_tokens", self._estimate_tokens(result["content"])
                     ),
@@ -661,7 +659,7 @@ class ChatService:
 
     @staticmethod
     def _convert_request_message(
-        message: dict[str, Any]
+        message: dict[str, Any],
     ) -> HumanMessage | AIMessage | SystemMessage | None:
         """Convert stored request message into a LangChain-compatible message."""
         role = message.get("role", "user")
@@ -770,11 +768,15 @@ class ChatService:
             mapped_messages = [
                 converted
                 for converted in (
-                    self._convert_request_message(message) for message in request.messages
+                    self._convert_request_message(message)
+                    for message in request.messages
                 )
                 if converted is not None
             ]
-            langchain_messages = [SystemMessage(content=system_prompt)] + mapped_messages
+            langchain_messages = [
+                SystemMessage(content=system_prompt),
+                *mapped_messages,
+            ]
 
             # Get AI response
             response = await llm.ainvoke(langchain_messages)
@@ -947,9 +949,7 @@ class ChatService:
                     content=result["content"],
                     created_at=datetime.fromisoformat(result["created_at"]),
                     metadata=result.get("metadata", {}),
-                    tool_calls=list(
-                        await self.db.get_message_tool_calls(result["id"])
-                    ),
+                    tool_calls=list(await self.db.get_message_tool_calls(result["id"])),
                     estimated_tokens=self._estimate_tokens(result["content"]),
                 )
                 for result in results

@@ -313,9 +313,7 @@ class TestApiKeyPerformance:
             list_tasks = [
                 (
                     "list",
-                    api_key_service.list_user_keys(
-                        sample_users[i % len(sample_users)]
-                    ),
+                    api_key_service.list_user_keys(sample_users[i % len(sample_users)]),
                 )
                 for i in range(20)
             ]

@@ -153,7 +153,9 @@ Start by greeting the user and asking how you can help with their travel plannin
             return "system"
         return "unknown"
 
-    def _to_langchain_message(self, message: Any) -> HumanMessage | AIMessage | SystemMessage | Any | None:
+    def _to_langchain_message(
+        self, message: Any
+    ) -> HumanMessage | AIMessage | SystemMessage | Any | None:
         """Convert dictionaries or message instances to LangChain messages."""
         if isinstance(message, dict):
             role = message.get("role", "human")
