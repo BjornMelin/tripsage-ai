@@ -139,7 +139,7 @@ class GoogleCalendarService:
             if self.cache_service is None:
                 try:
                     self.cache_service = await get_cache_service()
-                except Exception as cache_error:
+                except CoreServiceError as cache_error:
                     # Log warning but continue without cache
                     logger.warning(
                         "Calendar service cache initialization failed: %s",
@@ -227,7 +227,7 @@ class GoogleCalendarService:
             data = await self.cache_service.get(key)
             if data:
                 return json.loads(data)
-        except Exception as cache_error:
+        except (json.JSONDecodeError, CoreServiceError) as cache_error:
             logger.debug(
                 "Calendar cache read failed for key %s: %s",
                 key,
@@ -242,7 +242,7 @@ class GoogleCalendarService:
 
         try:
             await self.cache_service.set(key, json.dumps(value), ttl=ttl)
-        except Exception as cache_error:
+        except (ValueError, CoreServiceError) as cache_error:
             logger.debug(
                 "Calendar cache write failed for key %s: %s",
                 key,
@@ -740,7 +740,7 @@ class GoogleCalendarService:
             # Clear all event-related cache keys for this calendar
             pattern = f"events:{calendar_id}:*"
             await self.cache_service.delete_pattern(pattern)
-        except Exception as cache_error:
+        except CoreServiceError as cache_error:
             logger.debug(
                 "Calendar cache invalidation failed for pattern %s: %s",
                 pattern,
@@ -758,7 +758,7 @@ class GoogleCalendarService:
             # Simple test request
             await self.list_calendars()
             return True
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:

@@ -534,7 +534,7 @@ class DatabaseService:
             self._initialize_metrics()
 
         logger.info(
-            "Consolidated Database Service initialized with pool_size=%s, max_overflow=%s, LIFO=%s",
+            "Database Service initialized with pool_size=%s, max_overflow=%s, LIFO=%s",
             self.pool_size,
             self.max_overflow,
             "enabled" if self.pool_use_lifo else "disabled",
@@ -786,7 +786,8 @@ class DatabaseService:
             self._connection_stats.connection_errors = 0
 
             logger.info(
-                "Database service connected successfully in %.2fs. LIFO pooling enabled with pool_size=%s, max_overflow=%s",
+                "Database service connected successfully in %.2fs. "
+                "LIFO pooling enabled with pool_size=%s, max_overflow=%s",
                 duration,
                 self.pool_size,
                 self.max_overflow,
@@ -2030,9 +2031,10 @@ class DatabaseTransactionContext:
 
                 # Filter by destinations
                 if search_filters.get("destinations"):
-                    destination_filters = []
-                    for dest in search_filters["destinations"]:
-                        destination_filters.append(f"destination.ilike.%{dest}%")
+                    destination_filters = [
+                        f"destination.ilike.%{dest}%"
+                        for dest in search_filters["destinations"]
+                    ]
                     if destination_filters:
                         query = query.or_(",".join(destination_filters))
 

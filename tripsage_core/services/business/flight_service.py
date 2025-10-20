@@ -518,11 +518,7 @@ class FlightService:
 
             results = await self.db.get_flight_bookings(filters, limit)
 
-            bookings = []
-            for result in results:
-                bookings.append(FlightBooking(**result))
-
-            return bookings
+            return [FlightBooking(**result) for result in results]
 
         except Exception as e:
             logger.exception(
@@ -598,16 +594,14 @@ class FlightService:
             return []
 
         try:
-            # Convert passengers for external API
-            external_passengers = []
-            for passenger in search_request.passengers:
-                external_passengers.append(
-                    {
-                        "type": passenger.type.value,
-                        "given_name": passenger.given_name or "",
-                        "family_name": passenger.family_name or "",
-                    }
-                )
+            external_passengers = [
+                {
+                    "type": passenger.type.value,
+                    "given_name": passenger.given_name or "",
+                    "family_name": passenger.family_name or "",
+                }
+                for passenger in search_request.passengers
+            ]
 
             # Call external API
             external_offers = await self.external_service.search_flights(
@@ -621,13 +615,10 @@ class FlightService:
                 currency=search_request.currency,
             )
 
-            # Convert to our model
-            converted_offers = []
-            for external_offer in external_offers:
-                converted_offer = await self._convert_external_offer(external_offer)
-                converted_offers.append(converted_offer)
-
-            return converted_offers
+            return [
+                await self._convert_external_offer(external_offer)
+                for external_offer in external_offers
+            ]
 
         except Exception as e:
             logger.exception("External API search failed", extra={"error": str(e)})
@@ -650,12 +641,10 @@ class FlightService:
         self, search_request: FlightSearchRequest
     ) -> list[FlightOffer]:
         """Generate mock flight offers for testing."""
-        offers = []
-
         # Generate a few mock offers with different prices and options
         base_price = 300.0
-        for i in range(3):
-            offer = FlightOffer(
+        return [
+            FlightOffer(
                 id=str(uuid4()),
                 outbound_segments=[
                     FlightSegment(
@@ -677,9 +666,8 @@ class FlightService:
                 source="mock",
                 bookable=True,
             )
-            offers.append(offer)
-
-        return offers
+            for i in range(3)
+        ]
 
     async def _score_offers(
         self, offers: list[FlightOffer], search_request: FlightSearchRequest
@@ -821,21 +809,19 @@ class FlightService:
             return None
 
         try:
-            # Convert passengers for external API
-            external_passengers = []
-            for passenger in booking_request.passengers:
-                external_passengers.append(
-                    {
-                        "type": passenger.type.value,
-                        "given_name": passenger.given_name,
-                        "family_name": passenger.family_name,
-                        "born_on": passenger.date_of_birth.date()
-                        if passenger.date_of_birth
-                        else None,
-                        "email": passenger.email,
-                        "phone_number": passenger.phone,
-                    }
-                )
+            external_passengers = [
+                {
+                    "type": passenger.type.value,
+                    "given_name": passenger.given_name,
+                    "family_name": passenger.family_name,
+                    "born_on": passenger.date_of_birth.date()
+                    if passenger.date_of_birth
+                    else None,
+                    "email": passenger.email,
+                    "phone_number": passenger.phone,
+                }
+                for passenger in booking_request.passengers
+            ]
 
             # Create external booking
             external_order = await self.external_service.create_order(

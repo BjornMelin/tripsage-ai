@@ -906,9 +906,7 @@ class TestPerformanceScenarios:
         """Test rapid Settings instantiation."""
         start_time = time.time()
 
-        settings_list = []
-        for _ in range(100):
-            settings_list.append(Settings(_env_file=None))
+        settings_list = [Settings(_env_file=None) for _ in range(100)]
 
         end_time = time.time()
         total_time = end_time - start_time

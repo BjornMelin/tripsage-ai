@@ -420,10 +420,7 @@ class RateLimiter:
 
 
 class WebSocketManager:
-    """Enhanced WebSocket connection manager with broadcasting integration.
-
-    Refactored to use extracted services for better separation of concerns.
-    """
+    """WebSocket connection manager with broadcasting integration."""
 
     def __init__(self, broadcaster=None):
         # Extracted services
@@ -875,13 +872,12 @@ class WebSocketManager:
             try:
                 from .websocket_connection_service import ConnectionState
 
-                tasks = []
-                for connection in self.connection_service.connections.values():
-                    if connection.state in [
-                        ConnectionState.CONNECTED,
-                        ConnectionState.AUTHENTICATED,
-                    ]:
-                        tasks.append(connection.send_ping())
+                tasks = [
+                    connection.send_ping()
+                    for connection in self.connection_service.connections.values()
+                    if connection.state
+                    in [ConnectionState.CONNECTED, ConnectionState.AUTHENTICATED]
+                ]
 
                 # Send pings concurrently
                 if tasks:

@@ -663,11 +663,7 @@ class DestinationService:
 
             results = await self.db.get_saved_destinations(filters, limit)
 
-            saved_destinations = []
-            for result in results:
-                saved_destinations.append(SavedDestination(**result))
-
-            return saved_destinations
+            return [SavedDestination(**result) for result in results]
 
         except Exception as e:
             logger.exception(
@@ -735,12 +731,10 @@ class DestinationService:
                 external_request
             )
 
-            converted_destinations = []
-            for external_dest in external_destinations:
-                converted_dest = await self._convert_external_destination(external_dest)
-                converted_destinations.append(converted_dest)
-
-            return converted_destinations
+            return [
+                await self._convert_external_destination(external_dest)
+                for external_dest in external_destinations
+            ]
 
         except Exception as e:
             logger.exception(
@@ -768,8 +762,6 @@ class DestinationService:
         self, search_request: DestinationSearchRequest
     ) -> list[Destination]:
         """Generate mock destinations for testing."""
-        destinations = []
-
         # Generate mock destinations based on query
         mock_data = [
             {
@@ -807,8 +799,8 @@ class DestinationService:
             },
         ]
 
-        for _i, data in enumerate(mock_data[: search_request.limit]):
-            destination = Destination(
+        return [
+            Destination(
                 id=str(uuid4()),
                 name=data["name"],
                 country=data["country"],
@@ -830,9 +822,8 @@ class DestinationService:
                 source="mock",
                 last_updated=datetime.now(UTC),
             )
-            destinations.append(destination)
-
-        return destinations
+            for data in mock_data[: search_request.limit]
+        ]
 
     async def _enrich_with_weather(
         self, destinations: list[Destination]
@@ -1080,17 +1071,15 @@ class DestinationService:
             },
         ]
 
-        recommendations = []
-        for rec_data in mock_recommendations[: request.limit]:
-            recommendation = DestinationRecommendation(
+        return [
+            DestinationRecommendation(
                 destination=rec_data["destination"],
                 match_score=rec_data["match_score"],
                 reasons=rec_data["reasons"],
                 best_for=rec_data["best_for"],
             )
-            recommendations.append(recommendation)
-
-        return recommendations
+            for rec_data in mock_recommendations[: request.limit]
+        ]
 
     def _generate_search_cache_key(
         self, search_request: DestinationSearchRequest

@@ -39,7 +39,7 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
 
     if isinstance(exc, CoreMCPError):
         # Extract MCP-specific details from the core exception
-        details = exc.details.additional_context
+        details = exc.details.additional_context or {}
         log.error(
             "MCP Error: %s\nServer: %s\nTool: %s\nParams: %s",
             exc.message,
@@ -49,7 +49,7 @@ def log_exception(exc: Exception, logger_name: str | None = None) -> None:
         )
     elif isinstance(exc, CoreExternalAPIError):
         # Extract API-specific details from the core exception
-        details = exc.details.additional_context
+        details = exc.details.additional_context or {}
         log.error(
             "API Error: %s\nService: %s\nAPI Status Code: %s\nAPI Response: %s",
             exc.message,
@@ -137,6 +137,10 @@ def create_mcp_error(
     """
     details = ErrorDetails(
         service=server,
+        operation=None,
+        resource_id=None,
+        user_id=None,
+        request_id=None,
         additional_context={
             "tool": tool,
             "params": params,

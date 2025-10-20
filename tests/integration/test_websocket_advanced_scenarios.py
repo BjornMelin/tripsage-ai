@@ -417,9 +417,10 @@ class TestConcurrentOperations:
         # Send to all connections concurrently
         event = WebSocketEvent(type="broadcast", payload={"msg": "test"})
 
-        tasks = []
-        for conn_id in manager.connection_service.connections:
-            tasks.append(manager.send_to_connection(conn_id, event))
+        tasks = [
+            manager.send_to_connection(conn_id, event)
+            for conn_id in manager.connection_service.connections
+        ]
 
         results = await asyncio.gather(*tasks)
         assert all(results)

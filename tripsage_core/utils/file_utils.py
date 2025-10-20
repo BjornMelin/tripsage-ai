@@ -132,7 +132,11 @@ async def validate_file(
     # Size validation
     if file_size == 0:
         return ValidationResult(
-            is_valid=False, error_message="File is empty", file_size=file_size
+            is_valid=False,
+            error_message="File is empty",
+            file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     if file_size > max_size:
@@ -143,18 +147,28 @@ async def validate_file(
                 f"({max_size} bytes)"
             ),
             file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     # Filename security validation
     if not file.filename:
         return ValidationResult(
-            is_valid=False, error_message="Filename is required", file_size=file_size
+            is_valid=False,
+            error_message="Filename is required",
+            file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     filename_result = _validate_filename(file.filename)
     if not filename_result[0]:
         return ValidationResult(
-            is_valid=False, error_message=filename_result[1], file_size=file_size
+            is_valid=False,
+            error_message=filename_result[1],
+            file_size=file_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     # MIME type validation
@@ -166,6 +180,7 @@ async def validate_file(
             error_message=f"File type '{detected_type}' is not allowed",
             file_size=file_size,
             detected_type=detected_type,
+            file_hash=None,
         )
 
     # Content-based validation
@@ -176,10 +191,12 @@ async def validate_file(
             error_message=content_result[1],
             file_size=file_size,
             detected_type=detected_type,
+            file_hash=None,
         )
 
     return ValidationResult(
         is_valid=True,
+        error_message=None,
         file_size=file_size,
         detected_type=detected_type,
         file_hash=file_hash,
@@ -187,14 +204,7 @@ async def validate_file(
 
 
 def _validate_filename(filename: str) -> tuple[bool, str | None]:
-    """Validate filename for security issues.
-
-    Args:
-        filename: Original filename from upload
-
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
+    """Validate filename for security issues."""
     # Check for suspicious patterns
     for pattern in SUSPICIOUS_PATTERNS:
         if pattern in filename.lower():
@@ -285,7 +295,7 @@ def _validate_image_content(content: bytes, mime_type: str) -> tuple[bool, str |
         return False, "Invalid JPEG header"
     elif mime_type == "image/png" and not content.startswith(b"\x89PNG\r\n\x1a\n"):
         return False, "Invalid PNG header"
-    elif mime_type == "image/gif" and not (content.startswith((b"GIF87a", b"GIF89a"))):
+    elif mime_type == "image/gif" and not content.startswith((b"GIF87a", b"GIF89a")):
         return False, "Invalid GIF header"
 
     return True, None
@@ -327,7 +337,11 @@ async def validate_batch_upload(
     """
     if not files:
         return ValidationResult(
-            is_valid=False, error_message="No files provided", file_size=0
+            is_valid=False,
+            error_message="No files provided",
+            file_size=0,
+            detected_type=None,
+            file_hash=None,
         )
 
     total_size = 0
@@ -346,6 +360,8 @@ async def validate_batch_upload(
                 f"({max_total_size} bytes)"
             ),
             file_size=total_size,
+            detected_type=None,
+            file_hash=None,
         )
 
     # Validate individual files
@@ -356,9 +372,17 @@ async def validate_batch_upload(
                 is_valid=False,
                 error_message=f"File '{file.filename}': {result.error_message}",
                 file_size=total_size,
+                detected_type=None,
+                file_hash=None,
             )
 
-    return ValidationResult(is_valid=True, file_size=total_size)
+    return ValidationResult(
+        is_valid=True,
+        error_message=None,
+        file_size=total_size,
+        detected_type=None,
+        file_hash=None,
+    )
 
 
 def generate_safe_filename(original_filename: str, user_id: str) -> str:

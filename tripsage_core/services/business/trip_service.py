@@ -658,10 +658,11 @@ class TripService:
         shared_with = [c["user_id"] for c in collaborators]
 
         # Build destinations
-        destinations = []
-        for dest_data in trip_data.get("destinations", []):
-            if isinstance(dest_data, dict):
-                destinations.append(TripLocation(**dest_data))
+        destinations = [
+            TripLocation(**dest_data)
+            for dest_data in trip_data.get("destinations", [])
+            if isinstance(dest_data, dict)
+        ]
 
         return TripResponse(
             id=UUID(trip_data["id"]),

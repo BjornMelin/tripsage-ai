@@ -294,7 +294,7 @@ class UnifiedSearchService(
                 results.append(result)
 
             return results
-        except Exception as e:
+        except (ValueError, KeyError, CoreServiceError) as e:
             logger.warning("Destination search failed: %s", e)
             return []
 
@@ -354,7 +354,7 @@ class UnifiedSearchService(
                 results.append(result)
 
             return results
-        except Exception as e:
+        except (ValueError, KeyError, CoreServiceError) as e:
             logger.warning("Activity search failed: %s", e)
             return []
 
@@ -367,7 +367,7 @@ class UnifiedSearchService(
             # TODO: Implement flight search integration when flight service is available
             logger.debug("Flight search not yet implemented in unified search")
             return []
-        except Exception as e:
+        except (ValueError, KeyError, CoreServiceError) as e:
             logger.warning("Flight search failed: %s", e)
             return []
 
@@ -380,7 +380,7 @@ class UnifiedSearchService(
             # TODO: Implement accommodation search integration when service is available
             logger.debug("Accommodation search not yet implemented in unified search")
             return []
-        except Exception as e:
+        except (ValueError, KeyError, CoreServiceError) as e:
             logger.warning("Accommodation search failed: %s", e)
             return []
 

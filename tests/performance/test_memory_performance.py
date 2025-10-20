@@ -229,16 +229,14 @@ class TestMemoryPerformance:
             "tripsage.tools.memory_tools.memory_service", performance_memory_service
         ):
             # Create large conversation
-            large_messages = []
-            for i in range(1000):  # 1000 messages
-                large_messages.append(
-                    ConversationMessage(
-                        role="user" if i % 2 == 0 else "assistant",
-                        content=f"Large conversation message {i} "
-                        * 10,  # ~300 chars each
-                        timestamp=datetime.now(UTC),
-                    )
+            large_messages = [
+                ConversationMessage(
+                    role="user" if i % 2 == 0 else "assistant",
+                    content=f"Large conversation message {i} " * 10,  # ~300 chars each
+                    timestamp=datetime.now(UTC),
                 )
+                for i in range(1000)
+            ]  # 1000 messages
 
             start_time = time.time()
 

@@ -304,20 +304,17 @@ class ConfigurationService:
                 {"agent_type": agent_type, "environment": environment, "limit": limit},
             )
 
-            versions = []
-            for row in result:
-                versions.append(
-                    {
-                        "version_id": row.version_id,
-                        "configuration": row.config_snapshot,
-                        "description": row.description,
-                        "created_at": row.created_at,
-                        "created_by": row.created_by,
-                        "is_current": row.is_current,
-                    }
-                )
-
-            return versions
+            return [
+                {
+                    "version_id": row.version_id,
+                    "configuration": row.config_snapshot,
+                    "description": row.description,
+                    "created_at": row.created_at,
+                    "created_by": row.created_by,
+                    "is_current": row.is_current,
+                }
+                for row in result
+            ]
 
     async def rollback_to_version(
         self,

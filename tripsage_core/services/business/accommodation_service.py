@@ -691,11 +691,7 @@ class AccommodationService:
 
             results = await self.db.get_accommodation_bookings(filters, limit)
 
-            bookings = []
-            for result in results:
-                bookings.append(AccommodationBooking(**result))
-
-            return bookings
+            return [AccommodationBooking(**result) for result in results]
 
         except Exception as e:
             logger.exception(
@@ -798,14 +794,10 @@ class AccommodationService:
             )
 
             # Convert to our model
-            converted_listings = []
-            for external_listing in external_listings:
-                converted_listing = await self._convert_external_listing(
-                    external_listing
-                )
-                converted_listings.append(converted_listing)
-
-            return converted_listings
+            return [
+                await self._convert_external_listing(external_listing)
+                for external_listing in external_listings
+            ]
 
         except Exception as e:
             logger.exception("External API search failed", extra={"error": str(e)})
@@ -834,7 +826,6 @@ class AccommodationService:
         self, search_request: AccommodationSearchRequest
     ) -> list[AccommodationListing]:
         """Generate mock accommodation listings for testing."""
-        listings = []
         nights = (search_request.check_out - search_request.check_in).days
 
         # Generate a few mock listings with different property types and prices
@@ -845,8 +836,8 @@ class AccommodationService:
         ]
         base_price = 80.0
 
-        for i in range(3):
-            listing = AccommodationListing(
+        return [
+            AccommodationListing(
                 id=str(uuid4()),
                 name=f"Sample {property_types[i].value.title()} {i + 1}",
                 description=(
@@ -871,8 +862,12 @@ class AccommodationService:
                 bathrooms=1.0 + (i * 0.5),
                 amenities=[
                     AccommodationAmenity(name="WiFi"),
-                    AccommodationAmenity(name="Kitchen" if i > 0 else "Restaurant"),
-                    AccommodationAmenity(name="Pool" if i == 2 else "Air Conditioning"),
+                    AccommodationAmenity(
+                        name="Kitchen" if i > 0 else "Restaurant"
+                    ),
+                    AccommodationAmenity(
+                        name="Pool" if i == 2 else "Air Conditioning"
+                    ),
                 ],
                 images=[
                     AccommodationImage(
@@ -883,9 +878,8 @@ class AccommodationService:
                 source="mock",
                 instant_book=i % 2 == 0,
             )
-            listings.append(listing)
-
-        return listings
+            for i in range(3)
+        ]
 
     async def _score_listings(
         self,

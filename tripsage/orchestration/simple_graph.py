@@ -102,20 +102,11 @@ Start by greeting the user and asking how you can help with their travel plannin
         """
         try:
             # Convert messages to LangChain format if needed
-            langchain_messages = []
-            for msg in messages:
-                if isinstance(msg, dict):
-                    role = msg.get("role", "human")
-                    content = msg.get("content", "")
-
-                    if role == "user" or role == "human":
-                        langchain_messages.append(HumanMessage(content=content))
-                    elif role == "assistant" or role == "ai":
-                        langchain_messages.append(AIMessage(content=content))
-                    elif role == "system":
-                        langchain_messages.append(SystemMessage(content=content))
-                else:
-                    langchain_messages.append(msg)
+            langchain_messages = [
+                converted
+                for converted in (self._to_langchain_message(msg) for msg in messages)
+                if converted is not None
+            ]
 
             # Use default config if none provided
             if config is None:
@@ -127,15 +118,14 @@ Start by greeting the user and asking how you can help with their travel plannin
             )
 
             # Convert back to dictionary format
-            response_messages = []
-            for msg in result["messages"]:
-                response_messages.append(
-                    {
-                        "role": self._get_role_from_message(msg),
-                        "content": msg.content,
-                        "timestamp": msg.additional_kwargs.get("timestamp", None),
-                    }
-                )
+            response_messages = [
+                {
+                    "role": self._get_role_from_message(msg),
+                    "content": msg.content,
+                    "timestamp": msg.additional_kwargs.get("timestamp", None),
+                }
+                for msg in result["messages"]
+            ]
 
             return {"messages": response_messages, "success": True}
 
@@ -157,12 +147,25 @@ Start by greeting the user and asking how you can help with their travel plannin
         """Convert LangChain message type to role string."""
         if isinstance(message, HumanMessage):
             return "user"
-        elif isinstance(message, AIMessage):
+        if isinstance(message, AIMessage):
             return "assistant"
-        elif isinstance(message, SystemMessage):
+        if isinstance(message, SystemMessage):
             return "system"
-        else:
-            return "unknown"
+        return "unknown"
+
+    def _to_langchain_message(self, message: Any) -> HumanMessage | AIMessage | SystemMessage | Any | None:
+        """Convert dictionaries or message instances to LangChain messages."""
+        if isinstance(message, dict):
+            role = message.get("role", "human")
+            content = message.get("content", "")
+            if role in {"user", "human"}:
+                return HumanMessage(content=content)
+            if role in {"assistant", "ai"}:
+                return AIMessage(content=content)
+            if role == "system":
+                return SystemMessage(content=content)
+            return None
+        return message
 
     async def stream_conversation(
         self, messages: list[dict[str, Any]], config: dict[str, Any] | None = None
@@ -178,16 +181,11 @@ Start by greeting the user and asking how you can help with their travel plannin
         """
         try:
             # Convert messages to LangChain format
-            langchain_messages = []
-            for msg in messages:
-                if isinstance(msg, dict):
-                    role = msg.get("role", "human")
-                    content = msg.get("content", "")
-
-                    if role == "user" or role == "human":
-                        langchain_messages.append(HumanMessage(content=content))
-                    elif role == "assistant" or role == "ai":
-                        langchain_messages.append(AIMessage(content=content))
+            langchain_messages = [
+                converted
+                for converted in (self._to_langchain_message(msg) for msg in messages)
+                if isinstance(converted, (HumanMessage, AIMessage))
+            ]
 
             if config is None:
                 config = {"configurable": {"thread_id": "default"}}

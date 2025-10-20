@@ -400,10 +400,7 @@ class TestWebSocketRateLimiting:
 
         # Simulate burst of messages
         burst_size = 50
-        burst_messages = []
-
-        for i in range(burst_size):
-            burst_messages.append(f"Burst message {i}")
+        burst_messages = [f"Burst message {i}" for i in range(burst_size)]
 
         # Send burst
         start_time = time.time()

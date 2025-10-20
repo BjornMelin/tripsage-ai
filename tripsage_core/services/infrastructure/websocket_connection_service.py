@@ -55,6 +55,7 @@ class ExponentialBackoffException(Exception):
     """Custom exception for exponential backoff failures."""
 
     def __init__(self, message: str, max_attempts: int, last_delay: float):
+        """Initialize the Exponential Backoff Exception."""
         super().__init__(message)
         self.max_attempts = max_attempts
         self.last_delay = last_delay
@@ -66,36 +67,43 @@ class MonitoredDeque(deque):
     def __init__(
         self, *args, priority_name: str = "", connection_id: str = "", **kwargs
     ):
+        """Initialize the deque."""
         super().__init__(*args, **kwargs)
         self.priority_name = priority_name
         self.connection_id = connection_id
         self.dropped_count = 0
 
-    def append(self, item):
+    def append(self, x):
+        """Append an item to the deque."""
         if self.maxlen and len(self) >= self.maxlen:
             self.dropped_count += 1
             logger.warning(
-                "Message dropped from %s priority queue for connection %s. Total dropped: %s",
+                "Message dropped from %s priority queue for connection %s. "
+                "Total dropped: %s",
                 self.priority_name,
                 self.connection_id,
                 self.dropped_count,
             )
-        super().append(item)
+        super().append(x)
 
-    def appendleft(self, item):
+    def appendleft(self, x):
+        """Append an item to the left of the deque."""
         if self.maxlen and len(self) >= self.maxlen:
             self.dropped_count += 1
             logger.warning(
-                "Message dropped from %s priority queue for connection %s. Total dropped: %s",
+                "Message dropped from %s priority queue for connection %s. "
+                "Total dropped: %s",
                 self.priority_name,
                 self.connection_id,
                 self.dropped_count,
             )
-        super().appendleft(item)
+        super().appendleft(x)
 
 
 class WebSocketConnection:
     """Enhanced WebSocket connection wrapper with health monitoring."""
+
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -104,6 +112,7 @@ class WebSocketConnection:
         user_id: UUID | None = None,
         session_id: UUID | None = None,
     ):
+        """Initialize the WebSocket connection."""
         self.websocket = websocket
         self.connection_id = connection_id
         self.user_id = user_id
@@ -253,7 +262,8 @@ class WebSocketConnection:
                     low_priority_queue.popleft()  # Drop oldest low priority message
                     self.dropped_messages_count += 1
                     logger.warning(
-                        "Dropped low priority message to make space for priority %s message on connection %s",
+                        "Dropped low priority message to make space for priority"
+                        "%s message on connection %s",
                         priority,
                         self.connection_id,
                     )
@@ -262,7 +272,8 @@ class WebSocketConnection:
                     return True
                 # No low priority messages to drop, reject the new message
                 logger.exception(
-                    "Queue full and no low priority messages to drop for connection %s. Rejecting priority %s message.",
+                    "Queue full and no low priority messages to drop for connection %s."
+                    "Rejecting priority %s message.",
                     self.connection_id,
                     priority,
                 )
@@ -307,7 +318,9 @@ class WebSocketConnection:
         }
         return await self.send(event)
 
-    async def send(self, event: dict[str, Any], message_limits=None) -> bool:
+    async def send(
+        self, event: dict[str, Any] | BaseModel, message_limits=None
+    ) -> bool:
         """Send event to WebSocket connection with error handling and size validation.
 
         Args:
@@ -320,16 +333,21 @@ class WebSocketConnection:
         Raises:
             CoreValidationError: If message exceeds size limits
         """
+        # pylint: disable=too-many-return-statements
+        # pylint: disable=too-many-statements
         from tripsage_core.exceptions.exceptions import CoreValidationError
 
         # Validate message size before processing
         if message_limits:
-            message_type = event.get("type", "message")
+            if isinstance(event, BaseModel):
+                message_type = getattr(event, "type", "message")
+            else:
+                message_type = event.get("type", "message")
             max_size = message_limits.get_limit_for_message_type(message_type)
 
             # Estimate message size by converting to JSON
             try:
-                if hasattr(event, "model_dump"):
+                if isinstance(event, BaseModel):
                     event_dict = event.model_dump()
                     # Convert UUID fields to strings for JSON serialization
                     if event_dict.get("user_id"):
@@ -379,26 +397,25 @@ class WebSocketConnection:
             # circuit breaker, fail
             if self.state == ConnectionState.ERROR:
                 logger.warning(
-                    "Cannot send to connection %s - circuit breaker OPEN and in ERROR state",
+                    "Cannot send to connection %s - circuit breaker "
+                    "OPEN and in ERROR state",
                     self.connection_id,
                 )
                 return False
 
             # Circuit breaker is OPEN but connection is healthy - queue the message
             # instead of failing
-            priority = (
-                getattr(event, "priority", 2)
-                if hasattr(event, "priority")
-                else event.get("priority", 2)
-            )
+            if isinstance(event, BaseModel):
+                priority = getattr(event, "priority", 2)
+            else:
+                priority = event.get("priority", 2)
             return self.handle_queue_overflow(event, priority)
 
         # Add to priority queue if connection is busy, with backpressure handling
-        priority = (
-            getattr(event, "priority", 2)
-            if hasattr(event, "priority")
-            else event.get("priority", 2)
-        )
+        if isinstance(event, BaseModel):
+            priority = getattr(event, "priority", 2)
+        else:
+            priority = event.get("priority", 2)
         if self._send_lock.locked():
             # Check backpressure before queueing
             if self.is_backpressure_active() and priority == 3:
@@ -415,7 +432,7 @@ class WebSocketConnection:
         async with self._send_lock:
             try:
                 # Handle both Pydantic models and dicts
-                if hasattr(event, "model_dump"):
+                if isinstance(event, BaseModel):
                     event_dict = event.model_dump()
                     # Convert UUID fields to strings for JSON serialization
                     if event_dict.get("user_id"):
@@ -457,14 +474,13 @@ class WebSocketConnection:
                 self.circuit_breaker.record_failure()
 
                 # Queue for retry if not permanent error, using backpressure handling
-                retry_count = (
-                    getattr(event, "retry_count", 0)
-                    if hasattr(event, "retry_count")
-                    else event.get("retry_count", 0)
-                )
+                if isinstance(event, BaseModel):
+                    retry_count = getattr(event, "retry_count", 0)
+                else:
+                    retry_count = event.get("retry_count", 0)
                 if retry_count < 3:
                     # Preserve original event type (Pydantic or dict) for compatibility
-                    if hasattr(event, "model_dump"):
+                    if isinstance(event, BaseModel):
                         # For Pydantic models - create a new instance to preserve
                         # object type
                         event_dict = event.model_dump()
@@ -488,10 +504,6 @@ class WebSocketConnection:
     async def send_ping(self) -> bool:
         """Send ping and track latency with support for multiple outstanding pings."""
         try:
-            # Use the websocket.ping() method for compatibility with tests
-            if hasattr(self.websocket, "ping"):
-                await self.websocket.ping()
-
             # Generate unique ping ID
             ping_id = f"ping_{int(time.time() * 1000)}_{len(self.ping_sent_times)}"
 
@@ -588,7 +600,7 @@ class WebSocketConnection:
                 # last_pong is a timestamp
                 current_time = time.time()
                 return current_time - self.last_pong > self.heartbeat_timeout
-            elif hasattr(self.last_pong, "timestamp"):
+            if hasattr(self.last_pong, "timestamp"):
                 # last_pong is a datetime object
                 current_time = time.time()
                 last_pong_timestamp = self.last_pong.timestamp()
@@ -660,7 +672,7 @@ class WebSocketConnection:
                     event = queue.popleft()
 
                     # Convert Pydantic objects to dicts for sending
-                    if hasattr(event, "model_dump"):
+                    if isinstance(event, BaseModel):
                         event_dict = event.model_dump()
                         # Convert UUID fields to strings for JSON serialization
                         if event_dict.get("user_id"):
@@ -703,6 +715,7 @@ class WebSocketConnectionService:
     """Service for managing individual WebSocket connections."""
 
     def __init__(self):
+        """Initialize the WebSocket connection service."""
         self.connections: dict[str, WebSocketConnection] = {}
 
     async def create_connection(

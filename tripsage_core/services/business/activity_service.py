@@ -106,6 +106,9 @@ class ActivityService:
         """
         await self.ensure_services()
 
+        if self.google_maps_service is None:
+            raise ActivityServiceError("Google Maps service not initialized")
+
         try:
             logger.info("Searching activities for destination: %s", request.destination)
 
@@ -137,21 +140,14 @@ class ActivityService:
             place_types = self._get_place_types_for_categories(request.categories or [])
 
             # Set search radius (default 10km, max 50km for activities)
-            search_radius = min(50000, 10000)  # 10km default, 50km max
+            search_radius = 10000  # 10km
 
             activities = []
 
             if place_types:
-                # Search using specific place types
-                for place_type in place_types:
-                    try:
-                        results = await self._search_places_by_type(
-                            search_location, place_type, search_radius, request
-                        )
-                        activities.extend(results)
-                    except Exception as e:
-                        logger.warning("Failed to search for %s: %s", place_type, e)
-                        continue
+                activities = await self._search_activities_by_types(
+                    search_location, place_types, search_radius, request
+                )
             else:
                 # General activity search
                 search_query = f"activities things to do in {request.destination}"
@@ -163,27 +159,29 @@ class ActivityService:
                     )
 
                     if search_results.get("results"):
-                        batch_tasks = []
-                        for place in search_results["results"][
-                            :20
-                        ]:  # Limit to 20 results
-                            task = self._convert_place_to_activity(place, request)
-                            batch_tasks.append(task)
+                        batch_tasks = [
+                            self._convert_place_to_activity(place, request)
+                            for place in search_results["results"][:20]
+                        ]  # Limit to 20 results
 
                         if batch_tasks:
                             batch_results = await asyncio.gather(
                                 *batch_tasks, return_exceptions=True
                             )
-                            for result in batch_results:
-                                if isinstance(result, ActivityResponse):
-                                    activities.append(result)
-                                elif isinstance(result, Exception):
-                                    logger.warning(
-                                        "Failed to convert place: %s", result
-                                    )
+                            activities.extend(
+                                result
+                                for result in batch_results
+                                if isinstance(result, ActivityResponse)
+                            )
+                            for error in (
+                                result
+                                for result in batch_results
+                                if isinstance(result, Exception)
+                            ):
+                                logger.warning("Failed to convert place: %s", error)
 
-                except Exception:
-                    logger.exception("General activity search failed")
+                except GoogleMapsServiceError as e:
+                    logger.warning("General activity search failed: %s", e)
 
             # Apply additional filters
             filtered_activities = self._apply_filters(activities, request)
@@ -223,6 +221,7 @@ class ActivityService:
                     else None,
                 },
                 cached=False,  # Set by caching decorator if from cache
+                provider_responses=None,
             )
 
         except GoogleMapsServiceError as e:
@@ -244,6 +243,9 @@ class ActivityService:
         request: ActivitySearchRequest,
     ) -> list[ActivityResponse]:
         """Search for places of a specific type."""
+        if self.google_maps_service is None:
+            raise ActivityServiceError("Google Maps service not initialized")
+
         try:
             # Use Places API nearby search
             search_results = await self.google_maps_service.search_places(
@@ -252,25 +254,49 @@ class ActivityService:
                 radius=radius,
             )
 
-            activities = []
             if search_results.get("results"):
-                batch_tasks = []
-                for place in search_results["results"][:10]:  # Limit per type
-                    task = self._convert_place_to_activity(place, request)
-                    batch_tasks.append(task)
+                batch_tasks = [
+                    self._convert_place_to_activity(place, request)
+                    for place in search_results["results"][:10]
+                ]  # Limit per type
 
                 if batch_tasks:
                     batch_results = await asyncio.gather(
                         *batch_tasks, return_exceptions=True
                     )
-                    for result in batch_results:
-                        if isinstance(result, ActivityResponse):
-                            activities.append(result)
+                    return [
+                        result
+                        for result in batch_results
+                        if isinstance(result, ActivityResponse)
+                    ]
 
-            return activities
-        except Exception as e:
+            return []
+        except GoogleMapsServiceError as e:
             logger.warning("Failed to search places by type %s: %s", place_type, e)
             return []
+
+    async def _search_activities_by_types(
+        self,
+        search_location: tuple[float, float],
+        place_types: list[str],
+        search_radius: int,
+        request: ActivitySearchRequest,
+    ) -> list[ActivityResponse]:
+        """Search activities for multiple place types."""
+        if self.google_maps_service is None:
+            raise ActivityServiceError("Google Maps service not initialized")
+
+        activities: list[ActivityResponse] = []
+        for place_type in place_types:
+            try:
+                results = await self._search_places_by_type(
+                    search_location, place_type, search_radius, request
+                )
+                activities.extend(results)
+            except GoogleMapsServiceError as e:
+                logger.warning("Failed to search for %s: %s", place_type, e)
+                continue
+        return activities
 
     async def _convert_place_to_activity(
         self, place: dict[str, Any], request: ActivitySearchRequest
@@ -295,7 +321,7 @@ class ActivityService:
             activity_type = self._determine_activity_type(place_types)
 
             # Get rating and price level
-            rating = float(place.get("rating", 0.0))
+            rating = float(place.get("rating") or 0.0)
             price_level = place.get("price_level", 1)  # Google's 0-4 scale
 
             # Convert price level to estimated price
@@ -335,9 +361,16 @@ class ActivityService:
                 availability="Contact venue",
                 wheelchair_accessible=None,  # Not available from basic Places API
                 instant_confirmation=False,
+                cancellation_policy=None,
+                included=[],
+                excluded=[],
+                meeting_point=vicinity,
+                languages=["English"],
+                max_participants=None,
+                min_participants=None,
             )
 
-        except Exception as e:
+        except (ValueError, TypeError, KeyError) as e:
             logger.warning("Failed to convert place to activity: %s", e)
             raise
 
@@ -434,10 +467,11 @@ class ActivityService:
             filtered = [a for a in filtered if a.duration <= request.duration]
 
         # Accessibility filter
-        if request.wheelchair_accessible is True:
-            # Only include activities that are explicitly wheelchair accessible
-            # Since we don't have this data from basic Places API, we'll be conservative
-            filtered = [a for a in filtered if a.wheelchair_accessible is True]
+        if request.wheelchair_accessible:
+            logger.info(
+                "Wheelchair accessibility filter requested but data not available "
+                "from current API; including all activities"
+            )
 
         return filtered
 
@@ -519,7 +553,7 @@ class ActivityService:
         activity_type = self._determine_activity_type(place_types)
 
         # Get rating and price
-        rating = float(place.get("rating", 0.0))
+        rating = float(place.get("rating") or 0.0)
         price_level = place.get("price_level", 1)
         price = self._estimate_price_from_level(price_level, activity_type)
 
@@ -561,6 +595,11 @@ class ActivityService:
             languages=["English"],  # Default
             wheelchair_accessible=None,
             instant_confirmation=False,
+            cancellation_policy=None,
+            included=[],
+            excluded=[],
+            max_participants=None,
+            min_participants=None,
         )
 
 

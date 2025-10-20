@@ -132,12 +132,11 @@ class DuffelFlightsService(BaseService):
 
         response = await self._make_request("GET", "/places/suggestions", params=params)
 
-        airports = []
-        for place in response.get("data", []):
-            if place.get("type") == "airport":
-                airports.append(Airport(**place))
-
-        return airports
+        return [
+            Airport(**place)
+            for place in response.get("data", [])
+            if place.get("type") == "airport"
+        ]
 
     async def search_flights(
         self,

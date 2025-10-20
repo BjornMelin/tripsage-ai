@@ -393,19 +393,17 @@ async def get_active_connections() -> dict[str, Any]:
 
     Returns statistics about currently connected dashboard clients.
     """
-    connections_info = []
-
-    for metadata in dashboard_manager.connection_metadata.values():
-        connections_info.append(
-            {
-                "user_id": metadata.get("user_id"),
-                "connection_type": metadata.get("connection_type"),
-                "connected_at": metadata.get("connected_at"),
-                "duration_seconds": (
-                    datetime.now(UTC) - metadata.get("connected_at", datetime.now(UTC))
-                ).total_seconds(),
-            }
-        )
+    connections_info = [
+        {
+            "user_id": metadata.get("user_id"),
+            "connection_type": metadata.get("connection_type"),
+            "connected_at": metadata.get("connected_at"),
+            "duration_seconds": (
+                datetime.now(UTC) - metadata.get("connected_at", datetime.now(UTC))
+            ).total_seconds(),
+        }
+        for metadata in dashboard_manager.connection_metadata.values()
+    ]
 
     return {
         "total_connections": len(dashboard_manager.active_connections),

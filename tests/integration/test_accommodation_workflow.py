@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.business.accommodation_service import (
     AccommodationListing,
     AccommodationSearchRequest,
@@ -231,13 +232,13 @@ class TestAccommodationWorkflow:
             # If booking succeeds, verify the response structure
             if result:
                 assert hasattr(result, "id") or hasattr(result, "status")
-        except Exception as e:
+        except (CoreServiceError, ValueError, RuntimeError) as exc:
             # If method signature is different or dependencies missing,
             # that's acceptable for integration test - we're testing the API exists
             assert (
-                "booking" in str(e).lower()
-                or "user" in str(e).lower()
-                or "listing" in str(e).lower()
+                "booking" in str(exc).lower()
+                or "user" in str(exc).lower()
+                or "listing" in str(exc).lower()
             )
 
     @pytest.mark.asyncio
@@ -288,9 +289,9 @@ class TestAccommodationWorkflow:
             bookings = await accommodation_service.get_user_bookings(user_id)
             # If successful, verify it returns a list-like structure
             assert hasattr(bookings, "__iter__") or bookings is None
-        except Exception as e:
+        except (CoreServiceError, ValueError, RuntimeError) as exc:
             # If dependencies are missing, that's acceptable for integration test
-            assert "user" in str(e).lower() or "database" in str(e).lower()
+            assert "user" in str(exc).lower() or "database" in str(exc).lower()
 
     @pytest.mark.asyncio
     async def test_cancel_booking_workflow(self, accommodation_service):
@@ -304,9 +305,9 @@ class TestAccommodationWorkflow:
             result = await accommodation_service.cancel_booking(booking_id, user_id)
             # If successful, should return a boolean
             assert isinstance(result, bool)
-        except Exception as e:
+        except (CoreServiceError, ValueError, RuntimeError) as exc:
             # If dependencies are missing, that's acceptable for integration test
             assert any(
-                word in str(e).lower()
+                word in str(exc).lower()
                 for word in ["booking", "user", "database", "not found"]
             )

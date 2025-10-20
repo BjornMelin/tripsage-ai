@@ -88,7 +88,7 @@ class WeatherService:
         if self._client:
             try:
                 await self._client.aclose()
-            except Exception as close_error:
+            except CoreServiceError as close_error:
                 logger.warning(
                     "Error closing weather service HTTP client: %s",
                     close_error,
@@ -140,7 +140,7 @@ class WeatherService:
             error_data = {}
             try:
                 error_data = e.response.json() if e.response.content else {}
-            except Exception as parse_error:
+            except ValueError as parse_error:
                 logger.debug(
                     "Failed to parse weather API error response: %s",
                     parse_error,
@@ -765,7 +765,7 @@ class WeatherService:
             # Simple test request
             await self.get_current_weather(40.7128, -74.0060)  # New York
             return True
-        except Exception:
+        except CoreServiceError:
             return False
 
     async def close(self) -> None:

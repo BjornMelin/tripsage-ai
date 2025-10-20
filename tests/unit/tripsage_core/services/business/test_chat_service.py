@@ -352,20 +352,18 @@ class TestChatService:
         }
 
         # Create messages that would be limited by database layer
-        messages = []
-        # Database would return only 2 messages that fit in token limit
-        for _ in range(2):
-            messages.append(
-                {
-                    "id": str(uuid4()),
-                    "session_id": sample_chat_session.id,
-                    "role": MessageRole.USER,
-                    "content": "A" * 2000,  # ~500 tokens each
-                    "created_at": datetime.now(UTC).isoformat(),
-                    "metadata": {},
-                    "estimated_tokens": 500,
-                }
-            )
+        messages = [
+            {
+                "id": str(uuid4()),
+                "session_id": sample_chat_session.id,
+                "role": MessageRole.USER,
+                "content": "A" * 2000,  # ~500 tokens each
+                "created_at": datetime.now(UTC).isoformat(),
+                "metadata": {},
+                "estimated_tokens": 500,
+            }
+            for _ in range(2)
+        ]
 
         mock_database_service.get_recent_messages_with_tokens.return_value = messages
 

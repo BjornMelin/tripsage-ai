@@ -622,19 +622,17 @@ class TestDashboardService:
         """Test performance with large dataset."""
         # Create large sample dataset
         now = datetime.now(UTC)
-        large_dataset = []
-
-        for i in range(10000):  # 10k records
-            large_dataset.append(
-                {
-                    "user_id": f"user_{i % 100:03d}",  # 100 unique users
-                    "key_id": f"sk_{i % 50:03d}",  # 50 unique keys
-                    "service": ["openai", "weather", "googlemaps"][i % 3],
-                    "timestamp": now - timedelta(hours=i % 24),
-                    "success": i % 10 != 0,  # 90% success rate
-                    "latency_ms": 100.0 + (i % 200),
-                }
-            )
+        large_dataset = [
+            {
+                "user_id": f"user_{i % 100:03d}",  # 100 unique users
+                "key_id": f"sk_{i % 50:03d}",  # 50 unique keys
+                "service": ["openai", "weather", "googlemaps"][i % 3],
+                "timestamp": now - timedelta(hours=i % 24),
+                "success": i % 10 != 0,  # 90% success rate
+                "latency_ms": 100.0 + (i % 200),
+            }
+            for i in range(10000)
+        ]  # 10k records
 
         # Mock database to return large dataset
         dashboard_service.db.select.return_value = large_dataset

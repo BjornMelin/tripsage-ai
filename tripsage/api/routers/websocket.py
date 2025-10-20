@@ -1158,10 +1158,10 @@ async def list_websocket_connections():
         List of active connections with their information
     """
     # This would typically require admin authentication
-    connections = []
-
-    for connection in websocket_manager.connections.values():
-        connections.append(connection.get_info().model_dump())
+    connections = [
+        connection.get_info().model_dump()
+        for connection in websocket_manager.connections.values()
+    ]
 
     return {
         "connections": connections,

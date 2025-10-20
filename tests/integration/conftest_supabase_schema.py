@@ -231,18 +231,16 @@ class MockSupabaseClient:
             return []
 
         # User can see collaborations they're part of or trips they own
-        accessible_collabs = []
-
-        for collab_data in self.data_store["trip_collaborators"].values():
-            trip_id = collab_data["trip_id"]
-
-            # User is the collaborator
-            if collab_data["user_id"] == str(self.current_user_id) or (
-                trip_id in self.data_store["trips"]
+        accessible_collabs = [
+            collab_data
+            for collab_data in self.data_store["trip_collaborators"].values()
+            if collab_data["user_id"] == str(self.current_user_id)
+            or (
+                (trip_id := collab_data["trip_id"]) in self.data_store["trips"]
                 and self.data_store["trips"][trip_id]["user_id"]
                 == str(self.current_user_id)
-            ):
-                accessible_collabs.append(collab_data)
+            )
+        ]
 
         return accessible_collabs
 
@@ -252,13 +250,11 @@ class MockSupabaseClient:
             return []
 
         # User can only see their own memories
-        user_memories = []
-
-        for memory_data in self.data_store["memories"].values():
-            if memory_data.get("user_id") == str(self.current_user_id):
-                user_memories.append(memory_data)
-
-        return user_memories
+        return [
+            memory_data
+            for memory_data in self.data_store["memories"].values()
+            if memory_data.get("user_id") == str(self.current_user_id)
+        ]
 
     async def _handle_insert(self, query: str, params: tuple) -> None:
         """Handle INSERT queries with constraint validation."""
@@ -366,9 +362,6 @@ class SchemaValidator:
     def validate_policies(self) -> list[str]:
         """Validate RLS policies are properly defined."""
         policies_sql = self.schema_files.get("policies", "")
-        errors = []
-
-        # Check required policy components
         required_patterns = [
             "ENABLE ROW LEVEL SECURITY",
             "CREATE POLICY",
@@ -376,33 +369,29 @@ class SchemaValidator:
             "FOR ALL USING",
         ]
 
-        for pattern in required_patterns:
-            if pattern not in policies_sql:
-                errors.append(f"Missing required pattern in policies: {pattern}")
-
-        return errors
+        return [
+            f"Missing required pattern in policies: {pattern}"
+            for pattern in required_patterns
+            if pattern not in policies_sql
+        ]
 
     def validate_indexes(self) -> list[str]:
         """Validate performance indexes are defined."""
         indexes_sql = self.schema_files.get("indexes", "")
-        errors = []
-
-        for index_name in TestConfig.REQUIRED_INDEXES:
-            if index_name not in indexes_sql:
-                errors.append(f"Missing required index: {index_name}")
-
-        return errors
+        return [
+            f"Missing required index: {index_name}"
+            for index_name in TestConfig.REQUIRED_INDEXES
+            if index_name not in indexes_sql
+        ]
 
     def validate_functions(self) -> list[str]:
         """Validate database functions are defined."""
         functions_sql = self.schema_files.get("functions", "")
-        errors = []
-
-        for function_name in TestConfig.REQUIRED_FUNCTIONS:
-            if function_name not in functions_sql:
-                errors.append(f"Missing required function: {function_name}")
-
-        return errors
+        return [
+            f"Missing required function: {function_name}"
+            for function_name in TestConfig.REQUIRED_FUNCTIONS
+            if function_name not in functions_sql
+        ]
 
     def validate_migration(self, migration_sql: str) -> list[str]:
         """Validate migration safety and completeness."""

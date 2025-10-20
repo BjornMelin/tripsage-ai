@@ -5,6 +5,8 @@ Consolidated to use Supabase only for all environments for improved performance,
 cost savings, and simplified architecture.
 """
 
+from typing import Any
+
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -51,7 +53,7 @@ class DatabaseConnectionFactory:
         return get_supabase_settings()
 
     @staticmethod
-    def get_pgvector_config() -> dict[str, any]:
+    def get_pgvector_config() -> dict[str, Any]:
         """Get pgvector-specific configuration.
 
         Returns:

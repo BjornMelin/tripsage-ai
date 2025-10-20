@@ -311,30 +311,25 @@ class ChatService:
                 user_id, limit, include_ended
             )
 
-            sessions = []
-            for result in results:
-                sessions.append(
-                    ChatSessionResponse(
-                        id=result["id"],
-                        user_id=result["user_id"],
-                        title=result.get("title"),
-                        trip_id=result.get("trip_id"),
-                        created_at=datetime.fromisoformat(result["created_at"]),
-                        updated_at=datetime.fromisoformat(result["updated_at"]),
-                        ended_at=datetime.fromisoformat(result["ended_at"])
-                        if result.get("ended_at")
-                        else None,
-                        metadata=result.get("metadata", {}),
-                        message_count=result.get("message_count", 0),
-                        last_message_at=datetime.fromisoformat(
-                            result["last_message_at"]
-                        )
-                        if result.get("last_message_at")
-                        else None,
-                    )
+            return [
+                ChatSessionResponse(
+                    id=result["id"],
+                    user_id=result["user_id"],
+                    title=result.get("title"),
+                    trip_id=result.get("trip_id"),
+                    created_at=datetime.fromisoformat(result["created_at"]),
+                    updated_at=datetime.fromisoformat(result["updated_at"]),
+                    ended_at=datetime.fromisoformat(result["ended_at"])
+                    if result.get("ended_at")
+                    else None,
+                    metadata=result.get("metadata", {}),
+                    message_count=result.get("message_count", 0),
+                    last_message_at=datetime.fromisoformat(result["last_message_at"])
+                    if result.get("last_message_at")
+                    else None,
                 )
-
-            return sessions
+                for result in results
+            ]
 
         except Exception as e:
             logger.exception(
@@ -396,11 +391,14 @@ class ChatService:
             result = await self.db.create_chat_message(db_message_data)
 
             # Handle tool calls if present
-            tool_calls = []
+            tool_calls: list[dict[str, Any]] = []
             if message_data.tool_calls:
-                for tool_call_data in message_data.tool_calls:
-                    tool_call = await self._create_tool_call(message_id, tool_call_data)
-                    tool_calls.append(tool_call.model_dump())
+                tool_calls = [
+                    (
+                        await self._create_tool_call(message_id, tool_call_data)
+                    ).model_dump()
+                    for tool_call_data in message_data.tool_calls
+                ]
 
             # Update session timestamp
             await self.db.update_session_timestamp(session_id)
@@ -467,28 +465,24 @@ class ChatService:
                 self.chars_per_token,
             )
 
-            messages = []
-            total_tokens = 0
-
-            for result in results:
-                # Get tool calls for this message
-                tool_calls = await self.db.get_message_tool_calls(result["id"])
-
-                message = MessageResponse(
+            messages = [
+                MessageResponse(
                     id=result["id"],
                     session_id=result["session_id"],
                     role=result["role"],
                     content=result["content"],
                     created_at=datetime.fromisoformat(result["created_at"]),
                     metadata=result.get("metadata", {}),
-                    tool_calls=list(tool_calls),
+                    tool_calls=list(
+                        await self.db.get_message_tool_calls(result["id"])
+                    ),
                     estimated_tokens=result.get(
                         "estimated_tokens", self._estimate_tokens(result["content"])
                     ),
                 )
-
-                messages.append(message)
-                total_tokens += message.estimated_tokens or 0
+                for result in results
+            ]
+            total_tokens = sum(message.estimated_tokens or 0 for message in messages)
 
             # Check if truncation occurred based on token limits
             # The database should handle token limiting, so if we get results,
@@ -665,6 +659,21 @@ class ChatService:
             return 0
         return max(1, len(content) // self.chars_per_token)
 
+    @staticmethod
+    def _convert_request_message(
+        message: dict[str, Any]
+    ) -> HumanMessage | AIMessage | SystemMessage | None:
+        """Convert stored request message into a LangChain-compatible message."""
+        role = message.get("role", "user")
+        content = message.get("content", "")
+        if role == "user":
+            return HumanMessage(content=content)
+        if role == "assistant":
+            return AIMessage(content=content)
+        if role == "system":
+            return SystemMessage(content=content)
+        return None
+
     async def add_tool_call(
         self, message_id: str, tool_call_data: dict[str, Any]
     ) -> ToolCallResponse:
@@ -758,19 +767,14 @@ class ChatService:
                 "create itineraries, and provide destination recommendations. "
                 "Be helpful, informative, and personalized in your responses."
             )
-            langchain_messages.append(SystemMessage(content=system_prompt))
-
-            # Process user messages
-            for msg in request.messages:
-                role = msg.get("role", "user")
-                content = msg.get("content", "")
-
-                if role == "user":
-                    langchain_messages.append(HumanMessage(content=content))
-                elif role == "assistant":
-                    langchain_messages.append(AIMessage(content=content))
-                elif role == "system":
-                    langchain_messages.append(SystemMessage(content=content))
+            mapped_messages = [
+                converted
+                for converted in (
+                    self._convert_request_message(message) for message in request.messages
+                )
+                if converted is not None
+            ]
+            langchain_messages = [SystemMessage(content=system_prompt)] + mapped_messages
 
             # Get AI response
             response = await llm.ainvoke(langchain_messages)
@@ -935,25 +939,21 @@ class ChatService:
 
             results = await self.db.get_session_messages(session_id, limit, offset)
 
-            messages = []
-            for result in results:
-                # Get tool calls for this message
-                tool_calls = await self.db.get_message_tool_calls(result["id"])
-
-                messages.append(
-                    MessageResponse(
-                        id=result["id"],
-                        session_id=result["session_id"],
-                        role=result["role"],
-                        content=result["content"],
-                        created_at=datetime.fromisoformat(result["created_at"]),
-                        metadata=result.get("metadata", {}),
-                        tool_calls=list(tool_calls),
-                        estimated_tokens=self._estimate_tokens(result["content"]),
-                    )
+            return [
+                MessageResponse(
+                    id=result["id"],
+                    session_id=result["session_id"],
+                    role=result["role"],
+                    content=result["content"],
+                    created_at=datetime.fromisoformat(result["created_at"]),
+                    metadata=result.get("metadata", {}),
+                    tool_calls=list(
+                        await self.db.get_message_tool_calls(result["id"])
+                    ),
+                    estimated_tokens=self._estimate_tokens(result["content"]),
                 )
-
-            return messages
+                for result in results
+            ]
 
         except Exception as e:
             logger.exception(

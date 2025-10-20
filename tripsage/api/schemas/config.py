@@ -199,11 +199,11 @@ class AgentConfigRequest(BaseConfigModel):
 
     def get_changed_fields(self, other: "AgentConfigRequest") -> list[str]:
         """Get list of fields that changed compared to another configuration."""
-        changed = []
-        for field_name in self.model_fields:
-            if getattr(self, field_name) != getattr(other, field_name):
-                changed.append(field_name)
-        return changed
+        return [
+            field_name
+            for field_name in self.model_fields
+            if getattr(self, field_name) != getattr(other, field_name)
+        ]
 
 
 class AgentConfigResponse(BaseConfigModel):
@@ -292,28 +292,30 @@ class AgentConfigResponse(BaseConfigModel):
 
     def get_optimization_suggestions(self) -> list[str]:
         """Get suggestions for optimizing this configuration."""
-        suggestions = []
-
         recommended_temp = self.agent_type.recommended_temperature
-        if abs(self.temperature - recommended_temp) > 0.2:
-            suggestions.append(
-                f"Consider temperature {recommended_temp} for optimal "
-                f"{self.agent_type.display_name} performance"
-            )
-
-        if self.agent_type == AgentType.BUDGET_AGENT and self.temperature > 0.5:
-            suggestions.append(
-                "Budget agents work best with lower temperature (≤0.3) "
-                "for consistent calculations"
-            )
-
-        if self.max_tokens > 2000 and self.agent_type == AgentType.BUDGET_AGENT:
-            suggestions.append(
-                "Budget responses are typically concise; consider reducing "
-                "max_tokens for cost efficiency"
-            )
-
-        return suggestions
+        return [
+            message
+            for condition, message in [
+                (
+                    abs(self.temperature - recommended_temp) > 0.2,
+                    f"Consider temperature {recommended_temp} for optimal "
+                    f"{self.agent_type.display_name} performance",
+                ),
+                (
+                    self.agent_type == AgentType.BUDGET_AGENT
+                    and self.temperature > 0.5,
+                    "Budget agents work best with lower temperature (≤0.3) "
+                    "for consistent calculations",
+                ),
+                (
+                    self.max_tokens > 2000
+                    and self.agent_type == AgentType.BUDGET_AGENT,
+                    "Budget responses are typically concise; consider reducing "
+                    "max_tokens for cost efficiency",
+                ),
+            ]
+            if condition
+        ]
 
 
 class ConfigurationVersion(BaseConfigModel):

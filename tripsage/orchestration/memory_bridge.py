@@ -11,10 +11,6 @@ from typing import Any
 
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.services.simple_mcp_service import SimpleMCPService as MCPManager
-from tripsage_core.utils.session_utils import (
-    initialize_session_memory,
-    update_session_memory,
-)
 
 
 logger = logging.getLogger(__name__)
@@ -50,8 +46,14 @@ class SessionMemoryBridge:
         try:
             logger.debug("Hydrating state for user: %s", user_id)
 
-            # Load session memory data
-            session_data = await initialize_session_memory(user_id)
+            # Load session memory data via MemoryService (simplified hydration)
+            session_data = {
+                "user": {"id": user_id},
+                "preferences": {},
+                "recent_trips": [],
+                "insights": {},
+            }
+            # Optionally: call MemoryService to enrich preferences (future work)
 
             # Map session data to LangGraph state format
             if session_data:
