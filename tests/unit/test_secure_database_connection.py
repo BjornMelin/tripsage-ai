@@ -60,6 +60,8 @@ class TestDatabaseConnection:
         from sqlalchemy.orm import Mapped, mapped_column
 
         class TestModel(Base):
+            """Test model for testing."""
+
             __tablename__ = "test"
             id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -195,9 +197,7 @@ class TestDatabaseConnection:
         """Test session factory creation."""
         with (
             patch("tripsage_core.database.connection.get_engine") as mock_get_engine,
-            patch(
-                "tripsage_core.database.connection.async_sessionmaker"
-            ) as mock_maker,
+            patch("tripsage_core.database.connection.async_sessionmaker") as mock_maker,
         ):
             mock_engine = MagicMock()
             mock_get_engine.return_value = mock_engine
