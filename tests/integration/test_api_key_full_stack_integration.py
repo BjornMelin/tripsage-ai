@@ -44,6 +44,7 @@ class TestDatabaseService:
     """Lightweight test database service for integration tests."""
 
     def __init__(self, engine):
+        """Bind to an async SQLAlchemy engine for test operations."""
         self.engine = engine
         self._transaction_stack = []
 
@@ -232,6 +233,7 @@ class TestCacheService:
     """Lightweight test cache service."""
 
     def __init__(self, redis_client):
+        """Bind to a Redis client used in tests."""
         self.redis = redis_client
 
     async def get(self, key: str) -> str | None:

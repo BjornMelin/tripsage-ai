@@ -23,6 +23,7 @@ class PerformanceBenchmark:
     """Utility class for conducting performance benchmarks."""
 
     def __init__(self, iterations: int = 100):
+        """Set benchmark iteration count and allocate result storage."""
         self.iterations = iterations
         self.results: dict[str, list[float]] = {}
 

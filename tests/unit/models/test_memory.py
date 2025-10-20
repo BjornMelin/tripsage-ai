@@ -89,7 +89,8 @@ class TestMemoryModel:
     ):
         """Test validation for relevance score bounds."""
         with pytest.raises(
-            ValidationError, match="Relevance score must be between 0.0 and 1.0"
+            ValidationError,
+            match=r"Relevance score must be between 0\.0 and 1\.0",
         ):
             Memory(**{**base_memory_data, "relevance_score": invalid_score})
 
@@ -281,7 +282,8 @@ class TestMemorySearchResult:
     ):
         """Test similarity score validation."""
         with pytest.raises(
-            ValidationError, match="Similarity score must be between 0.0 and 1.0"
+            ValidationError,
+            match=r"Similarity score must be between 0\.0 and 1\.0",
         ):
             MemorySearchResult(
                 memory=sample_memory,

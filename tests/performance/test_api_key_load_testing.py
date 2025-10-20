@@ -613,6 +613,7 @@ if __name__ == "__main__":
     import asyncio
 
     async def main():
+        """Run the API key load testing scenario."""
         test_suite = TestApiKeyLoadTesting()
         await test_suite.test_basic_load_scenario()
         run_performance_report()

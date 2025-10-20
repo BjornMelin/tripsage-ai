@@ -16,6 +16,7 @@ class MockSettings:
     """Mock version of flat Settings for testing."""
 
     def __init__(self):
+        """Initialize mock settings with testing defaults."""
         # Environment & Core (flat structure)
         self.environment = "testing"
         self.debug = True
@@ -51,14 +52,17 @@ class MockSettings:
 
     @property
     def is_production(self) -> bool:
+        """Return True when environment is production."""
         return self.environment == "production"
 
     @property
     def is_development(self) -> bool:
+        """Return True when environment is development."""
         return self.environment == "development"
 
     @property
     def is_testing(self) -> bool:
+        """Return True when environment denotes testing."""
         return self.environment in ("test", "testing")
 
 
@@ -119,6 +123,7 @@ class MockServiceRegistry:
     """Mock service registry for dependency injection testing."""
 
     def __init__(self):
+        """Initialize an empty service registry mapping."""
         self._services = {}
 
     def register_service(self, name: str, service: Any):
@@ -230,6 +235,7 @@ class MockMCPManager:
     """Mock MCP Manager for testing."""
 
     def __init__(self):
+        """Initialize a mock MCP manager with async fakes."""
         self.invoke = AsyncMock()
         self.is_connected = AsyncMock(return_value=True)
         self.connect = AsyncMock()

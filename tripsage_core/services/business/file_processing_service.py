@@ -19,7 +19,7 @@ from uuid import uuid4
 from pydantic import Field
 
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
+    CoreAuthorizationError as AuthPermissionError,
     CoreResourceNotFoundError as NotFoundError,
     CoreServiceError as ServiceError,
     CoreValidationError as ValidationError,
@@ -28,6 +28,13 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 
 logger = logging.getLogger(__name__)
+
+METADATA_ERRORS = (
+    ValueError,
+    RuntimeError,
+    OSError,
+    TypeError,
+)
 
 
 class FileType(str, Enum):
@@ -269,9 +276,16 @@ class FileProcessingService:
         """
         # Import here to avoid circular imports
         if database_service is None:
+            import asyncio
+
             from tripsage_core.services.infrastructure import get_database_service
 
-            database_service = get_database_service()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            database_service = loop.run_until_complete(get_database_service())
 
         if storage_service is None:
             try:
@@ -596,7 +610,7 @@ class FileProcessingService:
             if check_access and not await self._check_file_access(
                 processed_file, user_id
             ):
-                raise PermissionError("Access denied to file")
+                raise AuthPermissionError("Access denied to file")
 
             # Update last accessed timestamp
             processed_file.last_accessed = datetime.now(UTC)
@@ -604,7 +618,7 @@ class FileProcessingService:
 
             return processed_file
 
-        except PermissionError:
+        except AuthPermissionError:
             raise
         except Exception as e:
             logger.exception(
@@ -723,7 +737,7 @@ class FileProcessingService:
 
             # Check ownership or edit permissions
             if processed_file.user_id != user_id:
-                raise PermissionError("Only file owner can delete")
+                raise AuthPermissionError("Only file owner can delete")
 
             # Delete from storage
             if self.storage_service:
@@ -745,7 +759,7 @@ class FileProcessingService:
 
             return success
 
-        except (NotFoundError, PermissionError):
+        except (NotFoundError, AuthPermissionError):
             raise
         except Exception as e:
             logger.exception(
@@ -1048,8 +1062,8 @@ class FileProcessingService:
                 # For now, just set basic info
                 metadata.title = Path(filename).stem
 
-        except Exception as e:
-            logger.warning("Failed to extract metadata", extra={"error": str(e)})
+        except METADATA_ERRORS as error:
+            logger.warning("Failed to extract metadata", extra={"error": str(error)})
 
         return metadata
 
