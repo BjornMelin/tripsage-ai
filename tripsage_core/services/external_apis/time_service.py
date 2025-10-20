@@ -6,7 +6,7 @@ external MCP services for basic time and timezone calculations.
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field
 
@@ -21,11 +21,16 @@ class TimeServiceError(CoreAPIError):
     """Exception raised for time service errors."""
 
     def __init__(self, message: str, original_error: Exception | None = None):
+        """Initialize TimeServiceError."""
         super().__init__(
             message=message,
             code="TIME_SERVICE_ERROR",
-            service="TimeService",
-            details={"original_error": str(original_error) if original_error else None},
+            api_service="TimeService",
+            details={
+                "additional_context": {
+                    "original_error": str(original_error) if original_error else None
+                }
+            },
         )
         self.original_error = original_error
 
@@ -117,6 +122,16 @@ class TimeService:
         if custom_timezones:
             self._major_timezones.update(custom_timezones)
 
+        self._recoverable_errors = (
+            CoreServiceError,
+            TimeServiceError,
+            ZoneInfoNotFoundError,
+            ValueError,
+            OSError,
+            RuntimeError,
+            ConnectionError,
+        )
+
     async def connect(self) -> None:
         """Initialize the time service."""
         if self._connected:
@@ -127,13 +142,13 @@ class TimeService:
             _ = datetime.now(UTC)
             self._connected = True
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise CoreServiceError(
-                message=f"Failed to connect time service: {e!s}",
+                message=f"Failed to connect time service: {error!s}",
                 code="CONNECTION_FAILED",
                 service="TimeService",
-                details={"error": str(e)},
-            ) from e
+                details={"error": str(error)},
+            ) from error
 
     async def disconnect(self) -> None:
         """Clean up resources."""
@@ -172,11 +187,11 @@ class TimeService:
             tz = ZoneInfo(timezone_name)
             return datetime.now(tz)
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error getting time for timezone {timezone_name}: {e!s}",
-                original_error=e,
-            ) from e
+                f"Error getting time for timezone {timezone_name}: {error!s}",
+                original_error=error,
+            ) from error
 
     async def get_timezone_info(self, timezone_name: str) -> TimeZoneInfo:
         """Get detailed timezone information.
@@ -221,11 +236,11 @@ class TimeService:
                 current_time=current_time,
             )
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error getting timezone info for {timezone_name}: {e!s}",
-                original_error=e,
-            ) from e
+                f"Error getting timezone info for {timezone_name}: {error!s}",
+                original_error=error,
+            ) from error
 
     async def convert_time(
         self,
@@ -315,12 +330,12 @@ class TimeService:
                 time_difference=diff_description,
             )
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
                 f"Error converting time from {source_timezone} to {target_timezone}: "
-                f"{e!s}",
-                original_error=e,
-            ) from e
+                f"{error!s}",
+                original_error=error,
+            ) from error
 
     async def get_world_clock(
         self, cities: list[str] | None = None
@@ -412,16 +427,16 @@ class TimeService:
                         )
                     )
 
-                except Exception:
+                except self._recoverable_errors:
                     # Skip problematic cities but don't fail the entire request
                     continue
 
             return world_clock
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error getting world clock: {e!s}", original_error=e
-            ) from e
+                f"Error getting world clock: {error!s}", original_error=error
+            ) from error
 
     async def get_time_until(
         self, target_time: datetime | str, timezone_name: str | None = None
@@ -485,11 +500,11 @@ class TimeService:
                     "total_seconds": time_diff.total_seconds(),
                 }
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error calculating time until {target_time}: {e!s}",
-                original_error=e,
-            ) from e
+                f"Error calculating time until {target_time}: {error!s}",
+                original_error=error,
+            ) from error
 
     def _format_timedelta(self, td: timedelta) -> str:
         """Format timedelta into human-readable string."""
@@ -565,11 +580,11 @@ class TimeService:
                 "weekdays_only": weekdays_only,
             }
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error checking business hours for {timezone_name}: {e!s}",
-                original_error=e,
-            ) from e
+                f"Error checking business hours for {timezone_name}: {error!s}",
+                original_error=error,
+            ) from error
 
     async def get_available_timezones(self, region: str | None = None) -> list[str]:
         """Get list of available timezone names.
@@ -634,10 +649,10 @@ class TimeService:
 
             return target_dt.strftime(format_string)
 
-        except Exception as e:
+        except self._recoverable_errors as error:
             raise TimeServiceError(
-                f"Error formatting datetime: {e!s}", original_error=e
-            ) from e
+                f"Error formatting datetime: {error!s}", original_error=error
+            ) from error
 
     async def health_check(self) -> bool:
         """Perform a health check to verify the service is working.

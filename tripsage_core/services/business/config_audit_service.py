@@ -20,13 +20,15 @@ import hashlib
 import logging
 import os
 import time
+from collections.abc import Coroutine
+from dataclasses import dataclass, field as dataclass_field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
-from pydantic import Field
-from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
+from pydantic import Field  # pylint: disable=import-error
+from watchdog.events import FileSystemEventHandler  # pylint: disable=import-error
+from watchdog.observers.api import BaseObserver  # pylint: disable=import-error
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.business.audit_logging_service import (
@@ -39,6 +41,15 @@ from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+RECOVERABLE_ERRORS = (
+    OSError,
+    ValueError,
+    RuntimeError,
+    ConnectionError,
+    asyncio.TimeoutError,
+    KeyError,
+)
 
 
 class ConfigChangeType(str, enum.Enum):
@@ -87,6 +98,15 @@ class ConfigChange(TripSageModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+@dataclass(slots=True)
+class AuditState:
+    """Mutable runtime state tracked by the audit service."""
+
+    file_hashes: dict[str, str] = dataclass_field(default_factory=dict)
+    env_vars: dict[str, str] = dataclass_field(default_factory=dict)
+    last_scan_time: datetime | None = None
+
+
 class ConfigurationAuditService:
     """Service for monitoring and auditing configuration changes.
 
@@ -95,17 +115,49 @@ class ConfigurationAuditService:
     relevant configurations.
     """
 
+    _SECURITY_PATTERNS: ClassVar[set[str]] = {
+        "secret",
+        "password",
+        "token",
+        "key",
+        "auth",
+        "credential",
+        "private",
+        "secure",
+        "ssl",
+        "tls",
+        "cert",
+        "encryption",
+        "database_url",
+        "api_key",
+        "jwt_secret",
+        "oauth",
+    }
+
+    _HIGH_RISK_KEYS: ClassVar[set[str]] = {
+        "DEBUG",
+        "SECRET_KEY",
+        "DATABASE_URL",
+        "REDIS_URL",
+        "JWT_SECRET",
+        "API_KEYS",
+        "CORS_ORIGINS",
+        "ALLOWED_HOSTS",
+        "RATE_LIMITS",
+        "MAX_CONNECTIONS",
+        "SECURITY_HEADERS",
+    }
+
     def __init__(self, config_paths: list[str] | None = None):
         """Initialize the configuration audit service."""
         self.config_paths = config_paths or self._get_default_config_paths()
         self._is_running = False
-        self._file_observer: Observer | None = None
+        self._file_observer: BaseObserver | None = None
         self._file_handler: ConfigFileHandler | None = None
+        self._background_tasks: set[asyncio.Task[Any]] = set()
 
         # State tracking
-        self._file_hashes: dict[str, str] = {}
-        self._env_vars: dict[str, str] = {}
-        self._last_scan_time: datetime | None = None
+        self._state = AuditState()
 
         # Statistics
         self.stats = {
@@ -115,40 +167,46 @@ class ConfigurationAuditService:
             "high_risk_changes": 0,
         }
 
-        # Security-relevant patterns
-        self._security_patterns = {
-            "secret",
-            "password",
-            "token",
-            "key",
-            "auth",
-            "credential",
-            "private",
-            "secure",
-            "ssl",
-            "tls",
-            "cert",
-            "encryption",
-            "database_url",
-            "api_key",
-            "jwt_secret",
-            "oauth",
-        }
+    @property
+    def is_running(self) -> bool:
+        """Return True when the audit service is actively monitoring."""
+        return self._is_running
 
-        # High-risk configuration keys
-        self._high_risk_keys = {
-            "DEBUG",
-            "SECRET_KEY",
-            "DATABASE_URL",
-            "REDIS_URL",
-            "JWT_SECRET",
-            "API_KEYS",
-            "CORS_ORIGINS",
-            "ALLOWED_HOSTS",
-            "RATE_LIMITS",
-            "MAX_CONNECTIONS",
-            "SECURITY_HEADERS",
-        }
+    def schedule_background_task(
+        self, coroutine: Coroutine[Any, Any, Any]
+    ) -> asyncio.Task[Any]:
+        """Create and track a background task for the service."""
+        task = asyncio.create_task(coroutine)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        task.add_done_callback(self._handle_task_exception)
+        return task
+
+    def _handle_task_exception(self, task: asyncio.Task[Any]) -> None:
+        """Log exceptions raised by tracked background tasks."""
+        if task.cancelled():
+            return
+
+        exception = task.exception()
+        if exception is not None:
+            logger.error(
+                "Background task %s raised an exception",
+                task.get_name(),
+                exc_info=(type(exception), exception, exception.__traceback__),
+            )
+
+    async def _drain_background_tasks(self) -> None:
+        """Cancel and await tracked background tasks."""
+        if not self._background_tasks:
+            return
+
+        tasks = list(self._background_tasks)
+        for task in tasks:
+            if not task.done():
+                task.cancel()
+
+        await asyncio.gather(*tasks, return_exceptions=True)
+        self._background_tasks.clear()
 
     def _get_default_config_paths(self) -> list[str]:
         """Get default configuration paths to monitor."""
@@ -183,7 +241,7 @@ class ConfigurationAuditService:
         await self._take_initial_snapshot()
 
         # Start periodic scanning
-        asyncio.create_task(self._periodic_scan_loop())
+        self.schedule_background_task(self._periodic_scan_loop())
 
         logger.info(
             "Configuration audit service started, monitoring %s paths",
@@ -212,6 +270,10 @@ class ConfigurationAuditService:
         if self._file_observer:
             self._file_observer.stop()
             self._file_observer.join()
+            self._file_observer = None
+            self._file_handler = None
+
+        await self._drain_background_tasks()
 
         logger.info("Configuration audit service stopped")
 
@@ -227,22 +289,22 @@ class ConfigurationAuditService:
 
     async def _initialize_file_monitoring(self):
         """Initialize file system monitoring."""
-        from watchdog.observers import Observer
+        from watchdog.observers import Observer  # pylint: disable=import-error
 
-        self._file_handler = ConfigFileHandler(self)
-        self._file_observer = Observer()
+        file_handler = ConfigFileHandler(self)
+        observer = Observer()
+        self._file_handler = file_handler
+        self._file_observer = observer
 
         # Watch each configuration directory
         watched_dirs = set()
         for config_path in self.config_paths:
             dir_path = Path(config_path).parent
             if dir_path not in watched_dirs:
-                self._file_observer.schedule(
-                    self._file_handler, str(dir_path), recursive=False
-                )
+                observer.schedule(file_handler, str(dir_path), recursive=False)
                 watched_dirs.add(dir_path)
 
-        self._file_observer.start()
+        observer.start()
         self.stats["files_monitored"] = len(self.config_paths)
 
     async def _take_initial_snapshot(self):
@@ -251,13 +313,13 @@ class ConfigurationAuditService:
             try:
                 if Path(config_path).exists():
                     file_hash = await self._calculate_file_hash(config_path)
-                    self._file_hashes[config_path] = file_hash
-            except Exception as e:
-                logger.warning("Failed to hash file %s: %s", config_path, e)
+                    self._state.file_hashes[config_path] = file_hash
+            except RECOVERABLE_ERRORS as error:
+                logger.warning("Failed to hash file %s: %s", config_path, error)
 
         # Snapshot environment variables
-        self._env_vars = dict(os.environ)
-        self._last_scan_time = datetime.now(UTC)
+        self._state.env_vars = dict(os.environ)
+        self._state.last_scan_time = datetime.now(UTC)
 
     async def _periodic_scan_loop(self):
         """Periodic scanning for changes not caught by file watcher."""
@@ -267,7 +329,7 @@ class ConfigurationAuditService:
                 await self._scan_for_changes()
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except RECOVERABLE_ERRORS:
                 logger.exception("Error in periodic scan")
 
     async def _scan_for_changes(self):
@@ -278,7 +340,7 @@ class ConfigurationAuditService:
         # Check file hashes
         await self._check_file_changes()
 
-        self._last_scan_time = datetime.now(UTC)
+        self._state.last_scan_time = datetime.now(UTC)
 
     async def _check_env_var_changes(self):
         """Check for environment variable changes."""
@@ -286,7 +348,7 @@ class ConfigurationAuditService:
 
         # Find added/changed variables
         for key, value in current_env.items():
-            if key not in self._env_vars:
+            if key not in self._state.env_vars:
                 # New environment variable
                 await self._handle_config_change(
                     ConfigChange(
@@ -300,14 +362,14 @@ class ConfigurationAuditService:
                         risk_level=self._assess_risk_level(key, value),
                     )
                 )
-            elif self._env_vars[key] != value:
+            elif self._state.env_vars[key] != value:
                 # Changed environment variable
                 await self._handle_config_change(
                     ConfigChange(
                         change_type=ConfigChangeType.ENV_VARIABLE_CHANGED,
                         config_path=f"ENV:{key}",
                         config_key=key,
-                        old_value=self._env_vars[key],
+                        old_value=self._state.env_vars[key],
                         new_value=value,
                         change_source="env_scanner",
                         is_security_relevant=self._is_security_relevant(key, value),
@@ -316,7 +378,7 @@ class ConfigurationAuditService:
                 )
 
         # Find removed variables
-        for key, value in self._env_vars.items():
+        for key, value in self._state.env_vars.items():
             if key not in current_env:
                 await self._handle_config_change(
                     ConfigChange(
@@ -331,7 +393,7 @@ class ConfigurationAuditService:
                     )
                 )
 
-        self._env_vars = current_env
+        self._state.env_vars = current_env
 
     async def _check_file_changes(self):
         """Check for file changes that might have been missed."""
@@ -339,23 +401,23 @@ class ConfigurationAuditService:
             try:
                 if Path(config_path).exists():
                     current_hash = await self._calculate_file_hash(config_path)
-                    stored_hash = self._file_hashes.get(config_path)
+                    stored_hash = self._state.file_hashes.get(config_path)
 
                     if stored_hash and stored_hash != current_hash:
                         # File changed
                         await self._handle_file_change(config_path, "modified")
-                        self._file_hashes[config_path] = current_hash
+                        self._state.file_hashes[config_path] = current_hash
                     elif not stored_hash:
                         # New file
                         await self._handle_file_change(config_path, "created")
-                        self._file_hashes[config_path] = current_hash
-                elif config_path in self._file_hashes:
+                        self._state.file_hashes[config_path] = current_hash
+                elif config_path in self._state.file_hashes:
                     # File was deleted
                     await self._handle_file_change(config_path, "deleted")
-                    del self._file_hashes[config_path]
+                    del self._state.file_hashes[config_path]
 
-            except Exception as e:
-                logger.warning("Failed to check file %s: %s", config_path, e)
+            except RECOVERABLE_ERRORS as error:
+                logger.warning("Failed to check file %s: %s", config_path, error)
 
     async def _handle_file_change(self, file_path: str, change_type: str):
         """Handle a file system change."""
@@ -377,13 +439,13 @@ class ConfigurationAuditService:
                 stat = file_path_obj.stat()
                 file_size = stat.st_size
                 file_permissions = oct(stat.st_mode)[-3:]
-            except Exception:
+            except OSError:
                 pass
 
         change = ConfigChange(
             change_type=config_change_type,
             config_path=file_path,
-            old_hash=self._file_hashes.get(file_path),
+            old_hash=self._state.file_hashes.get(file_path),
             new_hash=await self._calculate_file_hash(file_path)
             if file_path_obj.exists()
             else None,
@@ -488,7 +550,7 @@ class ConfigurationAuditService:
         value_lower = value.lower() if value else ""
 
         # Check key patterns
-        for pattern in self._security_patterns:
+        for pattern in self._SECURITY_PATTERNS:
             if pattern in key_lower:
                 return True
 
@@ -522,14 +584,14 @@ class ConfigurationAuditService:
 
         # Check for security-related patterns in path
         path_lower = file_path.lower()
-        return any(pattern in path_lower for pattern in self._security_patterns)
+        return any(pattern in path_lower for pattern in self._SECURITY_PATTERNS)
 
     def _assess_risk_level(self, key: str, value: str) -> str:
         """Assess the risk level of a configuration change."""
         key_upper = key.upper()
 
         # Critical risk keys
-        if key_upper in self._high_risk_keys:
+        if key_upper in self._HIGH_RISK_KEYS:
             return "critical"
 
         # High risk patterns
@@ -616,12 +678,12 @@ class ConfigurationAuditService:
         """Calculate SHA256 hash of a file."""
         try:
             hasher = hashlib.sha256()
-            with open(file_path, "rb") as f:
+            with Path(file_path).open("rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     hasher.update(chunk)
             return hasher.hexdigest()
-        except Exception as e:
-            logger.warning("Failed to hash file %s: %s", file_path, e)
+        except (OSError, ValueError) as error:
+            logger.warning("Failed to hash file %s: %s", file_path, error)
             return ""
 
     async def record_manual_change(
@@ -629,10 +691,11 @@ class ConfigurationAuditService:
         config_key: str,
         old_value: Any,
         new_value: Any,
+        *,
         changed_by: str,
         change_reason: str | None = None,
         requires_approval: bool = False,
-    ):
+    ) -> str:
         """Record a manual configuration change."""
         change = ConfigChange(
             change_type=ConfigChangeType.RUNTIME_CONFIG_CHANGED,
@@ -659,10 +722,10 @@ class ConfigurationAuditService:
             **self.stats,
             "is_running": self._is_running,
             "monitored_files": len(self.config_paths),
-            "tracked_files": len(self._file_hashes),
-            "tracked_env_vars": len(self._env_vars),
-            "last_scan": self._last_scan_time.isoformat()
-            if self._last_scan_time
+            "tracked_files": len(self._state.file_hashes),
+            "tracked_env_vars": len(self._state.env_vars),
+            "last_scan": self._state.last_scan_time.isoformat()
+            if self._state.last_scan_time
             else None,
         }
 
@@ -671,23 +734,39 @@ class ConfigFileHandler(FileSystemEventHandler):
     """File system event handler for configuration changes."""
 
     def __init__(self, audit_service: ConfigurationAuditService):
+        """Initialize the file system event handler."""
         self.audit_service = audit_service
 
     def on_modified(self, event):
-        if not event.is_directory and event.src_path in self.audit_service.config_paths:
-            asyncio.create_task(
+        """Handle file modification event."""
+        if (
+            self.audit_service.is_running
+            and not event.is_directory
+            and event.src_path in self.audit_service.config_paths
+        ):
+            self.audit_service.schedule_background_task(
                 self.audit_service._handle_file_change(event.src_path, "modified")
             )
 
     def on_created(self, event):
-        if not event.is_directory and event.src_path in self.audit_service.config_paths:
-            asyncio.create_task(
+        """Handle file creation event."""
+        if (
+            self.audit_service.is_running
+            and not event.is_directory
+            and event.src_path in self.audit_service.config_paths
+        ):
+            self.audit_service.schedule_background_task(
                 self.audit_service._handle_file_change(event.src_path, "created")
             )
 
     def on_deleted(self, event):
-        if not event.is_directory and event.src_path in self.audit_service.config_paths:
-            asyncio.create_task(
+        """Handle file deletion event."""
+        if (
+            self.audit_service.is_running
+            and not event.is_directory
+            and event.src_path in self.audit_service.config_paths
+        ):
+            self.audit_service.schedule_background_task(
                 self.audit_service._handle_file_change(event.src_path, "deleted")
             )
 
@@ -698,7 +777,7 @@ _config_audit_service: ConfigurationAuditService | None = None
 
 async def get_config_audit_service() -> ConfigurationAuditService:
     """Get or create the global configuration audit service instance."""
-    global _config_audit_service
+    global _config_audit_service  # pylint: disable=global-statement
 
     if _config_audit_service is None:
         _config_audit_service = ConfigurationAuditService()
@@ -709,7 +788,7 @@ async def get_config_audit_service() -> ConfigurationAuditService:
 
 async def shutdown_config_audit_service():
     """Shutdown the global configuration audit service instance."""
-    global _config_audit_service
+    global _config_audit_service  # pylint: disable=global-statement
 
     if _config_audit_service is not None:
         await _config_audit_service.stop()
@@ -721,6 +800,7 @@ async def record_config_change(
     config_key: str,
     old_value: Any,
     new_value: Any,
+    *,
     changed_by: str,
     change_reason: str | None = None,
     requires_approval: bool = False,
@@ -728,5 +808,10 @@ async def record_config_change(
     """Record a manual configuration change."""
     service = await get_config_audit_service()
     return await service.record_manual_change(
-        config_key, old_value, new_value, changed_by, change_reason, requires_approval
+        config_key,
+        old_value,
+        new_value,
+        changed_by=changed_by,
+        change_reason=change_reason,
+        requires_approval=requires_approval,
     )
