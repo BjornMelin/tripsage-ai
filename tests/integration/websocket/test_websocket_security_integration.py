@@ -11,8 +11,10 @@ including:
 """
 
 import asyncio
+import contextlib
 import json
 import time
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -466,13 +468,10 @@ class TestWebSocketInputValidation:
         ]
 
         for payload in malicious_payloads:
-            try:
+            with contextlib.suppress(CoreValidationError, json.JSONDecodeError):
                 # The system should validate and sanitize these inputs
                 await connection.send_message(payload)
                 # If it reaches here, ensure it was properly sanitized
-            except (CoreValidationError, json.JSONDecodeError):
-                # Expected for malicious payloads
-                pass
 
     @pytest.mark.asyncio
     @pytest.mark.security
@@ -527,12 +526,9 @@ class TestWebSocketInputValidation:
         ]
 
         for msg in unicode_messages:
-            try:
+            with contextlib.suppress(UnicodeError):
                 await connection.send_message(msg)
                 # Should handle Unicode properly
-            except UnicodeError:
-                # Some control characters might be rejected
-                pass
 
 
 class TestWebSocketConnectionSecurity:
@@ -579,7 +575,7 @@ class TestWebSocketConnectionSecurity:
         mock_ws.ping.assert_called_once()
 
         # Test heartbeat timeout detection
-        connection.last_pong = time.time() - 10.0  # 10 seconds ago
+        connection.last_pong = datetime.now() - timedelta(seconds=10)  # 10 seconds ago
         connection.heartbeat_timeout = 5.0  # 5 second timeout
 
         assert connection.is_ping_timeout() is True

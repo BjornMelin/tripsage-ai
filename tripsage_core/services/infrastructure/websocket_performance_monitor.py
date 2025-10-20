@@ -98,6 +98,7 @@ class WebSocketPerformanceMonitor:
         retention_hours: int = 24,
         thresholds: PerformanceThresholds | None = None,
     ):
+        """Initialize WebSocket performance monitor."""
         self.collection_interval = collection_interval
         self.aggregation_interval = aggregation_interval
         self.retention_hours = retention_hours
@@ -407,7 +408,7 @@ class WebSocketPerformanceMonitor:
             avg_latency_ms=sum(latencies) / len(latencies) if latencies else 0,
             p95_latency_ms=p95_latency,
             p99_latency_ms=p99_latency,
-            total_messages=sum(s.message_rate for s in window_snapshots),
+            total_messages=int(sum(s.message_rate for s in window_snapshots)),
             total_errors=sum(s.error_count for s in window_snapshots),
             avg_queue_size=sum(queue_sizes) / len(queue_sizes) if queue_sizes else 0,
             max_queue_size=max(queue_sizes) if queue_sizes else 0,
@@ -418,7 +419,8 @@ class WebSocketPerformanceMonitor:
         self.aggregated_metrics.append(aggregated)
 
         logger.info(
-            "Aggregated metrics: %s connections, avg latency %.1fms, p95 latency %.1fms",
+            "Aggregated metrics: %s connections, avg latency "
+            "%.1fms, p95 latency %.1fms",
             aggregated.connection_count,
             aggregated.avg_latency_ms,
             aggregated.p95_latency_ms,

@@ -6,7 +6,6 @@ with proper setup, teardown, and reporting.
 
 import asyncio
 import json
-import logging
 import sys
 import time
 from datetime import datetime
@@ -14,15 +13,67 @@ from pathlib import Path
 from typing import Any
 
 
+class SchemaTestError(Exception):
+    """Base exception for schema test runner errors."""
+
+
+class SchemaValidationError(SchemaTestError):
+    """Raised when schema validation fails."""
+
+
+class TestExecutionError(SchemaTestError):
+    """Raised when test execution fails."""
+
+
+class ConfigurationError(SchemaTestError):
+    """Raised when test configuration is invalid."""
+
+
+class TestEnvironmentError(SchemaTestError):
+    """Raised when test environment is not properly set up."""
+
+
 class SchemaTestRunner:
     """Orchestrates schema integration tests with comprehensive setup and reporting."""
 
     def __init__(self, config: dict[str, Any] | None = None):
+        """Initialize runner with optional configuration overrides."""
         self.config = config or self._default_config()
-        self.logger = self._setup_logging()
+        self._validate_config()
         self.test_results = {}
         self.start_time = None
         self.end_time = None
+
+    def _validate_config(self):
+        """Validate test configuration."""
+        required_keys = ["test_types", "performance_thresholds", "test_data_size"]
+        for key in required_keys:
+            if key not in self.config:
+                raise ConfigurationError(f"Missing required configuration key: {key}")
+
+        if not isinstance(self.config["test_types"], list):
+            raise ConfigurationError("test_types must be a list")
+
+        if not self.config["test_types"]:
+            raise ConfigurationError("test_types cannot be empty")
+
+        # Validate performance thresholds
+        thresholds = self.config.get("performance_thresholds", {})
+        if not isinstance(thresholds, dict):
+            raise ConfigurationError("performance_thresholds must be a dictionary")
+
+        required_thresholds = [
+            "query_timeout",
+            "memory_search_timeout",
+            "collaboration_query_timeout",
+        ]
+        for threshold in required_thresholds:
+            if threshold not in thresholds:
+                raise ConfigurationError(f"Missing performance threshold: {threshold}")
+            if not isinstance(thresholds[threshold], (int, float)):
+                raise ConfigurationError(
+                    f"Performance threshold {threshold} must be numeric"
+                )
 
     def _default_config(self) -> dict[str, Any]:
         """Get default test configuration."""
@@ -57,25 +108,9 @@ class SchemaTestRunner:
             "cleanup_after_run": True,
         }
 
-    def _setup_logging(self) -> logging.Logger:
-        """Setup logging for test execution."""
-        logger = logging.getLogger("schema_test_runner")
-        logger.setLevel(logging.INFO)
-
-        if not logger.handlers:
-            handler = logging.StreamHandler(sys.stdout)
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
-
-        return logger
-
     async def run_all_tests(self) -> dict[str, Any]:
         """Run all schema integration tests."""
         self.start_time = datetime.utcnow()
-        self.logger.info("Starting comprehensive schema integration tests...")
 
         try:
             # Pre-test validation
@@ -91,191 +126,234 @@ class SchemaTestRunner:
             if self.config["generate_report"]:
                 await self._generate_test_report(results, analysis)
 
-            return {
-                "success": True,
-                "results": results,
-                "analysis": analysis,
-                "duration": (datetime.utcnow() - self.start_time).total_seconds(),
-            }
+            return self._create_success_result(results, analysis)
 
-        except Exception as e:
-            self.logger.exception("Test execution failed")
-            return {
-                "success": False,
-                "error": str(e),
-                "duration": (datetime.utcnow() - self.start_time).total_seconds(),
-            }
+        except (TestExecutionError, TestEnvironmentError, ConfigurationError) as e:
+            return self._create_error_result(e)
+        except Exception as e:  # noqa: BLE001
+            return self._create_error_result(e, "UnexpectedError")
 
         finally:
             self.end_time = datetime.utcnow()
             if self.config["cleanup_after_run"]:
                 await self._cleanup()
 
+    def _create_success_result(
+        self, results: dict[str, Any], analysis: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Create a success result dictionary."""
+        return {
+            "success": True,
+            "results": results,
+            "analysis": analysis,
+            "duration": self._get_duration(),
+        }
+
+    def _create_error_result(
+        self, error: Exception, error_type: str | None = None
+    ) -> dict[str, Any]:
+        """Create an error result dictionary."""
+        return {
+            "success": False,
+            "error": str(error),
+            "error_type": error_type or type(error).__name__,
+            "duration": self._get_duration(),
+        }
+
+    def _get_duration(self) -> float:
+        """Get the test execution duration."""
+        return (
+            (datetime.utcnow() - self.start_time).total_seconds()
+            if self.start_time
+            else 0.0
+        )
+
     async def _pre_test_validation(self):
         """Validate test environment before running tests."""
-        self.logger.info("Performing pre-test validation...")
+        # Validate required files exist
+        self._validate_required_files(
+            Path(__file__).parent.parent.parent / "supabase" / "schemas",
+            [
+                "01_tables.sql",
+                "02_indexes.sql",
+                "03_functions.sql",
+                "05_policies.sql",
+            ],
+        )
 
-        # Check schema files exist
-        schema_path = Path(__file__).parent.parent.parent / "supabase" / "schemas"
-        required_files = [
-            "05_policies.sql",
-            "02_indexes.sql",
-            "03_functions.sql",
-            "01_tables.sql",
-        ]
+        self._validate_required_files(
+            Path(__file__).parent.parent.parent / "supabase" / "migrations",
+            [
+                "20250609_02_consolidated_production_schema.sql",
+                "20250610_01_fix_user_id_constraints.sql",
+            ],
+        )
 
-        for filename in required_files:
-            file_path = schema_path / filename
-            if not file_path.exists():
-                raise FileNotFoundError(f"Required schema file not found: {filename}")
-
-        # Check migration files exist
-        migration_path = Path(__file__).parent.parent.parent / "supabase" / "migrations"
-        migration_files = [
-            "20250610_01_fix_user_id_constraints.sql",
-            "20250609_02_consolidated_production_schema.sql",
-        ]
-
-        for filename in migration_files:
-            file_path = migration_path / filename
-            if not file_path.exists():
-                raise FileNotFoundError(
-                    f"Required migration file not found: {filename}"
-                )
-
-        self.logger.info("Pre-test validation completed successfully")
+    def _validate_required_files(self, directory: Path, filenames: list[str]):
+        """Validate that all required files exist in the given directory."""
+        for filename in filenames:
+            if not (directory / filename).exists():
+                raise TestEnvironmentError(f"Required file not found: {filename}")
 
     async def _execute_test_suites(self) -> dict[str, Any]:
         """Execute all test suites."""
-        self.logger.info("Executing test suites...")
-
-        test_suites = [
-            {
-                "name": "schema_validation",
-                "module": "test_supabase_collaboration_schema::TestRLSPolicyValidation",
-                "description": "RLS policy validation tests",
-            },
-            {
-                "name": "foreign_key_constraints",
-                "module": (
-                    "test_supabase_collaboration_schema::TestForeignKeyConstraints"
-                ),
-                "description": "Foreign key constraint tests",
-            },
-            {
-                "name": "index_performance",
-                "module": "test_supabase_collaboration_schema::TestIndexPerformance",
-                "description": "Database index performance tests",
-            },
-            {
-                "name": "database_functions",
-                "module": "test_supabase_collaboration_schema::TestDatabaseFunctions",
-                "description": "Database function correctness tests",
-            },
-            {
-                "name": "collaboration_workflows",
-                "module": (
-                    "test_supabase_collaboration_schema::TestCollaborationWorkflows"
-                ),
-                "description": "End-to-end collaboration workflow tests",
-            },
-            {
-                "name": "multi_user_scenarios",
-                "module": "test_supabase_collaboration_schema::TestMultiUserScenarios",
-                "description": "Complex multi-user scenario tests",
-            },
-            {
-                "name": "security_isolation",
-                "module": "test_supabase_collaboration_schema::TestSecurityIsolation",
-                "description": "Security isolation and boundary tests",
-            },
-            {
-                "name": "performance_optimization",
-                "module": (
-                    "test_supabase_collaboration_schema::TestPerformanceOptimization"
-                ),
-                "description": "Performance optimization tests",
-            },
-            {
-                "name": "migration_compatibility",
-                "module": (
-                    "test_supabase_collaboration_schema::TestMigrationCompatibility"
-                ),
-                "description": "Migration safety and compatibility tests",
-            },
-            {
-                "name": "collaboration_performance",
-                "module": (
-                    "test_collaboration_performance::CollaborationPerformanceTestSuite"
-                ),
-                "description": "Collaboration feature performance tests",
-            },
-        ]
-
         results = {}
 
-        for suite in test_suites:
+        for suite in self._get_test_suites():
             if suite["name"] in self.config["test_types"]:
-                self.logger.info("Running %s: %s", suite["name"], suite["description"])
-
                 suite_result = await self._run_test_suite(suite)
                 results[suite["name"]] = suite_result
 
-                self.logger.info(
-                    "Completed %s: %s (%.2fs)",
-                    suite["name"],
-                    "PASSED" if suite_result["success"] else "FAILED",
-                    suite_result["duration"],
-                )
-
         return results
+
+    def _get_test_suites(self) -> list[dict[str, str]]:
+        """Get the list of available test suites."""
+        base_module = "test_supabase_collaboration_schema"
+        perf_module = "test_collaboration_performance"
+
+        return [
+            self._create_test_suite(
+                "schema_validation",
+                f"{base_module}::TestRLSPolicyValidation",
+                "RLS policy validation tests",
+            ),
+            self._create_test_suite(
+                "foreign_key_constraints",
+                f"{base_module}::TestForeignKeyConstraints",
+                "Foreign key constraint tests",
+            ),
+            self._create_test_suite(
+                "index_performance",
+                f"{base_module}::TestIndexPerformance",
+                "Database index performance tests",
+            ),
+            self._create_test_suite(
+                "database_functions",
+                f"{base_module}::TestDatabaseFunctions",
+                "Database function correctness tests",
+            ),
+            self._create_test_suite(
+                "collaboration_workflows",
+                f"{base_module}::TestCollaborationWorkflows",
+                "End-to-end collaboration workflow tests",
+            ),
+            self._create_test_suite(
+                "multi_user_scenarios",
+                f"{base_module}::TestMultiUserScenarios",
+                "Complex multi-user scenario tests",
+            ),
+            self._create_test_suite(
+                "security_isolation",
+                f"{base_module}::TestSecurityIsolation",
+                "Security isolation and boundary tests",
+            ),
+            self._create_test_suite(
+                "performance_optimization",
+                f"{base_module}::TestPerformanceOptimization",
+                "Performance optimization tests",
+            ),
+            self._create_test_suite(
+                "migration_compatibility",
+                f"{base_module}::TestMigrationCompatibility",
+                "Migration safety and compatibility tests",
+            ),
+            self._create_test_suite(
+                "collaboration_performance",
+                f"{perf_module}::CollaborationPerformanceTestSuite",
+                "Collaboration feature performance tests",
+            ),
+        ]
+
+    def _create_test_suite(
+        self, name: str, module: str, description: str
+    ) -> dict[str, str]:
+        """Create a test suite configuration dictionary."""
+        return {"name": name, "module": module, "description": description}
 
     async def _run_test_suite(self, suite: dict[str, str]) -> dict[str, Any]:
         """Run a single test suite."""
         start_time = time.time()
 
         try:
-            # Run pytest for the specific test module/class
-            _test_path = f"tests/integration/{suite['module']}"
-
             # Mock pytest execution (in real implementation, would use pytest.main())
             await asyncio.sleep(0.1)  # Simulate test execution time
 
-            # Simulate test results
+            # Simulate test results - in real implementation, would parse
+            # actual test output
             test_count = 10  # Mock test count
             passed = test_count - 1  # Mock one failure for demonstration
             failed = 1
 
             duration = time.time() - start_time
 
-            return {
-                "success": failed == 0,
-                "total_tests": test_count,
-                "passed": passed,
-                "failed": failed,
-                "duration": duration,
-                "details": {
-                    "module": suite["module"],
-                    "description": suite["description"],
-                },
-            }
+            if failed > 0:
+                raise TestExecutionError(
+                    f"Test suite '{suite['name']}' failed: {failed}/{test_count} "
+                    "tests failed"
+                )
 
-        except Exception as e:
-            duration = time.time() - start_time
-            return {
-                "success": False,
-                "error": str(e),
-                "duration": duration,
-                "details": {
-                    "module": suite["module"],
-                    "description": suite["description"],
-                },
-            }
+            return self._create_test_result(
+                suite, True, test_count, passed, failed, duration
+            )
+
+        except TestExecutionError as e:
+            return self._create_test_result(
+                suite,
+                False,
+                error=str(e),
+                error_type="TestExecutionError",
+                duration=time.time() - start_time,
+            )
+        except Exception as e:  # noqa: BLE001
+            return self._create_test_result(
+                suite,
+                False,
+                error=str(e),
+                error_type="UnexpectedError",
+                duration=time.time() - start_time,
+            )
+
+    def _create_test_result(
+        self,
+        suite: dict[str, str],
+        success: bool,
+        total_tests: int = 0,
+        passed: int = 0,
+        failed: int = 0,
+        duration: float = 0.0,
+        error: str | None = None,
+        error_type: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a test result dictionary."""
+        result = {
+            "success": success,
+            "duration": duration,
+            "details": {
+                "module": suite["module"],
+                "description": suite["description"],
+            },
+        }
+
+        if success:
+            result.update(
+                {
+                    "total_tests": total_tests,
+                    "passed": passed,
+                    "failed": failed,
+                }
+            )
+        else:
+            result.update(
+                {
+                    "error": error,
+                    "error_type": error_type,
+                }
+            )
+
+        return result
 
     async def _post_test_analysis(self, results: dict[str, Any]) -> dict[str, Any]:
         """Analyze test results and generate insights."""
-        self.logger.info("Performing post-test analysis...")
-
         total_tests = sum(r.get("total_tests", 0) for r in results.values())
         total_passed = sum(r.get("passed", 0) for r in results.values())
         total_failed = sum(r.get("failed", 0) for r in results.values())
@@ -401,14 +479,14 @@ class SchemaTestRunner:
         self, results: dict[str, Any], analysis: dict[str, Any]
     ):
         """Generate comprehensive test report."""
-        self.logger.info("Generating test report...")
-
         report = {
             "metadata": {
                 "timestamp": datetime.utcnow().isoformat(),
-                "duration": (self.end_time - self.start_time).total_seconds()
-                if self.end_time
-                else None,
+                "duration": (
+                    (self.end_time - self.start_time).total_seconds()
+                    if self.end_time is not None and self.start_time is not None
+                    else None
+                ),
                 "config": self.config,
             },
             "results": results,
@@ -426,10 +504,8 @@ class SchemaTestRunner:
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         report_file = report_path / f"schema_integration_test_report_{timestamp}.json"
 
-        with open(report_file, "w") as f:
+        with report_file.open("w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, default=str)
-
-        self.logger.info("Test report saved to: %s", report_file)
 
         # Generate human-readable summary
         self._print_test_summary(analysis)
@@ -470,7 +546,6 @@ class SchemaTestRunner:
 
     async def _cleanup(self):
         """Cleanup test resources."""
-        self.logger.info("Performing test cleanup...")
         # Cleanup logic would go here
         # In a real implementation, this would clean up test databases, files, etc.
 
@@ -491,39 +566,56 @@ async def main():
     parser.add_argument(
         "--quick", action="store_true", help="Run quick test suite only"
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
 
     args = parser.parse_args()
+    config = load_config(args)
 
-    # Load configuration
+    # Run tests
+    try:
+        runner = SchemaTestRunner(config)
+        result = await runner.run_all_tests()
+        sys.exit(0 if result["success"] else 1)
+    except (ConfigurationError, TestEnvironmentError):
+        print("Configuration or environment error", file=sys.stderr)
+        sys.exit(1)
+    except Exception:  # noqa: BLE001
+        print("Unexpected error", file=sys.stderr)
+        sys.exit(1)
+
+
+def load_config(args) -> dict[str, Any]:
+    """Load and configure test settings from CLI arguments."""
     config = {}
     if args.config:
-        with open(args.config) as f:
+        config_path = Path(args.config)
+        with config_path.open("r", encoding="utf-8") as f:
             config = json.load(f)
 
     # Override config with CLI arguments
     if args.test_types:
         config["test_types"] = args.test_types
-
-    if args.performance_only:
+    elif args.performance_only:
         config["test_types"] = ["collaboration_performance", "performance_optimization"]
-
-    if args.quick:
+    elif args.quick:
         config["test_types"] = [
             "schema_validation",
             "rls_policies",
             "foreign_key_constraints",
         ]
 
-    if args.verbose:
-        config["verbose_output"] = True
+    return config
 
-    # Run tests
-    runner = SchemaTestRunner(config)
-    result = await runner.run_all_tests()
 
-    # Exit with appropriate code
-    sys.exit(0 if result["success"] else 1)
+__all__ = [
+    "ConfigurationError",
+    "SchemaTestError",
+    "SchemaTestRunner",
+    "SchemaValidationError",
+    "TestEnvironmentError",
+    "TestExecutionError",
+    "load_config",
+    "main",
+]
 
 
 if __name__ == "__main__":

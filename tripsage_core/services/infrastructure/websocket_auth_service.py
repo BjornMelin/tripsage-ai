@@ -43,8 +43,8 @@ class WebSocketAuthService:
     """Service for WebSocket authentication and authorization."""
 
     def __init__(self):
+        """Initialize WebSocket auth service."""
         # Don't cache settings to allow for testing with mocked settings
-        pass
 
     @property
     def settings(self):

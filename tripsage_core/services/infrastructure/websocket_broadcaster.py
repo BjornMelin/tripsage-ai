@@ -12,8 +12,9 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-import redis.asyncio as redis
 from pydantic import BaseModel, Field
+from redis.asyncio import from_url
+from redis.asyncio.client import PubSub
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions.exceptions import CoreServiceError
@@ -53,8 +54,9 @@ class WebSocketBroadcaster:
         """
         self.settings = get_settings()
         self.redis_url = redis_url or self.settings.redis_url
-        self.redis_client: redis.Redis | None = None
-        self.pubsub: redis.client.PubSub | None = None
+        # Use Any to accommodate redis stubs across versions.
+        self.redis_client: Any | None = None
+        self.pubsub: PubSub | None = None
         self._running = False
         self._subscribers: dict[str, set[str]] = {}  # channel -> connection_ids
 
@@ -81,9 +83,7 @@ class WebSocketBroadcaster:
         try:
             # Initialize Redis connection
             if self.redis_url:
-                self.redis_client = redis.from_url(
-                    self.redis_url, decode_responses=True
-                )
+                self.redis_client = from_url(self.redis_url, decode_responses=True)
                 self.pubsub = self.redis_client.pubsub()
 
                 # Test connection
@@ -168,6 +168,7 @@ class WebSocketBroadcaster:
                 "connected_at": datetime.utcnow().isoformat(),
             }
 
+            assert self.redis_client is not None
             await self.redis_client.hset(
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}",
                 mapping=connection_data,
@@ -211,6 +212,7 @@ class WebSocketBroadcaster:
 
         try:
             # Get connection info
+            assert self.redis_client is not None
             connection_data = await self.redis_client.hgetall(
                 f"{self.CONNECTION_INFO_KEY}:{connection_id}"
             )
@@ -342,6 +344,7 @@ class WebSocketBroadcaster:
             message_data = message.model_dump_json()
             priority_key = f"{self.BROADCAST_QUEUE_KEY}:priority_{message.priority}"
 
+            assert self.redis_client is not None
             await self.redis_client.lpush(priority_key, message_data)
 
             logger.debug(
@@ -363,7 +366,8 @@ class WebSocketBroadcaster:
                     priority_key = f"{self.BROADCAST_QUEUE_KEY}:priority_{priority}"
 
                     # Get message from queue (blocking with timeout)
-                    result = await self.redis_client.brpop(priority_key, timeout=1)
+                    assert self.redis_client is not None
+                    result = await self.redis_client.brpop([priority_key], timeout=1)
 
                     if result:
                         _, message_data = result
@@ -385,6 +389,9 @@ class WebSocketBroadcaster:
             message: Message to deliver
         """
         try:
+            if self.redis_client is None:
+                logger.warning("Redis not connected; cannot deliver broadcast message")
+                return
             if message.target_type == "user" and message.target_id:
                 # Broadcast to all connections for user
                 connection_ids = await self.redis_client.smembers(
@@ -407,7 +414,8 @@ class WebSocketBroadcaster:
             # Publish to Redis pub/sub for each connection
             for connection_id in connection_ids:
                 channel = f"tripsage:websocket:connection:{connection_id}"
-                await self.redis_client.publish(channel, message.event)
+                # Publish JSON-encoded payload.
+                await self.redis_client.publish(channel, json.dumps(message.event))
 
             logger.debug(
                 "Delivered message %s to %s connections",
