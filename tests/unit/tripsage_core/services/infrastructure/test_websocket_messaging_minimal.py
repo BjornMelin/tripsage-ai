@@ -13,4 +13,3 @@ def test_websocket_event_to_dict_serialization() -> None:
     assert data["type"] == WebSocketEventType.MESSAGE_SENT
     assert isinstance(data["timestamp"], str)
     assert data["payload"] == {"x": 1}
-
