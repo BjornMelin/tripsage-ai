@@ -5,13 +5,20 @@ retrieving, updating, and deleting trips.
 """
 
 import logging
-from datetime import UTC, datetime
-from typing import Any
+from collections.abc import Iterable
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Protocol, TypedDict, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import (  # type: ignore[reportMissingImports]
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+)
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
+from tripsage.api.core.dependencies import require_principal
 from tripsage.api.middlewares.authentication import Principal
 
 # Import schemas
@@ -20,6 +27,7 @@ from tripsage.api.schemas.trips import (
     TripCollaboratorResponse,
     TripCollaboratorsListResponse,
     TripCollaboratorUpdateRequest,
+    TripListItem,
     TripListResponse,
     TripPreferencesRequest,
     TripResponse,
@@ -35,7 +43,11 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.models.schemas_common.enums import TripType, TripVisibility
 from tripsage_core.models.schemas_common.geographic import Coordinates
 from tripsage_core.models.schemas_common.travel import TripDestination
-from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
+from tripsage_core.models.trip import (
+    BudgetBreakdown,
+    EnhancedBudget,
+    TripPreferences as CoreTripPreferences,
+)
 
 # Import audit logging
 from tripsage_core.services.business.audit_logging_service import (
@@ -48,7 +60,9 @@ from tripsage_core.services.business.audit_logging_service import (
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest,
     TripLocation,
+    TripResponse as CoreTripResponse,
     TripService,
+    TripUpdateRequest as CoreTripUpdateRequest,
     get_trip_service,
 )
 
@@ -56,6 +70,110 @@ from tripsage_core.services.business.trip_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["trips"])
+
+
+class _TripLocationProtocol(Protocol):
+    """Minimal protocol representing a trip location returned by the core service."""
+
+    name: str
+    country: str | None
+    city: str | None
+    coordinates: dict[str, float] | None
+
+
+class _CoreTripProtocol(Protocol):
+    """Protocol for core trip responses consumed by the API adapter."""
+
+    id: UUID | str
+    user_id: UUID | str
+    title: str
+    description: str | None
+    start_date: datetime | date | str
+    end_date: datetime | date | str
+    destinations: Iterable[_TripLocationProtocol]
+    preferences: Any
+    status: Any
+    created_at: datetime | str
+    updated_at: datetime | str
+
+
+class _ItineraryItem(TypedDict):
+    """Typed dictionary describing an itinerary item in responses."""
+
+    id: str | None
+    name: str
+    description: str | None
+    start_time: str | None
+    end_time: str | None
+    location: str | None
+
+
+class _ItineraryResponse(TypedDict):
+    """Typed dictionary describing an itinerary response payload."""
+
+    id: str | None
+    trip_id: str
+    items: list[_ItineraryItem]
+    total_items: int
+
+
+class _ExportResponse(TypedDict):
+    """Typed dictionary describing the export request acknowledgement payload."""
+
+    format: str
+    trip_id: str
+    export_token: str
+    status: str
+    estimated_completion: str
+    download_url: str
+    expires_at: str
+
+
+def _ensure_datetime(value: datetime | date | str) -> datetime:
+    """Normalize supported date/datetime inputs into timezone-aware datetimes."""
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime.combine(value, datetime.min.time(), tzinfo=UTC)
+    normalized = value if isinstance(value, str) else str(value)
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+    return datetime.fromisoformat(normalized)
+
+
+def _ensure_date(value: datetime | date | str) -> date:
+    """Normalize supported inputs into `date` instances."""
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    return _ensure_datetime(value).date()
+
+
+async def _get_user_details_by_id(user_id: str) -> tuple[str | None, str | None]:
+    """Retrieve user email and name for a given identifier."""
+    try:
+        from tripsage_core.services.business.user_service import get_user_service
+
+        user_service = await get_user_service()
+        user = await user_service.get_user_by_id(user_id)
+        if user:
+            return user.email, getattr(user, "full_name", None)
+    except Exception:
+        logger.exception("Failed to get user details")
+    return None, None
+
+
+async def _resolve_user_by_email(email: str) -> tuple[str | None, str | None]:
+    """Resolve a user ID and name from an email address."""
+    try:
+        from tripsage_core.services.business.user_service import get_user_service
+
+        user_service = await get_user_service()
+        user = await user_service.get_user_by_email(email)
+        if user:
+            return str(user.id), getattr(user, "full_name", None)
+    except Exception:
+        logger.exception("Failed to resolve user by email")
+    return None, None
 
 
 def _principal_ip_address(principal: Principal) -> str:
@@ -113,7 +231,7 @@ async def create_trip(
     Returns:
         Created trip
     """
-    logger.info(f"Creating trip for user: {principal.user_id}")
+    logger.info("Creating trip for user: %s", principal.user_id)
 
     try:
         # Convert date to datetime with timezone
@@ -125,9 +243,9 @@ async def create_trip(
         ).replace(tzinfo=UTC)
 
         # Convert TripDestination to TripLocation
-        trip_locations = []
+        trip_locations: list[TripLocation] = []
         for dest in trip_request.destinations:
-            coordinates = None
+            coordinates: dict[str, float] | None = None
             if dest.coordinates:
                 coordinates = {
                     "lat": dest.coordinates.latitude,
@@ -258,7 +376,7 @@ async def create_trip(
         # Convert core response to API response
         trip_response = _adapt_trip_response(core_response)
 
-        logger.info(f"Trip created successfully: {trip_response.id}")
+        logger.info("Trip created successfully: %s", trip_response.id)
         return trip_response
 
     except Exception as e:
@@ -285,7 +403,7 @@ async def get_trip(
     Returns:
         Trip details
     """
-    logger.info(f"Getting trip {trip_id} for user: {principal.user_id}")
+    logger.info("Getting trip %s for user: %s", trip_id, principal.user_id)
 
     try:
         trip_response = await trip_service.get_trip(
@@ -330,7 +448,7 @@ async def list_trips(
     Returns:
         List of trips
     """
-    logger.info(f"Listing trips for user: {principal.user_id}")
+    logger.info("Listing trips for user: %s", principal.user_id)
 
     try:
         trips = await trip_service.get_user_trips(
@@ -341,29 +459,28 @@ async def list_trips(
         total_count = await trip_service.count_user_trips(user_id=principal.user_id)
 
         # Convert to list items for response
-        trip_items = []
+        trip_items: list[TripListItem] = []
         for trip in trips:
-            # Adapt core response to API response
             adapted_trip = _adapt_trip_response(trip)
             trip_items.append(
-                {
-                    "id": adapted_trip.id,
-                    "title": adapted_trip.title,
-                    "start_date": adapted_trip.start_date,
-                    "end_date": adapted_trip.end_date,
-                    "duration_days": adapted_trip.duration_days,
-                    "destinations": [dest.name for dest in adapted_trip.destinations],
-                    "status": adapted_trip.status,
-                    "created_at": adapted_trip.created_at,
-                }
+                TripListItem(
+                    id=adapted_trip.id,
+                    title=adapted_trip.title,
+                    start_date=adapted_trip.start_date,
+                    end_date=adapted_trip.end_date,
+                    duration_days=adapted_trip.duration_days,
+                    destinations=[dest.name for dest in adapted_trip.destinations],
+                    status=adapted_trip.status,
+                    created_at=adapted_trip.created_at,
+                )
             )
 
-        return {
-            "items": trip_items,
-            "total": total_count,
-            "skip": skip,
-            "limit": limit,
-        }
+        return TripListResponse(
+            items=trip_items,
+            total=total_count,
+            skip=skip,
+            limit=limit,
+        )
 
     except Exception as e:
         logger.exception("Failed to list trips")
@@ -391,11 +508,11 @@ async def update_trip(
     Returns:
         Updated trip
     """
-    logger.info(f"Updating trip {trip_id} for user: {principal.user_id}")
+    logger.info("Updating trip %s for user: %s", trip_id, principal.user_id)
 
     try:
         # Convert update request to dict for core service
-        updates = {}
+        updates: dict[str, Any] = {}
 
         if trip_request.title is not None:
             updates["title"] = trip_request.title
@@ -432,8 +549,11 @@ async def update_trip(
                 trip_locations.append(trip_location)
             updates["destinations"] = trip_locations
 
+        core_update_request = CoreTripUpdateRequest(**updates)
         trip_response = await trip_service.update_trip(
-            user_id=principal.user_id, trip_id=str(trip_id), request=updates
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+            update_data=core_update_request,
         )
 
         if not trip_response:
@@ -477,7 +597,7 @@ async def delete_trip(
         principal: Current authenticated principal
         trip_service: Trip service instance
     """
-    logger.info(f"Deleting trip {trip_id} for user: {principal.user_id}")
+    logger.info("Deleting trip %s for user: %s", trip_id, principal.user_id)
 
     try:
         success = await trip_service.delete_trip(
@@ -535,7 +655,7 @@ async def get_trip_summary(
     Returns:
         Trip summary
     """
-    logger.info(f"Getting trip summary {trip_id} for user: {principal.user_id}")
+    logger.info("Getting trip summary %s for user: %s", trip_id, principal.user_id)
 
     try:
         # Get trip first to ensure access
@@ -558,7 +678,7 @@ async def get_trip_summary(
         )
 
         # Get budget information from trip data (authorized access verified above)
-        budget = adapted_trip.budget if hasattr(adapted_trip, "budget") else None
+        budget = getattr(adapted_trip, "budget", None)
         budget_total = budget.total if budget else 0.0
         budget_currency = budget.currency if budget else "USD"
 
@@ -640,14 +760,22 @@ async def update_trip_preferences(
     Returns:
         Updated trip
     """
-    logger.info(f"Updating trip preferences {trip_id} for user: {principal.user_id}")
+    logger.info(
+        "Updating trip preferences %s for user: %s",
+        trip_id,
+        principal.user_id,
+    )
 
     try:
         # Update preferences via the core service update_trip method
-        updates = {"preferences": preferences_request.model_dump()}
+        preference_payload = preferences_request.model_dump(exclude_none=True)
+        core_preferences = CoreTripPreferences(**preference_payload)
+        core_update_request = CoreTripUpdateRequest(preferences=core_preferences)
 
         trip_response = await trip_service.update_trip(
-            user_id=principal.user_id, trip_id=str(trip_id), request=updates
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+            update_data=core_update_request,
         )
 
         if not trip_response:
@@ -688,7 +816,7 @@ async def duplicate_trip(
     Returns:
         Duplicated trip
     """
-    logger.info(f"Duplicating trip {trip_id} for user: {principal.user_id}")
+    logger.info("Duplicating trip %s for user: %s", trip_id, principal.user_id)
 
     try:
         # Get original trip
@@ -765,37 +893,44 @@ async def search_trips(
     Returns:
         Search results
     """
-    logger.info(f"Searching trips for user: {principal.user_id}")
+    logger.info("Searching trips for user: %s", principal.user_id)
 
     try:
+        search_filters: dict[str, Any] = {}
+        if status_filter:
+            search_filters["status"] = status_filter
+
         trips = await trip_service.search_trips(
-            user_id=principal.user_id, query=q, limit=limit
+            user_id=principal.user_id,
+            query=q or "",
+            filters=search_filters or None,
+            limit=limit,
+            offset=skip,
         )
 
         # Convert to list items for response
-        trip_items = []
+        trip_items: list[TripListItem] = []
         for trip in trips:
-            # Adapt core response to API response
             adapted_trip = _adapt_trip_response(trip)
             trip_items.append(
-                {
-                    "id": adapted_trip.id,
-                    "title": adapted_trip.title,
-                    "start_date": adapted_trip.start_date,
-                    "end_date": adapted_trip.end_date,
-                    "duration_days": adapted_trip.duration_days,
-                    "destinations": [dest.name for dest in adapted_trip.destinations],
-                    "status": adapted_trip.status,
-                    "created_at": adapted_trip.created_at,
-                }
+                TripListItem(
+                    id=adapted_trip.id,
+                    title=adapted_trip.title,
+                    start_date=adapted_trip.start_date,
+                    end_date=adapted_trip.end_date,
+                    duration_days=adapted_trip.duration_days,
+                    destinations=[dest.name for dest in adapted_trip.destinations],
+                    status=adapted_trip.status,
+                    created_at=adapted_trip.created_at,
+                )
             )
 
-        return {
-            "items": trip_items,
-            "total": len(trip_items),
-            "skip": skip,
-            "limit": limit,
-        }
+        return TripListResponse(
+            items=trip_items,
+            total=len(trip_items),
+            skip=skip,
+            limit=limit,
+        )
 
     except Exception as e:
         logger.exception("Failed to search trips")
@@ -810,7 +945,7 @@ async def get_trip_itinerary(
     trip_id: UUID,
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
-):
+) -> _ItineraryResponse:
     """Get trip itinerary.
 
     Args:
@@ -821,7 +956,7 @@ async def get_trip_itinerary(
     Returns:
         Trip itinerary
     """
-    logger.info(f"Getting trip itinerary {trip_id} for user: {principal.user_id}")
+    logger.info("Getting trip itinerary %s for user: %s", trip_id, principal.user_id)
 
     try:
         # Get trip first to ensure access
@@ -857,48 +992,51 @@ async def get_trip_itinerary(
             if itineraries and len(itineraries) > 0:
                 itinerary_data = itineraries[0]
 
-                # Convert itinerary items to API format
-                items = [
-                    {
-                        "id": item.id,
-                        "name": item.name,
-                        "description": item.description,
-                        "start_time": f"{day.date}T{item.start_time}:00Z"
-                        if item.start_time
-                        else None,
-                        "end_time": f"{day.date}T{item.end_time}:00Z"
-                        if item.end_time
-                        else None,
-                        "location": item.location,
-                    }
+                items: list[_ItineraryItem] = [
+                    _ItineraryItem(
+                        id=str(item.id) if getattr(item, "id", None) else None,
+                        name=item.name,
+                        description=item.description,
+                        start_time=(
+                            f"{day.date}T{item.start_time}:00Z"
+                            if item.start_time
+                            else None
+                        ),
+                        end_time=(
+                            f"{day.date}T{item.end_time}:00Z" if item.end_time else None
+                        ),
+                        location=item.location,
+                    )
                     for day in itinerary_data.days
                     for item in day.items
                 ]
 
-                itinerary = {
-                    "id": itinerary_data.id,
-                    "trip_id": str(trip_id),
-                    "items": items,
-                    "total_items": len(items),
-                }
+                itinerary = _ItineraryResponse(
+                    id=str(itinerary_data.id)
+                    if getattr(itinerary_data, "id", None)
+                    else None,
+                    trip_id=str(trip_id),
+                    items=items,
+                    total_items=len(items),
+                )
             else:
                 # No itinerary found - return empty structure
-                itinerary = {
-                    "id": None,
-                    "trip_id": str(trip_id),
-                    "items": [],
-                    "total_items": 0,
-                }
+                itinerary = _ItineraryResponse(
+                    id=None,
+                    trip_id=str(trip_id),
+                    items=[],
+                    total_items=0,
+                )
 
         except Exception:
             logger.exception("Failed to get itinerary data")
             # Fallback to empty structure on error
-            itinerary = {
-                "id": None,
-                "trip_id": str(trip_id),
-                "items": [],
-                "total_items": 0,
-            }
+            itinerary = _ItineraryResponse(
+                id=None,
+                trip_id=str(trip_id),
+                items=[],
+                total_items=0,
+            )
 
         return itinerary
 
@@ -918,7 +1056,7 @@ async def export_trip(
     export_format: str = Query(default="pdf", description="Export format"),
     principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
-):
+) -> _ExportResponse:
     """Export trip.
 
     Args:
@@ -930,7 +1068,7 @@ async def export_trip(
     Returns:
         Export data
     """
-    logger.info(f"Exporting trip {trip_id} for user: {principal.user_id}")
+    logger.info("Exporting trip %s for user: %s", trip_id, principal.user_id)
 
     try:
         # Get trip first to ensure access
@@ -943,11 +1081,8 @@ async def export_trip(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
             )
 
-        # Implement actual export functionality with authorization
-        from datetime import datetime, timedelta
-
         # Validate export format
-        allowed_formats = ["pdf", "csv", "json"]
+        allowed_formats = {"pdf", "csv", "json"}
         if export_format not in allowed_formats:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -958,21 +1093,21 @@ async def export_trip(
         import secrets
 
         export_token = secrets.token_urlsafe(32)
-        expiry_time = datetime.now(UTC) + timedelta(hours=24)
+        now = datetime.now(UTC)
+        expiry_time = now + timedelta(hours=24)
+        estimated_completion = now + timedelta(minutes=5)
 
         # Store export request in a temporary location (in production, proper queue)
         # For now, return a response indicating export is being processed
-        export_data = {
-            "format": export_format,
-            "trip_id": str(trip_id),
-            "export_token": export_token,
-            "status": "processing",
-            "estimated_completion": (
-                datetime.now(UTC) + timedelta(minutes=5)
-            ).isoformat(),
-            "download_url": f"/api/trips/{trip_id}/export/{export_token}/download",
-            "expires_at": expiry_time.isoformat(),
-        }
+        export_data = _ExportResponse(
+            format=export_format,
+            trip_id=str(trip_id),
+            export_token=export_token,
+            status="processing",
+            estimated_completion=estimated_completion.isoformat(),
+            download_url=f"/api/trips/{trip_id}/export/{export_token}/download",
+            expires_at=expiry_time.isoformat(),
+        )
 
         # Audit log the export request
         await _record_trip_audit_event(
@@ -982,7 +1117,7 @@ async def export_trip(
             principal=principal,
             resource_id=str(trip_id),
             action="trip_export_requested",
-            format=format,
+            format=export_format,
             export_token=export_token,
         )
 
@@ -1019,140 +1154,136 @@ async def get_trip_suggestions(
     Returns:
         List of trip suggestions
     """
-    _user_id = get_principal_id(principal)
+    base_suggestions: list[TripSuggestionResponse] = [
+        TripSuggestionResponse(
+            id="suggestion-1",
+            title="Tokyo Cherry Blossom Adventure",
+            destination="Tokyo, Japan",
+            description=(
+                "Experience cherry blossom season in Japan's vibrant capital city."
+            ),
+            estimated_price=2800,
+            currency="USD",
+            duration=7,
+            rating=4.8,
+            category="culture",
+            best_time_to_visit="March - May",
+            highlights=[
+                "Cherry Blossoms",
+                "Temples",
+                "Street Food",
+                "Modern Culture",
+            ],
+            trending=True,
+            seasonal=True,
+        ),
+        TripSuggestionResponse(
+            id="suggestion-2",
+            title="Bali Tropical Retreat",
+            destination="Bali, Indonesia",
+            description=(
+                "Relax on beaches and explore ancient temples in this "
+                "tropical paradise."
+            ),
+            estimated_price=1500,
+            currency="USD",
+            duration=10,
+            rating=4.6,
+            category="relaxation",
+            best_time_to_visit="April - October",
+            highlights=["Beaches", "Temples", "Rice Terraces", "Wellness"],
+            difficulty="easy",
+        ),
+        TripSuggestionResponse(
+            id="suggestion-3",
+            title="Swiss Alps Hiking Experience",
+            destination="Interlaken, Switzerland",
+            description=(
+                "Challenge yourself with breathtaking alpine hikes and stunning "
+                "mountain views."
+            ),
+            estimated_price=3200,
+            currency="USD",
+            duration=5,
+            rating=4.9,
+            category="adventure",
+            best_time_to_visit="June - September",
+            highlights=[
+                "Mountain Hiking",
+                "Alpine Lakes",
+                "Cable Cars",
+                "Local Cuisine",
+            ],
+            difficulty="challenging",
+        ),
+        TripSuggestionResponse(
+            id="suggestion-4",
+            title="Santorini Sunset Romance",
+            destination="Santorini, Greece",
+            description=(
+                "Watch spectacular sunsets from clifftop villages in this iconic "
+                "Greek island."
+            ),
+            estimated_price=2100,
+            currency="USD",
+            duration=6,
+            rating=4.7,
+            category="relaxation",
+            best_time_to_visit="April - October",
+            highlights=[
+                "Sunset Views",
+                "White Architecture",
+                "Wine Tasting",
+                "Beaches",
+            ],
+            difficulty="easy",
+        ),
+        TripSuggestionResponse(
+            id="suggestion-5",
+            title="Iceland Northern Lights",
+            destination="Reykjavik, Iceland",
+            description=(
+                "Chase the aurora borealis and explore dramatic landscapes of "
+                "fire and ice."
+            ),
+            estimated_price=2500,
+            currency="USD",
+            duration=8,
+            rating=4.5,
+            category="nature",
+            best_time_to_visit="September - March",
+            highlights=["Northern Lights", "Geysers", "Waterfalls", "Blue Lagoon"],
+            seasonal=True,
+            difficulty="moderate",
+        ),
+    ]
 
-    # Implement trip suggestions logic using memory service
+    suggestions = base_suggestions
+
     try:
-        from tripsage_core.services.business.memory_service import get_memory_service
+        from tripsage_core.services.business.memory_service import (
+            MemorySearchRequest,
+            get_memory_service,
+        )
 
         memory_service = await get_memory_service()
-
-        # Get user preferences and travel history for personalized suggestions
-        user_memories = await memory_service.search_memories(
-            user_id=principal.user_id,
+        memory_search = MemorySearchRequest(
             query="travel preferences destinations budget",
             limit=10,
         )
+        user_memories = await memory_service.search_memories(
+            user_id=principal.user_id,
+            search_request=memory_search,
+        )
 
-        # Default fallback suggestions that are dynamically filtered
-        base_suggestions = [
-            TripSuggestionResponse(
-                id="suggestion-1",
-                title="Tokyo Cherry Blossom Adventure",
-                destination="Tokyo, Japan",
-                description=(
-                    "Experience cherry blossom season in Japan's vibrant capital city."
-                ),
-                estimated_price=2800,
-                currency="USD",
-                duration=7,
-                rating=4.8,
-                category="culture",
-                best_time_to_visit="March - May",
-                highlights=[
-                    "Cherry Blossoms",
-                    "Temples",
-                    "Street Food",
-                    "Modern Culture",
-                ],
-                trending=True,
-                seasonal=True,
-            ),
-            TripSuggestionResponse(
-                id="suggestion-2",
-                title="Bali Tropical Retreat",
-                destination="Bali, Indonesia",
-                description=(
-                    "Relax on beaches and explore ancient temples in this "
-                    "tropical paradise."
-                ),
-                estimated_price=1500,
-                currency="USD",
-                duration=10,
-                rating=4.6,
-                category="relaxation",
-                best_time_to_visit="April - October",
-                highlights=["Beaches", "Temples", "Rice Terraces", "Wellness"],
-                difficulty="easy",
-            ),
-            TripSuggestionResponse(
-                id="suggestion-3",
-                title="Swiss Alps Hiking Experience",
-                destination="Interlaken, Switzerland",
-                description=(
-                    "Challenge yourself with breathtaking alpine hikes and stunning "
-                    "mountain views."
-                ),
-                estimated_price=3200,
-                currency="USD",
-                duration=5,
-                rating=4.9,
-                category="adventure",
-                best_time_to_visit="June - September",
-                highlights=[
-                    "Mountain Hiking",
-                    "Alpine Lakes",
-                    "Cable Cars",
-                    "Local Cuisine",
-                ],
-                difficulty="challenging",
-            ),
-            TripSuggestionResponse(
-                id="suggestion-4",
-                title="Santorini Sunset Romance",
-                destination="Santorini, Greece",
-                description=(
-                    "Watch spectacular sunsets from clifftop villages in this iconic "
-                    "Greek island."
-                ),
-                estimated_price=2100,
-                currency="USD",
-                duration=6,
-                rating=4.7,
-                category="relaxation",
-                best_time_to_visit="April - October",
-                highlights=[
-                    "Sunset Views",
-                    "White Architecture",
-                    "Wine Tasting",
-                    "Beaches",
-                ],
-                difficulty="easy",
-            ),
-            TripSuggestionResponse(
-                id="suggestion-5",
-                title="Iceland Northern Lights",
-                destination="Reykjavik, Iceland",
-                description=(
-                    "Chase the aurora borealis and explore dramatic landscapes of "
-                    "fire and ice."
-                ),
-                estimated_price=2500,
-                currency="USD",
-                duration=8,
-                rating=4.5,
-                category="nature",
-                best_time_to_visit="September - March",
-                highlights=["Northern Lights", "Geysers", "Waterfalls", "Blue Lagoon"],
-                seasonal=True,
-                difficulty="moderate",
-            ),
-        ]
-
-        # Personalize suggestions based on user memory/preferences
-        suggestions = base_suggestions
         if user_memories:
-            # Basic personalization based on user memory
-            # In a full implementation, this would use AI/ML to analyze preferences
             logger.info(
-                f"Personalizing suggestions based on {len(user_memories)} user memories"
+                "Personalizing suggestions based on %s user memories",
+                len(user_memories),
             )
-
-        # Apply user authentication is already verified via require_principal decorator
 
     except Exception:
         logger.exception("Failed to get personalized suggestions")
-        # Fallback to base suggestions on error
         suggestions = base_suggestions
 
     # Apply filters with proper validation
@@ -1172,69 +1303,53 @@ async def get_trip_suggestions(
     return filtered_suggestions[:limit]
 
 
-def _adapt_trip_response(core_response) -> TripResponse:
-    """Adapt core trip response to API model."""
-    # Convert TripLocation to TripDestination
-    api_destinations = []
-    if hasattr(core_response, "destinations") and core_response.destinations:
-        for location in core_response.destinations:
-            coordinates = None
-            if hasattr(location, "coordinates") and location.coordinates:
-                coordinates = Coordinates(
-                    latitude=location.coordinates.get("lat", 0.0),
-                    longitude=location.coordinates.get("lng", 0.0),
-                )
+def _adapt_trip_response(
+    core_response: CoreTripResponse | _CoreTripProtocol,
+) -> TripResponse:
+    """Adapt a core trip response to the public API schema."""
+    api_destinations: list[TripDestination] = []
+    for location in getattr(core_response, "destinations", []) or []:
+        coordinates_dict = getattr(location, "coordinates", None)
+        coordinates = None
+        if isinstance(coordinates_dict, dict):
+            coordinates = Coordinates(
+                latitude=float(coordinates_dict.get("lat", 0.0)),
+                longitude=float(coordinates_dict.get("lng", 0.0)),
+            )
 
-            destination = TripDestination(
+        api_destinations.append(
+            TripDestination(
                 name=location.name,
                 country=location.country,
                 city=location.city,
                 coordinates=coordinates,
             )
-            api_destinations.append(destination)
+        )
 
-    # Handle datetime conversion safely
-    start_date = core_response.start_date
-    end_date = core_response.end_date
-
-    # Convert datetime to date if needed
-    if hasattr(start_date, "date"):
-        start_date = start_date.date()
-    if hasattr(end_date, "date"):
-        end_date = end_date.date()
-
-    # Calculate duration
-    try:
-        duration_days = (end_date - start_date).days
-    except (TypeError, AttributeError):
+    start_date = _ensure_date(core_response.start_date)
+    end_date = _ensure_date(core_response.end_date)
+    duration_days = (end_date - start_date).days or 0
+    if duration_days <= 0:
         duration_days = 1
 
-    # Handle created_at and updated_at safely
-    created_at = core_response.created_at
-    updated_at = core_response.updated_at
+    created_at = _ensure_datetime(core_response.created_at)
+    updated_at = _ensure_datetime(core_response.updated_at)
 
-    # Convert string dates to datetime if needed
-    if isinstance(created_at, str):
-        created_at = datetime.fromisoformat(
-            f"{created_at[:-1]}+00:00" if created_at.endswith("Z") else created_at
-        )
-    if isinstance(updated_at, str):
-        updated_at = datetime.fromisoformat(
-            f"{updated_at[:-1]}+00:00" if updated_at.endswith("Z") else updated_at
-        )
+    status_value = (
+        core_response.status.value
+        if hasattr(core_response.status, "value")
+        else str(core_response.status)
+    )
 
-    # Convert core TripPreferences to common TripPreferences if needed
     api_preferences = None
-    if core_response.preferences:
-        # The core preferences is already a TripPreferences from core models
-        # We need to convert it to common TripPreferences
-        # For now, we'll just pass None since the test doesn't check preferences
-        # A full implementation would convert all the fields properly
-        api_preferences = None  # Simplified for this test case
+    if getattr(core_response, "preferences", None):
+        api_preferences = (
+            None  # Placeholder until full preference mapping is implemented
+        )
 
     return TripResponse(
-        id=UUID(core_response.id),
-        user_id=core_response.user_id,
+        id=UUID(str(core_response.id)),
+        user_id=str(core_response.user_id),
         title=core_response.title,
         description=core_response.description,
         start_date=start_date,
@@ -1242,7 +1357,7 @@ def _adapt_trip_response(core_response) -> TripResponse:
         duration_days=duration_days,
         destinations=api_destinations,
         preferences=api_preferences,
-        status=core_response.status,
+        status=str(status_value),
         created_at=created_at,
         updated_at=updated_at,
     )
@@ -1274,40 +1389,86 @@ async def share_trip(
     Raises:
         HTTPException: If not authorized or trip not found
     """
-    logger.info(f"Sharing trip {trip_id} by user: {principal.user_id}")
+    logger.info("Sharing trip %s by user: %s", trip_id, principal.user_id)
 
     try:
-        # Import the core model for sharing
-        from tripsage_core.services.business.trip_service import (
-            TripShareRequest as CoreTripShareRequest,
+        trip = await trip_service.get_trip(
+            trip_id=str(trip_id), user_id=principal.user_id
         )
-
-        # Convert core service response to API response
-        core_share_request = CoreTripShareRequest(
-            user_emails=share_request.user_emails,
-            permission_level=share_request.permission_level,
-            message=share_request.message,
-        )
-
-        collaborators = await trip_service.share_trip(
-            trip_id=str(trip_id),
-            owner_id=principal.user_id,
-            share_request=core_share_request,
-        )
-
-        # Convert to API response models
-        response_collaborators = [
-            TripCollaboratorResponse(
-                user_id=UUID(collab.user_id),
-                email=collab.email,
-                name=await _get_user_name_safely(collab.user_id),
-                permission_level=collab.permission_level,
-                added_by=UUID(principal.user_id),
-                added_at=collab.added_at,
-                is_active=True,
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
             )
-            for collab in collaborators
-        ]
+
+        if str(trip.user_id) != principal.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only trip owner can share the trip",
+            )
+
+        resolved_users = []
+        missing_emails: list[str] = []
+        for email in share_request.user_emails:
+            user_id, full_name = await _resolve_user_by_email(email)
+            if not user_id:
+                missing_emails.append(email)
+            else:
+                resolved_users.append((email, user_id, full_name))
+
+        if missing_emails:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=(
+                    "Unable to find users for emails: "
+                    + ", ".join(sorted(missing_emails))
+                ),
+            )
+
+        database_service = cast(Any, trip_service.db)
+        response_collaborators: list[TripCollaboratorResponse] = []
+        for email, user_id, full_name in resolved_users:
+            await database_service.add_trip_collaborator(
+                {
+                    "trip_id": str(trip_id),
+                    "user_id": user_id,
+                    "permission_level": share_request.permission_level,
+                    "added_by": principal.user_id,
+                    "added_at": datetime.now(UTC),
+                }
+            )
+            collaborator_record = await database_service.get_trip_collaborator(
+                str(trip_id), user_id
+            )
+            added_at_value = (
+                collaborator_record.get("added_at") if collaborator_record else None
+            )
+            added_at = (
+                _ensure_datetime(added_at_value)
+                if added_at_value is not None
+                else datetime.now(UTC)
+            )
+            permission_value = (
+                collaborator_record.get("permission_level")
+                if collaborator_record
+                else None
+            )
+            response_collaborators.append(
+                TripCollaboratorResponse(
+                    user_id=UUID(user_id),
+                    email=email,
+                    name=full_name,
+                    permission_level=(
+                        permission_value or share_request.permission_level
+                    ),
+                    added_by=UUID(str(principal.user_id)),
+                    added_at=added_at,
+                    is_active=(
+                        collaborator_record.get("is_active")
+                        if collaborator_record and "is_active" in collaborator_record
+                        else True
+                    ),
+                )
+            )
 
         # Audit log the trip sharing
         await _record_trip_audit_event(
@@ -1358,7 +1519,9 @@ async def list_trip_collaborators(
         HTTPException: If not authorized or trip not found
     """
     logger.info(
-        f"Listing collaborators for trip {trip_id} by user: {principal.user_id}"
+        "Listing collaborators for trip %s by user: %s",
+        trip_id,
+        principal.user_id,
     )
 
     try:
@@ -1375,29 +1538,40 @@ async def list_trip_collaborators(
             )
 
         # Get collaborators
-        collaborators = await trip_service.get_trip_collaborators(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
+        database_service = cast(Any, trip_service.db)
+        collaborator_records = await database_service.get_trip_collaborators(
+            str(trip_id), user_id=principal.user_id
         )
 
         # Convert to API response models
-        response_collaborators = [
-            TripCollaboratorResponse(
-                user_id=UUID(collab.user_id),
-                email=collab.email,
-                name=await _get_user_name_safely(collab.user_id),
-                permission_level=collab.permission_level,
-                added_by=UUID(trip.user_id),
-                added_at=collab.added_at,
-                is_active=True,
+        response_collaborators: list[TripCollaboratorResponse] = []
+        for collab in collaborator_records:
+            email, full_name = await _get_user_details_by_id(str(collab["user_id"]))
+            added_at_value = collab.get("added_at")
+            added_at = (
+                _ensure_datetime(added_at_value)
+                if added_at_value is not None
+                else datetime.now(UTC)
             )
-            for collab in collaborators
-        ]
+            permission_level = collab.get("permission_level") or collab.get(
+                "permission"
+            )
+            response_collaborators.append(
+                TripCollaboratorResponse(
+                    user_id=UUID(str(collab["user_id"])),
+                    email=email or collab.get("email", ""),
+                    name=full_name,
+                    permission_level=permission_level or "view",
+                    added_by=UUID(str(collab.get("added_by", trip.user_id))),
+                    added_at=added_at,
+                    is_active=collab.get("is_active", True),
+                )
+            )
 
         return TripCollaboratorsListResponse(
             collaborators=response_collaborators,
             total=len(response_collaborators),
-            owner_id=UUID(trip.user_id),
+            owner_id=UUID(str(trip.user_id)),
         )
 
     except HTTPException:
@@ -1438,8 +1612,10 @@ async def update_collaborator_permissions(
         HTTPException: If not authorized or collaborator not found
     """
     logger.info(
-        f"Updating collaborator {user_id} permissions for trip {trip_id} "
-        f"by user: {principal.user_id}"
+        "Updating collaborator %s permissions for trip %s by user: %s",
+        user_id,
+        trip_id,
+        principal.user_id,
     )
 
     try:
@@ -1449,47 +1625,60 @@ async def update_collaborator_permissions(
             user_id=principal.user_id,
         )
 
-        if not trip or trip.user_id != principal.user_id:
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found",
+            )
+        trip_owner_id = str(trip.user_id)
+        if trip_owner_id != principal.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only trip owner can update collaborator permissions",
             )
 
-        # Update collaborator permissions
-        success = await trip_service.update_collaborator_permissions(
-            trip_id=str(trip_id),
-            collaborator_id=str(user_id),
-            permission_level=update_request.permission_level,
+        database_service = cast(Any, trip_service.db)
+        existing_collaborator = await database_service.get_trip_collaborator(
+            str(trip_id), str(user_id)
         )
-
-        if not success:
+        if not existing_collaborator:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Collaborator not found",
             )
 
-        # Get updated collaborator info
-        collaborators = await trip_service.get_trip_collaborators(
-            trip_id=str(trip_id),
-            user_id=principal.user_id,
+        await database_service.add_trip_collaborator(
+            {
+                "trip_id": str(trip_id),
+                "user_id": str(user_id),
+                "permission_level": update_request.permission_level,
+                "added_by": existing_collaborator.get("added_by", principal.user_id),
+                "added_at": existing_collaborator.get("added_at", datetime.now(UTC)),
+            }
         )
 
-        # Find the updated collaborator
-        for collab in collaborators:
-            if collab.user_id == str(user_id):
-                return TripCollaboratorResponse(
-                    user_id=user_id,
-                    email=collab.email,
-                    name=None,
-                    permission_level=update_request.permission_level,
-                    added_by=UUID(trip.user_id),
-                    added_at=collab.added_at,
-                    is_active=True,
-                )
+        updated_collaborator = (
+            await database_service.get_trip_collaborator(str(trip_id), str(user_id))
+            or existing_collaborator
+        )
+        email, full_name = await _get_user_details_by_id(str(user_id))
+        added_at_value = (
+            updated_collaborator.get("added_at") if updated_collaborator else None
+        )
+        added_at = (
+            _ensure_datetime(added_at_value)
+            if added_at_value is not None
+            else datetime.now(UTC)
+        )
 
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Collaborator not found",
+        return TripCollaboratorResponse(
+            user_id=user_id,
+            email=email or updated_collaborator.get("email", ""),
+            name=full_name,
+            permission_level=update_request.permission_level,
+            added_by=UUID(str(updated_collaborator.get("added_by", trip_owner_id))),
+            added_at=added_at,
+            is_active=updated_collaborator.get("is_active", True),
         )
 
     except HTTPException:
@@ -1525,8 +1714,10 @@ async def remove_collaborator(
         HTTPException: If not authorized or collaborator not found
     """
     logger.info(
-        f"Removing collaborator {user_id} from trip {trip_id} "
-        f"by user: {principal.user_id}"
+        "Removing collaborator %s from trip %s by user: %s",
+        user_id,
+        trip_id,
+        principal.user_id,
     )
 
     try:
@@ -1536,16 +1727,23 @@ async def remove_collaborator(
             user_id=principal.user_id,
         )
 
-        if not trip or trip.user_id != principal.user_id:
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found",
+            )
+        trip_owner_id = str(trip.user_id)
+        if trip_owner_id != principal.user_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only trip owner can remove collaborators",
             )
 
         # Remove collaborator
-        success = await trip_service.remove_collaborator(
+        success = await trip_service.unshare_trip(
             trip_id=str(trip_id),
-            collaborator_id=str(user_id),
+            owner_id=principal.user_id,
+            unshare_user_id=str(user_id),
         )
 
         if not success:
@@ -1574,15 +1772,8 @@ async def _get_user_name_safely(user_id: str) -> str | None:
         User's full name or None if not found/error
     """
     try:
-        from tripsage_core.services.business.user_service import get_user_service
-
-        user_service = await get_user_service()
-        user = await user_service.get_user_by_id(user_id)
-
-        if user and hasattr(user, "full_name"):
-            return user.full_name
-        return None
-
+        _, full_name = await _get_user_details_by_id(user_id)
+        return full_name
     except Exception:
         logger.exception("Failed to get user name")
         return None
