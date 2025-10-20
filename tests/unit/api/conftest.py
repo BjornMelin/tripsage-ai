@@ -1,5 +1,4 @@
-"""
-Common test configuration for API router tests.
+"""Common test configuration for API router tests.
 
 This module provides a comprehensive test setup that properly mocks all services
 and dependencies needed for API router testing, ensuring that validation tests
@@ -7,6 +6,7 @@ can run without interference from authentication or cache connection issues.
 """
 
 import os
+from datetime import UTC
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -304,7 +304,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         mock_user_service_getter.return_value = mock_user_service
 
         # Configure user service mock responses
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from tripsage_core.services.business.user_service import UserResponse
 
@@ -335,8 +335,8 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 email="test@example.com",
                 is_active=True,
                 is_verified=True,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
                 preferences=preferences,
             )
 

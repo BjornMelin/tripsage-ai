@@ -1,11 +1,9 @@
-"""
-OpenTelemetry monitoring setup for TripSage.
+"""OpenTelemetry monitoring setup for TripSage.
 
 This module configures OpenTelemetry for distributed tracing of MCP operations.
 """
 
 import logging
-from typing import Optional
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -17,17 +15,17 @@ from opentelemetry.sdk.trace.export import (
     SimpleSpanProcessor,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
 def configure_opentelemetry(
     service_name: str = "tripsage",
     service_version: str = "1.0.0",
-    otlp_endpoint: Optional[str] = None,
+    otlp_endpoint: str | None = None,
     use_console_exporter: bool = True,
 ) -> None:
-    """
-    Configure OpenTelemetry for the TripSage application.
+    """Configure OpenTelemetry for the TripSage application.
 
     Args:
         service_name: Name of the service for tracing
@@ -72,8 +70,7 @@ def configure_opentelemetry(
 
 
 def get_tracer(component_name: str) -> trace.Tracer:
-    """
-    Get a tracer for a specific component.
+    """Get a tracer for a specific component.
 
     Args:
         component_name: Name of the component (usually __name__)

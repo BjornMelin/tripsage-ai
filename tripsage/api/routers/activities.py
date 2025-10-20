@@ -1,10 +1,7 @@
-"""
-Router for activity-related endpoints in the TripSage API.
-"""
+"""Router for activity-related endpoints in the TripSage API."""
 
 import logging
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -35,14 +32,14 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 @router.post("/search", response_model=ActivitySearchResponse)
 async def search_activities(request: ActivitySearchRequest):
-    """
-    Search for activities based on provided criteria using Google Maps Places API.
+    """Search for activities based on provided criteria using Google Maps Places API.
 
     This endpoint searches for activities, attractions, and points of interest
     in the specified destination using real-time data from Google Maps.
@@ -74,8 +71,7 @@ async def search_activities(request: ActivitySearchRequest):
 
 @router.get("/{activity_id}", response_model=ActivityResponse)
 async def get_activity_details(activity_id: str):
-    """
-    Get detailed information about a specific activity.
+    """Get detailed information about a specific activity.
 
     Retrieves comprehensive details for an activity including enhanced
     information from Google Maps Places API.
@@ -119,8 +115,7 @@ async def save_activity(
     db_service: DatabaseService = Depends(get_database_service),
     trip_service: TripService = Depends(get_trip_service),
 ):
-    """
-    Save an activity for a user.
+    """Save an activity for a user.
 
     Security features:
     - User authentication required
@@ -159,7 +154,7 @@ async def save_activity(
                 )
 
         # Save activity to itinerary_items table
-        saved_at = datetime.now(timezone.utc)
+        saved_at = datetime.now(UTC)
         itinerary_data = {
             "id": str(uuid4()),
             "trip_id": request.trip_id,
@@ -211,7 +206,7 @@ async def save_activity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to save activity {request.activity_id}: {str(e)}")
+        logger.error(f"Failed to save activity {request.activity_id}: {e!s}")
 
         # Log system error
         await audit_security_event(
@@ -233,15 +228,14 @@ async def save_activity(
         ) from e
 
 
-@router.get("/saved", response_model=List[SavedActivityResponse])
+@router.get("/saved", response_model=list[SavedActivityResponse])
 async def get_saved_activities(
     principal: Principal = Depends(require_principal),
     db_service: DatabaseService = Depends(get_database_service),
     limit: int = 50,
     offset: int = 0,
 ):
-    """
-    Get all activities saved by a user.
+    """Get all activities saved by a user.
 
     Security features:
     - User authentication required
@@ -281,9 +275,7 @@ async def get_saved_activities(
                     ),
                     trip_id=item.get("trip_id"),
                     user_id=user_id,
-                    saved_at=item.get(
-                        "created_at", datetime.now(timezone.utc).isoformat()
-                    ),
+                    saved_at=item.get("created_at", datetime.now(UTC).isoformat()),
                     notes=metadata.get("notes"),
                 )
             )
@@ -310,7 +302,7 @@ async def get_saved_activities(
         return saved_activities
 
     except Exception as e:
-        logger.error(f"Failed to get saved activities: {str(e)}")
+        logger.error(f"Failed to get saved activities: {e!s}")
 
         # Log system error
         await audit_security_event(
@@ -337,8 +329,7 @@ async def delete_saved_activity(
     principal: Principal = Depends(require_principal),
     db_service: DatabaseService = Depends(get_database_service),
 ):
-    """
-    Delete a saved activity for a user.
+    """Delete a saved activity for a user.
 
     Security features:
     - User authentication required
@@ -450,7 +441,7 @@ async def delete_saved_activity(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete saved activity {activity_id}: {str(e)}")
+        logger.error(f"Failed to delete saved activity {activity_id}: {e!s}")
 
         # Log system error
         await audit_security_event(

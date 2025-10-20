@@ -1,5 +1,4 @@
-"""
-Security Monitoring Service for Suspicious Activity Detection.
+"""Security Monitoring Service for Suspicious Activity Detection.
 
 This service analyzes audit logs and system behavior to detect and respond to
 suspicious activities, security threats, and anomalous patterns. It provides
@@ -17,9 +16,9 @@ Features:
 import asyncio
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -33,6 +32,7 @@ from tripsage_core.services.business.audit_logging_service import (
     get_audit_logger,
 )
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -69,12 +69,12 @@ class ThreatIndicator(BaseModel):
     threat_level: ThreatLevel
     confidence: float = Field(ge=0.0, le=1.0)  # 0.0 to 1.0
     description: str
-    affected_entities: List[str] = Field(default_factory=list)
-    source_events: List[str] = Field(default_factory=list)  # Event IDs
-    first_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_seen: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    affected_entities: list[str] = Field(default_factory=list)
+    source_events: list[str] = Field(default_factory=list)  # Event IDs
+    first_seen: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_seen: datetime = Field(default_factory=lambda: datetime.now(UTC))
     count: int = 1
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class SecurityIncident(TripSageModel):
@@ -84,29 +84,29 @@ class SecurityIncident(TripSageModel):
     title: str
     description: str
     threat_level: ThreatLevel
-    threat_categories: List[ThreatCategory]
+    threat_categories: list[ThreatCategory]
     status: str = "open"  # open, investigating, resolved, false_positive
-    affected_users: List[str] = Field(default_factory=list)
-    affected_services: List[str] = Field(default_factory=list)
-    affected_ips: List[str] = Field(default_factory=list)
+    affected_users: list[str] = Field(default_factory=list)
+    affected_services: list[str] = Field(default_factory=list)
+    affected_ips: list[str] = Field(default_factory=list)
 
     # Timing
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Analysis
-    indicators: List[ThreatIndicator] = Field(default_factory=list)
+    indicators: list[ThreatIndicator] = Field(default_factory=list)
     risk_score: int = Field(default=0, ge=0, le=100)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
 
     # Response
-    automated_actions: List[str] = Field(default_factory=list)
-    manual_actions: List[str] = Field(default_factory=list)
-    notes: List[str] = Field(default_factory=list)
+    automated_actions: list[str] = Field(default_factory=list)
+    manual_actions: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
 
     # Metadata
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ActivityPattern(BaseModel):
@@ -119,7 +119,7 @@ class ActivityPattern(BaseModel):
     threat_level: ThreatLevel
 
     # Detection criteria
-    event_types: List[AuditEventType]
+    event_types: list[AuditEventType]
     time_window_minutes: int = 60
     min_occurrences: int = 5
     max_false_positive_rate: float = 0.1
@@ -128,7 +128,7 @@ class ActivityPattern(BaseModel):
     same_actor: bool = False
     same_ip: bool = False
     same_service: bool = False
-    outcome_filter: Optional[str] = None  # "failure", "success", None
+    outcome_filter: str | None = None  # "failure", "success", None
 
     # Response
     auto_block: bool = False
@@ -137,29 +137,28 @@ class ActivityPattern(BaseModel):
 
 
 class SecurityMonitoringService:
-    """
-    Real-time security monitoring and threat detection service.
+    """Real-time security monitoring and threat detection service.
 
     This service continuously analyzes audit events to detect suspicious
     activities, security threats, and anomalous behavior patterns.
     """
 
-    def __init__(self, audit_logger: Optional[SecurityAuditLogger] = None):
+    def __init__(self, audit_logger: SecurityAuditLogger | None = None):
         """Initialize the security monitoring service."""
         self.audit_logger = audit_logger
         self._is_running = False
-        self._monitoring_task: Optional[asyncio.Task] = None
+        self._monitoring_task: asyncio.Task | None = None
 
         # Detection state
         self._event_buffer: deque = deque(maxlen=10000)
-        self._active_incidents: Dict[str, SecurityIncident] = {}
-        self._threat_indicators: Dict[str, ThreatIndicator] = {}
+        self._active_incidents: dict[str, SecurityIncident] = {}
+        self._threat_indicators: dict[str, ThreatIndicator] = {}
 
         # Pattern tracking
         self._patterns = self._initialize_patterns()
-        self._actor_activity: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self._ip_activity: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self._service_activity: Dict[str, deque] = defaultdict(
+        self._actor_activity: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
+        self._ip_activity: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
+        self._service_activity: dict[str, deque] = defaultdict(
             lambda: deque(maxlen=1000)
         )
 
@@ -173,7 +172,7 @@ class SecurityMonitoringService:
             "automated_blocks": 0,
         }
 
-    def _initialize_patterns(self) -> List[ActivityPattern]:
+    def _initialize_patterns(self) -> list[ActivityPattern]:
         """Initialize detection patterns for common threats."""
         return [
             # Brute force login attempts
@@ -297,9 +296,8 @@ class SecurityMonitoringService:
 
         logger.info("Security monitoring service stopped")
 
-    async def process_event(self, event: AuditEvent) -> List[ThreatIndicator]:
-        """
-        Process a single audit event and detect threats.
+    async def process_event(self, event: AuditEvent) -> list[ThreatIndicator]:
+        """Process a single audit event and detect threats.
 
         Args:
             event: The audit event to analyze
@@ -340,9 +338,9 @@ class SecurityMonitoringService:
 
     async def _check_pattern(
         self, event: AuditEvent, pattern: ActivityPattern
-    ) -> Optional[ThreatIndicator]:
+    ) -> ThreatIndicator | None:
         """Check if an event matches a suspicious pattern."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         time_window = timedelta(minutes=pattern.time_window_minutes)
         cutoff_time = now - time_window
 
@@ -426,7 +424,7 @@ class SecurityMonitoringService:
 
         return None
 
-    async def _detect_anomalies(self, event: AuditEvent) -> List[ThreatIndicator]:
+    async def _detect_anomalies(self, event: AuditEvent) -> list[ThreatIndicator]:
         """Detect anomalies using statistical analysis."""
         threats = []
 
@@ -539,7 +537,7 @@ class SecurityMonitoringService:
             return False
 
         # Count events of this type in last hour
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         hour_ago = now - timedelta(hours=1)
 
         recent_events = [
@@ -581,7 +579,7 @@ class SecurityMonitoringService:
             ):
                 # Update existing incident
                 incident.indicators.append(threat)
-                incident.updated_at = datetime.now(timezone.utc)
+                incident.updated_at = datetime.now(UTC)
                 incident.risk_score = self._calculate_incident_risk_score(incident)
                 incident.confidence = self._calculate_incident_confidence(incident)
 
@@ -762,7 +760,7 @@ class SecurityMonitoringService:
 
     async def _cleanup_old_data(self):
         """Clean up old data to manage memory usage."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         cutoff = now - timedelta(hours=24)  # Keep 24 hours of data
 
         # Clean up activity tracking
@@ -809,7 +807,6 @@ class SecurityMonitoringService:
         # - Identify escalating threat patterns
         # - Detect coordinated attacks
         # - Analyze attack timing patterns
-        pass
 
     async def _update_risk_scores(self):
         """Update risk scores for active incidents."""
@@ -817,7 +814,7 @@ class SecurityMonitoringService:
             incident.risk_score = self._calculate_incident_risk_score(incident)
             incident.confidence = self._calculate_incident_confidence(incident)
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get monitoring service statistics."""
         return {
             **self.stats,
@@ -830,11 +827,11 @@ class SecurityMonitoringService:
             "is_running": self._is_running,
         }
 
-    def get_active_incidents(self) -> List[SecurityIncident]:
+    def get_active_incidents(self) -> list[SecurityIncident]:
         """Get list of active security incidents."""
         return list(self._active_incidents.values())
 
-    def get_threat_indicators(self, limit: int = 100) -> List[ThreatIndicator]:
+    def get_threat_indicators(self, limit: int = 100) -> list[ThreatIndicator]:
         """Get recent threat indicators."""
         indicators = sorted(
             self._threat_indicators.values(), key=lambda x: x.last_seen, reverse=True
@@ -842,13 +839,13 @@ class SecurityMonitoringService:
         return indicators[:limit]
 
     async def resolve_incident(
-        self, incident_id: str, resolution: str, notes: Optional[str] = None
+        self, incident_id: str, resolution: str, notes: str | None = None
     ):
         """Mark an incident as resolved."""
         if incident_id in self._active_incidents:
             incident = self._active_incidents[incident_id]
             incident.status = "resolved"
-            incident.updated_at = datetime.now(timezone.utc)
+            incident.updated_at = datetime.now(UTC)
             if notes:
                 incident.notes.append(f"Resolved: {notes}")
 
@@ -869,7 +866,7 @@ class SecurityMonitoringService:
 
 
 # Global monitoring service instance
-_monitoring_service: Optional[SecurityMonitoringService] = None
+_monitoring_service: SecurityMonitoringService | None = None
 
 
 async def get_monitoring_service() -> SecurityMonitoringService:

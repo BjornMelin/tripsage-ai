@@ -4,10 +4,8 @@ This module provides the ItineraryItem model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import date as Date
-from datetime import time as dt_time
+from datetime import date as Date, time as dt_time
 from enum import Enum
-from typing import Optional
 
 from pydantic import Field, field_validator
 
@@ -38,20 +36,20 @@ class ItineraryItem(TripSageModel):
         notes: Additional notes or information
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     item_type: ItemType = Field(..., description="Type of itinerary item")
     date: Date = Field(..., description="Date of the itinerary item")
-    scheduled_time: Optional[dt_time] = Field(
+    scheduled_time: dt_time | None = Field(
         None, description="Time of the itinerary item"
     )
     description: str = Field(..., description="Description of the itinerary item")
-    cost: Optional[float] = Field(None, description="Cost in default currency")
-    notes: Optional[str] = Field(None, description="Additional notes or information")
+    cost: float | None = Field(None, description="Cost in default currency")
+    notes: str | None = Field(None, description="Additional notes or information")
 
     @field_validator("cost")
     @classmethod
-    def validate_cost(cls, v: Optional[float]) -> Optional[float]:
+    def validate_cost(cls, v: float | None) -> float | None:
         """Validate that cost is a non-negative number if provided."""
         if v is not None and v < 0:
             raise ValueError("Cost must be non-negative")

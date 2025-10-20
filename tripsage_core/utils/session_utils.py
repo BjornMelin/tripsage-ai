@@ -1,5 +1,4 @@
-"""
-Session memory utilities for TripSage Core using Mem0.
+"""Session memory utilities for TripSage Core using Mem0.
 
 This module provides utilities for initializing and updating session memory
 using the new Mem0-based memory system. Complete replacement of the old
@@ -13,11 +12,12 @@ Key Features:
 - Integration with Core memory service
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -36,10 +36,10 @@ class SessionSummary(BaseModel):
     user_id: str = Field(..., description="User ID")
     session_id: str = Field(..., description="Session ID")
     summary: str = Field(..., description="Session summary text")
-    key_insights: Optional[List[str]] = Field(
+    key_insights: list[str] | None = Field(
         None, description="Key insights from the session"
     )
-    decisions_made: Optional[List[str]] = Field(
+    decisions_made: list[str] | None = Field(
         None, description="Decisions made during the session"
     )
 
@@ -47,15 +47,15 @@ class SessionSummary(BaseModel):
 class UserPreferences(BaseModel):
     """Model for user preferences."""
 
-    budget_range: Optional[Dict[str, float]] = None
-    preferred_destinations: Optional[List[str]] = None
-    travel_style: Optional[str] = None
-    accommodation_preferences: Optional[Dict[str, Any]] = None
-    dietary_restrictions: Optional[List[str]] = None
-    accessibility_needs: Optional[List[str]] = None
+    budget_range: dict[str, float] | None = None
+    preferred_destinations: list[str] | None = None
+    travel_style: str | None = None
+    accommodation_preferences: dict[str, Any] | None = None
+    dietary_restrictions: list[str] | None = None
+    accessibility_needs: list[str] | None = None
 
 
-async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, Any]:
+async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any]:
     """Initialize session memory by retrieving relevant user context.
 
     This function retrieves user preferences, past trips, and other relevant
@@ -122,15 +122,15 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
             )
 
         except Exception as e:
-            logger.error(f"Error loading user context for {user_id}: {str(e)}")
+            logger.error(f"Error loading user context for {user_id}: {e!s}")
             # Continue with default session data
 
     return session_data
 
 
 async def update_session_memory(
-    user_id: str, updates: Dict[str, Any]
-) -> Dict[str, Any]:
+    user_id: str, updates: dict[str, Any]
+) -> dict[str, Any]:
     """Update session memory with new knowledge.
 
     This function updates the memory system with new information
@@ -163,25 +163,25 @@ async def update_session_memory(
         memory_service = MemoryService()
 
         # Process user preferences
-        if "preferences" in updates and updates["preferences"]:
+        if updates.get("preferences"):
             await _update_user_preferences_memory(
                 user_id, updates["preferences"], result, memory_service
             )
 
         # Process learned facts
-        if "learned_facts" in updates and updates["learned_facts"]:
+        if updates.get("learned_facts"):
             await _process_learned_facts(
                 user_id, updates["learned_facts"], result, memory_service
             )
 
         # Process general conversation context
-        if "conversation_context" in updates and updates["conversation_context"]:
+        if updates.get("conversation_context"):
             await _process_conversation_context(
                 user_id, updates["conversation_context"], result, memory_service
             )
 
     except Exception as e:
-        logger.error(f"Error updating session memory: {str(e)}")
+        logger.error(f"Error updating session memory: {e!s}")
         result["success"] = False
         result["errors"].append(str(e))
 
@@ -196,9 +196,9 @@ async def store_session_summary(
     user_id: str,
     summary: str,
     session_id: str,
-    key_insights: Optional[List[str]] = None,
-    decisions_made: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    key_insights: list[str] | None = None,
+    decisions_made: list[str] | None = None,
+) -> dict[str, Any]:
     """Store session summary in the memory system.
 
     This function stores a summary of the session using the Mem0 memory service.
@@ -258,7 +258,7 @@ async def store_session_summary(
             }
 
     except Exception as e:
-        logger.error(f"Error storing session summary: {str(e)}")
+        logger.error(f"Error storing session summary: {e!s}")
         return {"status": "error", "error": str(e), "memories_created": 0}
 
 
@@ -266,7 +266,7 @@ async def store_session_summary(
 
 
 async def _update_user_preferences_memory(
-    user_id: str, preferences: Dict[str, Any], result: Dict[str, Any], memory_service
+    user_id: str, preferences: dict[str, Any], result: dict[str, Any], memory_service
 ) -> None:
     """Update user preferences in memory.
 
@@ -295,12 +295,12 @@ async def _update_user_preferences_memory(
             result["errors"].append("Failed to update preferences")
 
     except Exception as e:
-        logger.error(f"Error updating preferences: {str(e)}")
-        result["errors"].append(f"Preference processing error: {str(e)}")
+        logger.error(f"Error updating preferences: {e!s}")
+        result["errors"].append(f"Preference processing error: {e!s}")
 
 
 async def _process_learned_facts(
-    user_id: str, facts: List[Dict[str, Any]], result: Dict[str, Any], memory_service
+    user_id: str, facts: list[dict[str, Any]], result: dict[str, Any], memory_service
 ) -> None:
     """Process learned facts as conversation memory.
 
@@ -325,12 +325,12 @@ async def _process_learned_facts(
         result["facts_processed"] = len(facts)
 
     except Exception as e:
-        logger.error(f"Error processing learned facts: {str(e)}")
-        result["errors"].append(f"Facts processing error: {str(e)}")
+        logger.error(f"Error processing learned facts: {e!s}")
+        result["errors"].append(f"Facts processing error: {e!s}")
 
 
 async def _process_conversation_context(
-    user_id: str, context: Dict[str, Any], result: Dict[str, Any], memory_service
+    user_id: str, context: dict[str, Any], result: dict[str, Any], memory_service
 ) -> None:
     """Process general conversation context as memory.
 
@@ -366,8 +366,8 @@ async def _process_conversation_context(
                 result["memories_created"] += 1
 
     except Exception as e:
-        logger.error(f"Error processing conversation context: {str(e)}")
-        result["errors"].append(f"Context processing error: {str(e)}")
+        logger.error(f"Error processing conversation context: {e!s}")
+        result["errors"].append(f"Context processing error: {e!s}")
 
 
 # Simple SessionMemory utility class for API dependencies
@@ -378,7 +378,7 @@ class SessionMemory:
     session memory operations while the full domain models handle the data storage.
     """
 
-    def __init__(self, session_id: str, user_id: Optional[str] = None):
+    def __init__(self, session_id: str, user_id: str | None = None):
         """Initialize session memory utility.
 
         Args:
@@ -387,7 +387,7 @@ class SessionMemory:
         """
         self.session_id = session_id
         self.user_id = user_id
-        self._memory_data: Dict[str, Any] = {}
+        self._memory_data: dict[str, Any] = {}
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a value from session memory.
@@ -410,7 +410,7 @@ class SessionMemory:
         """
         self._memory_data[key] = value
 
-    def update(self, data: Dict[str, Any]) -> None:
+    def update(self, data: dict[str, Any]) -> None:
         """Update session memory with multiple values.
 
         Args:
@@ -422,7 +422,7 @@ class SessionMemory:
         """Clear all session memory data."""
         self._memory_data.clear()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert session memory to dictionary.
 
         Returns:
@@ -437,10 +437,10 @@ class SessionMemory:
 
 __all__ = [
     "ConversationMessage",
+    "SessionMemory",
     "SessionSummary",
     "UserPreferences",
-    "SessionMemory",
     "initialize_session_memory",
-    "update_session_memory",
     "store_session_summary",
+    "update_session_memory",
 ]

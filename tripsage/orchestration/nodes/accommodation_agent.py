@@ -1,13 +1,12 @@
-"""
-Accommodation agent node implementation for LangGraph orchestration.
+"""Accommodation agent node implementation for LangGraph orchestration.
 
 This module implements the accommodation search and booking agent as a LangGraph node,
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -18,12 +17,12 @@ from tripsage.orchestration.tools import get_tools_for_agent
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class AccommodationAgentNode(BaseAgentNode):
-    """
-    Accommodation search and booking agent node.
+    """Accommodation search and booking agent node.
 
     This node handles all accommodation-related requests including search, booking,
     and accommodation information using service-based integration.
@@ -56,8 +55,7 @@ class AccommodationAgentNode(BaseAgentNode):
         logger.info("Initialized accommodation agent with service-based architecture")
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Process accommodation-related requests.
+        """Process accommodation-related requests.
 
         Args:
             state: Current travel planning state
@@ -78,7 +76,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
             # Update state with results
             accommodation_search_record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "accommodation_agent",
@@ -105,9 +103,8 @@ class AccommodationAgentNode(BaseAgentNode):
 
     async def _extract_accommodation_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Extract accommodation search parameters from user message and context.
+    ) -> dict[str, Any] | None:
+        """Extract accommodation search parameters from user message and context.
 
         Args:
             message: User message to analyze
@@ -171,14 +168,13 @@ class AccommodationAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.error(f"Error extracting accommodation parameters: {str(e)}")
+            logger.error(f"Error extracting accommodation parameters: {e!s}")
             return None
 
     async def _search_accommodations(
-        self, search_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Perform accommodation search using service layer.
+        self, search_params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Perform accommodation search using service layer.
 
         Args:
             search_params: Accommodation search parameters
@@ -201,17 +197,16 @@ class AccommodationAgentNode(BaseAgentNode):
             return result
 
         except Exception as e:
-            logger.error(f"Accommodation search failed: {str(e)}")
-            return {"error": f"Accommodation search failed: {str(e)}"}
+            logger.error(f"Accommodation search failed: {e!s}")
+            return {"error": f"Accommodation search failed: {e!s}"}
 
     async def _generate_accommodation_response(
         self,
-        search_results: Dict[str, Any],
-        search_params: Dict[str, Any],
+        search_results: dict[str, Any],
+        search_params: dict[str, Any],
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
-        """
-        Generate user-friendly response from accommodation search results.
+    ) -> dict[str, Any]:
+        """Generate user-friendly response from accommodation search results.
 
         Args:
             search_results: Raw accommodation search results
@@ -291,9 +286,8 @@ class AccommodationAgentNode(BaseAgentNode):
 
     async def _handle_general_accommodation_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Handle general accommodation inquiries that don't require a specific search.
+    ) -> dict[str, Any]:
+        """Handle general accommodation inquiries that don't require a specific search.
 
         Args:
             message: User message
@@ -330,7 +324,7 @@ class AccommodationAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.error(f"Error generating accommodation response: {str(e)}")
+            logger.error(f"Error generating accommodation response: {e!s}")
             content = (
                 "I'd be happy to help you find accommodations! I'll need "
                 "your destination, check-in/check-out dates, and preferences "

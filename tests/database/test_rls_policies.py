@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Comprehensive RLS (Row Level Security) Policy Test Suite
+"""Comprehensive RLS (Row Level Security) Policy Test Suite
 
 Tests all RLS policies across the TripSage database to ensure:
 - Users can only access their own data
@@ -12,7 +11,6 @@ Tests all RLS policies across the TripSage database to ensure:
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
 from unittest.mock import MagicMock, Mock
 from uuid import uuid4
 
@@ -26,7 +24,7 @@ class RLSTestUser(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     email: str
     password: str = "Test123!@#"
-    client: Optional[MagicMock] = None
+    client: MagicMock | None = None
 
     class Config:
         """Pydantic config."""
@@ -44,8 +42,8 @@ class RLSTestResult(BaseModel):
     expected_access: bool
     actual_access: bool
     passed: bool
-    error: Optional[str] = None
-    performance_ms: Optional[float] = None
+    error: str | None = None
+    performance_ms: float | None = None
 
 
 class RLSPolicyTester:
@@ -54,8 +52,8 @@ class RLSPolicyTester:
     def __init__(self, supabase_url: str, supabase_key: str):
         self.supabase_url = supabase_url
         self.supabase_key = supabase_key
-        self.test_users: List[RLSTestUser] = []
-        self.test_results: List[RLSTestResult] = []
+        self.test_users: list[RLSTestUser] = []
+        self.test_results: list[RLSTestResult] = []
         # Initialize mock data before creating clients
         self._mock_data = {
             "trips": {},
@@ -413,7 +411,7 @@ class RLSPolicyTester:
         client.table = create_table_mock
         return client
 
-    async def setup_test_users(self) -> List[RLSTestUser]:
+    async def setup_test_users(self) -> list[RLSTestUser]:
         """Create test users for RLS testing."""
         users = [
             RLSTestUser(email="user_a@test.com"),
@@ -464,8 +462,8 @@ class RLSPolicyTester:
         user_role: str,
         expected_access: bool,
         actual_access: bool,
-        error: Optional[str] = None,
-        performance_ms: Optional[float] = None,
+        error: str | None = None,
+        performance_ms: float | None = None,
     ) -> RLSTestResult:
         """Record a test result."""
         result = RLSTestResult(
@@ -482,7 +480,7 @@ class RLSPolicyTester:
         self.test_results.append(result)
         return result
 
-    async def test_user_data_isolation(self) -> List[RLSTestResult]:
+    async def test_user_data_isolation(self) -> list[RLSTestResult]:
         """Test that users can only access their own data."""
         results = []
 
@@ -586,7 +584,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_collaboration_permissions(self) -> List[RLSTestResult]:
+    async def test_collaboration_permissions(self) -> list[RLSTestResult]:
         """Test trip collaboration permissions."""
         results = []
         user_a, user_b, user_c = self.test_users
@@ -722,7 +720,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_cascade_permissions(self) -> List[RLSTestResult]:
+    async def test_cascade_permissions(self) -> list[RLSTestResult]:
         """Test that trip-related data inherits trip permissions."""
         results = []
         user_a, user_b = self.test_users[0], self.test_users[1]
@@ -843,7 +841,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_anonymous_access(self) -> List[RLSTestResult]:
+    async def test_anonymous_access(self) -> list[RLSTestResult]:
         """Test that anonymous users cannot access any data."""
         results = []
 
@@ -884,7 +882,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_search_cache_isolation(self) -> List[RLSTestResult]:
+    async def test_search_cache_isolation(self) -> list[RLSTestResult]:
         """Test that search caches are user-specific."""
         results = []
         user_a, user_b = self.test_users[0], self.test_users[1]
@@ -926,7 +924,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_notification_isolation(self) -> List[RLSTestResult]:
+    async def test_notification_isolation(self) -> list[RLSTestResult]:
         """Test that users can only access their own notifications."""
         results = []
         user_a, user_b = self.test_users[0], self.test_users[1]
@@ -1039,7 +1037,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_system_tables_access(self) -> List[RLSTestResult]:
+    async def test_system_tables_access(self) -> list[RLSTestResult]:
         """Test that system tables are properly restricted."""
         results = []
         user = self.test_users[0]
@@ -1100,7 +1098,7 @@ class RLSPolicyTester:
 
         return results
 
-    async def test_performance_impact(self) -> Dict[str, float]:
+    async def test_performance_impact(self) -> dict[str, float]:
         """Test RLS performance impact."""
         user = self.test_users[0]
         performance_results = {}

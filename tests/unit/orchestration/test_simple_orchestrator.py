@@ -1,5 +1,4 @@
-"""
-Tests for SimpleTripSageOrchestrator using modern LangGraph patterns.
+"""Tests for SimpleTripSageOrchestrator using modern LangGraph patterns.
 
 Tests the simplified orchestrator that replaces the complex multi-agent
 system with a single, powerful ReAct agent.

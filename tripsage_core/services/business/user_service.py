@@ -1,5 +1,4 @@
-"""
-User service for comprehensive user management operations.
+"""User service for comprehensive user management operations.
 
 This service consolidates user-related business logic including user creation,
 retrieval, updates, and password management. It follows clean architecture
@@ -8,22 +7,19 @@ principles with proper dependency injection and error handling.
 
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from passlib.context import CryptContext
 from pydantic import EmailStr, Field, field_validator
 
 from tripsage_core.exceptions import (
     CoreAuthenticationError as AuthenticationError,
-)
-from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +36,8 @@ class UserCreateRequest(TripSageModel):
 
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password")
-    full_name: Optional[str] = Field(None, max_length=100, description="Full name")
-    username: Optional[str] = Field(
+    full_name: str | None = Field(None, max_length=100, description="Full name")
+    username: str | None = Field(
         None, min_length=3, max_length=30, description="Username"
     )
 
@@ -65,10 +61,10 @@ class UserCreateRequest(TripSageModel):
 class UserUpdateRequest(TripSageModel):
     """Request model for user updates."""
 
-    full_name: Optional[str] = Field(None, max_length=100)
-    username: Optional[str] = Field(None, min_length=3, max_length=30)
-    preferences: Optional[Dict[str, Any]] = Field(None)
-    is_active: Optional[bool] = Field(None)
+    full_name: str | None = Field(None, max_length=100)
+    username: str | None = Field(None, min_length=3, max_length=30)
+    preferences: dict[str, Any] | None = Field(None)
+    is_active: bool | None = Field(None)
 
 
 class UserResponse(TripSageModel):
@@ -76,13 +72,13 @@ class UserResponse(TripSageModel):
 
     id: str = Field(..., description="User ID")
     email: EmailStr = Field(..., description="User email")
-    full_name: Optional[str] = Field(None, description="Full name")
-    username: Optional[str] = Field(None, description="Username")
+    full_name: str | None = Field(None, description="Full name")
+    username: str | None = Field(None, description="Username")
     is_active: bool = Field(True, description="User active status")
     is_verified: bool = Field(False, description="Email verification status")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    preferences: Dict[str, Any] = Field(
+    preferences: dict[str, Any] = Field(
         default_factory=dict, description="User preferences"
     )
 
@@ -110,8 +106,7 @@ class PasswordChangeRequest(TripSageModel):
 
 
 class UserService:
-    """
-    Comprehensive user management service.
+    """Comprehensive user management service.
 
     This service handles all user-related operations including:
     - User creation and registration
@@ -124,8 +119,7 @@ class UserService:
     """
 
     def __init__(self, database_service=None):
-        """
-        Initialize the user service.
+        """Initialize the user service.
 
         Args:
             database_service: Database service for data persistence
@@ -141,8 +135,7 @@ class UserService:
         self._pwd_context = pwd_context
 
     async def create_user(self, user_data: UserCreateRequest) -> UserResponse:
-        """
-        Create a new user account.
+        """Create a new user account.
 
         Args:
             user_data: User creation data
@@ -174,7 +167,7 @@ class UserService:
             hashed_password = self._hash_password(user_data.password)
 
             # Prepare user data for database
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             db_user_data = {
                 "id": user_id,
                 "email": str(user_data.email),
@@ -216,9 +209,8 @@ class UserService:
             )
             raise
 
-    async def get_user_by_id(self, user_id: str) -> Optional[UserResponse]:
-        """
-        Retrieve user by ID.
+    async def get_user_by_id(self, user_id: str) -> UserResponse | None:
+        """Retrieve user by ID.
 
         Args:
             user_id: User ID
@@ -249,9 +241,8 @@ class UserService:
             )
             return None
 
-    async def get_user_by_email(self, email: str) -> Optional[UserResponse]:
-        """
-        Retrieve user by email address.
+    async def get_user_by_email(self, email: str) -> UserResponse | None:
+        """Retrieve user by email address.
 
         Args:
             email: Email address
@@ -282,9 +273,8 @@ class UserService:
             )
             return None
 
-    async def get_user_by_username(self, username: str) -> Optional[UserResponse]:
-        """
-        Retrieve user by username.
+    async def get_user_by_username(self, username: str) -> UserResponse | None:
+        """Retrieve user by username.
 
         Args:
             username: Username
@@ -319,8 +309,7 @@ class UserService:
     async def update_user(
         self, user_id: str, update_data: UserUpdateRequest
     ) -> UserResponse:
-        """
-        Update user information.
+        """Update user information.
 
         Args:
             user_id: User ID
@@ -351,7 +340,7 @@ class UserService:
 
             # Prepare update data
             db_update_data = update_data.model_dump(exclude_unset=True)
-            db_update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+            db_update_data["updated_at"] = datetime.now(UTC).isoformat()
 
             # Update in database
             result = await self.db.update_user(user_id, db_update_data)
@@ -387,8 +376,7 @@ class UserService:
     async def change_password(
         self, user_id: str, password_data: PasswordChangeRequest
     ) -> bool:
-        """
-        Change user password.
+        """Change user password.
 
         Args:
             user_id: User ID
@@ -435,9 +423,8 @@ class UserService:
 
     async def verify_user_credentials(
         self, identifier: str, password: str
-    ) -> Optional[UserResponse]:
-        """
-        Verify user credentials for authentication.
+    ) -> UserResponse | None:
+        """Verify user credentials for authentication.
 
         Args:
             identifier: Email or username
@@ -486,8 +473,7 @@ class UserService:
             return None
 
     async def deactivate_user(self, user_id: str) -> bool:
-        """
-        Deactivate user account.
+        """Deactivate user account.
 
         Args:
             user_id: User ID
@@ -515,8 +501,7 @@ class UserService:
             return False
 
     async def activate_user(self, user_id: str) -> bool:
-        """
-        Activate user account.
+        """Activate user account.
 
         Args:
             user_id: User ID
@@ -543,10 +528,9 @@ class UserService:
             return False
 
     async def update_user_preferences(
-        self, user_id: str, preferences: Dict[str, Any]
+        self, user_id: str, preferences: dict[str, Any]
     ) -> UserResponse:
-        """
-        Update user preferences.
+        """Update user preferences.
 
         Args:
             user_id: User ID
@@ -571,7 +555,7 @@ class UserService:
             )
 
             # Update in database
-            updated_at = datetime.now(timezone.utc).isoformat()
+            updated_at = datetime.now(UTC).isoformat()
             await self.db.update_user_preferences(
                 user_id, merged_preferences, updated_at
             )
@@ -599,10 +583,9 @@ class UserService:
             raise
 
     def _merge_preferences(
-        self, current: Dict[str, Any], updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Deep merge preference dictionaries.
+        self, current: dict[str, Any], updates: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Deep merge preference dictionaries.
 
         Args:
             current: Current preferences
@@ -628,8 +611,7 @@ class UserService:
         return result
 
     def _hash_password(self, password: str) -> str:
-        """
-        Hash a password using bcrypt.
+        """Hash a password using bcrypt.
 
         Args:
             password: Plain password
@@ -640,8 +622,7 @@ class UserService:
         return self._pwd_context.hash(password)
 
     def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """
-        Verify a password against its hash.
+        """Verify a password against its hash.
 
         Args:
             plain_password: Plain password
@@ -655,8 +636,7 @@ class UserService:
 
 # Dependency function for FastAPI
 async def get_user_service(database_service=None) -> UserService:
-    """
-    Get user service instance for dependency injection.
+    """Get user service instance for dependency injection.
 
     Args:
         database_service: Database service instance

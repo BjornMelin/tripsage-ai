@@ -1,5 +1,4 @@
-"""
-Consolidated Database Service for TripSage Core.
+"""Consolidated Database Service for TripSage Core.
 
 This module provides a unified, high-performance database service that
 consolidates all functionality from 7 previous database services into
@@ -21,7 +20,7 @@ import asyncio
 import logging
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, TypeVar
 from urllib.parse import urlparse
@@ -29,15 +28,16 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import create_engine, event, pool, text
 from sqlalchemy.engine import Engine
+from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
 
-from supabase import Client, create_client
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
     CoreResourceNotFoundError,
     CoreServiceError,
 )
+
 
 # Python 3.13 type parameters (PEP 695)
 type DatabaseResult[T] = dict[str, T] | list[dict[str, T]]
@@ -356,7 +356,7 @@ class QueryMetrics(BaseModel):
     rows_affected: int = 0
     success: bool = True
     error: str | None = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_id: str | None = None
     replica_id: str | None = None
 
@@ -384,15 +384,14 @@ class SecurityAlert(BaseModel):
     severity: str  # low, medium, high, critical
     message: str
     details: dict[str, Any]
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     user_id: str | None = None
     ip_address: str | None = None
     action_taken: str | None = None
 
 
 class DatabaseService:
-    """
-    Consolidated database service with LIFO pooling and comprehensive features.
+    """Consolidated database service with LIFO pooling and comprehensive features.
 
     This service consolidates functionality from 7 previous database services:
     - Core database operations (CRUD, transactions)
@@ -805,7 +804,7 @@ class DatabaseService:
 
             logger.error(f"Failed to connect to database: {e}")
             raise CoreDatabaseError(
-                message=f"Failed to connect to database: {str(e)}",
+                message=f"Failed to connect to database: {e!s}",
                 code="DATABASE_CONNECTION_FAILED",
                 details={"error": str(e)},
             ) from e
@@ -927,8 +926,7 @@ class DatabaseService:
                 self._connection_stats.last_error = str(exception)
 
     async def _test_connections(self) -> None:
-        """
-        Test both Supabase and SQLAlchemy connections using TaskGroup for
+        """Test both Supabase and SQLAlchemy connections using TaskGroup for
         concurrent execution.
         """
         # Python 3.13 TaskGroup for concurrent connection testing
@@ -1841,13 +1839,13 @@ class DatabaseTransactionContext:
 
     async def update_api_key_last_used(self, key_id: str) -> bool:
         """Update the last_used timestamp for an API key."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         result = await self.update(
             "api_keys",
             {
-                "last_used": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "last_used": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             },
             {"id": key_id},
         )
@@ -1857,14 +1855,14 @@ class DatabaseTransactionContext:
         self, key_id: str, is_valid: bool, validated_at: datetime
     ) -> bool:
         """Update API key validation status."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         result = await self.update(
             "api_keys",
             {
                 "is_valid": is_valid,
                 "last_validated": validated_at.isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             },
             {"id": key_id},
         )
@@ -2020,14 +2018,14 @@ class DatabaseTransactionContext:
                     query = query.eq("visibility", search_filters["visibility"])
 
                 # Text search
-                if "query" in search_filters and search_filters["query"]:
+                if search_filters.get("query"):
                     search_text = search_filters["query"]
                     query = query.or_(
                         f"name.ilike.%{search_text}%,destination.ilike.%{search_text}%"
                     )
 
                 # Filter by destinations
-                if "destinations" in search_filters and search_filters["destinations"]:
+                if search_filters.get("destinations"):
                     destination_filters = []
                     for dest in search_filters["destinations"]:
                         destination_filters.append(f"destination.ilike.%{dest}%")
@@ -2035,7 +2033,7 @@ class DatabaseTransactionContext:
                         query = query.or_(",".join(destination_filters))
 
                 # Filter by tags
-                if "tags" in search_filters and search_filters["tags"]:
+                if search_filters.get("tags"):
                     query = query.overlaps("notes", search_filters["tags"])
 
                 # Date range filter
@@ -2417,7 +2415,7 @@ class DatabaseTransactionContext:
         logger.info(
             f"AUDIT: user={user_id}, action={action}, table={table}, "
             f"records={records_affected}, "
-            f"timestamp={datetime.now(timezone.utc).isoformat()}"
+            f"timestamp={datetime.now(UTC).isoformat()}"
         )
 
     def _get_queries_by_type(self) -> dict[str, int]:

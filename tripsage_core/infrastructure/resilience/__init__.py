@@ -18,6 +18,7 @@ from tripsage_core.infrastructure.resilience.circuit_breaker import (
     register_circuit_breaker,
 )
 
+
 __all__ = [
     # Circuit breaker classes
     "SimpleCircuitBreaker",

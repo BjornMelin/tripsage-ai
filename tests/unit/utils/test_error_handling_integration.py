@@ -33,7 +33,6 @@ class TestBackwardsCompatibility:
         """Test that aliases point to correct core exceptions."""
         # These aliases no longer exist after Phase 1 cleanup
         # The error_handling_utils module now directly uses Core exceptions
-        pass
 
     def test_alias_functionality(self):
         """Test that aliases work identically to core exceptions."""
@@ -311,11 +310,13 @@ class TestTripSageErrorContext:
         """Test context manager with non-TripSage exception."""
         mock_logger = Mock()
 
-        with pytest.raises(ValueError):
-            with TripSageErrorContext(
+        with (
+            pytest.raises(ValueError),
+            TripSageErrorContext(
                 operation="test_operation", logger_instance=mock_logger
-            ):
-                raise ValueError("Standard error")
+            ),
+        ):
+            raise ValueError("Standard error")
 
         # Should still log the start operation
         assert mock_logger.debug.call_count == 1
@@ -351,23 +352,25 @@ class TestIntegrationScenarios:
         mock_get_logger.return_value = mock_logger
 
         # Simulate MCP service operation with error
-        with pytest.raises(CoreMCPError) as exc_info:
-            with TripSageErrorContext(
+        with (
+            pytest.raises(CoreMCPError) as exc_info,
+            TripSageErrorContext(
                 operation="search_flights",
                 service="flight_service",
                 user_id="user123",
                 request_id="req456",
                 logger_instance=mock_logger,
-            ):
-                # Create MCP error as would happen in real service
-                exc = create_mcp_error(
-                    message="Flight search timeout",
-                    server="duffel-mcp",
-                    tool="search_flights",
-                    params={"origin": "NYC", "destination": "LAX"},
-                    category="timeout",
-                )
-                raise exc
+            ),
+        ):
+            # Create MCP error as would happen in real service
+            exc = create_mcp_error(
+                message="Flight search timeout",
+                server="duffel-mcp",
+                tool="search_flights",
+                params={"origin": "NYC", "destination": "LAX"},
+                category="timeout",
+            )
+            raise exc
 
         # Verify exception enhancement
         enhanced_exc = exc_info.value

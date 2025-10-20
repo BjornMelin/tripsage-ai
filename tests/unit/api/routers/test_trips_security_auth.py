@@ -1,12 +1,11 @@
-"""
-Security, authentication, and authorization tests for trips router.
+"""Security, authentication, and authorization tests for trips router.
 
 This module provides comprehensive security testing including authentication
 edge cases, authorization boundary testing, permission escalation attempts,
 and security vulnerability prevention.
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -17,8 +16,6 @@ from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.trips import CreateTripRequest, UpdateTripRequest
 from tripsage_core.exceptions import (
     CoreAuthorizationError as PermissionError,
-)
-from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
 from tripsage_core.models.schemas_common.travel import TripDestination
@@ -122,12 +119,12 @@ class TestTripsSecurityAuthentication:
         trip.description = "Trip for security testing"
         trip.visibility = TripVisibility.PRIVATE.value
         trip.destinations = []
-        trip.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
-        trip.end_date = datetime(2024, 6, 10, tzinfo=timezone.utc)
+        trip.start_date = datetime(2024, 6, 1, tzinfo=UTC)
+        trip.end_date = datetime(2024, 6, 10, tzinfo=UTC)
         trip.preferences = {}
         trip.status = "planning"
-        trip.created_at = datetime.now(timezone.utc)
-        trip.updated_at = datetime.now(timezone.utc)
+        trip.created_at = datetime.now(UTC)
+        trip.updated_at = datetime.now(UTC)
         return trip
 
     # ===== AUTHENTICATION TESTS =====
@@ -369,7 +366,6 @@ class TestTripsSecurityAuthentication:
 
     async def test_oversized_input_handling(self, valid_principal, secure_trip_service):
         """Test handling of oversized inputs."""
-
         # Create oversized trip data
         oversized_title = "X" * 10000  # Very long title
         oversized_description = "Y" * 100000  # Very long description
@@ -390,7 +386,6 @@ class TestTripsSecurityAuthentication:
         self, valid_principal, secure_trip_service
     ):
         """Test security implications of invalid date ranges."""
-
         # Attempt to create trip with end date before start date
         with pytest.raises(ValueError, match="End date must be after start date"):
             CreateTripRequest(
@@ -546,12 +541,12 @@ class TestTripsSecurityAuthentication:
             "Contains SSN: 123-45-6789 and Credit Card: 4111-1111-1111-1111"
         )
         sensitive_trip.destinations = []
-        sensitive_trip.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
-        sensitive_trip.end_date = datetime(2024, 6, 10, tzinfo=timezone.utc)
+        sensitive_trip.start_date = datetime(2024, 6, 1, tzinfo=UTC)
+        sensitive_trip.end_date = datetime(2024, 6, 10, tzinfo=UTC)
         sensitive_trip.preferences = {"internal_service_key": "secret_key_123"}
         sensitive_trip.status = "planning"
-        sensitive_trip.created_at = datetime.now(timezone.utc)
-        sensitive_trip.updated_at = datetime.now(timezone.utc)
+        sensitive_trip.created_at = datetime.now(UTC)
+        sensitive_trip.updated_at = datetime.now(UTC)
 
         secure_trip_service.get_trip.return_value = sensitive_trip
 
@@ -689,12 +684,12 @@ class TestTripsSecurityAuthentication:
         sample_response.user_id = "valid_user_001"
         sample_response.title = sensitive_trip_data.title
         sample_response.destinations = sensitive_trip_data.destinations
-        sample_response.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
-        sample_response.end_date = datetime(2024, 6, 10, tzinfo=timezone.utc)
+        sample_response.start_date = datetime(2024, 6, 1, tzinfo=UTC)
+        sample_response.end_date = datetime(2024, 6, 10, tzinfo=UTC)
         sample_response.preferences = {}
         sample_response.status = "planning"
-        sample_response.created_at = datetime.now(timezone.utc)
-        sample_response.updated_at = datetime.now(timezone.utc)
+        sample_response.created_at = datetime.now(UTC)
+        sample_response.updated_at = datetime.now(UTC)
 
         secure_trip_service.create_trip.return_value = sample_response
 

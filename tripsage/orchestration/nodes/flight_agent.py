@@ -1,13 +1,12 @@
-"""
-Flight agent node implementation for LangGraph orchestration.
+"""Flight agent node implementation for LangGraph orchestration.
 
 This module implements the flight search and booking agent as a LangGraph node,
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -18,12 +17,12 @@ from tripsage.orchestration.tools import get_tools_for_agent
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class FlightAgentNode(BaseAgentNode):
-    """
-    Flight search and booking agent node.
+    """Flight search and booking agent node.
 
     This node handles all flight-related requests including search, booking,
     changes, and flight information using the centralized tool registry.
@@ -59,8 +58,7 @@ class FlightAgentNode(BaseAgentNode):
         logger.info(f"Initialized flight agent with {len(self.available_tools)} tools")
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Process flight-related requests.
+        """Process flight-related requests.
 
         Args:
             state: Current travel planning state
@@ -79,7 +77,7 @@ class FlightAgentNode(BaseAgentNode):
 
             # Update state with results
             flight_search_record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "flight_agent",
@@ -103,9 +101,8 @@ class FlightAgentNode(BaseAgentNode):
 
     async def _extract_flight_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Extract flight search parameters from user message and conversation context.
+    ) -> dict[str, Any] | None:
+        """Extract flight search parameters from user message and conversation context.
 
         Args:
             message: User message to analyze
@@ -165,12 +162,11 @@ class FlightAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.error(f"Error extracting flight parameters: {str(e)}")
+            logger.error(f"Error extracting flight parameters: {e!s}")
             return None
 
-    async def _search_flights(self, search_params: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Perform flight search using simple tool direct access.
+    async def _search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
+        """Perform flight search using simple tool direct access.
 
         Args:
             search_params: Flight search parameters
@@ -193,17 +189,16 @@ class FlightAgentNode(BaseAgentNode):
             return result
 
         except Exception as e:
-            logger.error(f"Flight search failed: {str(e)}")
-            return {"error": f"Flight search failed: {str(e)}"}
+            logger.error(f"Flight search failed: {e!s}")
+            return {"error": f"Flight search failed: {e!s}"}
 
     async def _generate_flight_response(
         self,
-        search_results: Dict[str, Any],
-        search_params: Dict[str, Any],
+        search_results: dict[str, Any],
+        search_params: dict[str, Any],
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
-        """
-        Generate user-friendly response from flight search results.
+    ) -> dict[str, Any]:
+        """Generate user-friendly response from flight search results.
 
         Args:
             search_results: Raw flight search results
@@ -260,9 +255,8 @@ class FlightAgentNode(BaseAgentNode):
 
     async def _handle_general_flight_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Handle general flight inquiries that don't require a specific search.
+    ) -> dict[str, Any]:
+        """Handle general flight inquiries that don't require a specific search.
 
         Args:
             message: User message
@@ -296,7 +290,7 @@ class FlightAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.error(f"Error generating flight response: {str(e)}")
+            logger.error(f"Error generating flight response: {e!s}")
             content = (
                 "I'd be happy to help you find flights! To get started, I'll need "
                 "to know your departure city, destination, and travel dates. "

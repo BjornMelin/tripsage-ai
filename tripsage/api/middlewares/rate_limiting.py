@@ -14,8 +14,9 @@ This module provides production-ready rate limiting with:
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, Optional
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import Request, Response
 from pydantic import BaseModel, Field
@@ -31,6 +32,7 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_api_key,
     audit_security_event,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,7 @@ class RateLimitConfig(BaseModel):
     refill_rate: float = Field(default=1.0, gt=0)  # tokens per second
 
     # Service-specific multipliers
-    service_multipliers: Dict[str, float] = Field(default_factory=dict)
+    service_multipliers: dict[str, float] = Field(default_factory=dict)
 
     # Advanced features
     enable_sliding_window: bool = True
@@ -56,11 +58,11 @@ class RateLimitConfig(BaseModel):
     enable_burst_protection: bool = True
 
     # Custom limits per endpoint pattern
-    endpoint_overrides: Dict[str, Dict[str, int]] = Field(default_factory=dict)
+    endpoint_overrides: dict[str, dict[str, int]] = Field(default_factory=dict)
 
     def get_effective_limits(
-        self, service: Optional[str] = None, endpoint: Optional[str] = None
-    ) -> Dict[str, int]:
+        self, service: str | None = None, endpoint: str | None = None
+    ) -> dict[str, int]:
         """Get effective rate limits for a service/endpoint combination."""
         multiplier = self.service_multipliers.get(service, 1.0) if service else 1.0
 
@@ -105,8 +107,8 @@ class RateLimitResult(BaseModel):
     retry_after_seconds: int = 0
 
     # Additional metadata
-    tokens_remaining: Optional[float] = None
-    window_start: Optional[datetime] = None
+    tokens_remaining: float | None = None
+    window_start: datetime | None = None
     algorithm: str = "sliding_window"  # 'sliding_window', 'token_bucket'
 
 
@@ -117,8 +119,8 @@ class RateLimiter:
         self,
         key: str,
         config: RateLimitConfig,
-        service: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        service: str | None = None,
+        endpoint: str | None = None,
         cost: int = 1,
     ) -> RateLimitResult:
         """Check if a request should be rate limited.
@@ -151,20 +153,20 @@ class InMemoryRateLimiter(RateLimiter):
     """Enhanced in-memory rate limiter with sliding window and token bucket."""
 
     def __init__(self):
-        self.requests: Dict[str, list] = {}
-        self.token_buckets: Dict[str, Dict[str, Any]] = {}
+        self.requests: dict[str, list] = {}
+        self.token_buckets: dict[str, dict[str, Any]] = {}
 
     async def check_rate_limit(
         self,
         key: str,
         config: RateLimitConfig,
-        service: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        service: str | None = None,
+        endpoint: str | None = None,
         cost: int = 1,
     ) -> RateLimitResult:
         """Check rate limit using sliding window algorithm."""
         current_time = time.time()
-        current_dt = datetime.fromtimestamp(current_time, tz=timezone.utc)
+        current_dt = datetime.fromtimestamp(current_time, tz=UTC)
 
         # Get effective limits
         limits = config.get_effective_limits(service, endpoint)
@@ -275,8 +277,8 @@ class DragonflyRateLimiter(RateLimiter):
         self,
         key: str,
         config: RateLimitConfig,
-        service: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        service: str | None = None,
+        endpoint: str | None = None,
         cost: int = 1,
     ) -> RateLimitResult:
         """Check rate limit using hybrid sliding window + token bucket algorithm."""
@@ -295,7 +297,7 @@ class DragonflyRateLimiter(RateLimiter):
             # Get effective limits
             limits = config.get_effective_limits(service, endpoint)
             current_time = time.time()
-            current_dt = datetime.fromtimestamp(current_time, tz=timezone.utc)
+            current_dt = datetime.fromtimestamp(current_time, tz=UTC)
 
             # Use token bucket for burst control and sliding window for sustained limits
             if config.enable_token_bucket:
@@ -354,7 +356,7 @@ class DragonflyRateLimiter(RateLimiter):
         self,
         key: str,
         config: RateLimitConfig,
-        limits: Dict[str, int],
+        limits: dict[str, int],
         cost: int,
         current_time: float,
         current_dt: datetime,
@@ -430,12 +432,12 @@ class DragonflyRateLimiter(RateLimiter):
         self,
         key: str,
         config: RateLimitConfig,
-        limits: Dict[str, int],
+        limits: dict[str, int],
         cost: int,
         current_time: float,
         current_dt: datetime,
-        service: Optional[str],
-        endpoint: Optional[str],
+        service: str | None,
+        endpoint: str | None,
     ) -> RateLimitResult:
         """Check sliding windows for sustained rate limits."""
         windows = [
@@ -482,7 +484,7 @@ class DragonflyRateLimiter(RateLimiter):
                     remaining=0,
                     reset_time=reset_time,
                     retry_after_seconds=retry_after,
-                    window_start=datetime.fromtimestamp(window_start, tz=timezone.utc),
+                    window_start=datetime.fromtimestamp(window_start, tz=UTC),
                     algorithm="sliding_window",
                 )
 
@@ -515,7 +517,7 @@ class DragonflyRateLimiter(RateLimiter):
         )
 
     async def _track_rate_limit_hit(
-        self, key: str, service: Optional[str], limit_type: str, result: RateLimitResult
+        self, key: str, service: str | None, limit_type: str, result: RateLimitResult
     ):
         """Track rate limit hits for monitoring."""
         if self.monitoring_service:
@@ -542,8 +544,8 @@ class DragonflyRateLimiter(RateLimiter):
     async def _record_request(
         self,
         key: str,
-        service: Optional[str],
-        endpoint: Optional[str],
+        service: str | None,
+        endpoint: str | None,
         timestamp: float,
     ):
         """Record successful request for analytics."""
@@ -616,7 +618,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        settings: Optional[Settings] = None,
+        settings: Settings | None = None,
         use_dragonfly: bool = True,
         monitoring_service=None,
     ):
@@ -656,7 +658,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         # Define comprehensive rate limit configurations
         self.configs = self._create_rate_limit_configs()
 
-    def _create_rate_limit_configs(self) -> Dict[str, RateLimitConfig]:
+    def _create_rate_limit_configs(self) -> dict[str, RateLimitConfig]:
         """Create comprehensive rate limit configurations."""
         return {
             # Base configurations
@@ -797,7 +799,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _get_rate_limit_context(self, request: Request) -> Dict[str, Any]:
+    def _get_rate_limit_context(self, request: Request) -> dict[str, Any]:
         """Get comprehensive rate limit context for the request."""
         principal = getattr(request.state, "principal", None)
         path = request.url.path
@@ -873,8 +875,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     def _normalize_endpoint_pattern(self, path: str) -> str:
         """Normalize endpoint path to pattern for configuration lookup."""
         # Remove API prefix
-        if path.startswith("/api"):
-            path = path[4:]
+        path = path.removeprefix("/api")
 
         # Replace dynamic segments with placeholders
         import re
@@ -942,7 +943,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         return any(path.startswith(skip_path) for skip_path in skip_paths)
 
     def _create_rate_limit_response(
-        self, result: RateLimitResult, context: Dict[str, Any]
+        self, result: RateLimitResult, context: dict[str, Any]
     ) -> Response:
         """Create a comprehensive 429 response."""
         retry_after = result.retry_after_seconds
@@ -1007,7 +1008,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _add_rate_limit_headers(
-        self, response: Response, result: RateLimitResult, context: Dict[str, Any]
+        self, response: Response, result: RateLimitResult, context: dict[str, Any]
     ):
         """Add comprehensive rate limit headers to successful responses."""
         headers = {
@@ -1068,7 +1069,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
             return False
 
     async def _track_rate_limit_violation(
-        self, request: Request, context: Dict[str, Any], result: RateLimitResult
+        self, request: Request, context: dict[str, Any], result: RateLimitResult
     ):
         """Track rate limit violations for monitoring and analytics."""
         if self.monitoring_service:
@@ -1164,7 +1165,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
     async def _track_successful_request(
         self,
         request: Request,
-        context: Dict[str, Any],
+        context: dict[str, Any],
         start_time: float,
         response: Response,
     ):
@@ -1205,7 +1206,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
 
 
 # Configuration helper functions
-def create_rate_limit_config_from_dict(config_dict: Dict[str, Any]) -> RateLimitConfig:
+def create_rate_limit_config_from_dict(config_dict: dict[str, Any]) -> RateLimitConfig:
     """Create a RateLimitConfig from a dictionary (useful for dynamic configuration)."""
     return RateLimitConfig(**config_dict)
 
@@ -1256,8 +1257,8 @@ def create_rate_limit_config_from_settings(
 
 def get_default_rate_limit_middleware(
     app: ASGIApp,
-    settings: Optional[Settings] = None,
-    use_dragonfly: Optional[bool] = None,
+    settings: Settings | None = None,
+    use_dragonfly: bool | None = None,
     monitoring_service=None,
 ) -> EnhancedRateLimitMiddleware:
     """Get a pre-configured rate limiting middleware with sensible defaults."""
@@ -1276,8 +1277,8 @@ def get_default_rate_limit_middleware(
 
 
 def create_middleware_from_settings(
-    app: ASGIApp, settings: Optional[Settings] = None
-) -> Optional[EnhancedRateLimitMiddleware]:
+    app: ASGIApp, settings: Settings | None = None
+) -> EnhancedRateLimitMiddleware | None:
     """Create rate limiting middleware from settings if enabled.
 
     Args:

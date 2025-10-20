@@ -6,13 +6,12 @@ focusing on edge cases that occur in production systems.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import ValidationError
 
 from tripsage.api.schemas.auth import (
@@ -255,10 +254,8 @@ class TestSerializationEdgeCases:
 
     def test_timezone_aware_datetime_serialization(self):
         """Test serialization of timezone-aware datetimes."""
-        from datetime import timezone
-
         # Create timezone-aware datetime
-        utc_time = datetime.now(timezone.utc)
+        utc_time = datetime.now(UTC)
 
         token = Token(
             access_token="test-token",
@@ -293,7 +290,7 @@ class TestSerializationEdgeCases:
     def test_model_inheritance_serialization(self):
         """Test serialization behavior with model inheritance."""
         # Test that base model behavior is consistent
-        base_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
+        base_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
 
         json_data = base_price.model_dump_json()
         parsed = json.loads(json_data)
@@ -303,7 +300,7 @@ class TestSerializationEdgeCases:
         assert "currency" in parsed
 
         reconstructed = Price.model_validate(parsed)
-        assert reconstructed.amount == Decimal("100")
+        assert reconstructed.amount == Decimal(100)
         assert reconstructed.currency == CurrencyCode.USD
 
     def test_enum_serialization_consistency(self):

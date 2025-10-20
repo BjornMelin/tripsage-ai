@@ -1,5 +1,4 @@
-"""
-Memory service for AI conversation memory and user context management.
+"""Memory service for AI conversation memory and user context management.
 
 This service consolidates memory-related operations using Mem0 with pgvector backend,
 providing efficient storage and retrieval of conversation context, user preferences,
@@ -11,8 +10,8 @@ import hashlib
 import json
 import logging
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -28,6 +27,7 @@ from tripsage_core.utils.connection_utils import (
     SecureDatabaseConnectionManager,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,10 +36,10 @@ class MemorySearchResult(TripSageModel):
 
     id: str = Field(..., description="Memory ID")
     memory: str = Field(..., description="Memory content")
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Memory metadata"
     )
-    categories: List[str] = Field(default_factory=list, description="Memory categories")
+    categories: list[str] = Field(default_factory=list, description="Memory categories")
     similarity: float = Field(default=0.0, description="Similarity score")
     created_at: datetime = Field(..., description="Creation timestamp")
     user_id: str = Field(..., description="User ID")
@@ -48,10 +48,10 @@ class MemorySearchResult(TripSageModel):
 class ConversationMemoryRequest(TripSageModel):
     """Request model for conversation memory extraction."""
 
-    messages: List[Dict[str, str]] = Field(..., description="Conversation messages")
-    session_id: Optional[str] = Field(None, description="Chat session ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    messages: list[dict[str, str]] = Field(..., description="Conversation messages")
+    session_id: str | None = Field(None, description="Chat session ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
+    metadata: dict[str, Any] | None = Field(None, description="Additional metadata")
 
 
 class MemorySearchRequest(TripSageModel):
@@ -59,7 +59,7 @@ class MemorySearchRequest(TripSageModel):
 
     query: str = Field(..., min_length=1, description="Search query")
     limit: int = Field(default=5, ge=1, le=50, description="Maximum results")
-    filters: Optional[Dict[str, Any]] = Field(None, description="Search filters")
+    filters: dict[str, Any] | None = Field(None, description="Search filters")
     similarity_threshold: float = Field(
         default=0.3, ge=0.0, le=1.0, description="Minimum similarity"
     )
@@ -68,31 +68,31 @@ class MemorySearchRequest(TripSageModel):
 class UserContextResponse(TripSageModel):
     """Response model for user context."""
 
-    preferences: List[Dict[str, Any]] = Field(
+    preferences: list[dict[str, Any]] = Field(
         default_factory=list, description="User preferences"
     )
-    past_trips: List[Dict[str, Any]] = Field(
+    past_trips: list[dict[str, Any]] = Field(
         default_factory=list, description="Past trip memories"
     )
-    saved_destinations: List[Dict[str, Any]] = Field(
+    saved_destinations: list[dict[str, Any]] = Field(
         default_factory=list, description="Saved destinations"
     )
-    budget_patterns: List[Dict[str, Any]] = Field(
+    budget_patterns: list[dict[str, Any]] = Field(
         default_factory=list, description="Budget patterns"
     )
-    travel_style: List[Dict[str, Any]] = Field(
+    travel_style: list[dict[str, Any]] = Field(
         default_factory=list, description="Travel style memories"
     )
-    dietary_restrictions: List[Dict[str, Any]] = Field(
+    dietary_restrictions: list[dict[str, Any]] = Field(
         default_factory=list, description="Dietary restrictions"
     )
-    accommodation_preferences: List[Dict[str, Any]] = Field(
+    accommodation_preferences: list[dict[str, Any]] = Field(
         default_factory=list, description="Accommodation preferences"
     )
-    activity_preferences: List[Dict[str, Any]] = Field(
+    activity_preferences: list[dict[str, Any]] = Field(
         default_factory=list, description="Activity preferences"
     )
-    insights: Dict[str, Any] = Field(
+    insights: dict[str, Any] = Field(
         default_factory=dict, description="Derived insights"
     )
     summary: str = Field(default="", description="Context summary")
@@ -101,12 +101,12 @@ class UserContextResponse(TripSageModel):
 class PreferencesUpdateRequest(TripSageModel):
     """Request model for preferences update."""
 
-    preferences: Dict[str, Any] = Field(..., description="Preferences to update")
-    category: Optional[str] = Field(None, description="Preference category")
+    preferences: dict[str, Any] = Field(..., description="Preferences to update")
+    category: str | None = Field(None, description="Preference category")
 
     @field_validator("preferences")
     @classmethod
-    def validate_preferences(cls, v: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_preferences(cls, v: dict[str, Any]) -> dict[str, Any]:
         """Validate preferences data."""
         if not v:
             raise ValueError("Preferences cannot be empty")
@@ -114,8 +114,7 @@ class PreferencesUpdateRequest(TripSageModel):
 
 
 class MemoryService:
-    """
-    Comprehensive memory service using Mem0 with travel-specific optimizations.
+    """Comprehensive memory service using Mem0 with travel-specific optimizations.
 
     This service handles:
     - Conversation memory extraction and storage
@@ -134,13 +133,12 @@ class MemoryService:
     def __init__(
         self,
         database_service=None,
-        memory_backend_config: Optional[Dict[str, Any]] = None,
+        memory_backend_config: dict[str, Any] | None = None,
         cache_ttl: int = 300,
         connection_max_retries: int = 3,
         connection_validation_timeout: float = 10.0,
     ):
-        """
-        Initialize the memory service with enhanced connection management.
+        """Initialize the memory service with enhanced connection management.
 
         Args:
             database_service: Database service for persistence
@@ -168,12 +166,11 @@ class MemoryService:
         self._initialize_memory_backend(memory_backend_config)
 
         # In-memory cache for search results
-        self._cache: Dict[str, Tuple[List[MemorySearchResult], float]] = {}
+        self._cache: dict[str, tuple[list[MemorySearchResult], float]] = {}
         self._connected = False
 
-    def _initialize_memory_backend(self, config: Optional[Dict[str, Any]]) -> None:
-        """
-        Initialize Mem0 memory backend.
+    def _initialize_memory_backend(self, config: dict[str, Any] | None) -> None:
+        """Initialize Mem0 memory backend.
 
         Args:
             config: Mem0 configuration
@@ -195,12 +192,11 @@ class MemoryService:
             logger.warning("Mem0 not available, using fallback memory implementation")
             self.memory = None
         except Exception as e:
-            logger.error(f"Failed to initialize memory backend: {str(e)}")
+            logger.error(f"Failed to initialize memory backend: {e!s}")
             self.memory = None
 
-    def _get_default_config(self) -> Dict[str, Any]:
-        """
-        Get default Mem0 configuration optimized for TripSage with secure URL parsing.
+    def _get_default_config(self) -> dict[str, Any]:
+        """Get default Mem0 configuration optimized for TripSage with secure URL parsing.
 
         Returns:
             Mem0 configuration dictionary
@@ -274,8 +270,7 @@ class MemoryService:
             raise ServiceError(error_msg) from e
 
     async def connect(self) -> None:
-        """
-        Initialize service connection with comprehensive validation and retry logic.
+        """Initialize service connection with comprehensive validation and retry logic.
 
         This method now includes:
         - Database connection validation
@@ -343,13 +338,12 @@ class MemoryService:
             logger.info("Memory service closed successfully")
 
         except Exception as e:
-            logger.error(f"Error closing memory service: {str(e)}")
+            logger.error(f"Error closing memory service: {e!s}")
 
     async def add_conversation_memory(
         self, user_id: str, memory_request: ConversationMemoryRequest
-    ) -> Dict[str, Any]:
-        """
-        Extract and store memories from conversation.
+    ) -> dict[str, Any]:
+        """Extract and store memories from conversation.
 
         Args:
             user_id: User identifier
@@ -367,7 +361,7 @@ class MemoryService:
                 "domain": "travel_planning",
                 "session_id": memory_request.session_id,
                 "trip_id": memory_request.trip_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "source": "conversation",
             }
 
@@ -409,9 +403,8 @@ class MemoryService:
 
     async def search_memories(
         self, user_id: str, search_request: MemorySearchRequest
-    ) -> List[MemorySearchResult]:
-        """
-        Search user memories with caching and optimization.
+    ) -> list[MemorySearchResult]:
+        """Search user memories with caching and optimization.
 
         Args:
             user_id: User identifier
@@ -449,7 +442,7 @@ class MemoryService:
                     categories=result.get("categories", []),
                     similarity=result.get("score", 0.0),
                     created_at=self._parse_datetime(
-                        result.get("created_at", datetime.now(timezone.utc).isoformat())
+                        result.get("created_at", datetime.now(UTC).isoformat())
                     ),
                     user_id=user_id,
                 )
@@ -487,10 +480,9 @@ class MemoryService:
             return []
 
     async def get_user_context(
-        self, user_id: str, context_type: Optional[str] = None
+        self, user_id: str, context_type: str | None = None
     ) -> UserContextResponse:
-        """
-        Get comprehensive user context for personalization.
+        """Get comprehensive user context for personalization.
 
         Args:
             user_id: User identifier
@@ -570,9 +562,8 @@ class MemoryService:
 
     async def update_user_preferences(
         self, user_id: str, preferences_request: PreferencesUpdateRequest
-    ) -> Dict[str, Any]:
-        """
-        Update user travel preferences in memory.
+    ) -> dict[str, Any]:
+        """Update user travel preferences in memory.
 
         Args:
             user_id: User identifier
@@ -632,10 +623,9 @@ class MemoryService:
             return {"error": str(e)}
 
     async def delete_user_memories(
-        self, user_id: str, memory_ids: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """
-        Delete user memories (GDPR compliance).
+        self, user_id: str, memory_ids: list[str] | None = None
+    ) -> dict[str, Any]:
+        """Delete user memories (GDPR compliance).
 
         Args:
             user_id: User identifier
@@ -657,7 +647,7 @@ class MemoryService:
                         await asyncio.to_thread(self.memory.delete, memory_id=memory_id)
                         deleted_count += 1
                     except Exception as e:
-                        logger.warning(f"Failed to delete memory {memory_id}: {str(e)}")
+                        logger.warning(f"Failed to delete memory {memory_id}: {e!s}")
             else:
                 # Delete all user memories
                 all_memories = await asyncio.to_thread(
@@ -674,7 +664,7 @@ class MemoryService:
                         deleted_count += 1
                     except Exception as e:
                         logger.warning(
-                            f"Failed to delete memory {memory.get('id')}: {str(e)}"
+                            f"Failed to delete memory {memory.get('id')}: {e!s}"
                         )
 
             # Clear user's cache
@@ -717,7 +707,7 @@ class MemoryService:
         )
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
-    def _get_cached_result(self, cache_key: str) -> Optional[List[MemorySearchResult]]:
+    def _get_cached_result(self, cache_key: str) -> list[MemorySearchResult] | None:
         """Get cached search result if still valid."""
         if cache_key in self._cache:
             result, timestamp = self._cache[cache_key]
@@ -727,7 +717,7 @@ class MemoryService:
                 del self._cache[cache_key]
         return None
 
-    def _cache_result(self, cache_key: str, result: List[MemorySearchResult]) -> None:
+    def _cache_result(self, cache_key: str, result: list[MemorySearchResult]) -> None:
         """Cache search result."""
         self._cache[cache_key] = (result, time.time())
 
@@ -753,11 +743,11 @@ class MemoryService:
         try:
             return datetime.fromisoformat(dt_string.replace("Z", "+00:00"))
         except Exception:
-            return datetime.now(timezone.utc)
+            return datetime.now(UTC)
 
     async def _enrich_travel_memories(
-        self, memories: List[MemorySearchResult]
-    ) -> List[MemorySearchResult]:
+        self, memories: list[MemorySearchResult]
+    ) -> list[MemorySearchResult]:
         """Enrich memories with travel-specific context."""
         for memory in memories:
             memory_content = memory.memory.lower()
@@ -782,7 +772,7 @@ class MemoryService:
 
         return memories
 
-    async def _derive_travel_insights(self, context: Dict[str, List]) -> Dict[str, Any]:
+    async def _derive_travel_insights(self, context: dict[str, list]) -> dict[str, Any]:
         """Derive insights from user's travel history and preferences."""
         insights = {
             "preferred_destinations": self._analyze_destinations(context),
@@ -794,7 +784,7 @@ class MemoryService:
 
         return insights
 
-    def _analyze_destinations(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_destinations(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze destination preferences from context."""
         destinations = []
         for memory in context.get("past_trips", []) + context.get(
@@ -819,7 +809,7 @@ class MemoryService:
             "destination_count": len(set(destinations)),
         }
 
-    def _analyze_budgets(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_budgets(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze budget patterns from context."""
         budgets = []
         for memory in context.get("budget_patterns", []):
@@ -838,7 +828,7 @@ class MemoryService:
             }
         return {"budget_info": "No budget data available"}
 
-    def _analyze_frequency(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_frequency(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze travel frequency from context."""
         trips = context.get("past_trips", [])
         return {
@@ -846,7 +836,7 @@ class MemoryService:
             "estimated_frequency": "Regular" if len(trips) > 5 else "Occasional",
         }
 
-    def _analyze_activities(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_activities(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze activity preferences from context."""
         activities = []
         for memory in context.get("activity_preferences", []) + context.get(
@@ -873,7 +863,7 @@ class MemoryService:
             else "Adventure",
         }
 
-    def _analyze_travel_style(self, context: Dict[str, List]) -> Dict[str, Any]:
+    def _analyze_travel_style(self, context: dict[str, list]) -> dict[str, Any]:
         """Analyze overall travel style from context."""
         style_indicators = {
             "luxury": ["luxury", "expensive", "high-end", "premium"],
@@ -903,7 +893,7 @@ class MemoryService:
         }
 
     def _generate_context_summary(
-        self, context: Dict[str, Any], insights: Dict[str, Any]
+        self, context: dict[str, Any], insights: dict[str, Any]
     ) -> str:
         """Generate a human-readable summary of user context."""
         summary_parts = []
@@ -944,8 +934,7 @@ class MemoryService:
 
 # Dependency function for FastAPI
 async def get_memory_service() -> MemoryService:
-    """
-    Get memory service instance for dependency injection.
+    """Get memory service instance for dependency injection.
 
     Returns:
         MemoryService instance

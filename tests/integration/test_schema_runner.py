@@ -1,5 +1,4 @@
-"""
-Comprehensive test runner for Supabase schema integration tests.
+"""Comprehensive test runner for Supabase schema integration tests.
 
 This module provides a test runner that orchestrates all schema-related tests
 with proper setup, teardown, and reporting.
@@ -12,20 +11,20 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class SchemaTestRunner:
     """Orchestrates schema integration tests with comprehensive setup and reporting."""
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or self._default_config()
         self.logger = self._setup_logging()
         self.test_results = {}
         self.start_time = None
         self.end_time = None
 
-    def _default_config(self) -> Dict[str, Any]:
+    def _default_config(self) -> dict[str, Any]:
         """Get default test configuration."""
         return {
             "test_types": [
@@ -73,7 +72,7 @@ class SchemaTestRunner:
 
         return logger
 
-    async def run_all_tests(self) -> Dict[str, Any]:
+    async def run_all_tests(self) -> dict[str, Any]:
         """Run all schema integration tests."""
         self.start_time = datetime.utcnow()
         self.logger.info("Starting comprehensive schema integration tests...")
@@ -100,7 +99,7 @@ class SchemaTestRunner:
             }
 
         except Exception as e:
-            self.logger.error(f"Test execution failed: {str(e)}")
+            self.logger.error(f"Test execution failed: {e!s}")
             return {
                 "success": False,
                 "error": str(e),
@@ -146,7 +145,7 @@ class SchemaTestRunner:
 
         self.logger.info("Pre-test validation completed successfully")
 
-    async def _execute_test_suites(self) -> Dict[str, Any]:
+    async def _execute_test_suites(self) -> dict[str, Any]:
         """Execute all test suites."""
         self.logger.info("Executing test suites...")
 
@@ -230,7 +229,7 @@ class SchemaTestRunner:
 
         return results
 
-    async def _run_test_suite(self, suite: Dict[str, str]) -> Dict[str, Any]:
+    async def _run_test_suite(self, suite: dict[str, str]) -> dict[str, Any]:
         """Run a single test suite."""
         start_time = time.time()
 
@@ -272,7 +271,7 @@ class SchemaTestRunner:
                 },
             }
 
-    async def _post_test_analysis(self, results: Dict[str, Any]) -> Dict[str, Any]:
+    async def _post_test_analysis(self, results: dict[str, Any]) -> dict[str, Any]:
         """Analyze test results and generate insights."""
         self.logger.info("Performing post-test analysis...")
 
@@ -325,10 +324,10 @@ class SchemaTestRunner:
 
     def _generate_recommendations(
         self,
-        results: Dict[str, Any],
-        slow_tests: List[Dict[str, Any]],
-        failed_suites: List[Dict[str, Any]],
-    ) -> List[str]:
+        results: dict[str, Any],
+        slow_tests: list[dict[str, Any]],
+        failed_suites: list[dict[str, Any]],
+    ) -> list[str]:
         """Generate recommendations based on test results."""
         recommendations = []
 
@@ -400,7 +399,7 @@ class SchemaTestRunner:
         return recommendations
 
     async def _generate_test_report(
-        self, results: Dict[str, Any], analysis: Dict[str, Any]
+        self, results: dict[str, Any], analysis: dict[str, Any]
     ):
         """Generate comprehensive test report."""
         self.logger.info("Generating test report...")
@@ -436,7 +435,7 @@ class SchemaTestRunner:
         # Generate human-readable summary
         self._print_test_summary(analysis)
 
-    def _print_test_summary(self, analysis: Dict[str, Any]):
+    def _print_test_summary(self, analysis: dict[str, Any]):
         """Print human-readable test summary."""
         summary = analysis["summary"]
 
@@ -475,7 +474,6 @@ class SchemaTestRunner:
         self.logger.info("Performing test cleanup...")
         # Cleanup logic would go here
         # In a real implementation, this would clean up test databases, files, etc.
-        pass
 
 
 # CLI interface for running tests

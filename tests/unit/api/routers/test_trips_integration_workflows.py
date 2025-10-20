@@ -1,12 +1,11 @@
-"""
-Integration workflow tests for trips router.
+"""Integration workflow tests for trips router.
 
 This module provides end-to-end integration tests that cover real-world
 scenarios, complex workflows, and interactions between multiple components
 of the trip management system.
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
@@ -98,9 +97,7 @@ class TestTripsIntegrationWorkflows:
             ],
             "preferences": TripPreferences(
                 budget=Budget(
-                    total_budget=Price(
-                        amount=Decimal("8000"), currency=CurrencyCode.USD
-                    )
+                    total_budget=Price(amount=Decimal(8000), currency=CurrencyCode.USD)
                 )
             ),
         }
@@ -135,9 +132,7 @@ class TestTripsIntegrationWorkflows:
             ],
             "preferences": TripPreferences(
                 budget=Budget(
-                    total_budget=Price(
-                        amount=Decimal("15000"), currency=CurrencyCode.USD
-                    )
+                    total_budget=Price(amount=Decimal(15000), currency=CurrencyCode.USD)
                 )
             ),
         }
@@ -171,13 +166,13 @@ class TestTripsIntegrationWorkflows:
         created_trip.destinations = tokyo_business_trip_data["destinations"]
         created_trip.start_date = datetime.combine(
             tokyo_business_trip_data["start_date"], datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
         created_trip.end_date = datetime.combine(
             tokyo_business_trip_data["end_date"], datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
         created_trip.preferences = {}
-        created_trip.created_at = datetime.now(timezone.utc)
-        created_trip.updated_at = datetime.now(timezone.utc)
+        created_trip.created_at = datetime.now(UTC)
+        created_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = created_trip
 
@@ -261,12 +256,12 @@ class TestTripsIntegrationWorkflows:
         created_trip.destinations = [
             MagicMock(name="Tokyo, Japan", country="Japan", city="Tokyo")
         ]
-        created_trip.start_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
-        created_trip.end_date = datetime(2024, 11, 15, tzinfo=timezone.utc)
+        created_trip.start_date = datetime(2024, 11, 1, tzinfo=UTC)
+        created_trip.end_date = datetime(2024, 11, 15, tzinfo=UTC)
         created_trip.preferences = {}
         created_trip.status = "planning"
-        created_trip.created_at = datetime.now(timezone.utc)
-        created_trip.updated_at = datetime.now(timezone.utc)
+        created_trip.created_at = datetime.now(UTC)
+        created_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = created_trip
 
@@ -298,7 +293,7 @@ class TestTripsIntegrationWorkflows:
             MagicMock(name=dest.name, country=dest.country, city=dest.city)
             for dest in expanded_destinations
         ]
-        created_trip.end_date = datetime(2024, 11, 20, tzinfo=timezone.utc)
+        created_trip.end_date = datetime(2024, 11, 20, tzinfo=UTC)
 
         comprehensive_trip_service.update_trip.return_value = created_trip
 
@@ -337,12 +332,12 @@ class TestTripsIntegrationWorkflows:
         family_trip.title = "European Family Adventure"
         family_trip.visibility = TripVisibility.SHARED.value
         family_trip.destinations = europe_family_trip_data["destinations"]
-        family_trip.start_date = datetime(2024, 7, 1, tzinfo=timezone.utc)
-        family_trip.end_date = datetime(2024, 7, 21, tzinfo=timezone.utc)
+        family_trip.start_date = datetime(2024, 7, 1, tzinfo=UTC)
+        family_trip.end_date = datetime(2024, 7, 21, tzinfo=UTC)
         family_trip.preferences = {}
         family_trip.status = "planning"
-        family_trip.created_at = datetime.now(timezone.utc)
-        family_trip.updated_at = datetime.now(timezone.utc)
+        family_trip.created_at = datetime.now(UTC)
+        family_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = family_trip
 
@@ -392,8 +387,8 @@ class TestTripsIntegrationWorkflows:
         duplicate_trip_mock.end_date = family_trip.end_date
         duplicate_trip_mock.preferences = {}
         duplicate_trip_mock.status = "planning"
-        duplicate_trip_mock.created_at = datetime.now(timezone.utc)
-        duplicate_trip_mock.updated_at = datetime.now(timezone.utc)
+        duplicate_trip_mock.created_at = datetime.now(UTC)
+        duplicate_trip_mock.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = duplicate_trip_mock
 
@@ -435,9 +430,7 @@ class TestTripsIntegrationWorkflows:
             ],
             preferences=TripPreferences(
                 budget=Budget(
-                    total_budget=Price(
-                        amount=Decimal("2500"), currency=CurrencyCode.USD
-                    )
+                    total_budget=Price(amount=Decimal(2500), currency=CurrencyCode.USD)
                 )
             ),
         )
@@ -447,12 +440,12 @@ class TestTripsIntegrationWorkflows:
         budget_trip.user_id = "leisure_user_002"
         budget_trip.title = "Budget Southeast Asia Adventure"
         budget_trip.destinations = budget_trip_data.destinations
-        budget_trip.start_date = datetime(2024, 9, 1, tzinfo=timezone.utc)
-        budget_trip.end_date = datetime(2024, 9, 30, tzinfo=timezone.utc)
+        budget_trip.start_date = datetime(2024, 9, 1, tzinfo=UTC)
+        budget_trip.end_date = datetime(2024, 9, 30, tzinfo=UTC)
         budget_trip.preferences = {"budget": {"total": 2500, "currency": "USD"}}
         budget_trip.status = "planning"
-        budget_trip.created_at = datetime.now(timezone.utc)
-        budget_trip.updated_at = datetime.now(timezone.utc)
+        budget_trip.created_at = datetime.now(UTC)
+        budget_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = budget_trip
 
@@ -479,7 +472,7 @@ class TestTripsIntegrationWorkflows:
 
         # Step 3: Update budget preferences based on suggestions
         updated_budget = Budget(
-            total_budget=Price(amount=Decimal("3200"), currency=CurrencyCode.USD)
+            total_budget=Price(amount=Decimal(3200), currency=CurrencyCode.USD)
         )
         preferences_update = TripPreferencesRequest(budget=updated_budget)
 
@@ -514,11 +507,11 @@ class TestTripsIntegrationWorkflows:
         trip.title = "Tokyo Q4 Sales Meeting"
         trip.status = TripStatus.PLANNING.value
         trip.destinations = tokyo_business_trip_data["destinations"]
-        trip.start_date = datetime(2024, 10, 15, tzinfo=timezone.utc)
-        trip.end_date = datetime(2024, 10, 19, tzinfo=timezone.utc)
+        trip.start_date = datetime(2024, 10, 15, tzinfo=UTC)
+        trip.end_date = datetime(2024, 10, 19, tzinfo=UTC)
         trip.preferences = {}
-        trip.created_at = datetime.now(timezone.utc)
-        trip.updated_at = datetime.now(timezone.utc)
+        trip.created_at = datetime.now(UTC)
+        trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = trip
 
@@ -538,7 +531,7 @@ class TestTripsIntegrationWorkflows:
         for status in status_progression:
             # Update mock status
             trip.status = status.value
-            trip.updated_at = datetime.now(timezone.utc)
+            trip.updated_at = datetime.now(UTC)
 
             comprehensive_trip_service.update_trip.return_value = trip
             comprehensive_trip_service.get_trip.return_value = trip
@@ -568,12 +561,12 @@ class TestTripsIntegrationWorkflows:
         shared_trip.visibility = TripVisibility.SHARED.value
         shared_trip.shared_with = ["leisure_user_002"]  # Shared with leisure traveler
         shared_trip.destinations = []
-        shared_trip.start_date = datetime(2024, 8, 1, tzinfo=timezone.utc)
-        shared_trip.end_date = datetime(2024, 8, 15, tzinfo=timezone.utc)
+        shared_trip.start_date = datetime(2024, 8, 1, tzinfo=UTC)
+        shared_trip.end_date = datetime(2024, 8, 15, tzinfo=UTC)
         shared_trip.preferences = {}
         shared_trip.status = "planning"
-        shared_trip.created_at = datetime.now(timezone.utc)
-        shared_trip.updated_at = datetime.now(timezone.utc)
+        shared_trip.created_at = datetime.now(UTC)
+        shared_trip.updated_at = datetime.now(UTC)
 
         trip_id = UUID(shared_trip.id)
 
@@ -642,9 +635,7 @@ class TestTripsIntegrationWorkflows:
             ],
             preferences=TripPreferences(
                 budget=Budget(
-                    total_budget=Price(
-                        amount=Decimal("3000"), currency=CurrencyCode.USD
-                    )
+                    total_budget=Price(amount=Decimal(3000), currency=CurrencyCode.USD)
                 )
             ),
         )
@@ -654,12 +645,12 @@ class TestTripsIntegrationWorkflows:
         trip.user_id = "leisure_user_002"
         trip.title = "Evolving Preferences Trip"
         trip.destinations = initial_trip.destinations
-        trip.start_date = datetime(2024, 12, 1, tzinfo=timezone.utc)
-        trip.end_date = datetime(2024, 12, 10, tzinfo=timezone.utc)
+        trip.start_date = datetime(2024, 12, 1, tzinfo=UTC)
+        trip.end_date = datetime(2024, 12, 10, tzinfo=UTC)
         trip.preferences = {"budget": {"total": 3000, "currency": "USD"}}
         trip.status = "planning"
-        trip.created_at = datetime.now(timezone.utc)
-        trip.updated_at = datetime.now(timezone.utc)
+        trip.created_at = datetime.now(UTC)
+        trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = trip
 
@@ -671,7 +662,7 @@ class TestTripsIntegrationWorkflows:
 
         # Evolution 1: Increase budget after research
         updated_budget_1 = Budget(
-            total_budget=Price(amount=Decimal("4000"), currency=CurrencyCode.USD)
+            total_budget=Price(amount=Decimal(4000), currency=CurrencyCode.USD)
         )
         preferences_update_1 = TripPreferencesRequest(budget=updated_budget_1)
 
@@ -687,7 +678,7 @@ class TestTripsIntegrationWorkflows:
 
         # Evolution 2: Further refinement based on accommodation options
         updated_budget_2 = Budget(
-            total_budget=Price(amount=Decimal("4500"), currency=CurrencyCode.USD)
+            total_budget=Price(amount=Decimal(4500), currency=CurrencyCode.USD)
         )
         preferences_update_2 = TripPreferencesRequest(budget=updated_budget_2)
 
@@ -740,12 +731,12 @@ class TestTripsIntegrationWorkflows:
         resilient_trip.user_id = "business_user_001"
         resilient_trip.title = "Trip with Potential Issues"
         resilient_trip.destinations = problematic_trip_data.destinations
-        resilient_trip.start_date = datetime(2024, 8, 15, tzinfo=timezone.utc)
-        resilient_trip.end_date = datetime(2024, 8, 20, tzinfo=timezone.utc)
+        resilient_trip.start_date = datetime(2024, 8, 15, tzinfo=UTC)
+        resilient_trip.end_date = datetime(2024, 8, 20, tzinfo=UTC)
         resilient_trip.preferences = {}
         resilient_trip.status = "planning"
-        resilient_trip.created_at = datetime.now(timezone.utc)
-        resilient_trip.updated_at = datetime.now(timezone.utc)
+        resilient_trip.created_at = datetime.now(UTC)
+        resilient_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = resilient_trip
 
@@ -776,12 +767,12 @@ class TestTripsIntegrationWorkflows:
         shared_trip.description = "Original description"
         shared_trip.visibility = TripVisibility.SHARED.value
         shared_trip.destinations = []
-        shared_trip.start_date = datetime(2024, 9, 1, tzinfo=timezone.utc)
-        shared_trip.end_date = datetime(2024, 9, 10, tzinfo=timezone.utc)
+        shared_trip.start_date = datetime(2024, 9, 1, tzinfo=UTC)
+        shared_trip.end_date = datetime(2024, 9, 10, tzinfo=UTC)
         shared_trip.preferences = {}
         shared_trip.status = "planning"
-        shared_trip.created_at = datetime.now(timezone.utc)
-        shared_trip.updated_at = datetime.now(timezone.utc)
+        shared_trip.created_at = datetime.now(UTC)
+        shared_trip.updated_at = datetime.now(UTC)
 
         trip_id = UUID(shared_trip.id)
 
@@ -789,7 +780,7 @@ class TestTripsIntegrationWorkflows:
         update_1 = UpdateTripRequest(description="Updated by family organizer")
 
         shared_trip.description = "Updated by family organizer"
-        shared_trip.updated_at = datetime.now(timezone.utc)
+        shared_trip.updated_at = datetime.now(UTC)
         comprehensive_trip_service.update_trip.return_value = shared_trip
         comprehensive_trip_service.get_trip.return_value = shared_trip
 
@@ -803,7 +794,7 @@ class TestTripsIntegrationWorkflows:
         update_2 = UpdateTripRequest(title="Concurrently Modified Trip - Edited")
 
         shared_trip.title = "Concurrently Modified Trip - Edited"
-        shared_trip.updated_at = datetime.now(timezone.utc)
+        shared_trip.updated_at = datetime.now(UTC)
         comprehensive_trip_service.update_trip.return_value = shared_trip
 
         result_2 = await update_trip(
@@ -832,11 +823,11 @@ class TestTripsIntegrationWorkflows:
             trip.user_id = "business_user_001"
             trip.title = f"Business Trip {i + 1}"
             trip.destinations = []
-            trip.start_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
-            trip.end_date = datetime(2024, 1, 5, tzinfo=timezone.utc)
+            trip.start_date = datetime(2024, 1, 1, tzinfo=UTC)
+            trip.end_date = datetime(2024, 1, 5, tzinfo=UTC)
             trip.status = "planning"
-            trip.created_at = datetime.now(timezone.utc)
-            trip.updated_at = datetime.now(timezone.utc)
+            trip.created_at = datetime.now(UTC)
+            trip.updated_at = datetime.now(UTC)
             large_trip_list.append(trip)
 
         comprehensive_trip_service.get_user_trips.return_value = large_trip_list
@@ -904,12 +895,12 @@ class TestTripsIntegrationWorkflows:
             MagicMock(name=dest.name, country=dest.country, city=dest.city)
             for dest in complex_destinations
         ]
-        complex_trip.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
-        complex_trip.end_date = datetime(2024, 8, 20, tzinfo=timezone.utc)
+        complex_trip.start_date = datetime(2024, 6, 1, tzinfo=UTC)
+        complex_trip.end_date = datetime(2024, 8, 20, tzinfo=UTC)
         complex_trip.preferences = {}
         complex_trip.status = "planning"
-        complex_trip.created_at = datetime.now(timezone.utc)
-        complex_trip.updated_at = datetime.now(timezone.utc)
+        complex_trip.created_at = datetime.now(UTC)
+        complex_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = complex_trip
 
@@ -978,12 +969,12 @@ class TestTripsIntegrationWorkflows:
         urgent_trip.destinations = urgent_trip_data.destinations
         urgent_trip.start_date = datetime.combine(
             date.today(), datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
-        urgent_trip.end_date = datetime(2024, 12, 31, tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
+        urgent_trip.end_date = datetime(2024, 12, 31, tzinfo=UTC)
         urgent_trip.preferences = {}
         urgent_trip.status = "planning"
-        urgent_trip.created_at = datetime.now(timezone.utc)
-        urgent_trip.updated_at = datetime.now(timezone.utc)
+        urgent_trip.created_at = datetime.now(UTC)
+        urgent_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = urgent_trip
 
@@ -1051,9 +1042,7 @@ class TestTripsIntegrationWorkflows:
             ],
             preferences=TripPreferences(
                 budget=Budget(
-                    total_budget=Price(
-                        amount=Decimal("5500"), currency=CurrencyCode.USD
-                    )
+                    total_budget=Price(amount=Decimal(5500), currency=CurrencyCode.USD)
                 )
             ),
         )
@@ -1064,12 +1053,12 @@ class TestTripsIntegrationWorkflows:
         consistent_trip.title = "Data Consistency Test Trip"
         consistent_trip.description = "Testing data consistency across operations"
         consistent_trip.destinations = consistent_trip_data.destinations
-        consistent_trip.start_date = datetime(2024, 7, 15, tzinfo=timezone.utc)
-        consistent_trip.end_date = datetime(2024, 7, 25, tzinfo=timezone.utc)
+        consistent_trip.start_date = datetime(2024, 7, 15, tzinfo=UTC)
+        consistent_trip.end_date = datetime(2024, 7, 25, tzinfo=UTC)
         consistent_trip.preferences = {"budget": {"total": 5500, "currency": "USD"}}
         consistent_trip.status = "planning"
-        consistent_trip.created_at = datetime.now(timezone.utc)
-        consistent_trip.updated_at = datetime.now(timezone.utc)
+        consistent_trip.created_at = datetime.now(UTC)
+        consistent_trip.updated_at = datetime.now(UTC)
 
         comprehensive_trip_service.create_trip.return_value = consistent_trip
         comprehensive_trip_service.get_trip.return_value = consistent_trip

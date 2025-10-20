@@ -1,5 +1,4 @@
-"""
-Integration tests for chat session management.
+"""Integration tests for chat session management.
 
 This module tests the complete chat session lifecycle including creation,
 message handling, persistence, and cleanup across the application stack.

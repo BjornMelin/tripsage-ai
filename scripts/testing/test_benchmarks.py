@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Modern test suite for consolidated benchmark scripts.
+"""Modern test suite for consolidated benchmark scripts.
 
 Uses pytest-asyncio for modern async testing patterns.
 Achieves 90%+ coverage for benchmark.py, collectors.py, and config.py.
@@ -14,11 +13,13 @@ from unittest.mock import patch
 
 import pytest
 
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "benchmarks"))
 
 from benchmark import BenchmarkRunner
 from collectors import MemorySnapshot, MetricsCollector, ReportGenerator, TimingResult
+
 from config import (
     BenchmarkConfig,
     OptimizationLevel,
@@ -244,7 +245,7 @@ class TestReportGenerator:
 
         assert csv_path.exists()
 
-        with open(csv_path, "r") as f:
+        with open(csv_path) as f:
             content = f.read()
             assert "operations_per_second,150.50,ops/sec" in content
             assert "avg_duration_ms,6.70,milliseconds" in content
@@ -280,7 +281,7 @@ class TestReportGenerator:
 
         assert html_path.exists()
 
-        with open(html_path, "r") as f:
+        with open(html_path) as f:
             content = f.read()
             assert "TripSage Benchmark Report" in content
             assert "150.5 ops/sec" in content

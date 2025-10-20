@@ -5,19 +5,16 @@ including search, booking, management, and MCP client integration.
 Updated for Pydantic v2 and modern testing patterns.
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.services.business.accommodation_service import (
@@ -168,7 +165,7 @@ class TestAccommodationService:
         """Sample accommodation booking."""
         booking_id = str(uuid4())
         user_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return AccommodationBooking(
             id=booking_id,

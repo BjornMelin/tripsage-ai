@@ -1,17 +1,17 @@
-"""
-Airbnb MCP Client implementation.
+"""Airbnb MCP Client implementation.
 
 This client provides the interface for interacting with the OpenBnB MCP Server
 for Airbnb accommodation searches and listing details.
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
 
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -20,17 +20,17 @@ class AirbnbSearchParams(BaseModel):
     """Parameters for Airbnb search."""
 
     location: str = Field(..., description="Location to search")
-    placeId: Optional[str] = Field(None, description="Specific place ID")
-    checkin: Optional[str] = Field(None, description="Check-in date (YYYY-MM-DD)")
-    checkout: Optional[str] = Field(None, description="Check-out date (YYYY-MM-DD)")
-    adults: Optional[int] = Field(1, description="Number of adults")
-    children: Optional[int] = Field(0, description="Number of children")
-    infants: Optional[int] = Field(0, description="Number of infants")
-    pets: Optional[int] = Field(0, description="Number of pets")
-    minPrice: Optional[int] = Field(None, description="Minimum price per night")
-    maxPrice: Optional[int] = Field(None, description="Maximum price per night")
-    cursor: Optional[str] = Field(None, description="Pagination cursor")
-    ignoreRobotsText: Optional[bool] = Field(
+    placeId: str | None = Field(None, description="Specific place ID")
+    checkin: str | None = Field(None, description="Check-in date (YYYY-MM-DD)")
+    checkout: str | None = Field(None, description="Check-out date (YYYY-MM-DD)")
+    adults: int | None = Field(1, description="Number of adults")
+    children: int | None = Field(0, description="Number of children")
+    infants: int | None = Field(0, description="Number of infants")
+    pets: int | None = Field(0, description="Number of pets")
+    minPrice: int | None = Field(None, description="Minimum price per night")
+    maxPrice: int | None = Field(None, description="Maximum price per night")
+    cursor: str | None = Field(None, description="Pagination cursor")
+    ignoreRobotsText: bool | None = Field(
         False, description="Ignore robots.txt (development only)"
     )
 
@@ -39,12 +39,12 @@ class AirbnbListingDetailsParams(BaseModel):
     """Parameters for fetching Airbnb listing details."""
 
     id: str = Field(..., description="Listing ID")
-    checkin: Optional[str] = Field(None, description="Check-in date for pricing")
-    checkout: Optional[str] = Field(None, description="Check-out date for pricing")
-    adults: Optional[int] = Field(1, description="Number of adults for pricing")
-    children: Optional[int] = Field(0, description="Number of children for pricing")
-    infants: Optional[int] = Field(0, description="Number of infants for pricing")
-    pets: Optional[int] = Field(0, description="Number of pets for pricing")
+    checkin: str | None = Field(None, description="Check-in date for pricing")
+    checkout: str | None = Field(None, description="Check-out date for pricing")
+    adults: int | None = Field(1, description="Number of adults for pricing")
+    children: int | None = Field(0, description="Number of children for pricing")
+    infants: int | None = Field(0, description="Number of infants for pricing")
+    pets: int | None = Field(0, description="Number of pets for pricing")
 
 
 class AirbnbMCPClient:
@@ -57,8 +57,7 @@ class AirbnbMCPClient:
         use_cache: bool = True,
         cache_ttl: int = 1800,  # 30 minutes
     ):
-        """
-        Initialize the Airbnb MCP client.
+        """Initialize the Airbnb MCP client.
 
         Args:
             endpoint: The MCP server endpoint URL
@@ -70,7 +69,7 @@ class AirbnbMCPClient:
         self.timeout = timeout
         self.use_cache = use_cache
         self.cache_ttl = cache_ttl
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def __aenter__(self):
         """Async context manager entry."""
@@ -97,10 +96,9 @@ class AirbnbMCPClient:
             logger.info("Disconnected from Airbnb MCP server")
 
     async def _invoke_tool(
-        self, tool_name: str, params: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Invoke a tool on the MCP server.
+        self, tool_name: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Invoke a tool on the MCP server.
 
         Args:
             tool_name: Name of the tool to invoke
@@ -140,18 +138,17 @@ class AirbnbMCPClient:
     async def search_accommodations(
         self,
         location: str,
-        checkin: Optional[str] = None,
-        checkout: Optional[str] = None,
+        checkin: str | None = None,
+        checkout: str | None = None,
         adults: int = 1,
         children: int = 0,
         infants: int = 0,
         pets: int = 0,
-        min_price: Optional[int] = None,
-        max_price: Optional[int] = None,
-        cursor: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
-        """
-        Search for Airbnb accommodations.
+        min_price: int | None = None,
+        max_price: int | None = None,
+        cursor: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Search for Airbnb accommodations.
 
         Args:
             location: Location to search
@@ -194,15 +191,14 @@ class AirbnbMCPClient:
     async def get_listing_details(
         self,
         listing_id: str,
-        checkin: Optional[str] = None,
-        checkout: Optional[str] = None,
+        checkin: str | None = None,
+        checkout: str | None = None,
         adults: int = 1,
         children: int = 0,
         infants: int = 0,
         pets: int = 0,
-    ) -> Dict[str, Any]:
-        """
-        Get detailed information for a specific Airbnb listing.
+    ) -> dict[str, Any]:
+        """Get detailed information for a specific Airbnb listing.
 
         Args:
             listing_id: The Airbnb listing ID
@@ -234,10 +230,9 @@ class AirbnbMCPClient:
         return result
 
     async def batch_search(
-        self, search_requests: List[Dict[str, Any]]
-    ) -> List[List[Dict[str, Any]]]:
-        """
-        Perform multiple searches in parallel.
+        self, search_requests: list[dict[str, Any]]
+    ) -> list[list[dict[str, Any]]]:
+        """Perform multiple searches in parallel.
 
         Args:
             search_requests: List of search parameter dictionaries
@@ -249,10 +244,9 @@ class AirbnbMCPClient:
         return await asyncio.gather(*tasks)
 
     async def batch_get_details(
-        self, detail_requests: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """
-        Get details for multiple listings in parallel.
+        self, detail_requests: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        """Get details for multiple listings in parallel.
 
         Args:
             detail_requests: List of detail request parameter dictionaries
@@ -268,8 +262,7 @@ class AirbnbMCPClient:
         return self._client is not None
 
     async def health_check(self) -> bool:
-        """
-        Check if the MCP server is healthy and responding.
+        """Check if the MCP server is healthy and responding.
 
         Returns:
             True if the server is healthy, False otherwise

@@ -1,5 +1,4 @@
-"""
-Tests for unified WebSocket router.
+"""Tests for unified WebSocket router.
 
 This module tests the updated WebSocket router that integrates with
 both unified services and existing core services.
@@ -299,8 +298,6 @@ class TestWebSocketCoreServiceIntegration:
         # Verify they're from the core service module
         from tripsage_core.services.business.chat_service import (
             MessageCreateRequest as CoreMessageCreateRequest,
-        )
-        from tripsage_core.services.business.chat_service import (
             MessageRole as CoreMessageRole,
         )
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Helper script to test and validate migrated database connections with secure utilities.
+"""Helper script to test and validate migrated database connections with secure utilities.
 
 This script validates all database connection methods after migration to ensure
 they're using the secure URL parsing and validation utilities correctly.
@@ -11,6 +10,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
+
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
@@ -28,6 +28,7 @@ from tripsage_core.utils.connection_utils import (
     SecureDatabaseConnectionManager,
 )
 from tripsage_core.utils.url_converters import DatabaseURLConverter
+
 
 # Configure logging
 logging.basicConfig(

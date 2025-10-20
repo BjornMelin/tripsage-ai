@@ -14,10 +14,8 @@ from ..trip import Trip
 from .accommodation import (
     Accommodation,
     AccommodationType,
-    CancellationPolicy,
-)
-from .accommodation import (
     BookingStatus as AccommodationBookingStatus,
+    CancellationPolicy,
 )
 
 # API Key models
@@ -36,11 +34,9 @@ from .chat import (
 # Flight models
 from .flight import (
     AirlineProvider,
+    BookingStatus as FlightBookingStatus,
     DataSource,
     Flight,
-)
-from .flight import (
-    BookingStatus as FlightBookingStatus,
 )
 
 # Memory models (Mem0 + pgvector)
@@ -62,8 +58,6 @@ from .search_parameters import SearchParameters
 # Transportation models
 from .transportation import (
     BookingStatus as TransportationBookingStatus,
-)
-from .transportation import (
     Transportation,
     TransportationType,
 )
@@ -78,6 +72,7 @@ from .trip_collaborator import (
 from .trip_comparison import TripComparison
 from .trip_note import TripNote
 from .user import User, UserRole
+
 
 __all__ = [
     # User

@@ -36,18 +36,17 @@ from tripsage_core.exceptions.exceptions import (
     CoreSecurityError,
 )
 from tripsage_core.models.schemas_common.enums import (
-    TripStatus,
-    TripType,
     TripVisibility,
 )
 from tripsage_core.services.business.trip_service import TripService
+
 
 # Load shared fixtures (sample_trip_data, mock_audit_service)
 pytest_plugins = ["tests.fixtures.trip_fixtures"]
 
 
 @pytest.fixture
-def sample_trip_data(core_trip_response):  # noqa: PT004 - local alias
+def sample_trip_data(core_trip_response):
     """Override global dict-based fixture with core model object.
 
     Many tests rely on attribute access and pass-through to the API adapter,
@@ -94,8 +93,6 @@ def mock_trip_service():
     service.get_trip_collaborators = AsyncMock()
     service._check_trip_access = AsyncMock()
     return service
-
-
 
 
 class TestGetTripSecurity:
@@ -157,9 +154,7 @@ class TestGetTripSecurity:
         )
 
     @pytest.mark.asyncio
-    async def test_get_trip_nonexistent_trip(
-        self, mock_principal, mock_trip_service
-    ):
+    async def test_get_trip_nonexistent_trip(self, mock_principal, mock_trip_service):
         """Test access to non-existent trip."""
         trip_id = str(uuid4())
         mock_trip_service.get_trip.return_value = None

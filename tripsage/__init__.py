@@ -1,5 +1,4 @@
-"""
-TripSage: An intelligent travel planning assistant.
+"""TripSage: An intelligent travel planning assistant.
 
 This package provides a streamlined, agent-based travel planning system
 that integrates with various external MCPs (Model Context Protocol servers)

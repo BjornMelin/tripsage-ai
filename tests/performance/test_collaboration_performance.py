@@ -1,5 +1,4 @@
-"""
-Performance tests for collaboration features in the Supabase schema.
+"""Performance tests for collaboration features in the Supabase schema.
 
 This module tests query performance, indexing efficiency, and scalability
 of collaboration-related database operations.
@@ -8,7 +7,6 @@ of collaboration-related database operations.
 import statistics
 import time
 from datetime import datetime, timedelta
-from typing import List
 from uuid import uuid4
 
 import pytest
@@ -438,7 +436,7 @@ class CollaborationPerformanceTestSuite:
     # Helper methods
 
     async def _populate_database(
-        self, client: MockSupabaseClient, trips: List[TestTrip]
+        self, client: MockSupabaseClient, trips: list[TestTrip]
     ):
         """Helper to populate database with trip data."""
         for trip in trips:

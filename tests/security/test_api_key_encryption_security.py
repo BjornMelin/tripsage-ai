@@ -1,5 +1,4 @@
-"""
-Comprehensive API key encryption security tests.
+"""Comprehensive API key encryption security tests.
 
 Tests envelope encryption, PBKDF2HMAC security, key derivation,
 and cryptographic attack resistance.
@@ -293,9 +292,7 @@ class TestApiKeyEncryptionSecurity:
             salt=corrupted_salt,
             iterations=300000,
         )
-        corrupted_key = base64.urlsafe_b64encode(
-            kdf.derive("corrupted-master-key".encode())
-        )
+        corrupted_key = base64.urlsafe_b64encode(kdf.derive(b"corrupted-master-key"))
         service.master_key = corrupted_key
         service.master_cipher = Fernet(corrupted_key)
 

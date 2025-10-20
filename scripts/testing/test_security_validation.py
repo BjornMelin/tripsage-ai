@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Tests for security validation script.
+"""Tests for security validation script.
 
 Achieves 90%+ coverage for security_validation.py which previously had 0% test coverage.
 """
@@ -11,6 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, mock_open, patch
+
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

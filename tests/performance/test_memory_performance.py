@@ -1,12 +1,11 @@
-"""
-Performance tests for memory system.
+"""Performance tests for memory system.
 Tests latency, throughput, and scalability of memory operations.
 """
 
 import asyncio
 import statistics
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -68,7 +67,7 @@ class TestMemoryPerformance:
                 ConversationMessage(
                     role="user",
                     content="Test message for latency measurement",
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -122,7 +121,7 @@ class TestMemoryPerformance:
                     ConversationMessage(
                         role="user",
                         content=f"Concurrent message {i}",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ]
 
@@ -184,7 +183,7 @@ class TestMemoryPerformance:
                     ConversationMessage(
                         role="user",
                         content=f"Load test message {i}",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ]
 
@@ -237,7 +236,7 @@ class TestMemoryPerformance:
                         role="user" if i % 2 == 0 else "assistant",
                         content=f"Large conversation message {i} "
                         * 10,  # ~300 chars each
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 )
 
@@ -379,7 +378,7 @@ class TestMemoryPerformance:
                     ConversationMessage(
                         role="user",
                         content=f"Resource test message {i}",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ]
 
@@ -431,7 +430,7 @@ class TestMemoryPerformance:
                         ConversationMessage(
                             role="user",
                             content=f"User {user_i} message {op_i}",
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                         )
                     ]
 
@@ -494,7 +493,7 @@ class TestMemoryPerformanceBenchmarks:
                         ConversationMessage(
                             role="user",
                             content="benchmark",
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                         )
                     ],
                     user_id="benchmark-user",

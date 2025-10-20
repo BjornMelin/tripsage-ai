@@ -1,5 +1,4 @@
-"""
-Locust-based load testing for API key service operations.
+"""Locust-based load testing for API key service operations.
 
 This module provides comprehensive load testing scenarios using Locust to simulate
 real-world usage patterns and identify performance bottlenecks under load.
@@ -10,7 +9,7 @@ import json
 import random
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -25,6 +24,7 @@ from tripsage_core.services.business.api_key_service import (
     ValidationStatus,
 )
 
+
 # Skip this file due to gevent monkey patching issues in pytest
 pytest.skip(
     "Skipping locust tests due to gevent monkey patching issues",
@@ -33,8 +33,7 @@ pytest.skip(
 
 
 class ApiKeyLoadTestUser(HttpUser):
-    """
-    Locust user class simulating API key operations.
+    """Locust user class simulating API key operations.
 
     This simulates realistic user behavior patterns for API key management
     including creation, validation, listing, and deletion operations.
@@ -62,8 +61,8 @@ class ApiKeyLoadTestUser(HttpUser):
             "name": "Load Test Key",
             "service": "openai",
             "is_valid": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "usage_count": 0,
         }
 
@@ -73,8 +72,8 @@ class ApiKeyLoadTestUser(HttpUser):
                 "name": f"Key {i}",
                 "service": random.choice([s.value for s in ServiceType]),
                 "is_valid": True,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
                 "usage_count": random.randint(0, 100),
             }
             for i in range(random.randint(1, 10))
@@ -283,8 +282,7 @@ class ApiKeyLoadTestUser(HttpUser):
 
 
 class HighFrequencyApiKeyUser(HttpUser):
-    """
-    High-frequency user simulating automated systems or heavy usage.
+    """High-frequency user simulating automated systems or heavy usage.
 
     This user type simulates systems that make frequent API key validations
     with minimal wait times, useful for stress testing.
@@ -315,7 +313,7 @@ class HighFrequencyApiKeyUser(HttpUser):
                         "status": "valid",
                         "service": "openai",
                         "message": "Cached validation result",
-                        "validated_at": datetime.now(timezone.utc).isoformat(),
+                        "validated_at": datetime.now(UTC).isoformat(),
                     }
                 )
             return None

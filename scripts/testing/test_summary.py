@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test summary script to show test progress.
-"""
+"""Test summary script to show test progress."""
 
 import os
 import subprocess

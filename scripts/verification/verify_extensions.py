@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Supabase Extensions Verification Script
+"""Supabase Extensions Verification Script
 Verifies that all required extensions are properly installed and configured.
 """
 
@@ -13,6 +12,7 @@ import asyncpg
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
 
 console = Console()
 

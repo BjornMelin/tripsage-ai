@@ -1,5 +1,4 @@
-"""
-Intelligent routing node for LangGraph orchestration.
+"""Intelligent routing node for LangGraph orchestration.
 
 This module implements enhanced semantic intent detection and routing logic to determine
 which specialized agent should handle each user request, with improved context awareness
@@ -7,8 +6,8 @@ and confidence scoring.
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -18,12 +17,12 @@ from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class RouterNode(BaseAgentNode):
-    """
-    Intelligent routing node using semantic analysis to determine agent routing.
+    """Intelligent routing node using semantic analysis to determine agent routing.
 
     This node analyzes user messages and determines which specialized agent
     should handle the request based on intent detection, context analysis,
@@ -157,11 +156,9 @@ class RouterNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Router doesn't need external tools, only classification model."""
-        pass
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Analyze user intent and route to appropriate agent.
+        """Analyze user intent and route to appropriate agent.
 
         Args:
             state: Current travel planning state
@@ -185,7 +182,7 @@ class RouterNode(BaseAgentNode):
         state["handoff_context"] = {
             "routing_confidence": classification["confidence"],
             "routing_reasoning": classification["reasoning"],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "message_analyzed": last_message[:100] + "..."
             if len(last_message) > 100
             else last_message,
@@ -199,10 +196,9 @@ class RouterNode(BaseAgentNode):
         return state
 
     async def _classify_intent(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Classify user intent using semantic analysis.
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Classify user intent using semantic analysis.
 
         Args:
             message: User message to classify
@@ -242,19 +238,18 @@ class RouterNode(BaseAgentNode):
             return classification
 
         except Exception as e:
-            self.logger.error(f"Intent classification failed: {str(e)}")
+            self.logger.error(f"Intent classification failed: {e!s}")
             # Fallback to general travel agent
             return {
                 "agent": "travel_agent",
                 "confidence": 0.3,
-                "reasoning": f"Error in classification, using fallback: {str(e)}",
+                "reasoning": f"Error in classification, using fallback: {e!s}",
             }
 
     def _build_classification_prompt(
-        self, message: str, context: Dict[str, Any]
+        self, message: str, context: dict[str, Any]
     ) -> str:
-        """
-        Build the classification prompt for intent detection.
+        """Build the classification prompt for intent detection.
 
         Args:
             message: User message to classify
@@ -300,9 +295,8 @@ class RouterNode(BaseAgentNode):
         {{"agent": "agent_name", "confidence": 0.9, "reasoning": "brief explanation"}}
         """
 
-    def _build_conversation_context(self, state: TravelPlanningState) -> Dict[str, Any]:
-        """
-        Build conversation context for better routing decisions.
+    def _build_conversation_context(self, state: TravelPlanningState) -> dict[str, Any]:
+        """Build conversation context for better routing decisions.
 
         Args:
             state: Current travel planning state
@@ -336,9 +330,8 @@ class RouterNode(BaseAgentNode):
 
         return context
 
-    def _validate_classification(self, classification: Dict[str, Any]) -> bool:
-        """
-        Validate the classification result.
+    def _validate_classification(self, classification: dict[str, Any]) -> bool:
+        """Validate the classification result.
 
         Args:
             classification: Classification result to validate
@@ -384,10 +377,9 @@ class RouterNode(BaseAgentNode):
         return True
 
     async def _enhanced_classification_with_fallback(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Enhanced classification with multiple fallback strategies.
+        self, message: str, context: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Enhanced classification with multiple fallback strategies.
 
         Args:
             message: User message to classify
@@ -414,12 +406,11 @@ class RouterNode(BaseAgentNode):
             return classification
 
         except Exception as e:
-            logger.error(f"Enhanced classification failed: {str(e)}")
+            logger.error(f"Enhanced classification failed: {e!s}")
             return self._get_safe_fallback_classification()
 
-    def _keyword_based_classification(self, message: str) -> Dict[str, Any]:
-        """
-        Keyword-based classification as fallback.
+    def _keyword_based_classification(self, message: str) -> dict[str, Any]:
+        """Keyword-based classification as fallback.
 
         Args:
             message: User message to classify
@@ -471,7 +462,7 @@ class RouterNode(BaseAgentNode):
         else:
             return self._get_safe_fallback_classification()
 
-    def _get_safe_fallback_classification(self) -> Dict[str, Any]:
+    def _get_safe_fallback_classification(self) -> dict[str, Any]:
         """Get a safe fallback classification."""
         return {
             "agent": "general_agent",

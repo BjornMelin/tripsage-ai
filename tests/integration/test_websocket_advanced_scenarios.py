@@ -1,5 +1,4 @@
-"""
-Advanced integration tests for WebSocket edge cases and complex scenarios.
+"""Advanced integration tests for WebSocket edge cases and complex scenarios.
 
 This module tests rate limiting edge cases, heartbeat timeouts, message prioritization,
 concurrent operations, and Redis integration failures to achieve 90%+ coverage.
@@ -259,7 +258,6 @@ class TestMessagePrioritization:
     @pytest.mark.asyncio
     async def test_priority_queue_ordering(self):
         """Test messages are processed by priority."""
-
         mock_ws = MagicMock()
         mock_ws.send_text = AsyncMock()
         connection = WebSocketConnection(websocket=mock_ws, connection_id=str(uuid4()))
@@ -286,7 +284,6 @@ class TestMessagePrioritization:
     @pytest.mark.asyncio
     async def test_priority_queue_overflow_handling(self):
         """Test handling of priority queue overflow."""
-
         mock_ws = MagicMock()
         connection = WebSocketConnection(websocket=mock_ws, connection_id=str(uuid4()))
 
@@ -301,7 +298,6 @@ class TestMessagePrioritization:
     @pytest.mark.asyncio
     async def test_message_expiration(self):
         """Test expired messages are not sent."""
-
         mock_ws = MagicMock()
         mock_ws.send_text = AsyncMock()
         connection = WebSocketConnection(websocket=mock_ws, connection_id=str(uuid4()))
@@ -511,7 +507,6 @@ class TestConnectionStateTransitions:
     @pytest.mark.asyncio
     async def test_full_connection_lifecycle(self):
         """Test complete connection lifecycle through all states."""
-
         mock_ws = MagicMock()
         connection = WebSocketConnection(websocket=mock_ws, connection_id=str(uuid4()))
 
@@ -545,7 +540,6 @@ class TestConnectionStateTransitions:
     @pytest.mark.asyncio
     async def test_reconnection_with_backoff(self):
         """Test reconnection attempts with exponential backoff."""
-
         mock_ws = MagicMock()
         connection = WebSocketConnection(websocket=mock_ws, connection_id=str(uuid4()))
 
@@ -622,7 +616,6 @@ class TestPerformanceOptimization:
 
     def test_memory_efficient_message_queuing(self):
         """Test memory-efficient message queuing with size limits."""
-
         connection = WebSocketConnection(
             websocket=MagicMock(), connection_id=str(uuid4())
         )

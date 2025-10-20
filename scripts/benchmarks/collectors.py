@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Metrics collection and reporting for TripSage benchmarks.
+"""Metrics collection and reporting for TripSage benchmarks.
 
 Core metrics without over-engineering:
 - Query performance (latency, throughput)
@@ -18,7 +17,9 @@ from pathlib import Path
 from typing import Any
 
 import psutil
+
 from config import BenchmarkConfig
+
 
 logger = logging.getLogger(__name__)
 

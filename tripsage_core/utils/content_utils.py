@@ -1,5 +1,4 @@
-"""
-Content type definitions for TripSage Core caching utilities.
+"""Content type definitions for TripSage Core caching utilities.
 
 This module provides content type enums without dependencies on settings
 or other complex modules to avoid circular import issues.

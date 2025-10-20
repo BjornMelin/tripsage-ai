@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 # Import the app directly
 from tripsage.api.main import app
 
+
 # Create a test client
 client = TestClient(app)
 

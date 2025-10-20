@@ -1,5 +1,4 @@
-"""
-Integration tests for Google Maps API service.
+"""Integration tests for Google Maps API service.
 
 This module tests the integration with Google Maps API for location services,
 geocoding, place details, and direction calculations.

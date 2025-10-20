@@ -1,5 +1,4 @@
-"""
-Unit tests for TripSage Core session utilities.
+"""Unit tests for TripSage Core session utilities.
 
 Tests session memory initialization, preference tracking, session summary storage,
 learned facts processing, and integration with Mem0 memory system.

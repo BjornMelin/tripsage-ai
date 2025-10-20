@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for ActivityService with full coverage.
+"""Comprehensive tests for ActivityService with full coverage.
 
 Tests cover:
 - Google Maps Places API integration

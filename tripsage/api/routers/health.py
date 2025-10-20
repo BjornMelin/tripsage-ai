@@ -9,8 +9,7 @@ This module provides health check endpoints including:
 
 import asyncio
 import logging
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -20,6 +19,7 @@ from tripsage.api.core.dependencies import (
     DatabaseDep,
     SettingsDep,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,28 +31,28 @@ class ComponentHealth(BaseModel):
 
     name: str
     status: str  # healthy, degraded, unhealthy
-    latency_ms: Optional[float] = None
-    message: Optional[str] = None
-    details: Dict = Field(default_factory=dict)
+    latency_ms: float | None = None
+    message: str | None = None
+    details: dict = Field(default_factory=dict)
 
 
 class SystemHealth(BaseModel):
     """Overall system health status."""
 
     status: str  # healthy, degraded, unhealthy
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     version: str = "1.0.0"
     environment: str
-    components: List[ComponentHealth]
+    components: list[ComponentHealth]
 
 
 class ReadinessCheck(BaseModel):
     """Readiness check result."""
 
     ready: bool
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    checks: Dict[str, bool]
-    details: Dict[str, str] = Field(default_factory=dict)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    checks: dict[str, bool]
+    details: dict[str, str] = Field(default_factory=dict)
 
 
 @router.get("/health", response_model=SystemHealth)
@@ -105,7 +105,7 @@ async def liveness_check():
     """
     return {
         "status": "alive",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
@@ -131,12 +131,12 @@ async def readiness_check(
         checks["database"] = db_health.status == "healthy"
         if db_health.status != "healthy":
             details["database"] = db_health.message or "Database not healthy"
-    except asyncio.TimeoutError:
+    except TimeoutError:
         checks["database"] = False
         details["database"] = "Database check timed out"
     except Exception as e:
         checks["database"] = False
-        details["database"] = f"Database check failed: {str(e)}"
+        details["database"] = f"Database check failed: {e!s}"
 
     # Check cache (with timeout)
     try:
@@ -147,12 +147,12 @@ async def readiness_check(
         checks["cache"] = cache_health.status == "healthy"
         if cache_health.status != "healthy":
             details["cache"] = cache_health.message or "Cache not healthy"
-    except asyncio.TimeoutError:
+    except TimeoutError:
         checks["cache"] = False
         details["cache"] = "Cache check timed out"
     except Exception as e:
         checks["cache"] = False
-        details["cache"] = f"Cache check failed: {str(e)}"
+        details["cache"] = f"Cache check failed: {e!s}"
 
     # Determine overall readiness
     ready = all(checks.values())
@@ -216,13 +216,13 @@ async def cache_health_check(cache_service: CacheDep):
 
 async def _check_database_health(db_service) -> ComponentHealth:
     """Check database health and connectivity."""
-    start_time = datetime.now(timezone.utc)
+    start_time = datetime.now(UTC)
 
     try:
         # Perform a simple query to check connectivity
         result = await db_service.execute_query("SELECT 1 as health_check")
 
-        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         if result:
             return ComponentHealth(
@@ -241,13 +241,13 @@ async def _check_database_health(db_service) -> ComponentHealth:
             )
 
     except Exception as e:
-        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         return ComponentHealth(
             name="database",
             status="unhealthy",
             latency_ms=latency_ms,
-            message=f"Database error: {str(e)}",
+            message=f"Database error: {e!s}",
             details={"error": str(e)},
         )
 
@@ -261,13 +261,13 @@ async def _check_cache_health(cache_service) -> ComponentHealth:
             message="Cache not configured (optional component)",
         )
 
-    start_time = datetime.now(timezone.utc)
+    start_time = datetime.now(UTC)
 
     try:
         # Perform a simple ping
         result = await cache_service.ping()
 
-        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         if result:
             return ComponentHealth(
@@ -285,12 +285,12 @@ async def _check_cache_health(cache_service) -> ComponentHealth:
             )
 
     except Exception as e:
-        latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        latency_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
         return ComponentHealth(
             name="cache",
             status="unhealthy",
             latency_ms=latency_ms,
-            message=f"Cache error: {str(e)}",
+            message=f"Cache error: {e!s}",
             details={"error": str(e)},
         )

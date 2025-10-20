@@ -1,5 +1,4 @@
-"""
-End-to-end tests for complete trip planning workflows.
+"""End-to-end tests for complete trip planning workflows.
 
 Tests the integration of multiple services working together to create
 a complete trip planning experience with mocked external dependencies.

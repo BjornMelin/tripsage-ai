@@ -1,5 +1,4 @@
-"""
-Google Maps direct SDK service with TripSage Core integration.
+"""Google Maps direct SDK service with TripSage Core integration.
 
 This module provides a service class for direct Google Maps API integration,
 replacing MCP wrapper with native SDK calls for improved performance.
@@ -7,7 +6,7 @@ replacing MCP wrapper with native SDK calls for improved performance.
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import googlemaps
 from googlemaps.exceptions import (
@@ -18,8 +17,11 @@ from googlemaps.exceptions import (
 )
 
 from tripsage_core.config import Settings, get_settings
-from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.exceptions.exceptions import (
+    CoreExternalAPIError as CoreAPIError,
+    CoreServiceError,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ logger = logging.getLogger(__name__)
 class GoogleMapsServiceError(CoreAPIError):
     """Exception raised for Google Maps service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="GOOGLE_MAPS_API_ERROR",
@@ -40,15 +42,14 @@ class GoogleMapsServiceError(CoreAPIError):
 class GoogleMapsService:
     """Direct Google Maps API service with async support and connection pooling."""
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
-        """
-        Initialize Google Maps service.
+    def __init__(self, settings: Settings | None = None) -> None:
+        """Initialize Google Maps service.
 
         Args:
             settings: Core application settings
         """
         self.settings = settings or get_settings()
-        self._client: Optional[googlemaps.Client] = None
+        self._client: googlemaps.Client | None = None
         self._connected = False
 
     @property
@@ -101,9 +102,8 @@ class GoogleMapsService:
         if not self._connected:
             await self.connect()
 
-    async def geocode(self, address: str, **kwargs) -> List[Dict[str, Any]]:
-        """
-        Convert address to coordinates.
+    async def geocode(self, address: str, **kwargs) -> list[dict[str, Any]]:
+        """Convert address to coordinates.
 
         Args:
             address: Address to geocode
@@ -127,9 +127,8 @@ class GoogleMapsService:
 
     async def reverse_geocode(
         self, lat: float, lng: float, **kwargs
-    ) -> List[Dict[str, Any]]:
-        """
-        Convert coordinates to address.
+    ) -> list[dict[str, Any]]:
+        """Convert coordinates to address.
 
         Args:
             lat: Latitude coordinate
@@ -163,12 +162,11 @@ class GoogleMapsService:
     async def search_places(
         self,
         query: str,
-        location: Optional[tuple] = None,
-        radius: Optional[int] = None,
+        location: tuple | None = None,
+        radius: int | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Search for places using text search.
+    ) -> dict[str, Any]:
+        """Search for places using text search.
 
         Args:
             query: Search query
@@ -204,10 +202,9 @@ class GoogleMapsService:
             raise GoogleMapsServiceError(f"Place search failed: {e}", e) from e
 
     async def get_place_details(
-        self, place_id: str, fields: Optional[List[str]] = None, **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Get detailed information about a specific place.
+        self, place_id: str, fields: list[str] | None = None, **kwargs
+    ) -> dict[str, Any]:
+        """Get detailed information about a specific place.
 
         Args:
             place_id: Google Maps place ID
@@ -237,9 +234,8 @@ class GoogleMapsService:
 
     async def get_directions(
         self, origin: str, destination: str, mode: str = "driving", **kwargs
-    ) -> List[Dict[str, Any]]:
-        """
-        Get directions between two locations.
+    ) -> list[dict[str, Any]]:
+        """Get directions between two locations.
 
         Args:
             origin: Origin address or coordinates
@@ -278,13 +274,12 @@ class GoogleMapsService:
 
     async def distance_matrix(
         self,
-        origins: List[str],
-        destinations: List[str],
+        origins: list[str],
+        destinations: list[str],
         mode: str = "driving",
         **kwargs,
-    ) -> Dict[str, Any]:
-        """
-        Calculate distance and time for multiple origins/destinations.
+    ) -> dict[str, Any]:
+        """Calculate distance and time for multiple origins/destinations.
 
         Args:
             origins: List of origin addresses or coordinates
@@ -323,10 +318,9 @@ class GoogleMapsService:
             ) from e
 
     async def get_elevation(
-        self, locations: List[tuple], **kwargs
-    ) -> List[Dict[str, Any]]:
-        """
-        Get elevation data for locations.
+        self, locations: list[tuple], **kwargs
+    ) -> list[dict[str, Any]]:
+        """Get elevation data for locations.
 
         Args:
             locations: List of (lat, lng) coordinate tuples
@@ -349,10 +343,9 @@ class GoogleMapsService:
             raise GoogleMapsServiceError(f"Elevation request failed: {e}", e) from e
 
     async def get_timezone(
-        self, location: tuple, timestamp: Optional[int] = None, **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Get timezone information for a location.
+        self, location: tuple, timestamp: int | None = None, **kwargs
+    ) -> dict[str, Any]:
+        """Get timezone information for a location.
 
         Args:
             location: (lat, lng) coordinate tuple
@@ -381,8 +374,7 @@ class GoogleMapsService:
             raise GoogleMapsServiceError(f"Timezone request failed: {e}", e) from e
 
     async def health_check(self) -> bool:
-        """
-        Check if the Google Maps API is accessible.
+        """Check if the Google Maps API is accessible.
 
         Returns:
             True if API is accessible, False otherwise
@@ -402,12 +394,11 @@ class GoogleMapsService:
 
 
 # Global service instance
-_google_maps_service: Optional[GoogleMapsService] = None
+_google_maps_service: GoogleMapsService | None = None
 
 
 async def get_google_maps_service() -> GoogleMapsService:
-    """
-    Get the global Google Maps service instance.
+    """Get the global Google Maps service instance.
 
     Returns:
         GoogleMapsService instance

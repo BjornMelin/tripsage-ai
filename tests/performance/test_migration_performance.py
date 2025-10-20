@@ -7,7 +7,6 @@ Compares previous baseline performance with current DragonflyDB operations.
 import asyncio
 import time
 from statistics import mean, median
-from typing import Dict, List
 
 import pytest
 
@@ -24,7 +23,7 @@ class PerformanceBenchmark:
 
     def __init__(self, iterations: int = 100):
         self.iterations = iterations
-        self.results: Dict[str, List[float]] = {}
+        self.results: dict[str, list[float]] = {}
 
     async def time_operation(self, name: str, operation, *args, **kwargs) -> float:
         """Time a single operation and return execution time in milliseconds."""
@@ -39,7 +38,7 @@ class PerformanceBenchmark:
 
     async def benchmark_operation(
         self, name: str, operation, *args, **kwargs
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Benchmark an operation multiple times and return statistics."""
         times = []
         for _ in range(self.iterations):

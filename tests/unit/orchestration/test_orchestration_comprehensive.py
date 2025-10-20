@@ -1,12 +1,11 @@
-"""
-Comprehensive orchestration layer tests following ULTRATHINK principles.
+"""Comprehensive orchestration layer tests following ULTRATHINK principles.
 
 This module provides complete test coverage for the TripSage orchestration system
 with modern patterns, async support, and 90%+ coverage targeting.
 """
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -83,7 +82,7 @@ class MockAgentNode(BaseAgentNode):
                 "role": "assistant",
                 "content": f"Processed by {self.node_name}",
                 "agent": self.node_name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -224,20 +223,22 @@ def optimized_orchestrator(
     Returns:
         TripSageOrchestrator instance for testing
     """
-    with patch(
-        "tripsage.orchestration.graph.get_memory_bridge",
-        return_value=mock_memory_bridge,
-    ):
-        with patch(
+    with (
+        patch(
+            "tripsage.orchestration.graph.get_memory_bridge",
+            return_value=mock_memory_bridge,
+        ),
+        patch(
             "tripsage.orchestration.graph.get_handoff_coordinator",
             return_value=mock_handoff_coordinator,
-        ):
-            with patch("tripsage.orchestration.graph.get_default_config"):
-                orchestrator = TripSageOrchestrator(
-                    service_registry=comprehensive_service_registry,
-                    checkpointer=MemorySaver(),
-                )
-                return orchestrator
+        ),
+        patch("tripsage.orchestration.graph.get_default_config"),
+    ):
+        orchestrator = TripSageOrchestrator(
+            service_registry=comprehensive_service_registry,
+            checkpointer=MemorySaver(),
+        )
+        return orchestrator
 
 
 class TestBaseAgentNodeComprehensive:
@@ -426,7 +427,7 @@ class TestTravelPlanningStateModels:
         # Create pending search
         search = SearchResult(
             search_id="search-123",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             agent="accommodation_agent",
             parameters={"location": "Tokyo", "guests": 2},
             results=[],
@@ -485,7 +486,7 @@ class TestTravelPlanningStateModels:
         # Add search results
         search_result = SearchResult(
             search_id="flight-search-001",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             agent="flight_agent",
             parameters={"origin": "JFK", "destination": "NRT"},
             results=[{"flight": "NH9"}],
@@ -497,7 +498,7 @@ class TestTravelPlanningStateModels:
         # Add tool tracking
         tool_call = ToolCallInfo(
             tool_name="search_flights",
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             parameters={"origin": "JFK"},
             status="success",
             execution_time_ms=1500.0,

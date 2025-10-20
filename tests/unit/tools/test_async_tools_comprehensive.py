@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for async tool implementations.
+"""Comprehensive tests for async tool implementations.
 
 This module tests the async tool implementations that were refactored
 to use proper async/await patterns for all I/O operations.
@@ -237,7 +236,7 @@ class TestToolErrorHandling:
                 search_memory_tool(query="test query", service_registry=mock_registry),
                 timeout=1.0,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # Expected timeout
             pass
         end_time = asyncio.get_event_loop().time()

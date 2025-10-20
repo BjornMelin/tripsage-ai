@@ -1,5 +1,4 @@
-"""
-User-related endpoints for the TripSage API.
+"""User-related endpoints for the TripSage API.
 
 This module provides endpoints for user preferences and profile management.
 Simplified authentication using direct JWT verification.
@@ -12,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.schemas.users import UserPreferencesRequest, UserPreferencesResponse
 from tripsage_core.services.business.user_service import UserService, get_user_service
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

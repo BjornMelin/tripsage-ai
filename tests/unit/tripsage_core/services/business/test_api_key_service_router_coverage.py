@@ -1,5 +1,4 @@
-"""
-Router-level coverage tests for API key service.
+"""Router-level coverage tests for API key service.
 
 This module specifically targets uncovered lines in the router layer
 to achieve 90%+ coverage for BJO-211 components.
@@ -57,7 +56,8 @@ class TestApiKeyRouterCoverage:
 
     def test_create_key_unexpected_service_error(self, mock_api_key_service):
         """Test router handling of unexpected service exceptions - targets
-        lines 101-106."""
+        lines 101-106.
+        """
         # Configure service to raise unexpected exception
         mock_api_key_service.create_api_key.side_effect = RuntimeError(
             "Unexpected database connection error"

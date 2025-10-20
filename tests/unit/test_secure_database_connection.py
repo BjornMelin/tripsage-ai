@@ -152,58 +152,59 @@ class TestSecureDatabaseConnection:
         self, mock_credentials
     ):
         """Test engine creation fails on validation."""
-        with patch(
-            "tripsage_core.database.connection.DatabaseURLDetector"
-        ) as mock_detector:
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.DatabaseURLDetector"
+            ) as mock_detector,
+            patch(
                 "tripsage_core.database.connection.get_connection_manager"
-            ) as mock_mgr:
-                with patch(
-                    "tripsage_core.database.connection.create_async_engine"
-                ) as mock_create:
-                    # Setup mocks
-                    mock_detector.return_value.detect_url_type.return_value = {
-                        "type": "postgresql"
-                    }
+            ) as mock_mgr,
+            patch(
+                "tripsage_core.database.connection.create_async_engine"
+            ) as mock_create,
+        ):
+            # Setup mocks
+            mock_detector.return_value.detect_url_type.return_value = {
+                "type": "postgresql"
+            }
 
-                    mock_mgr.return_value.parse_and_validate_url = AsyncMock(
-                        return_value=mock_credentials
-                    )
+            mock_mgr.return_value.parse_and_validate_url = AsyncMock(
+                return_value=mock_credentials
+            )
 
-                    mock_engine = AsyncMock()
-                    # Make validation fail
-                    mock_engine.begin.side_effect = Exception("Connection failed")
-                    mock_create.return_value = mock_engine
+            mock_engine = AsyncMock()
+            # Make validation fail
+            mock_engine.begin.side_effect = Exception("Connection failed")
+            mock_create.return_value = mock_engine
 
-                    with pytest.raises(DatabaseValidationError) as exc_info:
-                        await create_secure_async_engine(
-                            "postgresql://user:pass@host/db"
-                        )
+            with pytest.raises(DatabaseValidationError) as exc_info:
+                await create_secure_async_engine("postgresql://user:pass@host/db")
 
-                    assert "Failed to validate engine connection" in str(exc_info.value)
-                    mock_engine.dispose.assert_called_once()
+            assert "Failed to validate engine connection" in str(exc_info.value)
+            mock_engine.dispose.assert_called_once()
 
     def test_get_engine_sync_context(self, mock_settings):
         """Test get_engine in synchronous context."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
+        with (
+            patch(
+                "tripsage_core.database.connection.get_settings",
+                return_value=mock_settings,
+            ),
+            patch("tripsage_core.database.connection.asyncio.run") as mock_run,
+            patch("tripsage_core.database.connection.create_secure_async_engine"),
         ):
-            with patch("tripsage_core.database.connection.asyncio.run") as mock_run:
-                with patch(
-                    "tripsage_core.database.connection.create_secure_async_engine"
-                ):
-                    mock_engine = MagicMock()
-                    mock_run.return_value = mock_engine
+            mock_engine = MagicMock()
+            mock_run.return_value = mock_engine
 
-                    # Clear any cached engine
-                    import tripsage_core.database.connection as conn_module
+            # Clear any cached engine
+            import tripsage_core.database.connection as conn_module
 
-                    conn_module._engine = None
+            conn_module._engine = None
 
-                    engine = get_engine()
+            engine = get_engine()
 
-                    assert engine == mock_engine
-                    mock_run.assert_called_once()
+            assert engine == mock_engine
+            mock_run.assert_called_once()
 
     def test_get_session_factory(self, mock_settings):
         """Test session factory creation."""
@@ -365,48 +366,54 @@ class TestSecureDatabaseConnection:
     @pytest.mark.asyncio
     async def test_get_engine_for_testing(self, mock_settings):
         """Test creating test engine with NullPool."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
                 "tripsage_core.database.connection.create_secure_async_engine"
-            ) as mock_create:
-                mock_engine = AsyncMock()
-                mock_engine.dispose = AsyncMock()
-                mock_create.return_value = mock_engine
+            ) as mock_create,
+        ):
+            mock_engine = AsyncMock()
+            mock_engine.dispose = AsyncMock()
+            mock_create.return_value = mock_engine
 
-                test_url = "postgresql://test:test@localhost/test"
+            test_url = "postgresql://test:test@localhost/test"
 
-                async with get_engine_for_testing(test_url) as engine:
-                    assert engine == mock_engine
+            async with get_engine_for_testing(test_url) as engine:
+                assert engine == mock_engine
 
-                # Verify NullPool was used
-                mock_create.assert_called_once_with(
-                    test_url,
-                    poolclass=NullPool,
-                    echo=True,
-                )
+            # Verify NullPool was used
+            mock_create.assert_called_once_with(
+                test_url,
+                poolclass=NullPool,
+                echo=True,
+            )
 
-                # Verify cleanup
-                mock_engine.dispose.assert_called_once()
+            # Verify cleanup
+            mock_engine.dispose.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_engine_for_testing_with_queue_pool(self, mock_settings):
         """Test creating test engine with QueuePool."""
-        with patch(
-            "tripsage_core.database.connection.get_settings", return_value=mock_settings
-        ):
-            with patch(
+        with (
+            patch(
+                "tripsage_core.database.connection.get_settings",
+                return_value=mock_settings,
+            ),
+            patch(
                 "tripsage_core.database.connection.create_secure_async_engine"
-            ) as mock_create:
-                mock_engine = AsyncMock()
-                mock_engine.dispose = AsyncMock()
-                mock_create.return_value = mock_engine
+            ) as mock_create,
+        ):
+            mock_engine = AsyncMock()
+            mock_engine.dispose = AsyncMock()
+            mock_create.return_value = mock_engine
 
-                async with get_engine_for_testing(use_null_pool=False) as engine:
-                    assert engine == mock_engine
+            async with get_engine_for_testing(use_null_pool=False) as engine:
+                assert engine == mock_engine
 
-                # Verify QueuePool was used
-                mock_create.assert_called_once()
-                call_kwargs = mock_create.call_args[1]
-                assert call_kwargs["poolclass"] == QueuePool
+            # Verify QueuePool was used
+            mock_create.assert_called_once()
+            call_kwargs = mock_create.call_args[1]
+            assert call_kwargs["poolclass"] == QueuePool

@@ -1,10 +1,9 @@
-"""
-Test utilities for orchestration tests.
+"""Test utilities for orchestration tests.
 
 Provides common mocking utilities for LangChain and OpenAI API calls.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 
@@ -35,7 +34,7 @@ class MockChatOpenAI:
         self._default_response = response
 
     async def ainvoke(
-        self, messages: List[Dict[str, str]], **kwargs
+        self, messages: list[dict[str, str]], **kwargs
     ) -> MockLLMResponse:
         """Mock async invoke."""
         # Extract content from messages
@@ -156,7 +155,7 @@ class MockChatOpenAI:
         # Default response
         return MockLLMResponse(self._default_response)
 
-    def invoke(self, messages: List[Dict[str, str]], **kwargs) -> MockLLMResponse:
+    def invoke(self, messages: list[dict[str, str]], **kwargs) -> MockLLMResponse:
         """Mock sync invoke."""
         import asyncio
 
@@ -171,8 +170,7 @@ def create_mock_llm(default_response: str = "Test response") -> MockChatOpenAI:
 
 
 def patch_openai_in_module(module_path: str):
-    """
-    Create a patch decorator for mocking ChatOpenAI in a specific module.
+    """Create a patch decorator for mocking ChatOpenAI in a specific module.
 
     Args:
         module_path: The module path to patch
@@ -186,9 +184,8 @@ def patch_openai_in_module(module_path: str):
     return patch(f"{module_path}.ChatOpenAI", MockChatOpenAI)
 
 
-def create_mock_service_registry(services: Optional[Dict[str, Any]] = None) -> Mock:
-    """
-    Create a mock service registry with common services.
+def create_mock_service_registry(services: dict[str, Any] | None = None) -> Mock:
+    """Create a mock service registry with common services.
 
     Args:
         services: Optional dictionary of service name to mock service

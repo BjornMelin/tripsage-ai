@@ -1,5 +1,4 @@
-"""
-Database Connection Monitor for TripSage Core.
+"""Database Connection Monitor for TripSage Core.
 
 Provides real-time monitoring of database connections, health checks,
 security monitoring, and automatic recovery capabilities.
@@ -8,16 +7,18 @@ security monitoring, and automatic recovery capabilities.
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from tripsage_core.config import Settings, get_settings
 from tripsage_core.monitoring.database_metrics import (
     DatabaseMetrics,
     get_database_metrics,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,12 +49,12 @@ class HealthCheckResult:
     status: HealthStatus
     response_time: float
     message: str
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
     timestamp: datetime = None
 
     def __post_init__(self):
         if self.timestamp is None:
-            self.timestamp = datetime.now(timezone.utc)
+            self.timestamp = datetime.now(UTC)
 
 
 @dataclass
@@ -63,19 +64,18 @@ class SecurityAlert:
     event_type: SecurityEvent
     severity: str
     message: str
-    details: Dict[str, Any]
+    details: dict[str, Any]
     timestamp: datetime = None
-    user_id: Optional[str] = None
-    ip_address: Optional[str] = None
+    user_id: str | None = None
+    ip_address: str | None = None
 
     def __post_init__(self):
         if self.timestamp is None:
-            self.timestamp = datetime.now(timezone.utc)
+            self.timestamp = datetime.now(UTC)
 
 
 class DatabaseConnectionMonitor:
-    """
-    Comprehensive database connection monitor with health checks,
+    """Comprehensive database connection monitor with health checks,
     security monitoring, and automatic recovery capabilities.
 
     Features:
@@ -90,8 +90,8 @@ class DatabaseConnectionMonitor:
     def __init__(
         self,
         database_service,
-        settings: Optional[Settings] = None,
-        metrics: Optional[DatabaseMetrics] = None,
+        settings: Settings | None = None,
+        metrics: DatabaseMetrics | None = None,
     ):
         """Initialize database connection monitor.
 
@@ -106,23 +106,23 @@ class DatabaseConnectionMonitor:
 
         # Monitoring state
         self._monitoring = False
-        self._monitor_task: Optional[asyncio.Task] = None
+        self._monitor_task: asyncio.Task | None = None
         self._health_check_interval = self.settings.db_health_check_interval
         self._security_check_interval = self.settings.db_security_check_interval
 
         # Health tracking
-        self._last_health_check: Optional[HealthCheckResult] = None
-        self._health_history: List[HealthCheckResult] = []
+        self._last_health_check: HealthCheckResult | None = None
+        self._health_history: list[HealthCheckResult] = []
         self._max_health_history = 100
 
         # Security tracking
-        self._security_alerts: List[SecurityAlert] = []
+        self._security_alerts: list[SecurityAlert] = []
         self._max_security_history = 500
         self._failed_connection_count = 0
         self._last_connection_attempt = 0
 
         # Alert callbacks
-        self._alert_callbacks: List[Callable[[SecurityAlert], None]] = []
+        self._alert_callbacks: list[Callable[[SecurityAlert], None]] = []
 
         # Recovery settings
         self._max_recovery_attempts = self.settings.db_max_recovery_attempts
@@ -221,7 +221,7 @@ class DatabaseConnectionMonitor:
             result = HealthCheckResult(
                 status=HealthStatus.CRITICAL,
                 response_time=response_time,
-                message=f"Health check error: {str(e)}",
+                message=f"Health check error: {e!s}",
                 details={"error": str(e)},
             )
 
@@ -245,7 +245,7 @@ class DatabaseConnectionMonitor:
         logger.debug(f"Health check completed: {result.status.value}")
         return result
 
-    async def _collect_health_details(self) -> Dict[str, Any]:
+    async def _collect_health_details(self) -> dict[str, Any]:
         """Collect detailed health information."""
         details = {}
 
@@ -275,7 +275,7 @@ class DatabaseConnectionMonitor:
 
         return details
 
-    def _determine_health_status(self, details: Dict[str, Any]) -> HealthStatus:
+    def _determine_health_status(self, details: dict[str, Any]) -> HealthStatus:
         """Determine overall health status based on details."""
         if not details.get("connected", False):
             return HealthStatus.CRITICAL
@@ -495,13 +495,11 @@ class DatabaseConnectionMonitor:
 
     # Status and reporting methods
 
-    def get_current_health(self) -> Optional[HealthCheckResult]:
+    def get_current_health(self) -> HealthCheckResult | None:
         """Get current health status."""
         return self._last_health_check
 
-    def get_health_history(
-        self, limit: Optional[int] = None
-    ) -> List[HealthCheckResult]:
+    def get_health_history(self, limit: int | None = None) -> list[HealthCheckResult]:
         """Get health check history.
 
         Args:
@@ -515,7 +513,7 @@ class DatabaseConnectionMonitor:
             history = history[-limit:]
         return history
 
-    def get_security_alerts(self, limit: Optional[int] = None) -> List[SecurityAlert]:
+    def get_security_alerts(self, limit: int | None = None) -> list[SecurityAlert]:
         """Get security alerts.
 
         Args:
@@ -529,7 +527,7 @@ class DatabaseConnectionMonitor:
             alerts = alerts[-limit:]
         return alerts
 
-    def get_monitoring_status(self) -> Dict[str, Any]:
+    def get_monitoring_status(self) -> dict[str, Any]:
         """Get overall monitoring status.
 
         Returns:
@@ -569,10 +567,10 @@ class DatabaseConnectionMonitor:
 
     def configure_monitoring(
         self,
-        health_check_interval: Optional[float] = None,
-        security_check_interval: Optional[float] = None,
-        max_recovery_attempts: Optional[int] = None,
-        recovery_delay: Optional[float] = None,
+        health_check_interval: float | None = None,
+        security_check_interval: float | None = None,
+        max_recovery_attempts: int | None = None,
+        recovery_delay: float | None = None,
     ):
         """Configure monitoring settings.
 

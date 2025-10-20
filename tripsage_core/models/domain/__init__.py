@@ -1,5 +1,4 @@
-"""
-Core business domain models for TripSage.
+"""Core business domain models for TripSage.
 
 This module contains the canonical business domain models that represent
 core entities and concepts in the TripSage travel planning system.
@@ -57,6 +56,7 @@ from .transportation import (
     TransportationProvider,
     TransportationVehicle,
 )
+
 
 # Trip domain models - removed as they're now in the unified model
 

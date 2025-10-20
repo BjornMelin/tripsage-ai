@@ -1,5 +1,4 @@
-"""
-Comprehensive RLS (Row Level Security) policy validation tests for BJO-121.
+"""Comprehensive RLS (Row Level Security) policy validation tests for BJO-121.
 
 Tests the RLS policies for memory tables to ensure proper user data isolation
 and security compliance with Supabase authentication.
@@ -10,6 +9,7 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
+
 
 # Skip all tests in this file since the migration file doesn't exist yet
 pytestmark = pytest.mark.skip(

@@ -1,11 +1,10 @@
-"""
-Chat agent implementation for handling real-time chat interactions.
+"""Chat agent implementation for handling real-time chat interactions.
 
 This module provides the ChatAgent class that integrates with the LangGraph
 orchestration system for processing user messages through specialized agents.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage.agents.base import BaseAgent
 from tripsage.agents.service_registry import ServiceRegistry
@@ -13,12 +12,12 @@ from tripsage.agents.service_registry import ServiceRegistry
 # TripSageOrchestrator imported lazily to avoid circular imports
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class ChatAgent(BaseAgent):
-    """
-    Chat agent for handling real-time chat interactions.
+    """Chat agent for handling real-time chat interactions.
 
     This agent orchestrates the conversation flow by routing user messages
     to appropriate specialized agents through the LangGraph system.
@@ -46,11 +45,10 @@ class ChatAgent(BaseAgent):
         self,
         user_id: str,
         message: str,
-        session_id: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """
-        Process a user message through the orchestration system.
+        session_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Process a user message through the orchestration system.
 
         Args:
             user_id: User identifier
@@ -97,11 +95,10 @@ class ChatAgent(BaseAgent):
         self,
         user_id: str,
         message: str,
-        session_id: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None,
+        session_id: str | None = None,
+        context: dict[str, Any] | None = None,
     ):
-        """
-        Stream processing of a user message.
+        """Stream processing of a user message.
 
         Args:
             user_id: User identifier
@@ -157,9 +154,8 @@ class ChatAgent(BaseAgent):
 
     async def get_conversation_history(
         self, user_id: str, session_id: str, limit: int = 50
-    ) -> List[Dict[str, Any]]:
-        """
-        Get conversation history for a session.
+    ) -> list[dict[str, Any]]:
+        """Get conversation history for a session.
 
         Args:
             user_id: User identifier
@@ -185,8 +181,7 @@ class ChatAgent(BaseAgent):
             return []
 
     async def clear_conversation(self, user_id: str, session_id: str) -> bool:
-        """
-        Clear conversation history for a session.
+        """Clear conversation history for a session.
 
         Args:
             user_id: User identifier
@@ -208,9 +203,8 @@ class ChatAgent(BaseAgent):
             logger.error(f"Error clearing conversation: {e}")
             return False
 
-    def get_available_agents(self) -> List[str]:
-        """
-        Get list of available specialized agents.
+    def get_available_agents(self) -> list[str]:
+        """Get list of available specialized agents.
 
         Returns:
             List of agent names
@@ -223,9 +217,8 @@ class ChatAgent(BaseAgent):
             "itinerary_agent",
         ]
 
-    def get_agent_capabilities(self) -> Dict[str, List[str]]:
-        """
-        Get capabilities of each specialized agent.
+    def get_agent_capabilities(self) -> dict[str, list[str]]:
+        """Get capabilities of each specialized agent.
 
         Returns:
             Dictionary mapping agent names to their capabilities

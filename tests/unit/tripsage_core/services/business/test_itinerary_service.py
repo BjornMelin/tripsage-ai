@@ -1,11 +1,10 @@
-"""
-Comprehensive tests for ItineraryService.
+"""Comprehensive tests for ItineraryService.
 
 This module provides full test coverage for itinerary management operations
 including itinerary creation, optimization, conflict detection, and collaboration.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
@@ -14,8 +13,6 @@ import pytest
 
 from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.itinerary_service import (
@@ -87,7 +84,7 @@ class TestItineraryService:
     @pytest.fixture
     def sample_itinerary_create_request(self):
         """Sample itinerary creation request."""
-        base_date = datetime.now(timezone.utc) + timedelta(days=30)
+        base_date = datetime.now(UTC) + timedelta(days=30)
 
         return ItineraryCreateRequest(
             trip_id=str(uuid4()),
@@ -119,8 +116,8 @@ class TestItineraryService:
                 "address": "Champ de Mars, 5 Avenue Anatole France, 75007 Paris",
                 "coordinates": {"latitude": 48.8584, "longitude": 2.2945},
             },
-            start_time=datetime.now(timezone.utc) + timedelta(days=30, hours=10),
-            end_time=datetime.now(timezone.utc) + timedelta(days=30, hours=12),
+            start_time=datetime.now(UTC) + timedelta(days=30, hours=10),
+            end_time=datetime.now(UTC) + timedelta(days=30, hours=12),
             duration=timedelta(hours=2),
             cost=Decimal("25.00"),
             currency="EUR",
@@ -138,7 +135,7 @@ class TestItineraryService:
     @pytest.fixture
     def sample_itinerary_day(self, sample_itinerary_item):
         """Sample itinerary day."""
-        day_date = datetime.now(timezone.utc) + timedelta(days=30)
+        day_date = datetime.now(UTC) + timedelta(days=30)
 
         return ItineraryDay(
             date=day_date.date(),
@@ -169,7 +166,7 @@ class TestItineraryService:
         itinerary_id = str(uuid4())
         user_id = str(uuid4())
         trip_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return Itinerary(
             id=itinerary_id,
@@ -518,7 +515,7 @@ class TestItineraryService:
 
         share_options = {
             "share_type": "view_only",
-            "expiry_date": datetime.now(timezone.utc) + timedelta(days=30),
+            "expiry_date": datetime.now(UTC) + timedelta(days=30),
             "password_protected": False,
             "allow_comments": True,
         }
@@ -591,7 +588,7 @@ class TestItineraryService:
                 "export_url": "https://storage.example.com/exports/itinerary_123.pdf",
                 "format": "pdf",
                 "file_size": 2048576,
-                "generated_at": datetime.now(timezone.utc),
+                "generated_at": datetime.now(UTC),
             }
             mock_export.return_value = export_result
 
@@ -614,8 +611,8 @@ class TestItineraryService:
 
         clone_options = {
             "new_dates": {
-                "start_date": datetime.now(timezone.utc) + timedelta(days=60),
-                "end_date": datetime.now(timezone.utc) + timedelta(days=66),
+                "start_date": datetime.now(UTC) + timedelta(days=60),
+                "end_date": datetime.now(UTC) + timedelta(days=66),
             },
             "adjust_for_season": True,
             "new_title": "Paris Adventure - Spring Edition",
@@ -850,7 +847,7 @@ class TestItineraryService:
             "day_index": 0,
             "item": {
                 "title": "New Activity",
-                "start_time": datetime.now(timezone.utc) + timedelta(days=1),
+                "start_time": datetime.now(UTC) + timedelta(days=1),
             },
             "user_id": str(uuid4()),
         }
@@ -873,11 +870,11 @@ class TestItineraryService:
         mock_database_service.get_itinerary_versions.return_value = [
             {
                 "version": 1,
-                "timestamp": datetime.now(timezone.utc) - timedelta(hours=2),
+                "timestamp": datetime.now(UTC) - timedelta(hours=2),
             },
             {
                 "version": 2,
-                "timestamp": datetime.now(timezone.utc) - timedelta(hours=1),
+                "timestamp": datetime.now(UTC) - timedelta(hours=1),
             },
         ]
 

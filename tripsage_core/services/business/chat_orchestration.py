@@ -1,5 +1,4 @@
-"""
-Chat Orchestration Service using direct database integration.
+"""Chat Orchestration Service using direct database integration.
 
 This service provides chat orchestration with direct database operations
 for improved performance and simplified architecture.
@@ -8,7 +7,7 @@ for improved performance and simplified architecture.
 import asyncio
 import json
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.mcp_abstraction.manager import MCPManager
@@ -21,13 +20,12 @@ from tripsage_core.services.infrastructure import get_database_service
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class ChatOrchestrationError(TripSageError):
     """Error raised when chat orchestration operations fail."""
-
-    pass
 
 
 class ChatOrchestrationService:
@@ -73,8 +71,8 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def create_chat_session(
-        self, user_id: int, metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, user_id: int, metadata: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Create a new chat session using Supabase MCP.
 
         Args:
@@ -125,9 +123,7 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Failed to create chat session: {e}")
-            raise ChatOrchestrationError(
-                f"Failed to create chat session: {str(e)}"
-            ) from e
+            raise ChatOrchestrationError(f"Failed to create chat session: {e!s}") from e
 
     @with_error_handling()
     async def save_message(
@@ -135,8 +131,8 @@ class ChatOrchestrationService:
         session_id: str,
         role: str,
         content: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Save a chat message using Supabase MCP.
 
         Args:
@@ -196,10 +192,10 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Failed to save message: {e}")
-            raise ChatOrchestrationError(f"Failed to save message: {str(e)}") from e
+            raise ChatOrchestrationError(f"Failed to save message: {e!s}") from e
 
     @with_error_handling()
-    async def search_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def search_flights(self, params: dict[str, Any]) -> dict[str, Any]:
         """Search flights using Duffel MCP.
 
         Args:
@@ -232,10 +228,10 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Flight search failed: {e}")
-            raise ChatOrchestrationError(f"Flight search failed: {str(e)}") from e
+            raise ChatOrchestrationError(f"Flight search failed: {e!s}") from e
 
     @with_error_handling()
-    async def search_accommodations(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def search_accommodations(self, params: dict[str, Any]) -> dict[str, Any]:
         """Search accommodations using Airbnb MCP.
 
         Args:
@@ -268,12 +264,10 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Accommodation search failed: {e}")
-            raise ChatOrchestrationError(
-                f"Accommodation search failed: {str(e)}"
-            ) from e
+            raise ChatOrchestrationError(f"Accommodation search failed: {e!s}") from e
 
     @with_error_handling()
-    async def get_location_info(self, location: str) -> Dict[str, Any]:
+    async def get_location_info(self, location: str) -> dict[str, Any]:
         """Get location information using Google Maps MCP.
 
         Args:
@@ -306,10 +300,10 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Location lookup failed: {e}")
-            raise ChatOrchestrationError(f"Location lookup failed: {str(e)}") from e
+            raise ChatOrchestrationError(f"Location lookup failed: {e!s}") from e
 
     @with_error_handling()
-    async def execute_parallel_tools(self, tool_calls: List[Dict]) -> Dict[str, Any]:
+    async def execute_parallel_tools(self, tool_calls: list[dict]) -> dict[str, Any]:
         """Execute multiple tool calls in parallel using structured tool calling service
 
         Args:
@@ -375,7 +369,7 @@ class ChatOrchestrationService:
         except Exception as e:
             self.logger.error(f"Parallel tool execution failed: {e}")
             raise ChatOrchestrationError(
-                f"Parallel tool execution failed: {str(e)}"
+                f"Parallel tool execution failed: {e!s}"
             ) from e
 
     @with_error_handling()
@@ -383,8 +377,8 @@ class ChatOrchestrationService:
         self,
         service: str,
         method: str,
-        params: Dict[str, Any],
-        call_id: Optional[str] = None,
+        params: dict[str, Any],
+        call_id: str | None = None,
     ) -> ToolCallResponse:
         """Execute a single structured tool call.
 
@@ -413,14 +407,12 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Structured tool call failed: {e}")
-            raise ChatOrchestrationError(
-                f"Structured tool call failed: {str(e)}"
-            ) from e
+            raise ChatOrchestrationError(f"Structured tool call failed: {e!s}") from e
 
     @with_error_handling()
     async def format_tool_response_for_chat(
         self, response: ToolCallResponse
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Format tool response for chat interface display.
 
         Args:
@@ -451,10 +443,10 @@ class ChatOrchestrationService:
         except Exception as e:
             self.logger.error(f"Tool response formatting failed: {e}")
             raise ChatOrchestrationError(
-                f"Tool response formatting failed: {str(e)}"
+                f"Tool response formatting failed: {e!s}"
             ) from e
 
-    async def _execute_single_tool_call(self, tool_call: Dict) -> Any:
+    async def _execute_single_tool_call(self, tool_call: dict) -> Any:
         """Execute a single tool call.
 
         Args:
@@ -475,7 +467,7 @@ class ChatOrchestrationService:
 
     @with_error_handling()
     async def _store_search_result(
-        self, search_type: str, params: Dict[str, Any], results: Any
+        self, search_type: str, params: dict[str, Any], results: Any
     ) -> None:
         """Store search results in memory graph for future reference.
 
@@ -507,7 +499,7 @@ class ChatOrchestrationService:
             self.logger.warning(f"Failed to store search result in memory: {e}")
 
     @with_error_handling()
-    async def _store_location_data(self, location: str, data: Dict[str, Any]) -> None:
+    async def _store_location_data(self, location: str, data: dict[str, Any]) -> None:
         """Store location data in memory graph.
 
         Args:
@@ -542,7 +534,7 @@ class ChatOrchestrationService:
     @with_error_handling()
     async def get_chat_history(
         self, session_id: str, limit: int = 10, offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get chat history using Supabase MCP.
 
         Args:
@@ -593,7 +585,7 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Failed to get chat history: {e}")
-            raise ChatOrchestrationError(f"Failed to get chat history: {str(e)}") from e
+            raise ChatOrchestrationError(f"Failed to get chat history: {e!s}") from e
 
     @with_error_handling()
     async def end_chat_session(self, session_id: str) -> bool:
@@ -635,7 +627,7 @@ class ChatOrchestrationService:
 
         except Exception as e:
             self.logger.error(f"Failed to end chat session: {e}")
-            raise ChatOrchestrationError(f"Failed to end chat session: {str(e)}") from e
+            raise ChatOrchestrationError(f"Failed to end chat session: {e!s}") from e
 
 
 async def main():

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-"""
-TripSage Database Connection Verification Script
+"""TripSage Database Connection Verification Script
 
 This script verifies the connection to the Supabase database
 and checks that the required tables exist.
@@ -12,11 +11,13 @@ import asyncio
 import os
 import sys
 
+
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.db.client import get_supabase_client
 from src.utils.logging import configure_logging
+
 
 # Configure logging
 logger = configure_logging(__name__)
@@ -38,9 +39,7 @@ REQUIRED_TABLES = [
 
 
 async def verify_connection() -> None:
-    """
-    Verify the connection to the Supabase database and check that required tables exist.
-    """
+    """Verify the connection to the Supabase database and check that required tables exist."""
     print("Connecting to Supabase...")
 
     try:
@@ -85,11 +84,11 @@ async def verify_connection() -> None:
                     ):  # PostgreSQL error code for table does not exist
                         print(f"❌ Table '{table}' does not exist")
                     else:
-                        print(f"❓ Could not verify table '{table}': {str(e)}")
+                        print(f"❓ Could not verify table '{table}': {e!s}")
 
         print("\nDatabase verification complete!")
     except Exception as e:
-        print(f"❌ Error connecting to Supabase: {str(e)}")
+        print(f"❌ Error connecting to Supabase: {e!s}")
         sys.exit(1)
 
 

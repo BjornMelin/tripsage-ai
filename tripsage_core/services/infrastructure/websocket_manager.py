@@ -1,5 +1,4 @@
-"""
-WebSocket connection manager with integrated broadcasting and error recovery.
+"""WebSocket connection manager with integrated broadcasting and error recovery.
 
 This module provides comprehensive WebSocket connection management including:
 - Integration with Redis-backed broadcasting
@@ -19,9 +18,10 @@ import logging
 import secrets
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 import redis.asyncio as redis
@@ -45,6 +45,7 @@ from .websocket_messaging_service import (
     WebSocketMessagingService,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +59,7 @@ class ConnectionStatus(str, Enum):
     RECONNECTING = "reconnecting"
 
 
-def redis_with_fallback(fallback_method: Optional[str] = None):
+def redis_with_fallback(fallback_method: str | None = None):
     """Decorator to handle Redis operations with fallback to local methods.
 
     Args:
@@ -157,17 +158,17 @@ RATE_LIMIT_LUA_SCRIPT = """
 class WebSocketSubscribeRequest(BaseModel):
     """WebSocket subscription request."""
 
-    channels: List[str] = Field(default_factory=list)
-    unsubscribe_channels: List[str] = Field(default_factory=list)
+    channels: list[str] = Field(default_factory=list)
+    unsubscribe_channels: list[str] = Field(default_factory=list)
 
 
 class WebSocketSubscribeResponse(BaseModel):
     """WebSocket subscription response."""
 
     success: bool
-    subscribed_channels: List[str] = Field(default_factory=list)
-    failed_channels: List[str] = Field(default_factory=list)
-    error: Optional[str] = None
+    subscribed_channels: list[str] = Field(default_factory=list)
+    failed_channels: list[str] = Field(default_factory=list)
+    error: str | None = None
 
 
 class WebSocketMessageLimits(BaseModel):
@@ -309,16 +310,16 @@ class ExponentialBackoff:
 class RateLimiter:
     """Hierarchical rate limiter using Redis sliding window."""
 
-    def __init__(self, redis_client: Optional[redis.Redis], config: RateLimitConfig):
+    def __init__(self, redis_client: redis.Redis | None, config: RateLimitConfig):
         self.redis = redis_client
         self.config = config
-        self.local_counters: Dict[str, Dict] = defaultdict(
+        self.local_counters: dict[str, dict] = defaultdict(
             lambda: {"count": 0, "window_start": time.time()}
         )
 
     @redis_with_fallback("_check_local_connection_limit")
     async def check_connection_limit(
-        self, user_id: UUID, session_id: Optional[UUID] = None
+        self, user_id: UUID, session_id: UUID | None = None
     ) -> bool:
         """Check if user/session can create new connection."""
         user_key = f"connections:user:{user_id}"
@@ -339,7 +340,7 @@ class RateLimiter:
     @redis_with_fallback("_check_local_message_rate")
     async def check_message_rate(
         self, user_id: UUID, connection_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check message rate limits."""
         user_key = f"messages:user:{user_id}"
         conn_key = f"messages:connection:{connection_id}"
@@ -373,7 +374,7 @@ class RateLimiter:
         }
 
     def _check_local_connection_limit(
-        self, user_id: UUID, session_id: Optional[UUID] = None
+        self, user_id: UUID, session_id: UUID | None = None
     ) -> bool:
         """Fallback local connection limit check."""
         # Simplified local implementation - always allow connections in fallback mode
@@ -381,7 +382,7 @@ class RateLimiter:
 
     def _check_local_message_rate(
         self, user_id: UUID, connection_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Fallback local message rate check."""
         now = time.time()
         counter = self.local_counters[f"user:{user_id}"]
@@ -427,12 +428,12 @@ class WebSocketManager:
         self.messaging_service = WebSocketMessagingService(self.auth_service)
 
         # Redis integration
-        self.redis_client: Optional[redis.Redis] = None
-        self.redis_pubsub: Optional[redis.client.PubSub] = None
+        self.redis_client: redis.Redis | None = None
+        self.redis_pubsub: redis.client.PubSub | None = None
         self.broadcaster = broadcaster
 
         # Rate limiting
-        self.rate_limiter: Optional[RateLimiter] = None
+        self.rate_limiter: RateLimiter | None = None
 
         # Performance monitoring
         self.performance_metrics = {
@@ -446,11 +447,11 @@ class WebSocketManager:
         }
 
         # Background tasks
-        self._cleanup_task: Optional[asyncio.Task] = None
-        self._heartbeat_task: Optional[asyncio.Task] = None
-        self._performance_task: Optional[asyncio.Task] = None
-        self._redis_listener_task: Optional[asyncio.Task] = None
-        self._priority_processor_task: Optional[asyncio.Task] = None
+        self._cleanup_task: asyncio.Task | None = None
+        self._heartbeat_task: asyncio.Task | None = None
+        self._performance_task: asyncio.Task | None = None
+        self._redis_listener_task: asyncio.Task | None = None
+        self._priority_processor_task: asyncio.Task | None = None
         self._running = False
 
         # Settings
@@ -511,7 +512,7 @@ class WebSocketManager:
             logger.error(f"Failed to start WebSocket manager: {e}")
             self._running = False
             raise CoreServiceError(
-                message=f"Failed to start WebSocket manager: {str(e)}",
+                message=f"Failed to start WebSocket manager: {e!s}",
                 code="WEBSOCKET_MANAGER_START_FAILED",
                 service="WebSocketManager",
             ) from e
@@ -694,7 +695,7 @@ class WebSocketManager:
         )
 
     async def _check_connection_rate_limit(
-        self, user_id: UUID, session_id: Optional[UUID] = None
+        self, user_id: UUID, session_id: UUID | None = None
     ) -> bool:
         """Check if connection is allowed under rate limits.
 
@@ -801,7 +802,7 @@ class WebSocketManager:
         for connection_id in connection_ids:
             await self.disconnect_connection(connection_id)
 
-    def get_connection_stats(self) -> Dict[str, Any]:
+    def get_connection_stats(self) -> dict[str, Any]:
         """Get comprehensive connection statistics."""
         # Get stats from messaging service and combine with local metrics
         messaging_stats = self.messaging_service.get_connection_stats()
@@ -945,7 +946,7 @@ class WebSocketManager:
         except Exception as e:
             logger.error(f"Error in Redis message listener: {e}")
 
-    async def _handle_broadcast_message(self, data: Dict[str, Any]) -> None:
+    async def _handle_broadcast_message(self, data: dict[str, Any]) -> None:
         """Handle incoming broadcast message from Redis."""
         try:
             event = WebSocketEvent(

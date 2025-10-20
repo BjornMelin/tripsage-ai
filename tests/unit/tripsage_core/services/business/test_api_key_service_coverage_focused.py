@@ -1,5 +1,4 @@
-"""
-Focused test coverage for API key service targeting specific uncovered lines.
+"""Focused test coverage for API key service targeting specific uncovered lines.
 
 This module provides targeted tests for specific uncovered line ranges
 identified in BJO-211 coverage analysis to achieve 90%+ coverage.
@@ -8,7 +7,7 @@ identified in BJO-211 coverage analysis to achieve 90%+ coverage.
 import asyncio
 import base64
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
@@ -44,11 +43,11 @@ class TestApiKeyServiceCoverageFocused:
             "service": "openai",
             "description": "Test description",
             "is_valid": True,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "expires_at": None,
             "last_used": None,
-            "last_validated": datetime.now(timezone.utc).isoformat(),
+            "last_validated": datetime.now(UTC).isoformat(),
             "usage_count": 0,
         }
         cache.get_json.return_value = None
@@ -503,9 +502,7 @@ class TestApiKeyServiceCoverageFocused:
         # Simulate timeout during transaction execution
         mock_transaction = AsyncMock()
         mock_transaction.__aenter__.return_value = mock_transaction
-        mock_transaction.execute.side_effect = asyncio.TimeoutError(
-            "Transaction timeout"
-        )
+        mock_transaction.execute.side_effect = TimeoutError("Transaction timeout")
         mock_dependencies["db"].transaction.return_value = mock_transaction
 
         with patch.object(api_service, "validate_api_key") as mock_validate:
@@ -527,7 +524,7 @@ class TestApiKeyServiceCoverageFocused:
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
-            mock_get.side_effect = asyncio.TimeoutError("Request timeout")
+            mock_get.side_effect = TimeoutError("Request timeout")
 
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test-key-12345", user_id
@@ -543,7 +540,7 @@ class TestApiKeyServiceCoverageFocused:
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
-            mock_get.side_effect = asyncio.TimeoutError("Request timeout")
+            mock_get.side_effect = TimeoutError("Request timeout")
 
             result = await api_service.validate_api_key(
                 ServiceType.WEATHER, "weather_api_key_test_12345", user_id
@@ -559,7 +556,7 @@ class TestApiKeyServiceCoverageFocused:
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
-            mock_get.side_effect = asyncio.TimeoutError("Request timeout")
+            mock_get.side_effect = TimeoutError("Request timeout")
 
             result = await api_service.validate_api_key(
                 ServiceType.GOOGLEMAPS, "AIza_test_key_value_12345", user_id
@@ -622,7 +619,8 @@ class TestApiKeyServiceCoverageFocused:
         self, api_service, mock_dependencies
     ):
         """Test validation caching when cache service fails - targets lines
-        1128-1159."""
+        1128-1159.
+        """
         user_id = str(uuid.uuid4())
 
         # Mock cache service to raise exceptions
@@ -660,7 +658,6 @@ class TestApiKeyServiceCoverageFocused:
     @pytest.mark.asyncio
     async def test_validation_with_retry_mechanism(self, api_service):
         """Test retry mechanism in validation."""
-
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
@@ -770,7 +767,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_googlemaps_health_check_timeout(self, api_service):
         """Test Google Maps health check timeout handling (lines 1095-1099)."""
-
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.TimeoutException("Service timeout")
 
@@ -785,7 +781,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_googlemaps_health_check_network_error(self, api_service):
         """Test Google Maps health check network connection failures."""
-
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.ConnectError("Connection failed")
 
@@ -797,7 +792,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_googlemaps_capability_detection_timeout(self, api_service):
         """Test Google Maps capability detection with timeout (lines 1112-1127)."""
-
         with patch.object(api_service.client, "get") as mock_get:
             # Simulate timeout on all capability check requests
             mock_get.side_effect = httpx.TimeoutException("Request timeout")
@@ -812,7 +806,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_googlemaps_capability_detection_partial_failures(self, api_service):
         """Test Google Maps capability detection with mixed success/failure."""
-
         with patch.object(api_service.client, "get") as mock_get:
             # First API succeeds, second times out, third fails with error
             mock_get.side_effect = [
@@ -830,7 +823,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_openai_validation_timeout_handling(self, api_service):
         """Test OpenAI validation timeout handling (lines 778-784)."""
-
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
@@ -849,7 +841,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_openai_health_check_timeout(self, api_service):
         """Test OpenAI health check timeout scenarios (lines 1001-1009)."""
-
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.TimeoutException("Health check timeout")
 
@@ -862,7 +853,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_openai_health_check_network_error(self, api_service):
         """Test OpenAI health check network failures."""
-
         with patch.object(api_service.client, "get") as mock_get:
             mock_get.side_effect = httpx.ConnectError("Cannot connect to OpenAI")
 
@@ -875,7 +865,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_weather_api_validation_timeout(self, api_service):
         """Test Weather API validation timeout handling (lines 851-857)."""
-
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
@@ -894,7 +883,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_weather_api_network_failures(self, api_service):
         """Test Weather API network connection failures."""
-
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:
@@ -914,7 +902,7 @@ class TestServiceValidationFailures:
 
         # Test 500 Internal Server Error
         with patch.object(api_service.client, "get") as mock_get:
-            mock_get.return_value = Mock(status_code=500, json=lambda: {})
+            mock_get.return_value = Mock(status_code=500, json=dict)
 
             result = await api_service.validate_api_key(
                 ServiceType.OPENAI, "sk-test-key", user_id
@@ -945,7 +933,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_multiple_service_timeout_scenarios(self, api_service):
         """Test timeout scenarios across different services."""
-
         user_id = str(uuid.uuid4())
 
         test_cases = [
@@ -972,7 +959,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_health_check_timeout_status_consistency(self, api_service):
         """Test that health check timeouts return consistent status."""
-
         # Test all service health checks with timeout
         services = [ServiceType.OPENAI, ServiceType.GOOGLEMAPS]
 
@@ -998,7 +984,6 @@ class TestServiceValidationFailures:
     @pytest.mark.asyncio
     async def test_concurrent_timeout_handling(self, api_service):
         """Test concurrent validation requests with timeouts."""
-
         user_id = str(uuid.uuid4())
 
         with patch.object(api_service.client, "get") as mock_get:

@@ -1,5 +1,4 @@
-"""
-Example of how to write clean, robust tests using the new test configuration approach.
+"""Example of how to write clean, robust tests using the new test configuration approach.
 
 This demonstrates the proper patterns for testing TripSage components without
 Pydantic validation errors or complex mocking setups.

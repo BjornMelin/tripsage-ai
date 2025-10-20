@@ -1,12 +1,11 @@
-"""
-MCP model classes for TripSage.
+"""MCP model classes for TripSage.
 
 This module provides the MCP-related model classes used for communication with
 MCP (Model Context Protocol) servers and validation of requests and responses.
 """
 
 from datetime import datetime
-from typing import Any, Dict, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from pydantic import (
     ConfigDict,
@@ -27,10 +26,10 @@ class MCPRequestBase(TripSageModel):
     )
 
     # Add common request tracing/logging fields
-    request_id: Optional[str] = Field(
+    request_id: str | None = Field(
         None, description="Optional unique request ID for tracing"
     )
-    timestamp: Optional[datetime] = Field(None, description="Request timestamp")
+    timestamp: datetime | None = Field(None, description="Request timestamp")
 
 
 class MCPResponseBase(TripSageModel):
@@ -42,10 +41,8 @@ class MCPResponseBase(TripSageModel):
 
     # Common response fields
     success: bool = Field(True, description="Whether the request was successful")
-    error: Optional[str] = Field(
-        None, description="Error message if the request failed"
-    )
-    request_id: Optional[str] = Field(None, description="The request ID for tracing")
+    error: str | None = Field(None, description="Error message if the request failed")
+    request_id: str | None = Field(None, description="The request ID for tracing")
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="Response timestamp"
     )
@@ -56,8 +53,8 @@ class ErrorResponse(MCPResponseBase):
 
     success: bool = Field(False, description="Always false for error responses")
     error: str = Field(..., description="Error message")
-    error_type: Optional[str] = Field(None, description="Type of error")
-    error_details: Optional[Dict[str, Any]] = Field(
+    error_type: str | None = Field(None, description="Type of error")
+    error_details: dict[str, Any] | None = Field(
         None, description="Additional error details"
     )
 
@@ -67,8 +64,8 @@ class PaginatedResponseBase(MCPResponseBase):
 
     page: int = Field(1, description="Current page number")
     page_size: int = Field(..., description="Number of items per page")
-    total_items: Optional[int] = Field(None, description="Total number of items")
-    total_pages: Optional[int] = Field(None, description="Total number of pages")
+    total_items: int | None = Field(None, description="Total number of items")
+    total_pages: int | None = Field(None, description="Total number of pages")
     has_next: bool = Field(False, description="Whether there is a next page")
     has_previous: bool = Field(False, description="Whether there is a previous page")
 
@@ -119,7 +116,7 @@ class SearchRequest(MCPRequestBase):
     limit: int = Field(
         10, ge=1, le=100, description="Maximum number of results to return"
     )
-    offset: Optional[int] = Field(None, ge=0, description="Offset for pagination")
+    offset: int | None = Field(None, ge=0, description="Offset for pagination")
 
 
 class LocationRequest(MCPRequestBase):
@@ -152,7 +149,7 @@ class CacheConfig(TripSageModel):
     ttl_seconds: int = Field(
         3600, ge=0, description="Time-to-live in seconds (0 = indefinite)"
     )
-    cache_key_prefix: Optional[str] = Field(None, description="Prefix for cache keys")
+    cache_key_prefix: str | None = Field(None, description="Prefix for cache keys")
 
 
 class TimeZoneRequest(MCPRequestBase):

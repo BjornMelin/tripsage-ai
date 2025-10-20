@@ -5,8 +5,8 @@ including user creation, authentication, profile management, and settings.
 Updated for Pydantic v2 and modern testing patterns.
 """
 
-from datetime import datetime, timezone
-from typing import Any, Dict
+from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -14,11 +14,7 @@ import pytest
 
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.user_service import (
@@ -52,7 +48,7 @@ class TestUserService:
     @pytest.fixture
     def sample_user_response(self, sample_user_id: str) -> UserResponse:
         """Sample user response object."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return UserResponse(
             id=sample_user_id,
@@ -67,9 +63,9 @@ class TestUserService:
         )
 
     @pytest.fixture
-    def sample_db_user_data(self, sample_user_id: str) -> Dict[str, Any]:
+    def sample_db_user_data(self, sample_user_id: str) -> dict[str, Any]:
         """Sample database user data."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return {
             "id": sample_user_id,
@@ -104,8 +100,8 @@ class TestUserService:
             "username": sample_user_create_request.username,
             "is_active": True,
             "is_verified": False,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "preferences": {},
         }
 
@@ -132,7 +128,7 @@ class TestUserService:
         user_service: UserService,
         mock_database_service: AsyncMock,
         sample_user_create_request: UserCreateRequest,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test user creation with duplicate email."""
         # Arrange
@@ -148,7 +144,7 @@ class TestUserService:
         user_service: UserService,
         mock_database_service: AsyncMock,
         sample_user_create_request: UserCreateRequest,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test user creation with duplicate username."""
         # Arrange
@@ -176,7 +172,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user retrieval by ID."""
         # Arrange
@@ -213,7 +209,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user retrieval by email."""
         # Arrange
@@ -233,7 +229,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user retrieval by username."""
         # Arrange
@@ -257,7 +253,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user update."""
         # Arrange
@@ -266,7 +262,7 @@ class TestUserService:
 
         updated_data = sample_db_user_data.copy()
         updated_data["full_name"] = "Updated Name"
-        updated_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        updated_data["updated_at"] = datetime.now(UTC).isoformat()
         mock_database_service.update_user.return_value = updated_data
 
         update_request = UserUpdateRequest(full_name="Updated Name")
@@ -301,7 +297,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful password change."""
         # Arrange
@@ -330,7 +326,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test password change with wrong current password."""
         # Arrange
@@ -374,7 +370,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful credential verification."""
         # Arrange
@@ -400,7 +396,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test credential verification with wrong password."""
         # Arrange
@@ -441,7 +437,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test credential verification with inactive user."""
         # Arrange
@@ -469,7 +465,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user deactivation."""
         # Arrange
@@ -488,7 +484,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test successful user activation."""
         # Arrange
@@ -616,8 +612,8 @@ class TestUserService:
             "username": "testuser1",
             "is_active": True,
             "is_verified": False,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "preferences": {},
         }
 
@@ -633,7 +629,7 @@ class TestUserService:
         self,
         user_service: UserService,
         mock_database_service: AsyncMock,
-        sample_db_user_data: Dict[str, Any],
+        sample_db_user_data: dict[str, Any],
     ):
         """Test user update with empty update request."""
         # Arrange

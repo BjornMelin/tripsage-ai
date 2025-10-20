@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for agent node implementations.
+"""Comprehensive tests for agent node implementations.
 
 Tests the modern agent node architecture with service injection,
 tool integration, and proper async patterns.

@@ -1,5 +1,4 @@
-"""
-Unit tests for TripSage Core decorator utilities.
+"""Unit tests for TripSage Core decorator utilities.
 
 Tests error handling decorators, retry logic, timing, async/sync decorators,
 and memory service initialization decorators.
@@ -33,7 +32,8 @@ class TestWithErrorHandling:
 
     async def test_async_function_with_exception_dict_return(self):
         """Test error handling decorator with async function that fails and
-        returns dict."""
+        returns dict.
+        """
 
         @with_error_handling()
         async def async_fail_dict() -> dict:
@@ -45,7 +45,8 @@ class TestWithErrorHandling:
 
     async def test_async_function_with_exception_reraise(self):
         """Test error handling decorator with async function that fails and
-        re-raises."""
+        re-raises.
+        """
 
         @with_error_handling()
         async def async_fail_reraise() -> str:
@@ -66,7 +67,8 @@ class TestWithErrorHandling:
 
     def test_sync_function_with_exception_dict_return(self):
         """Test error handling decorator with sync function that fails and
-        returns dict."""
+        returns dict.
+        """
 
         @with_error_handling()
         def sync_fail_dict() -> dict:
@@ -78,7 +80,8 @@ class TestWithErrorHandling:
 
     def test_sync_function_with_exception_reraise(self):
         """Test error handling decorator with sync function that fails and
-        re-raises."""
+        re-raises.
+        """
 
         @with_error_handling()
         def sync_fail_reraise() -> str:
@@ -108,7 +111,6 @@ class TestWithErrorHandling:
         @with_error_handling()
         def original_function():
             """Original docstring."""
-            pass
 
         assert original_function.__name__ == "original_function"
         assert original_function.__doc__ == "Original docstring."
@@ -283,7 +285,7 @@ class TestRetryOnFailure:
             call_count += 1
             if call_count == 1:
                 raise ConnectionError("Network error")  # Should retry
-            elif call_count == 2:
+            if call_count == 2:
                 raise ValueError("Value error")  # Should not retry
             return "success"
 
@@ -333,7 +335,6 @@ class TestRetryOnFailure:
         @retry_on_failure()
         def original_function():
             """Original docstring."""
-            pass
 
         assert original_function.__name__ == "original_function"
         assert original_function.__doc__ == "Original docstring."
@@ -458,7 +459,8 @@ class TestEnsureMemoryClientInitialized:
 
     async def test_return_annotation_detection(self):
         """Test that decorator correctly detects return type annotations for
-        memory functions."""
+        memory functions.
+        """
 
         @ensure_memory_client_initialized
         async def dict_return() -> dict:
@@ -533,10 +535,9 @@ class TestDecoratorHelpers:
 
     async def test_complex_return_annotations(self):
         """Test decorators with complex return type annotations."""
-        from typing import Dict, List, Optional
 
         @with_error_handling()
-        async def complex_return() -> Optional[Dict[str, List[str]]]:
+        async def complex_return() -> dict[str, list[str]] | None:
             raise ValueError("Complex type error")
 
         # Should re-raise since it's not exactly Dict

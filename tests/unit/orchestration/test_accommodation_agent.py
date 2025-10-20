@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for AccommodationAgentNode.
+"""Comprehensive tests for AccommodationAgentNode.
 
 This module provides full test coverage for the accommodation agent node
 including search parameter extraction, API integration, and response generation.

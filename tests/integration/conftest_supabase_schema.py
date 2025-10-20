@@ -1,5 +1,4 @@
-"""
-Configuration and fixtures for Supabase schema integration tests.
+"""Configuration and fixtures for Supabase schema integration tests.
 
 This module provides shared fixtures, utilities, and configuration for testing
 the enhanced Supabase schema with collaboration features.
@@ -9,10 +8,11 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+
 
 # Configure test logging
 logging.basicConfig(level=logging.INFO)
@@ -74,7 +74,7 @@ class TestUser:
         self.created_at = datetime.utcnow()
         self.permissions = self._get_default_permissions(role)
 
-    def _get_default_permissions(self, role: str) -> Dict[str, bool]:
+    def _get_default_permissions(self, role: str) -> dict[str, bool]:
         """Get default permissions based on role."""
         permission_map = {
             "owner": {
@@ -129,7 +129,7 @@ class TestTrip:
             "added_by": self.owner.id,
         }
 
-    def get_collaborator_permission(self, user_id: UUID) -> Optional[str]:
+    def get_collaborator_permission(self, user_id: UUID) -> str | None:
         """Get permission level for a collaborator."""
         if user_id == self.owner.id:
             return "admin"
@@ -142,7 +142,7 @@ class MockSupabaseClient:
     """Mock Supabase client for testing schema interactions."""
 
     def __init__(self):
-        self.current_user_id: Optional[UUID] = None
+        self.current_user_id: UUID | None = None
         self.data_store = {
             "trips": {},
             "trip_collaborators": {},
@@ -157,11 +157,11 @@ class MockSupabaseClient:
         self.constraints_enabled = True
         self.rls_enabled = True
 
-    def set_current_user(self, user_id: Optional[UUID]):
+    def set_current_user(self, user_id: UUID | None):
         """Set current authenticated user for RLS simulation."""
         self.current_user_id = user_id
 
-    def auth_uid(self) -> Optional[UUID]:
+    def auth_uid(self) -> UUID | None:
         """Simulate auth.uid() function."""
         return self.current_user_id
 
@@ -182,7 +182,7 @@ class MockSupabaseClient:
             logger.info(f"Unhandled query type: {query[:50]}...")
             return None
 
-    async def _handle_select(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    async def _handle_select(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle SELECT queries with RLS simulation."""
         # Extract table name (simple parsing)
         if "FROM trips" in query:
@@ -194,7 +194,7 @@ class MockSupabaseClient:
         else:
             return []
 
-    async def _select_trips(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    async def _select_trips(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle trips table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -225,7 +225,7 @@ class MockSupabaseClient:
 
     async def _select_collaborators(
         self, query: str, params: tuple
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Handle trip_collaborators table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -237,17 +237,16 @@ class MockSupabaseClient:
             trip_id = collab_data["trip_id"]
 
             # User is the collaborator
-            if collab_data["user_id"] == str(self.current_user_id):
-                accessible_collabs.append(collab_data)
-            # User owns the trip
-            elif trip_id in self.data_store["trips"] and self.data_store["trips"][
-                trip_id
-            ]["user_id"] == str(self.current_user_id):
+            if collab_data["user_id"] == str(self.current_user_id) or (
+                trip_id in self.data_store["trips"]
+                and self.data_store["trips"][trip_id]["user_id"]
+                == str(self.current_user_id)
+            ):
                 accessible_collabs.append(collab_data)
 
         return accessible_collabs
 
-    async def _select_memories(self, query: str, params: tuple) -> List[Dict[str, Any]]:
+    async def _select_memories(self, query: str, params: tuple) -> list[dict[str, Any]]:
         """Handle memories table SELECT with RLS."""
         if not self.current_user_id:
             return []
@@ -342,8 +341,7 @@ class MockSupabaseClient:
         }
 
     def _user_exists(self, user_id: UUID) -> bool:
-        """
-        Check if user exists
+        """Check if user exists
         (simplified - in real implementation would check auth.users).
         """
         # For testing, assume system user and current user exist
@@ -362,10 +360,10 @@ class MockSupabaseClient:
 class SchemaValidator:
     """Validator for database schema components."""
 
-    def __init__(self, schema_files: Dict[str, str]):
+    def __init__(self, schema_files: dict[str, str]):
         self.schema_files = schema_files
 
-    def validate_policies(self) -> List[str]:
+    def validate_policies(self) -> list[str]:
         """Validate RLS policies are properly defined."""
         policies_sql = self.schema_files.get("policies", "")
         errors = []
@@ -384,7 +382,7 @@ class SchemaValidator:
 
         return errors
 
-    def validate_indexes(self) -> List[str]:
+    def validate_indexes(self) -> list[str]:
         """Validate performance indexes are defined."""
         indexes_sql = self.schema_files.get("indexes", "")
         errors = []
@@ -395,7 +393,7 @@ class SchemaValidator:
 
         return errors
 
-    def validate_functions(self) -> List[str]:
+    def validate_functions(self) -> list[str]:
         """Validate database functions are defined."""
         functions_sql = self.schema_files.get("functions", "")
         errors = []
@@ -406,7 +404,7 @@ class SchemaValidator:
 
         return errors
 
-    def validate_migration(self, migration_sql: str) -> List[str]:
+    def validate_migration(self, migration_sql: str) -> list[str]:
         """Validate migration safety and completeness."""
         errors = []
 
@@ -626,7 +624,7 @@ def assert_performance_threshold(duration: float, threshold: float, operation: s
 
 
 def assert_rls_isolation(
-    user1_data: List[Any], user2_data: List[Any], user1_id: UUID, user2_id: UUID
+    user1_data: list[Any], user2_data: list[Any], user1_id: UUID, user2_id: UUID
 ):
     """Assert RLS properly isolates data between users."""
     # Check user1 data belongs to user1
@@ -652,7 +650,7 @@ def assert_rls_isolation(
             )
 
 
-def create_test_memory_embedding() -> List[float]:
+def create_test_memory_embedding() -> list[float]:
     """Create a test embedding vector for memory operations."""
     import random
 
@@ -661,8 +659,8 @@ def create_test_memory_embedding() -> List[float]:
 
 
 async def simulate_concurrent_access(
-    operations: List[callable], max_concurrent: int = 3
-) -> List[Any]:
+    operations: list[callable], max_concurrent: int = 3
+) -> list[Any]:
     """Simulate concurrent database access for testing."""
     semaphore = asyncio.Semaphore(max_concurrent)
 

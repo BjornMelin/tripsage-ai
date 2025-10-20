@@ -1,5 +1,4 @@
-"""
-Comprehensive migration script validation tests for BJO-121.
+"""Comprehensive migration script validation tests for BJO-121.
 
 Tests the migration SQL structure, syntax, safety measures, and best practices
 for the foreign key constraints and UUID conversion migration.
@@ -9,6 +8,7 @@ import re
 from pathlib import Path
 
 import pytest
+
 
 # Skip all tests in this file since the migration file doesn't exist yet
 pytestmark = pytest.mark.skip(

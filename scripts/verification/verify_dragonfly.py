@@ -8,6 +8,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+
 # If running as a script, add project root to path
 if __name__ == "__main__":
     project_root = Path(__file__).resolve().parent.parent.parent
@@ -74,7 +75,7 @@ async def verify_dragonfly_connection():
         return True
 
     except Exception as e:
-        print(f"\n❌ Error: {str(e)}")
+        print(f"\n❌ Error: {e!s}")
         print("\n💡 Troubleshooting tips:")
         print("   1. Ensure DragonflyDB container is running:")
         print("      docker-compose up -d dragonfly")

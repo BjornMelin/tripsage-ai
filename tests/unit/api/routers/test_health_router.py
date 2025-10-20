@@ -1,7 +1,7 @@
 """Comprehensive tests for enhanced health check endpoints."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -672,5 +672,5 @@ class TestHealthModels:
         assert health.external_services == {}
         assert isinstance(health.timestamp, datetime)
         # Check that timestamp is recent (within last minute)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         assert (now - health.timestamp).total_seconds() < 60

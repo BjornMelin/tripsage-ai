@@ -1,5 +1,4 @@
-"""
-Comprehensive WebSocket Performance Integration Tests.
+"""Comprehensive WebSocket Performance Integration Tests.
 
 This module provides end-to-end integration tests for the complete WebSocket
 performance infrastructure, including:
@@ -33,6 +32,7 @@ from tripsage_core.services.infrastructure.websocket_performance_monitor import 
     PerformanceThresholds,
     WebSocketPerformanceMonitor,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -601,7 +601,6 @@ class TestWebSocketEndToEndPerformance:
         self, test_client, performance_monitor
     ):
         """Test complete WebSocket workflow with performance monitoring."""
-
         # This test would ideally use a real WebSocket connection
         # For now, we'll simulate the workflow with the components we have
 

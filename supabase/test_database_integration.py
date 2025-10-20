@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-TripSage Database Integration Test Script
+"""TripSage Database Integration Test Script
 Tests Supabase database functionality including trip collaboration,
 RLS policies, and vector search.
 """
@@ -8,7 +7,6 @@ RLS policies, and vector search.
 import os
 import sys
 from pathlib import Path
-from typing import Dict
 
 
 class DatabaseTester:
@@ -291,7 +289,7 @@ class DatabaseTester:
             self.log_test("Security Configuration", True, "Complete RLS security setup")
             return True
 
-    def generate_schema_summary(self) -> Dict:
+    def generate_schema_summary(self) -> dict:
         """Generate a summary of the database schema."""
         summary = {
             "tables": [],

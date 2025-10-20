@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for DestinationService.
+"""Comprehensive tests for DestinationService.
 
 This module provides full test coverage for destination management operations
 including search, discovery, weather integration, and travel advisory features.
@@ -13,8 +12,6 @@ import pytest
 
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
 from tripsage_core.services.business.destination_service import (
@@ -258,7 +255,6 @@ class TestDestinationService:
     @pytest.mark.asyncio
     async def test_search_destinations_validation_error(self, destination_service):
         """Test destination search with validation errors."""
-
         # Create invalid search request with end date before start date
         with pytest.raises(ValueError, match="End date must be after start date"):
             DestinationSearchRequest(

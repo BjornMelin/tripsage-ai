@@ -1,13 +1,11 @@
-"""
-Optimized source selector for direct Crawl4AI SDK integration.
+"""Optimized source selector for direct Crawl4AI SDK integration.
 
 This module handles content type optimization for the direct Crawl4AI SDK,
 focusing on performance and specialized extraction patterns.
 """
 
-from typing import Dict, Optional
-
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -21,7 +19,7 @@ class WebCrawlSourceSelector:
     """
 
     # Content type specific optimization settings
-    CONTENT_TYPE_CONFIG: Dict[str, Dict[str, bool]] = {
+    CONTENT_TYPE_CONFIG: dict[str, dict[str, bool]] = {
         "travel_blog": {
             "javascript_enabled": False,  # Most blogs are static
             "extract_markdown": True,
@@ -56,10 +54,10 @@ class WebCrawlSourceSelector:
 
     def get_optimized_config(
         self,
-        content_type: Optional[str] = None,
-        requires_javascript: Optional[bool] = None,
-        extract_structured_data: Optional[bool] = None,
-    ) -> Dict[str, bool]:
+        content_type: str | None = None,
+        requires_javascript: bool | None = None,
+        extract_structured_data: bool | None = None,
+    ) -> dict[str, bool]:
         """Get optimized configuration for the given content type.
 
         Args:
@@ -91,8 +89,8 @@ class WebCrawlSourceSelector:
     def is_javascript_required(
         self,
         url: str,
-        content_type: Optional[str] = None,
-        requires_javascript: Optional[bool] = None,
+        content_type: str | None = None,
+        requires_javascript: bool | None = None,
     ) -> bool:
         """Determine if JavaScript is required for the given URL/content type.
 
@@ -113,8 +111,8 @@ class WebCrawlSourceSelector:
 
     def should_extract_structured_data(
         self,
-        content_type: Optional[str] = None,
-        extract_structured_data: Optional[bool] = None,
+        content_type: str | None = None,
+        extract_structured_data: bool | None = None,
     ) -> bool:
         """Determine if structured data extraction should be enabled.
 

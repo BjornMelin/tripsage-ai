@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+
 # Add the project root to sys.path to ensure imports work
 project_root = Path(__file__).parents[3]  # Go up to project root
 if str(project_root) not in sys.path:

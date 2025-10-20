@@ -32,6 +32,7 @@ from tripsage_core.exceptions.exceptions import (
     with_error_handling,
 )
 
+
 __all__ = [
     # Base exception
     "CoreTripSageError",

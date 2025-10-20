@@ -1,5 +1,4 @@
-"""
-Comprehensive configuration testing for TripSage Core.
+"""Comprehensive configuration testing for TripSage Core.
 
 This module provides extensive testing coverage for the configuration system,
 following 2025 best practices for Pydantic Settings testing. Achieves 90%+ coverage

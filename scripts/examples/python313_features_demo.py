@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Python 3.13 Modern Features Demonstration for TripSage
+"""Python 3.13 Modern Features Demonstration for TripSage
 ===================================================
 
 This script demonstrates the Python 3.13 modern features implemented
@@ -20,8 +19,9 @@ import logging
 import sys
 import time
 from collections.abc import Mapping, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, TypeVar
+
 
 # Python 3.13 type parameters (PEP 695) - Modern syntax
 type ProcessingResult[T] = dict[str, T] | list[T]
@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class ModernAsyncProcessor[T]:
-    """
-    Demonstration of Python 3.13 generic type syntax with PEP 695.
+    """Demonstration of Python 3.13 generic type syntax with PEP 695.
 
     This class shows how the new type parameter syntax provides better
     type safety and readability compared to traditional TypeVar usage.
@@ -59,15 +58,14 @@ class ModernAsyncProcessor[T]:
         return {
             "processed_item": item,
             "processor": self.name,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "count": self.processed_count,
         }
 
     async def process_batch_taskgroup(
         self, items: Sequence[T]
     ) -> BatchResults[ProcessingResult[T]]:
-        """
-        Process items using Python 3.13 TaskGroup for structured concurrency.
+        """Process items using Python 3.13 TaskGroup for structured concurrency.
 
         TaskGroup provides better error handling and automatic cleanup
         compared to asyncio.gather() or manual task management.
@@ -90,8 +88,7 @@ class ModernAsyncProcessor[T]:
     async def process_batch_traditional(
         self, items: Sequence[T]
     ) -> BatchResults[ProcessingResult[T]]:
-        """
-        Process items using traditional asyncio.gather() for comparison.
+        """Process items using traditional asyncio.gather() for comparison.
 
         This method demonstrates the old approach for comparison purposes.
         """
@@ -109,9 +106,7 @@ class ModernAsyncProcessor[T]:
 
 
 async def demonstrate_taskgroup_benefits():
-    """
-    Demonstrate the benefits of TaskGroup over traditional approaches.
-    """
+    """Demonstrate the benefits of TaskGroup over traditional approaches."""
     logger.info("🚀 Demonstrating Python 3.13 TaskGroup benefits")
 
     # Test data
@@ -149,9 +144,7 @@ async def demonstrate_taskgroup_benefits():
 
 
 async def demonstrate_enhanced_error_handling():
-    """
-    Demonstrate enhanced error handling with TaskGroups.
-    """
+    """Demonstrate enhanced error handling with TaskGroups."""
     logger.info("🛡️ Demonstrating enhanced error handling")
 
     async def failing_task(task_id: str) -> str:
@@ -202,9 +195,7 @@ async def demonstrate_enhanced_error_handling():
 
 
 async def demonstrate_concurrent_database_operations():
-    """
-    Simulate concurrent database operations using modern patterns.
-    """
+    """Simulate concurrent database operations using modern patterns."""
     logger.info("🗄️ Demonstrating concurrent database operations")
 
     async def simulate_db_query(query_type: str, delay: float = 0.1) -> dict[str, Any]:
@@ -215,7 +206,7 @@ async def demonstrate_concurrent_database_operations():
             "execution_time_ms": delay * 1000,
             "rows_affected": 42,
             "success": True,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     # Concurrent database operations using TaskGroup
@@ -261,9 +252,7 @@ async def demonstrate_concurrent_database_operations():
 
 
 def demonstrate_type_safety():
-    """
-    Demonstrate improved type safety with Python 3.13 features.
-    """
+    """Demonstrate improved type safety with Python 3.13 features."""
     logger.info("🔒 Demonstrating enhanced type safety")
 
     # Modern type aliases with type statement
@@ -298,15 +287,13 @@ def demonstrate_type_safety():
 
 
 async def main():
-    """
-    Main demonstration function showcasing Python 3.13 modernizations.
-    """
+    """Main demonstration function showcasing Python 3.13 modernizations."""
     logger.info("=" * 60)
     logger.info("🎉 Python 3.13 Modern Features Demo for TripSage")
     logger.info("=" * 60)
 
     print(f"Python version: {sys.version}")
-    print(f"Demo started at: {datetime.now(timezone.utc).isoformat()}")
+    print(f"Demo started at: {datetime.now(UTC).isoformat()}")
     print()
 
     try:

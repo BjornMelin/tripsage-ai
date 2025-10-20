@@ -1,5 +1,4 @@
-"""
-Database security tests for Row Level Security (RLS) policy enforcement
+"""Database security tests for Row Level Security (RLS) policy enforcement
 and user data isolation.
 
 This module provides comprehensive testing for database-level security features,
@@ -18,8 +17,8 @@ Uses real Supabase database connections to test actual RLS policies.
 
 import asyncio
 import logging
-from datetime import date, datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import UTC, date, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -35,6 +34,7 @@ from tripsage_core.models.schemas_common.enums import (
 )
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +46,7 @@ class TestDatabaseSecurity:
     # ===== FIXTURES =====
 
     @pytest.fixture
-    def test_users(self) -> List[Dict[str, Any]]:
+    def test_users(self) -> list[dict[str, Any]]:
         """Test users for database security testing."""
         return [
             {
@@ -54,33 +54,33 @@ class TestDatabaseSecurity:
                 "email": "db.owner@example.com",
                 "name": "Database Owner",
                 "role": "user",
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
             {
                 "id": "14002",
                 "email": "db.collaborator@example.com",
                 "name": "Database Collaborator",
                 "role": "user",
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
             {
                 "id": "14003",
                 "email": "db.viewer@example.com",
                 "name": "Database Viewer",
                 "role": "user",
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
             {
                 "id": "14004",
                 "email": "db.unauthorized@example.com",
                 "name": "Database Unauthorized",
                 "role": "user",
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
         ]
 
     @pytest.fixture
-    def test_trips(self, test_users: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def test_trips(self, test_users: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Test trips for database security testing."""
         return [
             {
@@ -96,8 +96,8 @@ class TestDatabaseSecurity:
                 "visibility": TripVisibility.PRIVATE.value,
                 "status": TripStatus.PLANNING.value,
                 "trip_type": TripType.LEISURE.value,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             },
             {
                 "id": str(uuid4()),
@@ -112,15 +112,15 @@ class TestDatabaseSecurity:
                 "visibility": TripVisibility.PUBLIC.value,
                 "status": TripStatus.PLANNING.value,
                 "trip_type": TripType.BUSINESS.value,
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC),
             },
         ]
 
     @pytest.fixture
     def test_collaborators(
-        self, test_users: List[Dict[str, Any]], test_trips: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+        self, test_users: list[dict[str, Any]], test_trips: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Test collaborators for database security testing."""
         return [
             {
@@ -128,14 +128,14 @@ class TestDatabaseSecurity:
                 "user_id": test_users[1]["id"],  # Collaborator
                 "permission": "edit",
                 "invited_by": test_users[0]["id"],
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
             {
                 "trip_id": test_trips[0]["id"],  # Private trip
                 "user_id": test_users[2]["id"],  # Viewer
                 "permission": "view",
                 "invited_by": test_users[0]["id"],
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             },
         ]
 
@@ -154,10 +154,10 @@ class TestDatabaseSecurity:
     async def setup_test_database(
         self,
         mock_database_service: DatabaseService,
-        test_users: List[Dict[str, Any]],
-        test_trips: List[Dict[str, Any]],
-        test_collaborators: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        test_users: list[dict[str, Any]],
+        test_trips: list[dict[str, Any]],
+        test_collaborators: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """Set up test database with mock data."""
         # In a real integration test, this would insert actual data
         # For now, configure mocks to simulate database state
@@ -165,8 +165,8 @@ class TestDatabaseSecurity:
         # Configure database service responses
         def mock_execute_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             query_lower = query.lower()
 
@@ -239,7 +239,7 @@ class TestDatabaseSecurity:
 
     async def test_rls_trip_ownership_enforcement(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test RLS policy enforcement for trip ownership."""
         db_service = setup_test_database["database_service"]
@@ -271,7 +271,7 @@ class TestDatabaseSecurity:
 
     async def test_rls_collaboration_access_enforcement(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test RLS policy enforcement for collaboration access."""
         db_service = setup_test_database["database_service"]
@@ -312,7 +312,7 @@ class TestDatabaseSecurity:
 
     async def test_rls_public_trip_visibility(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test RLS policy enforcement for public trip visibility."""
         db_service = setup_test_database["database_service"]
@@ -334,7 +334,7 @@ class TestDatabaseSecurity:
 
     async def test_rls_modification_restrictions(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test RLS policy enforcement for modification operations."""
         db_service = setup_test_database["database_service"]
@@ -385,7 +385,7 @@ class TestDatabaseSecurity:
 
     async def test_user_data_isolation_queries(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test user data isolation through database queries."""
         db_service = setup_test_database["database_service"]
@@ -414,7 +414,7 @@ class TestDatabaseSecurity:
 
     async def test_cross_user_data_access_prevention(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test prevention of cross-user data access."""
         db_service = setup_test_database["database_service"]
@@ -445,7 +445,7 @@ class TestDatabaseSecurity:
 
     async def test_memory_data_isolation(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test memory data isolation between users."""
         db_service = setup_test_database["database_service"]
@@ -472,8 +472,8 @@ class TestDatabaseSecurity:
         # Configure mock for memory queries
         def mock_memory_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             if "select" in query.lower() and "memories" in query.lower():
                 if user_context:
@@ -505,7 +505,7 @@ class TestDatabaseSecurity:
 
     async def test_collaboration_permission_levels(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test enforcement of different collaboration permission levels."""
         db_service = setup_test_database["database_service"]
@@ -520,8 +520,8 @@ class TestDatabaseSecurity:
         # Mock collaboration permission check
         def mock_collab_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             if "update" in query.lower() and "trips" in query.lower():
                 # Check if user has edit permission
@@ -591,7 +591,7 @@ class TestDatabaseSecurity:
 
     async def test_collaboration_invitation_security(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test security of collaboration invitation process."""
         db_service = setup_test_database["database_service"]
@@ -605,8 +605,8 @@ class TestDatabaseSecurity:
         # Mock collaboration invitation
         def mock_invite_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             if "insert" in query.lower() and "trip_collaborators" in query.lower():
                 # Only trip owner can invite collaborators
@@ -653,7 +653,7 @@ class TestDatabaseSecurity:
 
     async def test_database_audit_trail_creation(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test that database operations create proper audit trails."""
         db_service = setup_test_database["database_service"]
@@ -668,8 +668,8 @@ class TestDatabaseSecurity:
 
         def mock_audit_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             # Simulate audit log creation for various operations
             if "update" in query.lower() and "trips" in query.lower():
@@ -678,7 +678,7 @@ class TestDatabaseSecurity:
                         "event_type": "trip_updated",
                         "user_id": user_context,
                         "resource_id": trip_id,
-                        "timestamp": datetime.now(timezone.utc),
+                        "timestamp": datetime.now(UTC),
                         "details": params,
                     }
                 )
@@ -690,7 +690,7 @@ class TestDatabaseSecurity:
                         "event_type": "trip_deleted",
                         "user_id": user_context,
                         "resource_id": trip_id,
-                        "timestamp": datetime.now(timezone.utc),
+                        "timestamp": datetime.now(UTC),
                         "details": params,
                     }
                 )
@@ -731,7 +731,7 @@ class TestDatabaseSecurity:
 
     async def test_security_event_database_logging(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test that security events are logged to database."""
         db_service = setup_test_database["database_service"]
@@ -746,8 +746,8 @@ class TestDatabaseSecurity:
 
         def mock_security_log_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             if "select" in query.lower() and "trips" in query.lower():
                 # Simulate RLS blocking access and logging security event
@@ -757,7 +757,7 @@ class TestDatabaseSecurity:
                         "user_id": user_context,
                         "resource_id": trip_id,
                         "reason": "rls_policy_violation",
-                        "timestamp": datetime.now(timezone.utc),
+                        "timestamp": datetime.now(UTC),
                         "ip_address": "192.168.1.100",
                     }
                 )
@@ -792,7 +792,7 @@ class TestDatabaseSecurity:
 
     async def test_sql_injection_prevention(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test SQL injection prevention at database level."""
         db_service = setup_test_database["database_service"]
@@ -803,8 +803,8 @@ class TestDatabaseSecurity:
         # Mock parameterized query handling
         def mock_injection_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             # Simulate proper parameterized query handling
             if params and any(
@@ -855,7 +855,7 @@ class TestDatabaseSecurity:
 
     async def test_database_constraint_enforcement(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test enforcement of database constraints."""
         db_service = setup_test_database["database_service"]
@@ -866,8 +866,8 @@ class TestDatabaseSecurity:
         # Mock constraint enforcement
         def mock_constraint_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             if "insert" in query.lower() and "trips" in query.lower():
                 # Simulate constraint violations
@@ -965,7 +965,7 @@ class TestDatabaseSecurity:
 
     async def test_concurrent_database_access(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test concurrent database access scenarios."""
         db_service = setup_test_database["database_service"]
@@ -981,8 +981,8 @@ class TestDatabaseSecurity:
 
         def mock_concurrent_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             nonlocal access_count
             access_count += 1
@@ -1031,7 +1031,7 @@ class TestDatabaseSecurity:
 
     async def test_database_transaction_isolation(
         self,
-        setup_test_database: Dict[str, Any],
+        setup_test_database: dict[str, Any],
     ):
         """Test database transaction isolation."""
         db_service = setup_test_database["database_service"]
@@ -1046,8 +1046,8 @@ class TestDatabaseSecurity:
 
         def mock_transaction_query(
             query: str,
-            params: Optional[Dict[str, Any]] = None,
-            user_context: Optional[str] = None,
+            params: dict[str, Any] | None = None,
+            user_context: str | None = None,
         ):
             if "update" in query.lower() and "trips" in query.lower():
                 if not transaction_state["committed"]:
@@ -1111,21 +1111,21 @@ class TestDatabaseSecurity:
 
 def create_test_user(
     user_id: str, email: str, name: str = "Test User"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Helper function to create test user data."""
     return {
         "id": user_id,
         "email": email,
         "name": name,
         "role": "user",
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
     }
 
 
 def create_test_trip(
     trip_id: str, user_id: str, name: str = "Test Trip", visibility: str = "private"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Helper function to create test trip data."""
     return {
         "id": trip_id,
@@ -1140,12 +1140,12 @@ def create_test_trip(
         "visibility": visibility,
         "status": TripStatus.PLANNING.value,
         "trip_type": TripType.LEISURE.value,
-        "created_at": datetime.now(timezone.utc),
-        "updated_at": datetime.now(timezone.utc),
+        "created_at": datetime.now(UTC),
+        "updated_at": datetime.now(UTC),
     }
 
 
-def assert_rls_policy_enforced(result: Dict[str, Any], expected_count: int = 0) -> None:
+def assert_rls_policy_enforced(result: dict[str, Any], expected_count: int = 0) -> None:
     """Helper function to assert RLS policy enforcement."""
     assert "data" in result
     assert len(result["data"]) == expected_count

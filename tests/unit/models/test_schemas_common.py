@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for centralized schemas.
+"""Comprehensive tests for centralized schemas.
 
 Tests all centralized schema models and enums for validation,
 business logic, and integration functionality.
@@ -7,6 +6,7 @@ business logic, and integration functionality.
 
 import sys
 from pathlib import Path
+
 
 # Add the project root to Python path
 project_root = Path(__file__).parents[3]
@@ -193,7 +193,7 @@ class TestFinancialModels:
     def test_price_validation(self):
         """Test Price model validation."""
         with pytest.raises(ValidationError) as excinfo:
-            Price(amount=Decimal("-10"), currency=CurrencyCode.USD)
+            Price(amount=Decimal(-10), currency=CurrencyCode.USD)
 
         assert "Input should be greater than or equal to 0" in str(excinfo.value)
 
@@ -206,29 +206,29 @@ class TestFinancialModels:
 
     def test_price_conversion(self):
         """Test Price currency conversion."""
-        price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
+        price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
         converted = price.convert_to(CurrencyCode.EUR, Decimal("0.85"))
 
-        assert converted.amount == Decimal("85")
+        assert converted.amount == Decimal(85)
         assert converted.currency == CurrencyCode.EUR
 
     def test_price_range(self):
         """Test PriceRange model."""
-        min_price = Price(amount=Decimal("50"), currency=CurrencyCode.USD)
-        max_price = Price(amount=Decimal("150"), currency=CurrencyCode.USD)
+        min_price = Price(amount=Decimal(50), currency=CurrencyCode.USD)
+        max_price = Price(amount=Decimal(150), currency=CurrencyCode.USD)
 
         price_range = PriceRange(min_price=min_price, max_price=max_price)
 
-        test_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
+        test_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
         assert price_range.contains(test_price)
 
         avg_price = price_range.average()
-        assert avg_price.amount == Decimal("100")
+        assert avg_price.amount == Decimal(100)
 
     def test_price_range_validation(self):
         """Test PriceRange validation."""
-        min_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        max_price = Price(amount=Decimal("50"), currency=CurrencyCode.USD)
+        min_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        max_price = Price(amount=Decimal(50), currency=CurrencyCode.USD)
 
         with pytest.raises(ValidationError) as excinfo:
             PriceRange(min_price=min_price, max_price=max_price)
@@ -239,8 +239,8 @@ class TestFinancialModels:
 
     def test_budget_creation(self):
         """Test Budget model creation."""
-        total_budget = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
-        spent = Price(amount=Decimal("300"), currency=CurrencyCode.USD)
+        total_budget = Price(amount=Decimal(1000), currency=CurrencyCode.USD)
+        spent = Price(amount=Decimal(300), currency=CurrencyCode.USD)
 
         budget = Budget(total_budget=total_budget, spent=spent)
 
@@ -248,7 +248,7 @@ class TestFinancialModels:
         assert not budget.is_over_budget()
 
         remaining = budget.calculate_remaining()
-        assert remaining.amount == Decimal("700")
+        assert remaining.amount == Decimal(700)
 
     def test_exchange_rate(self):
         """Test ExchangeRate model."""
@@ -258,8 +258,8 @@ class TestFinancialModels:
             rate=Decimal("0.85"),
         )
 
-        converted = rate.convert(Decimal("100"))
-        assert converted == Decimal("85")
+        converted = rate.convert(Decimal(100))
+        assert converted == Decimal(85)
 
         inverse = rate.inverse()
         assert inverse.from_currency == CurrencyCode.EUR
@@ -563,7 +563,7 @@ class TestIntegration:
 
     def test_budget_with_multiple_currencies(self, sample_price):
         """Test Budget model with currency consistency validation."""
-        eur_price = Price(amount=Decimal("50"), currency=CurrencyCode.EUR)
+        eur_price = Price(amount=Decimal(50), currency=CurrencyCode.EUR)
 
         with pytest.raises(ValidationError) as excinfo:
             Budget(total_budget=sample_price, spent=eur_price)
@@ -601,8 +601,8 @@ class TestEdgeCases:
 
     def test_zero_price(self):
         """Test zero price handling."""
-        price = Price(amount=Decimal("0"), currency=CurrencyCode.USD)
-        assert price.amount == Decimal("0")
+        price = Price(amount=Decimal(0), currency=CurrencyCode.USD)
+        assert price.amount == Decimal(0)
         assert price.format() == "USD0.00"
 
     def test_coordinates_extreme_values(self):

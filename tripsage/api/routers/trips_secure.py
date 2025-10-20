@@ -1,12 +1,11 @@
-"""
-Enhanced Trip Router with Integrated Security System.
+"""Enhanced Trip Router with Integrated Security System.
 
 This module demonstrates how to integrate the new trip access verification system
 with existing trip endpoints, providing secure, audited access control.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -45,10 +44,9 @@ from tripsage_core.models.trip import BudgetBreakdown, EnhancedBudget
 # Import core service and models
 from tripsage_core.services.business.trip_service import (
     TripCreateRequest as CoreTripCreateRequest,
-)
-from tripsage_core.services.business.trip_service import (
     TripLocation,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +98,7 @@ async def create_trip(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Create a new trip.
+    """Create a new trip.
 
     No access verification needed as any authenticated user can create trips.
 
@@ -119,10 +116,10 @@ async def create_trip(
         # Convert date to datetime with timezone
         start_datetime = datetime.combine(
             trip_request.start_date, datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
         end_datetime = datetime.combine(
             trip_request.end_date, datetime.min.time()
-        ).replace(tzinfo=timezone.utc)
+        ).replace(tzinfo=UTC)
 
         # Convert TripDestination to TripLocation
         trip_locations = []
@@ -182,7 +179,7 @@ async def create_trip(
         return _adapt_trip_response(trip_response)
 
     except Exception as e:
-        logger.error(f"Failed to create trip: {str(e)}")
+        logger.error(f"Failed to create trip: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create trip",
@@ -196,8 +193,7 @@ async def get_trip(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Get trip details by ID.
+    """Get trip details by ID.
 
     Requires read access to the trip (owner, collaborator, or public trip).
 
@@ -238,7 +234,7 @@ async def get_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get trip: {str(e)}")
+        logger.error(f"Failed to get trip: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip",
@@ -254,8 +250,7 @@ async def list_trips(
         default=10, ge=1, le=100, description="Number of trips to return"
     ),
 ):
-    """
-    List trips for the current user.
+    """List trips for the current user.
 
     No access verification needed as users can only see their own trips
     and trips shared with them.
@@ -287,7 +282,7 @@ async def list_trips(
         )
 
     except Exception as e:
-        logger.error(f"Failed to list trips: {str(e)}")
+        logger.error(f"Failed to list trips: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trips",
@@ -302,8 +297,7 @@ async def update_trip(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Update trip details.
+    """Update trip details.
 
     Requires edit permission (owner or collaborator with edit access).
 
@@ -333,11 +327,11 @@ async def update_trip(
         if trip_request.start_date is not None:
             update_data["start_date"] = datetime.combine(
                 trip_request.start_date, datetime.min.time()
-            ).replace(tzinfo=timezone.utc)
+            ).replace(tzinfo=UTC)
         if trip_request.end_date is not None:
             update_data["end_date"] = datetime.combine(
                 trip_request.end_date, datetime.min.time()
-            ).replace(tzinfo=timezone.utc)
+            ).replace(tzinfo=UTC)
 
         # Update trip using service
         updated_trip = await trip_service.update_trip(
@@ -356,7 +350,7 @@ async def update_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update trip: {str(e)}")
+        logger.error(f"Failed to update trip: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip",
@@ -370,8 +364,7 @@ async def delete_trip(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Delete a trip.
+    """Delete a trip.
 
     Requires owner access - only the trip owner can delete trips.
 
@@ -398,7 +391,7 @@ async def delete_trip(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete trip: {str(e)}")
+        logger.error(f"Failed to delete trip: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete trip",
@@ -415,8 +408,7 @@ async def list_collaborators(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    List trip collaborators.
+    """List trip collaborators.
 
     Requires collaborator access (owner or any collaborator can view).
     """
@@ -443,7 +435,7 @@ async def list_collaborators(
         )
 
     except Exception as e:
-        logger.error(f"Failed to list collaborators: {str(e)}")
+        logger.error(f"Failed to list collaborators: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list collaborators",
@@ -458,8 +450,7 @@ async def add_collaborator(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Add a collaborator to the trip.
+    """Add a collaborator to the trip.
 
     Requires manage permission (owner or collaborator with manage access).
     """
@@ -485,14 +476,14 @@ async def add_collaborator(
         return TripCollaboratorResponse(
             user_id=share_request.user_id,
             permission=share_request.permission,
-            added_at=datetime.now(timezone.utc),
+            added_at=datetime.now(UTC),
             added_by=principal.user_id,
         )
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to add collaborator: {str(e)}")
+        logger.error(f"Failed to add collaborator: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add collaborator",
@@ -509,8 +500,7 @@ async def remove_collaborator(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Remove a collaborator from the trip.
+    """Remove a collaborator from the trip.
 
     Requires owner access - only the trip owner can remove collaborators.
     """
@@ -533,7 +523,7 @@ async def remove_collaborator(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to remove collaborator: {str(e)}")
+        logger.error(f"Failed to remove collaborator: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove collaborator",
@@ -546,8 +536,7 @@ async def get_trip_permissions(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Get detailed permission information for the current user on this trip.
+    """Get detailed permission information for the current user on this trip.
 
     This endpoint doesn't require pre-verification as it's used to check permissions.
     """
@@ -565,7 +554,7 @@ async def get_trip_permissions(
         }
 
     except Exception as e:
-        logger.error(f"Failed to get trip permissions: {str(e)}")
+        logger.error(f"Failed to get trip permissions: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip permissions",
@@ -579,8 +568,7 @@ async def get_trip_summary(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Get a summary of trip information.
+    """Get a summary of trip information.
 
     Requires read access (public trips, collaborators, or owner).
     """
@@ -609,7 +597,7 @@ async def get_trip_summary(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get trip summary: {str(e)}")
+        logger.error(f"Failed to get trip summary: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip summary",
@@ -624,8 +612,7 @@ async def conditional_action(
     principal: RequiredPrincipalDep,
     trip_service: TripServiceDep,
 ):
-    """
-    Demonstrate conditional logic based on user's access level.
+    """Demonstrate conditional logic based on user's access level.
 
     Different actions are available based on the user's permission level.
     """

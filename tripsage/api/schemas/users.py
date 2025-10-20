@@ -1,10 +1,9 @@
-"""
-Schemas for user-related endpoints.
+"""Schemas for user-related endpoints.
 
 Includes request and response models for user preferences.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -12,7 +11,7 @@ from pydantic import BaseModel, Field
 class UserPreferencesRequest(BaseModel):
     """Request model for updating user preferences."""
 
-    preferences: Dict[str, Any] = Field(
+    preferences: dict[str, Any] = Field(
         ...,
         description="User preferences as a flexible JSON object",
         example={
@@ -37,7 +36,7 @@ class UserPreferencesRequest(BaseModel):
 class UserPreferencesResponse(BaseModel):
     """Response model for user preferences."""
 
-    preferences: Dict[str, Any] = Field(
+    preferences: dict[str, Any] = Field(
         ...,
         description="Current user preferences",
     )

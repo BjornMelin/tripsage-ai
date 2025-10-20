@@ -1,5 +1,4 @@
-"""
-Comprehensive Memory Service Tests - 90%+ Coverage.
+"""Comprehensive Memory Service Tests - 90%+ Coverage.
 
 This module provides complete test coverage for the MemoryService class,
 testing all public methods, error handling, caching, and edge cases.
@@ -8,13 +7,12 @@ testing business logic and integration patterns.
 """
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 from uuid import uuid4
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 
 from tripsage_core.exceptions import CoreServiceError as ServiceError
 from tripsage_core.services.business.memory_service import (
@@ -516,7 +514,7 @@ class TestMemoryServiceSearchMemories:
                     "metadata": {"location": "Paris", "type": "preference"},
                     "categories": ["accommodation", "preference"],
                     "score": 0.92,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
                 {
                     "id": "mem_456",
@@ -524,7 +522,7 @@ class TestMemoryServiceSearchMemories:
                     "metadata": {"amenity": "spa"},
                     "categories": ["accommodation"],
                     "score": 0.85,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
             ]
         }
@@ -538,7 +536,7 @@ class TestMemoryServiceSearchMemories:
                     metadata={"location": "Paris", "type": "preference"},
                     categories=["accommodation", "preference"],
                     similarity=0.92,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     user_id=user_id,
                 ),
                 MemorySearchResult(
@@ -547,7 +545,7 @@ class TestMemoryServiceSearchMemories:
                     metadata={"amenity": "spa"},
                     categories=["accommodation"],
                     similarity=0.85,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     user_id=user_id,
                 ),
             ]
@@ -584,7 +582,7 @@ class TestMemoryServiceSearchMemories:
                     "metadata": {},
                     "categories": [],
                     "score": 0.95,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
                 {
                     "id": "mem_low",
@@ -592,7 +590,7 @@ class TestMemoryServiceSearchMemories:
                     "metadata": {},
                     "categories": [],
                     "score": 0.6,  # Below threshold
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
                 {
                     "id": "mem_medium",
@@ -600,7 +598,7 @@ class TestMemoryServiceSearchMemories:
                     "metadata": {},
                     "categories": [],
                     "score": 0.85,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                 },
             ]
         }
@@ -631,7 +629,7 @@ class TestMemoryServiceSearchMemories:
             MemorySearchResult(
                 id="cached_mem",
                 memory="Cached memory",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id=user_id,
             )
         ]
@@ -1131,7 +1129,7 @@ class TestMemoryServiceCaching:
             MemorySearchResult(
                 id="mem_1",
                 memory="Test memory",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user_123",
             )
         ]
@@ -1154,7 +1152,7 @@ class TestMemoryServiceCaching:
             MemorySearchResult(
                 id="mem_1",
                 memory="Test memory",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user_123",
             )
         ]
@@ -1181,7 +1179,7 @@ class TestMemoryServiceCaching:
                 MemorySearchResult(
                     id=f"mem_{i}",
                     memory=f"Memory {i}",
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(UTC),
                     user_id="user_123",
                 )
             ]
@@ -1235,21 +1233,21 @@ class TestMemoryServiceTravelInsights:
                 id="mem_1",
                 memory="I stayed at a beautiful hotel in Paris with great city views",
                 metadata={},
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user_123",
             ),
             MemorySearchResult(
                 id="mem_2",
                 memory="The budget for this trip was around $3000 total",
                 metadata={},
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user_123",
             ),
             MemorySearchResult(
                 id="mem_3",
                 memory="We visited the local museum and historical sites",
                 metadata={},
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user_123",
             ),
         ]
@@ -1579,7 +1577,7 @@ class TestMemoryServiceEdgeCases:
             MemorySearchResult(
                 id="mem_1",
                 memory="Concurrent test",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
                 user_id="user_123",
             )
         ]

@@ -1,5 +1,4 @@
-"""
-Clean tests for logging utilities.
+"""Clean tests for logging utilities.
 
 Tests the actual implemented logging functionality.
 Follows TripSage standards for focused, actionable testing.
@@ -326,24 +325,24 @@ class TestLoggingUtils:
 
     def test_logger_name_normalization(self, temp_log_dir):
         """Test that logger names are normalized for file paths."""
-        with patch.dict(os.environ, {}, clear=True):
-            with patch(
-                "tripsage_core.utils.logging_utils.get_settings"
-            ) as mock_settings:
-                mock_settings.return_value.is_testing.return_value = False
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings,
+        ):
+            mock_settings.return_value.is_testing.return_value = False
 
-                # Use a name with dots that should be converted to underscores
-                adapter = configure_logging(
-                    "test.module.submodule", log_to_file=True, log_dir=str(temp_log_dir)
-                )
+            # Use a name with dots that should be converted to underscores
+            adapter = configure_logging(
+                "test.module.submodule", log_to_file=True, log_dir=str(temp_log_dir)
+            )
 
-                # Log a message to trigger file creation
-                adapter.info("Test message")
+            # Log a message to trigger file creation
+            adapter.info("Test message")
 
-                # Check that log file was created with proper naming
-                log_files = list(temp_log_dir.glob("*.log"))
-                assert len(log_files) >= 1
+            # Check that log file was created with proper naming
+            log_files = list(temp_log_dir.glob("*.log"))
+            assert len(log_files) >= 1
 
-                # Verify filename format (dots should be replaced with underscores)
-                log_file = log_files[0]
-                assert "test_module_submodule" in log_file.name
+            # Verify filename format (dots should be replaced with underscores)
+            log_file = log_files[0]
+            assert "test_module_submodule" in log_file.name

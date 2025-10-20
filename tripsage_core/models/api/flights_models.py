@@ -1,5 +1,4 @@
-"""
-Pydantic models for Duffel Flights API integration.
+"""Pydantic models for Duffel Flights API integration.
 
 This module provides comprehensive data models for flight operations,
 including search, booking, and management features.
@@ -8,7 +7,7 @@ including search, booking, and management features.
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
@@ -51,8 +50,8 @@ class Currency(BaseModel):
     """Currency representation."""
 
     code: str = Field(..., pattern="^[A-Z]{3}$")
-    name: Optional[str] = None
-    symbol: Optional[str] = None
+    name: str | None = None
+    symbol: str | None = None
 
 
 class Location(BaseModel):
@@ -71,14 +70,14 @@ class Airport(BaseModel):
     type: str = "airport"
     iata_code: str = Field(..., pattern="^[A-Z]{3}$")
     iata_country_code: str = Field(..., pattern="^[A-Z]{2}$")
-    iata_city_code: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
-    icao_code: Optional[str] = Field(None, pattern="^[A-Z]{4}$")
+    iata_city_code: str | None = Field(None, pattern="^[A-Z]{3}$")
+    icao_code: str | None = Field(None, pattern="^[A-Z]{4}$")
     name: str
-    city_name: Optional[str] = None
-    city: Optional[Dict[str, Any]] = None
-    latitude: Optional[float] = Field(None, ge=-90, le=90)
-    longitude: Optional[float] = Field(None, ge=-180, le=180)
-    time_zone: Optional[str] = None
+    city_name: str | None = None
+    city: dict[str, Any] | None = None
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
+    time_zone: str | None = None
 
 
 class Airline(BaseModel):
@@ -89,10 +88,10 @@ class Airline(BaseModel):
     id: str
     type: str = "airline"
     iata_code: str = Field(..., pattern="^[A-Z0-9]{2}$")
-    icao_code: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    icao_code: str | None = Field(None, pattern="^[A-Z]{3}$")
     name: str
-    logo_url: Optional[HttpUrl] = None
-    logo_lockup_url: Optional[HttpUrl] = None
+    logo_url: HttpUrl | None = None
+    logo_lockup_url: HttpUrl | None = None
 
 
 class Aircraft(BaseModel):
@@ -103,7 +102,7 @@ class Aircraft(BaseModel):
     id: str
     type: str = "aircraft"
     iata_code: str
-    icao_code: Optional[str] = None
+    icao_code: str | None = None
     name: str
 
 
@@ -113,11 +112,11 @@ class Place(BaseModel):
     id: str
     type: str
     iata_code: str
-    iata_city_code: Optional[str] = None
+    iata_city_code: str | None = None
     name: str
-    city_name: Optional[str] = None
-    city: Optional[Dict[str, Any]] = None
-    airports: Optional[List[Airport]] = None
+    city_name: str | None = None
+    city: dict[str, Any] | None = None
+    airports: list[Airport] | None = None
 
 
 class Duration(BaseModel):
@@ -145,8 +144,8 @@ class BaggageAllowance(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     quantity: int = Field(..., ge=0)
-    weight: Optional[float] = Field(None, ge=0)
-    weight_unit: Optional[str] = Field(None, pattern="^(kg|lb)$")
+    weight: float | None = Field(None, ge=0)
+    weight_unit: str | None = Field(None, pattern="^(kg|lb)$")
 
 
 class Segment(BaseModel):
@@ -160,16 +159,16 @@ class Segment(BaseModel):
     destination: Place
     departure_datetime: datetime
     arrival_datetime: datetime
-    duration: Optional[str] = None
-    distance: Optional[str] = None
+    duration: str | None = None
+    distance: str | None = None
 
     operating_carrier: Airline
     operating_carrier_flight_number: str
     marketing_carrier: Airline
     marketing_carrier_flight_number: str
 
-    aircraft: Optional[Aircraft] = None
-    passengers: Optional[List[Dict[str, Any]]] = None
+    aircraft: Aircraft | None = None
+    passengers: list[dict[str, Any]] | None = None
 
     @property
     def flight_number(self) -> str:
@@ -190,8 +189,8 @@ class Slice(BaseModel):
     destination: Place
     departure_datetime: datetime
     arrival_datetime: datetime
-    duration: Optional[str] = None
-    segments: List[Segment]
+    duration: str | None = None
+    segments: list[Segment]
 
     @property
     def stops(self) -> int:
@@ -206,8 +205,8 @@ class OfferSliceSegment(BaseModel):
 
     segment: Segment
     cabin_class: CabinClass
-    cabin_class_marketing_name: Optional[str] = None
-    fare_basis_code: Optional[str] = None
+    cabin_class_marketing_name: str | None = None
+    fare_basis_code: str | None = None
 
 
 class OfferSlice(BaseModel):
@@ -216,8 +215,8 @@ class OfferSlice(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     slice: Slice
-    segments: List[OfferSliceSegment]
-    fare_brand_name: Optional[str] = None
+    segments: list[OfferSliceSegment]
+    fare_brand_name: str | None = None
 
 
 class PriceBreakdown(BaseModel):
@@ -244,12 +243,12 @@ class PassengerIdentity(BaseModel):
 
     given_name: str = Field(..., min_length=1, max_length=100)
     family_name: str = Field(..., min_length=1, max_length=100)
-    middle_name: Optional[str] = Field(None, max_length=100)
-    title: Optional[str] = Field(None, pattern="^(mr|ms|mrs|miss|dr)$")
-    gender: Optional[str] = Field(None, pattern="^(m|f)$")
+    middle_name: str | None = Field(None, max_length=100)
+    title: str | None = Field(None, pattern="^(mr|ms|mrs|miss|dr)$")
+    gender: str | None = Field(None, pattern="^(m|f)$")
     born_on: date
-    phone_number: Optional[str] = None
-    email: Optional[str] = None
+    phone_number: str | None = None
+    email: str | None = None
 
     @field_validator("born_on")
     @classmethod
@@ -265,12 +264,12 @@ class Passenger(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id: Optional[str] = None
+    id: str | None = None
     type: PassengerType
-    given_name: Optional[str] = None
-    family_name: Optional[str] = None
-    age: Optional[int] = Field(None, ge=0, le=150)
-    born_on: Optional[date] = None
+    given_name: str | None = None
+    family_name: str | None = None
+    age: int | None = Field(None, ge=0, le=150)
+    born_on: date | None = None
 
 
 class FlightOffer(BaseModel):
@@ -284,30 +283,28 @@ class FlightOffer(BaseModel):
     expires_at: datetime
     live_mode: bool
 
-    slices: List[OfferSlice]
-    passengers: List[Passenger]
+    slices: list[OfferSlice]
+    passengers: list[Passenger]
 
     total_amount: Decimal = Field(..., decimal_places=2)
     total_currency: str = Field(..., pattern="^[A-Z]{3}$")
 
-    base_amount: Optional[Decimal] = Field(None, decimal_places=2)
-    base_currency: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    base_amount: Decimal | None = Field(None, decimal_places=2)
+    base_currency: str | None = Field(None, pattern="^[A-Z]{3}$")
 
-    tax_amount: Optional[Decimal] = Field(None, decimal_places=2)
-    tax_currency: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    tax_amount: Decimal | None = Field(None, decimal_places=2)
+    tax_currency: str | None = Field(None, pattern="^[A-Z]{3}$")
 
     owner: Airline
     partial: bool = False
-    private_fares: List[Dict[str, Any]] = Field(default_factory=list)
+    private_fares: list[dict[str, Any]] = Field(default_factory=list)
 
-    conditions: Optional[Dict[str, Any]] = None
-    available_services: Optional[List[Dict[str, Any]]] = None
+    conditions: dict[str, Any] | None = None
+    available_services: list[dict[str, Any]] | None = None
 
     # TripSage extensions
-    score: Optional[float] = Field(
-        None, ge=0, le=1, description="TripSage quality score"
-    )
-    user_preferences_match: Optional[Dict[str, Any]] = None
+    score: float | None = Field(None, ge=0, le=1, description="TripSage quality score")
+    user_preferences_match: dict[str, Any] | None = None
 
 
 class FlightOfferRequest(BaseModel):
@@ -315,21 +312,21 @@ class FlightOfferRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    id: Optional[str] = None
+    id: str | None = None
     type: str = "offer_request"
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
     live_mode: bool = True
 
-    slices: List[Dict[str, Any]]
-    passengers: List[Passenger]
+    slices: list[dict[str, Any]]
+    passengers: list[Passenger]
 
-    cabin_class: Optional[CabinClass] = None
-    max_connections: Optional[int] = Field(None, ge=0)
+    cabin_class: CabinClass | None = None
+    max_connections: int | None = Field(None, ge=0)
     return_offers: bool = True
 
     # Filters
-    only_airlines: Optional[List[str]] = None
-    exclude_airlines: Optional[List[str]] = None
+    only_airlines: list[str] | None = None
+    exclude_airlines: list[str] | None = None
 
 
 class OrderPassenger(BaseModel):
@@ -341,11 +338,11 @@ class OrderPassenger(BaseModel):
     type: str = "order_passenger"
     given_name: str
     family_name: str
-    title: Optional[str] = None
-    gender: Optional[str] = None
+    title: str | None = None
+    gender: str | None = None
     born_on: date
-    phone_number: Optional[str] = None
-    email: Optional[str] = None
+    phone_number: str | None = None
+    email: str | None = None
     passenger_type: PassengerType = Field(..., alias="type")
 
 
@@ -360,8 +357,8 @@ class OrderSlice(BaseModel):
     destination: Place
     departure_datetime: datetime
     arrival_datetime: datetime
-    duration: Optional[str] = None
-    segments: List[Dict[str, Any]]
+    duration: str | None = None
+    segments: list[dict[str, Any]]
 
 
 class Payment(BaseModel):
@@ -372,7 +369,7 @@ class Payment(BaseModel):
     type: PaymentType
     amount: Decimal = Field(..., decimal_places=2)
     currency: str = Field(..., pattern="^[A-Z]{3}$")
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
 
 class PaymentRequest(BaseModel):
@@ -396,28 +393,28 @@ class Order(BaseModel):
     live_mode: bool
 
     booking_reference: str
-    synced_at: Optional[datetime] = None
+    synced_at: datetime | None = None
 
     owner: Airline
-    offer: Optional[FlightOffer] = None
+    offer: FlightOffer | None = None
 
-    passengers: List[OrderPassenger]
-    slices: List[OrderSlice]
+    passengers: list[OrderPassenger]
+    slices: list[OrderSlice]
 
     total_amount: Decimal = Field(..., decimal_places=2)
     total_currency: str = Field(..., pattern="^[A-Z]{3}$")
 
-    base_amount: Optional[Decimal] = Field(None, decimal_places=2)
-    base_currency: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    base_amount: Decimal | None = Field(None, decimal_places=2)
+    base_currency: str | None = Field(None, pattern="^[A-Z]{3}$")
 
-    tax_amount: Optional[Decimal] = Field(None, decimal_places=2)
-    tax_currency: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    tax_amount: Decimal | None = Field(None, decimal_places=2)
+    tax_currency: str | None = Field(None, pattern="^[A-Z]{3}$")
 
-    payments: List[Payment] = Field(default_factory=list)
-    services: List[Dict[str, Any]] = Field(default_factory=list)
+    payments: list[Payment] = Field(default_factory=list)
+    services: list[dict[str, Any]] = Field(default_factory=list)
 
-    conditions: Optional[Dict[str, Any]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    conditions: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class OrderCreateRequest(BaseModel):
@@ -426,11 +423,11 @@ class OrderCreateRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     type: str = "instant"
-    selected_offers: List[str]
-    passengers: List[OrderPassenger]
-    payments: List[Payment]
-    services: Optional[List[Dict[str, Any]]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    selected_offers: list[str]
+    passengers: list[OrderPassenger]
+    payments: list[Payment]
+    services: list[dict[str, Any]] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class OrderCancellation(BaseModel):
@@ -443,10 +440,10 @@ class OrderCancellation(BaseModel):
     order_id: str
     created_at: datetime
     live_mode: bool
-    confirmed_at: Optional[datetime] = None
-    refund_to: Optional[str] = None
-    refund_amount: Optional[Decimal] = Field(None, decimal_places=2)
-    refund_currency: Optional[str] = Field(None, pattern="^[A-Z]{3}$")
+    confirmed_at: datetime | None = None
+    refund_to: str | None = None
+    refund_amount: Decimal | None = Field(None, decimal_places=2)
+    refund_currency: str | None = Field(None, pattern="^[A-Z]{3}$")
 
 
 class SeatMap(BaseModel):
@@ -459,7 +456,7 @@ class SeatMap(BaseModel):
     slice_id: str
     segment_id: str
     aircraft: Aircraft
-    cabins: List[Dict[str, Any]]
+    cabins: list[dict[str, Any]]
 
 
 class SearchParameters(BaseModel):
@@ -470,37 +467,37 @@ class SearchParameters(BaseModel):
     origin: str = Field(..., pattern="^[A-Z]{3}$")
     destination: str = Field(..., pattern="^[A-Z]{3}$")
     departure_date: date
-    return_date: Optional[date] = None
+    return_date: date | None = None
 
     adults: int = Field(1, ge=1, le=9)
     children: int = Field(0, ge=0, le=9)
     infants: int = Field(0, ge=0, le=9)
 
     cabin_class: CabinClass = CabinClass.ECONOMY
-    max_connections: Optional[int] = Field(None, ge=0, le=3)
+    max_connections: int | None = Field(None, ge=0, le=3)
 
     # Price filters
-    max_price: Optional[Decimal] = Field(None, ge=0)
+    max_price: Decimal | None = Field(None, ge=0)
     currency: str = Field("USD", pattern="^[A-Z]{3}$")
 
     # Airline preferences
-    only_airlines: Optional[List[str]] = None
-    exclude_airlines: Optional[List[str]] = None
+    only_airlines: list[str] | None = None
+    exclude_airlines: list[str] | None = None
 
     # Time preferences
-    outbound_departure_time_from: Optional[str] = None
-    outbound_departure_time_to: Optional[str] = None
-    outbound_arrival_time_from: Optional[str] = None
-    outbound_arrival_time_to: Optional[str] = None
+    outbound_departure_time_from: str | None = None
+    outbound_departure_time_to: str | None = None
+    outbound_arrival_time_from: str | None = None
+    outbound_arrival_time_to: str | None = None
 
-    inbound_departure_time_from: Optional[str] = None
-    inbound_departure_time_to: Optional[str] = None
-    inbound_arrival_time_from: Optional[str] = None
-    inbound_arrival_time_to: Optional[str] = None
+    inbound_departure_time_from: str | None = None
+    inbound_departure_time_to: str | None = None
+    inbound_arrival_time_from: str | None = None
+    inbound_arrival_time_to: str | None = None
 
     @field_validator("return_date")
     @classmethod
-    def validate_return_date(cls, v: Optional[date], info) -> Optional[date]:
+    def validate_return_date(cls, v: date | None, info) -> date | None:
         """Ensure return date is after departure date."""
         if v and "departure_date" in info.data and v <= info.data["departure_date"]:
             raise ValueError("Return date must be after departure date")

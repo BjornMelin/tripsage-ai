@@ -30,6 +30,7 @@ from tripsage_core.services.business.dashboard_service import (
     ApiKeyMonitoringService,  # Compatibility adapter for BJO-211
 )
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/dashboard/realtime", tags=["dashboard-realtime"])

@@ -1,12 +1,10 @@
-"""
-Configuration management API endpoints.
+"""Configuration management API endpoints.
 
 Provides RESTful endpoints for managing agent configurations with validation,
 versioning, and real-time updates following 2025 best practices.
 """
 
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -22,6 +20,7 @@ from tripsage.api.schemas.config import (
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/config", tags=["configuration"])
@@ -32,7 +31,7 @@ class ConfigurationWebSocketManager:
     """Manages WebSocket connections for real-time configuration updates."""
 
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -55,7 +54,7 @@ class ConfigurationWebSocketManager:
 ws_manager = ConfigurationWebSocketManager()
 
 
-@router.get("/agents", response_model=List[str])
+@router.get("/agents", response_model=list[str])
 async def list_agent_types():
     """List all available agent types."""
     return ["budget_agent", "destination_research_agent", "itinerary_agent"]
@@ -84,7 +83,7 @@ async def get_agent_config(agent_type: str):
             top_p=config["top_p"],
             timeout_seconds=config["timeout_seconds"],
             model=config["model"],
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
         )
     except Exception as e:
         logger.error(f"Error getting agent config for {agent_type}: {e}")
@@ -153,7 +152,7 @@ async def update_agent_config(
             top_p=updated_config["top_p"],
             timeout_seconds=updated_config["timeout_seconds"],
             model=updated_config["model"],
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
             updated_by=current_user,
         )
 
@@ -164,7 +163,7 @@ async def update_agent_config(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.get("/agents/{agent_type}/versions", response_model=List[ConfigurationVersion])
+@router.get("/agents/{agent_type}/versions", response_model=list[ConfigurationVersion])
 async def get_agent_config_versions(
     agent_type: str, limit: int = 10, current_user: str = Depends(get_current_user_id)
 ):

@@ -1,8 +1,7 @@
 """Fixed comprehensive tests for Pydantic v2 common validators."""
 
 import pytest
-from hypothesis import given
-from hypothesis import strategies as st
+from hypothesis import given, strategies as st
 
 from tripsage_core.models.schemas_common.common_validators import (
     validate_airport_code,

@@ -1,11 +1,10 @@
-"""
-Main LangGraph orchestrator for TripSage AI.
+"""Main LangGraph orchestrator for TripSage AI.
 
 This module implements the core graph-based orchestration system that coordinates
 all specialized agents and manages the conversation flow.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
@@ -31,12 +30,12 @@ from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class TripSageOrchestrator:
-    """
-    Enhanced LangGraph orchestrator for TripSage AI with centralized tool management.
+    """Enhanced LangGraph orchestrator for TripSage AI with centralized tool management.
 
     This class builds and manages the graph-based workflow that coordinates
     all specialized travel planning agents using LangGraph. Enhanced with:
@@ -66,12 +65,11 @@ class TripSageOrchestrator:
 
     def __init__(
         self,
-        service_registry: Optional[ServiceRegistry] = None,
-        checkpointer: Optional[Any] = None,
-        config: Optional[Any] = None,
+        service_registry: ServiceRegistry | None = None,
+        checkpointer: Any | None = None,
+        config: Any | None = None,
     ):
-        """
-        Initialize the orchestrator with graph construction and checkpointing.
+        """Initialize the orchestrator with graph construction and checkpointing.
 
         Args:
             service_registry: Service registry for dependency injection
@@ -89,9 +87,7 @@ class TripSageOrchestrator:
         self._initialized = False
 
     async def initialize(self) -> None:
-        """
-        Async initialization for PostgreSQL checkpointer and other components.
-        """
+        """Async initialization for PostgreSQL checkpointer and other components."""
         if self._initialized:
             return
 
@@ -115,8 +111,7 @@ class TripSageOrchestrator:
         logger.info("TripSage LangGraph orchestrator initialized successfully")
 
     def _build_graph(self) -> StateGraph:
-        """
-        Construct the main orchestration graph.
+        """Construct the main orchestration graph.
 
         Returns:
             Configured StateGraph with all nodes and edges
@@ -203,8 +198,7 @@ class TripSageOrchestrator:
         return graph
 
     def _route_to_agent(self, state: TravelPlanningState) -> str:
-        """
-        Determine which agent should handle the current state.
+        """Determine which agent should handle the current state.
 
         Args:
             state: Current travel planning state
@@ -235,8 +229,7 @@ class TripSageOrchestrator:
         return "general_agent"
 
     def _determine_next_step(self, state: TravelPlanningState) -> str:
-        """
-        Determine the next step after agent completion.
+        """Determine the next step after agent completion.
 
         Args:
             state: Current travel planning state
@@ -298,8 +291,7 @@ class TripSageOrchestrator:
         return "continue"
 
     def _handle_recovery(self, state: TravelPlanningState) -> str:
-        """
-        Handle error recovery decisions.
+        """Handle error recovery decisions.
 
         Args:
             state: Current travel planning state
@@ -317,8 +309,7 @@ class TripSageOrchestrator:
             return "end"
 
     def _create_stub_node(self, node_name: str):
-        """
-        Create a stub node for Phase 1 implementation.
+        """Create a stub node for Phase 1 implementation.
 
         These will be replaced with full implementations in Phase 2.
 
@@ -349,8 +340,7 @@ class TripSageOrchestrator:
         return stub_node
 
     def _create_general_agent(self):
-        """
-        Create a general-purpose agent for handling unrouted requests.
+        """Create a general-purpose agent for handling unrouted requests.
 
         Returns:
             General agent function
@@ -384,10 +374,9 @@ class TripSageOrchestrator:
         return general_agent
 
     async def process_message(
-        self, user_id: str, message: str, session_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Main entry point for processing user messages.
+        self, user_id: str, message: str, session_id: str | None = None
+    ) -> dict[str, Any]:
+        """Main entry point for processing user messages.
 
         Args:
             user_id: Unique identifier for the user
@@ -447,7 +436,7 @@ class TripSageOrchestrator:
             }
 
         except Exception as e:
-            logger.error(f"Error processing message: {str(e)}")
+            logger.error(f"Error processing message: {e!s}")
             return {
                 "response": (
                     "I apologize, but I encountered an error processing your request. "
@@ -457,9 +446,8 @@ class TripSageOrchestrator:
                 "error": str(e),
             }
 
-    async def get_session_state(self, session_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Get the current state for a session.
+    async def get_session_state(self, session_id: str) -> dict[str, Any] | None:
+        """Get the current state for a session.
 
         Args:
             session_id: Session ID to retrieve state for
@@ -472,5 +460,5 @@ class TripSageOrchestrator:
             state = self.compiled_graph.get_state(config)
             return state.values if state else None
         except Exception as e:
-            logger.error(f"Error retrieving session state: {str(e)}")
+            logger.error(f"Error retrieving session state: {e!s}")
             return None

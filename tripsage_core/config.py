@@ -1,5 +1,4 @@
-"""
-Unified, modern configuration for TripSage application.
+"""Unified, modern configuration for TripSage application.
 
 Following 2025 best practices with a single, flat configuration structure.
 No backwards compatibility concerns - only optimal patterns.

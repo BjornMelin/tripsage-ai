@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for TripSage Core Database Service.
+"""Comprehensive tests for TripSage Core Database Service.
 
 This module provides comprehensive test coverage for database service functionality
 including connection management, CRUD operations, transaction support, vector
@@ -8,7 +7,7 @@ operations, health monitoring, and error handling scenarios.
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 from uuid import uuid4
 
@@ -367,7 +366,7 @@ class TestDatabaseService:
             "user_id": str(uuid4()),
             "title": "Europe Trip",
             "destination": "Paris",
-            "start_date": datetime.now(timezone.utc).isoformat(),
+            "start_date": datetime.now(UTC).isoformat(),
         }
         expected_result = [{"id": str(uuid4()), **trip_data}]
         mock_supabase_client.execute.return_value = Mock(data=expected_result)
@@ -495,7 +494,7 @@ class TestDatabaseService:
         session_data = {
             "user_id": str(uuid4()),
             "title": "Travel Planning",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         expected_result = [{"id": str(uuid4()), **session_data}]
         mock_supabase_client.execute.return_value = Mock(data=expected_result)
@@ -514,7 +513,7 @@ class TestDatabaseService:
             "session_id": str(uuid4()),
             "role": "user",
             "content": "Hello",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         expected_result = [{"id": str(uuid4()), **message_data}]
         mock_supabase_client.execute.return_value = Mock(data=expected_result)

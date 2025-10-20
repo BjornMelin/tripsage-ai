@@ -27,6 +27,7 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     get_key_health_metrics,
 )
 
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,6 @@ async def create_key(
     Raises:
         HTTPException: If the key is invalid
     """
-
     try:
         # Validate the API key with the service
         validation = await key_service.validate_key(key_data.key, key_data.service)
@@ -123,7 +123,6 @@ async def delete_key(
     Raises:
         HTTPException: If the key is not found or does not belong to the user
     """
-
     # Check if the key exists and belongs to the user
     key = await key_service.get_key(key_id)
 
@@ -163,7 +162,6 @@ async def validate_key(
     Returns:
         Validation result
     """
-
     user_id = get_principal_id(principal)
     return await key_service.validate_key(key_data.key, key_data.service, user_id)
 
@@ -192,7 +190,6 @@ async def rotate_key(
     Raises:
         HTTPException: If the key is not found or does not belong to the user
     """
-
     # Check if the key exists and belongs to the user
     key = await key_service.get_key(key_id)
 
@@ -240,7 +237,6 @@ async def get_metrics(
     Returns:
         Key health metrics
     """
-
     # Only allow admin users to access metrics
     # This would normally check user roles, but for now we'll use a simple approach
     return await get_key_health_metrics()

@@ -1,5 +1,4 @@
-"""
-Tests for TripSage Modern Docker Development Environment.
+"""Tests for TripSage Modern Docker Development Environment.
 
 Tests validate the modernized Docker setup aligned with current architecture:
 - Supabase PostgreSQL with pgvector (unified storage)
@@ -29,7 +28,7 @@ class TestModernDockerArchitecture:
 
     def test_compose_yaml_valid(self):
         """Test that Docker Compose YAML is valid."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         assert config is not None, "Failed to parse Docker Compose YAML"
@@ -37,7 +36,7 @@ class TestModernDockerArchitecture:
 
     def test_modern_infrastructure_services(self):
         """Test that modern high-performance infrastructure services are present."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -56,7 +55,7 @@ class TestModernDockerArchitecture:
 
     def test_legacy_mcp_services_removed(self):
         """Test that legacy MCP services have been removed."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -81,7 +80,7 @@ class TestModernDockerArchitecture:
 
     def test_monitoring_stack_present(self):
         """Test that production-ready monitoring stack is configured."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -94,7 +93,7 @@ class TestModernDockerArchitecture:
 
     def test_resource_limits_optimized(self):
         """Test that resource limits are optimized for modern architecture."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -134,7 +133,7 @@ class TestDockerfileModernization:
         api_dockerfile = self.docker_dir / "Dockerfile.api"
         assert api_dockerfile.exists(), "API Dockerfile not found"
 
-        with open(api_dockerfile, "r") as f:
+        with open(api_dockerfile) as f:
             content = f.read()
 
         # Check for modern dependencies
@@ -151,7 +150,7 @@ class TestDockerfileModernization:
         )
         assert frontend_dockerfile.exists(), "Frontend Dockerfile not found"
 
-        with open(frontend_dockerfile, "r") as f:
+        with open(frontend_dockerfile) as f:
             content = f.read()
 
         # Check for modern frontend setup
@@ -199,7 +198,7 @@ class TestEnvironmentConfiguration:
 
     def test_supabase_configuration(self):
         """Test Supabase configuration for unified database."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -216,7 +215,7 @@ class TestEnvironmentConfiguration:
 
     def test_dragonfly_configuration(self):
         """Test DragonflyDB configuration for high-performance caching."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -236,7 +235,7 @@ class TestEnvironmentConfiguration:
 
     def test_api_environment_modern_sdks(self):
         """Test API environment includes modern SDK configurations."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -277,7 +276,7 @@ class TestNetworkAndVolumeConfiguration:
 
     def test_network_configuration(self):
         """Test that services use proper network isolation."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         # Check network configuration
@@ -297,7 +296,7 @@ class TestNetworkAndVolumeConfiguration:
 
     def test_volume_configuration(self):
         """Test that persistent volumes are configured for data services."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         # Check volume configuration
@@ -326,7 +325,7 @@ class TestPerformanceArchitecture:
 
     def test_dragonfly_vs_redis_performance_setup(self):
         """Test DragonflyDB is configured for 25x performance vs Redis."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -342,7 +341,7 @@ class TestPerformanceArchitecture:
 
     def test_supabase_pgvector_setup(self):
         """Test Supabase is configured for pgvector (11x faster vector search)."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]
@@ -354,7 +353,7 @@ class TestPerformanceArchitecture:
 
     def test_no_neo4j_mem0_migration(self):
         """Test Neo4j has been replaced by Mem0 (91% faster)."""
-        with open(self.compose_file, "r") as f:
+        with open(self.compose_file) as f:
             config = yaml.safe_load(f)
 
         services = config["services"]

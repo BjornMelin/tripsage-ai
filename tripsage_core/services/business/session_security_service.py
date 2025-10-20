@@ -1,5 +1,4 @@
-"""
-Session Management and Security Monitoring Service.
+"""Session Management and Security Monitoring Service.
 
 This service provides comprehensive session management, security event logging,
 and user activity monitoring for TripSage authentication system.
@@ -8,10 +7,9 @@ and user activity monitoring for TripSage authentication system.
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timedelta, timezone
-from ipaddress import AddressValueError
-from ipaddress import ip_address as parse_ip_address
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime, timedelta
+from ipaddress import AddressValueError, ip_address as parse_ip_address
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -19,6 +17,7 @@ from tripsage_core.exceptions import (
     CoreSecurityError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,21 +28,19 @@ class UserSession(TripSageModel):
     id: str = Field(..., description="Session ID")
     user_id: str = Field(..., description="User ID")
     session_token: str = Field(..., description="Session token hash")
-    ip_address: Optional[str] = Field(None, description="IP address")
-    user_agent: Optional[str] = Field(None, description="User agent string")
-    device_info: Dict[str, Any] = Field(
+    ip_address: str | None = Field(None, description="IP address")
+    user_agent: str | None = Field(None, description="User agent string")
+    device_info: dict[str, Any] = Field(
         default_factory=dict, description="Device information"
     )
-    location_info: Dict[str, Any] = Field(
+    location_info: dict[str, Any] = Field(
         default_factory=dict, description="Location information"
     )
     is_active: bool = Field(True, description="Session active status")
-    last_activity_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    last_activity_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime = Field(..., description="Session expiration time")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    ended_at: Optional[datetime] = Field(None, description="Session end time")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    ended_at: datetime | None = Field(None, description="Session end time")
 
     @field_validator("id")
     @classmethod
@@ -82,7 +79,7 @@ class UserSession(TripSageModel):
 
     @field_validator("ip_address")
     @classmethod
-    def validate_ip_address(cls, v: Optional[str]) -> Optional[str]:
+    def validate_ip_address(cls, v: str | None) -> str | None:
         """Validate IP address format and security."""
         if v is None or v == "":
             return None
@@ -120,7 +117,7 @@ class UserSession(TripSageModel):
 
     @field_validator("user_agent")
     @classmethod
-    def validate_user_agent(cls, v: Optional[str]) -> Optional[str]:
+    def validate_user_agent(cls, v: str | None) -> str | None:
         """Validate user agent string."""
         if v is None:
             return None
@@ -160,17 +157,17 @@ class UserSession(TripSageModel):
 class SecurityEvent(TripSageModel):
     """Security event model."""
 
-    id: Optional[str] = Field(None, description="Event ID")
-    user_id: Optional[str] = Field(None, description="User ID")
+    id: str | None = Field(None, description="Event ID")
+    user_id: str | None = Field(None, description="User ID")
     event_type: str = Field(..., description="Event type")
     event_category: str = Field(default="authentication", description="Event category")
     severity: str = Field(default="info", description="Event severity")
-    ip_address: Optional[str] = Field(None, description="IP address")
-    user_agent: Optional[str] = Field(None, description="User agent")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Event details")
+    ip_address: str | None = Field(None, description="IP address")
+    user_agent: str | None = Field(None, description="User agent")
+    details: dict[str, Any] = Field(default_factory=dict, description="Event details")
     risk_score: int = Field(default=0, description="Risk score (0-100)")
     is_blocked: bool = Field(default=False, description="Whether action was blocked")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @field_validator("event_type")
     @classmethod
@@ -226,15 +223,14 @@ class SessionSecurityMetrics(TripSageModel):
     )
     security_events_7d: int = Field(default=0, description="Security events in 7 days")
     risk_score: int = Field(default=0, description="Overall risk score")
-    last_login_at: Optional[datetime] = Field(None, description="Last login time")
-    password_changed_at: Optional[datetime] = Field(
+    last_login_at: datetime | None = Field(None, description="Last login time")
+    password_changed_at: datetime | None = Field(
         None, description="Last password change"
     )
 
 
 class SessionSecurityService:
-    """
-    Comprehensive session management and security monitoring service.
+    """Comprehensive session management and security monitoring service.
 
     This service provides:
     - Session lifecycle management
@@ -252,8 +248,7 @@ class SessionSecurityService:
         rate_limit_window_minutes: int = 15,
         max_failed_attempts: int = 5,
     ):
-        """
-        Initialize the session security service.
+        """Initialize the session security service.
 
         Args:
             database_service: Database service for persistence
@@ -275,19 +270,18 @@ class SessionSecurityService:
         self.max_failed_attempts = max_failed_attempts
 
         # In-memory cache for rate limiting (use Redis in production)
-        self._rate_limit_cache: Dict[str, List[float]] = {}
-        self._risk_scores: Dict[str, int] = {}
+        self._rate_limit_cache: dict[str, list[float]] = {}
+        self._risk_scores: dict[str, int] = {}
 
     async def create_session(
         self,
         user_id: str,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        device_info: Optional[Dict[str, Any]] = None,
-        location_info: Optional[Dict[str, Any]] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        device_info: dict[str, Any] | None = None,
+        location_info: dict[str, Any] | None = None,
     ) -> UserSession:
-        """
-        Create a new user session.
+        """Create a new user session.
 
         Args:
             user_id: User identifier
@@ -317,7 +311,7 @@ class SessionSecurityService:
             session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
 
             # Create session
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             session = UserSession(
                 id=secrets.token_urlsafe(16),
                 user_id=user_id,
@@ -371,11 +365,10 @@ class SessionSecurityService:
     async def validate_session(
         self,
         session_token: str,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-    ) -> Optional[UserSession]:
-        """
-        Validate and refresh a session.
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession | None:
+        """Validate and refresh a session.
 
         Args:
             session_token: Session token to validate
@@ -405,7 +398,7 @@ class SessionSecurityService:
             session = UserSession(**session_data)
 
             # Check if session is expired
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             if session.expires_at <= now:
                 await self.terminate_session(session.id, reason="expired")
                 return None
@@ -452,10 +445,9 @@ class SessionSecurityService:
         self,
         session_id: str,
         reason: str = "user_logout",
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> bool:
-        """
-        Terminate a user session.
+        """Terminate a user session.
 
         Args:
             session_id: Session ID to terminate
@@ -472,7 +464,7 @@ class SessionSecurityService:
                 conditions["user_id"] = user_id
 
             # Update session
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             result = await self.db.update(
                 "user_sessions",
                 conditions,
@@ -509,9 +501,8 @@ class SessionSecurityService:
             )
             return False
 
-    async def get_active_sessions(self, user_id: str) -> List[UserSession]:
-        """
-        Get all active sessions for a user.
+    async def get_active_sessions(self, user_id: str) -> list[UserSession]:
+        """Get all active sessions for a user.
 
         Args:
             user_id: User identifier
@@ -527,7 +518,7 @@ class SessionSecurityService:
             )
 
             sessions = []
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             for result in results:
                 session = UserSession(**result)
@@ -551,16 +542,15 @@ class SessionSecurityService:
     async def log_security_event(
         self,
         event_type: str,
-        user_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
+        user_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        details: dict[str, Any] | None = None,
         risk_score: int = 0,
         severity: str = "info",
         event_category: str = "authentication",
     ) -> SecurityEvent:
-        """
-        Log a security event.
+        """Log a security event.
 
         Args:
             event_type: Type of security event
@@ -615,8 +605,7 @@ class SessionSecurityService:
             return event
 
     async def get_security_metrics(self, user_id: str) -> SessionSecurityMetrics:
-        """
-        Get security metrics for a user.
+        """Get security metrics for a user.
 
         Args:
             user_id: User identifier
@@ -629,7 +618,7 @@ class SessionSecurityService:
             active_sessions = await self.get_active_sessions(user_id)
 
             # Get recent events
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             day_ago = now - timedelta(days=1)
             week_ago = now - timedelta(days=7)
 
@@ -711,9 +700,7 @@ class SessionSecurityService:
             )
             return SessionSecurityMetrics(user_id=user_id)
 
-    def _calculate_login_risk_score(
-        self, user_id: str, ip_address: Optional[str]
-    ) -> int:
+    def _calculate_login_risk_score(self, user_id: str, ip_address: str | None) -> int:
         """Calculate risk score for login attempt."""
         risk_score = 0
 
@@ -848,8 +835,8 @@ class SessionSecurityService:
     def _calculate_activity_risk_score(
         self,
         session: UserSession,
-        current_ip: Optional[str],
-        current_user_agent: Optional[str],
+        current_ip: str | None,
+        current_user_agent: str | None,
     ) -> int:
         """Calculate risk score for activity."""
         risk_score = 0
@@ -868,7 +855,7 @@ class SessionSecurityService:
 
         return min(risk_score, 100)
 
-    def _calculate_user_risk_score(self, user_id: str, metrics: Dict[str, Any]) -> int:
+    def _calculate_user_risk_score(self, user_id: str, metrics: dict[str, Any]) -> int:
         """Calculate overall user risk score."""
         risk_score = 0
 
@@ -897,14 +884,13 @@ class SessionSecurityService:
         return len(failures_list) if isinstance(failures_list, list) else 0
 
     async def cleanup_expired_sessions(self) -> int:
-        """
-        Clean up expired sessions.
+        """Clean up expired sessions.
 
         Returns:
             Number of sessions cleaned up
         """
         try:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             # Find expired sessions
             expired_sessions = await self.db.select(
@@ -939,8 +925,7 @@ class SessionSecurityService:
 
 # Dependency function for FastAPI
 async def get_session_security_service() -> SessionSecurityService:
-    """
-    Get session security service instance for dependency injection.
+    """Get session security service instance for dependency injection.
 
     Returns:
         SessionSecurityService instance

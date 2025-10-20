@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test Script for Python 3.13 Modernizations in TripSage
+"""Test Script for Python 3.13 Modernizations in TripSage
 ======================================================
 
 This script tests and validates all Python 3.13 modern features implemented
@@ -13,8 +12,9 @@ Run this script to verify that Python 3.13 modernizations are working correctly.
 import asyncio
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -340,7 +340,7 @@ async def main():
     print("🧪 Python 3.13 Modernizations Test Suite")
     print("=" * 60)
     print(f"Python version: {sys.version}")
-    print(f"Test started: {datetime.now(timezone.utc).isoformat()}")
+    print(f"Test started: {datetime.now(UTC).isoformat()}")
     print()
 
     # Define all tests

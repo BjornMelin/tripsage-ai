@@ -1,5 +1,4 @@
-"""
-Authentication bypass attempt security tests.
+"""Authentication bypass attempt security tests.
 
 This module provides comprehensive security testing for authentication bypass
 attempts against the API key validation infrastructure. Tests cover various

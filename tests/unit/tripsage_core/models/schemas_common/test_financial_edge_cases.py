@@ -8,8 +8,7 @@ complex financial scenarios that occur in production travel booking systems.
 from decimal import Decimal
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import ValidationError
 
 from tripsage_core.models.schemas_common.enums import CurrencyCode
@@ -37,8 +36,8 @@ class TestPriceEdgeCases:
         assert price.amount == high_precision
 
         # Test with zero
-        zero_price = Price(amount=Decimal("0"), currency=CurrencyCode.USD)
-        assert zero_price.amount == Decimal("0")
+        zero_price = Price(amount=Decimal(0), currency=CurrencyCode.USD)
+        assert zero_price.amount == Decimal(0)
 
         # Test with very small amount
         tiny_amount = Decimal("0.000001")
@@ -52,11 +51,11 @@ class TestPriceEdgeCases:
 
     def test_price_conversion_edge_cases(self):
         """Test price conversion with edge case exchange rates."""
-        base_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
+        base_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
 
         # Test conversion with rate of 1 (no change)
-        same_currency = base_price.convert_to(CurrencyCode.EUR, Decimal("1"))
-        assert same_currency.amount == Decimal("100")
+        same_currency = base_price.convert_to(CurrencyCode.EUR, Decimal(1))
+        assert same_currency.amount == Decimal(100)
         assert same_currency.currency == CurrencyCode.EUR
 
         # Test conversion with very small rate
@@ -65,14 +64,14 @@ class TestPriceEdgeCases:
         assert tiny_result.amount == Decimal("0.01")
 
         # Test conversion with very large rate
-        huge_rate = Decimal("10000")
+        huge_rate = Decimal(10000)
         huge_result = base_price.convert_to(CurrencyCode.JPY, huge_rate)
-        assert huge_result.amount == Decimal("1000000")
+        assert huge_result.amount == Decimal(1000000)
 
         # Test conversion with precise rate
         precise_rate = Decimal("1.23456789")
         precise_result = base_price.convert_to(CurrencyCode.EUR, precise_rate)
-        expected = Decimal("100") * precise_rate
+        expected = Decimal(100) * precise_rate
         assert precise_result.amount == expected
 
     def test_price_formatting_edge_cases(self):
@@ -87,7 +86,7 @@ class TestPriceEdgeCases:
         assert formatted_custom == "$99.99"
 
         # Test with zero amount
-        zero_price = Price(amount=Decimal("0"), currency=CurrencyCode.USD)
+        zero_price = Price(amount=Decimal(0), currency=CurrencyCode.USD)
         formatted_zero = zero_price.format("$")
         assert formatted_zero == "$0.00"
 
@@ -102,7 +101,7 @@ class TestPriceEdgeCases:
         """Test price to float conversion edge cases."""
         # Test with various decimal amounts
         test_cases = [
-            Decimal("0"),
+            Decimal(0),
             Decimal("0.01"),
             Decimal("999.99"),
             Decimal("123.456"),
@@ -121,13 +120,13 @@ class TestPriceRangeEdgeCases:
     def test_price_range_boundary_conditions(self):
         """Test price range with boundary conditions."""
         # Test with same min and max (single price point)
-        single_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
+        single_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
         single_range = PriceRange(min_price=single_price, max_price=single_price)
         assert single_range.min_price.amount == single_range.max_price.amount
 
         # Test average of single price point
         avg = single_range.average()
-        assert avg.amount == Decimal("100")
+        assert avg.amount == Decimal(100)
 
         # Test contains with exact boundary values
         assert single_range.contains(single_price)
@@ -142,28 +141,28 @@ class TestPriceRangeEdgeCases:
 
     def test_price_range_currency_mismatch(self):
         """Test price range validation with currency mismatches."""
-        min_usd = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        max_eur = Price(amount=Decimal("120"), currency=CurrencyCode.EUR)
+        min_usd = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        max_eur = Price(amount=Decimal(120), currency=CurrencyCode.EUR)
 
         with pytest.raises(ValidationError, match="same currency"):
             PriceRange(min_price=min_usd, max_price=max_eur)
 
     def test_price_range_invalid_order(self):
         """Test price range with max < min."""
-        min_price = Price(amount=Decimal("200"), currency=CurrencyCode.USD)
-        max_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
+        min_price = Price(amount=Decimal(200), currency=CurrencyCode.USD)
+        max_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
 
         with pytest.raises(ValidationError, match="greater than or equal to min"):
             PriceRange(min_price=min_price, max_price=max_price)
 
     def test_price_range_contains_edge_cases(self):
         """Test price range contains with edge cases."""
-        min_price = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        max_price = Price(amount=Decimal("200"), currency=CurrencyCode.USD)
+        min_price = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        max_price = Price(amount=Decimal(200), currency=CurrencyCode.USD)
         price_range = PriceRange(min_price=min_price, max_price=max_price)
 
         # Test with different currency
-        eur_price = Price(amount=Decimal("150"), currency=CurrencyCode.EUR)
+        eur_price = Price(amount=Decimal(150), currency=CurrencyCode.EUR)
         assert not price_range.contains(eur_price)
 
         # Test with boundary values
@@ -233,9 +232,9 @@ class TestPriceBreakdownEdgeCases:
 
     def test_price_breakdown_currency_consistency(self):
         """Test price breakdown currency consistency validation."""
-        base_usd = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        tax_eur = Price(amount=Decimal("20"), currency=CurrencyCode.EUR)
-        total_usd = Price(amount=Decimal("120"), currency=CurrencyCode.USD)
+        base_usd = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        tax_eur = Price(amount=Decimal(20), currency=CurrencyCode.EUR)
+        total_usd = Price(amount=Decimal(120), currency=CurrencyCode.USD)
 
         with pytest.raises(ValidationError, match="same currency"):
             PriceBreakdown(base_price=base_usd, taxes=tax_eur, total=total_usd)
@@ -246,9 +245,9 @@ class TestBudgetEdgeCases:
 
     def test_budget_calculation_edge_cases(self):
         """Test budget calculation methods with edge cases."""
-        total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
+        total = Price(amount=Decimal(1000), currency=CurrencyCode.USD)
         spent = Price(
-            amount=Decimal("1000"), currency=CurrencyCode.USD
+            amount=Decimal(1000), currency=CurrencyCode.USD
         )  # Exactly on budget
 
         budget = Budget(total_budget=total, spent=spent)
@@ -259,10 +258,10 @@ class TestBudgetEdgeCases:
 
         # Test remaining calculation when fully spent
         remaining = budget.calculate_remaining()
-        assert remaining.amount == Decimal("0")
+        assert remaining.amount == Decimal(0)
 
         # Test over budget scenario
-        over_spent = Price(amount=Decimal("1200"), currency=CurrencyCode.USD)
+        over_spent = Price(amount=Decimal(1200), currency=CurrencyCode.USD)
         over_budget = Budget(total_budget=total, spent=over_spent)
 
         assert over_budget.is_over_budget()
@@ -271,27 +270,27 @@ class TestBudgetEdgeCases:
 
         # Remaining should be 0 when over budget (not negative)
         over_remaining = over_budget.calculate_remaining()
-        assert over_remaining.amount == Decimal("0")
+        assert over_remaining.amount == Decimal(0)
 
     def test_budget_with_allocated_vs_spent(self):
         """Test budget calculations with both allocated and spent amounts."""
-        total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
-        allocated = Price(amount=Decimal("800"), currency=CurrencyCode.USD)
-        spent = Price(amount=Decimal("600"), currency=CurrencyCode.USD)
+        total = Price(amount=Decimal(1000), currency=CurrencyCode.USD)
+        allocated = Price(amount=Decimal(800), currency=CurrencyCode.USD)
+        spent = Price(amount=Decimal(600), currency=CurrencyCode.USD)
 
         # When both allocated and spent are present, spent takes precedence
         budget_both = Budget(total_budget=total, allocated=allocated, spent=spent)
         remaining = budget_both.calculate_remaining()
-        assert remaining.amount == Decimal("400")  # 1000 - 600
+        assert remaining.amount == Decimal(400)  # 1000 - 600
 
         # When only allocated is present
         budget_allocated = Budget(total_budget=total, allocated=allocated)
         remaining_allocated = budget_allocated.calculate_remaining()
-        assert remaining_allocated.amount == Decimal("200")  # 1000 - 800
+        assert remaining_allocated.amount == Decimal(200)  # 1000 - 800
 
     def test_budget_zero_amounts(self):
         """Test budget with zero amounts."""
-        total_zero = Price(amount=Decimal("0"), currency=CurrencyCode.USD)
+        total_zero = Price(amount=Decimal(0), currency=CurrencyCode.USD)
         budget_zero = Budget(total_budget=total_zero)
 
         # Zero budget utilization
@@ -303,17 +302,17 @@ class TestBudgetEdgeCases:
 
         # Remaining should be zero
         remaining = budget_zero.calculate_remaining()
-        assert remaining.amount == Decimal("0")
+        assert remaining.amount == Decimal(0)
 
     def test_budget_category_validation(self):
         """Test budget category currency validation."""
-        total = Price(amount=Decimal("1000"), currency=CurrencyCode.USD)
+        total = Price(amount=Decimal(1000), currency=CurrencyCode.USD)
         categories = {
-            "flights": Price(amount=Decimal("400"), currency=CurrencyCode.USD),
+            "flights": Price(amount=Decimal(400), currency=CurrencyCode.USD),
             "hotels": Price(
-                amount=Decimal("300"), currency=CurrencyCode.EUR
+                amount=Decimal(300), currency=CurrencyCode.EUR
             ),  # Wrong currency
-            "food": Price(amount=Decimal("200"), currency=CurrencyCode.USD),
+            "food": Price(amount=Decimal(200), currency=CurrencyCode.USD),
         }
 
         with pytest.raises(ValidationError, match="different currency"):
@@ -356,7 +355,7 @@ class TestExchangeRateEdgeCases:
         assert abs(inverse.rate - expected_inverse) < Decimal("0.000001")
 
         # Test round-trip conversion
-        amount = Decimal("100")
+        amount = Decimal(100)
         converted = rate.convert(amount)
         back_converted = inverse.convert(converted)
         assert abs(back_converted - amount) < Decimal(
@@ -371,18 +370,18 @@ class TestExchangeRateEdgeCases:
             from_currency=CurrencyCode.USD, to_currency=CurrencyCode.JPY, rate=tiny_rate
         )
 
-        amount = Decimal("1000")
+        amount = Decimal(1000)
         converted = tiny_rate_exchange.convert(amount)
         assert converted == Decimal("0.1")
 
         # Test with very large rate
-        huge_rate = Decimal("10000")
+        huge_rate = Decimal(10000)
         huge_rate_exchange = ExchangeRate(
             from_currency=CurrencyCode.JPY, to_currency=CurrencyCode.USD, rate=huge_rate
         )
 
-        converted_huge = huge_rate_exchange.convert(Decimal("1"))
-        assert converted_huge == Decimal("10000")
+        converted_huge = huge_rate_exchange.convert(Decimal(1))
+        assert converted_huge == Decimal(10000)
 
 
 class TestDealEdgeCases:
@@ -390,9 +389,9 @@ class TestDealEdgeCases:
 
     def test_deal_validation_edge_cases(self):
         """Test deal validation with edge cases."""
-        original = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        final = Price(amount=Decimal("80"), currency=CurrencyCode.USD)
-        discount_amount = Price(amount=Decimal("20"), currency=CurrencyCode.USD)
+        original = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        final = Price(amount=Decimal(80), currency=CurrencyCode.USD)
+        discount_amount = Price(amount=Decimal(20), currency=CurrencyCode.USD)
 
         # Valid deal
         deal = Deal(
@@ -400,9 +399,9 @@ class TestDealEdgeCases:
             original_price=original,
             final_price=final,
             discount_amount=discount_amount,
-            discount_percentage=Decimal("20"),
+            discount_percentage=Decimal(20),
         )
-        assert deal.discount_percentage == Decimal("20")
+        assert deal.discount_percentage == Decimal(20)
 
         # Test with zero discount (no savings)
         no_discount = Deal(
@@ -416,15 +415,15 @@ class TestDealEdgeCases:
         free_deal = Deal(
             title="Free Deal",
             original_price=original,
-            final_price=Price(amount=Decimal("0"), currency=CurrencyCode.USD),
-            discount_percentage=Decimal("100"),
+            final_price=Price(amount=Decimal(0), currency=CurrencyCode.USD),
+            discount_percentage=Decimal(100),
         )
-        assert free_deal.final_price.amount == Decimal("0")
+        assert free_deal.final_price.amount == Decimal(0)
 
     def test_deal_currency_mismatch_validation(self):
         """Test deal validation with currency mismatches."""
-        original_usd = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        final_eur = Price(amount=Decimal("80"), currency=CurrencyCode.EUR)
+        original_usd = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        final_eur = Price(amount=Decimal(80), currency=CurrencyCode.EUR)
 
         with pytest.raises(ValidationError, match="same currency"):
             Deal(
@@ -432,9 +431,9 @@ class TestDealEdgeCases:
             )
 
         # Test discount amount currency mismatch
-        original = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        final = Price(amount=Decimal("80"), currency=CurrencyCode.USD)
-        discount_eur = Price(amount=Decimal("20"), currency=CurrencyCode.EUR)
+        original = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        final = Price(amount=Decimal(80), currency=CurrencyCode.USD)
+        discount_eur = Price(amount=Decimal(20), currency=CurrencyCode.EUR)
 
         with pytest.raises(ValidationError, match="same currency"):
             Deal(
@@ -446,8 +445,8 @@ class TestDealEdgeCases:
 
     def test_deal_invalid_final_price(self):
         """Test deal with final price greater than original."""
-        original = Price(amount=Decimal("100"), currency=CurrencyCode.USD)
-        final_higher = Price(amount=Decimal("120"), currency=CurrencyCode.USD)
+        original = Price(amount=Decimal(100), currency=CurrencyCode.USD)
+        final_higher = Price(amount=Decimal(120), currency=CurrencyCode.USD)
 
         with pytest.raises(ValidationError, match="cannot be greater than original"):
             Deal(
@@ -460,15 +459,15 @@ class TestTaxInfoEdgeCases:
 
     def test_tax_rate_boundary_values(self):
         """Test tax rate validation with boundary values."""
-        tax_amount = Price(amount=Decimal("20"), currency=CurrencyCode.USD)
+        tax_amount = Price(amount=Decimal(20), currency=CurrencyCode.USD)
 
         # Test with 0% tax rate
-        zero_tax = TaxInfo(tax_type="VAT", rate=Decimal("0"), amount=tax_amount)
-        assert zero_tax.rate == Decimal("0")
+        zero_tax = TaxInfo(tax_type="VAT", rate=Decimal(0), amount=tax_amount)
+        assert zero_tax.rate == Decimal(0)
 
         # Test with 100% tax rate
-        full_tax = TaxInfo(tax_type="VAT", rate=Decimal("1"), amount=tax_amount)
-        assert full_tax.rate == Decimal("1")
+        full_tax = TaxInfo(tax_type="VAT", rate=Decimal(1), amount=tax_amount)
+        assert full_tax.rate == Decimal(1)
 
         # Test with invalid tax rate (> 100%)
         with pytest.raises(ValidationError):
@@ -509,11 +508,11 @@ class TestPaymentInfoEdgeCases:
         """Test payment info with various amount scenarios."""
         # Test with zero amount
         zero_payment = PaymentInfo(
-            amount=Price(amount=Decimal("0"), currency=CurrencyCode.USD),
+            amount=Price(amount=Decimal(0), currency=CurrencyCode.USD),
             payment_method="credit_card",
             status="pending",
         )
-        assert zero_payment.amount.amount == Decimal("0")
+        assert zero_payment.amount.amount == Decimal(0)
 
         # Test with very large amount
         large_amount = Decimal("999999999.99")

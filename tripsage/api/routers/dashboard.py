@@ -35,6 +35,7 @@ from tripsage_core.services.business.dashboard_service import (
     DashboardService,  # Production-ready dashboard service
 )
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])

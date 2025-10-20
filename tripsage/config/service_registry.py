@@ -8,10 +8,11 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import Any, Dict, Protocol
+from typing import Any, Protocol
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage_core.config import get_settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +39,10 @@ class BaseService(ABC):
     @abstractmethod
     async def connect(self) -> None:
         """Initialize service connection."""
-        pass
 
     @abstractmethod
     async def close(self) -> None:
         """Close service connection."""
-        pass
 
     @property
     def is_connected(self) -> bool:
@@ -71,7 +70,6 @@ class ServiceAdapter(ABC):
     @abstractmethod
     async def get_service_instance(self):
         """Get service instance."""
-        pass
 
     async def get_service(self):
         """Get appropriate service instance."""
@@ -86,9 +84,9 @@ class ServiceRegistry:
     """
 
     def __init__(self):
-        self._services: Dict[str, ServiceAdapter] = {}
-        self._instances: Dict[str, Any] = {}
-        self._locks: Dict[str, asyncio.Lock] = {}
+        self._services: dict[str, ServiceAdapter] = {}
+        self._instances: dict[str, Any] = {}
+        self._locks: dict[str, asyncio.Lock] = {}
 
     def register_service(self, name: str, adapter: ServiceAdapter) -> None:
         """Register a service adapter.
@@ -168,7 +166,7 @@ class ServiceRegistry:
 
         self._instances.clear()
 
-    def list_services(self) -> Dict[str, Dict[str, Any]]:
+    def list_services(self) -> dict[str, dict[str, Any]]:
         """List all registered services and their status.
 
         Returns:

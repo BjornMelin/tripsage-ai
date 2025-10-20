@@ -1,11 +1,10 @@
-"""
-Comprehensive tests for ChatService.
+"""Comprehensive tests for ChatService.
 
 This module provides full test coverage for chat session management operations
 including session creation, message handling, context management, and AI interactions.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -68,7 +67,7 @@ class TestChatService:
         session_id = str(uuid4())
         user_id = str(uuid4())
         trip_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return ChatSessionResponse(
             id=session_id,
@@ -96,7 +95,7 @@ class TestChatService:
     def sample_message_response(self, sample_chat_session):
         """Sample message response."""
         message_id = str(uuid4())
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return MessageResponse(
             id=message_id,
@@ -122,8 +121,8 @@ class TestChatService:
             "user_id": user_id,
             "title": sample_session_create_request.title,
             "trip_id": sample_session_create_request.trip_id,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "metadata": sample_session_create_request.metadata or {},
             "message_count": 0,
         }
@@ -222,7 +221,7 @@ class TestChatService:
             "session_id": sample_chat_session.id,
             "role": sample_message_create_request.role,
             "content": sample_message_create_request.content,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
             "metadata": sample_message_create_request.metadata or {},
             "estimated_tokens": 12,
         }
@@ -350,7 +349,7 @@ class TestChatService:
         # Mock get_session_stats for the get_session call
         mock_database_service.get_session_stats.return_value = {
             "message_count": 5,
-            "last_message_at": datetime.now(timezone.utc).isoformat(),
+            "last_message_at": datetime.now(UTC).isoformat(),
         }
 
         # Create messages that would be limited by database layer
@@ -363,7 +362,7 @@ class TestChatService:
                     "session_id": sample_chat_session.id,
                     "role": MessageRole.USER,
                     "content": "A" * 2000,  # ~500 tokens each
-                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "created_at": datetime.now(UTC).isoformat(),
                     "metadata": {},
                     "estimated_tokens": 500,
                 }
@@ -408,7 +407,7 @@ class TestChatService:
             "tool_name": tool_call_data["tool_name"],
             "arguments": tool_call_data["arguments"],
             "status": ToolCallStatus.PENDING,
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         result = await chat_service.add_tool_call(
@@ -435,7 +434,7 @@ class TestChatService:
             "id": tool_call_id,
             "status": ToolCallStatus.COMPLETED,
             "result": result_data,
-            "completed_at": datetime.now(timezone.utc).isoformat(),
+            "completed_at": datetime.now(UTC).isoformat(),
         }
 
         result = await chat_service.update_tool_call_status(
@@ -496,7 +495,7 @@ class TestChatService:
             "created_at": sample_chat_session.created_at.isoformat(),
             "updated_at": sample_chat_session.updated_at.isoformat(),
             "metadata": sample_chat_session.metadata,
-            "ended_at": datetime.now(timezone.utc).isoformat(),
+            "ended_at": datetime.now(UTC).isoformat(),
         }
 
         # Mock get_session_stats for the get_session call

@@ -1,5 +1,4 @@
-"""
-Comprehensive Database Service Tests - Advanced Features
+"""Comprehensive Database Service Tests - Advanced Features
 
 This module provides comprehensive test coverage for advanced database service features
 that were not covered in the base test suite, specifically targeting:
@@ -20,7 +19,7 @@ These tests focus on achieving 90%+ test coverage for the consolidated database 
 
 import asyncio
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -699,7 +698,7 @@ class TestSecurityFeatures:
 
         # Mock audit log entry
         audit_entry = {
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
             "user_id": "test_user",
             "action": "SELECT",
             "table": "sensitive_data",
@@ -975,7 +974,7 @@ class TestErrorHandlingAndRecovery:
 
         # Mock query that times out
         with patch.object(service, "execute_sql") as mock_execute:
-            mock_execute.side_effect = asyncio.TimeoutError("Query timeout")
+            mock_execute.side_effect = TimeoutError("Query timeout")
 
             with pytest.raises(CoreDatabaseError, match="Query timeout"):
                 await service._execute_with_timeout(
@@ -1086,7 +1085,6 @@ class TestPerformanceOptimization:
 
     def test_query_caching_optimization(self, performance_service):
         """Test query result caching for performance."""
-
         # Mock cache implementation
         cache = {}
 

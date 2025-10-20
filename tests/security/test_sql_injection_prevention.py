@@ -1,5 +1,4 @@
-"""
-SQL injection prevention and input validation security tests.
+"""SQL injection prevention and input validation security tests.
 
 Tests SQL injection attacks, input sanitization, parameterized queries,
 and database security measures.
@@ -354,8 +353,7 @@ class TestSQLInjectionPrevention:
                 # Some validation errors are acceptable for control characters
                 if any(ord(c) < 32 for c in test_input if c not in "\t\n\r"):
                     continue  # Control characters should be rejected
-                else:
-                    pytest.fail(f"Unexpected validation error for {test_input}: {e}")
+                pytest.fail(f"Unexpected validation error for {test_input}: {e}")
 
     def test_numeric_overflow_protection(self):
         """Test protection against numeric overflow attacks."""

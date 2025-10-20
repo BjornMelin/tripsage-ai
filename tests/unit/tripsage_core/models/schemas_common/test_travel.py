@@ -1,5 +1,4 @@
-"""
-Tests for shared travel models in tripsage_core.
+"""Tests for shared travel models in tripsage_core.
 
 This module tests the travel-related models used across
 the application including trip destinations and preferences.

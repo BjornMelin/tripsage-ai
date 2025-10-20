@@ -1,5 +1,4 @@
-"""
-API key monitoring and security service for TripSage Core.
+"""API key monitoring and security service for TripSage Core.
 
 This module provides monitoring, structured logging, and security features for
 API key operations in TripSage.
@@ -8,10 +7,11 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -28,6 +28,7 @@ from tripsage_core.services.infrastructure.database_service import (
     get_database_service,
 )
 from tripsage_core.utils.logging_utils import get_logger
+
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])
@@ -48,23 +49,22 @@ class KeyOperation(str, Enum):
 
 
 class KeyMonitoringService:
-    """
-    Service for monitoring API key operations.
+    """Service for monitoring API key operations.
 
     This service is responsible for monitoring API key operations, detecting
     suspicious patterns, and sending alerts.
     """
 
-    def __init__(self, settings: Optional[Settings] = None):
+    def __init__(self, settings: Settings | None = None):
         """Initialize the key monitoring service.
 
         Args:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self.cache_service: Optional[CacheService] = None
-        self.database_service: Optional[DatabaseService] = None
-        self.suspicious_patterns: Set[str] = set()
+        self.cache_service: CacheService | None = None
+        self.database_service: DatabaseService | None = None
+        self.suspicious_patterns: set[str] = set()
         self.alert_threshold = {
             KeyOperation.CREATE: 5,  # 5 creates in 10 minutes
             KeyOperation.DELETE: 5,  # 5 deletes in 10 minutes
@@ -84,10 +84,10 @@ class KeyMonitoringService:
         self,
         operation: KeyOperation,
         user_id: str,
-        key_id: Optional[str] = None,
-        service: Optional[str] = None,
+        key_id: str | None = None,
+        service: str | None = None,
         success: bool = True,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Log an API key operation with structured data.
 
@@ -104,7 +104,7 @@ class KeyMonitoringService:
 
         # Create a log entry
         log_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "operation": operation.value,
             "user_id": user_id,
             "key_id": key_id,
@@ -166,11 +166,9 @@ class KeyMonitoringService:
         # Get existing operations
         existing_ops = await self.cache_service.get_json(key) or []
         # Add new timestamp
-        existing_ops.append(datetime.now(timezone.utc).isoformat())
+        existing_ops.append(datetime.now(UTC).isoformat())
         # Keep only recent operations within timeframe
-        cutoff_time = datetime.now(timezone.utc) - timedelta(
-            seconds=self.pattern_timeframe
-        )
+        cutoff_time = datetime.now(UTC) - timedelta(seconds=self.pattern_timeframe)
         existing_ops = [
             op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time
         ]
@@ -205,7 +203,7 @@ class KeyMonitoringService:
         return count >= threshold
 
     async def _send_alert(
-        self, operation: KeyOperation, user_id: str, log_data: Dict[str, Any]
+        self, operation: KeyOperation, user_id: str, log_data: dict[str, Any]
     ) -> None:
         """Send an alert for suspicious key operations.
 
@@ -236,7 +234,7 @@ class KeyMonitoringService:
         existing_alerts = await self.cache_service.get_json(alert_key) or []
         existing_alerts.append(
             {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "message": alert_message,
                 "operation": operation.value,
                 "user_id": user_id,
@@ -252,7 +250,7 @@ class KeyMonitoringService:
 
     async def get_user_operations(
         self, user_id: str, limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get recent key operations for a user.
 
         Args:
@@ -271,7 +269,7 @@ class KeyMonitoringService:
         # Return limited results
         return logs[-limit:] if len(logs) > limit else logs
 
-    async def get_alerts(self, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_alerts(self, limit: int = 100) -> list[dict[str, Any]]:
         """Get recent key operation alerts.
 
         Args:
@@ -322,8 +320,7 @@ class KeyMonitoringService:
 
 
 class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware for rate limiting API key operations.
+    """Middleware for rate limiting API key operations.
 
     This middleware specifically rate limits API key operations,
     using more strict limits than the general API rate limiting.
@@ -333,7 +330,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         monitoring_service: KeyMonitoringService,
-        settings: Optional[Settings] = None,
+        settings: Settings | None = None,
     ):
         """Initialize the middleware.
 
@@ -393,7 +390,7 @@ class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _get_key_operation(self, request: Request) -> Optional[KeyOperation]:
+    def _get_key_operation(self, request: Request) -> KeyOperation | None:
         """Get the key operation from the request.
 
         Args:
@@ -561,7 +558,7 @@ def constant_time_compare(a: str, b: str) -> bool:
     return secrets.compare_digest(a.encode(), b.encode())
 
 
-def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+def clear_sensitive_data(data: dict[str, Any], keys: list[str]) -> dict[str, Any]:
     """Clear sensitive data from a dictionary.
 
     Args:
@@ -580,7 +577,7 @@ def clear_sensitive_data(data: Dict[str, Any], keys: List[str]) -> Dict[str, Any
 
 async def check_key_expiration(
     monitoring_service: KeyMonitoringService, days_before: int = 7
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Check for API keys that are about to expire.
 
     Args:
@@ -594,7 +591,7 @@ async def check_key_expiration(
     await monitoring_service.initialize()
 
     # Get date threshold
-    threshold = datetime.now(timezone.utc) + timedelta(days=days_before)
+    threshold = datetime.now(UTC) + timedelta(days=days_before)
 
     # Get expiring keys from database
     try:
@@ -609,7 +606,7 @@ async def check_key_expiration(
         return []
 
 
-async def get_key_health_metrics() -> Dict[str, Any]:
+async def get_key_health_metrics() -> dict[str, Any]:
     """Get health metrics for API keys.
 
     Returns:
@@ -631,7 +628,7 @@ async def get_key_health_metrics() -> Dict[str, Any]:
                 service_count[service] = service_count.get(service, 0) + 1
 
         # Get count of expired keys
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired_count = await db_service.count(
             "api_keys", {"expires_at": {"lte": now.isoformat()}}
         )

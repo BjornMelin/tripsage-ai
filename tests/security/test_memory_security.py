@@ -1,11 +1,10 @@
-"""
-Security tests for memory system.
+"""Security tests for memory system.
 Tests data isolation, GDPR compliance, and security measures.
 """
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -36,7 +35,7 @@ class TestMemorySecurityIsolation:
                 {
                     "operation": "add",
                     "user_id": user_id,
-                    "timestamp": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(UTC),
                     "data_size": len(str(messages)),
                 }
             )
@@ -49,7 +48,7 @@ class TestMemorySecurityIsolation:
                 "user_id": user_id,
                 "messages": messages,
                 "metadata": metadata or {},
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
             }
             self.user_data[user_id].append(memory_entry)
 
@@ -63,7 +62,7 @@ class TestMemorySecurityIsolation:
                     "operation": "search",
                     "user_id": user_id,
                     "query": query,
-                    "timestamp": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(UTC),
                 }
             )
 
@@ -93,7 +92,7 @@ class TestMemorySecurityIsolation:
                 {
                     "operation": "get_context",
                     "user_id": user_id,
-                    "timestamp": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(UTC),
                 }
             )
 
@@ -132,7 +131,7 @@ class TestMemorySecurityIsolation:
                         "My secret travel plans to a classified location. "
                         "SSN: 123-45-6789"
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -150,7 +149,7 @@ class TestMemorySecurityIsolation:
                         "My private business trip details. "
                         "Credit card: 4111-1111-1111-1111"
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -215,7 +214,7 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content=f"Travel context: {sensitive_content}",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ]
 
@@ -247,7 +246,7 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content="Secret project alpha details",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id="target-user-alpha",
@@ -292,7 +291,7 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content="Audit test message",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
@@ -333,7 +332,7 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content="Data to be retained for compliance testing",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
@@ -352,7 +351,7 @@ class TestMemorySecurityIsolation:
             # In production, this would trigger actual deletion
             deletion_metadata = {
                 "deletion_requested": True,
-                "deletion_timestamp": datetime.now(timezone.utc),
+                "deletion_timestamp": datetime.now(UTC),
                 "legal_basis": "gdpr_article_17",
             }
 
@@ -382,7 +381,7 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content=encrypted_content,  # Would be encrypted in production
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id="encryption-test-user",
@@ -411,7 +410,7 @@ class TestMemorySecurityIsolation:
             request_timestamps = []
 
             async def rate_limited_operation(user_id, operation_type):
-                now = datetime.now(timezone.utc)
+                now = datetime.now(UTC)
                 request_timestamps.append((user_id, operation_type, now))
 
                 # Count recent requests (last minute)
@@ -460,13 +459,13 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content="I consent to storing this travel information",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
                 metadata={
                     "consent_given": True,
-                    "consent_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "consent_timestamp": datetime.now(UTC).isoformat(),
                     "privacy_level": "standard",
                     "data_sharing_allowed": False,
                 },
@@ -478,7 +477,7 @@ class TestMemorySecurityIsolation:
                     ConversationMessage(
                         role="user",
                         content="This should be stored with high privacy",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
@@ -521,7 +520,7 @@ class TestMemoryGDPRCompliance:
                 "user_id": user_id,
                 "messages": messages,
                 "metadata": metadata or {},
-                "created_at": datetime.now(timezone.utc),
+                "created_at": datetime.now(UTC),
                 "gdpr_compliant": True,
             }
             self.user_data_map[user_id].append(memory_entry)
@@ -533,7 +532,7 @@ class TestMemoryGDPRCompliance:
             user_data = self.user_data_map.get(user_id, [])
             export_data = {
                 "user_id": user_id,
-                "export_timestamp": datetime.now(timezone.utc).isoformat(),
+                "export_timestamp": datetime.now(UTC).isoformat(),
                 "data_count": len(user_data),
                 "memories": user_data,
                 "gdpr_compliance": {
@@ -547,7 +546,7 @@ class TestMemoryGDPRCompliance:
                 {
                     "type": "data_export",
                     "user_id": user_id,
-                    "timestamp": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(UTC),
                 }
             )
 
@@ -563,7 +562,7 @@ class TestMemoryGDPRCompliance:
                     {
                         "type": "data_deletion",
                         "user_id": user_id,
-                        "timestamp": datetime.now(timezone.utc),
+                        "timestamp": datetime.now(UTC),
                         "deleted_records": deleted_count,
                     }
                 )
@@ -594,7 +593,7 @@ class TestMemoryGDPRCompliance:
                     ConversationMessage(
                         role="user",
                         content="GDPR test data for access request",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
@@ -630,7 +629,7 @@ class TestMemoryGDPRCompliance:
                         ConversationMessage(
                             role="user",
                             content=f"GDPR erasure test data {_i}",
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                         )
                     ],
                     user_id=user_id,
@@ -675,7 +674,7 @@ class TestMemoryGDPRCompliance:
                     ConversationMessage(
                         role="user",
                         content="Portable travel data for GDPR compliance",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,

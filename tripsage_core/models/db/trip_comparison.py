@@ -5,7 +5,7 @@ comparison data between different trip options.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import Field
 
@@ -21,18 +21,17 @@ class TripComparison(TripSageModel):
         comparison_json: The comparison data in JSON format
     """
 
-    id: Optional[int] = Field(None, description="Unique identifier")
+    id: int | None = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     timestamp: datetime = Field(..., description="When the comparison was created")
-    comparison_json: Dict[str, Any] = Field(
+    comparison_json: dict[str, Any] = Field(
         ..., description="The comparison data in JSON format"
     )
 
     @property
     def is_recent(self) -> bool:
         """Check if the comparison was created recently (within 24 hours)."""
-        from datetime import datetime as datetime_type
-        from datetime import timedelta
+        from datetime import datetime as datetime_type, timedelta
 
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
 
@@ -55,12 +54,12 @@ class TripComparison(TripSageModel):
         return "selected_option_id" in self.comparison_json
 
     @property
-    def selected_option_id(self) -> Optional[int]:
+    def selected_option_id(self) -> int | None:
         """Get the ID of the selected option."""
         return self.comparison_json.get("selected_option_id")
 
     @property
-    def comparison_type(self) -> Optional[str]:
+    def comparison_type(self) -> str | None:
         """Get the type of comparison (flight, accommodation, etc.)."""
         # Try to infer from options
         options = self.comparison_json.get("options", [])
@@ -78,7 +77,7 @@ class TripComparison(TripSageModel):
         return isinstance(criteria, list) and len(criteria) > 0
 
     @property
-    def criteria_list(self) -> List[str]:
+    def criteria_list(self) -> list[str]:
         """Get the list of comparison criteria."""
         criteria = self.comparison_json.get("criteria", [])
         if isinstance(criteria, list):
@@ -141,7 +140,7 @@ class TripComparison(TripSageModel):
 
         return f"Comparison of {options_count} options with {components_str}"
 
-    def get_option_by_id(self, option_id: int) -> Optional[Dict[str, Any]]:
+    def get_option_by_id(self, option_id: int) -> dict[str, Any] | None:
         """Get an option by its ID."""
         options = self.comparison_json.get("options", [])
         if isinstance(options, list):
@@ -150,7 +149,7 @@ class TripComparison(TripSageModel):
                     return option
         return None
 
-    def get_selected_option(self) -> Optional[Dict[str, Any]]:
+    def get_selected_option(self) -> dict[str, Any] | None:
         """Get the currently selected option."""
         selected_id = self.selected_option_id
         if selected_id is not None:

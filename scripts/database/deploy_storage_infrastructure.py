@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-TripSage Storage Infrastructure Deployment Script
+"""TripSage Storage Infrastructure Deployment Script
 Description: Deploys complete file storage infrastructure to Supabase
 Created: 2025-01-11
 Version: 1.0
@@ -12,7 +11,6 @@ import sys
 from pathlib import Path
 
 import asyncpg
-
 from supabase import Client, create_client
 
 

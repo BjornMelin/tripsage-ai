@@ -1,5 +1,4 @@
-"""
-Comprehensive Security Audit Logging Service.
+"""Comprehensive Security Audit Logging Service.
 
 This service provides enterprise-grade audit logging capabilities following
 NIST SP 800-92, OWASP, and industry best practices for security event tracking.
@@ -21,15 +20,16 @@ import json
 import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.utils.logging_utils import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -127,11 +127,11 @@ class AuditSource(BaseModel):
     """Source information for the audit event."""
 
     ip_address: str
-    user_agent: Optional[str] = None
-    country: Optional[str] = None
-    city: Optional[str] = None
-    isp: Optional[str] = None
-    threat_level: Optional[str] = None
+    user_agent: str | None = None
+    country: str | None = None
+    city: str | None = None
+    isp: str | None = None
+    threat_level: str | None = None
     is_tor: bool = False
     is_vpn: bool = False
 
@@ -141,8 +141,8 @@ class AuditTarget(BaseModel):
 
     resource_type: str  # user, api_key, configuration, etc.
     resource_id: str
-    resource_name: Optional[str] = None
-    resource_attributes: Dict[str, Any] = Field(default_factory=dict)
+    resource_name: str | None = None
+    resource_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class AuditActor(BaseModel):
@@ -150,16 +150,15 @@ class AuditActor(BaseModel):
 
     actor_type: str  # user, system, api_key, service
     actor_id: str
-    actor_name: Optional[str] = None
-    roles: List[str] = Field(default_factory=list)
-    permissions: List[str] = Field(default_factory=list)
-    session_id: Optional[str] = None
-    authentication_method: Optional[str] = None
+    actor_name: str | None = None
+    roles: list[str] = Field(default_factory=list)
+    permissions: list[str] = Field(default_factory=list)
+    session_id: str | None = None
+    authentication_method: str | None = None
 
 
 class AuditEvent(TripSageModel):
-    """
-    Comprehensive audit event following NIST SP 800-92 guidelines.
+    """Comprehensive audit event following NIST SP 800-92 guidelines.
 
     This model represents a single security event with all required
     metadata for compliance and forensic analysis.
@@ -171,25 +170,25 @@ class AuditEvent(TripSageModel):
     event_version: str = "1.0"
 
     # Temporal Information
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     timezone: str = "UTC"
 
     # Event Details
     severity: AuditSeverity
     outcome: AuditOutcome
     message: str
-    description: Optional[str] = None
+    description: str | None = None
 
     # Context Information
     actor: AuditActor
-    target: Optional[AuditTarget] = None
+    target: AuditTarget | None = None
     source: AuditSource
 
     # Request Context
-    request_id: Optional[str] = None
-    correlation_id: Optional[str] = None
-    session_id: Optional[str] = None
-    trace_id: Optional[str] = None
+    request_id: str | None = None
+    correlation_id: str | None = None
+    session_id: str | None = None
+    trace_id: str | None = None
 
     # Technical Details
     application: str = "tripsage"
@@ -198,17 +197,15 @@ class AuditEvent(TripSageModel):
     service_version: str = "1.0.0"
 
     # Additional Data
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     # Security Context
-    risk_score: Optional[int] = None  # 0-100
-    compliance_tags: List[str] = Field(default_factory=list)
+    risk_score: int | None = None  # 0-100
+    compliance_tags: list[str] = Field(default_factory=list)
 
     # Data Classification
-    data_classification: Optional[str] = (
-        None  # public, internal, confidential, restricted
-    )
+    data_classification: str | None = None  # public, internal, confidential, restricted
     retention_period_days: int = 2555  # 7 years default
 
     @validator("risk_score")
@@ -221,7 +218,7 @@ class AuditEvent(TripSageModel):
     def validate_timestamp(cls, v):
         # Ensure timestamp is UTC
         if v.tzinfo is None:
-            v = v.replace(tzinfo=timezone.utc)
+            v = v.replace(tzinfo=UTC)
         return v
 
     def to_json_log(self) -> str:
@@ -258,9 +255,9 @@ class AuditLogConfig(BaseModel):
 
     # Security Configuration
     integrity_checks_enabled: bool = True
-    integrity_secret_key: Optional[str] = None
+    integrity_secret_key: str | None = None
     encryption_enabled: bool = False
-    encryption_key: Optional[str] = None
+    encryption_key: str | None = None
 
     # Performance Configuration
     max_events_per_second: int = 1000
@@ -270,19 +267,18 @@ class AuditLogConfig(BaseModel):
 
     # External Integration
     external_forwarding_enabled: bool = False
-    external_endpoints: List[str] = Field(default_factory=list)
-    external_headers: Dict[str, str] = Field(default_factory=dict)
+    external_endpoints: list[str] = Field(default_factory=list)
+    external_headers: dict[str, str] = Field(default_factory=dict)
     external_timeout_seconds: int = 5
 
     # Compliance Configuration
     compliance_mode: str = "standard"  # standard, hipaa, pci, gdpr
     anonymization_enabled: bool = False
-    data_residency_region: Optional[str] = None
+    data_residency_region: str | None = None
 
 
 class SecurityAuditLogger:
-    """
-    Production-ready security audit logging service.
+    """Production-ready security audit logging service.
 
     This service provides comprehensive audit logging capabilities with:
     - Structured JSON logging with consistent schema
@@ -293,14 +289,14 @@ class SecurityAuditLogger:
     - Compliance-ready audit trails
     """
 
-    def __init__(self, config: Optional[AuditLogConfig] = None):
+    def __init__(self, config: AuditLogConfig | None = None):
         """Initialize the audit logging service."""
         self.config = config or AuditLogConfig()
-        self._buffer: List[AuditEvent] = []
+        self._buffer: list[AuditEvent] = []
         self._buffer_lock = asyncio.Lock()
         self._is_running = False
-        self._flush_task: Optional[asyncio.Task] = None
-        self._cleanup_task: Optional[asyncio.Task] = None
+        self._flush_task: asyncio.Task | None = None
+        self._cleanup_task: asyncio.Task | None = None
 
         # Performance tracking
         self._events_per_second = 0
@@ -395,8 +391,7 @@ class SecurityAuditLogger:
         logger.info("Security audit logging service stopped")
 
     async def log_event(self, event: AuditEvent) -> bool:
-        """
-        Log a security audit event.
+        """Log a security audit event.
 
         Args:
             event: The audit event to log
@@ -460,9 +455,9 @@ class SecurityAuditLogger:
         outcome: AuditOutcome,
         user_id: str,
         ip_address: str,
-        user_agent: Optional[str] = None,
-        message: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        user_agent: str | None = None,
+        message: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Log authentication-related audit event."""
         severity = self._determine_auth_severity(event_type, outcome)
@@ -488,8 +483,8 @@ class SecurityAuditLogger:
         key_id: str,
         service: str,
         ip_address: str,
-        message: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        message: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Log API key related audit event."""
         severity = self._determine_api_key_severity(event_type, outcome)
@@ -520,9 +515,9 @@ class SecurityAuditLogger:
         message: str,
         actor_id: str,
         ip_address: str,
-        target_resource: Optional[str] = None,
-        risk_score: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        target_resource: str | None = None,
+        risk_score: int | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Log security-related audit event."""
         target = None
@@ -550,7 +545,7 @@ class SecurityAuditLogger:
         new_value: Any,
         changed_by: str,
         ip_address: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Log configuration change audit event."""
         event = AuditEvent(
@@ -575,15 +570,14 @@ class SecurityAuditLogger:
 
     async def query_events(
         self,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        event_types: Optional[List[AuditEventType]] = None,
-        severity: Optional[AuditSeverity] = None,
-        actor_id: Optional[str] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        event_types: list[AuditEventType] | None = None,
+        severity: AuditSeverity | None = None,
+        actor_id: str | None = None,
         limit: int = 1000,
-    ) -> List[AuditEvent]:
-        """
-        Query audit events (simplified implementation).
+    ) -> list[AuditEvent]:
+        """Query audit events (simplified implementation).
 
         Note: In production, this would typically use a proper search index
         like Elasticsearch or a database with full-text search capabilities.
@@ -596,9 +590,9 @@ class SecurityAuditLogger:
 
         # Get date range for file filtering
         if not start_time:
-            start_time = datetime.now(timezone.utc) - timedelta(days=7)
+            start_time = datetime.now(UTC) - timedelta(days=7)
         if not end_time:
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
 
         # Read relevant log files
         current_date = start_time.date()
@@ -609,7 +603,7 @@ class SecurityAuditLogger:
 
             if log_file.exists():
                 try:
-                    with open(log_file, "r") as f:
+                    with open(log_file) as f:
                         for line in f:
                             if len(events) >= limit:
                                 break
@@ -646,7 +640,7 @@ class SecurityAuditLogger:
 
         return sorted(events, key=lambda x: x.timestamp, reverse=True)[:limit]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get audit logging statistics."""
         return {
             **self.stats,
@@ -841,7 +835,7 @@ class SecurityAuditLogger:
 
 
 # Global audit logger instance
-_audit_logger: Optional[SecurityAuditLogger] = None
+_audit_logger: SecurityAuditLogger | None = None
 
 
 async def get_audit_logger() -> SecurityAuditLogger:
@@ -871,8 +865,8 @@ async def audit_authentication(
     outcome: AuditOutcome,
     user_id: str,
     ip_address: str,
-    user_agent: Optional[str] = None,
-    message: Optional[str] = None,
+    user_agent: str | None = None,
+    message: str | None = None,
     **metadata,
 ) -> bool:
     """Log authentication audit event."""
@@ -888,7 +882,7 @@ async def audit_api_key(
     key_id: str,
     service: str,
     ip_address: str,
-    message: Optional[str] = None,
+    message: str | None = None,
     **metadata,
 ) -> bool:
     """Log API key audit event."""
@@ -904,8 +898,8 @@ async def audit_security_event(
     message: str,
     actor_id: str,
     ip_address: str,
-    target_resource: Optional[str] = None,
-    risk_score: Optional[int] = None,
+    target_resource: str | None = None,
+    risk_score: int | None = None,
     **metadata,
 ) -> bool:
     """Log security audit event."""

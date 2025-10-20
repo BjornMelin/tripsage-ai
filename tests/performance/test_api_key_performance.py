@@ -1,5 +1,4 @@
-"""
-Performance and load testing for API key service operations.
+"""Performance and load testing for API key service operations.
 
 This module provides comprehensive performance testing including:
 - Benchmark tests for API key operations using pytest-benchmark
@@ -18,7 +17,7 @@ import statistics
 import threading
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -49,8 +48,8 @@ class TestApiKeyPerformance:
                 "name": "Test Key",
                 "service": "openai",
                 "is_valid": True,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
                 "usage_count": 0,
             }
 
@@ -88,15 +87,15 @@ class TestApiKeyPerformance:
                         "id": str(uuid.uuid4()),
                         "name": "Test API Key",
                         "service": "openai",
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
+                        "updated_at": datetime.now(UTC).isoformat(),
                         "is_active": True,
                         "is_valid": True,
                         "usage_count": 0,
                         "description": "Test key description",
                         "expires_at": None,
                         "last_used": None,
-                        "last_validated": datetime.now(timezone.utc).isoformat(),
+                        "last_validated": datetime.now(UTC).isoformat(),
                     }
                 ],
                 [],
@@ -114,7 +113,7 @@ class TestApiKeyPerformance:
         # Simulate cache operations with realistic latencies
         async def mock_get_with_latency(key):
             await asyncio.sleep(0.0001)  # 0.1ms cache latency
-            return None  # Cache miss for most tests
+            return  # Cache miss for most tests
 
         async def mock_set_with_latency(key, value, ex=None):
             await asyncio.sleep(0.0001)  # 0.1ms cache write latency
@@ -507,7 +506,7 @@ class TestApiKeyPerformance:
                         else:
                             failed_ops += 1
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 timeouts = len(tasks)
 
             end_time = time.time()
@@ -550,7 +549,6 @@ class TestApiKeyPerformance:
     @pytest.mark.asyncio
     async def test_service_health_check_performance(self, api_key_service):
         """Test performance of service health checks."""
-
         with patch("httpx.AsyncClient.get") as mock_get:
             mock_response = Mock()
             mock_response.status_code = 200
@@ -585,7 +583,6 @@ class TestApiKeyPerformance:
     @pytest.mark.asyncio
     async def test_performance_regression_baseline(self, api_key_service):
         """Establish performance baseline for regression testing."""
-
         # Define baseline performance expectations
         BASELINE_ENCRYPTION_TIME = 0.01  # 10ms
         BASELINE_CREATION_TIME = 0.05  # 50ms
@@ -648,8 +645,7 @@ class TestApiKeyPerformance:
     def test_database_performance_under_concurrent_load(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """
-        Test database performance under high concurrent load.
+        """Test database performance under high concurrent load.
 
         This test simulates multiple concurrent database operations including:
         - Concurrent key creation with transaction management
@@ -701,8 +697,8 @@ class TestApiKeyPerformance:
                         "service": data["service"],
                         "encrypted_key": data["encrypted_key"],
                         "is_valid": True,
-                        "created_at": datetime.now(timezone.utc).isoformat(),
-                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "created_at": datetime.now(UTC).isoformat(),
+                        "updated_at": datetime.now(UTC).isoformat(),
                         "usage_count": 0,
                     }
 
@@ -740,8 +736,8 @@ class TestApiKeyPerformance:
                                 "service": "openai",
                                 "encrypted_key": f"encrypted_value_{i}",
                                 "is_valid": True,
-                                "created_at": datetime.now(timezone.utc).isoformat(),
-                                "updated_at": datetime.now(timezone.utc).isoformat(),
+                                "created_at": datetime.now(UTC).isoformat(),
+                                "updated_at": datetime.now(UTC).isoformat(),
                                 "usage_count": random.randint(0, 50),
                             }
                             for i in range(random.randint(1, 5))
@@ -776,7 +772,7 @@ class TestApiKeyPerformance:
                     result = {
                         "id": filters.get("id", str(uuid.uuid4())),
                         "last_used": data.get(
-                            "last_used", datetime.now(timezone.utc).isoformat()
+                            "last_used", datetime.now(UTC).isoformat()
                         ),
                         "usage_count": random.randint(1, 100),
                     }
@@ -856,7 +852,7 @@ class TestApiKeyPerformance:
                     mixed_tasks.append(
                         mock_db.update(
                             "api_keys",
-                            {"last_used": datetime.now(timezone.utc).isoformat()},
+                            {"last_used": datetime.now(UTC).isoformat()},
                             {"id": f"key_{i % 10}"},
                         )
                     )
@@ -940,8 +936,7 @@ class TestApiKeyPerformance:
     def test_cache_hit_miss_ratio_under_load(
         self, api_key_service, mock_cache, benchmark
     ):
-        """
-        Test cache hit/miss ratios under various load conditions.
+        """Test cache hit/miss ratios under various load conditions.
 
         This test analyzes cache performance including:
         - Cache hit ratio optimization under different access patterns
@@ -1062,7 +1057,7 @@ class TestApiKeyPerformance:
                         "is_valid": True,
                         "status": "valid",
                         "service": "openai",
-                        "validated_at": datetime.now(timezone.utc).isoformat(),
+                        "validated_at": datetime.now(UTC).isoformat(),
                     }
                 )
                 warm_tasks.append(mock_cache.set(key, value, ex=300))  # 5 min TTL
@@ -1182,8 +1177,7 @@ class TestApiKeyPerformance:
     def test_memory_usage_and_resource_monitoring(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """
-        Test memory usage and system resource monitoring during API key operations.
+        """Test memory usage and system resource monitoring during API key operations.
 
         This test monitors:
         - Memory consumption during encryption/decryption operations
@@ -1474,8 +1468,7 @@ class TestApiKeyPerformance:
     def test_comprehensive_performance_regression_suite(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
-        """
-        Comprehensive performance regression test suite.
+        """Comprehensive performance regression test suite.
 
         This test establishes and validates performance baselines for:
         - Core operation latencies (encryption, validation, creation)
@@ -1721,16 +1714,9 @@ class TestApiKeyPerformance:
             ]
 
             for check_name, actual_value, baseline_value in checks:
-                if "max" in check_name and actual_value > baseline_value:
-                    results["failed_baselines"].append(
-                        {
-                            "metric": check_name,
-                            "actual": actual_value,
-                            "baseline": baseline_value,
-                            "regression_type": "performance_degradation",
-                        }
-                    )
-                elif "min" in check_name and actual_value < baseline_value:
+                if ("max" in check_name and actual_value > baseline_value) or (
+                    "min" in check_name and actual_value < baseline_value
+                ):
                     results["failed_baselines"].append(
                         {
                             "metric": check_name,

@@ -1,5 +1,4 @@
-"""
-Accommodation service for comprehensive accommodation management operations.
+"""Accommodation service for comprehensive accommodation management operations.
 
 This service consolidates accommodation-related business logic including accommodation
 search, booking, management, and integration with external accommodation APIs. It
@@ -7,23 +6,20 @@ provides clean abstractions over external services with proper data relationship
 """
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 from pydantic import Field, field_validator
 
 from tripsage_core.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions import (
     CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,35 +66,35 @@ class AccommodationAmenity(TripSageModel):
     """Accommodation amenity information."""
 
     name: str = Field(..., description="Amenity name")
-    category: Optional[str] = Field(None, description="Amenity category")
-    icon: Optional[str] = Field(None, description="Amenity icon identifier")
-    description: Optional[str] = Field(None, description="Amenity description")
+    category: str | None = Field(None, description="Amenity category")
+    icon: str | None = Field(None, description="Amenity icon identifier")
+    description: str | None = Field(None, description="Amenity description")
 
 
 class AccommodationImage(TripSageModel):
     """Accommodation image information."""
 
     url: str = Field(..., description="Image URL")
-    caption: Optional[str] = Field(None, description="Image caption")
+    caption: str | None = Field(None, description="Image caption")
     is_primary: bool = Field(
         default=False, description="Whether this is the primary image"
     )
-    width: Optional[int] = Field(None, description="Image width in pixels")
-    height: Optional[int] = Field(None, description="Image height in pixels")
+    width: int | None = Field(None, description="Image width in pixels")
+    height: int | None = Field(None, description="Image height in pixels")
 
 
 class AccommodationLocation(TripSageModel):
     """Accommodation location information."""
 
-    address: Optional[str] = Field(None, description="Full address")
+    address: str | None = Field(None, description="Full address")
     city: str = Field(..., description="City")
-    state: Optional[str] = Field(None, description="State/province")
+    state: str | None = Field(None, description="State/province")
     country: str = Field(..., description="Country")
-    postal_code: Optional[str] = Field(None, description="Postal/zip code")
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
-    neighborhood: Optional[str] = Field(None, description="Neighborhood name")
-    distance_to_center: Optional[float] = Field(
+    postal_code: str | None = Field(None, description="Postal/zip code")
+    latitude: float | None = Field(None, description="Latitude coordinate")
+    longitude: float | None = Field(None, description="Longitude coordinate")
+    neighborhood: str | None = Field(None, description="Neighborhood name")
+    distance_to_center: float | None = Field(
         None, description="Distance to city center in km"
     )
 
@@ -108,15 +104,13 @@ class AccommodationHost(TripSageModel):
 
     id: str = Field(..., description="Host ID")
     name: str = Field(..., description="Host name")
-    avatar_url: Optional[str] = Field(None, description="Host avatar URL")
-    rating: Optional[float] = Field(None, ge=0, le=5, description="Host rating")
-    review_count: Optional[int] = Field(None, ge=0, description="Host review count")
-    response_rate: Optional[float] = Field(
-        None, ge=0, le=1, description="Response rate"
-    )
-    response_time: Optional[str] = Field(None, description="Response time")
+    avatar_url: str | None = Field(None, description="Host avatar URL")
+    rating: float | None = Field(None, ge=0, le=5, description="Host rating")
+    review_count: int | None = Field(None, ge=0, description="Host review count")
+    response_rate: float | None = Field(None, ge=0, le=1, description="Response rate")
+    response_time: str | None = Field(None, description="Response time")
     is_superhost: bool = Field(default=False, description="Whether host is a superhost")
-    verification_badges: List[str] = Field(
+    verification_badges: list[str] = Field(
         default_factory=list, description="Host verification badges"
     )
 
@@ -128,50 +122,46 @@ class AccommodationSearchRequest(TripSageModel):
     check_in: date = Field(..., description="Check-in date")
     check_out: date = Field(..., description="Check-out date")
     guests: int = Field(default=1, ge=1, le=16, description="Number of guests")
-    adults: Optional[int] = Field(None, ge=1, le=16, description="Number of adults")
-    children: Optional[int] = Field(None, ge=0, le=16, description="Number of children")
-    infants: Optional[int] = Field(None, ge=0, le=16, description="Number of infants")
+    adults: int | None = Field(None, ge=1, le=16, description="Number of adults")
+    children: int | None = Field(None, ge=0, le=16, description="Number of children")
+    infants: int | None = Field(None, ge=0, le=16, description="Number of infants")
 
-    property_types: Optional[List[PropertyType]] = Field(
+    property_types: list[PropertyType] | None = Field(
         None, description="Preferred property types"
     )
-    min_price: Optional[float] = Field(
-        None, ge=0, description="Minimum price per night"
-    )
-    max_price: Optional[float] = Field(
-        None, ge=0, description="Maximum price per night"
-    )
+    min_price: float | None = Field(None, ge=0, description="Minimum price per night")
+    max_price: float | None = Field(None, ge=0, description="Maximum price per night")
     currency: str = Field(default="USD", description="Currency code")
 
-    bedrooms: Optional[int] = Field(
+    bedrooms: int | None = Field(
         None, ge=0, le=10, description="Minimum number of bedrooms"
     )
-    beds: Optional[int] = Field(None, ge=0, le=20, description="Minimum number of beds")
-    bathrooms: Optional[float] = Field(
+    beds: int | None = Field(None, ge=0, le=20, description="Minimum number of beds")
+    bathrooms: float | None = Field(
         None, ge=0, le=10, description="Minimum number of bathrooms"
     )
 
-    amenities: Optional[List[str]] = Field(None, description="Required amenities")
-    accessibility_features: Optional[List[str]] = Field(
+    amenities: list[str] | None = Field(None, description="Required amenities")
+    accessibility_features: list[str] | None = Field(
         None, description="Required accessibility features"
     )
 
-    instant_book: Optional[bool] = Field(
+    instant_book: bool | None = Field(
         None, description="Filter for instant bookable properties"
     )
-    free_cancellation: Optional[bool] = Field(
+    free_cancellation: bool | None = Field(
         None, description="Filter for free cancellation"
     )
 
-    max_distance_km: Optional[float] = Field(
+    max_distance_km: float | None = Field(
         None, ge=0, description="Maximum distance from center"
     )
-    min_rating: Optional[float] = Field(
+    min_rating: float | None = Field(
         None, ge=0, le=5, description="Minimum property rating"
     )
 
-    sort_by: Optional[str] = Field("relevance", description="Sort criteria")
-    sort_order: Optional[str] = Field("asc", description="Sort order (asc/desc)")
+    sort_by: str | None = Field("relevance", description="Sort criteria")
+    sort_order: str | None = Field("asc", description="Sort order (asc/desc)")
 
     @field_validator("check_out")
     @classmethod
@@ -187,60 +177,60 @@ class AccommodationListing(TripSageModel):
 
     id: str = Field(..., description="Listing ID")
     name: str = Field(..., description="Property name")
-    description: Optional[str] = Field(None, description="Property description")
+    description: str | None = Field(None, description="Property description")
     property_type: PropertyType = Field(..., description="Property type")
 
     location: AccommodationLocation = Field(..., description="Property location")
 
     price_per_night: float = Field(..., description="Price per night")
-    total_price: Optional[float] = Field(None, description="Total price for stay")
+    total_price: float | None = Field(None, description="Total price for stay")
     currency: str = Field(..., description="Currency code")
 
-    rating: Optional[float] = Field(None, ge=0, le=5, description="Property rating")
-    review_count: Optional[int] = Field(None, ge=0, description="Number of reviews")
+    rating: float | None = Field(None, ge=0, le=5, description="Property rating")
+    review_count: int | None = Field(None, ge=0, description="Number of reviews")
 
     max_guests: int = Field(..., description="Maximum number of guests")
-    bedrooms: Optional[int] = Field(None, description="Number of bedrooms")
-    beds: Optional[int] = Field(None, description="Number of beds")
-    bathrooms: Optional[float] = Field(None, description="Number of bathrooms")
+    bedrooms: int | None = Field(None, description="Number of bedrooms")
+    beds: int | None = Field(None, description="Number of beds")
+    bathrooms: float | None = Field(None, description="Number of bathrooms")
 
-    amenities: List[AccommodationAmenity] = Field(
+    amenities: list[AccommodationAmenity] = Field(
         default_factory=list, description="Property amenities"
     )
-    images: List[AccommodationImage] = Field(
+    images: list[AccommodationImage] = Field(
         default_factory=list, description="Property images"
     )
 
-    host: Optional[AccommodationHost] = Field(None, description="Host information")
+    host: AccommodationHost | None = Field(None, description="Host information")
 
-    check_in_time: Optional[str] = Field(None, description="Check-in time")
-    check_out_time: Optional[str] = Field(None, description="Check-out time")
+    check_in_time: str | None = Field(None, description="Check-in time")
+    check_out_time: str | None = Field(None, description="Check-out time")
 
-    cancellation_policy: Optional[CancellationPolicy] = Field(
+    cancellation_policy: CancellationPolicy | None = Field(
         None, description="Cancellation policy"
     )
     instant_book: bool = Field(default=False, description="Whether instantly bookable")
 
-    source: Optional[str] = Field(
+    source: str | None = Field(
         None, description="Data source (airbnb, booking.com, etc.)"
     )
-    source_listing_id: Optional[str] = Field(
+    source_listing_id: str | None = Field(
         None, description="Original listing ID from source"
     )
-    listing_url: Optional[str] = Field(None, description="URL to original listing")
+    listing_url: str | None = Field(None, description="URL to original listing")
 
     # Search context
-    nights: Optional[int] = Field(None, description="Number of nights for the search")
+    nights: int | None = Field(None, description="Number of nights for the search")
     is_available: bool = Field(
         default=True, description="Whether available for search dates"
     )
 
     # Scoring and ranking
-    score: Optional[float] = Field(None, ge=0, le=1, description="Relevance score")
-    price_score: Optional[float] = Field(
+    score: float | None = Field(None, ge=0, le=1, description="Relevance score")
+    price_score: float | None = Field(
         None, ge=0, le=1, description="Price competitiveness"
     )
-    location_score: Optional[float] = Field(
+    location_score: float | None = Field(
         None, ge=0, le=1, description="Location convenience"
     )
 
@@ -250,10 +240,10 @@ class AccommodationBooking(TripSageModel):
 
     id: str = Field(..., description="Booking ID")
     user_id: str = Field(..., description="User ID")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    trip_id: str | None = Field(None, description="Associated trip ID")
 
     listing_id: str = Field(..., description="Booked listing ID")
-    confirmation_number: Optional[str] = Field(
+    confirmation_number: str | None = Field(
         None, description="Booking confirmation number"
     )
 
@@ -273,7 +263,7 @@ class AccommodationBooking(TripSageModel):
     status: BookingStatus = Field(..., description="Booking status")
     booked_at: datetime = Field(..., description="Booking timestamp")
 
-    cancellation_policy: Optional[CancellationPolicy] = Field(
+    cancellation_policy: CancellationPolicy | None = Field(
         None, description="Cancellation policy"
     )
     is_cancellable: bool = Field(
@@ -283,12 +273,12 @@ class AccommodationBooking(TripSageModel):
         default=False, description="Whether booking is refundable"
     )
 
-    host: Optional[AccommodationHost] = Field(None, description="Host information")
-    special_requests: Optional[str] = Field(
+    host: AccommodationHost | None = Field(None, description="Host information")
+    special_requests: str | None = Field(
         None, description="Special requests from guest"
     )
 
-    metadata: Dict[str, Any] = Field(
+    metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional booking metadata"
     )
 
@@ -297,7 +287,7 @@ class AccommodationSearchResponse(TripSageModel):
     """Accommodation search response model."""
 
     search_id: str = Field(..., description="Search ID")
-    listings: List[AccommodationListing] = Field(..., description="Search results")
+    listings: list[AccommodationListing] = Field(..., description="Search results")
     search_parameters: AccommodationSearchRequest = Field(
         ..., description="Original search parameters"
     )
@@ -305,11 +295,11 @@ class AccommodationSearchResponse(TripSageModel):
     total_results: int = Field(..., description="Total number of results")
     results_returned: int = Field(..., description="Number of results returned")
 
-    min_price: Optional[float] = Field(None, description="Minimum price found")
-    max_price: Optional[float] = Field(None, description="Maximum price found")
-    avg_price: Optional[float] = Field(None, description="Average price")
+    min_price: float | None = Field(None, description="Minimum price found")
+    max_price: float | None = Field(None, description="Maximum price found")
+    avg_price: float | None = Field(None, description="Average price")
 
-    search_duration_ms: Optional[int] = Field(
+    search_duration_ms: int | None = Field(
         None, description="Search duration in milliseconds"
     )
     cached: bool = Field(default=False, description="Whether results were cached")
@@ -325,22 +315,21 @@ class AccommodationBookingRequest(TripSageModel):
 
     guest_name: str = Field(..., description="Primary guest name")
     guest_email: str = Field(..., description="Guest email address")
-    guest_phone: Optional[str] = Field(None, description="Guest phone number")
+    guest_phone: str | None = Field(None, description="Guest phone number")
 
-    special_requests: Optional[str] = Field(None, description="Special requests")
-    trip_id: Optional[str] = Field(None, description="Associated trip ID")
+    special_requests: str | None = Field(None, description="Special requests")
+    trip_id: str | None = Field(None, description="Associated trip ID")
 
-    payment_method: Optional[str] = Field(None, description="Payment method")
+    payment_method: str | None = Field(None, description="Payment method")
     hold_only: bool = Field(default=False, description="Hold booking without payment")
 
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         None, description="Additional booking metadata"
     )
 
 
 class AccommodationService:
-    """
-    Comprehensive accommodation service for search, booking, and management.
+    """Comprehensive accommodation service for search, booking, and management.
 
     This service handles:
     - Accommodation search with multiple providers
@@ -357,8 +346,7 @@ class AccommodationService:
         external_accommodation_service=None,
         cache_ttl: int = 300,
     ):
-        """
-        Initialize the accommodation service.
+        """Initialize the accommodation service.
 
         Args:
             database_service: Database service for persistence
@@ -386,13 +374,12 @@ class AccommodationService:
         self.cache_ttl = cache_ttl
 
         # In-memory cache for search results
-        self._search_cache: Dict[str, tuple] = {}
+        self._search_cache: dict[str, tuple] = {}
 
     async def search_accommodations(
         self, search_request: AccommodationSearchRequest
     ) -> AccommodationSearchResponse:
-        """
-        Search for accommodation listings.
+        """Search for accommodation listings.
 
         Args:
             search_request: Accommodation search parameters
@@ -406,7 +393,7 @@ class AccommodationService:
         """
         try:
             search_id = str(uuid4())
-            start_time = datetime.now(timezone.utc)
+            start_time = datetime.now(UTC)
 
             # Check cache first
             cache_key = self._generate_search_cache_key(search_request)
@@ -470,7 +457,7 @@ class AccommodationService:
             await self._store_search_history(search_id, search_request, scored_listings)
 
             search_duration = int(
-                (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+                (datetime.now(UTC) - start_time).total_seconds() * 1000
             )
 
             logger.info(
@@ -505,13 +492,12 @@ class AccommodationService:
                     "check_out": search_request.check_out,
                 },
             )
-            raise ServiceError(f"Accommodation search failed: {str(e)}") from e
+            raise ServiceError(f"Accommodation search failed: {e!s}") from e
 
     async def get_listing_details(
         self, listing_id: str, user_id: str
-    ) -> Optional[AccommodationListing]:
-        """
-        Get detailed information about an accommodation listing.
+    ) -> AccommodationListing | None:
+        """Get detailed information about an accommodation listing.
 
         Args:
             listing_id: Listing ID
@@ -560,8 +546,7 @@ class AccommodationService:
     async def book_accommodation(
         self, user_id: str, booking_request: AccommodationBookingRequest
     ) -> AccommodationBooking:
-        """
-        Book an accommodation listing.
+        """Book an accommodation listing.
 
         Args:
             user_id: User ID
@@ -590,7 +575,7 @@ class AccommodationService:
                 )
 
             booking_id = str(uuid4())
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             nights = (booking_request.check_out - booking_request.check_in).days
 
             # Calculate total price
@@ -677,17 +662,16 @@ class AccommodationService:
                     "error": str(e),
                 },
             )
-            raise ServiceError(f"Accommodation booking failed: {str(e)}") from e
+            raise ServiceError(f"Accommodation booking failed: {e!s}") from e
 
     async def get_user_bookings(
         self,
         user_id: str,
-        trip_id: Optional[str] = None,
-        status: Optional[BookingStatus] = None,
+        trip_id: str | None = None,
+        status: BookingStatus | None = None,
         limit: int = 50,
-    ) -> List[AccommodationBooking]:
-        """
-        Get accommodation bookings for a user.
+    ) -> list[AccommodationBooking]:
+        """Get accommodation bookings for a user.
 
         Args:
             user_id: User ID
@@ -721,8 +705,7 @@ class AccommodationService:
             return []
 
     async def cancel_booking(self, booking_id: str, user_id: str) -> bool:
-        """
-        Cancel an accommodation booking.
+        """Cancel an accommodation booking.
 
         Args:
             booking_id: Booking ID
@@ -788,7 +771,7 @@ class AccommodationService:
 
     async def _search_external_api(
         self, search_request: AccommodationSearchRequest
-    ) -> List[AccommodationListing]:
+    ) -> list[AccommodationListing]:
         """Search accommodations using external API."""
         if not self.external_service:
             return []
@@ -849,7 +832,7 @@ class AccommodationService:
 
     async def _generate_mock_listings(
         self, search_request: AccommodationSearchRequest
-    ) -> List[AccommodationListing]:
+    ) -> list[AccommodationListing]:
         """Generate mock accommodation listings for testing."""
         listings = []
         nights = (search_request.check_out - search_request.check_in).days
@@ -906,9 +889,9 @@ class AccommodationService:
 
     async def _score_listings(
         self,
-        listings: List[AccommodationListing],
+        listings: list[AccommodationListing],
         search_request: AccommodationSearchRequest,
-    ) -> List[AccommodationListing]:
+    ) -> list[AccommodationListing]:
         """Score and rank accommodation listings."""
         if not listings:
             return listings
@@ -973,7 +956,7 @@ class AccommodationService:
 
         return hashlib.sha256(key_data.encode()).hexdigest()[:16]
 
-    def _get_cached_search(self, cache_key: str) -> Optional[Dict[str, Any]]:
+    def _get_cached_search(self, cache_key: str) -> dict[str, Any] | None:
         """Get cached search results if still valid."""
         if cache_key in self._search_cache:
             result, timestamp = self._search_cache[cache_key]
@@ -985,7 +968,7 @@ class AccommodationService:
                 del self._search_cache[cache_key]
         return None
 
-    def _cache_search_results(self, cache_key: str, result: Dict[str, Any]) -> None:
+    def _cache_search_results(self, cache_key: str, result: dict[str, Any]) -> None:
         """Cache search results."""
         import time
 
@@ -1003,7 +986,7 @@ class AccommodationService:
         self,
         search_id: str,
         search_request: AccommodationSearchRequest,
-        listings: List[AccommodationListing],
+        listings: list[AccommodationListing],
     ) -> None:
         """Store search history in database."""
         try:
@@ -1014,7 +997,7 @@ class AccommodationService:
                 "check_out": search_request.check_out.isoformat(),
                 "guests": search_request.adults + search_request.children,
                 "listings_count": len(listings),
-                "search_timestamp": datetime.now(timezone.utc).isoformat(),
+                "search_timestamp": datetime.now(UTC).isoformat(),
             }
 
             await self.db.store_accommodation_search(search_data)
@@ -1030,7 +1013,7 @@ class AccommodationService:
         try:
             listing_data = listing.model_dump()
             listing_data["user_id"] = user_id
-            listing_data["stored_at"] = datetime.now(timezone.utc).isoformat()
+            listing_data["stored_at"] = datetime.now(UTC).isoformat()
 
             await self.db.store_accommodation_listing(listing_data)
 
@@ -1044,7 +1027,7 @@ class AccommodationService:
         """Store accommodation booking in database."""
         try:
             booking_data = booking.model_dump()
-            booking_data["created_at"] = datetime.now(timezone.utc).isoformat()
+            booking_data["created_at"] = datetime.now(UTC).isoformat()
 
             await self.db.store_accommodation_booking(booking_data)
 
@@ -1059,7 +1042,7 @@ class AccommodationService:
         self,
         listing: AccommodationListing,
         booking_request: AccommodationBookingRequest,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Book accommodation using external API."""
         if not self.external_service:
             return None
@@ -1114,8 +1097,7 @@ class AccommodationService:
 
 # Dependency function for FastAPI
 async def get_accommodation_service() -> AccommodationService:
-    """
-    Get accommodation service instance for dependency injection.
+    """Get accommodation service instance for dependency injection.
 
     Returns:
         AccommodationService instance

@@ -7,12 +7,10 @@ serialization, deserialization, and cross-module validation.
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import Dict, List, Optional
 from uuid import uuid4
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import BaseModel
 
 from tripsage.api.schemas.auth import (
@@ -106,26 +104,24 @@ class TestCompletePurchaseFlow:
         """Test purchasing a product with budget constraints."""
         # 1. User has a travel budget
         user_budget = Budget(
-            total_budget=Price(amount=Decimal("5000"), currency=CurrencyCode.USD),
-            allocated=Price(amount=Decimal("3000"), currency=CurrencyCode.USD),
-            spent=Price(amount=Decimal("1500"), currency=CurrencyCode.USD),
+            total_budget=Price(amount=Decimal(5000), currency=CurrencyCode.USD),
+            allocated=Price(amount=Decimal(3000), currency=CurrencyCode.USD),
+            spent=Price(amount=Decimal(1500), currency=CurrencyCode.USD),
             categories={
-                "flights": Price(amount=Decimal("2000"), currency=CurrencyCode.USD),
-                "accommodation": Price(
-                    amount=Decimal("1500"), currency=CurrencyCode.USD
-                ),
-                "activities": Price(amount=Decimal("500"), currency=CurrencyCode.USD),
+                "flights": Price(amount=Decimal(2000), currency=CurrencyCode.USD),
+                "accommodation": Price(amount=Decimal(1500), currency=CurrencyCode.USD),
+                "activities": Price(amount=Decimal(500), currency=CurrencyCode.USD),
             },
         )
 
         # 2. Flight search returns price range
         flight_price_range = PriceRange(
-            min_price=Price(amount=Decimal("350"), currency=CurrencyCode.USD),
-            max_price=Price(amount=Decimal("750"), currency=CurrencyCode.USD),
+            min_price=Price(amount=Decimal(350), currency=CurrencyCode.USD),
+            max_price=Price(amount=Decimal(750), currency=CurrencyCode.USD),
         )
 
         # 3. User selects a flight
-        selected_flight_price = Price(amount=Decimal("450"), currency=CurrencyCode.USD)
+        selected_flight_price = Price(amount=Decimal(450), currency=CurrencyCode.USD)
         assert flight_price_range.contains(selected_flight_price)
 
         # 4. Apply a deal/discount
@@ -133,7 +129,7 @@ class TestCompletePurchaseFlow:
             title="Early Bird Special - 15% off",
             description="Book 30 days in advance for 15% discount",
             original_price=selected_flight_price,
-            discount_percentage=Decimal("15"),
+            discount_percentage=Decimal(15),
             final_price=Price(
                 amount=selected_flight_price.amount * Decimal("0.85"),
                 currency=CurrencyCode.USD,
@@ -202,11 +198,11 @@ class TestMultiCurrencyScenarios:
         """Test currency conversion in international purchases."""
         # 1. User budget in USD
         usd_budget = Budget(
-            total_budget=Price(amount=Decimal("3000"), currency=CurrencyCode.USD)
+            total_budget=Price(amount=Decimal(3000), currency=CurrencyCode.USD)
         )
 
         # 2. Hotel price in EUR
-        hotel_price_eur = Price(amount=Decimal("150"), currency=CurrencyCode.EUR)
+        hotel_price_eur = Price(amount=Decimal(150), currency=CurrencyCode.EUR)
 
         # 3. Exchange rate
         exchange_rate = ExchangeRate(
@@ -355,9 +351,9 @@ class TestSchemaVersioning:
         # Create a model with optional fields that might be added in future
         class UserResponseV2(UserResponse):
             # Simulating a future version with additional fields
-            avatar_url: Optional[str] = None
-            bio: Optional[str] = None
-            social_links: Optional[Dict[str, str]] = None
+            avatar_url: str | None = None
+            bio: str | None = None
+            social_links: dict[str, str] | None = None
 
         # Create V2 instance
         user_v2 = UserResponseV2(
@@ -413,7 +409,7 @@ class TestComplexValidationScenarios:
     def test_nested_budget_validation(self):
         """Test complex budget validation with categories."""
         # Create a budget with multiple validation constraints
-        total_amount = Decimal("10000")
+        total_amount = Decimal(10000)
 
         budget_data = {
             "total_budget": {"amount": total_amount, "currency": "USD"},
@@ -497,32 +493,30 @@ class TestAPIResponseIntegration:
 
         # 2. Trip budget
         trip_budget = Budget(
-            total_budget=Price(amount=Decimal("7500"), currency=CurrencyCode.USD),
-            allocated=Price(amount=Decimal("6000"), currency=CurrencyCode.USD),
-            spent=Price(amount=Decimal("0"), currency=CurrencyCode.USD),
+            total_budget=Price(amount=Decimal(7500), currency=CurrencyCode.USD),
+            allocated=Price(amount=Decimal(6000), currency=CurrencyCode.USD),
+            spent=Price(amount=Decimal(0), currency=CurrencyCode.USD),
             categories={
-                "flights": Price(amount=Decimal("2500"), currency=CurrencyCode.USD),
-                "accommodation": Price(
-                    amount=Decimal("2000"), currency=CurrencyCode.USD
-                ),
-                "activities": Price(amount=Decimal("1000"), currency=CurrencyCode.USD),
-                "food": Price(amount=Decimal("500"), currency=CurrencyCode.USD),
+                "flights": Price(amount=Decimal(2500), currency=CurrencyCode.USD),
+                "accommodation": Price(amount=Decimal(2000), currency=CurrencyCode.USD),
+                "activities": Price(amount=Decimal(1000), currency=CurrencyCode.USD),
+                "food": Price(amount=Decimal(500), currency=CurrencyCode.USD),
             },
         )
 
         # 3. Flight options with deals
         flight_options = []
         for i in range(3):
-            base_price = Decimal("400") + (i * Decimal("100"))
+            base_price = Decimal(400) + (i * Decimal(100))
             deal = Deal(
                 title=f"Flight Option {i + 1}",
                 description=(
                     f"Direct flight with {'Premium' if i == 2 else 'Standard'} airline"
                 ),
                 original_price=Price(amount=base_price, currency=CurrencyCode.USD),
-                discount_percentage=Decimal("10") if i == 0 else Decimal("0"),
+                discount_percentage=Decimal(10) if i == 0 else Decimal(0),
                 final_price=Price(
-                    amount=base_price * (Decimal("0.9") if i == 0 else Decimal("1")),
+                    amount=base_price * (Decimal("0.9") if i == 0 else Decimal(1)),
                     currency=CurrencyCode.USD,
                 ),
                 valid_until="2024-12-31",
@@ -533,7 +527,7 @@ class TestAPIResponseIntegration:
         class TripPlanningResponse(BaseModel):
             user: UserResponse
             budget: Budget
-            flight_options: List[Deal]
+            flight_options: list[Deal]
             booking_model: ModelName = "gpt-4"  # AI model used for recommendations
             generated_at: datetime
 
@@ -559,7 +553,7 @@ class TestAPIResponseIntegration:
         restored = TripPlanningResponse.model_validate_json(json_response)
         assert restored.user.id == user.id
         assert len(restored.flight_options) == 3
-        assert restored.budget.total_budget.amount == Decimal("7500")
+        assert restored.budget.total_budget.amount == Decimal(7500)
 
 
 class TestSchemaPropertyInvariants:
@@ -568,7 +562,7 @@ class TestSchemaPropertyInvariants:
     @settings(max_examples=50, deadline=None)
     @given(
         base_amount=st.decimals(
-            min_value=Decimal("1"), max_value=Decimal("1000"), places=2
+            min_value=Decimal(1), max_value=Decimal(1000), places=2
         ),
         tax_rate=st.floats(min_value=0.0, max_value=0.3),
         fee_rate=st.floats(min_value=0.0, max_value=0.1),
@@ -599,7 +593,7 @@ class TestSchemaPropertyInvariants:
 
         # Calculate total
         total_amount = base_amount + tax_amount + fee_amount - discount_amount
-        total_amount = max(Decimal("0"), total_amount)  # Never negative
+        total_amount = max(Decimal(0), total_amount)  # Never negative
 
         # Create breakdown
         breakdown = PriceBreakdown(

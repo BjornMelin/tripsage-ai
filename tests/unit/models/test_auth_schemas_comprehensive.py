@@ -6,12 +6,10 @@ schemas including request validation, password requirements, and API responses.
 
 import json
 from datetime import datetime, timedelta
-from typing import Dict
 from uuid import uuid4
 
 import pytest
-from hypothesis import given, settings
-from hypothesis import strategies as st
+from hypothesis import given, settings, strategies as st
 from pydantic import ValidationError
 
 from tripsage.api.schemas.auth import (
@@ -772,7 +770,7 @@ class TestAuthSchemaIntegration:
         ),
     )
     def test_user_response_property_validation(
-        self, username: str, full_name: str, preferences: Dict
+        self, username: str, full_name: str, preferences: dict
     ):
         """Test user response with property-based testing."""
         try:

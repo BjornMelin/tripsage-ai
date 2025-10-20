@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Simple test runner to verify imports and basic functionality
+"""Simple test runner to verify imports and basic functionality
 without requiring full pytest installation.
 """
 
@@ -8,6 +7,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
+
 
 # Add project root to path
 project_root = Path(__file__).parent

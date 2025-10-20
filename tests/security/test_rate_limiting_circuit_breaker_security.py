@@ -1,5 +1,4 @@
-"""
-Security tests for rate limiting and circuit breaker features.
+"""Security tests for rate limiting and circuit breaker features.
 
 This module provides comprehensive security testing for rate limiting middleware
 and circuit breaker functionality, including abuse prevention, DoS protection,
@@ -521,7 +520,6 @@ class TestCircuitBreakerSecurity:
 
     def test_circuit_breaker_exception_type_bypass(self, simple_breaker):
         """Test attempts to bypass circuit breaker with different exception types."""
-
         # Configure breaker to only trigger on specific exceptions
         breaker_with_filter = SimpleCircuitBreaker(
             name="filtered_breaker", exceptions=[ValueError, TypeError]
@@ -531,12 +529,11 @@ class TestCircuitBreakerSecurity:
         def service_with_different_exceptions(exception_type):
             if exception_type == "value":
                 raise ValueError("Value error")
-            elif exception_type == "type":
+            if exception_type == "type":
                 raise TypeError("Type error")
-            elif exception_type == "runtime":
+            if exception_type == "runtime":
                 raise RuntimeError("Runtime error")  # Should not trigger circuit
-            else:
-                return "success"
+            return "success"
 
         # Trigger circuit with filtered exceptions
         for _ in range(5):
@@ -644,8 +641,7 @@ class TestCircuitBreakerSecurity:
             if user_exists:
                 time.sleep(0.1)  # Simulate database lookup
                 raise Exception("User found but access denied")
-            else:
-                raise Exception("User not found")
+            raise Exception("User not found")
 
         # Measure timing for different scenarios
         times_user_exists = []
@@ -845,7 +841,6 @@ class TestRateLimitingCircuitBreakerIntegration:
 
     def test_configuration_interaction_vulnerabilities(self):
         """Test for vulnerabilities in system configuration interactions."""
-
         # Test conflicting configurations
         _very_permissive_rate_config = RateLimitConfig(
             requests_per_minute=999999,

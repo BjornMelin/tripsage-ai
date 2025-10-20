@@ -1,5 +1,4 @@
-"""
-Activity service for TripSage.
+"""Activity service for TripSage.
 
 This service handles activity-related operations including searching for activities,
 saving user activity selections, and managing activity data using Google Maps Places API
@@ -9,7 +8,7 @@ and web crawling for additional information.
 import asyncio
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
@@ -32,6 +31,7 @@ from tripsage_core.utils.content_utils import ContentType
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 # Activity type mappings for Google Places API
@@ -52,7 +52,7 @@ ACTIVITY_TYPE_MAPPING = {
 class ActivityServiceError(CoreServiceError):
     """Exception raised for activity service errors."""
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(
             message=message,
             code="ACTIVITY_SERVICE_ERROR",
@@ -67,11 +67,10 @@ class ActivityService:
 
     def __init__(
         self,
-        google_maps_service: Optional[GoogleMapsService] = None,
+        google_maps_service: GoogleMapsService | None = None,
         cache_service=None,
     ):
-        """
-        Initialize activity service.
+        """Initialize activity service.
 
         Args:
             google_maps_service: Google Maps service instance
@@ -94,8 +93,7 @@ class ActivityService:
     async def search_activities(
         self, request: ActivitySearchRequest
     ) -> ActivitySearchResponse:
-        """
-        Search for activities based on the provided criteria.
+        """Search for activities based on the provided criteria.
 
         Args:
             request: Activity search request
@@ -242,7 +240,7 @@ class ActivityService:
         place_type: str,
         radius: int,
         request: ActivitySearchRequest,
-    ) -> List[ActivityResponse]:
+    ) -> list[ActivityResponse]:
         """Search for places of a specific type."""
         try:
             # Use Places API nearby search
@@ -273,7 +271,7 @@ class ActivityService:
             return []
 
     async def _convert_place_to_activity(
-        self, place: Dict[str, Any], request: ActivitySearchRequest
+        self, place: dict[str, Any], request: ActivitySearchRequest
     ) -> ActivityResponse:
         """Convert a Google Places result to an ActivityResponse."""
         try:
@@ -341,7 +339,7 @@ class ActivityService:
             logger.warning(f"Failed to convert place to activity: {e}")
             raise e
 
-    def _get_place_types_for_categories(self, categories: List[str]) -> List[str]:
+    def _get_place_types_for_categories(self, categories: list[str]) -> list[str]:
         """Get Google Places types for activity categories."""
         place_types = []
         for category in categories:
@@ -349,7 +347,7 @@ class ActivityService:
                 place_types.extend(ACTIVITY_TYPE_MAPPING[category.lower()])
         return list(set(place_types))  # Remove duplicates
 
-    def _determine_activity_type(self, place_types: List[str]) -> str:
+    def _determine_activity_type(self, place_types: list[str]) -> str:
         """Determine activity type from Google Places types."""
         # Map Google Places types back to our activity categories
         for category, google_types in ACTIVITY_TYPE_MAPPING.items():
@@ -393,7 +391,7 @@ class ActivityService:
 
         return base_price * multiplier
 
-    def _estimate_duration(self, activity_type: str, place_types: List[str]) -> int:
+    def _estimate_duration(self, activity_type: str, place_types: list[str]) -> int:
         """Estimate duration in minutes based on activity type."""
         # Duration estimates by type (in minutes)
         durations = {
@@ -412,8 +410,8 @@ class ActivityService:
         return durations.get(activity_type, 120)  # Default 2 hours
 
     def _apply_filters(
-        self, activities: List[ActivityResponse], request: ActivitySearchRequest
-    ) -> List[ActivityResponse]:
+        self, activities: list[ActivityResponse], request: ActivitySearchRequest
+    ) -> list[ActivityResponse]:
         """Apply search filters to activities."""
         filtered = activities
 
@@ -442,11 +440,8 @@ class ActivityService:
         return filtered
 
     @with_error_handling()
-    async def get_activity_details(
-        self, activity_id: str
-    ) -> Optional[ActivityResponse]:
-        """
-        Get detailed information about a specific activity.
+    async def get_activity_details(self, activity_id: str) -> ActivityResponse | None:
+        """Get detailed information about a specific activity.
 
         Args:
             activity_id: Activity ID
@@ -501,7 +496,7 @@ class ActivityService:
             raise ActivityServiceError(f"Failed to get activity details: {e}", e) from e
 
     async def _convert_detailed_place_to_activity(
-        self, place: Dict[str, Any], activity_id: str
+        self, place: dict[str, Any], activity_id: str
     ) -> ActivityResponse:
         """Convert detailed Google Places result to ActivityResponse."""
         name = place.get("name", "Unknown Activity")
@@ -568,7 +563,7 @@ class ActivityService:
 
 
 # Global service instance
-_activity_service: Optional[ActivityService] = None
+_activity_service: ActivityService | None = None
 
 
 async def get_activity_service() -> ActivityService:

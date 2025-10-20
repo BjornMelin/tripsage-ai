@@ -1,11 +1,10 @@
-"""
-Integration tests for complete memory system workflow.
+"""Integration tests for complete memory system workflow.
 Tests end-to-end memory operations from chat to storage to retrieval.
 """
 
 import asyncio
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -40,7 +39,7 @@ class TestMemoryWorkflowIntegration:
                 "session_id": session_id,
                 "messages": messages,
                 "metadata": metadata or {},
-                "created_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
             }
             self.stored_memories.append(memory_entry)
             return {"status": "success", "memory_id": memory_id}
@@ -152,7 +151,7 @@ class TestMemoryWorkflowIntegration:
                         "I'm planning a luxury honeymoon trip to Paris in June. "
                         "Our budget is $10,000."
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 ),
                 ConversationMessage(
                     role="assistant",
@@ -160,7 +159,7 @@ class TestMemoryWorkflowIntegration:
                         "I'll help you plan a perfect luxury honeymoon in Paris! "
                         "With your $10,000 budget, we can find excellent 5-star hotels."
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 ),
             ]
 
@@ -182,7 +181,7 @@ class TestMemoryWorkflowIntegration:
                         "I prefer hotels near the Champs-Élysées with spa services "
                         "and Michelin-starred restaurants."
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 ),
                 ConversationMessage(
                     role="assistant",
@@ -191,7 +190,7 @@ class TestMemoryWorkflowIntegration:
                         "Bristol Paris. Both are on the Champs-Élysées "
                         "with world-class spas."
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 ),
             ]
 
@@ -238,7 +237,7 @@ class TestMemoryWorkflowIntegration:
                 ConversationMessage(
                     role="user",
                     content="I want to plan a trip to Tokyo for cherry blossom season.",
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -257,7 +256,7 @@ class TestMemoryWorkflowIntegration:
                         "For my Tokyo trip, I prefer traditional ryokans "
                         "over modern hotels."
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -275,7 +274,7 @@ class TestMemoryWorkflowIntegration:
                     content=(
                         "My budget for the Tokyo trip is around $8,000 for two weeks."
                     ),
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -314,7 +313,7 @@ class TestMemoryWorkflowIntegration:
                             "I'm a budget traveler looking for hostels "
                             "and cheap flights."
                         ),
-                        timestamp=datetime.now(timezone.utc) - timedelta(days=30),
+                        timestamp=datetime.now(UTC) - timedelta(days=30),
                     )
                 ],
                 user_id=user_id,
@@ -330,7 +329,7 @@ class TestMemoryWorkflowIntegration:
                             "I've gotten a promotion! Now I can afford mid-range "
                             "hotels with good reviews."
                         ),
-                        timestamp=datetime.now(timezone.utc) - timedelta(days=15),
+                        timestamp=datetime.now(UTC) - timedelta(days=15),
                     )
                 ],
                 user_id=user_id,
@@ -346,7 +345,7 @@ class TestMemoryWorkflowIntegration:
                             "For my anniversary trip, I want the best luxury hotels "
                             "and first-class flights."
                         ),
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
@@ -389,7 +388,7 @@ class TestMemoryWorkflowIntegration:
                             content=(
                                 "I love cultural experiences and museums when I travel."
                             ),
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                         )
                     ],
                     "metadata": {"interest": "culture", "preference": "museums"},
@@ -402,7 +401,7 @@ class TestMemoryWorkflowIntegration:
                                 "I'm vegetarian and need restaurants with good "
                                 "plant-based options."
                             ),
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                         )
                     ],
                     "metadata": {"dietary": "vegetarian", "requirement": "plant-based"},
@@ -415,7 +414,7 @@ class TestMemoryWorkflowIntegration:
                                 "I prefer staying in boutique hotels with unique "
                                 "character over chain hotels."
                             ),
-                            timestamp=datetime.now(timezone.utc),
+                            timestamp=datetime.now(UTC),
                         )
                     ],
                     "metadata": {"accommodation": "boutique", "preference": "unique"},
@@ -438,7 +437,7 @@ class TestMemoryWorkflowIntegration:
                         content=(
                             "I'm planning a trip to Barcelona. What do you recommend?"
                         ),
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_id,
@@ -482,7 +481,7 @@ class TestMemoryWorkflowIntegration:
                             "My trip to Italy last year was amazing. "
                             "The food in Tuscany was incredible."
                         ),
-                        timestamp=datetime.now(timezone.utc) - timedelta(days=365),
+                        timestamp=datetime.now(UTC) - timedelta(days=365),
                     )
                 ],
                 user_id=user_id,
@@ -502,7 +501,7 @@ class TestMemoryWorkflowIntegration:
                             "I want to plan another European food tour, "
                             "similar to my Italy trip."
                         ),
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     ),
                     ConversationMessage(
                         role="assistant",
@@ -510,7 +509,7 @@ class TestMemoryWorkflowIntegration:
                             "Based on your amazing Tuscany experience, I recommend "
                             "exploring France's culinary regions."
                         ),
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     ),
                 ],
                 user_id=user_id,
@@ -550,7 +549,7 @@ class TestMemoryWorkflowIntegration:
                     ConversationMessage(
                         role="user",
                         content=f"Planning trip number {i} to destination {i}",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ]
 
@@ -616,7 +615,7 @@ class TestMemoryWorkflowIntegration:
                 ConversationMessage(
                     role="user",
                     content="Test message for error recovery",
-                    timestamp=datetime.now(timezone.utc),
+                    timestamp=datetime.now(UTC),
                 )
             ]
 
@@ -650,7 +649,7 @@ class TestMemoryWorkflowIntegration:
                     ConversationMessage(
                         role="user",
                         content="User 1 secret travel plans to Mars",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_1,
@@ -663,7 +662,7 @@ class TestMemoryWorkflowIntegration:
                     ConversationMessage(
                         role="user",
                         content="User 2 planning trip to Jupiter",
-                        timestamp=datetime.now(timezone.utc),
+                        timestamp=datetime.now(UTC),
                     )
                 ],
                 user_id=user_2,

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-TripSage Configuration Manager CLI.
+"""TripSage Configuration Manager CLI.
 
 A comprehensive tool for managing TripSage configuration across environments.
 Provides validation, template generation, secret management, and deployment utilities.
@@ -12,9 +11,10 @@ import logging
 import secrets
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from tripsage_core.config import Settings, get_settings, validate_configuration
+
 
 # Configure logging
 logging.basicConfig(
@@ -27,7 +27,7 @@ class ConfigManager:
     """Configuration management utilities for TripSage."""
 
     def __init__(self):
-        self.settings: Optional[Settings] = None
+        self.settings: Settings | None = None
 
     def load_settings(self) -> Settings:
         """Load and cache settings."""
@@ -175,7 +175,7 @@ class ConfigManager:
 
         return recommendations
 
-    def _print_human_readable_report(self, report: Dict[str, Any]) -> None:
+    def _print_human_readable_report(self, report: dict[str, Any]) -> None:
         """Print human-readable security report."""
         config = report["configuration"]
         security = report["security"]

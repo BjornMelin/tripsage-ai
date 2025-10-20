@@ -9,6 +9,7 @@ This module tests the dashboard router endpoints for monitoring and insights:
 - Trend analysis
 """
 
+from datetime import UTC
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -71,7 +72,7 @@ class TestDashboardRouter:
         service = AsyncMock(spec=DashboardService)
 
         # Mock dashboard data using new DashboardData structure
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         mock_metrics = RealTimeMetrics(
             total_requests=1000,
@@ -83,8 +84,8 @@ class TestDashboardRouter:
             active_keys_count=5,
             unique_users_count=10,
             requests_per_minute=16.67,
-            period_start=datetime.now(timezone.utc),
-            period_end=datetime.now(timezone.utc),
+            period_start=datetime.now(UTC),
+            period_end=datetime.now(UTC),
         )
 
         mock_alert = AlertData(
@@ -93,8 +94,8 @@ class TestDashboardRouter:
             severity=AlertSeverity.HIGH,
             title="Usage spike detected",
             message="High error rate detected in OpenAI service",
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
             service="openai",
             user_id="user1",
             api_key_id="key123",
@@ -108,8 +109,8 @@ class TestDashboardRouter:
                 success_rate=0.95,
                 avg_latency_ms=150.0,
                 services_used=["openai"],
-                first_activity=datetime.now(timezone.utc),
-                last_activity=datetime.now(timezone.utc),
+                first_activity=datetime.now(UTC),
+                last_activity=datetime.now(UTC),
                 total_api_keys=1,
             ),
             UserActivityData(
@@ -119,8 +120,8 @@ class TestDashboardRouter:
                 success_rate=0.95,
                 avg_latency_ms=140.0,
                 services_used=["weather"],
-                first_activity=datetime.now(timezone.utc),
-                last_activity=datetime.now(timezone.utc),
+                first_activity=datetime.now(UTC),
+                last_activity=datetime.now(UTC),
                 total_api_keys=1,
             ),
         ]
@@ -134,7 +135,7 @@ class TestDashboardRouter:
                 success_rate=0.95,
                 avg_latency_ms=150.0,
                 active_keys=3,
-                last_health_check=datetime.now(timezone.utc),
+                last_health_check=datetime.now(UTC),
                 health_status=ServiceHealthStatus.HEALTHY,
             ),
             ServiceAnalytics(
@@ -145,7 +146,7 @@ class TestDashboardRouter:
                 success_rate=0.95,
                 avg_latency_ms=200.0,
                 active_keys=2,
-                last_health_check=datetime.now(timezone.utc),
+                last_health_check=datetime.now(UTC),
                 health_status=ServiceHealthStatus.DEGRADED,
             ),
         ]
@@ -206,7 +207,7 @@ class TestDashboardRouter:
     @pytest.fixture
     def mock_validator(self):
         """Create mock API key validator."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         from tripsage_core.services.business.dashboard_service import ApiKeyValidator
 
@@ -221,14 +222,14 @@ class TestDashboardRouter:
                 status=ServiceHealthStatus.HEALTHY,
                 latency_ms=150.0,
                 message="Service is healthy",
-                checked_at=datetime.now(timezone.utc),
+                checked_at=datetime.now(UTC),
             ),
             ServiceType.WEATHER: AsyncMock(
                 service=ServiceType.WEATHER,
                 status=ServiceHealthStatus.DEGRADED,
                 latency_ms=300.0,
                 message="Service is degraded",
-                checked_at=datetime.now(timezone.utc),
+                checked_at=datetime.now(UTC),
             ),
         }
 

@@ -1,5 +1,4 @@
-"""
-Pydantic models for direct API integrations.
+"""Pydantic models for direct API integrations.
 
 This package contains data models for the direct API service implementations,
 replacing the previous MCP server abstraction layer.
@@ -30,6 +29,7 @@ from tripsage_core.models.api.weather_models import (
     WeatherCondition,
     WeatherForecast,
 )
+
 
 __all__ = [
     # Calendar models

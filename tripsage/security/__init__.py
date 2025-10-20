@@ -11,6 +11,7 @@ from tripsage.security.memory_security import (
     secure_memory_operation,
 )
 
+
 __all__ = [
     "AuditLog",
     "AuditLogger",

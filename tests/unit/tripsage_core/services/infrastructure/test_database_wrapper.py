@@ -1,5 +1,4 @@
-"""
-Tests for database service wrapper with monitoring integration.
+"""Tests for database service wrapper with monitoring integration.
 
 Tests cover feature flag-based monitoring, graceful degradation,
 and transparent pass-through of database operations.

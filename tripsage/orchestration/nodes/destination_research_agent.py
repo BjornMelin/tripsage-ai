@@ -1,5 +1,4 @@
-"""
-Destination research agent node implementation for LangGraph orchestration.
+"""Destination research agent node implementation for LangGraph orchestration.
 
 This module implements the destination research agent as a LangGraph node,
 replacing the OpenAI Agents SDK implementation with improved performance and
@@ -7,8 +6,8 @@ capabilities.
 """
 
 import json
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from datetime import UTC, datetime
+from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -19,12 +18,12 @@ from tripsage_core.config import get_settings
 from tripsage_core.services.configuration_service import get_configuration_service
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class DestinationResearchAgentNode(BaseAgentNode):
-    """
-    Destination research agent node.
+    """Destination research agent node.
 
     This node handles all destination research requests including destination
     information, attractions, activities, cultural insights, and practical travel
@@ -108,8 +107,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
-        """
-        Process destination research requests.
+        """Process destination research requests.
 
         Args:
             state: Current travel planning state
@@ -132,7 +130,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
             # Update state with results
             research_record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "parameters": research_params,
                 "results": research_results,
                 "agent": "destination_research_agent",
@@ -167,9 +165,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     async def _extract_research_parameters(
         self, message: str, state: TravelPlanningState
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Extract destination research parameters from user message and conversation
+    ) -> dict[str, Any] | None:
+        """Extract destination research parameters from user message and conversation
         context.
 
         Args:
@@ -240,14 +237,13 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 return None
 
         except Exception as e:
-            logger.error(f"Error extracting research parameters: {str(e)}")
+            logger.error(f"Error extracting research parameters: {e!s}")
             return None
 
     async def _research_destination(
-        self, params: Dict[str, Any], state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Perform comprehensive destination research using MCP tools.
+        self, params: dict[str, Any], state: TravelPlanningState
+    ) -> dict[str, Any]:
+        """Perform comprehensive destination research using MCP tools.
 
         Args:
             params: Research parameters
@@ -311,10 +307,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
             return research_results
 
         except Exception as e:
-            logger.error(f"Destination research failed for {destination}: {str(e)}")
-            return {"error": f"Research failed: {str(e)}", "destination": destination}
+            logger.error(f"Destination research failed for {destination}: {e!s}")
+            return {"error": f"Research failed: {e!s}", "destination": destination}
 
-    async def _research_overview(self, destination: str) -> Dict[str, Any]:
+    async def _research_overview(self, destination: str) -> dict[str, Any]:
         """Research general overview information about a destination."""
         try:
             # Use web crawling tool for comprehensive overview
@@ -329,7 +325,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.error(f"Overview research failed: {str(e)}")
+            logger.error(f"Overview research failed: {e!s}")
             return {"error": str(e)}
 
     async def _research_attractions(self, destination: str, interests: list) -> list:
@@ -366,7 +362,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     }
                 ]
         except Exception as e:
-            logger.error(f"Attractions research failed: {str(e)}")
+            logger.error(f"Attractions research failed: {e!s}")
             return [{"error": str(e)}]
 
     async def _research_activities(self, destination: str, interests: list) -> list:
@@ -407,10 +403,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     }
                 ]
         except Exception as e:
-            logger.error(f"Activities research failed: {str(e)}")
+            logger.error(f"Activities research failed: {e!s}")
             return [{"error": str(e)}]
 
-    async def _research_practical_info(self, destination: str) -> Dict[str, Any]:
+    async def _research_practical_info(self, destination: str) -> dict[str, Any]:
         """Research practical travel information for a destination."""
         try:
             # Use web crawling for practical information
@@ -431,10 +427,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.error(f"Practical info research failed: {str(e)}")
+            logger.error(f"Practical info research failed: {e!s}")
             return {"error": str(e)}
 
-    async def _research_cultural_info(self, destination: str) -> Dict[str, Any]:
+    async def _research_cultural_info(self, destination: str) -> dict[str, Any]:
         """Research cultural information and customs for a destination."""
         try:
             # Use web crawling for cultural information
@@ -454,12 +450,12 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.error(f"Cultural info research failed: {str(e)}")
+            logger.error(f"Cultural info research failed: {e!s}")
             return {"error": str(e)}
 
     async def _research_weather_info(
-        self, destination: str, travel_dates: Optional[str]
-    ) -> Dict[str, Any]:
+        self, destination: str, travel_dates: str | None
+    ) -> dict[str, Any]:
         """Research weather and climate information for a destination."""
         try:
             # Use weather tools for climate information
@@ -475,10 +471,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.error(f"Weather info research failed: {str(e)}")
+            logger.error(f"Weather info research failed: {e!s}")
             return {"error": str(e)}
 
-    async def _get_location_data(self, destination: str) -> Dict[str, Any]:
+    async def _get_location_data(self, destination: str) -> dict[str, Any]:
         """Get location data using Google Maps tools."""
         try:
             # Use Google Maps for location information
@@ -493,17 +489,16 @@ class DestinationResearchAgentNode(BaseAgentNode):
                     "sources": "placeholder",
                 }
         except Exception as e:
-            logger.error(f"Location data retrieval failed: {str(e)}")
+            logger.error(f"Location data retrieval failed: {e!s}")
             return {"error": str(e)}
 
     async def _generate_research_response(
         self,
-        research_results: Dict[str, Any],
-        params: Dict[str, Any],
+        research_results: dict[str, Any],
+        params: dict[str, Any],
         state: TravelPlanningState,
-    ) -> Dict[str, Any]:
-        """
-        Generate user-friendly response from destination research results.
+    ) -> dict[str, Any]:
+        """Generate user-friendly response from destination research results.
 
         Args:
             research_results: Raw research results
@@ -600,9 +595,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     async def _handle_general_research_inquiry(
         self, message: str, state: TravelPlanningState
-    ) -> Dict[str, Any]:
-        """
-        Handle general destination research inquiries.
+    ) -> dict[str, Any]:
+        """Handle general destination research inquiries.
 
         Args:
             message: User message
@@ -640,7 +634,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
             content = response.content
 
         except Exception as e:
-            logger.error(f"Error generating research response: {str(e)}")
+            logger.error(f"Error generating research response: {e!s}")
             content = (
                 "I'd be happy to help you research destinations! Please let me know "
                 "which destination you're interested in, and I can provide information "

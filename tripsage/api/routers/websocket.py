@@ -31,8 +31,6 @@ from tripsage_core.models.schemas_common.chat import (
 )
 from tripsage_core.services.business.chat_service import (
     ChatService as CoreChatService,
-)
-from tripsage_core.services.business.chat_service import (
     MessageCreateRequest,
     MessageRole,
 )
@@ -104,10 +102,8 @@ def validate_incoming_message_size(
 
         if message_size > max_size:
             logger.warning(
-                (
-                    f"Message size exceeds limit for type '{message_type}': "
-                    f"{message_size} > {max_size}"
-                )
+                f"Message size exceeds limit for type '{message_type}': "
+                f"{message_size} > {max_size}"
             )
             return False
         return True
@@ -157,8 +153,6 @@ auth_service = websocket_manager.auth_service
 # chat service is dependency injected and tests need to patch this module attribute
 class MockChatService:
     """Placeholder chat service for test compatibility."""
-
-    pass
 
 
 chat_service = MockChatService()
@@ -313,9 +307,9 @@ async def generic_websocket(websocket: WebSocket):
         # Send authentication success response
         auth_response_dict = auth_response.model_dump()
         # Convert UUID fields to strings for JSON serialization
-        if "user_id" in auth_response_dict and auth_response_dict["user_id"]:
+        if auth_response_dict.get("user_id"):
             auth_response_dict["user_id"] = str(auth_response_dict["user_id"])
-        if "session_id" in auth_response_dict and auth_response_dict["session_id"]:
+        if auth_response_dict.get("session_id"):
             auth_response_dict["session_id"] = str(auth_response_dict["session_id"])
         await websocket.send_text(json.dumps(auth_response_dict))
 
@@ -583,9 +577,9 @@ async def chat_websocket(
         # Send authentication success response
         auth_response_dict = auth_response.model_dump()
         # Convert UUID fields to strings for JSON serialization
-        if "user_id" in auth_response_dict and auth_response_dict["user_id"]:
+        if auth_response_dict.get("user_id"):
             auth_response_dict["user_id"] = str(auth_response_dict["user_id"])
-        if "session_id" in auth_response_dict and auth_response_dict["session_id"]:
+        if auth_response_dict.get("session_id"):
             auth_response_dict["session_id"] = str(auth_response_dict["session_id"])
         await websocket.send_text(json.dumps(auth_response_dict))
 
@@ -836,9 +830,9 @@ async def agent_status_websocket(
         # Send authentication success response
         auth_response_dict = auth_response.model_dump()
         # Convert UUID fields to strings for JSON serialization
-        if "user_id" in auth_response_dict and auth_response_dict["user_id"]:
+        if auth_response_dict.get("user_id"):
             auth_response_dict["user_id"] = str(auth_response_dict["user_id"])
-        if "session_id" in auth_response_dict and auth_response_dict["session_id"]:
+        if auth_response_dict.get("session_id"):
             auth_response_dict["session_id"] = str(auth_response_dict["session_id"])
         await websocket.send_text(json.dumps(auth_response_dict))
 
@@ -869,10 +863,8 @@ async def agent_status_websocket(
                 )
                 if not is_valid:
                     logger.warning(
-                        (
-                            f"Message validation failed for agent status connection "
-                            f"{connection_id}: {error_msg}"
-                        )
+                        f"Message validation failed for agent status connection "
+                        f"{connection_id}: {error_msg}"
                     )
                     continue
 

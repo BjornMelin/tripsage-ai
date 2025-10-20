@@ -1,5 +1,4 @@
-"""
-Integration tests for database foreign key constraints (BJO-121).
+"""Integration tests for database foreign key constraints (BJO-121).
 
 Tests the foreign key constraints between memory tables and auth.users,
 validating the migration SQL and constraint behavior through mocked database
@@ -16,8 +15,6 @@ from tripsage_core.models.db.memory import Memory, MemoryCreate
 
 class MockForeignKeyViolationError(Exception):
     """Mock foreign key violation error for testing."""
-
-    pass
 
 
 class TestDatabaseConstraints:

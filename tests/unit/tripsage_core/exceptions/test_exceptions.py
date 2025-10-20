@@ -1,5 +1,4 @@
-"""
-Clean, focused test suite for TripSage exception system.
+"""Clean, focused test suite for TripSage exception system.
 
 Tests core exception functionality with proper Pydantic v2 compatibility.
 """

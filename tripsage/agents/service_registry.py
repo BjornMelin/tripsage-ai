@@ -214,9 +214,7 @@ class ServiceRegistry:
         """
         service = getattr(self, service_name, None)
         if service is None:
-            raise ValueError(
-                f"Required service '{service_name}' is not initialized"
-            )
+            raise ValueError(f"Required service '{service_name}' is not initialized")
         if expected_type is not None and not isinstance(service, expected_type):
             raise TypeError(
                 f"Service '{service_name}' is not of expected type"

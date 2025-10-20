@@ -1,5 +1,4 @@
-"""
-Isolated configuration testing for TripSage Core.
+"""Isolated configuration testing for TripSage Core.
 
 This module redirects to the standalone test implementation due to pytest fixture
 conflicts in the test environment. The comprehensive tests are available in the
@@ -10,6 +9,7 @@ patching get_settings() to return mock dictionaries instead of Settings instance
 """
 
 import pytest
+
 
 # Custom test isolation marker
 pytestmark = pytest.mark.usefixtures()

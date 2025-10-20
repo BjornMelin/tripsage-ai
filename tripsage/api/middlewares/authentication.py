@@ -7,8 +7,8 @@ for all authentication events.
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Callable, Optional, Union
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from fastapi import Request, Response
 from pydantic import BaseModel, ConfigDict
@@ -19,8 +19,6 @@ from starlette.types import ASGIApp
 from tripsage.api.core.config import Settings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
 from tripsage_core.services.business.api_key_service import ApiKeyService
@@ -33,6 +31,7 @@ from tripsage_core.services.business.audit_logging_service import (
     audit_security_event,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,8 +40,8 @@ class Principal(BaseModel):
 
     id: str
     type: str  # "user" or "agent"
-    email: Optional[str] = None
-    service: Optional[str] = None  # For API keys
+    email: str | None = None
+    service: str | None = None  # For API keys
     auth_method: str  # "jwt" or "api_key"
     scopes: list[str] = []
     metadata: dict = {}
@@ -74,8 +73,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        settings: Optional[Settings] = None,
-        key_service: Optional[ApiKeyService] = None,
+        settings: Settings | None = None,
+        key_service: ApiKeyService | None = None,
     ):
         """Initialize AuthenticationMiddleware.
 
@@ -191,7 +190,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     user_id="unknown",
                     ip_address=self._get_client_ip(request),
                     user_agent=request.headers.get("User-Agent"),
-                    message=f"JWT authentication failed: {str(e)}",
+                    message=f"JWT authentication failed: {e!s}",
                     endpoint=request.url.path,
                     method=request.method,
                     error_type=type(e).__name__,
@@ -258,7 +257,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                         key_id=key_id,
                         service=service,
                         ip_address=self._get_client_ip(request),
-                        message=f"API key authentication failed: {str(e)}",
+                        message=f"API key authentication failed: {e!s}",
                         endpoint=request.url.path,
                         method=request.method,
                         error_type=type(e).__name__,
@@ -482,7 +481,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     metadata={
                         "key_id": key_id,
                         "service": service,
-                        "validated_at": datetime.now(timezone.utc).isoformat(),
+                        "validated_at": datetime.now(UTC).isoformat(),
                         **key_metadata,  # Additional metadata
                     },
                 )
@@ -512,7 +511,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             raise AuthenticationError("Invalid API key") from e
 
     def _create_auth_error_response(
-        self, error: Union[AuthenticationError, KeyValidationError]
+        self, error: AuthenticationError | KeyValidationError
     ) -> Response:
         """Create an authentication error response.
 

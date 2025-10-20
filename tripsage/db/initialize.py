@@ -1,5 +1,4 @@
-"""
-Database initialization module for TripSage.
+"""Database initialization module for TripSage.
 
 This module provides functionality to initialize SQL databases using
 direct SDK connections for optimal performance. Memory management is now
@@ -10,12 +9,14 @@ architecture.
 """
 
 import asyncio
-from typing import Any, Dict
+from typing import Any
 
 from supabase import Client, create_client
+
 from tripsage.db.migrations import run_migrations
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import configure_logging
+
 
 logger = configure_logging(__name__)
 
@@ -33,8 +34,7 @@ async def initialize_databases(
     run_migrations_on_startup: bool = False,
     verify_connections: bool = True,
 ) -> bool:
-    """
-    Initialize database connections and ensure databases are properly set up.
+    """Initialize database connections and ensure databases are properly set up.
 
     Args:
         run_migrations_on_startup: Whether to run migrations on startup.
@@ -84,9 +84,8 @@ async def initialize_databases(
         return False
 
 
-async def verify_database_schema() -> Dict[str, Any]:
-    """
-    Verify that the database schema is correctly set up.
+async def verify_database_schema() -> dict[str, Any]:
+    """Verify that the database schema is correctly set up.
 
     Returns:
         Dictionary with verification results for SQL database.
@@ -124,8 +123,7 @@ async def verify_database_schema() -> Dict[str, Any]:
 
 
 async def create_sample_data() -> bool:
-    """
-    Create sample data for development and testing.
+    """Create sample data for development and testing.
 
     Returns:
         True if sample data was created successfully, False otherwise.

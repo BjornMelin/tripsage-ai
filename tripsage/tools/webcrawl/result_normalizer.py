@@ -1,28 +1,26 @@
-"""
-Result normalizer for web crawling tools.
+"""Result normalizer for web crawling tools.
 
 This module provides functionality to normalize results from different web crawling
 sources (Crawl4AI and Firecrawl) into a consistent UnifiedCrawlResult format.
 """
 
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage_core.services.external_apis.webcrawl_service import WebCrawlResult
 from tripsage_core.utils.logging_utils import get_logger
 
+
 logger = get_logger(__name__)
 
 
 class ResultNormalizer:
-    """
-    Normalizes results from different web crawling sources into UnifiedCrawlResult.
-    """
+    """Normalizes results from different web crawling sources into UnifiedCrawlResult."""
 
     async def normalize_firecrawl_output(
-        self, raw_output: Dict[str, Any], original_url: str
+        self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
         """Normalize Firecrawl MCP output to UnifiedCrawlResult.
 
@@ -41,7 +39,7 @@ class ResultNormalizer:
                 error_message=raw_output.get("error"),
                 metadata={
                     "source_crawler": "firecrawl",
-                    "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -73,7 +71,7 @@ class ResultNormalizer:
             structured_data=structured_data if structured_data else None,
             metadata={
                 "source_crawler": "firecrawl",
-                "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+                "crawl_timestamp": datetime.now(UTC).isoformat(),
                 "content_length": len(markdown_content or ""),
                 "has_screenshot": raw_output.get("screenshot") is not None,
                 "original_metadata": raw_output.get("metadata", {}),
@@ -82,7 +80,7 @@ class ResultNormalizer:
         )
 
     async def normalize_crawl4ai_output(
-        self, raw_output: Dict[str, Any], original_url: str
+        self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
         """Normalize Crawl4AI MCP output to UnifiedCrawlResult.
 
@@ -101,7 +99,7 @@ class ResultNormalizer:
                 error_message=raw_output.get("error"),
                 metadata={
                     "source_crawler": "crawl4ai",
-                    "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -123,7 +121,7 @@ class ResultNormalizer:
         # Extract additional fields if available
         metadata = {
             "source_crawler": "crawl4ai",
-            "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+            "crawl_timestamp": datetime.now(UTC).isoformat(),
             "content_length": len(markdown_content or text_content or ""),
             "has_screenshot": result_data.get("screenshot") is not None,
             "extraction_method": result_data.get("extraction_method", "default"),
@@ -146,8 +144,8 @@ class ResultNormalizer:
         )
 
     async def normalize_search_results(
-        self, raw_results: List[Dict[str, Any]], source: str, query: str
-    ) -> List[UnifiedCrawlResult]:
+        self, raw_results: list[dict[str, Any]], source: str, query: str
+    ) -> list[UnifiedCrawlResult]:
         """Normalize search results from either crawler into UnifiedCrawlResult list.
 
         Args:
@@ -170,7 +168,7 @@ class ResultNormalizer:
                     "source_crawler": source,
                     "search_query": query,
                     "result_position": idx + 1,
-                    "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
                 status="success",
             )
@@ -179,7 +177,7 @@ class ResultNormalizer:
         return normalized_results
 
     async def normalize_playwright_mcp_output(
-        self, raw_output: Dict[str, Any], original_url: str
+        self, raw_output: dict[str, Any], original_url: str
     ) -> UnifiedCrawlResult:
         """Normalize Playwright MCP output to UnifiedCrawlResult.
 
@@ -199,7 +197,7 @@ class ResultNormalizer:
                 or raw_output.get("error_message"),
                 metadata={
                     "source_crawler": "playwright_mcp",
-                    "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "crawl_timestamp": datetime.now(UTC).isoformat(),
                 },
             )
 
@@ -212,7 +210,7 @@ class ResultNormalizer:
         # Extract any metadata from the response
         metadata = {
             "source_crawler": "playwright_mcp",
-            "crawl_timestamp": datetime.now(timezone.utc).isoformat(),
+            "crawl_timestamp": datetime.now(UTC).isoformat(),
             "content_length": len(text_content or ""),
             "browser_type": raw_output.get("browser_type", "chromium"),
         }
@@ -245,8 +243,7 @@ class ResultNormalizer:
     async def normalize_direct_crawl4ai_output(
         self, crawl_result: WebCrawlResult, url: str
     ) -> UnifiedCrawlResult:
-        """
-        Normalize direct Crawl4AI SDK output to UnifiedCrawlResult format.
+        """Normalize direct Crawl4AI SDK output to UnifiedCrawlResult format.
 
         Args:
             crawl_result: Result from direct Crawl4AI SDK
@@ -305,13 +302,11 @@ class ResultNormalizer:
             return result
 
         except Exception as e:
-            logger.error(
-                f"Error normalizing direct Crawl4AI output for {url}: {str(e)}"
-            )
+            logger.error(f"Error normalizing direct Crawl4AI output for {url}: {e!s}")
             return UnifiedCrawlResult(
                 url=url,
                 status="error",
-                error_message=f"Normalization error: {str(e)}",
+                error_message=f"Normalization error: {e!s}",
                 metadata={
                     "source_crawler": "crawl4ai_direct",
                     "error_type": type(e).__name__,
@@ -319,8 +314,7 @@ class ResultNormalizer:
             )
 
     def _markdown_to_text(self, markdown: str) -> str:
-        """
-        Convert markdown to plain text by removing markdown formatting.
+        """Convert markdown to plain text by removing markdown formatting.
 
         Args:
             markdown: Markdown content

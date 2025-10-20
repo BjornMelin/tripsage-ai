@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Comprehensive WebSocket Performance Tests
+"""Comprehensive WebSocket Performance Tests
 
 This module tests WebSocket performance across various scenarios:
 - Connection establishment and teardown
@@ -25,6 +24,7 @@ from httpx import AsyncClient
 
 from tripsage.api.main import app
 from tripsage_core.config import get_settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -518,13 +518,11 @@ class TestWebSocketIntegrationPerformance:
 @pytest.mark.performance
 @pytest.mark.websocket
 def test_websocket_performance_regression_detection():
-    """
-    Performance regression detection for WebSocket operations.
+    """Performance regression detection for WebSocket operations.
 
     This test defines performance thresholds and can be used in CI/CD
     to detect performance regressions.
     """
-
     # Define performance thresholds (in milliseconds)
     PERFORMANCE_THRESHOLDS = {
         "connection_establishment": 100,  # 100ms max
