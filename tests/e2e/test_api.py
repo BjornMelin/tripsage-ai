@@ -6,10 +6,10 @@ verify the API functionality.
 """
 
 import asyncio
-import os
 import sys
 import time
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import httpx
 import uvicorn
@@ -20,9 +20,9 @@ from tripsage.api.main import app
 
 
 # Add the project root to the path so we can import from src
-script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(script_dir)
-sys.path.insert(0, project_root)
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent
+sys.path.insert(0, str(project_root))
 
 # Load environment variables
 load_dotenv()
@@ -35,6 +35,8 @@ TEST_USER_PASSWORD = "password123"
 
 # Models for test data
 class UserModel(BaseModel):
+    """User data used by end-to-end API tests."""
+
     email: str
     password: str
     full_name: str | None = None
@@ -42,6 +44,8 @@ class UserModel(BaseModel):
 
 
 class TripModel(BaseModel):
+    """Trip payload for end-to-end API tests."""
+
     name: str
     start_date: date
     end_date: date
@@ -52,6 +56,8 @@ class TripModel(BaseModel):
 
 
 class FlightModel(BaseModel):
+    """Flight payload used in end-to-end API tests."""
+
     trip_id: str
     origin: str
     destination: str
@@ -259,7 +265,7 @@ async def run_tests():
         arrival_time = departure_time + timedelta(hours=6)
 
         test_flight = FlightModel(
-            trip_id=test_trip.id,
+            trip_id=test_trip.id or "",
             origin="SFO",
             destination="HNL",
             departure_time=departure_time,
@@ -272,7 +278,7 @@ async def run_tests():
             return
 
         # Get all flights for the trip
-        flights = await get_flights_for_trip(client, test_user, test_trip.id)
+        flights = await get_flights_for_trip(client, test_user, test_trip.id or "")
         if not flights:
             return
 
