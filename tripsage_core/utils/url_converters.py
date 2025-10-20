@@ -7,6 +7,7 @@ from connection_utils.py.
 
 import logging
 import re
+from typing import Any, ClassVar
 
 from tripsage_core.utils.connection_utils import (
     ConnectionCredentials,
@@ -31,12 +32,13 @@ class DatabaseURLConverter:
     )
 
     # Known Supabase regions and their database hosts
-    SUPABASE_REGIONS = {
+    SUPABASE_REGIONS: ClassVar[dict[str, str]] = {
         "supabase.co": "db.supabase.co",
         "supabase.com": "db.supabase.com",
     }
 
     def __init__(self):
+        """Initialize the database URL converter."""
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.url_parser = DatabaseURLParser()
 
@@ -155,9 +157,9 @@ class DatabaseURLConverter:
 
             return postgres_url
 
-        except Exception as e:
+        except Exception as e:  # Broad catch for robust URL conversion
             error_msg = f"Failed to convert Supabase URL: {e}"
-            self.logger.error(error_msg)
+            self.logger.exception(error_msg)
             raise DatabaseURLParsingError(error_msg) from e
 
     def postgres_to_supabase(
@@ -181,10 +183,11 @@ class DatabaseURLConverter:
 
             # Extract project reference from hostname
             # Format: [project-ref].db.supabase.co
-            hostname_parts = credentials.hostname.split(".")
-            if len(hostname_parts) < 3 or "supabase" not in credentials.hostname:
+            hostname = str(credentials.hostname)
+            hostname_parts = hostname.split(".")
+            if len(hostname_parts) < 3 or "supabase" not in hostname:
                 raise DatabaseURLParsingError(
-                    f"Hostname {credentials.hostname} is not a Supabase database host"
+                    f"Hostname {hostname} is not a Supabase database host"
                 )
 
             project_ref = hostname_parts[0]
@@ -199,9 +202,9 @@ class DatabaseURLConverter:
 
             return supabase_url, project_ref
 
-        except Exception as e:
+        except Exception as e:  # Broad catch for robust URL extraction
             error_msg = f"Failed to extract Supabase info: {e}"
-            self.logger.error(error_msg)
+            self.logger.exception(error_msg)
             raise DatabaseURLParsingError(error_msg) from e
 
     def validate_conversion(self, original_url: str, converted_url: str) -> bool:
@@ -226,19 +229,15 @@ class DatabaseURLConverter:
                 # Check for Supabase hostname pattern
                 return "supabase" in credentials.hostname
 
-            elif self.is_postgres_url(original_url):
+            if self.is_postgres_url(original_url):
                 # Original was PostgreSQL, converted should be Supabase
-                if not self.is_supabase_url(converted_url):
-                    return False
+                return self.is_supabase_url(converted_url)
 
-                return True
+            # Unknown URL type
+            return False
 
-            else:
-                # Unknown URL type
-                return False
-
-        except Exception as e:
-            self.logger.error(f"Validation failed: {e}")
+        except Exception:  # pylint: disable=broad-exception-caught
+            self.logger.exception("Validation failed")
             return False
 
 
@@ -250,18 +249,12 @@ class DatabaseURLDetector:
     """
 
     def __init__(self):
+        """Initialize the database URL detector."""
         self.converter = DatabaseURLConverter()
         self.parser = DatabaseURLParser()
 
-    def detect_url_type(self, url: str) -> dict[str, any]:
-        """Detect URL type and provide metadata.
-
-        Args:
-            url: URL to analyze
-
-        Returns:
-            Dictionary with URL type and metadata
-        """
+    def detect_url_type(self, url: str) -> dict[str, Any]:
+        """Detect URL type and provide metadata."""
         result = {"url": url, "type": "unknown", "valid": False, "metadata": {}}
 
         try:
@@ -291,7 +284,7 @@ class DatabaseURLDetector:
                     }
                 )
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught  # noqa: BLE001
             result["error"] = str(e)
 
         return result
@@ -312,16 +305,14 @@ class DatabaseURLDetector:
                 "Use Supabase client for API operations or convert to PostgreSQL "
                 "URL for direct database access"
             )
-        elif url_info["type"] == "postgresql":
+        if url_info["type"] == "postgresql":
             if url_info["metadata"].get("is_supabase_postgres"):
                 return (
                     "Use PostgreSQL client for direct database access or "
                     "extract Supabase project info for API operations"
                 )
-            else:
-                return "Use PostgreSQL client for database operations"
-        else:
-            return "Unknown URL type - manual inspection required"
+            return "Use PostgreSQL client for database operations"
+        return "Unknown URL type - manual inspection required"
 
 
 # Convenience functions
@@ -340,7 +331,7 @@ def convert_supabase_to_postgres(supabase_url: str, password: str, **kwargs) -> 
     return converter.supabase_to_postgres(supabase_url, password, **kwargs)
 
 
-def detect_database_url_type(url: str) -> dict[str, any]:
+def detect_database_url_type(url: str) -> dict[str, Any]:
     """Detect and analyze database URL type.
 
     Args:
