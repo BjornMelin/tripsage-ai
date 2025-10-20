@@ -17,8 +17,8 @@ project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
 # These imports rely on the path adjustments above
-from tripsage.db.migrations import run_migrations  # noqa: E402
-from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
+from tripsage.db.migrations import run_migrations
+from tripsage_core.utils.logging_utils import configure_logging
 
 
 # Configure logging
