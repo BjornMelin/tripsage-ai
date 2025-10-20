@@ -3,6 +3,10 @@
 > **Complete Setup and Dependencies for TripSage AI Platform**
 > Local Development | Docker | Dependencies | Node.js Compatibility
 
+> IMPORTANT: This repository is standardized on `pyproject.toml` + `uv` for Python dependencies.
+> Any references to `requirements.txt` or `requirements-dev.txt` are deprecated and will be removed.
+> Use `uv sync` (and `uv sync --group dev`) instead.
+
 ## 📋 Table of Contents
 
 - [🚀 TripSage Installation Guide](#-tripsage-installation-guide)
@@ -75,29 +79,20 @@
 git clone https://github.com/BjornMelin/tripsage-ai.git
 cd tripsage-ai
 
-# (Optional) Install uv if you want to use the recommended method:
+# Install uv (recommended):
 curl -LsSf https://astral.sh/uv/install.sh | sh
 # Or with pip: pip install uv
 
-# Install Python dependencies using one of these methods:
+# Install Python dependencies via pyproject.toml and uv:
 
 # Option 1: Using uv with pyproject.toml (Recommended - Fastest ~30 seconds)
 uv sync                    # Install core dependencies only
 uv sync --group dev       # Install all dependencies including dev tools
 
-# Option 2: Using uv with requirements.txt (Fast ~45 seconds)
-uv pip install -r requirements.txt      # Install core dependencies only
-uv pip install -r requirements-dev.txt  # Install all dependencies including dev tools
 
-# Option 3: Using pip directly (Traditional method ~2-5 minutes)
-# First create and activate a virtual environment:
-python -m venv .venv
 source .venv/bin/activate               # On Windows: .venv\Scripts\activate
 # Then install dependencies:
-pip install -r requirements.txt         # Install core dependencies only
-pip install -r requirements-dev.txt     # Install all dependencies including dev tools
 # Or install as editable package:
-pip install -e .                        # Editable install with core deps
 
 # Install frontend dependencies
 cd frontend
@@ -247,7 +242,7 @@ uv run pytest tests/integration/ -v
 
 ### Dependency Management
 
-TripSage supports both modern (`pyproject.toml`) and traditional (`requirements.txt`) dependency management approaches to ensure maximum compatibility and developer flexibility.
+TripSage standardizes on modern dependency management with `pyproject.toml` and `uv`. Traditional `requirements.txt` files are not used.
 
 #### File Structure
 
@@ -255,17 +250,11 @@ TripSage supports both modern (`pyproject.toml`) and traditional (`requirements.
   - Core dependencies in `[project.dependencies]`
   - Development dependencies in `[dependency-groups]`
   
-- **`requirements.txt`**: Core dependencies only (production)
-  - Auto-generated from `pyproject.toml`
-  - Contains 37 packages needed to run the application
-  
-- **`requirements-dev.txt`**: All dependencies (core + dev + test + lint)
-  - Auto-generated from `pyproject.toml`
-  - Contains 50 packages for full development environment
+- **`uv.lock`**: Locked dependency resolution committed to the repo
 
 #### Adding New Dependencies
 
-⚠️ **Important**: Always update dependencies in `pyproject.toml` first, then regenerate the requirements files.
+⚠️ **Important**: Always update dependencies in `pyproject.toml`. `uv` will manage the lockfile.
 
 **Python packages:**
 
@@ -273,9 +262,8 @@ TripSage supports both modern (`pyproject.toml`) and traditional (`requirements.
 # Add to pyproject.toml in the appropriate section, then:
 uv sync                          # Install the new dependency
 
-# Manually update the corresponding requirements file(s)
-# For core dependencies, add to requirements.txt
-# For dev dependencies, add to requirements-dev.txt only
+uv add <package>
+uv add --group dev <package>
 ```
 
 **Frontend packages:**
@@ -296,12 +284,11 @@ uv sync --resolution=highest
 uv add package-name@latest
 ```
 
-#### Why Both Approaches?
+#### Rationale
 
-1. **Backward Compatibility**: Many deployment pipelines and Docker containers expect `requirements.txt`
-2. **Team Flexibility**: Developers can use their preferred workflow
-3. **Tool Compatibility**: Some tools don't yet support `pyproject.toml`
-4. **Clear Separation**: Easy to see production vs development dependencies
+1. **KISS/DRY/YAGNI**: Single source of truth avoids drift and duplication.
+2. **Performance**: `uv` offers fast installs and reproducible `uv.lock`.
+3. **Consistency**: Aligns local, CI, and containers on the same toolchain.
 
 ## Production Deployment
 

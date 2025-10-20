@@ -6,7 +6,7 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
   configurable: true,
   value: vi.fn().mockImplementation((query: string) => ({
-    matches: query === "(prefers-color-scheme: dark)" ? false : false,
+    matches: false,
     media: query,
     onchange: null,
     addListener: vi.fn(),
@@ -17,7 +17,7 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-import { type Theme, useUIStore } from "../ui-store";
+import { useUIStore } from "../ui-store";
 
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({
@@ -119,7 +119,7 @@ describe("UI Store", () => {
 
       // Mock dark mode preference - update the existing mock
       const matchMediaMock = vi.fn().mockImplementation((query: string) => ({
-        matches: query === "(prefers-color-scheme: dark)" ? true : false,
+        matches: query === "(prefers-color-scheme: dark)",
         media: query,
         onchange: null,
         addListener: vi.fn(),

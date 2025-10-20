@@ -167,6 +167,7 @@ worktrees/
 
 # Archived documentation (moved out of main repo)
 ARCHIVED_DOCS/
+docs/archive/
 repomix-output.*
 
 # Temporary documentation files
@@ -182,7 +183,7 @@ repomix-output.*
 *_DEBUG.md
 !README.md
 !TODO.md
-!CLAUDE.md
+CLAUDE.md
 !KNOWLEDGE_PACK.md
 # Exception for security documentation
 !docs/operators/RLS_IMPLEMENTATION.md

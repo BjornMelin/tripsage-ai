@@ -1,29 +1,28 @@
-# 👨‍💻 TripSage Developers Documentation
+# TripSage Developer Documentation
 
-> **Internal Developer Resources & Guidelines**  
-> Comprehensive development documentation for TripSage AI team members and contributors.
+Internal developer resources and guidelines.
 
 ## 📋 Table of Contents
 
-### **🚀 Getting Started**
+### Getting Started
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [**Quick Start Guide**](quick-start-guide.md) | ⚡ 15-minute setup for new developers | New developers |
+| [Quick Start Guide](quick-start-guide.md) | Setup for new developers | New developers |
 | [Code Standards](code-standards.md) | Python/TypeScript coding guidelines & conventions | All developers |
 | [Testing Guide](testing-guide.md) | Comprehensive testing strategies & patterns | All developers |
 
-### **🏗️ Core Development**
+### Core Development
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [API Development](api-development.md) | Backend API development with FastAPI | Backend developers |
-| [**API Key Service**](api-key-service.md) | 🔑 Internal API key service implementation guide | Backend developers |
+| [API Key Service](api-key-service.md) | Internal API key service implementation guide | Backend developers |
 | [Frontend Development](frontend-development.md) | Next.js frontend development guide | Frontend developers |
 | [**Unified Database Guide**](unified-database-guide.md) | 🗄️ Complete database development reference | Backend developers |
 | [Data Models](data-models.md) | Pydantic models and TypeScript interfaces | All developers |
 
-### **🎯 Advanced Topics**
+### Advanced Topics
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
@@ -32,9 +31,9 @@
 | [External Integrations](external-integrations.md) | Third-party API integrations | Backend developers |
 | [Debugging Guide](debugging-guide.md) | Debugging techniques & troubleshooting | All developers |
 
-## 🛠️ Quick Start
+## Quick Start
 
-> **New to TripSage?** Start with our [**Quick Start Guide**](quick-start-guide.md) for complete 15-minute setup instructions.
+Start with the [Quick Start Guide](quick-start-guide.md) for setup instructions.
 
 ### **Essential Commands**
 

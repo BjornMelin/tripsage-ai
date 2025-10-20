@@ -21,18 +21,16 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install uv and project dependencies using pyproject.toml
+RUN pip install --no-cache-dir uv
 
-# Install additional modern dependencies for current architecture
-RUN pip install --no-cache-dir \
-    mem0ai \
-    crawl4ai \
-    playwright \
-    asyncpg \
-    redis \
-    supabase
+# Copy only dependency manifests first to leverage Docker layer caching
+COPY pyproject.toml ./
+COPY uv.lock ./
+RUN uv sync --frozen --no-dev
+
+# Install Playwright browsers (package provided via pyproject)
+RUN uv run playwright install chromium
 
 # Install Playwright browsers
 RUN playwright install chromium

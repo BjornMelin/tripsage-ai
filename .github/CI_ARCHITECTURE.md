@@ -1,4 +1,4 @@
-# TripSage AI CI/CD Architecture
+# TripSage AI CI/CD Architecture (Simplified)
 
 ## Overview
 
@@ -16,53 +16,29 @@ This document describes the comprehensive CI/CD pipeline architecture for TripSa
 
 ## Architecture Overview
 
-The CI/CD system is built around three main workflows:
+The CI/CD system is built around two main workflows:
 
-1. **Unified CI** (`ci.yml`) - Comprehensive testing and quality checks
-2. **Deploy** (`deploy.yml`) - Automated deployment pipeline
-3. **PR & Repository Utilities** (`utilities.yml`) - Automation helpers
+1. **CI** (`ci.yml`) - Minimal testing and quality checks for backend and frontend
+2. **Weekly Security** (`security.yml`) - Scheduled (and manual) secrets scan
 
 ### Key Design Principles
 
-1. **Security First**: All GitHub Actions are pinned to specific commit SHAs
-2. **Intelligent Path Filtering**: Only run relevant jobs based on file changes
-3. **Parallelization**: Maximum job concurrency for faster feedback
-4. **Caching Strategy**: Multi-level caching for dependencies and build artifacts
-5. **Retry Logic**: Built-in retry mechanisms for flaky tests
-6. **OIDC Authentication**: Secure, token-less authentication where possible
+1. **KISS/DRY/YAGNI**: Small workflows, no custom composite actions
+2. **Path Filtering**: Each job runs only when relevant areas change
+3. **Fast Feedback**: No matrices or redundant gates; clear summaries
+4. **Security**: GH secret scanning config plus weekly gitleaks
 
 ## Validation Report
 
-### ✅ Syntax Validation
+### ✅ Files in scope
 
-All YAML files have been validated and are syntactically correct:
+- `.github/workflows/ci.yml`
+- `.github/workflows/security.yml`
+- `.github/secret_scanning.yml`
 
-- ✅ `.github/workflows/ci.yml` - Valid YAML
-- ✅ `.github/workflows/deploy.yml` - Valid YAML
-- ✅ `.github/workflows/utilities.yml` - Valid YAML
-- ✅ `.github/actions/setup-python/action.yml` - Valid YAML
-- ✅ `.github/actions/setup-node/action.yml` - Valid YAML
-- ✅ `.github/actions/security-scan/action.yml` - Valid YAML
-- ✅ `.github/dependabot.yml` - Valid YAML
-- ✅ `.github/ci-config.yml` - Valid YAML
+### ✅ Action Usage
 
-### ✅ Action Pinning
-
-All GitHub Actions are pinned to commit SHAs unless GitHub mandates a supported major tag:
-
-- `actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11` (v4.1.1)
-- `actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d` (v5.1.0)
-- `actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8` (v4.0.2)
-- `actions/cache@v4` (GitHub deprecates pinning to the legacy commit; use supported major tag)
-- `actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3` (v4.3.1)
-- `actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427` (v4.1.4)
-- `pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2` (v4.0.0)
-- `dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50` (v2.11.1)
-- `codecov/codecov-action@e28ff129e5465c2c0dcc6f003fc735cb6ae0c673` (v4.5.0)
-- `actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea` (v7.0.1)
-- `aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8` (v0.24.0)
-- `github/codeql-action/upload-sarif@4fa2a7953630fd2f3fb380f21be14ede0169dd4f` (v3.25.12)
-- `actions/dependency-review-action@72eb03d02c7872a771aacd928f3123ac62ad6d3a` (v4.3.3)
+Use supported major tags for official actions (`actions/checkout@v4`, `actions/setup-python@v5`, `actions/setup-node@v4`). Avoid bespoke composite actions unless shared cross-repo.
 
 ### ✅ Path References
 
@@ -73,51 +49,17 @@ All path references are correctly structured:
 - Migration paths: `supabase/migrations/`, `scripts/database/`
 - GitHub paths: `.github/workflows/`, `.github/actions/`
 
-### ⚠️ Issues Found and Recommendations
+### Notes
 
-1. **Missing uv installation for Windows**: The ci.yml workflow uses incorrect syntax for Windows uv installation. Lines 262-264 should be:
-
-   ```yaml
-   if [[ "$RUNNER_OS" == "Windows" ]]; then
-     powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-     echo "$env:USERPROFILE\.cargo\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-   ```
-
-2. **Hardcoded Python version in setup-python action**: The action uses a different SHA than in ci.yml. Recommend updating to match.
-
-3. **Missing error handling in composite actions**: The composite actions should include error handling for failed installations.
+- Backend pyright/unit tests are temporarily soft-fail while stabilizing. We will make them blocking after consecutive green runs on `main`.
 
 ## Workflow Structure
 
-### Unified CI Workflow
+### CI Workflow
 
-The main CI workflow implements a sophisticated job dependency graph:
+Two jobs run in parallel: Backend (lint/type/unit) and Frontend (lint/type/unit). Each is path-scoped and minimal. The workflow triggers when backend code, tests, dependency manifests/locks, frontend files, or CI configs change, including:
 
-```mermaid
-graph TD
-    A[changes] --> B[backend-quality]
-    A --> C[frontend-quality]
-    B --> D[backend-tests]
-    B --> E[backend-integration]
-    B --> F[backend-build]
-    C --> G[frontend-tests]
-    C --> H[frontend-e2e]
-    C --> I[frontend-build]
-    D --> J[coverage-analysis]
-    G --> J
-    B --> K[performance-tests]
-    C --> K
-    A --> L[security-scan]
-    B --> M[quality-gate]
-    C --> M
-    D --> M
-    E --> M
-    F --> M
-    G --> M
-    H --> M
-    I --> M
-    M --> N[trigger-deployment]
-```
+`tripsage/**`, `tripsage_core/**`, `scripts/**`, `supabase/**`, `tests/**`, `uv.lock`, `pyproject.toml`, `ruff.toml`, `pyrightconfig.json`, `setup.cfg`, `pytest.ini`, `frontend/**`, `.github/workflows/**`.
 
 ### Key Features
 
@@ -131,14 +73,7 @@ graph TD
 
 ### 1. Secrets Scanning
 
-```yaml
-- name: Check for hardcoded secrets
-  run: |
-    if git grep -i "fallback-secret\|development-only" . | grep -v "allowed-files"; then
-      echo "❌ Hardcoded secrets detected!"
-      exit 1
-    fi
-```
+Use weekly `security.yml` with gitleaks; maintain `.github/secret_scanning.yml` `paths-ignore` for example env templates.
 
 ### 2. RLS Policy Validation
 
