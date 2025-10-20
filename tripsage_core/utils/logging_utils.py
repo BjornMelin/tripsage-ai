@@ -6,7 +6,6 @@ a function to get a configured logger for a module.
 """
 
 import logging
-import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -33,14 +32,15 @@ class ContextAdapter(logging.LoggerAdapter):
             Tuple of (modified message, modified kwargs)
         """
         # Extract extra context if provided
-        context = self.extra.get("context", {})
+        context = self.extra.get("context", {}) if self.extra else {}
 
         # Add context to extra if provided
         if "extra" not in kwargs:
             kwargs["extra"] = {}
 
-        # Update extra with context
-        kwargs["extra"].update(context)
+        # Only update if context is a dict
+        if isinstance(context, dict):
+            kwargs["extra"].update(context)
 
         return msg, kwargs
 
@@ -99,7 +99,7 @@ def configure_logging(
     settings = get_settings()
     if log_to_file and not settings.is_testing:
         # Create logs directory if it doesn't exist
-        os.makedirs(log_dir, exist_ok=True)
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
 
         # Create a log file with timestamp
         timestamp = datetime.now(UTC).strftime("%Y%m%d")

@@ -25,6 +25,7 @@ class SecurityValidator:
     """Comprehensive security validation for TripSage configuration."""
 
     def __init__(self):
+        """Initialize security configuration validator."""
         self.issues: list[str] = []
         self.warnings: list[str] = []
 
@@ -272,7 +273,7 @@ def main():
 
     if template:
         template_path = Path(".env.secure.template")
-        with open(template_path, "w") as f:
+        with template_path.open("w") as f:
             f.write(template)
         logger.info("✅ Secure configuration template saved to %s", template_path)
 

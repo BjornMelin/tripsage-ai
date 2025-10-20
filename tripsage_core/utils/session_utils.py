@@ -16,6 +16,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from tripsage_core.exceptions.exceptions import (
+    CoreServiceError,
+    CoreValidationError as ValidationError,
+)
 from tripsage_core.utils.logging_utils import get_logger
 
 
@@ -104,7 +108,9 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
             recent_trips = []
             for memory in trip_memories[:5]:  # Limit to 5 most recent
                 if hasattr(memory, "content"):
-                    recent_trips.append(memory.content)
+                    recent_trips = [
+                        m.content for m in trip_memories[:5] if hasattr(m, "content")
+                    ]
 
             # Update session data
             session_data.update(
@@ -123,8 +129,9 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
                 user_id,
             )
 
-        except Exception:
+        except (CoreServiceError, ValidationError, TypeError) as exc:
             logger.exception("Error loading user context for %s", user_id)
+            logger.debug("User context load failure details: %s", exc, exc_info=False)
             # Continue with default session data
 
     return session_data
@@ -182,7 +189,7 @@ async def update_session_memory(
                 user_id, updates["conversation_context"], result, memory_service
             )
 
-    except Exception as exc:
+    except (CoreServiceError, ValidationError, TypeError) as exc:
         logger.exception("Error updating session memory for %s", user_id)
         result["success"] = False
         result["errors"].append(str(exc))
@@ -259,7 +266,7 @@ async def store_session_summary(
                 "memories_created": 0,
             }
 
-    except Exception as exc:
+    except (CoreServiceError, ValidationError, TypeError) as exc:
         logger.exception(
             "Error storing session summary for user %s, session %s",
             user_id,
@@ -300,7 +307,7 @@ async def _update_user_preferences_memory(
         else:
             result["errors"].append("Failed to update preferences")
 
-    except Exception as exc:
+    except (CoreServiceError, ValidationError, TypeError) as exc:
         logger.exception("Error updating preferences for %s", user_id)
         result["errors"].append(f"Preference processing error: {exc!s}")
 
@@ -330,7 +337,7 @@ async def _process_learned_facts(
 
         result["facts_processed"] = len(facts)
 
-    except Exception as exc:
+    except (CoreServiceError, ValidationError, TypeError) as exc:
         logger.exception("Error processing learned facts for %s", user_id)
         result["errors"].append(f"Facts processing error: {exc!s}")
 
@@ -371,7 +378,7 @@ async def _process_conversation_context(
             if memory_id:
                 result["memories_created"] += 1
 
-    except Exception as exc:
+    except (CoreServiceError, ValidationError, TypeError) as exc:
         logger.exception("Error processing conversation context for %s", user_id)
         result["errors"].append(f"Context processing error: {exc!s}")
 

@@ -221,8 +221,8 @@ class DatabaseTester:
                         )
                 else:
                     invalid_files.append(f"{sql_file.name} (empty file)")
-            except Exception as e:
-                invalid_files.append(f"{sql_file.name} (read error: {e})")
+            except (OSError, UnicodeDecodeError) as exc:
+                invalid_files.append(f"{sql_file.name} (read error: {exc})")
 
         if invalid_files:
             self.log_test(
@@ -329,8 +329,8 @@ class DatabaseTester:
             )
             summary["policies"] = len(policy_matches)
 
-        except Exception as e:
-            summary["error"] = str(e)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            summary["error"] = str(exc)
 
         return summary
 

@@ -26,6 +26,7 @@ import numpy as np
 from tripsage_core.config import get_settings
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -484,7 +485,7 @@ class DatabaseBenchmark:
                 "metadata": result.metadata,
             }
 
-        with Path(filename).open("w") as f:
+        with Path(filename).open("w", encoding="utf-8") as f:
             json.dump(results_data, f, indent=2)
 
         print(f"\nDetailed results saved to: {filename}")

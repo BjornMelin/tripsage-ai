@@ -1,221 +1,316 @@
 #!/usr/bin/env python3
-"""Python 3.13 Modern Features Demonstration for TripSage.
-===================================================
+"""Python 3.13 Modern Features Demonstration for TripSage with Pydantic models."""
 
-This script demonstrates the Python 3.13 modern features implemented
-across the TripSage codebase:
-
-1. PEP 695: Type Parameter Syntax
-2. TaskGroups for structured concurrency
-3. Enhanced error handling with improved tracebacks
-4. Modern async patterns
-5. Performance optimizations
-
-Run this script to see the benefits of Python 3.13 modernization.
-"""
+from __future__ import annotations
 
 import asyncio
 import logging
 import sys
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any, TypeVar
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
-# Python 3.13 type parameters (PEP 695) - Modern syntax
-type ProcessingResult[T] = dict[str, T] | list[T]
-type TaskResult[T] = tuple[str, T, float]  # (task_name, result, duration)
-type BatchResults[T] = Mapping[str, Sequence[T]]
-
-# Traditional type variables for comparison
-T = TypeVar("T")
-ResultT = TypeVar("ResultT")
-
-# Configure logging for demonstration
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
 
-class ModernAsyncProcessor[T]:
-    """Demonstration of Python 3.13 generic type syntax with PEP 695.
+class ProcessedItem(BaseModel):
+    """Single processed item produced by ModernAsyncProcessor."""
 
-    This class shows how the new type parameter syntax provides better
-    type safety and readability compared to traditional TypeVar usage.
-    """
+    processed_item: Any
+    processor: str
+    count: int
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="UTC timestamp when the item was processed.",
+    )
 
-    def __init__(self, name: str):
+
+class BatchProcessingResult(BaseModel):
+    """Collection of processed items keyed by an item identifier."""
+
+    items: dict[str, ProcessedItem]
+
+    @property
+    def processed_count(self) -> int:
+        """Return the number of processed items."""
+        return len(self.items)
+
+
+class TaskGroupRunMetrics(BaseModel):
+    """Stores batch processing output together with the elapsed duration."""
+
+    result: BatchProcessingResult
+    duration_seconds: float
+
+
+class TaskGroupDemoResult(BaseModel):
+    """Comparison of TaskGroup and traditional asyncio approaches."""
+
+    structured: TaskGroupRunMetrics
+    traditional: TaskGroupRunMetrics
+    performance_difference_seconds: float
+
+
+class TaskExecutionRecord(BaseModel):
+    """Successful task execution details."""
+
+    task_id: str
+    message: str
+
+
+class TaskFailure(BaseModel):
+    """Failed task metadata captured from an exception group."""
+
+    task_id: str
+    error_type: str
+    detail: str
+
+
+class ErrorHandlingResult(BaseModel):
+    """Summary of successful and failed task outcomes."""
+
+    successful_tasks: list[TaskExecutionRecord]
+    failures: list[TaskFailure]
+
+    @property
+    def success_count(self) -> int:
+        """Return the number of successful tasks."""
+        return len(self.successful_tasks)
+
+
+class DatabaseOperationResult(BaseModel):
+    """Single simulated database operation result."""
+
+    query_type: str
+    execution_time_ms: float
+    rows_affected: int
+    success: bool
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="UTC timestamp representing when the operation finished.",
+    )
+
+
+class DatabaseOperationsSummary(BaseModel):
+    """Aggregated metrics for concurrent database operations."""
+
+    operations: dict[str, DatabaseOperationResult]
+    total_duration_seconds: float
+    sequential_time_seconds: float
+    speedup: float
+
+
+class UserDataModel(BaseModel):
+    """Typed representation of demo user data."""
+
+    id: int
+    name: str
+    age: int
+
+
+class SearchFiltersModel(BaseModel):
+    """Typed representation of demo search filters."""
+
+    destinations: list[str]
+    min_budget: int
+    max_budget: int
+    active: bool
+
+
+class TypeSafetyResult(BaseModel):
+    """Container that holds typed user data and filters."""
+
+    user: UserDataModel
+    filters: SearchFiltersModel
+
+
+class ModernAsyncProcessor:
+    """Demonstration of Python 3.13 generic type syntax with PEP 695."""
+
+    def __init__(self, name: str) -> None:
+        """Initialize modern data processor."""
         self.name = name
         self.processed_count = 0
 
-    async def process_item(self, item: T) -> ProcessingResult[T]:
+    async def process_item(self, item: Any) -> ProcessedItem:
         """Process a single item with modern type annotations."""
-        await asyncio.sleep(0.1)  # Simulate processing
+        await asyncio.sleep(0.1)
         self.processed_count += 1
 
-        return {
-            "processed_item": item,
-            "processor": self.name,
-            "timestamp": datetime.now(UTC).isoformat(),
-            "count": self.processed_count,
-        }
+        return ProcessedItem(
+            processed_item=item,
+            processor=self.name,
+            count=self.processed_count,
+        )
 
     async def process_batch_taskgroup(
-        self, items: Sequence[T]
-    ) -> BatchResults[ProcessingResult[T]]:
-        """Process items using Python 3.13 TaskGroup for structured concurrency.
+        self, items: Sequence[Any]
+    ) -> BatchProcessingResult:
+        """Process items using Python 3.13 TaskGroup for structured concurrency."""
+        results: dict[str, ProcessedItem] = {}
 
-        TaskGroup provides better error handling and automatic cleanup
-        compared to asyncio.gather() or manual task management.
-        """
-        results: dict[str, ProcessingResult[T]] = {}
-
-        # Python 3.13 TaskGroup - structured concurrency
+        tasks: dict[asyncio.Task[ProcessedItem], str] = {}
         async with asyncio.TaskGroup() as tg:
-            tasks = {}
-            for i, item in enumerate(items):
-                task = tg.create_task(self.process_item(item), name=f"process_item_{i}")
-                tasks[task] = f"item_{i}"
+            for index, item in enumerate(items):
+                task = tg.create_task(
+                    self.process_item(item),
+                    name=f"process_item_{index}",
+                )
+                tasks[task] = f"item_{index}"
 
-        # Collect results after all tasks complete successfully
         for task, item_key in tasks.items():
             results[item_key] = task.result()
 
-        return results
+        return BatchProcessingResult(items=results)
 
     async def process_batch_traditional(
-        self, items: Sequence[T]
-    ) -> BatchResults[ProcessingResult[T]]:
-        """Process items using traditional asyncio.gather() for comparison.
-
-        This method demonstrates the old approach for comparison purposes.
-        """
+        self, items: Sequence[Any]
+    ) -> BatchProcessingResult:
+        """Process items using traditional asyncio.gather() for comparison."""
         tasks = [self.process_item(item) for item in items]
         results_list = await asyncio.gather(*tasks, return_exceptions=True)
 
-        results: dict[str, ProcessingResult[T]] = {}
-        for i, result in enumerate(results_list):
-            if isinstance(result, Exception):
-                logger.exception("Task %s failed: %s", i, result)
+        results: dict[str, ProcessedItem] = {}
+        for index, result in enumerate(results_list):
+            if isinstance(result, BaseException):
+                logger.exception("Task %s failed: %s", index, result)
                 continue
-            results[f"item_{i}"] = result
+            results[f"item_{index}"] = result
 
-        return results
+        return BatchProcessingResult(items=results)
 
 
-async def demonstrate_taskgroup_benefits():
+async def demonstrate_taskgroup_benefits() -> TaskGroupDemoResult:
     """Demonstrate the benefits of TaskGroup over traditional approaches."""
-    logger.info("🚀 Demonstrating Python 3.13 TaskGroup benefits")
+    logger.info("Demonstrating Python 3.13 TaskGroup benefits")
 
-    # Test data
     test_items = ["trip_1", "trip_2", "trip_3", "trip_4", "trip_5"]
-    processor = ModernAsyncProcessor[str]("TripSage-Processor")
+    processor = ModernAsyncProcessor("TripSage-Processor")
 
-    # Test TaskGroup approach
     start_time = time.time()
-    taskgroup_results = await processor.process_batch_taskgroup(test_items)
+    taskgroup_items = await processor.process_batch_taskgroup(test_items)
     taskgroup_duration = time.time() - start_time
-
-    logger.info(
-        "✅ TaskGroup processed %s items in %.3fs",
-        len(taskgroup_results),
-        taskgroup_duration,
+    structured_metrics = TaskGroupRunMetrics(
+        result=taskgroup_items,
+        duration_seconds=taskgroup_duration,
     )
 
-    # Reset processor state
     processor.processed_count = 0
 
-    # Test traditional approach
     start_time = time.time()
-    traditional_results = await processor.process_batch_traditional(test_items)
+    traditional_items = await processor.process_batch_traditional(test_items)
     traditional_duration = time.time() - start_time
-
-    logger.info(
-        "⚡ Traditional processed %s items in %.3fs",
-        len(traditional_results),
-        traditional_duration,
+    traditional_metrics = TaskGroupRunMetrics(
+        result=traditional_items,
+        duration_seconds=traditional_duration,
     )
 
-    # Compare results
     performance_diff = abs(taskgroup_duration - traditional_duration)
-    logger.info("📊 Performance difference: %.3fs", performance_diff)
 
-    return taskgroup_results, traditional_results
+    logger.info(
+        "TaskGroup processed %s items in %.3fs",
+        structured_metrics.result.processed_count,
+        structured_metrics.duration_seconds,
+    )
+    logger.info(
+        "Traditional processed %s items in %.3fs",
+        traditional_metrics.result.processed_count,
+        traditional_metrics.duration_seconds,
+    )
+    logger.info("Performance difference: %.3fs", performance_diff)
+
+    return TaskGroupDemoResult(
+        structured=structured_metrics,
+        traditional=traditional_metrics,
+        performance_difference_seconds=performance_diff,
+    )
 
 
-async def demonstrate_enhanced_error_handling():
+async def demonstrate_enhanced_error_handling() -> ErrorHandlingResult:
     """Demonstrate enhanced error handling with TaskGroups."""
-    logger.info("🛡️ Demonstrating enhanced error handling")
+    logger.info("Demonstrating enhanced error handling")
 
     async def failing_task(task_id: str) -> str:
-        """A task that may fail to demonstrate error handling."""
         await asyncio.sleep(0.1)
         if task_id == "fail_me":
             raise ValueError(f"Intentional failure in {task_id}")
         return f"Success: {task_id}"
 
-    # TaskGroup with error handling
+    failures: list[TaskFailure] = []
+    first_run_tasks: dict[asyncio.Task[str], str] = {}
     try:
         async with asyncio.TaskGroup() as tg:
-            tasks = []
             for task_id in ["task_1", "task_2", "fail_me", "task_3"]:
                 task = tg.create_task(failing_task(task_id), name=task_id)
-                tasks.append((task_id, task))
+                first_run_tasks[task] = task_id
+    except ExceptionGroup as exception_group:
+        logger.exception(
+            "TaskGroup caught %s exceptions:",
+            len(exception_group.exceptions),
+        )
+        for task, task_id in first_run_tasks.items():
+            if not task.done():
+                continue
+            exception = task.exception()
+            if exception is None:
+                continue
+            failures.append(
+                TaskFailure(
+                    task_id=task_id,
+                    error_type=type(exception).__name__,
+                    detail=str(exception),
+                )
+            )
 
-        # This won't be reached due to the failure
-        logger.info("All tasks completed successfully")
-
-    except* ValueError as eg:
-        # Python 3.11+ exception groups - works great with TaskGroup
-        logger.exception("TaskGroup caught %s exceptions:", len(eg.exceptions))
-        for exc in eg.exceptions:
-            logger.exception(" - %s", type(exc).__name__)
-
-    # Demonstrate that partial results can still be processed
-    results = {}
+    successful_records: list[TaskExecutionRecord] = []
     try:
+        safe_task_mapping: dict[asyncio.Task[str], str] = {}
         async with asyncio.TaskGroup() as tg:
-            # Process non-failing tasks separately
-            safe_tasks = ["task_1", "task_2", "task_3", "task_4"]
-            task_map = {}
-            for task_id in safe_tasks:
+            for task_id in ["task_1", "task_2", "task_3", "task_4"]:
                 task = tg.create_task(failing_task(task_id), name=task_id)
-                task_map[task] = task_id
+                safe_task_mapping[task] = task_id
 
-        # Collect successful results
-        for task, task_id in task_map.items():
-            results[task_id] = task.result()
+        for task, task_id in safe_task_mapping.items():
+            successful_records.append(
+                TaskExecutionRecord(task_id=task_id, message=task.result())
+            )
+    except Exception:  # pragma: no cover - safeguard for demo script
+        logger.exception("Unexpected error during safe task processing")
 
-        logger.info("✅ Successfully processed %s safe tasks", len(results))
+    logger.info("Successfully processed %s safe tasks", len(successful_records))
 
-    except Exception:
-        logger.exception("Unexpected error")
+    return ErrorHandlingResult(
+        successful_tasks=successful_records,
+        failures=failures,
+    )
 
-    return results
 
-
-async def demonstrate_concurrent_database_operations():
+async def demonstrate_concurrent_database_operations() -> DatabaseOperationsSummary:
     """Simulate concurrent database operations using modern patterns."""
-    logger.info("🗄️ Demonstrating concurrent database operations")
+    logger.info("Demonstrating concurrent database operations")
 
-    async def simulate_db_query(query_type: str, delay: float = 0.1) -> dict[str, Any]:
-        """Simulate a database query with varying delays."""
+    async def simulate_db_query(
+        query_type: str,
+        delay: float = 0.1,
+    ) -> DatabaseOperationResult:
         await asyncio.sleep(delay)
-        return {
-            "query_type": query_type,
-            "execution_time_ms": delay * 1000,
-            "rows_affected": 42,
-            "success": True,
-            "timestamp": datetime.now(UTC).isoformat(),
-        }
+        return DatabaseOperationResult(
+            query_type=query_type,
+            execution_time_ms=delay * 1000,
+            rows_affected=42,
+            success=True,
+        )
 
-    # Concurrent database operations using TaskGroup
     start_time = time.time()
-
     async with asyncio.TaskGroup() as tg:
-        # Simulate multiple database operations
         user_task = tg.create_task(
             simulate_db_query("SELECT_USERS", 0.15), name="fetch_users"
         )
@@ -231,7 +326,6 @@ async def demonstrate_concurrent_database_operations():
 
     total_duration = time.time() - start_time
 
-    # Collect results
     operations = {
         "users": user_task.result(),
         "trips": trips_task.result(),
@@ -239,60 +333,48 @@ async def demonstrate_concurrent_database_operations():
         "health": health_task.result(),
     }
 
+    sequential_time = (
+        sum(operation.execution_time_ms for operation in operations.values()) / 1000
+    )
+    speedup = sequential_time / total_duration if total_duration else 0.0
+
     logger.info(
-        "🎯 Completed %s concurrent DB operations in %.3fs",
+        "Completed %s concurrent DB operations in %.3fs",
         len(operations),
         total_duration,
     )
+    logger.info("Speedup: %.2fx (Sequential: %.3fs)", speedup, sequential_time)
 
-    # Calculate sequential time for comparison
-    sequential_time = sum(op["execution_time_ms"] for op in operations.values()) / 1000
-    speedup = sequential_time / total_duration
-
-    logger.info("📈 Speedup: %.2fx (Sequential: %.3fs)", speedup, sequential_time)
-
-    return operations
-
-
-def demonstrate_type_safety():
-    """Demonstrate improved type safety with Python 3.13 features."""
-    logger.info("🔒 Demonstrating enhanced type safety")
-
-    # Modern type aliases with type statement
-    type UserData = dict[str, str | int | float]
-    type SearchFilters = dict[str, str | list[str]]
-
-    def process_user_data(data: UserData) -> str:
-        """Process user data with strict typing."""
-        return f"User: {data.get('name', 'Unknown')} (ID: {data.get('id', 'N/A')})"
-
-    def create_search_filters(
-        destinations: Sequence[str], budget_range: tuple[int, int]
-    ) -> SearchFilters:
-        """Create search filters with modern type annotations."""
-        return {
-            "destinations": list(destinations),
-            "min_budget": str(budget_range[0]),
-            "max_budget": str(budget_range[1]),
-            "active": "true",
-        }
-
-    # Example usage
-    user: UserData = {"id": 12345, "name": "Alice", "age": 30}
-    filters: SearchFilters = create_search_filters(
-        ["Paris", "Tokyo", "New York"], (1000, 5000)
+    return DatabaseOperationsSummary(
+        operations=operations,
+        total_duration_seconds=total_duration,
+        sequential_time_seconds=sequential_time,
+        speedup=speedup,
     )
 
-    logger.info("👤 %s", process_user_data(user))
-    logger.info("🔍 Search filters: %s", filters)
 
-    return user, filters
+def demonstrate_type_safety() -> TypeSafetyResult:
+    """Demonstrate improved type safety with Python 3.13 features."""
+    logger.info("Demonstrating enhanced type safety")
+
+    user = UserDataModel(id=12345, name="Alice", age=30)
+    filters = SearchFiltersModel(
+        destinations=["Paris", "Tokyo", "New York"],
+        min_budget=1000,
+        max_budget=5000,
+        active=True,
+    )
+
+    logger.info("User %s", user.model_dump())
+    logger.info("Search filters: %s", filters.model_dump())
+
+    return TypeSafetyResult(user=user, filters=filters)
 
 
-async def main():
+async def main() -> None:
     """Main demonstration function showcasing Python 3.13 modernizations."""
     logger.info("=" * 60)
-    logger.info("🎉 Python 3.13 Modern Features Demo for TripSage")
+    logger.info("Python 3.13 Modern Features Demo for TripSage")
     logger.info("=" * 60)
 
     print(f"Python version: {sys.version}")
@@ -300,29 +382,32 @@ async def main():
     print()
 
     try:
-        # 1. TaskGroup benefits
-        await demonstrate_taskgroup_benefits()
+        taskgroup_demo = await demonstrate_taskgroup_benefits()
+        print("TaskGroup comparison:")
+        print(taskgroup_demo.model_dump_json(indent=2))
         print()
 
-        # 2. Enhanced error handling
-        await demonstrate_enhanced_error_handling()
+        error_handling_result = await demonstrate_enhanced_error_handling()
+        print("Error handling summary:")
+        print(error_handling_result.model_dump_json(indent=2))
         print()
 
-        # 3. Concurrent operations
-        await demonstrate_concurrent_database_operations()
+        db_summary = await demonstrate_concurrent_database_operations()
+        print("Database operations summary:")
+        print(db_summary.model_dump_json(indent=2))
         print()
 
-        # 4. Type safety
-        demonstrate_type_safety()
+        type_safety_result = demonstrate_type_safety()
+        print("Type safety result:")
+        print(type_safety_result.model_dump_json(indent=2))
         print()
 
-        logger.info("✨ All demonstrations completed successfully!")
+        logger.info("All demonstrations completed successfully")
 
-    except Exception:
+    except Exception:  # pragma: no cover - safeguard for demo script
         logger.exception("Demo failed")
         raise
 
 
 if __name__ == "__main__":
-    # Run the demonstration
     asyncio.run(main())

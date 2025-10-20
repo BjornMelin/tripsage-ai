@@ -9,6 +9,7 @@ from typing import Any
 
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage_core.config import get_settings
+from tripsage_core.exceptions import CoreServiceError
 
 
 logger = logging.getLogger(__name__)
@@ -99,9 +100,13 @@ class SimpleMCPService:
 
             return result
 
-        except Exception as e:
+        except (CoreServiceError, Exception) as e:
             logger.exception("MCP method '%s' failed", method_name)
-            raise Exception(f"MCP method '{method_name}' failed: {e!s}") from e
+            raise CoreServiceError(
+                message=f"MCP method '{method_name}' failed: {e!s}",
+                service="mcp",
+                details={"original_error": str(e)},
+            ) from e
 
     def _convert_to_airbnb_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Convert generic params to Airbnb-specific format."""
@@ -178,7 +183,11 @@ class SimpleMCPService:
             )
             return {"status": "healthy"}
         except Exception as e:
-            return {"status": "unhealthy", "error": str(e)}
+            raise CoreServiceError(
+                message="Health check failed",
+                service="mcp",
+                details={"original_error": str(e)},
+            ) from e
 
     async def initialize_all_enabled(self) -> None:
         """Initialize all enabled MCP services."""
