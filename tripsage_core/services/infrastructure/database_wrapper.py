@@ -1,3 +1,4 @@
+# pylint: disable=too-many-public-methods,global-statement
 """Database service wrapper with monitoring integration and feature flags.
 
 This wrapper provides a transparent layer around the database service
@@ -169,6 +170,7 @@ class DatabaseServiceWrapper:
         self,
         table: str,
         columns: str = "*",
+        *,
         filters: dict[str, Any] | None = None,
         order_by: str | None = None,
         limit: int | None = None,
@@ -178,11 +180,21 @@ class DatabaseServiceWrapper:
         if self.metrics and self.settings.enable_prometheus_metrics:
             with self.metrics.time_query("supabase", "SELECT", table):
                 return await self.database_service.select(
-                    table, columns, filters, order_by, limit, offset
+                    table,
+                    columns,
+                    filters=filters,
+                    order_by=order_by,
+                    limit=limit,
+                    offset=offset,
                 )
         else:
             return await self.database_service.select(
-                table, columns, filters, order_by, limit, offset
+                table,
+                columns,
+                filters=filters,
+                order_by=order_by,
+                limit=limit,
+                offset=offset,
             )
 
     async def update(
@@ -389,13 +401,19 @@ class DatabaseServiceWrapper:
         table: str,
         vector_column: str,
         query_vector: list[float],
+        *,
         limit: int = 10,
         similarity_threshold: float | None = None,
         filters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Perform vector similarity search."""
         return await self.database_service.vector_search(
-            table, vector_column, query_vector, limit, similarity_threshold, filters
+            table,
+            vector_column,
+            query_vector,
+            limit=limit,
+            similarity_threshold=similarity_threshold,
+            filters=filters,
         )
 
     async def vector_search_destinations(
@@ -527,7 +545,7 @@ async def get_database_wrapper() -> DatabaseServiceWrapper:
     Returns:
         Connected DatabaseServiceWrapper instance
     """
-    global _database_wrapper
+    global _database_wrapper  # pylint: disable=global-statement
 
     if _database_wrapper is None:
         _database_wrapper = DatabaseServiceWrapper()
@@ -538,7 +556,7 @@ async def get_database_wrapper() -> DatabaseServiceWrapper:
 
 async def close_database_wrapper() -> None:
     """Close the global database wrapper instance."""
-    global _database_wrapper
+    global _database_wrapper  # pylint: disable=global-statement
 
     if _database_wrapper:
         await _database_wrapper.close()
