@@ -5,6 +5,8 @@ tools, and orchestration nodes. It ensures proper initialization and lifecycle
 management of services while enabling easy testing through dependency injection.
 """
 
+from typing import TypeVar, cast
+
 from tripsage_core.config import get_settings
 from tripsage_core.services.business.accommodation_service import AccommodationService
 from tripsage_core.services.business.api_key_service import ApiKeyService
@@ -34,6 +36,9 @@ from tripsage_core.services.infrastructure import (
     WebSocketBroadcaster,
     WebSocketManager,
 )
+
+
+ServiceT = TypeVar("ServiceT")
 
 
 class ServiceRegistry:
@@ -138,25 +143,27 @@ class ServiceRegistry:
         api_key_service = ApiKeyService(
             db=db_service, cache=cache_service, settings=settings
         )
-        memory_service = MemoryService(db_service)
-        chat_service = ChatService(db_service, memory_service)
-        file_processing_service = FileProcessingService(document_analyzer)
-
-        accommodation_service = AccommodationService(
-            db_service, cache_service, google_maps_service
+        memory_service = MemoryService(database_service=db_service)
+        chat_service = ChatService(database_service=db_service)
+        file_processing_service = FileProcessingService(
+            database_service=db_service, ai_analysis_service=document_analyzer
         )
+
+        accommodation_service = AccommodationService(database_service=db_service)
 
         destination_service = DestinationService(
-            db_service, cache_service, google_maps_service, weather_service
+            database_service=db_service, weather_service=weather_service
         )
 
-        flight_service = FlightService(db_service, cache_service)
+        flight_service = FlightService(database_service=db_service)
 
         itinerary_service = ItineraryService(
-            db_service, google_maps_service, weather_service
+            database_service=db_service, external_calendar_service=calendar_service
         )
 
-        trip_service = TripService(db_service, memory_service, itinerary_service)
+        trip_service = TripService(
+            database_service=db_service, user_service=user_service
+        )
 
         return cls(
             # Business services
@@ -186,30 +193,61 @@ class ServiceRegistry:
             websocket_manager=websocket_manager,
         )
 
-    def get_required_service(self, service_name: str):
+    def get_required_service(
+        self,
+        service_name: str,
+        *,
+        expected_type: type[ServiceT] | None = None,
+    ) -> ServiceT:
         """Get a required service by name, raising an error if not found.
 
         Args:
-            service_name: The name of the service attribute
+            service_name: The name of the service attribute.
+            expected_type: Optional concrete type that the service must satisfy.
 
         Returns:
-            The service instance
+            The service instance cast to ``expected_type`` when provided.
 
         Raises:
-            ValueError: If the service is not initialized
+            ValueError: If the service is not initialized.
+            TypeError: If the service does not match ``expected_type``.
         """
         service = getattr(self, service_name, None)
         if service is None:
-            raise ValueError(f"Required service '{service_name}' is not initialized")
-        return service
+            raise ValueError(
+                f"Required service '{service_name}' is not initialized"
+            )
+        if expected_type is not None and not isinstance(service, expected_type):
+            raise TypeError(
+                f"Service '{service_name}' is not of expected type"
+                f" {expected_type.__name__}"
+            )
+        return cast(ServiceT, service)
 
-    def get_optional_service(self, service_name: str):
-        """Get an optional service by name, returning None if not found.
+    def get_optional_service(
+        self,
+        service_name: str,
+        *,
+        expected_type: type[ServiceT] | None = None,
+    ) -> ServiceT | None:
+        """Get an optional service by name, returning ``None`` if not found.
 
         Args:
-            service_name: The name of the service attribute
+            service_name: The name of the service attribute.
+            expected_type: Optional concrete type that the service must satisfy.
 
         Returns:
-            The service instance or None
+            The service instance (when present) cast to ``expected_type``.
+
+        Raises:
+            TypeError: If the service is present but does not match ``expected_type``.
         """
-        return getattr(self, service_name, None)
+        service = getattr(self, service_name, None)
+        if service is None:
+            return None
+        if expected_type is not None and not isinstance(service, expected_type):
+            raise TypeError(
+                f"Service '{service_name}' is not of expected type"
+                f" {expected_type.__name__}"
+            )
+        return cast(ServiceT, service)
