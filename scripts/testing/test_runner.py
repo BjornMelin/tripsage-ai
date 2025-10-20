@@ -62,7 +62,7 @@ def test_config_imports():
         print("✓ Config imports and basic functionality test passed")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"✗ Config test failed: {e}")
         traceback.print_exc()
         return False
@@ -92,7 +92,7 @@ def test_exception_imports():
         print("✓ Exception imports and basic functionality test passed")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"✗ Exception test failed: {e}")
         traceback.print_exc()
         return False
@@ -109,7 +109,7 @@ def test_main_imports():
         print("✓ Main module imports test passed")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"✗ Main imports test failed: {e}")
         traceback.print_exc()
         return False
@@ -142,7 +142,7 @@ def test_cors_validation():
         print("✓ CORS validation test passed")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"✗ CORS validation test failed: {e}")
         traceback.print_exc()
         return False
@@ -174,7 +174,7 @@ def test_inheritance():
         print("✓ Inheritance test passed")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"✗ Inheritance test failed: {e}")
         traceback.print_exc()
         return False

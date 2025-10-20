@@ -74,7 +74,7 @@ class ConfigManager:
             template = settings.export_env_template(include_secrets=include_secrets)
 
             output_path = Path(output_file)
-            with open(output_path, "w") as f:
+            with output_path.open(encoding="utf-8") as f:
                 f.write(template)
 
             logger.info(f"✅ Template saved to {output_path}")
@@ -271,13 +271,13 @@ class ConfigManager:
                 )
                 content = json.dumps(config_dict, indent=2, default=str)
             else:
-                logger.exception(f"❌ Unsupported format: {format_type}")
+                logger.exception("❌ Unsupported format: %s", format_type)
                 return False
 
-            with open(output_path, "w") as f:
+            with output_path.open(encoding="utf-8") as f:
                 f.write(content)
 
-            logger.info(f"✅ Configuration exported to {output_path}")
+            logger.info("✅ Configuration exported to %s", output_path)
             return True
 
         except Exception:

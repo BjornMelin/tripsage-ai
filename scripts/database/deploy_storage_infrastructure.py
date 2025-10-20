@@ -61,7 +61,7 @@ class StorageDeployment:
 
             return results
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ Deployment failed: {e}")
             return {"error": str(e)}
 
@@ -92,7 +92,7 @@ class StorageDeployment:
             finally:
                 await conn.close()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ Migration failed: {e}")
             return False
 
@@ -120,7 +120,7 @@ class StorageDeployment:
             print(f"✅ All buckets verified: {existing_buckets}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ Bucket verification failed: {e}")
             return False
 
@@ -149,7 +149,7 @@ class StorageDeployment:
             finally:
                 await conn.close()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ RLS policy test failed: {e}")
             return False
 
@@ -177,7 +177,7 @@ class StorageDeployment:
             )
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ Edge Function deployment failed: {e}")
             return False
 
@@ -219,7 +219,7 @@ class StorageDeployment:
             finally:
                 await conn.close()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ Webhook configuration failed: {e}")
             return False
 
@@ -283,7 +283,7 @@ class StorageDeployment:
             finally:
                 await conn.close()
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"❌ Verification tests failed: {e}")
             return False
 

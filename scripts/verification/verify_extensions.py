@@ -62,7 +62,7 @@ class ExtensionVerifier:
         try:
             self.connection = await asyncpg.connect(self.database_url)
             console.print("✅ Connected to database", style="green")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"❌ Failed to connect to database: {e}", style="red")
             sys.exit(1)
 
@@ -234,7 +234,7 @@ class ExtensionVerifier:
             console.print(f"\nTotal jobs configured: {len(results)}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"❌ Error checking scheduled jobs: {e}", style="red")
             return False
 
@@ -274,7 +274,7 @@ class ExtensionVerifier:
             console.print(f"\nTotal webhook configs: {len(results)}")
             return True
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"❌ Error checking webhook configs: {e}", style="red")
             return False
 
@@ -298,7 +298,7 @@ class ExtensionVerifier:
             try:
                 await self.connection.fetch(f"SELECT * FROM {func_call}")
                 status = "✅ Working"
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 status = f"❌ Error: {str(e)[:30]}..."
                 all_good = False
 
@@ -332,7 +332,7 @@ class ExtensionVerifier:
         for check_name, check_coro in checks:
             try:
                 results[check_name] = await check_coro
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 console.print(f"❌ Error in {check_name}: {e}", style="red")
                 results[check_name] = False
 

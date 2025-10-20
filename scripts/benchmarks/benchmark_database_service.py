@@ -14,10 +14,10 @@ Validates ULTRATHINK consolidation performance improvements.
 
 import asyncio
 import json
-import logging
 import statistics
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -192,7 +192,7 @@ class DatabaseBenchmark:
                 await service.connect()
                 duration = (time.time() - start) * 1000
                 result.add_result(duration)
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 result.add_result(0, success=False)
                 print(f"Connection failed: {e}")
 
@@ -203,7 +203,7 @@ class DatabaseBenchmark:
         # Ensure connected
         try:
             await service.connect()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Failed to connect for query benchmarks: {e}")
             return
 
@@ -215,7 +215,7 @@ class DatabaseBenchmark:
                 await service.execute_sql("SELECT 1 as test_column LIMIT 10")
                 duration = (time.time() - start) * 1000
                 result.add_result(duration)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 result.add_result(0, success=False)
 
         self.results[result.name] = result
@@ -242,7 +242,7 @@ class DatabaseBenchmark:
                     )
                     duration = (time.time() - start) * 1000
                     result.add_result(duration)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     result.add_result(0, success=False)
 
             self.results[result.name] = result
@@ -258,12 +258,12 @@ class DatabaseBenchmark:
                     )
                     duration = (time.time() - start) * 1000
                     result.add_result(duration)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     result.add_result(0, success=False)
 
             self.results[result.name] = result
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Could not run table-based benchmarks: {e}")
 
     async def _benchmark_transactions(self, service: DatabaseService):
@@ -278,7 +278,7 @@ class DatabaseBenchmark:
                     await service.execute_sql("SELECT 2")
                 duration = (time.time() - start) * 1000
                 result.add_result(duration)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 result.add_result(0, success=False)
 
         self.results[result.name] = result
@@ -287,7 +287,7 @@ class DatabaseBenchmark:
         """Benchmark query caching performance."""
         try:
             await service.connect()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             print(f"Failed to connect for caching benchmarks: {e}")
             return
 
@@ -302,7 +302,7 @@ class DatabaseBenchmark:
                 )
                 duration = (time.time() - start) * 1000
                 result_first_run.add_result(duration)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 result_first_run.add_result(0, success=False)
 
         self.results[result_first_run.name] = result_first_run
@@ -318,7 +318,7 @@ class DatabaseBenchmark:
                 )
                 duration = (time.time() - start) * 1000
                 result_repeat_run.add_result(duration)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 result_repeat_run.add_result(0, success=False)
 
         self.results[result_repeat_run.name] = result_repeat_run
@@ -347,7 +347,7 @@ class DatabaseBenchmark:
                     )
                     duration = (time.time() - start) * 1000
                     durations.append(duration)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
             return durations
 
@@ -399,14 +399,14 @@ class DatabaseBenchmark:
                     )
                     duration = (time.time() - start) * 1000
                     result.add_result(duration)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     result.add_result(0, success=False)
                     result.metadata["note"] = f"Vector operation failed: {str(e)[:100]}"
                     break
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             result.metadata["note"] = "pgvector extension not available"
-            logging.info(f"Vector search benchmark skipped: {e}")
+            logger.info(f"Vector search benchmark skipped: {e}")
 
         self.results[result.name] = result
 
