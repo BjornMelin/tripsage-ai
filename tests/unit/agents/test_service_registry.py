@@ -1,5 +1,4 @@
-"""
-Tests for the ServiceRegistry dependency injection system.
+"""Tests for the ServiceRegistry dependency injection system.
 
 This module tests the ServiceRegistry class which provides centralized
 dependency injection for all agents, tools, and orchestration nodes.
@@ -77,22 +76,20 @@ class TestServiceRegistry:
         ):
             registry.get_required_service("invalid_service")
 
-    def test_get_service_compatibility(self):
-        """Test get_service method (compatibility alias for get_optional_service)."""
-        mock_db = MagicMock()
-        registry = ServiceRegistry(database_service=mock_db)
-
-        assert registry.get_service("database_service") is mock_db
-        assert registry.get_service("memory_service") is None
-
     @pytest.mark.asyncio
     async def test_create_default_success(self):
         """Test creating a default ServiceRegistry with all services."""
         mock_db = MagicMock()
 
         # Mock all the service constructors to avoid actual instantiation
+        settings_mock = MagicMock()
+        secret_mock = MagicMock()
+        secret_mock.get_secret_value.return_value = "test-secret"
+        settings_mock.secret_key = secret_mock
+
         with patch.multiple(
             "tripsage.agents.service_registry",
+            get_settings=MagicMock(return_value=settings_mock),
             CacheService=MagicMock(),
             WebSocketManager=MagicMock(),
             WebSocketBroadcaster=MagicMock(),
@@ -105,7 +102,6 @@ class TestServiceRegistry:
             PlaywrightService=MagicMock(),
             WebCrawlService=MagicMock(),
             UserService=MagicMock(),
-            KeyManagementService=MagicMock(),
             MemoryService=MagicMock(),
             ChatService=MagicMock(),
             FileProcessingService=MagicMock(),

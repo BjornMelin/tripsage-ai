@@ -184,7 +184,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          uv sync --frozen
           
       - name: Verify Database
         env:

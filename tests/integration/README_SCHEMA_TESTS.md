@@ -317,7 +317,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install -r requirements-dev.txt
+          uv sync --group dev --frozen
       
       - name: Run schema validation tests
         run: |
