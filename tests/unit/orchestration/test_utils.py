@@ -11,6 +11,7 @@ class MockLLMResponse:
     """Mock response for LLM calls."""
 
     def __init__(self, content: str):
+        """Store mock content returned by the LLM."""
         self.content = content
 
 
