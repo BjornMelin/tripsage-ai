@@ -270,7 +270,7 @@ class TestLoggingUtils:
         logger.debug("Debug message")
         logger.info("Info message")
         logger.warning("Warning message")
-        logger.error("Error message")
+        logger.exception("Error message")
         logger.critical("Critical message")
 
         # All messages should be captured

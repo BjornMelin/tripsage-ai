@@ -266,7 +266,7 @@ async def validate_key(
         return result
         
     except Exception as e:
-        logger.error(f"Validation failed for service {service}: {e}")
+        logger.exception(f"Validation failed for service {service}: {e}")
         return ApiKeyValidateResponse(
             is_valid=False,
             service=service,
@@ -686,7 +686,7 @@ async def _log_operation(
     if success:
         logger.info(f"API key {operation} successful", extra=log_data)
     else:
-        logger.error(f"API key {operation} failed", extra=log_data)
+        logger.exception(f"API key {operation} failed", extra=log_data)
 ```
 
 ---

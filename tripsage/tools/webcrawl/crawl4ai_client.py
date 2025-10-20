@@ -104,7 +104,7 @@ class Crawl4AIClient:
                     error_msg = result.get(
                         "error", "Unknown error in Crawl4AI scraping"
                     )
-                    logger.error(f"Crawl4AI scraping error: {error_msg}")
+                    logger.exception(f"Crawl4AI scraping error: {error_msg}")
                     return {"success": False, "error": error_msg}
 
                 # Extract and format the result
@@ -113,17 +113,17 @@ class Crawl4AIClient:
 
         except httpx.RequestError as e:
             error_msg = f"Crawl4AI network error: {e!s}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return {"success": False, "error": error_msg}
         except httpx.HTTPStatusError as e:
             error_msg = (
                 f"Crawl4AI HTTP error {e.response.status_code}: {e.response.text}"
             )
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return {"success": False, "error": error_msg}
         except Exception as e:
             error_msg = f"Crawl4AI unexpected error: {e!s}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return {"success": False, "error": error_msg}
 
     async def search_web(self, query: str, depth: str = "standard") -> dict[str, Any]:
@@ -213,7 +213,7 @@ class Crawl4AIClient:
                     error_msg = result.get(
                         "error", "Unknown error in Crawl4AI blog crawl"
                     )
-                    logger.error(f"Crawl4AI blog crawl error: {error_msg}")
+                    logger.exception(f"Crawl4AI blog crawl error: {error_msg}")
                     return {"success": False, "error": error_msg}
 
                 # Process the blog-specific results based on extract_type
@@ -222,7 +222,7 @@ class Crawl4AIClient:
 
         except Exception as e:
             error_msg = f"Crawl4AI blog crawl error: {e!s}"
-            logger.error(error_msg)
+            logger.exception(error_msg)
             return {"success": False, "error": error_msg}
 
     def _format_result(self, result: dict[str, Any], url: str) -> dict[str, Any]:
@@ -358,7 +358,7 @@ class Crawl4AIClient:
             }
 
         except Exception as e:
-            logger.error(f"Failed to extract travel insights: {e}")
+            logger.exception(f"Failed to extract travel insights: {e}")
             return {"success": False, "url": url, "error": str(e), "insights": {}}
 
     def _parse_travel_insights(

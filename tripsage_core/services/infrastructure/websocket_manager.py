@@ -90,7 +90,7 @@ def redis_with_fallback(fallback_method: str | None = None):
             try:
                 return await func(self, *args, **kwargs)
             except Exception as e:
-                logger.error(
+                logger.exception(
                     f"Redis operation failed in {func.__name__}, using fallback: {e}"
                 )
                 fallback_name = fallback_method or f"_local_{func.__name__}"
@@ -102,7 +102,7 @@ def redis_with_fallback(fallback_method: str | None = None):
                         else fallback_func(*args, **kwargs)
                     )
                 else:
-                    logger.error(
+                    logger.exception(
                         f"No fallback method {fallback_name} found for {func.__name__}"
                     )
                     raise
@@ -509,7 +509,7 @@ class WebSocketManager:
             logger.info("Enhanced WebSocket manager started with full integration")
 
         except Exception as e:
-            logger.error(f"Failed to start WebSocket manager: {e}")
+            logger.exception(f"Failed to start WebSocket manager: {e}")
             self._running = False
             raise CoreServiceError(
                 message=f"Failed to start WebSocket manager: {e!s}",
@@ -573,7 +573,7 @@ class WebSocketManager:
             logger.info("Redis connection initialized for WebSocket broadcasting")
 
         except Exception as e:
-            logger.error(f"Failed to initialize Redis: {e}")
+            logger.exception(f"Failed to initialize Redis: {e}")
             self.redis_client = None
             self.redis_pubsub = None
 
@@ -648,7 +648,7 @@ class WebSocketManager:
             )
 
         except Exception as e:
-            logger.error(f"WebSocket authentication failed: {e}")
+            logger.exception(f"WebSocket authentication failed: {e}")
             self.performance_metrics["failed_connections"] += 1
             return WebSocketAuthResponse(
                 success=False,
@@ -734,7 +734,7 @@ class WebSocketManager:
             logger.info(f"Disconnected WebSocket connection {connection_id}")
 
         except Exception as e:
-            logger.error(f"Error disconnecting connection {connection_id}: {e}")
+            logger.exception(f"Error disconnecting connection {connection_id}: {e}")
 
     async def send_to_connection(
         self, connection_id: str, event: WebSocketEvent
@@ -857,7 +857,7 @@ class WebSocketManager:
                 await cleanup_sleep_task
 
             except Exception as e:
-                logger.error(f"Error in cleanup task: {e}")
+                logger.exception(f"Error in cleanup task: {e}")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(
                     asyncio.sleep(self.cleanup_interval)
@@ -892,7 +892,7 @@ class WebSocketManager:
                 await heartbeat_sleep_task
 
             except Exception as e:
-                logger.error(f"Error in heartbeat task: {e}")
+                logger.exception(f"Error in heartbeat task: {e}")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(
                     asyncio.sleep(self.heartbeat_interval)
@@ -923,7 +923,7 @@ class WebSocketManager:
                 await performance_sleep_task
 
             except Exception as e:
-                logger.error(f"Error in performance monitor: {e}")
+                logger.exception(f"Error in performance monitor: {e}")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(asyncio.sleep(30))
                 await error_sleep_task
@@ -941,10 +941,10 @@ class WebSocketManager:
                         data = json.loads(message["data"])
                         await self._handle_broadcast_message(data)
                     except Exception as e:
-                        logger.error(f"Failed to handle broadcast message: {e}")
+                        logger.exception(f"Failed to handle broadcast message: {e}")
 
         except Exception as e:
-            logger.error(f"Error in Redis message listener: {e}")
+            logger.exception(f"Error in Redis message listener: {e}")
 
     async def _handle_broadcast_message(self, data: dict[str, Any]) -> None:
         """Handle incoming broadcast message from Redis."""
@@ -984,7 +984,7 @@ class WebSocketManager:
                 )
 
         except Exception as e:
-            logger.error(f"Failed to handle broadcast message: {e}")
+            logger.exception(f"Failed to handle broadcast message: {e}")
 
     async def _process_priority_queues(self) -> None:
         """Background task to process priority message queues with anti-starvation.
@@ -1026,7 +1026,7 @@ class WebSocketManager:
                     await sleep_task
 
             except Exception as e:
-                logger.error(f"Error in priority queue processor: {e}")
+                logger.exception(f"Error in priority queue processor: {e}")
                 # Create non-blocking sleep task for error recovery
                 error_sleep_task = asyncio.create_task(asyncio.sleep(1))
                 await error_sleep_task

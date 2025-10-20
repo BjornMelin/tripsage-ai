@@ -399,7 +399,7 @@ class DashboardService:
             )
 
         except Exception as e:
-            logger.error(f"Failed to get dashboard data: {e}")
+            logger.exception(f"Failed to get dashboard data: {e}")
             # Return minimal data on error
             now = datetime.now(UTC)
             return await self._get_fallback_dashboard_data(now, time_range_hours)
@@ -445,7 +445,7 @@ class DashboardService:
                 return self._get_default_rate_limit_status(key_id, window_minutes)
 
         except Exception as e:
-            logger.error(f"Failed to get rate limit status for {key_id}: {e}")
+            logger.exception(f"Failed to get rate limit status for {key_id}: {e}")
             return self._get_default_rate_limit_status(key_id, window_minutes)
 
     async def _get_real_time_metrics(self, time_range_hours: int) -> RealTimeMetrics:
@@ -532,7 +532,7 @@ class DashboardService:
             return metrics
 
         except Exception as e:
-            logger.error(f"Failed to get real-time metrics: {e}")
+            logger.exception(f"Failed to get real-time metrics: {e}")
             return self._get_default_metrics(time_range_hours)
 
     async def _get_service_analytics(
@@ -569,7 +569,7 @@ class DashboardService:
             return services
 
         except Exception as e:
-            logger.error(f"Failed to get service analytics: {e}")
+            logger.exception(f"Failed to get service analytics: {e}")
             return self._get_default_service_analytics()
 
     async def _get_user_activity_data(
@@ -659,7 +659,7 @@ class DashboardService:
             return user_activities[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get user activity data: {e}")
+            logger.exception(f"Failed to get user activity data: {e}")
             return []
 
     async def _get_recent_alerts(self) -> list[AlertData]:
@@ -675,7 +675,7 @@ class DashboardService:
             return alerts[:50]  # Limit to most recent/important
 
         except Exception as e:
-            logger.error(f"Failed to get recent alerts: {e}")
+            logger.exception(f"Failed to get recent alerts: {e}")
             return []
 
     async def _get_usage_trends(self, time_range_hours: int) -> list[dict[str, Any]]:
@@ -715,7 +715,7 @@ class DashboardService:
             return trends
 
         except Exception as e:
-            logger.error(f"Failed to get usage trends: {e}")
+            logger.exception(f"Failed to get usage trends: {e}")
             return []
 
     async def _get_cache_statistics(self) -> dict[str, Any]:
@@ -737,7 +737,7 @@ class DashboardService:
             return stats
 
         except Exception as e:
-            logger.error(f"Failed to get cache statistics: {e}")
+            logger.exception(f"Failed to get cache statistics: {e}")
             return {}
 
     async def _query_usage_logs(
@@ -760,7 +760,7 @@ class DashboardService:
             return logs
 
         except Exception as e:
-            logger.error(f"Failed to query usage logs: {e}")
+            logger.exception(f"Failed to query usage logs: {e}")
             return []
 
     async def _get_service_usage_data(
@@ -803,7 +803,9 @@ class DashboardService:
             }
 
         except Exception as e:
-            logger.error(f"Failed to get service usage data for {service_type}: {e}")
+            logger.exception(
+                f"Failed to get service usage data for {service_type}: {e}"
+            )
             return {
                 "requests": 0,
                 "errors": 0,

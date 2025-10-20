@@ -52,7 +52,7 @@ async def get_user_preferences(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting user preferences: {e}")
+        logger.exception(f"Error getting user preferences: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve preferences",
@@ -93,7 +93,7 @@ async def update_user_preferences(
         return UserPreferencesResponse(preferences=updated_user.preferences or {})
 
     except Exception as e:
-        logger.error(f"Error updating user preferences: {e}")
+        logger.exception(f"Error updating user preferences: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update preferences",

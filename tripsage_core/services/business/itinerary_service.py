@@ -493,7 +493,7 @@ class ItineraryService:
             return itinerary
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create itinerary",
                 extra={
                     "user_id": user_id,
@@ -543,7 +543,7 @@ class ItineraryService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get itinerary",
                 extra={
                     "itinerary_id": itinerary_id,
@@ -589,7 +589,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to update itinerary",
                 extra={
                     "itinerary_id": itinerary_id,
@@ -770,7 +770,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to add item to itinerary",
                 extra={
                     "itinerary_id": itinerary_id,
@@ -827,7 +827,7 @@ class ItineraryService:
             return conflicts
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to detect conflicts",
                 extra={"itinerary_id": itinerary_id, "error": str(e)},
             )
@@ -909,7 +909,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to optimize itinerary",
                 extra={
                     "itinerary_id": optimize_request.itinerary_id,
@@ -966,7 +966,7 @@ class ItineraryService:
             return itineraries
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to search itineraries",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -1008,7 +1008,7 @@ class ItineraryService:
         except (NotFoundError, PermissionError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to delete itinerary",
                 extra={
                     "itinerary_id": itinerary_id,
@@ -1321,7 +1321,7 @@ class ItineraryService:
             await self.db.store_itinerary(itinerary_data)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to store itinerary",
                 extra={"itinerary_id": itinerary.id, "error": str(e)},
             )

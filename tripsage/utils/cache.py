@@ -161,7 +161,7 @@ class DragonflyCache:
             return None
 
         except Exception as e:
-            logger.error(f"Error getting cache value: {e}")
+            logger.exception(f"Error getting cache value: {e}")
             return None
 
     async def set(
@@ -185,7 +185,7 @@ class DragonflyCache:
             return bool(result)
 
         except Exception as e:
-            logger.error(f"Error setting cache value: {e}")
+            logger.exception(f"Error setting cache value: {e}")
             return False
 
     async def delete(self, key: str) -> bool:
@@ -201,7 +201,7 @@ class DragonflyCache:
             return False
 
         except Exception as e:
-            logger.error(f"Error deleting cache value: {e}")
+            logger.exception(f"Error deleting cache value: {e}")
             return False
 
     async def invalidate_pattern(self, pattern: str) -> int:
@@ -238,7 +238,7 @@ class DragonflyCache:
                 return 0
 
         except Exception as e:
-            logger.error(f"Error invalidating pattern: {e}")
+            logger.exception(f"Error invalidating pattern: {e}")
             return 0
 
     async def _increment_stat(self, stat: str) -> None:
@@ -304,7 +304,7 @@ class DragonflyCache:
             return stats
 
         except Exception as e:
-            logger.error(f"Error getting cache stats: {e}")
+            logger.exception(f"Error getting cache stats: {e}")
             return CacheStats()
 
 
@@ -497,7 +497,7 @@ async def batch_cache_set(
         return results
 
     except Exception as e:
-        logger.error(f"Batch cache set failed: {e}")
+        logger.exception(f"Batch cache set failed: {e}")
         return [False] * len(items)
 
 
@@ -545,7 +545,7 @@ async def batch_cache_get(
         return results
 
     except Exception as e:
-        logger.error(f"Batch cache get failed: {e}")
+        logger.exception(f"Batch cache get failed: {e}")
         return [None] * len(keys)
 
 

@@ -61,7 +61,7 @@ class SessionMemoryBridge:
                 logger.info(f"No existing session data found for user {user_id}")
 
         except Exception as e:
-            logger.error(f"Failed to hydrate state for user {user_id}: {e}")
+            logger.exception(f"Failed to hydrate state for user {user_id}: {e}")
             # Continue without memory data rather than failing
 
         return state
@@ -232,7 +232,7 @@ class SessionMemoryBridge:
                 return {}
 
         except Exception as e:
-            logger.error(f"Failed to persist insights for user {user_id}: {e}")
+            logger.exception(f"Failed to persist insights for user {user_id}: {e}")
             return {"error": str(e)}
 
     async def _extract_insights_from_state(
@@ -425,7 +425,7 @@ class SessionMemoryBridge:
             )
 
         except Exception as e:
-            logger.error(f"Failed to store checkpoint reference: {e}")
+            logger.exception(f"Failed to store checkpoint reference: {e}")
 
 
 # Global bridge instance

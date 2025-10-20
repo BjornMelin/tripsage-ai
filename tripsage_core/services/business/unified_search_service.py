@@ -250,7 +250,7 @@ class UnifiedSearchService(
             return response
 
         except Exception as e:
-            logger.error(f"Unified search failed: {e}")
+            logger.exception(f"Unified search failed: {e}")
             raise UnifiedSearchServiceError(f"Unified search failed: {e}", e) from e
 
     async def _search_destinations(
@@ -547,7 +547,7 @@ class UnifiedSearchService(
             return suggestions[:limit]
 
         except Exception as e:
-            logger.error(f"Failed to get search suggestions: {e}")
+            logger.exception(f"Failed to get search suggestions: {e}")
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
 
 

@@ -122,7 +122,7 @@ async def initialize_session_memory(user_id: str | None = None) -> dict[str, Any
             )
 
         except Exception as e:
-            logger.error(f"Error loading user context for {user_id}: {e!s}")
+            logger.exception(f"Error loading user context for {user_id}: {e!s}")
             # Continue with default session data
 
     return session_data
@@ -181,7 +181,7 @@ async def update_session_memory(
             )
 
     except Exception as e:
-        logger.error(f"Error updating session memory: {e!s}")
+        logger.exception(f"Error updating session memory: {e!s}")
         result["success"] = False
         result["errors"].append(str(e))
 
@@ -258,7 +258,7 @@ async def store_session_summary(
             }
 
     except Exception as e:
-        logger.error(f"Error storing session summary: {e!s}")
+        logger.exception(f"Error storing session summary: {e!s}")
         return {"status": "error", "error": str(e), "memories_created": 0}
 
 
@@ -295,7 +295,7 @@ async def _update_user_preferences_memory(
             result["errors"].append("Failed to update preferences")
 
     except Exception as e:
-        logger.error(f"Error updating preferences: {e!s}")
+        logger.exception(f"Error updating preferences: {e!s}")
         result["errors"].append(f"Preference processing error: {e!s}")
 
 
@@ -325,7 +325,7 @@ async def _process_learned_facts(
         result["facts_processed"] = len(facts)
 
     except Exception as e:
-        logger.error(f"Error processing learned facts: {e!s}")
+        logger.exception(f"Error processing learned facts: {e!s}")
         result["errors"].append(f"Facts processing error: {e!s}")
 
 
@@ -366,7 +366,7 @@ async def _process_conversation_context(
                 result["memories_created"] += 1
 
     except Exception as e:
-        logger.error(f"Error processing conversation context: {e!s}")
+        logger.exception(f"Error processing conversation context: {e!s}")
         result["errors"].append(f"Context processing error: {e!s}")
 
 

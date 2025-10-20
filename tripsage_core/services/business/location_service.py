@@ -48,7 +48,7 @@ class LocationService:
             logger.debug(f"Geocoding address: {address}")
             return await self.google_maps_service.geocode(address, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.error(f"Geocoding failed for address '{address}': {e}")
+            logger.exception(f"Geocoding failed for address '{address}': {e}")
             raise LocationServiceError(f"Geocoding failed: {e}") from e
 
     @with_error_handling()
@@ -72,7 +72,7 @@ class LocationService:
             logger.debug(f"Reverse geocoding coordinates: ({lat}, {lng})")
             return await self.google_maps_service.reverse_geocode(lat, lng, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.error(
+            logger.exception(
                 f"Reverse geocoding failed for coordinates ({lat}, {lng}): {e}"
             )
             raise LocationServiceError(f"Reverse geocoding failed: {e}") from e
@@ -105,7 +105,7 @@ class LocationService:
                 query, location, radius, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.error(f"Place search failed for query '{query}': {e}")
+            logger.exception(f"Place search failed for query '{query}': {e}")
             raise LocationServiceError(f"Place search failed: {e}") from e
 
     @with_error_handling()
@@ -131,7 +131,9 @@ class LocationService:
                 place_id, fields, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.error(f"Place details request failed for place_id '{place_id}': {e}")
+            logger.exception(
+                f"Place details request failed for place_id '{place_id}': {e}"
+            )
             raise LocationServiceError(f"Place details request failed: {e}") from e
 
     @with_error_handling()
@@ -158,7 +160,7 @@ class LocationService:
                 origin, destination, mode, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.error(
+            logger.exception(
                 f"Directions request failed from '{origin}' to '{destination}': {e}"
             )
             raise LocationServiceError(f"Directions request failed: {e}") from e
@@ -191,7 +193,7 @@ class LocationService:
                 origins, destinations, mode, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.error(f"Distance matrix request failed: {e}")
+            logger.exception(f"Distance matrix request failed: {e}")
             raise LocationServiceError(f"Distance matrix request failed: {e}") from e
 
     @with_error_handling()
@@ -214,7 +216,7 @@ class LocationService:
             logger.debug("Getting elevation data")
             return await self.google_maps_service.get_elevation(locations, **kwargs)
         except GoogleMapsServiceError as e:
-            logger.error(f"Elevation request failed: {e}")
+            logger.exception(f"Elevation request failed: {e}")
             raise LocationServiceError(f"Elevation request failed: {e}") from e
 
     @with_error_handling()
@@ -240,7 +242,7 @@ class LocationService:
                 location, timestamp, **kwargs
             )
         except GoogleMapsServiceError as e:
-            logger.error(f"Timezone request failed for location {location}: {e}")
+            logger.exception(f"Timezone request failed for location {location}: {e}")
             raise LocationServiceError(f"Timezone request failed: {e}") from e
 
 

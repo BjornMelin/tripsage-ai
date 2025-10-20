@@ -240,7 +240,7 @@ def main(dry_run: bool) -> None:
         # Implementation
         pass
     except Exception as e:
-        logger.error(f"Script failed: {e}")
+        logger.exception(f"Script failed: {e}")
         raise click.ClickException(str(e))
 
 

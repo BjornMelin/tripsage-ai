@@ -238,7 +238,7 @@ class RouterNode(BaseAgentNode):
             return classification
 
         except Exception as e:
-            self.logger.error(f"Intent classification failed: {e!s}")
+            self.logger.exception(f"Intent classification failed: {e!s}")
             # Fallback to general travel agent
             return {
                 "agent": "travel_agent",
@@ -406,7 +406,7 @@ class RouterNode(BaseAgentNode):
             return classification
 
         except Exception as e:
-            logger.error(f"Enhanced classification failed: {e!s}")
+            logger.exception(f"Enhanced classification failed: {e!s}")
             return self._get_safe_fallback_classification()
 
     def _keyword_based_classification(self, message: str) -> dict[str, Any]:

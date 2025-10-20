@@ -424,7 +424,7 @@ class AccommodationService:
                     external_listings = await self._search_external_api(search_request)
                     listings.extend(external_listings)
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         "External accommodation search failed",
                         extra={"error": str(e), "search_id": search_id},
                     )
@@ -483,7 +483,7 @@ class AccommodationService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Accommodation search failed",
                 extra={
                     "error": str(e),
@@ -537,7 +537,7 @@ class AccommodationService:
             return None
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get listing details",
                 extra={"listing_id": listing_id, "user_id": user_id, "error": str(e)},
             )
@@ -625,7 +625,7 @@ class AccommodationService:
                             "is_refundable", False
                         )
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         "External booking failed",
                         extra={
                             "booking_id": booking_id,
@@ -654,7 +654,7 @@ class AccommodationService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Accommodation booking failed",
                 extra={
                     "user_id": user_id,
@@ -698,7 +698,7 @@ class AccommodationService:
             return bookings
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user bookings",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -763,7 +763,7 @@ class AccommodationService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to cancel booking",
                 extra={"booking_id": booking_id, "user_id": user_id, "error": str(e)},
             )
@@ -808,7 +808,7 @@ class AccommodationService:
             return converted_listings
 
         except Exception as e:
-            logger.error("External API search failed", extra={"error": str(e)})
+            logger.exception("External API search failed", extra={"error": str(e)})
             return []
 
     async def _convert_external_listing(self, external_listing) -> AccommodationListing:
@@ -1032,7 +1032,7 @@ class AccommodationService:
             await self.db.store_accommodation_booking(booking_data)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to store booking",
                 extra={"booking_id": booking.id, "error": str(e)},
             )
@@ -1072,7 +1072,7 @@ class AccommodationService:
             }
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "External booking failed",
                 extra={"listing_id": listing.id, "error": str(e)},
             )
@@ -1089,7 +1089,7 @@ class AccommodationService:
             pass
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "External cancellation failed",
                 extra={"booking_id": booking.id, "error": str(e)},
             )

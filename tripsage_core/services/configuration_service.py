@@ -80,7 +80,7 @@ class ConfigurationService:
                 return fallback_config
 
         except Exception as e:
-            logger.error(f"Error getting agent config from database: {e}")
+            logger.exception(f"Error getting agent config from database: {e}")
             # Fallback to settings-based config
             return self.settings.get_agent_config(agent_type, **overrides)
 
@@ -175,7 +175,7 @@ class ConfigurationService:
                 return updated_config
 
         except Exception as e:
-            logger.error(f"Error updating agent config: {e}")
+            logger.exception(f"Error updating agent config: {e}")
             raise
 
     async def _create_new_config_profile(
@@ -397,7 +397,7 @@ class ConfigurationService:
                 return await self.get_agent_config(agent_type, environment)
 
         except Exception as e:
-            logger.error(f"Error rolling back configuration: {e}")
+            logger.exception(f"Error rolling back configuration: {e}")
             raise
 
     async def get_all_agent_configs(
@@ -416,7 +416,7 @@ class ConfigurationService:
                     agent_type, environment
                 )
             except Exception as e:
-                logger.error(f"Error getting config for {agent_type}: {e}")
+                logger.exception(f"Error getting config for {agent_type}: {e}")
                 # Use fallback
                 configs[agent_type] = self.settings.get_agent_config(agent_type)
 
@@ -487,7 +487,7 @@ class ConfigurationService:
                 logger.debug(f"Performance metrics recorded for {agent_type}")
 
         except Exception as e:
-            logger.error(f"Error recording performance metrics: {e}")
+            logger.exception(f"Error recording performance metrics: {e}")
 
 
 # Global service instance

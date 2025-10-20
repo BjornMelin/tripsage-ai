@@ -138,7 +138,7 @@ class BaseService:
             )
             return None
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 f"Failed to initialize database service: {e}",
                 extra={"service": self.service_name, "error": str(e)},
             )
@@ -171,7 +171,7 @@ class BaseService:
             )
             return None
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 f"Failed to initialize cache service: {e}",
                 extra={"service": self.service_name, "error": str(e)},
             )
@@ -232,7 +232,7 @@ class BaseService:
             )
             return None
         except Exception as e:
-            self.logger.error(
+            self.logger.exception(
                 f"Failed to initialize external service {class_name}: {e}",
                 extra={
                     "service": self.service_name,

@@ -197,7 +197,7 @@ class TripService:
             return await self._build_trip_response(result)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create trip", extra={"user_id": user_id, "error": str(e)}
             )
             raise
@@ -224,7 +224,7 @@ class TripService:
             return await self._build_trip_response(result)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get trip",
                 extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
             )
@@ -275,7 +275,7 @@ class TripService:
             return trips
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user trips",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -296,7 +296,7 @@ class TripService:
             return count
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to count user trips",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -365,7 +365,7 @@ class TripService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to update trip",
                 extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
             )
@@ -402,7 +402,7 @@ class TripService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to delete trip",
                 extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
             )
@@ -467,7 +467,7 @@ class TripService:
         except (PermissionError, NotFoundError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to share trip",
                 extra={
                     "trip_id": trip_id,
@@ -516,7 +516,7 @@ class TripService:
         except PermissionError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to unshare trip",
                 extra={
                     "trip_id": trip_id,
@@ -555,7 +555,7 @@ class TripService:
             return trips[offset : offset + limit]
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get shared trips",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -602,7 +602,7 @@ class TripService:
             return trips
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to search trips",
                 extra={"user_id": user_id, "query": query, "error": str(e)},
             )

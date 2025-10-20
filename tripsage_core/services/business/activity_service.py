@@ -181,7 +181,7 @@ class ActivityService:
                                     logger.warning(f"Failed to convert place: {result}")
 
                 except Exception as e:
-                    logger.error(f"General activity search failed: {e}")
+                    logger.exception(f"General activity search failed: {e}")
 
             # Apply additional filters
             filtered_activities = self._apply_filters(activities, request)
@@ -224,12 +224,12 @@ class ActivityService:
             )
 
         except GoogleMapsServiceError as e:
-            logger.error(f"Google Maps API error in activity search: {e}")
+            logger.exception(f"Google Maps API error in activity search: {e}")
             raise CoreServiceError(
                 f"Maps API error: {e}", service="ActivityService"
             ) from e
         except Exception as e:
-            logger.error(f"Unexpected error in activity search: {e}")
+            logger.exception(f"Unexpected error in activity search: {e}")
             raise CoreServiceError(
                 f"Activity search failed: {e}", service="ActivityService"
             ) from e
@@ -489,10 +489,10 @@ class ActivityService:
             return None
 
         except GoogleMapsServiceError as e:
-            logger.error(f"Google Maps API error getting activity details: {e}")
+            logger.exception(f"Google Maps API error getting activity details: {e}")
             raise ActivityServiceError(f"Maps API error: {e}", e) from e
         except Exception as e:
-            logger.error(f"Error getting activity details for {activity_id}: {e}")
+            logger.exception(f"Error getting activity details for {activity_id}: {e}")
             raise ActivityServiceError(f"Failed to get activity details: {e}", e) from e
 
     async def _convert_detailed_place_to_activity(

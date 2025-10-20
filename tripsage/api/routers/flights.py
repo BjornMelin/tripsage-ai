@@ -254,7 +254,7 @@ async def get_upcoming_flights(
         return upcoming_flights
 
     except Exception as e:
-        logger.error(f"Failed to get upcoming flights: {e!s}")
+        logger.exception(f"Failed to get upcoming flights: {e!s}")
 
         # Fallback to enhanced mock data with trip context
         from datetime import datetime, timedelta

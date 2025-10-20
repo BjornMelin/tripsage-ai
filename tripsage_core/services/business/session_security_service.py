@@ -353,7 +353,7 @@ class SessionSecurityService:
             return session
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to create session",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -435,7 +435,7 @@ class SessionSecurityService:
             return session
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Session validation failed",
                 extra={"error": str(e)},
             )
@@ -495,7 +495,7 @@ class SessionSecurityService:
             return bool(result)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to terminate session",
                 extra={"session_id": session_id, "error": str(e)},
             )
@@ -533,7 +533,7 @@ class SessionSecurityService:
             return sessions
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get active sessions",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -597,7 +597,7 @@ class SessionSecurityService:
             return event
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to log security event",
                 extra={"event_type": event_type, "error": str(e)},
             )
@@ -694,7 +694,7 @@ class SessionSecurityService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get security metrics",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -819,7 +819,7 @@ class SessionSecurityService:
 
         except Exception as e:
             # Handle any unexpected errors gracefully
-            logger.error(
+            logger.exception(
                 "Unexpected error during IP validation",
                 extra={
                     "ip_address": str(ip_address)[:100] if ip_address else "None",
@@ -919,7 +919,7 @@ class SessionSecurityService:
             return cleanup_count
 
         except Exception as e:
-            logger.error(f"Failed to cleanup expired sessions: {e}")
+            logger.exception(f"Failed to cleanup expired sessions: {e}")
             return 0
 
 

@@ -441,7 +441,7 @@ class DestinationService:
                     )
                     destinations.extend(external_destinations)
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         "External destination search failed",
                         extra={"error": str(e), "search_id": search_id},
                     )
@@ -495,7 +495,7 @@ class DestinationService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Destination search failed",
                 extra={"error": str(e), "query": search_request.query},
             )
@@ -571,7 +571,7 @@ class DestinationService:
             return destination
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get destination details",
                 extra={"destination_id": destination_id, "error": str(e)},
             )
@@ -633,7 +633,7 @@ class DestinationService:
         except NotFoundError:
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to save destination",
                 extra={
                     "user_id": user_id,
@@ -670,7 +670,7 @@ class DestinationService:
             return saved_destinations
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get saved destinations",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -709,7 +709,7 @@ class DestinationService:
             return recommendations
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to generate recommendations",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -743,7 +743,9 @@ class DestinationService:
             return converted_destinations
 
         except Exception as e:
-            logger.error("External destination search failed", extra={"error": str(e)})
+            logger.exception(
+                "External destination search failed", extra={"error": str(e)}
+            )
             return []
 
     async def _convert_external_destination(self, external_dest) -> Destination:
@@ -1187,7 +1189,7 @@ class DestinationService:
             await self.db.store_saved_destination(saved_data)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to store saved destination",
                 extra={"saved_id": saved_destination.id, "error": str(e)},
             )

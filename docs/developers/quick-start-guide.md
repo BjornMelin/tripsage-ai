@@ -257,7 +257,7 @@ async def debug_example():
         logger.info(f"Operation successful: {result}")
         return {"result": result}
     except Exception as e:
-        logger.error(f"Operation failed: {str(e)}")
+        logger.exception(f"Operation failed: {str(e)}")
         raise
 ```
 

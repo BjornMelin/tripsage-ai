@@ -287,7 +287,7 @@ class FlightService:
                     external_offers = await self._search_external_api(search_request)
                     offers.extend(external_offers)
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         "External flight search failed",
                         extra={"error": str(e), "search_id": search_id},
                     )
@@ -328,7 +328,7 @@ class FlightService:
             )
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Flight search failed",
                 extra={
                     "error": str(e),
@@ -381,7 +381,7 @@ class FlightService:
             return None
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get offer details",
                 extra={"offer_id": offer_id, "user_id": user_id, "error": str(e)},
             )
@@ -452,7 +452,7 @@ class FlightService:
                         booking.cancellable = external_booking.get("cancellable", False)
                         booking.refundable = external_booking.get("refundable", False)
                 except Exception as e:
-                    logger.error(
+                    logger.exception(
                         "External booking failed",
                         extra={
                             "booking_id": booking_id,
@@ -481,7 +481,7 @@ class FlightService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Flight booking failed",
                 extra={
                     "user_id": user_id,
@@ -525,7 +525,7 @@ class FlightService:
             return bookings
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to get user bookings",
                 extra={"user_id": user_id, "error": str(e)},
             )
@@ -584,7 +584,7 @@ class FlightService:
         except (NotFoundError, ValidationError):
             raise
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to cancel booking",
                 extra={"booking_id": booking_id, "user_id": user_id, "error": str(e)},
             )
@@ -630,7 +630,7 @@ class FlightService:
             return converted_offers
 
         except Exception as e:
-            logger.error("External API search failed", extra={"error": str(e)})
+            logger.exception("External API search failed", extra={"error": str(e)})
             return []
 
     async def _convert_external_offer(self, external_offer) -> FlightOffer:
@@ -807,7 +807,7 @@ class FlightService:
             await self.db.store_flight_booking(booking_data)
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "Failed to store booking",
                 extra={"booking_id": booking.id, "error": str(e)},
             )
@@ -851,7 +851,7 @@ class FlightService:
             }
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "External booking failed",
                 extra={"offer_id": offer.id, "error": str(e)},
             )
@@ -868,7 +868,7 @@ class FlightService:
             pass
 
         except Exception as e:
-            logger.error(
+            logger.exception(
                 "External cancellation failed",
                 extra={"booking_id": booking.id, "error": str(e)},
             )

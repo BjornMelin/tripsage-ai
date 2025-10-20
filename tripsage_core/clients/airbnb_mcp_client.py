@@ -129,10 +129,10 @@ class AirbnbMCPClient:
             return result.get("result", {})
 
         except httpx.HTTPError as e:
-            logger.error(f"HTTP error invoking {tool_name}: {e}")
+            logger.exception(f"HTTP error invoking {tool_name}: {e}")
             raise
         except Exception as e:
-            logger.error(f"Error invoking {tool_name}: {e}")
+            logger.exception(f"Error invoking {tool_name}: {e}")
             raise
 
     async def search_accommodations(
@@ -274,5 +274,5 @@ class AirbnbMCPClient:
             response = await self._client.get("/health")
             return response.status_code == 200
         except Exception as e:
-            logger.error(f"Health check failed: {e}")
+            logger.exception(f"Health check failed: {e}")
             return False

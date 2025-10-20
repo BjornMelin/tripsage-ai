@@ -229,7 +229,7 @@ class ErrorRecoveryService:
             )
             self.error_history.append(mcp_error)
 
-            logger.error(f"MCP operation failed: {service}.{method} - {error!s}")
+            logger.exception(f"MCP operation failed: {service}.{method} - {error!s}")
 
             # Determine fallback strategy
             strategy = self._determine_fallback_strategy(mcp_error, params)
@@ -243,7 +243,7 @@ class ErrorRecoveryService:
             return result
 
         except Exception as fallback_error:
-            logger.error(f"Fallback handling failed: {fallback_error!s}")
+            logger.exception(f"Fallback handling failed: {fallback_error!s}")
             return FallbackResult(
                 success=False,
                 strategy_used=FallbackStrategy.FAIL_FAST,

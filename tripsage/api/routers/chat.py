@@ -45,7 +45,7 @@ async def chat(
         return response
 
     except Exception as e:
-        logger.error(f"Chat request failed: {e!s}")
+        logger.exception(f"Chat request failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Chat request failed",
@@ -79,7 +79,7 @@ async def create_session(
         return session
 
     except Exception as e:
-        logger.error(f"Session creation failed: {e!s}")
+        logger.exception(f"Session creation failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session creation failed",
@@ -106,7 +106,7 @@ async def list_sessions(
         return sessions
 
     except Exception as e:
-        logger.error(f"Session listing failed: {e!s}")
+        logger.exception(f"Session listing failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session listing failed",
@@ -143,7 +143,7 @@ async def get_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session retrieval failed: {e!s}")
+        logger.exception(f"Session retrieval failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session retrieval failed",
@@ -174,7 +174,7 @@ async def get_session_messages(
         return messages
 
     except Exception as e:
-        logger.error(f"Message retrieval failed: {e!s}")
+        logger.exception(f"Message retrieval failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message retrieval failed",
@@ -214,7 +214,7 @@ async def create_message(
         return message
 
     except Exception as e:
-        logger.error(f"Message creation failed: {e!s}")
+        logger.exception(f"Message creation failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Message creation failed",
@@ -251,7 +251,7 @@ async def delete_session(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Session deletion failed: {e!s}")
+        logger.exception(f"Session deletion failed: {e!s}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Session deletion failed",

@@ -41,7 +41,7 @@ class ConfigManager:
 
         try:
             if not validate_configuration():
-                logger.error("❌ Configuration validation failed")
+                logger.exception("❌ Configuration validation failed")
                 return False
 
             settings = self.load_settings()
@@ -60,7 +60,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Validation error: {e}")
+            logger.exception(f"❌ Validation error: {e}")
             return False
 
     def generate_template(
@@ -85,7 +85,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Template generation failed: {e}")
+            logger.exception(f"❌ Template generation failed: {e}")
             return False
 
     def generate_secrets(self, count: int = 1, length: int = 32) -> bool:
@@ -105,7 +105,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Secret generation failed: {e}")
+            logger.exception(f"❌ Secret generation failed: {e}")
             return False
 
     def security_report(self, output_format: str = "json") -> bool:
@@ -141,7 +141,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Security report generation failed: {e}")
+            logger.exception(f"❌ Security report generation failed: {e}")
             return False
 
     def _get_security_recommendations(self, settings: Settings) -> list[str]:
@@ -236,16 +236,16 @@ class ConfigManager:
                     issues.extend(security_report.get("warnings", []))
 
             if issues:
-                logger.error(f"❌ Configuration not suitable for {target_env}:")
+                logger.exception(f"❌ Configuration not suitable for {target_env}:")
                 for issue in issues:
-                    logger.error(f"  - {issue}")
+                    logger.exception(f"  - {issue}")
                 return False
 
             logger.info(f"✅ Configuration is suitable for {target_env}")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Environment check failed: {e}")
+            logger.exception(f"❌ Environment check failed: {e}")
             return False
 
     def export_config(self, output_file: str, format_type: str = "env") -> bool:
@@ -271,7 +271,7 @@ class ConfigManager:
                 )
                 content = json.dumps(config_dict, indent=2, default=str)
             else:
-                logger.error(f"❌ Unsupported format: {format_type}")
+                logger.exception(f"❌ Unsupported format: {format_type}")
                 return False
 
             with open(output_path, "w") as f:
@@ -281,7 +281,7 @@ class ConfigManager:
             return True
 
         except Exception as e:
-            logger.error(f"❌ Export failed: {e}")
+            logger.exception(f"❌ Export failed: {e}")
             return False
 
 
@@ -372,14 +372,14 @@ Examples:
         elif args.command == "export":
             success = manager.export_config(args.output, args.format)
         else:
-            logger.error(f"❌ Unknown command: {args.command}")
+            logger.exception(f"❌ Unknown command: {args.command}")
             success = False
 
     except KeyboardInterrupt:
         logger.info("\n⏹️ Operation cancelled by user")
         success = False
     except Exception as e:
-        logger.error(f"❌ Unexpected error: {e}")
+        logger.exception(f"❌ Unexpected error: {e}")
         success = False
 
     sys.exit(0 if success else 1)

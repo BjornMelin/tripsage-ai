@@ -57,7 +57,7 @@ class SecurityValidator:
             return len(self.issues) == 0
 
         except Exception as e:
-            logger.error(f"❌ Security validation failed with error: {e}")
+            logger.exception(f"❌ Security validation failed with error: {e}")
             self.issues.append(f"Validation error: {e}")
             return False
 
@@ -201,9 +201,9 @@ class SecurityValidator:
 
         # Report issues
         if self.issues:
-            logger.error(f"❌ {len(self.issues)} security issue(s) found:")
+            logger.exception(f"❌ {len(self.issues)} security issue(s) found:")
             for issue in self.issues:
-                logger.error(f"  - {issue}")
+                logger.exception(f"  - {issue}")
 
         # Report warnings
         if self.warnings:
@@ -256,7 +256,7 @@ ENABLE_DATABASE_MONITORING=true
         return security_template
 
     except Exception as e:
-        logger.error(f"Failed to generate secure config template: {e}")
+        logger.exception(f"Failed to generate secure config template: {e}")
         return ""
 
 
@@ -282,7 +282,7 @@ def main():
         logger.info("🎉 Security validation completed successfully!")
         sys.exit(0)
     else:
-        logger.error("💥 Security validation failed!")
+        logger.exception("💥 Security validation failed!")
         sys.exit(1)
 
 
