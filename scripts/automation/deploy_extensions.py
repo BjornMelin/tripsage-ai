@@ -26,7 +26,7 @@ class ExtensionDeployer:
         """
         self.database_url = database_url
         self.schema_path = schema_path
-        self.connection = None
+        self.connection: asyncpg.Connection | None = None
 
     async def connect(self):
         """Open an asyncpg connection."""
@@ -36,6 +36,14 @@ class ExtensionDeployer:
         except (asyncpg.PostgresError, OSError) as exc:
             console.print(f"Failed to connect: {exc}", style="red")
             sys.exit(1)
+
+    def _ensure_connected(self) -> asyncpg.Connection:
+        """Ensure database connection is available."""
+        if self.connection is None:
+            raise RuntimeError(
+                "Database connection not established. Call connect() first."
+            )
+        return self.connection
 
     async def disconnect(self):
         """Disconnect from database."""
@@ -65,7 +73,7 @@ class ExtensionDeployer:
             for i, statement in enumerate(statements):
                 if statement.strip():
                     try:
-                        await self.connection.execute(statement)
+                        await self._ensure_connected().execute(statement)
                     except asyncpg.PostgresError as exec_error:
                         console.print(
                             f"Warning in statement {i + 1}: {exec_error}",
@@ -190,7 +198,7 @@ class ExtensionDeployer:
             SELECT extname FROM pg_extension
             WHERE extname IN ('pg_cron', 'pg_net', 'vector', 'uuid-ossp', 'pgcrypto')
             """
-            extensions = await self.connection.fetch(extensions_query)
+            extensions = await self._ensure_connected().fetch(extensions_query)
             checks["extensions"] = len(extensions) >= 5
             console.print(f"Extensions installed: {len(extensions)}/5")
         except asyncpg.PostgresError as exc:
@@ -205,7 +213,7 @@ class ExtensionDeployer:
                 'notifications', 'system_metrics', 'webhook_configs', 'webhook_logs'
             )
             """
-            tables = await self.connection.fetch(tables_query)
+            tables = await self._ensure_connected().fetch(tables_query)
             checks["automation_tables"] = len(tables) >= 4
             console.print(f"Automation tables created: {len(tables)}/4")
         except asyncpg.PostgresError as exc:
@@ -218,9 +226,9 @@ class ExtensionDeployer:
             SELECT COUNT(*) as table_count FROM pg_publication_tables
             WHERE pubname = 'supabase_realtime'
             """
-            result = await self.connection.fetchval(realtime_query)
-            checks["realtime"] = result >= 6
-            console.print(f"Realtime tables configured: {result}/6")
+            result = await self._ensure_connected().fetchval(realtime_query)
+            checks["realtime"] = (result or 0) >= 6
+            console.print(f"Realtime tables configured: {result or 0}/6")
         except asyncpg.PostgresError as exc:
             checks["realtime"] = False
             console.print(f"Realtime check failed: {exc}", style="red")
@@ -235,9 +243,9 @@ class ExtensionDeployer:
                 'verify_extensions', 'send_webhook_with_retry', 'list_scheduled_jobs'
             )
             """
-            result = await self.connection.fetchval(functions_query)
-            checks["functions"] = result >= 3
-            console.print(f"Key functions created: {result}/3")
+            result = await self._ensure_connected().fetchval(functions_query)
+            checks["functions"] = (result or 0) >= 3
+            console.print(f"Key functions created: {result or 0}/3")
         except asyncpg.PostgresError as exc:
             checks["functions"] = False
             console.print(f"Functions check failed: {exc}", style="red")
@@ -258,7 +266,7 @@ class ExtensionDeployer:
             WHERE url LIKE '%your-domain.supabase.co%'
             """
 
-            await self.connection.execute(update_query, supabase_url)
+            await self._ensure_connected().execute(update_query, supabase_url)
             console.print(f"Updated webhook URLs to use: {supabase_url}")
             return True
 

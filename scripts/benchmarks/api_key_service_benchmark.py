@@ -195,7 +195,8 @@ class PerformanceBenchmark:
                 print(f"   Failed: {outcome}")
                 results[name] = {"error": str(outcome)}
             else:
-                duration = outcome
+                # outcome should be a float at this point due to isinstance check above
+                duration: float = outcome  # type: ignore[assignment]
                 operations_per_second = self.iterations / duration
                 results[name] = {
                     "duration": duration,
