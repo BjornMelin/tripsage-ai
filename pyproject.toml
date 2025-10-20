@@ -156,6 +156,7 @@ ignore = [
     "C408",
     # Boolean positional arguments
     "FBT001", "FBT002", "FBT003",
+    "ERA001",
 ]
 
 fixable = ["ALL"]
