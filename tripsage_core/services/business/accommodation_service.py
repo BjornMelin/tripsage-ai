@@ -24,6 +24,15 @@ from tripsage_core.models.base_core_model import TripSageModel
 logger = logging.getLogger(__name__)
 
 
+RECOVERABLE_ERRORS = (
+    ServiceError,
+    ConnectionError,
+    TimeoutError,
+    RuntimeError,
+    ValueError,
+)
+
+
 class PropertyType(str, Enum):
     """Property type enumeration."""
 
@@ -355,9 +364,16 @@ class AccommodationService:
         """
         # Import here to avoid circular imports
         if database_service is None:
+            import asyncio
+
             from tripsage_core.services.infrastructure import get_database_service
 
-            database_service = get_database_service()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            database_service = loop.run_until_complete(get_database_service())
 
         if external_accommodation_service is None:
             # Try to import MCP accommodation client
@@ -423,10 +439,10 @@ class AccommodationService:
                 try:
                     external_listings = await self._search_external_api(search_request)
                     listings.extend(external_listings)
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.exception(
                         "External accommodation search failed",
-                        extra={"error": str(e), "search_id": search_id},
+                        extra={"error": str(error), "search_id": search_id},
                     )
 
             # Add fallback/mock listings if no external service
@@ -482,11 +498,11 @@ class AccommodationService:
                 cached=False,
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Accommodation search failed",
                 extra={
-                    "error": str(e),
+                    "error": str(error),
                     "location": search_request.location,
                     "check_in": search_request.check_in,
                     "check_out": search_request.check_out,
@@ -528,18 +544,22 @@ class AccommodationService:
                         await self._store_listing(converted_listing, user_id)
 
                         return converted_listing
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.warning(
                         "Failed to get external listing details",
-                        extra={"listing_id": listing_id, "error": str(e)},
+                        extra={"listing_id": listing_id, "error": str(error)},
                     )
 
             return None
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to get listing details",
-                extra={"listing_id": listing_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "listing_id": listing_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return None
 
@@ -624,13 +644,13 @@ class AccommodationService:
                         booking.is_refundable = external_booking.get(
                             "is_refundable", False
                         )
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.exception(
                         "External booking failed",
                         extra={
                             "booking_id": booking_id,
                             "listing_id": booking_request.listing_id,
-                            "error": str(e),
+                            "error": str(error),
                         },
                     )
                     # Continue with inquiry status if external booking fails
@@ -653,16 +673,16 @@ class AccommodationService:
 
         except (NotFoundError, ValidationError):
             raise
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Accommodation booking failed",
                 extra={
                     "user_id": user_id,
                     "listing_id": booking_request.listing_id,
-                    "error": str(e),
+                    "error": str(error),
                 },
             )
-            raise ServiceError(f"Accommodation booking failed: {e!s}") from e
+            raise ServiceError(f"Accommodation booking failed: {error!s}") from error
 
     async def get_user_bookings(
         self,
@@ -693,10 +713,10 @@ class AccommodationService:
 
             return [AccommodationBooking(**result) for result in results]
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to get user bookings",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             return []
 
@@ -737,10 +757,10 @@ class AccommodationService:
             ):
                 try:
                     await self._cancel_external_booking(booking)
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.warning(
                         "External cancellation failed",
-                        extra={"booking_id": booking_id, "error": str(e)},
+                        extra={"booking_id": booking_id, "error": str(error)},
                     )
 
             # Update booking status
@@ -758,10 +778,14 @@ class AccommodationService:
 
         except (NotFoundError, ValidationError):
             raise
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to cancel booking",
-                extra={"booking_id": booking_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "booking_id": booking_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return False
 
@@ -799,8 +823,8 @@ class AccommodationService:
                 for external_listing in external_listings
             ]
 
-        except Exception as e:
-            logger.exception("External API search failed", extra={"error": str(e)})
+        except RECOVERABLE_ERRORS as error:
+            logger.exception("External API search failed", extra={"error": str(error)})
             return []
 
     async def _convert_external_listing(self, external_listing) -> AccommodationListing:
@@ -992,10 +1016,10 @@ class AccommodationService:
 
             await self.db.store_accommodation_search(search_data)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.warning(
                 "Failed to store search history",
-                extra={"search_id": search_id, "error": str(e)},
+                extra={"search_id": search_id, "error": str(error)},
             )
 
     async def _store_listing(self, listing: AccommodationListing, user_id: str) -> None:
@@ -1007,10 +1031,10 @@ class AccommodationService:
 
             await self.db.store_accommodation_listing(listing_data)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.warning(
                 "Failed to store listing",
-                extra={"listing_id": listing.id, "error": str(e)},
+                extra={"listing_id": listing.id, "error": str(error)},
             )
 
     async def _store_booking(self, booking: AccommodationBooking) -> None:
@@ -1021,10 +1045,10 @@ class AccommodationService:
 
             await self.db.store_accommodation_booking(booking_data)
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to store booking",
-                extra={"booking_id": booking.id, "error": str(e)},
+                extra={"booking_id": booking.id, "error": str(error)},
             )
             raise
 
@@ -1061,10 +1085,10 @@ class AccommodationService:
                 "is_refundable": external_booking.get("is_refundable", False),
             }
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "External booking failed",
-                extra={"listing_id": listing.id, "error": str(e)},
+                extra={"listing_id": listing.id, "error": str(error)},
             )
             return None
 
@@ -1078,18 +1102,14 @@ class AccommodationService:
             # Implementation depends on the external service
             pass
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "External cancellation failed",
-                extra={"booking_id": booking.id, "error": str(e)},
+                extra={"booking_id": booking.id, "error": str(error)},
             )
 
 
 # Dependency function for FastAPI
 async def get_accommodation_service() -> AccommodationService:
-    """Get accommodation service instance for dependency injection.
-
-    Returns:
-        AccommodationService instance
-    """
+    """Get accommodation service instance for dependency injection."""
     return AccommodationService()
