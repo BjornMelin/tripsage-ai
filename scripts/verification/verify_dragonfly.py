@@ -74,7 +74,7 @@ async def verify_dragonfly_connection():
         print("\n✅ DragonflyDB verification complete!")
         return True
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"\n❌ Error: {e!s}")
         print("\n💡 Troubleshooting tips:")
         print("   1. Ensure DragonflyDB container is running:")

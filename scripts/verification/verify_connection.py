@@ -10,12 +10,8 @@ Usage: python verify_connection.py
 import asyncio
 import sys
 
-
-# Add the project root to the Python path
-sys.path.insert(0, Path(__file__).parent.parent.resolve())
-
-from src.db.client import get_supabase_client
-from src.utils.logging import configure_logging
+from tripsage_core.services.business.auth_service import get_supabase_client
+from tripsage_core.utils.logging_utils import configure_logging
 
 
 # Configure logging
@@ -38,7 +34,7 @@ REQUIRED_TABLES = [
 
 
 async def verify_connection() -> None:
-    """Verify the connection to the Supabase database and check that required tables exist."""
+    """Verify connection to Supabase database and check required tables exist."""
     print("Connecting to Supabase...")
 
     try:
@@ -57,7 +53,7 @@ async def verify_connection() -> None:
         table_response = None
         try:
             table_response = supabase.rpc("get_tables").execute()
-        except Exception:
+        except Exception:  # noqa: BLE001
             print("Unable to list tables using RPC. Using alternative method...")
 
         if table_response and table_response.data:
@@ -77,7 +73,7 @@ async def verify_connection() -> None:
                         supabase.table(table).select("id").limit(1).execute()
                     )
                     print(f"✅ Table '{table}' exists")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001
                     if "42P01" in str(
                         e
                     ):  # PostgreSQL error code for table does not exist
@@ -86,7 +82,7 @@ async def verify_connection() -> None:
                         print(f"❓ Could not verify table '{table}': {e!s}")
 
         print("\nDatabase verification complete!")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"❌ Error connecting to Supabase: {e!s}")
         sys.exit(1)
 

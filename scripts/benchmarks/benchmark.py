@@ -387,7 +387,7 @@ def quick(output_dir: str, iterations: int, concurrent: int):
                 f"⚡ Operations/sec: {results['results']['operations_per_second']:.1f}"
             )
             return 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"❌ Quick benchmark failed: {e}")
             return 1
 
@@ -414,7 +414,7 @@ def database_only(output_dir: str):
             click.echo("✅ Database benchmark completed!")
             click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
             return 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"❌ Database benchmark failed: {e}")
             return 1
 
@@ -441,7 +441,7 @@ def vector_only(output_dir: str):
             click.echo("✅ Vector benchmark completed!")
             click.echo(f"📈 Report: {results.get('report_path', 'N/A')}")
             return 0
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"❌ Vector benchmark failed: {e}")
             return 1
 
@@ -485,7 +485,7 @@ def full_suite(output_dir: str, timeout: int):
         except TimeoutError:
             click.echo(f"❌ Benchmark suite timed out after {timeout} seconds")
             return 1
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             click.echo(f"❌ Benchmark suite failed: {e}")
             return 1
 

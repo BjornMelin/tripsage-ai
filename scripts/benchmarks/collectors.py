@@ -110,7 +110,7 @@ class MetricsCollector:
 
         except asyncio.CancelledError:
             logger.debug("Monitoring loop cancelled")
-        except Exception:
+        except psutil.Error:
             logger.exception("Error in monitoring loop")
 
     def _get_process_memory_mb(self) -> float:
@@ -118,7 +118,7 @@ class MetricsCollector:
         try:
             process = psutil.Process()
             return process.memory_info().rss / 1024 / 1024
-        except Exception:
+        except (psutil.Error, OSError):
             return 0.0
 
     def record_timing(

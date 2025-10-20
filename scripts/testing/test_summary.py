@@ -4,12 +4,13 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 
 def get_test_results(test_dir):
     """Run tests and get results."""
     env = os.environ.copy()
-    env["PYTHONPATH"] = os.getcwd()
+    env["PYTHONPATH"] = str(Path.cwd())
     env["ENV"] = "test"
 
     cmd = [
@@ -74,7 +75,7 @@ def main():
     total_stats = {"total": 0, "passed": 0, "failed": 0, "errors": 0}
 
     for name, test_dir in test_dirs:
-        if os.path.exists(test_dir):
+        if Path(test_dir).exists():
             print(f"\n{name} ({test_dir}):")
             stats = get_test_results(test_dir)
 

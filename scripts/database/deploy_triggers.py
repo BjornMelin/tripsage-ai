@@ -410,7 +410,7 @@ class TriggerDeploymentService:
                     "WHERE jobname LIKE '%cleanup%' OR jobname LIKE '%maintenance%'"
                 )
                 report["scheduled_jobs"] = result[0]["job_count"]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 report["scheduled_jobs"] = "pg_cron not available"
 
             # Get recent maintenance logs
@@ -432,7 +432,7 @@ class TriggerDeploymentService:
                     }
                     for log in logs
                 ]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 report["recent_maintenance"] = []
 
             return report

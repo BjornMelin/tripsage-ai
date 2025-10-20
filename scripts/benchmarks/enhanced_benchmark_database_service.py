@@ -351,7 +351,7 @@ class EnhancedDatabaseBenchmark:
                             await service.execute_sql("SELECT 1")
                             if i % 3 == 0:  # Simulate occasional rollback
                                 raise Exception("Intentional rollback")
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         pass  # Expected for rollback test
 
                     metrics.metadata.update(
@@ -450,7 +450,7 @@ class EnhancedDatabaseBenchmark:
                     "SELECT 1 FROM pg_extension WHERE extname = 'vector'"
                 )
                 vector_available = True
-            except Exception:
+            except Exception:  # noqa: BLE001
                 vector_available = False
                 logger.warning(
                     "pgvector extension not available, using mock operations"
@@ -568,7 +568,7 @@ class EnhancedDatabaseBenchmark:
                 with Path(self.baseline_file).open() as f:
                     baseline_data = json.load(f)
                     baseline_stats = baseline_data.get("statistics", {})
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 logger.warning(f"Could not load baseline file: {e}")
 
         # Check for regressions
@@ -658,7 +658,7 @@ class EnhancedDatabaseBenchmark:
         }
 
         json_file = self.output_dir / f"benchmark_report_{timestamp}.json"
-        with open(json_file, "w") as f:
+        with Path(json_file, "w").open() as f:
             json.dump(report_data, f, indent=2, default=str)
 
         logger.info(f"JSON report saved to: {json_file}")
@@ -667,7 +667,7 @@ class EnhancedDatabaseBenchmark:
         """Generate CSV report for data analysis."""
         csv_file = self.output_dir / f"benchmark_data_{timestamp}.csv"
 
-        with open(csv_file, "w", newline="") as f:
+        with Path(csv_file, "w", newline="").open() as f:
             writer = csv.writer(f)
 
             # Write header
@@ -823,7 +823,7 @@ class EnhancedDatabaseBenchmark:
         """
 
         html_file = self.output_dir / f"benchmark_report_{timestamp}.html"
-        with open(html_file, "w") as f:
+        with Path(html_file, "w").open() as f:
             f.write(html_content)
 
         logger.info(f"HTML report saved to: {html_file}")
@@ -886,12 +886,12 @@ class EnhancedDatabaseBenchmark:
             "performance_thresholds": self.performance_thresholds,
         }
 
-        with open(baseline_file, "w") as f:
+        with Path(baseline_file, "w").open() as f:
             json.dump(baseline_data, f, indent=2, default=str)
 
         # Also save as latest baseline
         latest_baseline = self.output_dir / "baseline_latest.json"
-        with open(latest_baseline, "w") as f:
+        with Path(latest_baseline, "w").open() as f:
             json.dump(baseline_data, f, indent=2, default=str)
 
         logger.info(f"Baseline saved to: {baseline_file}")
