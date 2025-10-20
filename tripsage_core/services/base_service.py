@@ -8,7 +8,7 @@ and external service initialization.
 import logging
 from typing import Any, TypeVar
 
-from tripsage_core.exceptions import CoreServiceError
+from tripsage_core.exceptions import CoreServiceError, CoreTripSageError
 from tripsage_core.utils.decorator_utils import with_error_handling
 
 
@@ -139,10 +139,16 @@ class BaseService:
                 extra={"service": self.service_name, "error": str(e)},
             )
             return None
-        except Exception as e:
+        except CoreTripSageError as error:
             self.logger.exception(
                 "Failed to initialize database service",
-                extra={"service": self.service_name, "error": str(e)},
+                extra={"service": self.service_name, "error": str(error)},
+            )
+            return None
+        except (RuntimeError, ValueError, OSError) as error:
+            self.logger.exception(
+                "Failed to initialize database service",
+                extra={"service": self.service_name, "error": str(error)},
             )
             return None
 
@@ -173,10 +179,16 @@ class BaseService:
                 extra={"service": self.service_name, "error": str(e)},
             )
             return None
-        except Exception as e:
+        except CoreTripSageError as error:
             self.logger.exception(
                 "Failed to initialize cache service",
-                extra={"service": self.service_name, "error": str(e)},
+                extra={"service": self.service_name, "error": str(error)},
+            )
+            return None
+        except (RuntimeError, ValueError, OSError) as error:
+            self.logger.exception(
+                "Failed to initialize cache service",
+                extra={"service": self.service_name, "error": str(error)},
             )
             return None
 
@@ -240,14 +252,25 @@ class BaseService:
                 },
             )
             return None
-        except Exception as e:
+        except CoreTripSageError as error:
             self.logger.exception(
                 "Failed to initialize external service %s",
                 class_name,
                 extra={
                     "service": self.service_name,
                     "external_service": class_name,
-                    "error": str(e),
+                    "error": str(error),
+                },
+            )
+            return None
+        except (RuntimeError, ValueError, OSError) as error:
+            self.logger.exception(
+                "Failed to initialize external service %s",
+                class_name,
+                extra={
+                    "service": self.service_name,
+                    "external_service": class_name,
+                    "error": str(error),
                 },
             )
             return None
@@ -258,21 +281,6 @@ class BaseService:
 
         Returns:
             Health status information for the service and its dependencies
-
-        Example:
-            ```python
-            health_status = await user_service.health_check()
-            print(health_status)
-            # {
-            #     "service": "UserService",
-            #     "status": "healthy",
-            #     "dependencies": {
-            #         "database": "healthy",
-            #         "cache": "healthy",
-            #         "external_service": "unavailable"
-            #     }
-            # }
-            ```
         """
         health_status = {
             "service": self.service_name,
@@ -287,8 +295,13 @@ class BaseService:
                 if hasattr(self.db, "health_check"):
                     await self.db.health_check()
                 health_status["dependencies"]["database"] = "healthy"
-            except Exception as e:
-                health_status["dependencies"]["database"] = f"unhealthy: {e!s}"
+            except (
+                TimeoutError,
+                CoreTripSageError,
+                ConnectionError,
+                RuntimeError,
+            ) as error:
+                health_status["dependencies"]["database"] = f"unhealthy: {error!s}"
                 health_status["status"] = "degraded"
         else:
             health_status["dependencies"]["database"] = "unavailable"
@@ -300,8 +313,13 @@ class BaseService:
                 if hasattr(self.cache, "health_check"):
                     await self.cache.health_check()
                 health_status["dependencies"]["cache"] = "healthy"
-            except Exception as e:
-                health_status["dependencies"]["cache"] = f"unhealthy: {e!s}"
+            except (
+                TimeoutError,
+                CoreTripSageError,
+                ConnectionError,
+                RuntimeError,
+            ) as error:
+                health_status["dependencies"]["cache"] = f"unhealthy: {error!s}"
                 health_status["status"] = "degraded"
         else:
             health_status["dependencies"]["cache"] = "unavailable"
@@ -313,8 +331,15 @@ class BaseService:
                 if hasattr(self.external_service, "health_check"):
                     await self.external_service.health_check()
                 health_status["dependencies"]["external_service"] = "healthy"
-            except Exception as e:
-                health_status["dependencies"]["external_service"] = f"unhealthy: {e!s}"
+            except (
+                TimeoutError,
+                CoreTripSageError,
+                ConnectionError,
+                RuntimeError,
+            ) as error:
+                health_status["dependencies"]["external_service"] = (
+                    f"unhealthy: {error!s}"
+                )
                 health_status["status"] = "degraded"
         else:
             health_status["dependencies"]["external_service"] = "unavailable"

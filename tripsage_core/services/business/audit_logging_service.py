@@ -26,13 +26,22 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+LOGGING_ERRORS = (
+    OSError,
+    RuntimeError,
+    ValueError,
+    ConnectionError,
+    asyncio.TimeoutError,
+    TypeError,
+)
 
 
 class AuditEventType(str, Enum):
@@ -209,14 +218,18 @@ class AuditEvent(TripSageModel):
     data_classification: str | None = None  # public, internal, confidential, restricted
     retention_period_days: int = 2555  # 7 years default
 
-    @validator("risk_score")
-    def validate_risk_score(cls, v):
-        if v is not None and not (0 <= v <= 100):
+    @field_validator("risk_score")
+    @classmethod
+    def validate_risk_score(cls, v: int) -> int:
+        """Validate the risk score."""
+        if v is not None and not 0 <= v <= 100:
             raise ValueError("Risk score must be between 0 and 100")
         return v
 
-    @validator("timestamp")
-    def validate_timestamp(cls, v):
+    @field_validator("timestamp")
+    @classmethod
+    def validate_timestamp(cls, v: datetime) -> datetime:
+        """Validate the timestamp."""
         # Ensure timestamp is UTC
         if v.tzinfo is None:
             v = v.replace(tzinfo=UTC)
@@ -440,7 +453,7 @@ class SecurityAuditLogger:
 
             return True
 
-        except Exception:
+        except LOGGING_ERRORS:
             self.stats["errors"] += 1
             self._handle_circuit_breaker_failure()
             logger.exception("Failed to log audit event")
@@ -600,7 +613,7 @@ class SecurityAuditLogger:
 
             if log_file.exists():
                 try:
-                    with open(log_file) as f:
+                    with Path(log_file).open(encoding="utf-8") as f:
                         for line in f:
                             if len(events) >= limit:
                                 break
@@ -630,8 +643,8 @@ class SecurityAuditLogger:
                             except (json.JSONDecodeError, ValueError):
                                 continue
 
-                except Exception as e:
-                    logger.warning("Failed to read log file %s: %s", log_file, e)
+                except OSError as error:
+                    logger.warning("Failed to read log file %s: %s", log_file, error)
 
             current_date += timedelta(days=1)
 
@@ -655,7 +668,7 @@ class SecurityAuditLogger:
                 await self._flush_buffer()
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except LOGGING_ERRORS:
                 logger.exception("Error in flush loop")
 
     async def _flush_buffer(self):
@@ -676,7 +689,7 @@ class SecurityAuditLogger:
 
             self.stats["buffer_flushes"] += 1
 
-        except Exception:
+        except LOGGING_ERRORS:
             logger.exception("Failed to flush events")
             # Re-add events to buffer for retry
             async with self._buffer_lock:
@@ -696,7 +709,7 @@ class SecurityAuditLogger:
             ):
                 await self._forward_to_external(event)
 
-        except Exception:
+        except LOGGING_ERRORS:
             self.stats["errors"] += 1
             raise
 
@@ -716,16 +729,24 @@ class SecurityAuditLogger:
                         endpoint,
                         json=event.model_dump(mode="json"),
                         headers=headers,
-                        timeout=self.config.external_timeout_seconds,
+                        timeout=aiohttp.ClientTimeout(
+                            total=self.config.external_timeout_seconds
+                        ),
                     ) as response:
                         if response.status >= 400:
-                            raise Exception(f"HTTP {response.status}")
+                            raise RuntimeError(f"HTTP {response.status}")
 
                         self.stats["external_forwards"] += 1
 
-            except Exception as e:
+            except (
+                TimeoutError,
+                aiohttp.ClientError,
+                OSError,
+                ValueError,
+                RuntimeError,
+            ) as error:
                 self.stats["external_forward_errors"] += 1
-                logger.warning("Failed to forward to %s: %s", endpoint, e)
+                logger.warning("Failed to forward to %s: %s", endpoint, error)
 
     async def _cleanup_loop(self):
         """Background task to clean up old log files."""
@@ -735,7 +756,7 @@ class SecurityAuditLogger:
                 await self._cleanup_old_logs()
             except asyncio.CancelledError:
                 break
-            except Exception:
+            except LOGGING_ERRORS:
                 logger.exception("Error in cleanup loop")
 
     async def _cleanup_old_logs(self):
@@ -760,8 +781,8 @@ class SecurityAuditLogger:
                         log_file.unlink()
                         logger.info("Cleaned up old log file: %s", log_file)
 
-            except Exception as e:
-                logger.warning("Failed to process log file %s: %s", log_file, e)
+            except (OSError, ValueError) as error:
+                logger.warning("Failed to process log file %s: %s", log_file, error)
 
     def _determine_auth_severity(
         self, event_type: AuditEventType, outcome: AuditOutcome
@@ -837,7 +858,7 @@ _audit_logger: SecurityAuditLogger | None = None
 
 async def get_audit_logger() -> SecurityAuditLogger:
     """Get or create the global audit logger instance."""
-    global _audit_logger
+    global _audit_logger  # pylint: disable=global-statement
 
     if _audit_logger is None:
         config = AuditLogConfig()
@@ -849,7 +870,7 @@ async def get_audit_logger() -> SecurityAuditLogger:
 
 async def shutdown_audit_logger():
     """Shutdown the global audit logger instance."""
-    global _audit_logger
+    global _audit_logger  # pylint: disable=global-statement
 
     if _audit_logger is not None:
         await _audit_logger.stop()
