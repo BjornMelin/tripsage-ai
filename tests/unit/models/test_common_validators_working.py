@@ -96,7 +96,7 @@ class TestRatingValidation:
     @given(st.floats().filter(lambda x: x < 0.0 or x > 5.0))
     def test_invalid_ratings(self, rating: float):
         """Test that out-of-range ratings are rejected."""
-        with pytest.raises(ValueError, match="must be between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"must be between 0\.0 and 5\.0"):
             validate_rating_range(rating)
 
     def test_rating_none_handling(self):
@@ -122,13 +122,13 @@ class TestCoordinateValidation:
     @given(st.floats().filter(lambda x: x < -90.0 or x > 90.0))
     def test_invalid_latitude(self, lat: float):
         """Test invalid latitude values."""
-        with pytest.raises(ValueError, match="must be between -90.0 and 90.0"):
+        with pytest.raises(ValueError, match=r"must be between -90\.0 and 90\.0"):
             validate_latitude(lat)
 
     @given(st.floats().filter(lambda x: x < -180.0 or x > 180.0))
     def test_invalid_longitude(self, lng: float):
         """Test invalid longitude values."""
-        with pytest.raises(ValueError, match="must be between -180.0 and 180.0"):
+        with pytest.raises(ValueError, match=r"must be between -180\.0 and 180\.0"):
             validate_longitude(lng)
 
 

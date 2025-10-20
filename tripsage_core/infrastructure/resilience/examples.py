@@ -12,7 +12,9 @@ import time
 from typing import Any
 
 from tripsage_core.config import apply_preset, get_enterprise_config
+from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.infrastructure.resilience import (
+    CircuitBreakerError,
     circuit_breaker,
     get_circuit_breaker_status,
 )
@@ -101,8 +103,8 @@ async def demonstrate_simple_mode():
         try:
             result = await protected_operation(f"op_{i}")
             print(f"✅ Operation {i} succeeded: {result['status']}")
-        except Exception as e:
-            print(f"❌ Operation {i} failed: {type(e).__name__}: {e}")
+        except (ConnectionError, CircuitBreakerError) as error:
+            print(f"❌ Operation {i} failed: {type(error).__name__}: {error}")
 
         await asyncio.sleep(0.2)
 
@@ -151,11 +153,11 @@ async def demonstrate_enterprise_mode():
         try:
             result = await protected_operation(f"op_{i}")
             print(f"✅ Operation {i} succeeded: {result['status']}")
-        except Exception as e:
-            if "Circuit breaker" in str(e):
-                print(f"🔴 Operation {i} blocked by circuit breaker: {e}")
+        except (ConnectionError, CircuitBreakerError) as error:
+            if "Circuit breaker" in str(error):
+                print(f"🔴 Operation {i} blocked by circuit breaker: {error}")
             else:
-                print(f"❌ Operation {i} failed: {type(e).__name__}: {e}")
+                print(f"❌ Operation {i} failed: {type(error).__name__}: {error}")
 
         # Show circuit breaker state
         if hasattr(breaker, "get_state"):
@@ -206,8 +208,8 @@ async def demonstrate_recovery():
     for i in range(5):
         try:
             await protected_operation(f"fail_{i}")
-        except Exception as e:
-            print(f"❌ Operation fail_{i}: {type(e).__name__}")
+        except (ConnectionError, CircuitBreakerError) as error:
+            print(f"❌ Operation fail_{i}: {type(error).__name__}")
             if hasattr(breaker, "get_state"):
                 state = breaker.get_state()
                 print(f"   Circuit state: {state['state']}")
@@ -218,8 +220,8 @@ async def demonstrate_recovery():
     for i in range(3):
         try:
             await protected_operation(f"blocked_{i}")
-        except Exception as e:
-            print(f"🔴 Operation blocked_{i}: {e}")
+        except (ConnectionError, CircuitBreakerError) as error:
+            print(f"🔴 Operation blocked_{i}: {error}")
 
     print(f"\nPhase 3: Waiting for timeout ({breaker.timeout}s)...")
     await asyncio.sleep(breaker.timeout + 0.5)
@@ -232,8 +234,8 @@ async def demonstrate_recovery():
         try:
             await protected_operation(f"recovery_{i}")
             print(f"✅ Operation recovery_{i} succeeded")
-        except Exception as e:
-            print(f"❌ Operation recovery_{i} failed: {type(e).__name__}")
+        except (ConnectionError, CircuitBreakerError) as error:
+            print(f"❌ Operation recovery_{i} failed: {type(error).__name__}")
 
         if hasattr(breaker, "get_state"):
             state = breaker.get_state()
@@ -264,8 +266,16 @@ async def main():
         for name, state in status.items():
             print(f"{name}: {state}")
 
-    except Exception as e:
-        print(f"Demo failed: {e}")
+    except (
+        TimeoutError,
+        CoreTripSageError,
+        CircuitBreakerError,
+        ConnectionError,
+        RuntimeError,
+        ValueError,
+        OSError,
+    ) as error:
+        print(f"Demo failed: {error}")
         import traceback
 
         traceback.print_exc()

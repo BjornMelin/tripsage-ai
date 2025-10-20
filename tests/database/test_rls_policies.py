@@ -50,6 +50,7 @@ class RLSPolicyTester:
     """Comprehensive RLS policy testing framework."""
 
     def __init__(self, supabase_url: str, supabase_key: str):
+        """Initialize tester with connection settings and in-memory state."""
         self.supabase_url = supabase_url
         self.supabase_key = supabase_key
         self.test_users: list[RLSTestUser] = []

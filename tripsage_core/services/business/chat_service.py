@@ -5,6 +5,7 @@ message persistence, tool call tracking, and rate limiting. It provides clean
 integration with the AI agents and maintains conversation context.
 """
 
+import asyncio
 import html
 import logging
 import re
@@ -19,7 +20,7 @@ from pydantic import Field, field_validator
 
 from tripsage_core.config import get_settings
 from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
+    CoreAuthorizationError as AuthPermissionError,
     CoreResourceNotFoundError as NotFoundError,
     CoreValidationError as ValidationError,
 )
@@ -27,6 +28,17 @@ from tripsage_core.models.base_core_model import TripSageModel
 
 
 logger = logging.getLogger(__name__)
+
+RECOVERABLE_ERRORS = (
+    AuthPermissionError,
+    ValidationError,
+    NotFoundError,
+    ConnectionError,
+    RuntimeError,
+    ValueError,
+    asyncio.TimeoutError,
+    TypeError,
+)
 
 
 class MessageRole(str):
@@ -226,9 +238,16 @@ class ChatService:
         """
         # Import here to avoid circular imports
         if database_service is None:
+            import asyncio
+
             from tripsage_core.services.infrastructure import get_database_service
 
-            database_service = get_database_service()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            database_service = loop.run_until_complete(get_database_service())
 
         self.db = database_service
         self.rate_limiter = rate_limiter or RateLimiter()
@@ -282,12 +301,16 @@ class ChatService:
                 if result.get("ended_at")
                 else None,
                 metadata=result.get("metadata", {}),
+                message_count=result.get("message_count", 0),
+                last_message_at=datetime.fromisoformat(result["last_message_at"])
+                if result.get("last_message_at")
+                else None,
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to create chat session",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             raise
 
@@ -331,10 +354,10 @@ class ChatService:
                 for result in results
             ]
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to get user sessions",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             return []
 
@@ -354,16 +377,18 @@ class ChatService:
         Raises:
             ValidationError: If rate limit exceeded or validation fails
             NotFoundError: If session not found
-            PermissionError: If user doesn't have access
+            AuthPermissionError: If user doesn't have access
         """
         try:
             # Check rate limit for user messages
-            if message_data.role == MessageRole.USER:
-                if not self.rate_limiter.is_allowed(user_id):
-                    raise ValidationError(
-                        f"Rate limit exceeded. Max {self.rate_limiter.max_messages} "
-                        f"messages per {self.rate_limiter.window_seconds} seconds."
-                    )
+            if (
+                message_data.role == MessageRole.USER
+                and not self.rate_limiter.is_allowed(user_id)
+            ):
+                raise ValidationError(
+                    f"Rate limit exceeded. Max {self.rate_limiter.max_messages} "
+                    f"messages per {self.rate_limiter.window_seconds} seconds.",
+                )
 
             # Verify session access
             session = await self._get_session_internal(session_id, user_id)
@@ -424,12 +449,16 @@ class ChatService:
                 estimated_tokens=self._estimate_tokens(content),
             )
 
-        except (ValidationError, NotFoundError, PermissionError):
+        except (ValidationError, NotFoundError, AuthPermissionError):
             raise
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to add message",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             raise
 
@@ -494,10 +523,14 @@ class ChatService:
                 messages=messages, total_tokens=total_tokens, truncated=truncated
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to get recent messages",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return RecentMessagesResponse(messages=[], total_tokens=0, truncated=False)
 
@@ -538,10 +571,14 @@ class ChatService:
 
         except (NotFoundError, ValidationError):
             raise
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to end session",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return False
 
@@ -592,10 +629,14 @@ class ChatService:
             else:
                 return None
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to update tool call status",
-                extra={"tool_call_id": tool_call_id, "status": status, "error": str(e)},
+                extra={
+                    "tool_call_id": tool_call_id,
+                    "status": status,
+                    "error": str(error),
+                },
             )
             return None
 
@@ -816,10 +857,10 @@ class ChatService:
                     )
                     await self.add_message(session_id, user_id, ai_msg_data)
 
-                except Exception as e:
+                except RECOVERABLE_ERRORS as error:
                     logger.warning(
                         "Failed to store chat in session",
-                        extra={"session_id": session_id, "error": str(e)},
+                        extra={"session_id": session_id, "error": str(error)},
                     )
 
             # Return formatted response
@@ -835,10 +876,10 @@ class ChatService:
                 "finish_reason": finish_reason,
             }
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Chat completion failed",
-                extra={"user_id": user_id, "error": str(e)},
+                extra={"user_id": user_id, "error": str(error)},
             )
             raise
 
@@ -918,10 +959,14 @@ class ChatService:
                 else None,
             )
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to get chat session",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return None
 
@@ -955,10 +1000,14 @@ class ChatService:
                 for result in results
             ]
 
-        except Exception as e:
+        except RECOVERABLE_ERRORS as error:
             logger.exception(
                 "Failed to get messages",
-                extra={"session_id": session_id, "user_id": user_id, "error": str(e)},
+                extra={
+                    "session_id": session_id,
+                    "user_id": user_id,
+                    "error": str(error),
+                },
             )
             return []
 

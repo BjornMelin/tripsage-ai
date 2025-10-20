@@ -16,11 +16,15 @@ from tripsage.api.middlewares.authentication import Principal
 
 # Legacy compatibility models for testing
 class AnomalyType:
+    """Anomaly type for dashboard tests."""
+
     SPIKE = "spike"
     ERROR_RATE = "error_rate"
 
 
 class UsageAlert:
+    """Usage alert model for dashboard tests."""
+
     def __init__(
         self,
         alert_id,
@@ -32,6 +36,7 @@ class UsageAlert:
         message,
         details=None,
     ):
+        """Simple alert DTO used by dashboard tests."""
         self.alert_id = alert_id
         self.key_id = key_id
         self.user_id = user_id
@@ -43,6 +48,8 @@ class UsageAlert:
 
 
 class UsageDashboard:
+    """Usage dashboard model for dashboard tests."""
+
     def __init__(
         self,
         total_requests,
@@ -55,6 +62,7 @@ class UsageDashboard:
         usage_by_service,
         usage_trend,
     ):
+        """Simple dashboard DTO aggregating usage metrics for tests."""
         self.total_requests = total_requests
         self.total_errors = total_errors
         self.overall_success_rate = overall_success_rate
@@ -67,7 +75,7 @@ class UsageDashboard:
 
 
 class ApiKeyMonitoringService:
-    pass
+    """Api key monitoring service for dashboard tests."""
 
 
 class TestDashboardIntegration:

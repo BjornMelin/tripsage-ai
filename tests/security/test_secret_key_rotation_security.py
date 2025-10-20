@@ -489,7 +489,7 @@ class TestSecretKeyRotationSecurity:
         for tampered in tampering_attempts:
             # All tampering attempts should be detected and fail
             with pytest.raises(
-                ServiceError, match="(Decryption failed|Invalid encrypted key format)"
+                ServiceError, match=r"(Decryption failed|Invalid encrypted key format)"
             ):
                 api_key_service._decrypt_api_key(tampered)
 

@@ -5,7 +5,7 @@ and connection pooling using asyncpg directly.
 """
 
 import re
-from typing import Any
+from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 import asyncpg
@@ -17,7 +17,7 @@ class DatabaseConnectionFactory:
     """Factory for creating secure database connections with asyncpg."""
 
     # Security patterns to detect potential issues
-    DANGEROUS_PATTERNS = [
+    DANGEROUS_PATTERNS: ClassVar[list[str]] = [
         r"(DROP|ALTER|CREATE|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)",
         r"DELETE\s+FROM",
         r";\s*(DROP|ALTER|CREATE|DELETE|TRUNCATE)",
@@ -51,17 +51,13 @@ class DatabaseConnectionFactory:
                 )
 
         # Parse URL to validate structure
-        try:
-            parsed = urlparse(url)
-            if not parsed.scheme or not parsed.hostname:
-                raise ValueError("Invalid URL structure")
+        parsed = urlparse(url)
+        if not parsed.scheme or not parsed.hostname:
+            raise ValueError("Invalid URL structure")
 
-            # Ensure it's a PostgreSQL URL
-            if not parsed.scheme.startswith(("postgres", "postgresql")):
-                raise ValueError(f"Invalid scheme: {parsed.scheme}")
-
-        except Exception as e:
-            raise ValueError(f"Invalid connection URL: {e}") from e
+        # Ensure it's a PostgreSQL URL
+        if not parsed.scheme.startswith(("postgres", "postgresql")):
+            raise ValueError(f"Invalid scheme: {parsed.scheme}")
 
     def _get_pool_config(self) -> dict[str, Any]:
         """Get connection pool configuration.
@@ -107,17 +103,13 @@ class DatabaseConnectionFactory:
         # Get pool configuration
         pool_config = self._get_pool_config()
 
-        try:
-            self._pool = await asyncpg.create_pool(url, **pool_config)
+        self._pool = await asyncpg.create_pool(url, **pool_config)
 
-            # Test the pool with a simple query
-            async with self._pool.acquire() as conn:
-                await conn.fetchval("SELECT 1")
+        # Test the pool with a simple query
+        async with self._pool.acquire() as conn:
+            await conn.fetchval("SELECT 1")
 
-            return self._pool
-
-        except Exception:
-            raise
+        return self._pool
 
     async def get_connection(self) -> asyncpg.Connection:
         """Get a single database connection.
@@ -150,7 +142,7 @@ class DatabaseConnectionFactory:
             async with pool.acquire() as conn:
                 result = await conn.fetchval("SELECT 1")
                 return result == 1
-        except Exception:
+        except (TimeoutError, asyncpg.PostgresError, OSError, ValueError):
             return False
 
     async def execute_query(
@@ -187,7 +179,7 @@ def get_connection_factory() -> DatabaseConnectionFactory:
     Returns:
         DatabaseConnectionFactory instance
     """
-    global _factory
+    global _factory  # pylint: disable=global-statement
     if _factory is None:
         _factory = DatabaseConnectionFactory()
     return _factory

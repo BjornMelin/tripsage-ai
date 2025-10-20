@@ -33,7 +33,7 @@ _cache_service = None
 
 async def get_cache_instance():
     """Get the global cache service instance (DragonflyDB/Redis)."""
-    global _cache_service
+    global _cache_service  # pylint: disable=global-statement
     if _cache_service is None:
         _cache_service = await get_cache_service()
     return _cache_service

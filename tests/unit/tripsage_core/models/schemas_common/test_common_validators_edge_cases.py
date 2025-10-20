@@ -86,13 +86,13 @@ class TestValidatorEdgeCases:
     def test_rating_special_numeric_values(self):
         """Test rating with special numeric values."""
         # Test infinity and NaN - these are considered numbers but outside valid range
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(float("inf"))
 
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(float("-inf"))
 
-        with pytest.raises(ValueError, match="between 0.0 and 5.0"):
+        with pytest.raises(ValueError, match=r"between 0\.0 and 5\.0"):
             CommonValidators.rating_range(float("nan"))
 
     def test_email_unicode_and_international(self):
