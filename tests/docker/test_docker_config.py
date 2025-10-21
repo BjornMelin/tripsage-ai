@@ -53,7 +53,7 @@ class TestModernDockerArchitecture:
         for service_name, description in required_services.items():
             assert service_name in services, f"Missing {service_name}: {description}"
 
-    def test_legacy_mcp_services_removed(self):
+    def test_legacy_mcp_managers_removed(self):
         """Test that legacy MCP services have been removed."""
         with Path(self.compose_file).open(encoding="utf-8") as f:
             config = yaml.safe_load(f)
