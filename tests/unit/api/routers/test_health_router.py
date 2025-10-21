@@ -13,6 +13,9 @@ from tripsage.api.core import dependencies as core_dependencies
 from tripsage.api.main import app
 
 
+pytestmark = pytest.mark.asyncio
+
+
 @pytest.fixture
 async def async_client():
     """Return async HTTP client for FastAPI app."""
@@ -73,7 +76,6 @@ def _dependency_context(
     return stack, mock_db, mock_cache
 
 
-@pytest.mark.anyio
 async def test_comprehensive_health_check(async_client: AsyncClient):
     """Health endpoint returns component statuses."""
     stack, _, _ = _dependency_context()
@@ -84,14 +86,13 @@ async def test_comprehensive_health_check(async_client: AsyncClient):
     payload = response.json()
 
     assert payload["status"] == "healthy"
-    assert payload["environment"] == "test"
+    assert payload["environment"] == "testing"
     assert len(payload["components"]) == 3
 
     for component in payload["components"]:
         assert component["status"] in {"healthy", "degraded", "unhealthy"}
 
 
-@pytest.mark.anyio
 async def test_readiness_health_returns_checks(async_client: AsyncClient):
     """Readiness endpoint reports dependency checks."""
     stack, _, _ = _dependency_context()
@@ -105,7 +106,6 @@ async def test_readiness_health_returns_checks(async_client: AsyncClient):
     assert payload["checks"]["cache"] is True
 
 
-@pytest.mark.anyio
 async def test_cache_health_details(async_client: AsyncClient):
     """Cache health endpoint surfaces cache metrics."""
     stack, _, _ = _dependency_context()
@@ -118,7 +118,6 @@ async def test_cache_health_details(async_client: AsyncClient):
     assert payload["details"]["used_memory"] == "1.2M"
 
 
-@pytest.mark.anyio
 async def test_database_health_handles_failures(async_client: AsyncClient):
     """Database health gracefully reports errors."""
     mock_settings = Mock()

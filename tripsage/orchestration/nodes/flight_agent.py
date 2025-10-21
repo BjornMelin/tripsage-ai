@@ -4,6 +4,8 @@ This module implements the flight search and booking agent as a LangGraph node,
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
+# pylint: disable=duplicate-code
+
 from datetime import UTC, datetime
 from typing import Any
 
@@ -263,18 +265,34 @@ class FlightAgentNode(BaseAgentNode):
             flights = search_results.get("flights", [])
 
             if flights:
-                # Format flight results
+                # Format canonical FlightOffer dicts
                 content = (
                     f"I found {len(flights)} flights from "
                     f"{search_params['origin']} to {search_params['destination']}:\n\n"
                 )
 
-                for i, flight in enumerate(flights[:3], 1):  # Show top 3 results
-                    airline = flight.get("airline", "Unknown")
-                    departure = flight.get("departure_time", "Unknown")
-                    price = flight.get("price", "Unknown")
+                for i, offer in enumerate(flights[:3], 1):  # Show top 3 results
+                    # Derive primary airline and departure from canonical structure
+                    airlines = offer.get("airlines") or []
+                    airline = airlines[0] if airlines else "Unknown"
+
+                    outbound = offer.get("outbound_segments") or []
+                    first_seg = outbound[0] if outbound else {}
+                    departure = first_seg.get("departure_date", "Unknown")
+
+                    currency = offer.get("currency", "USD")
+                    total_price = offer.get("total_price")
+                    price_str = (
+                        f"{currency} {total_price:.2f}"
+                        if isinstance(total_price, (int, float))
+                        else str(total_price)
+                        if total_price is not None
+                        else "Unknown"
+                    )
+
                     content += (
-                        f"{i}. {airline} - Departure: {departure} - Price: {price}\n"
+                        f"{i}. {airline} - Departure: {departure} - "
+                        f"Price: {price_str}\n"
                     )
 
                 if len(flights) > 3:
