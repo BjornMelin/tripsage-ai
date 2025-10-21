@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 """End-to-end tests for complete trip planning workflows.
 
 Tests the integration of multiple services working together to create
@@ -5,7 +6,7 @@ a complete trip planning experience with mocked external dependencies.
 """
 
 from datetime import date, timedelta
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -90,8 +91,6 @@ def mock_mcp_manager():
 @pytest.fixture
 def trip_service(mock_database, mock_cache):
     """Create TripService with mocked dependencies."""
-    from unittest.mock import MagicMock
-
     from tripsage_core.services.business.user_service import UserService
 
     # Create mock user service
@@ -100,7 +99,7 @@ def trip_service(mock_database, mock_cache):
     service = TripService(
         database_service=mock_database, user_service=mock_user_service
     )
-    service.cache = mock_cache
+    service.cache = mock_cache  # type: ignore[attr-defined]
     return service
 
 
@@ -109,26 +108,36 @@ def accommodation_service(mock_cache, mock_mcp_manager):
     """Create AccommodationService with mocked dependencies."""
     from tripsage_core.services.business.accommodation_service import (
         AccommodationListing,
-        AccommodationLocation,
         PropertyType,
     )
 
+    mock_db = AsyncMock()
+    mock_db.store_accommodation_search = AsyncMock()
+    mock_db.store_accommodation_listing = AsyncMock()
+    mock_db.store_accommodation_booking = AsyncMock()
+    mock_db.get_accommodation_listing = AsyncMock(return_value=None)
+    mock_db.get_accommodation_bookings = AsyncMock(return_value=[])
+    mock_db.get_accommodation_booking = AsyncMock(return_value=None)
+    mock_db.update_accommodation_booking = AsyncMock(return_value=True)
+
     service = AccommodationService(
-        database_service=mock_cache, external_accommodation_service=None
+        database_service=mock_db, external_accommodation_service=None
     )
-    service.cache = mock_cache
-    service.mcp_manager = mock_mcp_manager
+    service.cache = mock_cache  # type: ignore[attr-defined]
+    service.mcp_manager = mock_mcp_manager  # type: ignore[attr-defined]
 
     # Create sample accommodation listing for tests
-    sample_listing = AccommodationListing(
-        id="test_hotel_123",
-        name="Test Hotel",
-        property_type=PropertyType.HOTEL,
-        location=AccommodationLocation(city="Paris", country="France"),
-        price_per_night=280.0,
-        currency="USD",
-        max_guests=2,
-        rating=4.5,
+    sample_listing = AccommodationListing.model_validate(
+        {
+            "id": "test_hotel_123",
+            "name": "Test Hotel",
+            "property_type": PropertyType.HOTEL,
+            "location": {"city": "Paris", "country": "France"},
+            "price_per_night": 280.0,
+            "currency": "USD",
+            "max_guests": 2,
+            "rating": 4.5,
+        }
     )
 
     # Mock the external API methods to return sample listings
@@ -140,12 +149,10 @@ def accommodation_service(mock_cache, mock_mcp_manager):
 @pytest.fixture
 def flight_service(mock_cache, mock_mcp_manager):
     """Create FlightService with mocked dependencies."""
-    from unittest.mock import MagicMock
-
     # Create a mock flight service
     service = MagicMock()
-    service.cache = mock_cache
-    service.mcp_manager = mock_mcp_manager
+    service.cache = mock_cache  # type: ignore[attr-defined]
+    service.mcp_manager = mock_mcp_manager  # type: ignore[attr-defined]
     return service
 
 
@@ -156,8 +163,6 @@ def weather_service(mock_cache, monkeypatch):
     monkeypatch.setenv("OPENWEATHERMAP_API_KEY", "test_key")
 
     # Mock the settings to bypass validation
-    from unittest.mock import MagicMock, patch
-
     from pydantic import SecretStr
 
     mock_settings = MagicMock()
@@ -168,7 +173,7 @@ def weather_service(mock_cache, monkeypatch):
         return_value=mock_settings,
     ):
         service = WeatherService()
-        service.cache = mock_cache
+        service.cache = mock_cache  # type: ignore[attr-defined]
         service._make_request = AsyncMock()
         return service
 
@@ -198,7 +203,7 @@ class TestTripPlanningJourney:
     """End-to-end tests for complete trip planning workflows."""
 
     @pytest.mark.asyncio
-    async def test_complete_trip_creation_workflow(
+    async def test_complete_trip_creation_workflow(  # pylint: disable=too-many-positional-arguments
         self,
         trip_service,
         accommodation_service,
@@ -249,19 +254,21 @@ class TestTripPlanningJourney:
         )
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest,
-            TripLocation,
         )
 
-        trip_request = TripCreateRequest(
-            title=f"Trip to {sample_trip_data['destination']}",
-            description="Test trip",
-            start_date=sample_trip_data["start_date"],
-            end_date=sample_trip_data["end_date"],
-            destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
-            budget=EnhancedBudget(total=sample_trip_data["budget"]),
+        trip_request = TripCreateRequest.model_validate(
+            {
+                "title": f"Trip to {sample_trip_data['destination']}",
+                "description": "Test trip",
+                "start_date": sample_trip_data["start_date"],
+                "end_date": sample_trip_data["end_date"],
+                "destination": sample_trip_data["destination"],
+                "destinations": [
+                    {"name": sample_trip_data["destination"], "country": "France"}
+                ],
+                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "preferences": sample_trip_data["preferences"],
+            }
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
@@ -272,11 +279,15 @@ class TestTripPlanningJourney:
         flights = {"offers": [{"price": 850, "airline": "Air France"}]}
 
         # Use proper accommodation search request
-        accommodation_request = AccommodationSearchRequest(
-            location=sample_trip_data["destination"],
-            check_in=sample_trip_data["start_date"],
-            check_out=sample_trip_data["end_date"],
-            guests=sample_trip_data["travelers"],
+        accommodation_request = AccommodationSearchRequest.model_validate(
+            {
+                "user_id": sample_trip_data["user_id"],
+                "trip_id": str(trip_id),
+                "location": sample_trip_data["destination"],
+                "check_in": sample_trip_data["start_date"],
+                "check_out": sample_trip_data["end_date"],
+                "guests": sample_trip_data["travelers"],
+            }
         )
         accommodations_response = await accommodation_service.search_accommodations(
             accommodation_request
@@ -329,30 +340,36 @@ class TestTripPlanningJourney:
         )
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest,
-            TripLocation,
         )
 
-        trip_request = TripCreateRequest(
-            title=f"Trip to {sample_trip_data['destination']}",
-            description="Test trip with preferences",
-            start_date=sample_trip_data["start_date"],
-            end_date=sample_trip_data["end_date"],
-            destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
-            budget=EnhancedBudget(total=sample_trip_data["budget"]),
+        trip_request = TripCreateRequest.model_validate(
+            {
+                "title": f"Trip to {sample_trip_data['destination']}",
+                "description": "Test trip with preferences",
+                "start_date": sample_trip_data["start_date"],
+                "end_date": sample_trip_data["end_date"],
+                "destination": sample_trip_data["destination"],
+                "destinations": [
+                    {"name": sample_trip_data["destination"], "country": "France"}
+                ],
+                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "preferences": sample_trip_data["preferences"],
+            }
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
         )
         trip_id = trip_response.id
 
-        accommodation_request = AccommodationSearchRequest(
-            location=sample_trip_data["destination"],
-            check_in=sample_trip_data["start_date"],
-            check_out=sample_trip_data["end_date"],
-            guests=sample_trip_data["travelers"],
+        accommodation_request = AccommodationSearchRequest.model_validate(
+            {
+                "user_id": sample_trip_data["user_id"],
+                "trip_id": str(trip_id),
+                "location": sample_trip_data["destination"],
+                "check_in": sample_trip_data["start_date"],
+                "check_out": sample_trip_data["end_date"],
+                "guests": sample_trip_data["travelers"],
+            }
         )
         accommodations_response = await accommodation_service.search_accommodations(
             accommodation_request
@@ -370,7 +387,7 @@ class TestTripPlanningJourney:
         # mock_mcp_manager.invoke.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_budget_constrained_trip_workflow(
+    async def test_budget_constrained_trip_workflow(  # pylint: disable=too-many-positional-arguments
         self,
         trip_service,
         flight_service,
@@ -415,19 +432,21 @@ class TestTripPlanningJourney:
         )
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest,
-            TripLocation,
         )
 
-        trip_request = TripCreateRequest(
-            title=f"Budget Trip to {sample_trip_data['destination']}",
-            description="Budget-constrained test trip",
-            start_date=sample_trip_data["start_date"],
-            end_date=sample_trip_data["end_date"],
-            destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
-            budget=EnhancedBudget(total=sample_trip_data["budget"]),
+        trip_request = TripCreateRequest.model_validate(
+            {
+                "title": f"Budget Trip to {sample_trip_data['destination']}",
+                "description": "Budget-constrained test trip",
+                "start_date": sample_trip_data["start_date"],
+                "end_date": sample_trip_data["end_date"],
+                "destination": sample_trip_data["destination"],
+                "destinations": [
+                    {"name": sample_trip_data["destination"], "country": "France"}
+                ],
+                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "preferences": sample_trip_data["preferences"],
+            }
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request
@@ -438,12 +457,16 @@ class TestTripPlanningJourney:
         flights = {"offers": [{"price": 650, "airline": "EasyJet"}]}
 
         # Use proper accommodation search with budget constraints
-        accommodation_request = AccommodationSearchRequest(
-            location=sample_trip_data["destination"],
-            check_in=sample_trip_data["start_date"],
-            check_out=sample_trip_data["end_date"],
-            guests=sample_trip_data["travelers"],
-            max_price=150.0,
+        accommodation_request = AccommodationSearchRequest.model_validate(
+            {
+                "user_id": sample_trip_data["user_id"],
+                "trip_id": str(trip_id),
+                "location": sample_trip_data["destination"],
+                "check_in": sample_trip_data["start_date"],
+                "check_out": sample_trip_data["end_date"],
+                "guests": sample_trip_data["travelers"],
+                "max_price": 150.0,
+            }
         )
         accommodations_response = await accommodation_service.search_accommodations(
             accommodation_request
@@ -545,10 +568,7 @@ class TestTripPlanningJourney:
             "updated_at": "2024-01-01T00:00:00+00:00",
         }
 
-        update_request = TripUpdateRequest(
-            end_date=new_end_date
-            # Note: travelers and budget might not be part of standard trip updates
-        )
+        update_request = TripUpdateRequest.model_validate({"end_date": new_end_date})
         updated_trip = await trip_service.update_trip(trip_id, user_id, update_request)
 
         # Assert
@@ -605,19 +625,21 @@ class TestTripPlanningJourney:
         from tripsage_core.models.trip import EnhancedBudget
         from tripsage_core.services.business.trip_service import (
             TripCreateRequest,
-            TripLocation,
         )
 
-        trip_request = TripCreateRequest(
-            title=f"Trip to {sample_trip_data['destination']}",
-            description="Test trip for error handling",
-            start_date=sample_trip_data["start_date"],
-            end_date=sample_trip_data["end_date"],
-            destination=sample_trip_data["destination"],
-            destinations=[
-                TripLocation(name=sample_trip_data["destination"], country="France")
-            ],
-            budget=EnhancedBudget(total=sample_trip_data["budget"]),
+        trip_request = TripCreateRequest.model_validate(
+            {
+                "title": f"Trip to {sample_trip_data['destination']}",
+                "description": "Test trip for error handling",
+                "start_date": sample_trip_data["start_date"],
+                "end_date": sample_trip_data["end_date"],
+                "destination": sample_trip_data["destination"],
+                "destinations": [
+                    {"name": sample_trip_data["destination"], "country": "France"}
+                ],
+                "budget": EnhancedBudget(total=sample_trip_data["budget"]),
+                "preferences": sample_trip_data["preferences"],
+            }
         )
         trip_response = await trip_service.create_trip(
             sample_trip_data["user_id"], trip_request

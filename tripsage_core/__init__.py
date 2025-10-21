@@ -8,16 +8,6 @@ Modules:
 - exceptions: Centralized exception handling system
 - config: Core configuration settings
 - utilities: Shared utility functions and helpers
-
-Usage:
-    # Import core models
-    from tripsage_core.models import TripSageModel, TripSageDomainModel
-
-    # Import domain models
-    from tripsage_core.models.domain import AccommodationListing, FlightOffer
-
-    # Import exceptions
-    from tripsage_core.exceptions import CoreTripSageError, CoreValidationError
 """
 
 __version__ = "1.0.0"

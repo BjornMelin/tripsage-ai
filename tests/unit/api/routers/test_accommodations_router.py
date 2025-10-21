@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code,R0801
 """Simplified accommodation router tests following ULTRATHINK methodology.
 
 This module focuses on testing the validation and routing behavior that we know works,
