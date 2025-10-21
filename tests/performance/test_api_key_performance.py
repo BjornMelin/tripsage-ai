@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Performance and load testing for API key service operations.
 
 This module provides comprehensive performance testing including:
@@ -10,6 +11,7 @@ This module provides comprehensive performance testing including:
 """
 
 import asyncio
+import gc
 import hashlib
 import json
 import random
@@ -21,6 +23,7 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from fastapi.exceptions import HTTPException
 
 # pytest_benchmark provides the benchmark fixture automatically
 from tripsage_core.services.business.api_key_service import (
@@ -64,7 +67,15 @@ class TestApiKeyPerformance:
 
         async def mock_list_with_latency(*args, **kwargs):
             await asyncio.sleep(0.003)  # 3ms for list operation
-            return [mock_get_with_latency() for _ in range(5)]
+            return [
+                {
+                    "id": str(uuid.uuid4()),
+                    "encrypted_key": "encrypted_value",
+                    "service": "openai",
+                    "expires_at": None,
+                }
+                for _ in range(5)
+            ]
 
         db.create_api_key = mock_create_with_latency
         db.get_api_key_by_id = mock_get_with_latency
@@ -136,7 +147,8 @@ class TestApiKeyPerformance:
     def sample_api_keys(self):
         """Generate sample API keys for testing."""
         return [
-            f"sk-test_key_{i:04d}_{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}"  # noqa: E501
+            f"sk-test_key_{i:04d}_"
+            f"{''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=32))}"
             for i in range(100)
         ]
 
@@ -176,7 +188,7 @@ class TestApiKeyPerformance:
         request = ApiKeyCreateRequest(
             name="Performance Test Key",
             service=ServiceType.OPENAI,
-            key_value="sk-performance_test_key_123456789",
+            key="sk-performance_test_key_123456789",  # Use alias 'key'
             description="Key for performance testing",
         )
 
@@ -277,7 +289,7 @@ class TestApiKeyPerformance:
             print(f"Throughput: {throughput:.2f} requests/second")
             print(f"Average latency: {avg_latency * 1000:.2f}ms")
 
-    @pytest.mark.asyncio
+    # pylint: disable=too-many-statements
     async def test_database_performance_under_load(
         self, api_key_service, sample_users, sample_api_keys
     ):
@@ -302,7 +314,7 @@ class TestApiKeyPerformance:
                         ApiKeyCreateRequest(
                             name=f"Load Test Key {i}",
                             service=ServiceType.OPENAI,
-                            key_value=sample_api_keys[i],
+                            key=sample_api_keys[i],  # Use alias 'key'
                             description=f"Load test key {i}",
                         ),
                     ),
@@ -363,7 +375,7 @@ class TestApiKeyPerformance:
 
             async def tracked_cache_get(key):
                 nonlocal cache_hits, cache_misses
-                result = await original_get(key)
+                result = await original_get(key)  # type: ignore[reportOptionalCall]
                 if result:
                     cache_hits += 1
                 else:
@@ -463,11 +475,9 @@ class TestApiKeyPerformance:
                 f"Memory usage too high: {memory_increase:.2f} MB"
             )
 
-    @pytest.mark.asyncio
+    # pylint: disable=too-many-statements
     async def test_stress_test_extreme_load(self, api_key_service):
         """Stress test with extreme load to find breaking points."""
-        import time
-
         # Track metrics
         successful_ops = 0
         failed_ops = 0
@@ -612,7 +622,7 @@ class TestApiKeyPerformance:
             request = ApiKeyCreateRequest(
                 name="Baseline Test",
                 service=ServiceType.OPENAI,
-                key_value="sk-baseline_key",
+                key="sk-baseline_key",  # Use alias 'key'
                 description="Baseline test",
             )
 
@@ -645,6 +655,7 @@ class TestApiKeyPerformance:
                 "Creation performance regression"
             )
 
+    # pylint: disable=too-many-statements
     def test_database_performance_under_concurrent_load(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
@@ -658,10 +669,9 @@ class TestApiKeyPerformance:
         - Query performance under load
         """
 
+        # pylint: disable=too-many-statements
         def setup_concurrent_db_mocks():
             """Setup realistic database mocking for concurrent operations."""
-            import time
-
             # Simulate connection pool with limited connections
             connection_pool = threading.Semaphore(10)  # Max 10 concurrent connections
             query_metrics = {
@@ -677,10 +687,12 @@ class TestApiKeyPerformance:
                 query_metrics["total_queries"] += 1
 
                 # Simulate connection acquisition
+                # pylint: disable=consider-using-with
                 connection_acquired = connection_pool.acquire(blocking=False)
                 if not connection_acquired:
                     query_metrics["connection_timeouts"] += 1
                     await asyncio.sleep(0.01)  # Brief timeout
+                    # pylint: disable=consider-using-with
                     connection_pool.acquire()  # Block until available
 
                 try:
@@ -690,7 +702,7 @@ class TestApiKeyPerformance:
                     # Simulate occasional deadlock (1% chance)
                     if random.random() < 0.01:
                         query_metrics["deadlock_detections"] += 1
-                        raise Exception("Deadlock detected")
+                        raise RuntimeError("Deadlock detected")
 
                     # Create realistic result
                     result = {
@@ -719,10 +731,12 @@ class TestApiKeyPerformance:
                 query_start = time.time()
                 query_metrics["total_queries"] += 1
 
+                # pylint: disable=consider-using-with
                 connection_acquired = connection_pool.acquire(blocking=False)
                 if not connection_acquired:
                     query_metrics["connection_timeouts"] += 1
                     await asyncio.sleep(0.005)
+                    # pylint: disable=consider-using-with
                     connection_pool.acquire()
 
                 try:
@@ -762,10 +776,12 @@ class TestApiKeyPerformance:
                 query_start = time.time()
                 query_metrics["total_queries"] += 1
 
+                # pylint: disable=consider-using-with
                 connection_acquired = connection_pool.acquire(blocking=False)
                 if not connection_acquired:
                     query_metrics["connection_timeouts"] += 1
                     await asyncio.sleep(0.003)
+                    # pylint: disable=consider-using-with
                     connection_pool.acquire()
 
                 try:
@@ -939,6 +955,7 @@ class TestApiKeyPerformance:
 
         return results
 
+    # pylint: disable=too-many-statements
     def test_cache_hit_miss_ratio_under_load(
         self, api_key_service, mock_cache, benchmark
     ):
@@ -952,10 +969,9 @@ class TestApiKeyPerformance:
         - TTL expiration impact on performance
         """
 
+        # pylint: disable=too-many-statements
         def setup_realistic_cache_with_metrics():
             """Setup cache with realistic behavior and metrics tracking."""
-            import time
-
             cache_storage = {}
             cache_metrics = {
                 "hits": 0,
@@ -973,26 +989,7 @@ class TestApiKeyPerformance:
             async def mock_cache_get(key):
                 start_time = time.time()
 
-                if key in cache_storage:
-                    # Check TTL expiration
-                    value, ttl_expiry = cache_storage[key]
-                    if ttl_expiry and time.time() > ttl_expiry:
-                        del cache_storage[key]
-                        cache_metrics["misses"] += 1
-                        cache_metrics["avg_miss_time"].append(
-                            (time.time() - start_time) * 1000
-                        )
-                        return None
-
-                    cache_metrics["hits"] += 1
-                    cache_metrics["avg_hit_time"].append(
-                        (time.time() - start_time) * 1000
-                    )
-
-                    # Simulate cache hit latency (faster than miss)
-                    await asyncio.sleep(random.uniform(0.0001, 0.0005))
-                    return value
-                else:
+                if key not in cache_storage:  # Restructured to avoid unnecessary else
                     cache_metrics["misses"] += 1
                     cache_metrics["avg_miss_time"].append(
                         (time.time() - start_time) * 1000
@@ -1001,6 +998,22 @@ class TestApiKeyPerformance:
                     # Simulate cache miss latency (slower)
                     await asyncio.sleep(random.uniform(0.001, 0.003))
                     return None
+
+                value, ttl_expiry = cache_storage[key]
+                if ttl_expiry and time.time() > ttl_expiry:
+                    del cache_storage[key]
+                    cache_metrics["misses"] += 1
+                    cache_metrics["avg_miss_time"].append(
+                        (time.time() - start_time) * 1000
+                    )
+                    return None
+
+                cache_metrics["hits"] += 1
+                cache_metrics["avg_hit_time"].append((time.time() - start_time) * 1000)
+
+                # Simulate cache hit latency (faster than miss)
+                await asyncio.sleep(random.uniform(0.0001, 0.0005))
+                return value
 
             async def mock_cache_set(key, value, ex=None):
                 cache_metrics["sets"] += 1
@@ -1178,6 +1191,7 @@ class TestApiKeyPerformance:
 
         return results
 
+    # pylint: disable=too-many-statements
     def test_memory_usage_and_resource_monitoring(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
@@ -1192,11 +1206,9 @@ class TestApiKeyPerformance:
         - Memory efficiency of caching strategies
         """
 
+        # pylint: disable=too-many-statements
         def setup_resource_monitoring():
-            """Setup comprehensive resource monitoring."""
-            import gc
-            import time
-
+            """Setup resource monitoring."""
             import psutil
 
             process = psutil.Process()
@@ -1262,7 +1274,7 @@ class TestApiKeyPerformance:
 
                         time.sleep(0.1)  # Sample every 100ms
 
-                    except Exception:
+                    except (OSError, RuntimeError):
                         pass  # Continue monitoring even if sample fails
 
             # Start monitoring thread
@@ -1369,8 +1381,6 @@ class TestApiKeyPerformance:
             cleanup_start = time.time()
 
             # Force garbage collection
-            import gc
-
             collected = gc.collect()
 
             # Wait for memory cleanup
@@ -1392,7 +1402,7 @@ class TestApiKeyPerformance:
 
             # Memory efficiency calculations
             max_memory_during_ops = (
-                max([s["memory_mb"] for s in resource_metrics["memory_samples"]])
+                max(s["memory_mb"] for s in resource_metrics["memory_samples"])
                 if resource_metrics["memory_samples"]
                 else baseline_memory
             )
@@ -1467,6 +1477,7 @@ class TestApiKeyPerformance:
 
         return results
 
+    # pylint: disable=too-many-statements
     def test_comprehensive_performance_regression_suite(
         self, api_key_service, mock_cache, mock_db, benchmark
     ):
@@ -1481,6 +1492,7 @@ class TestApiKeyPerformance:
         - Overall system performance regression detection
         """
 
+        # pylint: disable=too-many-statements
         def establish_performance_baselines():
             """Establish performance baselines for regression detection."""
             return {
@@ -1503,6 +1515,7 @@ class TestApiKeyPerformance:
                 "timeout_rate_max": 0.01,  # 1% max timeout rate
             }
 
+        # pylint: disable=too-many-statements
         async def run_comprehensive_performance_tests():
             """Run comprehensive performance tests for regression detection."""
             baselines = establish_performance_baselines()
@@ -1572,7 +1585,7 @@ class TestApiKeyPerformance:
                             str(uuid.uuid4()),
                         )
                         validation_times.append((time.time() - start) * 1000)
-                    except Exception:
+                    except (HTTPException, TimeoutError, RuntimeError):
                         validation_errors += 1
 
                 results["validation_performance"] = {
@@ -1617,7 +1630,7 @@ class TestApiKeyPerformance:
                         ApiKeyCreateRequest(
                             name=f"Throughput Test {i}",
                             service=ServiceType.OPENAI,
-                            key_value=f"sk-throughput_create_{i}",
+                            key=f"sk-throughput_create_{i}",  # Use alias 'key'
                             description="Throughput test",
                         ),
                     )
