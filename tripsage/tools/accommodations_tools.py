@@ -77,6 +77,9 @@ async def search_accommodations(
     location: str,
     check_in: str,
     check_out: str,
+    user_id: str,
+    *,
+    trip_id: str | None = None,
     guests: int = 1,
     min_price: float | None = None,
     max_price: float | None = None,
@@ -88,7 +91,13 @@ async def search_accommodations(
     """Search for accommodations using the domain AccommodationService."""
     service = _get_accommodation_service(ctx)
 
+    request_metadata: dict[str, Any] = {
+        "tool": "accommodations_tools.search_accommodations",
+        "actor_id": getattr(ctx, "actor_id", None),
+    }
     request = AccommodationSearchRequest(
+        user_id=user_id,
+        trip_id=trip_id,
         location=location.strip(),
         check_in=_parse_iso_date(check_in, "check_in"),
         check_out=_parse_iso_date(check_out, "check_out"),
@@ -111,6 +120,7 @@ async def search_accommodations(
         sort_by="relevance",
         sort_order="asc",
         currency="USD",
+        metadata=request_metadata,
     )
 
     logger.info("Searching accommodations for %s", request.location)
