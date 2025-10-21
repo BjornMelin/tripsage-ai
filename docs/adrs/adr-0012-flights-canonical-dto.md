@@ -19,7 +19,7 @@ Flight-related data models and flows had diverged across API, business service, 
   - Deleted legacy Duffel HTTP client and tests.
   - Removed legacy flight models and re-export shims.
   - Pruned integration tests referencing removed clients.
-- Keep provider-specific models (`tripsage_core/models/api/flights_models.py`) isolated to the external adapter only. Mapping to canonical models occurs via `tripsage_core/models/mappers/flights_mapper.py`.
+- Remove provider-specific DTO modules. Adapters return raw provider dicts that are converted centrally by `tripsage_core/models/mappers/flights_mapper.py` into canonical models.
 
 ## Alternatives Considered
 

@@ -1,16 +1,19 @@
-# 🚀 TripSage Installation Guide
+# TripSage Installation Guide
 
+>
 > **Complete Setup and Dependencies for TripSage AI Platform**
 > Local Development | Docker | Dependencies | Node.js Compatibility
-
-> IMPORTANT: This repository is standardized on `pyproject.toml` + `uv` for Python dependencies.
-> Any references to `requirements.txt` or `requirements-dev.txt` are deprecated and will be removed.
+>
+> IMPORTANT: This repository is standardized on `pyproject.toml` + `uv`
+> for Python dependencies.
+> Any references to `requirements.txt` or `requirements-dev.txt` are deprecated
+> and will be removed.
 > Use `uv sync` (and `uv sync --group dev`) instead.
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [🚀 TripSage Installation Guide](#-tripsage-installation-guide)
-  - [📋 Table of Contents](#-table-of-contents)
+- [TripSage Installation Guide](#tripsage-installation-guide)
+  - [Table of Contents](#table-of-contents)
   - [Local Development Setup](#local-development-setup)
   - [Quick Start](#quick-start)
     - [1. Clone and Setup](#1-clone-and-setup)
@@ -32,7 +35,7 @@
       - [File Structure](#file-structure)
       - [Adding New Dependencies](#adding-new-dependencies)
       - [Updating Dependencies](#updating-dependencies)
-      - [Why Both Approaches?](#why-both-approaches)
+      - [Rationale](#rationale)
   - [Production Deployment](#production-deployment)
     - [Environment Variables](#environment-variables)
     - [Database Migration](#database-migration)
@@ -64,11 +67,13 @@
 
 ## Local Development Setup
 
-- **uv**: Recommended but optional (modern Python package manager - 10-100x faster than pip)
+- **uv**: Recommended but optional (modern Python package manager -
+  10-100x faster than pip)
 - **Git**: For cloning the repository
 - **Docker**: Optional, for local DragonflyDB
 
-> **Note**: While `uv` is recommended for its speed and reliability, you can use standard `pip` if preferred.
+> **Note**: While `uv` is recommended for its speed and reliability,
+> you can use standard `pip` if preferred.
 
 ## Quick Start
 
@@ -130,7 +135,7 @@ DRAGONFLY_PASSWORD=your_secure_password
 
 # External APIs (Optional - for full functionality)
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-DUFFEL_API_KEY=your_duffel_api_key_here
+DUFFEL_ACCESS_TOKEN=your_duffel_access_token_here
 OPENWEATHERMAP_API_KEY=your_openweathermap_api_key_here
 ```
 
@@ -177,9 +182,9 @@ cd frontend && pnpm dev
 
 ### 5. Verify Installation
 
-- **API**: <http://localhost:8000/docs> (FastAPI docs)
-- **Frontend**: <http://localhost:3000> (Next.js app)
-- **Monitoring**: <http://localhost:3000> (Grafana, if using full stack)
+- **API**: [FastAPI docs](http://localhost:8000/docs)
+- **Frontend**: [Next.js app](http://localhost:3000)
+- **Monitoring**: [Grafana](http://localhost:3000) (if using full stack)
 
 ## Architecture Overview
 
@@ -242,7 +247,8 @@ uv run pytest tests/integration/ -v
 
 ### Dependency Management
 
-TripSage standardizes on modern dependency management with `pyproject.toml` and `uv`. Traditional `requirements.txt` files are not used.
+TripSage standardizes on modern dependency management with `pyproject.toml`
+and `uv`. Traditional `requirements.txt` files are not used.
 
 #### File Structure
 
@@ -254,7 +260,8 @@ TripSage standardizes on modern dependency management with `pyproject.toml` and 
 
 #### Adding New Dependencies
 
-⚠️ **Important**: Always update dependencies in `pyproject.toml`. `uv` will manage the lockfile.
+**Important**: Always update dependencies in `pyproject.toml`.
+`uv` will manage the lockfile.
 
 **Python packages:**
 
@@ -433,22 +440,22 @@ pnpm build
 
 1. **nvm (Node Version Manager)**
    - Popular version manager for Node.js
-   - <https://github.com/nvm-sh/nvm>
+   - [nvm](https://github.com/nvm-sh/nvm)
    - Automatically sets up PATH for Node.js and npm/npx
 
 2. **fnm (Fast Node Manager)**
    - Rust-based alternative to nvm
-   - <https://github.com/Schniz/fnm>
+   - [fnm](https://github.com/Schniz/fnm)
    - Works seamlessly with our MCP servers
 
 3. **volta**
    - JavaScript toolchain manager
-   - <https://volta.sh/>
+   - [volta](https://volta.sh/)
    - Provides automatic project-based Node.js versions
 
 4. **asdf**
    - Multi-language version manager
-   - <https://asdf-vm.com/>
+   - [asdf](https://asdf-vm.com/)
    - Supports Node.js through plugins
 
 5. **System Package Managers**
@@ -457,12 +464,14 @@ pnpm build
    - Windows: Chocolatey, Scoop
 
 6. **Official Node.js Installer**
-   - Direct download from <https://nodejs.org/>
+   - Direct download from [Node.js](https://nodejs.org/)
    - Includes npm and npx by default
 
 ## How It Works
 
-The MCP launcher uses `npx` command, which is included with npm (Node Package Manager). The `npx` command works identically across all Node.js installation methods because:
+The MCP launcher uses `npx` command, which is included with npm
+(Node Package Manager). The `npx` command works identically across all
+Node.js installation methods because:
 
 1. All Node version managers add their Node.js installation to the system PATH
 2. `npx` is a standard tool included with npm since version 5.2
@@ -493,7 +502,8 @@ These servers don't require Node.js:
 
 ## Dependency Checking
 
-The MCP launcher automatically checks for Node.js availability on startup. If Node.js is not found, it will:
+The MCP launcher automatically checks for Node.js availability on startup.
+If Node.js is not found, it will:
 
 1. Log a warning with installation instructions
 2. Provide links to various installation methods
@@ -504,10 +514,10 @@ Example output when Node.js is missing:
 ```plaintext
 Node.js not found in PATH. Node-based MCP servers will not work.
 Please install Node.js using one of the following:
-  - Official installer: https://nodejs.org/
+  - Official installer: [https://nodejs.org/](https://nodejs.org/)
   - Package manager: brew install node (macOS)
-  - nvm: https://github.com/nvm-sh/nvm
-  - fnm: https://github.com/Schniz/fnm
+  - nvm: [https://github.com/nvm-sh/nvm](https://github.com/nvm-sh/nvm)
+  - fnm: [https://github.com/Schniz/fnm](https://github.com/Schniz/fnm)
 ```
 
 ## Version Requirements

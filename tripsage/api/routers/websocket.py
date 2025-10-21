@@ -4,6 +4,8 @@ This module provides WebSocket endpoints for real-time communication,
 including chat streaming, agent status updates, and live user feedback.
 """
 
+# pylint: disable=too-many-lines
+
 import asyncio
 import json
 import logging
@@ -11,6 +13,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, cast
+from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
@@ -213,21 +216,31 @@ def build_auth_request(
 # Services for test compatibility - tests expect these attributes to exist
 auth_service = websocket_manager.auth_service
 chat_service: CoreChatService | None = None
+MessageRole = ChatMessageRole
 
 
 def serialize_connection(connection: WebSocketConnection) -> dict[str, Any]:
     """Serialize a WebSocketConnection for API responses."""
     state_value = getattr(connection.state, "value", str(connection.state))
+    connected_at = getattr(connection, "connected_at", None)
+    last_heartbeat = getattr(connection, "last_heartbeat", None)
+    subscribed_channels = getattr(connection, "subscribed_channels", [])
     return {
         "connection_id": connection.connection_id,
         "user_id": str(connection.user_id) if connection.user_id else None,
         "session_id": str(connection.session_id) if connection.session_id else None,
         "state": state_value,
-        "connected_at": connection.connected_at.isoformat(),
-        "last_heartbeat": connection.last_heartbeat.isoformat(),
-        "subscribed_channels": sorted(connection.subscribed_channels),
-        "client_ip": connection.client_ip,
-        "user_agent": connection.user_agent,
+        "connected_at": connected_at.isoformat()
+        if isinstance(connected_at, datetime)
+        else None,
+        "last_heartbeat": last_heartbeat.isoformat()
+        if isinstance(last_heartbeat, datetime)
+        else None,
+        "subscribed_channels": sorted(subscribed_channels)
+        if isinstance(subscribed_channels, (set, list, tuple))
+        else [],
+        "client_ip": getattr(connection, "client_ip", None),
+        "user_agent": getattr(connection, "user_agent", None),
     }
 
 
@@ -382,23 +395,63 @@ async def validate_websocket_origin(websocket: WebSocket) -> bool:
             return False
         return True
 
-    # Check if origin is in allowed CORS origins
-    if origin in settings.cors_origins:
-        logger.info("WebSocket connection from authorized origin: %s", origin)
-        return True
+    parsed_origin = urlparse(origin)
+    is_authorized = False
 
-    # Additional check for wildcard origins if configured
-    for allowed_origin in settings.cors_origins:
-        if allowed_origin == "*":
-            logger.warning(
-                "Wildcard CORS origin detected - allowing all origins (insecure)"
-            )
-            return True
+    if not parsed_origin.scheme or not parsed_origin.netloc:
+        logger.exception("Invalid origin format: %s", origin)
+    else:
+        host = parsed_origin.hostname or ""
+        host_normalized = host.lower()
 
-    logger.exception(
-        "WebSocket connection rejected from unauthorized origin: %s", origin
-    )
-    return False
+        try:
+            host_ascii = host_normalized.encode("idna").decode("ascii")
+        except UnicodeError:
+            logger.exception("Origin host could not be IDNA-encoded: %s", host)
+            host_ascii = None
+
+        host_is_ascii = host_ascii is not None and host_ascii == host_normalized
+        if not host_is_ascii:
+            logger.exception("Origin host contains non-ASCII characters: %s", host)
+        else:
+            canonical_origin = f"{parsed_origin.scheme.lower()}://{host_ascii}"
+            if parsed_origin.port:
+                canonical_origin = f"{canonical_origin}:{parsed_origin.port}"
+
+            allowed_canonicals = set()
+            for allowed_origin in settings.cors_origins:
+                if allowed_origin == "*":
+                    continue
+                allowed_parsed = urlparse(allowed_origin)
+                if not allowed_parsed.scheme or not allowed_parsed.hostname:
+                    continue
+                allowed_host_ascii = (
+                    allowed_parsed.hostname.lower().encode("idna").decode("ascii")
+                )
+                allowed_canonical = (
+                    f"{allowed_parsed.scheme.lower()}://{allowed_host_ascii}"
+                )
+                if allowed_parsed.port:
+                    allowed_canonical = f"{allowed_canonical}:{allowed_parsed.port}"
+                allowed_canonicals.add(allowed_canonical)
+
+            if canonical_origin in allowed_canonicals:
+                logger.info(
+                    "WebSocket connection from authorized origin: %s", origin
+                )
+                is_authorized = True
+            elif "*" in settings.cors_origins:
+                logger.warning(
+                    "Wildcard CORS origin detected - allowing all origins (insecure)"
+                )
+                is_authorized = True
+            else:
+                logger.exception(
+                    "WebSocket connection rejected from unauthorized origin: %s",
+                    origin,
+                )
+
+    return is_authorized
 
 
 # Global chat agent instance
@@ -540,7 +593,6 @@ async def generic_websocket(websocket: WebSocket):
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
-    db=Depends(get_db),
     chat_service: CoreChatService = Depends(get_core_chat_service),
 ):
     """WebSocket endpoint for real-time chat communication.
