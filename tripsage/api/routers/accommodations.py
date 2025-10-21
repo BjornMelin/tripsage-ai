@@ -5,6 +5,7 @@ searching for accommodations, managing saved accommodations, and retrieving deta
 """
 
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -14,17 +15,23 @@ from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.accommodations import (
     AccommodationDetailsRequest,
     AccommodationDetailsResponse,
+    AccommodationListing,
+    AccommodationLocation,
     AccommodationSearchRequest,
     AccommodationSearchResponse,
     SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
+from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-from tripsage_core.models.schemas_common import BookingStatus
+from tripsage_core.models.schemas_common import AccommodationType, BookingStatus
 from tripsage_core.services.business.accommodation_service import (
+    AccommodationListing as ServiceAccommodationListing,
+    AccommodationLocation as ServiceAccommodationLocation,
     AccommodationSearchRequest as ServiceAccommodationSearchRequest,
+    AccommodationSearchResponse as ServiceAccommodationSearchResponse,
     AccommodationService,
     get_accommodation_service,
 )
@@ -36,7 +43,7 @@ router = APIRouter()
 
 
 def _convert_api_to_service_search_request(
-    api_request: AccommodationSearchRequest,
+    api_request: AccommodationSearchRequest, user_id: str
 ) -> ServiceAccommodationSearchRequest:
     """Convert API AccommodationSearchRequest to Service AccommodationSearchRequest.
 
@@ -46,6 +53,7 @@ def _convert_api_to_service_search_request(
 
     Args:
         api_request: API accommodation search request
+        user_id: User ID
 
     Returns:
         Service accommodation search request
@@ -56,6 +64,8 @@ def _convert_api_to_service_search_request(
 
     # Map API fields to service fields
     service_data = {
+        "user_id": user_id,
+        "trip_id": str(api_request.trip_id) if api_request.trip_id else None,
         "location": api_request.location,
         "check_in": api_request.check_in,
         "check_out": api_request.check_out,
@@ -63,6 +73,7 @@ def _convert_api_to_service_search_request(
         "adults": api_request.adults,  # Service has this as optional
         "children": api_request.children,  # Both have this as optional
         # Note: API 'rooms' field doesn't exist in service schema
+        "metadata": {},
     }
 
     # Add optional fields if they exist
@@ -77,22 +88,87 @@ def _convert_api_to_service_search_request(
         service_data["max_price"] = api_request.max_price
 
     if api_request.amenities:
-        # Service doesn't have amenities in search request - handle in service layer
-        pass
+        service_data["amenities"] = api_request.amenities
 
     if api_request.min_rating:
-        # Service doesn't have min_rating in search request - handle in service layer
-        pass
+        service_data["min_rating"] = api_request.min_rating
 
-    if api_request.latitude and api_request.longitude:
-        # Service doesn't have lat/lng in search request - handle in service layer
-        pass
+    if api_request.latitude is not None and api_request.longitude is not None:
+        service_data["metadata"]["coordinates"] = {
+            "latitude": api_request.latitude,
+            "longitude": api_request.longitude,
+        }
 
-    if api_request.trip_id:
-        # Service doesn't have trip_id in search request - handle in service layer
-        pass
+    if api_request.rooms:
+        service_data["metadata"]["rooms"] = api_request.rooms
+
+    if not service_data["metadata"]:
+        service_data.pop("metadata")
 
     return ServiceAccommodationSearchRequest(**service_data)
+
+
+def _convert_service_location_to_api_location(
+    service_location: ServiceAccommodationLocation,
+) -> AccommodationLocation:
+    """Convert service AccommodationLocation to API AccommodationLocation."""
+    return AccommodationLocation(
+        city=service_location.city,
+        country=service_location.country,
+        latitude=service_location.latitude or 0.0,
+        longitude=service_location.longitude or 0.0,
+        neighborhood=getattr(service_location, "neighborhood", None),
+        distance_to_center=getattr(service_location, "distance_to_center", None),
+    )
+
+
+def _convert_service_listing_to_api_listing(
+    service_listing: ServiceAccommodationListing,
+) -> AccommodationListing:
+    """Convert service AccommodationListing to API AccommodationListing."""
+    return AccommodationListing(
+        id=service_listing.id,
+        name=service_listing.name,
+        description=service_listing.description or "",
+        property_type=AccommodationType(service_listing.property_type.value),
+        location=_convert_service_location_to_api_location(service_listing.location),
+        price_per_night=service_listing.price_per_night,
+        currency=getattr(service_listing, "currency", "USD"),
+        rating=getattr(service_listing, "rating", None),
+        review_count=getattr(service_listing, "review_count", None),
+        amenities=getattr(service_listing, "amenities", []),
+        images=getattr(service_listing, "images", []),
+        max_guests=getattr(service_listing, "max_guests", 2),
+        bedrooms=getattr(service_listing, "bedrooms", 1),
+        beds=getattr(service_listing, "beds", 1),
+        bathrooms=getattr(service_listing, "bathrooms", 1.0),
+        check_in_time=getattr(service_listing, "check_in_time", "15:00"),
+        check_out_time=getattr(service_listing, "check_out_time", "11:00"),
+        url=getattr(service_listing, "url", None),
+        source=getattr(service_listing, "source", None),
+        total_price=getattr(service_listing, "total_price", None),
+    )
+
+
+def _convert_service_search_response_to_api_response(
+    service_response: ServiceAccommodationSearchResponse,
+    api_request: AccommodationSearchRequest,
+) -> AccommodationSearchResponse:
+    """Convert service search response into the API schema representation."""
+    return AccommodationSearchResponse(
+        listings=[
+            _convert_service_listing_to_api_listing(listing)
+            for listing in service_response.listings
+        ],
+        count=service_response.total_results,
+        currency=getattr(service_response, "currency", "USD"),
+        search_id=service_response.search_id,
+        trip_id=getattr(api_request, "trip_id", None),
+        min_price=service_response.min_price,
+        max_price=service_response.max_price,
+        avg_price=service_response.avg_price,
+        search_request=api_request,
+    )
 
 
 @router.post("/search", response_model=AccommodationSearchResponse)
@@ -112,29 +188,12 @@ async def search_accommodations(
         Accommodation search results
     """
     # Convert API schema to service schema
-    service_request = _convert_api_to_service_search_request(request)
+    user_id = get_principal_id(principal)
+    service_request = _convert_api_to_service_search_request(request, user_id)
     service_results = await accommodation_service.search_accommodations(service_request)
 
     # Convert service response to API response format
-    return AccommodationSearchResponse(
-        listings=service_results.listings,
-        count=service_results.total_results,
-        currency=service_results.currency
-        if hasattr(service_results, "currency")
-        else "USD",
-        search_id=service_results.search_id,
-        trip_id=getattr(request, "trip_id", None),
-        min_price=service_results.min_price
-        if hasattr(service_results, "min_price")
-        else None,
-        max_price=service_results.max_price
-        if hasattr(service_results, "max_price")
-        else None,
-        avg_price=service_results.avg_price
-        if hasattr(service_results, "avg_price")
-        else None,
-        search_request=request,  # Use the original API request
-    )
+    return _convert_service_search_response_to_api_response(service_results, request)
 
 
 @router.post("/details", response_model=AccommodationDetailsResponse)
@@ -170,7 +229,7 @@ async def get_accommodation_details(
 
     # Convert service response to API response format
     return AccommodationDetailsResponse(
-        listing=listing,
+        listing=_convert_service_listing_to_api_listing(listing),
         availability=True,  # Default to available - service could provide this
         total_price=None,  # Could be calculated based on check-in/out dates
     )
@@ -211,26 +270,37 @@ async def save_accommodation(
             details={"listing_id": request.listing_id},
         )
 
-    # Use book_accommodation to save the accommodation (with SAVED status)
-    # Note: Service book_accommodation might need modification to support "saved" status
-    booking = await accommodation_service.book_accommodation(
+    # Create booking request for saving accommodation
+    from tripsage_core.services.business.accommodation_service import (
+        AccommodationBookingRequest,
+    )
+
+    booking_request = AccommodationBookingRequest(
         listing_id=request.listing_id,
-        user_id=user_id,
         check_in=request.check_in,
         check_out=request.check_out,
-        guests=1,  # Default - service requires this
-        booking_type="SAVED",  # Indicate this is a save, not a booking
+        guests=1,  # Default for saved accommodations
+        guest_name="Saved",  # Placeholder for saved bookings
+        guest_email="saved@example.com",  # Placeholder
+        guest_phone=None,
+        trip_id=str(request.trip_id) if request.trip_id else None,
+        special_requests=request.notes,
+        payment_method=None,
+        metadata=None,
     )
+
+    # Use book_accommodation to save the accommodation
+    booking = await accommodation_service.book_accommodation(user_id, booking_request)
 
     # Convert booking to saved accommodation response
     return SavedAccommodationResponse(
-        id=booking.id,
+        id=UUID(booking.id),
         user_id=user_id,
         trip_id=request.trip_id,
-        listing=listing,
+        listing=_convert_service_listing_to_api_listing(listing),
         check_in=request.check_in,
         check_out=request.check_out,
-        saved_at=booking.created_at.date(),
+        saved_at=datetime.now().date(),
         notes=request.notes,
         status=BookingStatus.SAVED,
     )
@@ -290,24 +360,52 @@ async def list_saved_accommodations(
     saved_accommodations = []
     for booking in bookings:
         # Filter by trip_id if provided
-        if trip_id and booking.trip_id != trip_id:
+        if trip_id and booking.trip_id != str(trip_id):
             continue
 
-        # Only include saved accommodations (not actual bookings)
-        if booking.status == BookingStatus.SAVED:
-            saved_accommodations.append(
-                SavedAccommodationResponse(
-                    id=booking.id,
-                    user_id=user_id,
-                    trip_id=booking.trip_id,
-                    listing=booking.listing,  # Assumes booking has listing details
-                    check_in=booking.check_in,
-                    check_out=booking.check_out,
-                    saved_at=booking.created_at.date(),
-                    notes=booking.notes,
-                    status=booking.status,
-                )
+        # Only include saved accommodations (not actual bookings).
+        # AccommodationBooking lacks a status field, so include every record for now.
+        # Fetch listing details for each booking.
+        try:
+            listing = await accommodation_service.get_listing_details(
+                booking.listing_id, user_id
             )
+            if listing:
+                trip_uuid: UUID | None = (
+                    UUID(booking.trip_id) if booking.trip_id else trip_id
+                )
+                if trip_uuid is None:
+                    logger.warning(
+                        "Skipping saved accommodation without a trip identifier",
+                        extra={"booking_id": booking.id},
+                    )
+                    continue
+
+                saved_accommodations.append(
+                    SavedAccommodationResponse(
+                        id=UUID(booking.id),
+                        user_id=user_id,
+                        trip_id=trip_uuid,
+                        listing=_convert_service_listing_to_api_listing(listing),
+                        check_in=booking.check_in,
+                        check_out=booking.check_out,
+                        # Booking records omit created_at timestamps.
+                        saved_at=datetime.now().date(),
+                        # Accommodation bookings lack a notes field.
+                        notes=None,
+                        # Treat all retrieved entries as saved entries in the API.
+                        status=BookingStatus.SAVED,
+                    )
+                )
+        except (
+            CoreTripSageError,
+            ConnectionError,
+            TimeoutError,
+            RuntimeError,
+            ValueError,
+        ):
+            # Skip bookings when listing details cannot be retrieved gracefully
+            continue
 
     return saved_accommodations
 
@@ -342,7 +440,7 @@ async def update_saved_accommodation_status(
     bookings = await accommodation_service.get_user_bookings(user_id)
     current_booking = None
     for booking in bookings:
-        if booking.id == saved_accommodation_id:
+        if booking.id == str(saved_accommodation_id):
             current_booking = booking
             break
 
@@ -352,18 +450,30 @@ async def update_saved_accommodation_status(
             details={"saved_accommodation_id": str(saved_accommodation_id)},
         )
 
+    # Get listing details
+    listing = await accommodation_service.get_listing_details(
+        current_booking.listing_id, user_id
+    )
+    if not listing:
+        raise ResourceNotFoundError(
+            message=(
+                f"Accommodation listing with ID {current_booking.listing_id} not found"
+            ),
+            details={"listing_id": current_booking.listing_id},
+        )
+
     # Note: Service doesn't have update_status method - would need to be implemented
     # For now, return the current booking with updated status
     # In a real implementation, the service would need an update_booking_status method
 
     return SavedAccommodationResponse(
-        id=current_booking.id,
+        id=UUID(current_booking.id),
         user_id=user_id,
-        trip_id=current_booking.trip_id,
-        listing=current_booking.listing,
+        trip_id=UUID(current_booking.trip_id) if current_booking.trip_id else None,  # type: ignore
+        listing=_convert_service_listing_to_api_listing(listing),
         check_in=current_booking.check_in,
         check_out=current_booking.check_out,
-        saved_at=current_booking.created_at.date(),
-        notes=current_booking.notes,
+        saved_at=datetime.now().date(),
+        notes=None,
         status=status,  # Use the requested status
     )

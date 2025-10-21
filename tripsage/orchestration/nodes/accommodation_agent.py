@@ -105,7 +105,9 @@ class AccommodationAgentNode(BaseAgentNode):
 
         if search_params:
             # Perform accommodation search using service
-            search_results = await self._search_accommodations(search_params)
+            search_results = await self._search_accommodations(
+                search_params, state["user_id"]
+            )
 
             # Update state with results
             accommodation_search_record = {
@@ -199,11 +201,11 @@ class AccommodationAgentNode(BaseAgentNode):
         return params
 
     async def _search_accommodations(
-        self, search_params: dict[str, Any]
+        self, search_params: dict[str, Any], user_id: str
     ) -> AccommodationSearchResponse:
         """Perform accommodation search using service layer."""
         try:
-            search_request = self._build_search_request(search_params)
+            search_request = self._build_search_request(search_params, user_id)
             result = await self.accommodation_service.search_accommodations(
                 search_request
             )
@@ -224,7 +226,7 @@ class AccommodationAgentNode(BaseAgentNode):
             raise
 
     def _build_search_request(
-        self, search_params: dict[str, Any]
+        self, search_params: dict[str, Any], user_id: str
     ) -> AccommodationSearchRequest:
         """Convert extracted parameters into a typed search request."""
         normalized = search_params.copy()
@@ -243,6 +245,20 @@ class AccommodationAgentNode(BaseAgentNode):
                 if isinstance(check_out_val, str)
                 else check_out_val
             )
+
+        if not normalized.get("guests"):
+            normalized["guests"] = max(normalized.get("adults", 1) or 1, 1)
+
+        normalized.setdefault("user_id", user_id)
+        trip_identifier = normalized.get("trip_id", search_params.get("trip_id"))
+        if trip_identifier is not None and not isinstance(trip_identifier, str):
+            trip_identifier = str(trip_identifier)
+        normalized["trip_id"] = trip_identifier
+        if "metadata" not in normalized:
+            normalized["metadata"] = {
+                "agent": "accommodation_agent",
+                "source": "structured_extraction",
+            }
 
         return AccommodationSearchRequest(**normalized)
 
