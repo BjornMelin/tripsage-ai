@@ -52,11 +52,58 @@ dependencies = [
     # Observability and monitoring
     "opentelemetry-api>=1.38.0,<1.39.0",
     "opentelemetry-sdk>=1.38.0,<1.39.0",
-    "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
     "opentelemetry-exporter-otlp>=1.38.0,<1.39.0",
     "prometheus-client>=0.23.1,<0.24.0",
     "psutil>=7.1.1,<8.0.0",
 ]
+# Dependency groups (PEP 735)
+[dependency-groups]
+observability = [
+    "opentelemetry-instrumentation-asgi>=0.59b0,<0.60",
+    "opentelemetry-instrumentation-fastapi>=0.59b0,<0.60",
+    "opentelemetry-instrumentation-httpx>=0.59b0,<0.60",
+    "opentelemetry-instrumentation-redis>=0.59b0,<0.60",
+]
+
+test = [
+    # Core testing framework
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.4.0",
+    # Testing utilities and mocking
+    "pytest-benchmark>=5.1.0",
+    "pytest-httpx>=0.35.0",
+    "fakeredis>=2.32.0",
+    "nest-asyncio>=1.6.0",
+    "hypothesis>=6.142.1",
+    "python-dotenv>=1.1.1",
+    # Performance and load testing
+    "locust>=2.41.6",
+    # Coverage reporting
+    "coverage[toml]>=7.11.0",
+]
+
+lint = [
+    # Code formatting and linting
+    "ruff>=0.14.1",
+    "mypy>=1.18.2",
+]
+
+dev = [
+    # Include test and lint groups
+    {include-group = "test"},
+    {include-group = "lint"},
+    # Additional development tools
+    "radon>=6.0.1",
+    "python-jose[cryptography]>=3.5.0",
+    "bandit>=1.8.6",
+    "rich>=14.2.0",
+    "numpy>=2.3.4",
+    "uvloop>=0.22.1",
+]
+
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -199,47 +246,6 @@ lines-after-imports = 2
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-# Modern dependency groups following PEP 735
-[dependency-groups]
-test = [
-    # Core testing framework
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-cov>=7.0.0",
-    "pytest-mock>=3.15.1",
-    "pytest-timeout>=2.4.0",
-    # Testing utilities and mocking
-    "pytest-benchmark>=5.1.0",
-    "pytest-httpx>=0.35.0",
-    "fakeredis>=2.32.0",
-    "nest-asyncio>=1.6.0",
-    "hypothesis>=6.142.1",
-    "python-dotenv>=1.1.1",
-    # Performance and load testing
-    "locust>=2.41.6",
-    # Coverage reporting
-    "coverage[toml]>=7.11.0",
-]
-
-lint = [
-    # Code formatting and linting
-    "ruff>=0.14.1",
-    "mypy>=1.18.2",
-]
-
-dev = [
-    # Include test and lint groups
-    {include-group = "test"},
-    {include-group = "lint"},
-    # Additional development tools
-    "radon>=6.0.1",
-    "python-jose[cryptography]>=3.5.0",
-    "bandit>=1.8.6",
-    "rich>=14.2.0",
-    "numpy>=2.3.4",
-    "uvloop>=0.22.1",
-]
 
 [tool.pyright]
 include = ["tripsage", "tripsage_core", "scripts", "tests"]
