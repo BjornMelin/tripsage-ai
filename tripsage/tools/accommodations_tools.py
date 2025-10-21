@@ -6,15 +6,9 @@ Refactored to be lean wrappers that delegate to core services.
 
 from typing import Any
 
+from agents.tool_context import ToolContext
 
-try:
-    from agents import function_tool
-except ImportError:
-    from unittest.mock import MagicMock
-
-    function_tool = MagicMock
-
-from tripsage.agents.service_registry import ServiceRegistry
+from agents import function_tool  # type: ignore
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -23,11 +17,11 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-@function_tool
 @with_error_handling()
-async def search_airbnb_rentals_tool(
+async def search_airbnb_rentals(
+    ctx: ToolContext[Any],
     location: str,
-    service_registry: ServiceRegistry,
+    *,
     checkin: str | None = None,
     checkout: str | None = None,
     adults: int = 1,
@@ -45,8 +39,8 @@ async def search_airbnb_rentals_tool(
     """Search for Airbnb rental options based on location and filters.
 
     Args:
+        ctx: Tool runtime context (provides dependencies)
         location: Location to search for accommodations
-        service_registry: Service registry for accessing services
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
         adults: Number of adults (default: 1)
@@ -66,10 +60,9 @@ async def search_airbnb_rentals_tool(
     """
     logger.info("Searching Airbnb rentals in %s", location)
 
-    # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service(
-        "accommodation_service"
-    )
+    # Get accommodation service from registry via context
+    registry = ctx.context["service_registry"]
+    accommodation_service = registry.get_required_service("accommodation_service")
 
     # Prepare search parameters
     search_params = {
@@ -137,23 +130,22 @@ async def search_airbnb_rentals_tool(
             "error": None,
             "cache_hit": result.get("cache_hit", False),
         }
-    else:
-        return {
-            "source": "airbnb",
-            "location": location,
-            "count": 0,
-            "listings": [],
-            "search_params": search_params,
-            "error": result.get("error", "No results found"),
-            "cache_hit": False,
-        }
+    return {
+        "source": "airbnb",
+        "location": location,
+        "count": 0,
+        "listings": [],
+        "search_params": search_params,
+        "error": result.get("error", "No results found"),
+        "cache_hit": False,
+    }
 
 
-@function_tool
 @with_error_handling()
-async def get_airbnb_listing_details_tool(
+async def get_airbnb_listing_details(
+    ctx: ToolContext[Any],
     listing_id: str,
-    service_registry: ServiceRegistry,
+    *,
     checkin: str | None = None,
     checkout: str | None = None,
     adults: int = 1,
@@ -161,8 +153,8 @@ async def get_airbnb_listing_details_tool(
     """Get detailed information about a specific Airbnb listing.
 
     Args:
+        ctx: Tool runtime context (provides dependencies)
         listing_id: Airbnb listing ID
-        service_registry: Service registry for accessing services
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
         adults: Number of adults (default: 1)
@@ -172,10 +164,9 @@ async def get_airbnb_listing_details_tool(
     """
     logger.info("Getting details for Airbnb listing: %s", listing_id)
 
-    # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service(
-        "accommodation_service"
-    )
+    # Get accommodation service from registry via context
+    registry = ctx.context["service_registry"]
+    accommodation_service = registry.get_required_service("accommodation_service")
 
     # Get listing details through service
     result = await accommodation_service.get_accommodation_details(
@@ -210,18 +201,17 @@ async def get_airbnb_listing_details_tool(
             "cancellation_policy": details.get("cancellation_policy"),
             "cache_hit": result.get("cache_hit", False),
         }
-    else:
-        return {
-            "error": result.get("error", "Failed to get listing details"),
-            "listing_id": listing_id,
-        }
+    return {
+        "error": result.get("error", "Failed to get listing details"),
+        "listing_id": listing_id,
+    }
 
 
-@function_tool
 @with_error_handling()
-async def search_accommodations_tool(
+async def search_accommodations(
+    ctx: ToolContext[Any],
     location: str,
-    service_registry: ServiceRegistry,
+    *,
     source: str = "airbnb",
     checkin: str | None = None,
     checkout: str | None = None,
@@ -236,8 +226,8 @@ async def search_accommodations_tool(
     """Search for accommodations across different providers.
 
     Args:
+        ctx: Tool runtime context (provides dependencies)
         location: Location to search for accommodations
-        service_registry: Service registry for accessing services
         source: Accommodation source (airbnb, booking, hotels)
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
@@ -256,9 +246,9 @@ async def search_accommodations_tool(
 
     # Currently, delegate to airbnb search
     if source.lower() == "airbnb":
-        return await search_airbnb_rentals_tool(
+        return await search_airbnb_rentals(
+            ctx,
             location=location,
-            service_registry=service_registry,
             checkin=checkin,
             checkout=checkout,
             adults=adults,
@@ -269,23 +259,22 @@ async def search_accommodations_tool(
             min_rating=min_rating,
             amenities=amenities,
         )
-    else:
-        return {
-            "error": f"Unsupported accommodation source: {source}",
-            "available_sources": ["airbnb"],
-            "message": (
-                "Currently, only Airbnb is supported for accommodations search. "
-                "Hotel search via Booking.com integration is planned for future "
-                "releases."
-            ),
-        }
+    return {
+        "error": f"Unsupported accommodation source: {source}",
+        "available_sources": ["airbnb"],
+        "message": (
+            "Currently, only Airbnb is supported for accommodations search. "
+            "Hotel search via Booking.com integration is planned for future "
+            "releases."
+        ),
+    }
 
 
-@function_tool
 @with_error_handling()
-async def book_accommodation_tool(
+async def book_accommodation(
+    ctx: ToolContext[Any],
     listing_id: str,
-    service_registry: ServiceRegistry,
+    *,
     source: str = "airbnb",
     checkin: str | None = None,
     checkout: str | None = None,
@@ -296,8 +285,8 @@ async def book_accommodation_tool(
     """Initiate accommodation booking process.
 
     Args:
+        ctx: Tool runtime context (provides dependencies)
         listing_id: Accommodation listing ID
-        service_registry: Service registry for accessing services
         source: Booking source (airbnb, booking, etc.)
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
@@ -310,10 +299,9 @@ async def book_accommodation_tool(
     """
     logger.info("Initiating booking for %s listing: %s", source, listing_id)
 
-    # Get accommodation service from registry
-    accommodation_service = service_registry.get_required_service(
-        "accommodation_service"
-    )
+    # Get accommodation service from registry via context
+    registry = ctx.context["service_registry"]
+    accommodation_service = registry.get_required_service("accommodation_service")
 
     # Initiate booking through service
     return await accommodation_service.book_accommodation(
@@ -325,3 +313,9 @@ async def book_accommodation_tool(
         children=children,
         guest_details=guest_details,
     )
+
+
+search_airbnb_rentals_tool = function_tool(search_airbnb_rentals)
+get_airbnb_listing_details_tool = function_tool(get_airbnb_listing_details)
+search_accommodations_tool = function_tool(search_accommodations)
+book_accommodation_tool = function_tool(book_accommodation)
