@@ -12,8 +12,8 @@ following Pydantic V2 best practices.
 # Re-export Airport and FlightOffer from domain model (canonical location)
 from tripsage_core.models.domain.flight import Airport, FlightOffer
 
-# Re-export CabinClass from enums (canonical location)
-from tripsage_core.models.schemas_common.enums import CabinClass
+# Re-export enums from canonical location
+from tripsage_core.models.schemas_common.enums import BookingStatus, CabinClass
 from tripsage_core.models.schemas_common.flight_schemas import (
     AirportSearchRequest,
     AirportSearchResponse,
@@ -26,6 +26,10 @@ from tripsage_core.models.schemas_common.flight_schemas import (
     SavedFlightResponse,
     UpcomingFlightResponse,
 )
+from tripsage_core.services.business.flight_service import (
+    FlightBooking,
+    FlightBookingRequest,
+)
 
 
 __all__ = [
@@ -33,7 +37,11 @@ __all__ = [
     "AirportSearchRequest",
     "AirportSearchResponse",
     # Enums
+    "BookingStatus",
     "CabinClass",
+    # Domain models
+    "FlightBooking",
+    "FlightBookingRequest",
     "FlightOffer",
     "FlightPassenger",
     # Request schemas

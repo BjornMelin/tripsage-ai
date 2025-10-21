@@ -152,7 +152,7 @@ class SavedDestinationResponse(BaseModel):
 
     id: UUID = Field(description="Saved destination ID")
     user_id: str = Field(description="User ID")
-    trip_id: UUID = Field(description="Trip ID")
+    trip_id: UUID | None = Field(default=None, description="Trip ID")
     destination: Destination = Field(description="Destination details")
     saved_at: date = Field(description="Date when the destination was saved")
     notes: str | None = Field(default=None, description="Notes about this destination")

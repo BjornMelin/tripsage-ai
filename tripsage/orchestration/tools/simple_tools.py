@@ -4,23 +4,38 @@ This module defines all tools using the modern LangGraph @tool pattern,
 replacing the over-engineered registry system with simple, direct tool functions.
 """
 
-import json
-from datetime import datetime
-from typing import Any
+from __future__ import annotations
 
-from langchain_core.tools import tool
+import json
+from collections.abc import Awaitable, Callable
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Final
+
+from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
 from tripsage.tools.memory_tools import (
-    add_conversation_memory as _add_conversation_memory,
-    search_user_memories as _search_user_memories,
+    add_conversation_memory as _add_conversation_memory_raw,
+    search_user_memories as _search_user_memories_raw,
 )
 from tripsage.tools.models import ConversationMessage
-from tripsage_core.services.simple_mcp_service import mcp_manager
+from tripsage_core.services.simple_mcp_service import default_mcp_service
 from tripsage_core.utils.logging_utils import get_logger
 
 
+if TYPE_CHECKING:
+    from tripsage.tools.models import MemorySearchQuery
+
+
 logger = get_logger(__name__)
+
+mcp_service: Final = default_mcp_service
+
+AddMemoryFn = Callable[..., Awaitable[dict[str, Any]]]
+SearchMemoryFn = Callable[["MemorySearchQuery"], Awaitable[list[dict[str, Any]]]]
+
+_add_conversation_memory: AddMemoryFn = _add_conversation_memory_raw
+_search_user_memories: SearchMemoryFn = _search_user_memories_raw
 
 
 # Tool parameter schemas using Pydantic for validation
@@ -84,7 +99,7 @@ async def search_flights(
 ) -> str:
     """Search for flights with date and passenger filters."""
     try:
-        result = await mcp_manager.invoke(
+        result = await mcp_service.invoke(
             method_name="search_flights",
             params={
                 "origin": origin,
@@ -124,7 +139,7 @@ async def search_accommodations(
         if price_max is not None:
             params["price_max"] = price_max
 
-        result = await mcp_manager.invoke(method_name="search_listings", params=params)
+        result = await mcp_service.invoke(method_name="search_listings", params=params)
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
@@ -136,7 +151,7 @@ async def search_accommodations(
 async def geocode_location(location: str) -> str:
     """Get geographic coordinates and details for a location."""
     try:
-        result = await mcp_manager.invoke(
+        result = await mcp_service.invoke(
             method_name="geocode", params={"location": location}
         )
 
@@ -150,7 +165,7 @@ async def geocode_location(location: str) -> str:
 async def get_weather(location: str) -> str:
     """Get current weather information for a location."""
     try:
-        result = await mcp_manager.invoke(
+        result = await mcp_service.invoke(
             method_name="get_current_weather", params={"location": location}
         )
 
@@ -168,7 +183,7 @@ async def web_search(query: str, location: str | None = None) -> str:
         if location:
             params["location"] = location
 
-        result = await mcp_manager.invoke(method_name="search", params=params)
+        result = await mcp_service.invoke(method_name="search_listings", params=params)
 
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
@@ -224,7 +239,7 @@ async def search_memories(content: str, category: str | None = None) -> str:
 
 
 # Tool catalog for agent-specific tool access
-AGENT_TOOLS = {
+AGENT_TOOLS: dict[str, list[BaseTool]] = {
     "flight_agent": [
         search_flights,
         geocode_location,
@@ -268,7 +283,7 @@ AGENT_TOOLS = {
 }
 
 # All available tools list
-ALL_TOOLS = [
+ALL_TOOLS: list[BaseTool] = [
     search_flights,
     search_accommodations,
     geocode_location,
@@ -279,12 +294,12 @@ ALL_TOOLS = [
 ]
 
 
-def get_tools_for_agent(agent_type: str) -> list:
+def get_tools_for_agent(agent_type: str) -> list[BaseTool]:
     """Get tools for a specific agent type."""
     return AGENT_TOOLS.get(agent_type, [])
 
 
-def get_all_tools() -> list:
+def get_all_tools() -> list[BaseTool]:
     """Get all available tools."""
     return ALL_TOOLS
 
@@ -295,11 +310,13 @@ async def health_check() -> dict[str, Any]:
     unhealthy = []
 
     try:
-        # Test basic MCP connectivity
-        await mcp_manager.invoke("health_check", {})
-        healthy.append("mcp_manager")
-    except (ConnectionError, TimeoutError, ValueError) as e:
-        unhealthy.append({"service": "mcp_manager", "error": str(e)})
+        status = await mcp_service.health_check()
+        if status.get("status") == "healthy":
+            healthy.append("airbnb_mcp")
+        else:
+            unhealthy.append({"service": "airbnb_mcp", "error": status})
+    except (ConnectionError, TimeoutError, ValueError) as exc:
+        unhealthy.append({"service": "airbnb_mcp", "error": str(exc)})
 
     return {
         "healthy": healthy,
@@ -307,3 +324,24 @@ async def health_check() -> dict[str, Any]:
         "total_tools": len(ALL_TOOLS),
         "timestamp": datetime.now().isoformat(),
     }
+
+
+__all__ = [
+    "AGENT_TOOLS",
+    "ALL_TOOLS",
+    "AccommodationSearchParams",
+    "FlightSearchParams",
+    "LocationParams",
+    "MemoryParams",
+    "WebSearchParams",
+    "add_memory",
+    "geocode_location",
+    "get_all_tools",
+    "get_tools_for_agent",
+    "get_weather",
+    "health_check",
+    "search_accommodations",
+    "search_flights",
+    "search_memories",
+    "web_search",
+]

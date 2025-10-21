@@ -193,7 +193,7 @@ class ServiceRegistry:
         checkpoint_manager = SupabaseCheckpointManager()
         memory_bridge = SessionMemoryBridge(memory_service=memory_service)
         mcp_service = SimpleMCPService()
-        mcp_bridge = LangGraphMCPBridge(mcp_manager=mcp_service)
+        mcp_bridge = LangGraphMCPBridge(mcp_service=mcp_service)
         await mcp_bridge.initialize()
 
         return cls(
