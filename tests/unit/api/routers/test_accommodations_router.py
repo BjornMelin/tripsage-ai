@@ -249,7 +249,9 @@ class TestAccommodationRouterCoverageBasics:
         )
 
         # Convert to service request (executes all optional field handling)
-        service_request = _convert_api_to_service_search_request(api_request)
+        service_request = _convert_api_to_service_search_request(
+            api_request, user_id="test-user-id"
+        )
 
         # Verify basic conversion worked
         assert service_request.location == "Paris"
@@ -257,6 +259,7 @@ class TestAccommodationRouterCoverageBasics:
         assert service_request.adults == 1
         assert service_request.min_price == 100.0
         assert service_request.max_price == 500.0
+        assert service_request.user_id == "test-user-id"
 
 
 class TestAccommodationRouterBehavior:
@@ -363,13 +366,16 @@ class TestAccommodationRouterBehavior:
         )
 
         # Convert to service request
-        service_request = _convert_api_to_service_search_request(api_request)
+        service_request = _convert_api_to_service_search_request(
+            api_request, user_id="router-test-user"
+        )
 
         # Verify conversion worked
         assert service_request.location == "Tokyo"
         assert service_request.guests == 3  # adults + children = 2 + 1
         assert service_request.adults == 2
         assert service_request.children == 1
+        assert service_request.user_id == "router-test-user"
 
     def test_schema_adapter_with_minimal_fields(self):
         """Test schema adapter with just required fields."""
@@ -397,7 +403,9 @@ class TestAccommodationRouterBehavior:
         )
 
         # Convert to service request
-        service_request = _convert_api_to_service_search_request(api_request)
+        service_request = _convert_api_to_service_search_request(
+            api_request, user_id="router-test-user"
+        )
 
         # Verify basic conversion
         assert service_request.location == "Paris"
@@ -406,6 +414,7 @@ class TestAccommodationRouterBehavior:
         assert (
             service_request.children == 0
         )  # API doesn't provide children, so defaults to 0
+        assert service_request.user_id == "router-test-user"
 
 
 # === MODULE TESTS ===

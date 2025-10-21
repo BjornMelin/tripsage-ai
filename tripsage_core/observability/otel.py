@@ -12,7 +12,7 @@ import time
 from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from functools import wraps
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast, overload
 
 
 # Import typing-only symbols to avoid runtime ImportError on environments
@@ -30,6 +30,9 @@ else:  # pragma: no cover - at runtime these are resolved lazily
 _SETUP_DONE = False
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
+F = TypeVar("F", bound=Callable[..., Any])
+_SyncCallable = Callable[_P, _T]
+_AsyncCallable = Callable[_P, Awaitable[_T]]
 
 
 def setup_otel(
@@ -87,14 +90,28 @@ def setup_otel(
     semconv = importlib.import_module("opentelemetry.semconv.attributes")
 
     Resource = sdk_resources.Resource
+    # Resolve semantic convention attribute keys with safe fallbacks
+    try:
+        svc_name_key = semconv.service_attributes.SERVICE_NAME
+        svc_ver_key = semconv.service_attributes.SERVICE_VERSION
+    except AttributeError:  # pragma: no cover - version fallback
+        svc_name_key = "service.name"
+        svc_ver_key = "service.version"
+    try:
+        deploy_env_key = semconv_inc.deployment_attributes.DEPLOYMENT_ENVIRONMENT
+    except AttributeError:  # pragma: no cover - version fallback
+        deploy_env_key = "deployment.environment"
+    try:
+        instance_id_key = semconv_inc.service_attributes.SERVICE_INSTANCE_ID
+    except AttributeError:  # pragma: no cover - version fallback
+        instance_id_key = "service.instance.id"
+
     resource = Resource.create(
         {
-            semconv.service_attributes.SERVICE_NAME: service_name,
-            semconv.service_attributes.SERVICE_VERSION: service_version,
-            semconv_inc.deployment_attributes.DEPLOYMENT_ENVIRONMENT: environment,
-            semconv_inc.service_attributes.SERVICE_INSTANCE_ID: os.getenv(
-                "HOSTNAME", "local"
-            ),
+            svc_name_key: service_name,
+            svc_ver_key: service_version,
+            deploy_env_key: environment,
+            instance_id_key: os.getenv("HOSTNAME", "local"),
         }
     )
 
@@ -132,19 +149,41 @@ def setup_otel(
     # For FastAPI, call FastAPIInstrumentor.instrument_app(app) after the app
     # instance is created (see tripsage/api/main.py).
     if enable_asgi:
-        with suppress(Exception):  # pragma: no cover
+        with suppress(ImportError):  # pragma: no cover
             asgi_inst = importlib.import_module("opentelemetry.instrumentation.asgi")
             asgi_inst.ASGIInstrumentor().instrument()
     if enable_httpx:
-        with suppress(Exception):  # pragma: no cover
+        with suppress(ImportError):  # pragma: no cover
             httpx_inst = importlib.import_module("opentelemetry.instrumentation.httpx")
             httpx_inst.HTTPXClientInstrumentor().instrument()
     if enable_redis:
-        with suppress(Exception):  # pragma: no cover
+        with suppress(ImportError):  # pragma: no cover
             redis_inst = importlib.import_module("opentelemetry.instrumentation.redis")
             redis_inst.RedisInstrumentor().instrument()
 
     _SETUP_DONE = True
+
+
+def before_sleep_otel(retry_state: Any) -> None:
+    """Record retry attempt details in OTEL.
+
+    Args:
+        retry_state: Tenacity retry state object.
+    """
+    tracer = get_tracer(__name__)
+    with tracer.start_as_current_span("retry.before_sleep") as span:  # type: ignore[attr-defined]
+        fn = getattr(retry_state, "fn", None)
+        attempt = getattr(retry_state, "attempt_number", 0)
+        outcome = getattr(retry_state, "outcome", None)
+        failed = bool(getattr(outcome, "failed", False))
+        err: Exception | None = None
+        if failed and outcome is not None:
+            with suppress(Exception):
+                err = outcome.exception()  # type: ignore[assignment]
+        span.set_attribute("retry.fn", getattr(fn, "__name__", str(fn)))
+        span.set_attribute("retry.attempt", int(attempt))
+        if err:
+            span.record_exception(err)
 
 
 def get_tracer(name: str):
@@ -229,7 +268,7 @@ def trace_span(
     attrs: dict[str, Any]
     | Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]]
     | None = None,
-):
+) -> Callable[[F], F]:
     """Decorator to trace a function as a span.
 
     Args:
@@ -237,14 +276,14 @@ def trace_span(
         attrs: Optional static attributes or a callable producing attributes.
     """
 
-    def _decorator(
-        func: Callable[_P, _T] | Callable[_P, Awaitable[_T]],
-    ) -> Callable[_P, _T] | Callable[_P, Awaitable[_T]]:
+    def _decorator(func: F) -> F:
+        """Decorator to trace a function as a span."""
         tracer = get_tracer(func.__module__)
         span_name = name or func.__qualname__
 
         @wraps(func)
-        def _sync(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+        def _sync(*args: _P.args, **kwargs: _P.kwargs) -> object:
+            """Trace a function as a span."""
             with tracer.start_as_current_span(span_name) as span:
                 if attrs:
                     a = attrs(args, kwargs) if callable(attrs) else attrs
@@ -252,13 +291,14 @@ def trace_span(
                         span.set_attribute(k, v)
                 try:
                     result = func(*args, **kwargs)
-                    return cast(_T, result)
+                    return cast(object, result)
                 except Exception as e:  # pragma: no cover
                     span.record_exception(e)
                     raise
 
         @wraps(func)
-        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> object:
+            """Trace a function as a span."""
             with tracer.start_as_current_span(span_name) as span:
                 if attrs:
                     a = attrs(args, kwargs) if callable(attrs) else attrs
@@ -270,11 +310,30 @@ def trace_span(
                     span.record_exception(e)
                     raise
 
-        if _is_coroutine(func):
-            return cast(Callable[_P, Awaitable[_T]], _async)
-        return cast(Callable[_P, _T], _sync)
+        wrapped: F = cast(F, _async) if _is_coroutine(func) else cast(F, _sync)
+        return wrapped
 
     return _decorator
+
+
+@overload
+def record_histogram(
+    name: str,
+    *,
+    unit: str = "s",
+    description: str = "Function duration in seconds",
+    attr_fn: Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]] | None = None,
+) -> Callable[[F], F]: ...
+
+
+@overload
+def record_histogram(
+    name: str,
+    *,
+    unit: str = "s",
+    description: str = "Function duration in seconds",
+    attr_fn: Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]] | None = None,
+) -> Callable[[F], F]: ...
 
 
 def record_histogram(
@@ -283,7 +342,7 @@ def record_histogram(
     unit: str = "s",
     description: str = "Function duration in seconds",
     attr_fn: Callable[[tuple[Any, ...], dict[str, Any]], dict[str, Any]] | None = None,
-):
+) -> Callable[[F], F]:
     """Decorator to record function duration into a histogram.
 
     Args:
@@ -293,37 +352,37 @@ def record_histogram(
         attr_fn: Optional callable computing attributes from args/kwargs.
     """
 
-    def _decorator(
-        func: Callable[_P, _T] | Callable[_P, Awaitable[_T]],
-    ) -> Callable[_P, _T] | Callable[_P, Awaitable[_T]]:
+    def _decorator(func: F) -> F:
+        """Decorator to record function duration into a histogram."""
         meter = get_meter(func.__module__)
         hist = meter.create_histogram(name, unit=unit, description=description)
 
         @wraps(func)
-        def _sync(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+        def _sync(*args: _P.args, **kwargs: _P.kwargs) -> object:
+            """Record function duration into a histogram."""
             start = time.perf_counter()
             try:
-                return cast(_T, func(*args, **kwargs))
+                return cast(object, func(*args, **kwargs))
             finally:
                 dur = time.perf_counter() - start
                 attributes = attr_fn(args, kwargs) if attr_fn else {}
                 hist.record(dur, attributes)
 
         @wraps(func)
-        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> _T:
+        async def _async(*args: _P.args, **kwargs: _P.kwargs) -> object:
+            """Record function duration into a histogram."""
             start = time.perf_counter()
             try:
                 return await cast(  # type: ignore[func-returns-value]
-                    Awaitable[_T], func(*args, **kwargs)
+                    Awaitable[object], func(*args, **kwargs)
                 )
             finally:
                 dur = time.perf_counter() - start
                 attributes = attr_fn(args, kwargs) if attr_fn else {}
                 hist.record(dur, attributes)
 
-        if _is_coroutine(func):
-            return cast(Callable[_P, Awaitable[_T]], _async)
-        return cast(Callable[_P, _T], _sync)
+        wrapped: F = cast(F, _async) if _is_coroutine(func) else cast(F, _sync)
+        return wrapped
 
     return _decorator
 
