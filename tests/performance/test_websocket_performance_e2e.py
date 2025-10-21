@@ -20,9 +20,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import websockets
-from httpx import AsyncClient
 
-from tripsage.api.main import app
 from tripsage_core.config import get_settings
 
 
@@ -42,8 +40,9 @@ def websocket_settings():
 @pytest.fixture
 async def test_client():
     """Async test client for the FastAPI app."""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
+    # Mock client since not used in performance simulations
+    mock_client = AsyncMock()
+    yield mock_client
 
 
 @pytest.fixture
@@ -63,7 +62,7 @@ async def authenticated_websocket_connection(websocket_settings):
         try:
             websocket = await websockets.connect(uri)
             yield websocket
-        except Exception as e:
+        except (ConnectionError, TimeoutError, RuntimeError, OSError) as e:
             logger.warning("Could not establish WebSocket connection: %s", e)
             # Yield a mock WebSocket for testing
             mock_ws = AsyncMock()
@@ -246,7 +245,7 @@ class TestWebSocketMessagePerformance:
 
             for i in range(batch_size):
                 # Simulate message processing
-                {
+                _ = {
                     "id": i,
                     "type": "batch_test",
                     "data": f"Message {i}",
