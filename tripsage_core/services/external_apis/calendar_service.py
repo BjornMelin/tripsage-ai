@@ -9,7 +9,6 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from functools import wraps
 from pathlib import Path
 from typing import Any, cast
 
@@ -24,6 +23,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreExternalAPIError as CoreAPIError,
     CoreServiceError,
 )
+from tripsage_core.infrastructure.retry_policies import generic_retry
 from tripsage_core.models.api.calendar_models import (
     CalendarEvent,
     CalendarList,
@@ -47,40 +47,7 @@ SCOPES = [
 ]
 
 
-def async_retry(
-    max_attempts: int = 3,
-    delay: float = 1.0,
-    backoff: float = 2.0,
-    exceptions: tuple = (HttpError,),
-):
-    """Decorator for async retry logic."""
-
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            for attempt in range(max_attempts):
-                try:
-                    return await func(*args, **kwargs)
-                except exceptions as e:
-                    if attempt < max_attempts - 1:
-                        wait_time = delay * (backoff**attempt)
-                        await asyncio.sleep(wait_time)
-                    else:
-                        raise CoreAPIError(
-                            message=(
-                                f"Google Calendar API failed after {max_attempts} "
-                                f"attempts: {e}"
-                            ),
-                            code="CALENDAR_API_ERROR",
-                            api_service="GoogleCalendarService",
-                            details={"attempts": max_attempts, "error": str(e)},
-                        ) from e
-            # This should never be reached, but added for type safety
-            return None
-
-        return wrapper
-
-    return decorator
+"""Retry logic moved to Tenacity policies via generic_retry."""
 
 
 class GoogleCalendarServiceError(CoreAPIError):
@@ -267,7 +234,7 @@ class GoogleCalendarService:
                 cache_error,
             )
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def list_calendars(
         self, show_hidden: bool = False, show_deleted: bool = False
     ) -> CalendarList:
@@ -335,7 +302,7 @@ class GoogleCalendarService:
 
         return response
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def create_event(
         self,
         calendar_id: str,
@@ -382,7 +349,7 @@ class GoogleCalendarService:
                 f"Error creating event: {e}", original_error=e
             ) from e
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def update_event(
         self,
         calendar_id: str,
@@ -429,7 +396,7 @@ class GoogleCalendarService:
                 f"Error updating event: {e}", original_error=e
             ) from e
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def delete_event(
         self,
         calendar_id: str,
@@ -474,7 +441,7 @@ class GoogleCalendarService:
                 f"Error deleting event: {e}", original_error=e
             ) from e
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def get_event(
         self,
         calendar_id: str,
@@ -515,7 +482,7 @@ class GoogleCalendarService:
                 f"Error getting event: {e}", original_error=e
             ) from e
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def list_events(
         self,
         request: EventsListRequest,
@@ -595,7 +562,7 @@ class GoogleCalendarService:
                 f"Error listing events: {e}", original_error=e
             ) from e
 
-    @async_retry()
+    @generic_retry(exceptions=(HttpError,))
     async def get_free_busy(
         self,
         request: FreeBusyRequest,

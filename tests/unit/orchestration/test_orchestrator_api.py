@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tripsage.agents.service_registry import ServiceRegistry
-from tripsage.orchestration import TripSageOrchestrator, get_orchestrator
+from tripsage.orchestration.graph import TripSageOrchestrator, get_orchestrator
 
 
 def test_get_orchestrator_requires_registry():

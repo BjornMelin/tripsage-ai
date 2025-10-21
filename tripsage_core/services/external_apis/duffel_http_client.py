@@ -263,17 +263,21 @@ class DuffelHTTPClient:
         if data:
             data = {"data": data}
 
-        retry_count = 0
-        last_exception = None
+        from tripsage_core.infrastructure.retry_policies import httpx_block_retry
 
-        while retry_count <= self.max_retries:
-            try:
-                response = await self._client.request(
-                    method=method,
-                    url=url,
-                    json=data if method in ["POST", "PUT", "PATCH"] else None,
-                    params=params,
-                )
+        retry_count = 0
+
+        try:
+            async for attempt in httpx_block_retry(
+                attempts=self.max_retries + 1, max_delay=10.0
+            ):
+                with attempt:
+                    response = await self._client.request(
+                        method=method,
+                        url=url,
+                        json=data if method in ["POST", "PUT", "PATCH"] else None,
+                        params=params,
+                    )
 
                 # Handle rate limiting
                 if response.status_code == 429:
@@ -298,10 +302,9 @@ class DuffelHTTPClient:
                     )
 
                     # Retry on server errors (5xx)
-                    if response.status_code >= 500 and retry_count < self.max_retries:
-                        await asyncio.sleep(self.retry_backoff * (2**retry_count))
-                        retry_count += 1
-                        continue
+                    if response.status_code >= 500:
+                        # Trigger tenacity retry by raising a network-style error
+                        raise httpx.NetworkError("Server error, retrying")
 
                     raise DuffelAPIError(
                         error_message,
@@ -315,31 +318,22 @@ class DuffelHTTPClient:
                 except Exception as e:
                     raise DuffelAPIError(f"Failed to parse response JSON: {e!s}") from e
 
-            except (
-                httpx.TimeoutException,
-                httpx.ConnectError,
-                httpx.NetworkError,
-            ) as e:
-                last_exception = e
-                if retry_count < self.max_retries:
-                    await asyncio.sleep(self.retry_backoff * (2**retry_count))
-                    retry_count += 1
-                    continue
-                break
+        except DuffelAPIError as api_error:
+            # Don't retry API errors (4xx), only network/server errors
+            raise api_error from None
 
-            except DuffelAPIError as api_error:
-                # Don't retry API errors (4xx), only network/server errors
-                raise api_error from None
+        except DuffelRateLimitError as rate_error:
+            # Don't retry rate limit errors, let them propagate
+            raise rate_error from None
+        except (httpx.TimeoutException, httpx.ConnectError, httpx.NetworkError) as e:
+            # Tenacity exhausted
+            message = (
+                "Request failed after "
+                f"{self.max_retries + 1} attempts. Last error: {e!s}"
+            )
+            raise DuffelAPIError(message) from e
 
-            except DuffelRateLimitError as rate_error:
-                # Don't retry rate limit errors, let them propagate
-                raise rate_error from None
-
-        # If we get here, we've exhausted retries
-        raise DuffelAPIError(
-            f"Request failed after {self.max_retries + 1} attempts. "
-            f"Last error: {str(last_exception) if last_exception else 'Unknown'}",
-        )
+        raise DuffelAPIError("Request failed without producing a response")
 
     async def search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
         """Search for flights using the Duffel API.
