@@ -11,10 +11,10 @@ from uuid import UUID
 
 from pydantic import Field, field_validator
 
-from tripsage_core.exceptions import (
-    CoreAuthorizationError as PermissionError,
-    CoreResourceNotFoundError as NotFoundError,
-    CoreValidationError as ValidationError,
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthorizationError,
+    CoreResourceNotFoundError,
+    CoreValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.enums import (
@@ -179,7 +179,11 @@ class TripService:
                 trip_type=trip_data.trip_type,
                 visibility=trip_data.visibility,
                 tags=trip_data.tags,
-                preferences_extended=trip_data.preferences or TripPreferences(),
+                preferences_extended=(
+                    trip_data.preferences
+                    if trip_data.preferences is not None
+                    else TripPreferences()  # type: ignore
+                ),
             )
 
             # Store in database
@@ -263,8 +267,13 @@ class TripService:
             # Remove None values
             filters = {k: v for k, v in filters.items() if v is not None}
 
-            results = await self.db.get_trips(
-                filters=filters, limit=limit, offset=offset
+            results = await self.db.select(
+                "trips",
+                "*",
+                filters=filters,
+                limit=limit,
+                offset=offset,
+                order_by="-created_at",
             )
 
             trips = []
@@ -321,7 +330,9 @@ class TripService:
         try:
             # Check access permissions
             if not await self._check_trip_access(trip_id, user_id, require_owner=True):
-                raise PermissionError("You don't have permission to update this trip")
+                raise CoreAuthorizationError(
+                    "You don't have permission to update this trip"
+                )
 
             # Get existing trip
             existing = await self.db.get_trip_by_id(trip_id)
@@ -342,7 +353,7 @@ class TripService:
                 start = updates.get("start_date", existing["start_date"])
                 end = updates.get("end_date", existing["end_date"])
                 if end < start:
-                    raise ValidationError("End date must be after start date")
+                    raise CoreValidationError("End date must be after start date")
 
             # Update timestamp
             updates["updated_at"] = datetime.now(UTC)
@@ -386,7 +397,9 @@ class TripService:
         try:
             # Check access permissions
             if not await self._check_trip_access(trip_id, user_id, require_owner=True):
-                raise PermissionError("You don't have permission to delete this trip")
+                raise CoreAuthorizationError(
+                    "You don't have permission to delete this trip"
+                )
 
             result = await self.db.delete_trip(trip_id)
 
@@ -432,12 +445,12 @@ class TripService:
         try:
             # Verify owner
             if not await self._check_trip_access(trip_id, owner_id, require_owner=True):
-                raise PermissionError("Only the trip owner can share the trip")
+                raise CoreAuthorizationError("Only the trip owner can share the trip")
 
             # Verify target user exists
-            target_user = await self.user_service.get_user(share_with_user_id)
+            target_user = await self.user_service.get_user_by_id(share_with_user_id)
             if not target_user:
-                raise NotFoundError("User not found")
+                raise CoreResourceNotFoundError("User not found")
 
             # Create collaborator record
             collaborator_data = {
@@ -461,9 +474,9 @@ class TripService:
                     },
                 )
 
-            return result
+            return bool(result)
 
-        except (PermissionError, NotFoundError):
+        except (PermissionError, CoreResourceNotFoundError):
             raise
         except Exception as e:
             logger.exception(
@@ -496,9 +509,11 @@ class TripService:
         try:
             # Verify owner
             if not await self._check_trip_access(trip_id, owner_id, require_owner=True):
-                raise PermissionError("Only the trip owner can unshare the trip")
+                raise CoreAuthorizationError("Only the trip owner can unshare the trip")
 
-            result = await self.db.remove_trip_collaborator(trip_id, unshare_user_id)
+            result = await self.db.delete(
+                "trip_collaborators", {"trip_id": trip_id, "user_id": unshare_user_id}
+            )
 
             if result:
                 logger.info(
@@ -510,7 +525,7 @@ class TripService:
                     },
                 )
 
-            return result
+            return bool(result)
 
         except PermissionError:
             raise
@@ -541,7 +556,9 @@ class TripService:
         """
         try:
             # Get trips where user is a collaborator
-            collaborations = await self.db.get_user_collaborations(user_id)
+            collaborations = await self.db.select(
+                "trip_collaborators", "*", filters={"user_id": user_id}
+            )
 
             trips = []
             for collab in collaborations:
@@ -587,8 +604,9 @@ class TripService:
                 search_filters.update(filters)
 
             # Perform search
+            search_filters["query"] = query
             results = await self.db.search_trips(
-                query=query, filters=search_filters, limit=limit, offset=offset
+                search_filters, limit=limit, offset=offset
             )
 
             trips = []
