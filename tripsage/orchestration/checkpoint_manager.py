@@ -169,27 +169,3 @@ class CheckpointConfig:
         self.max_checkpoint_age_days = max_checkpoint_age_days
         self.pool_size = pool_size
         self.enable_stats = enable_stats
-
-
-# Global checkpoint manager instance
-_global_checkpoint_manager: SupabaseCheckpointManager | None = None
-
-
-def get_checkpoint_manager() -> SupabaseCheckpointManager:
-    """Get the global checkpoint manager instance."""
-    global _global_checkpoint_manager
-    if _global_checkpoint_manager is None:
-        _global_checkpoint_manager = SupabaseCheckpointManager()
-    return _global_checkpoint_manager
-
-
-async def get_async_checkpointer() -> Any:
-    """Get the async PostgreSQL checkpointer."""
-    manager = get_checkpoint_manager()
-    return await manager.get_async_checkpointer()
-
-
-def get_sync_checkpointer() -> Any:
-    """Get the sync PostgreSQL checkpointer."""
-    manager = get_checkpoint_manager()
-    return manager.get_sync_checkpointer()

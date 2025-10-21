@@ -5,7 +5,9 @@ tools, and orchestration nodes. It ensures proper initialization and lifecycle
 management of services while enabling easy testing through dependency injection.
 """
 
-from typing import TypeVar, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from tripsage_core.config import get_settings
 from tripsage_core.services.business.accommodation_service import AccommodationService
@@ -36,6 +38,12 @@ from tripsage_core.services.infrastructure import (
     WebSocketBroadcaster,
     WebSocketManager,
 )
+
+
+if TYPE_CHECKING:
+    from tripsage.orchestration.checkpoint_manager import SupabaseCheckpointManager
+    from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
+    from tripsage.orchestration.memory_bridge import SessionMemoryBridge
 
 
 ServiceT = TypeVar("ServiceT")
@@ -75,6 +83,10 @@ class ServiceRegistry:
         key_monitoring_service: KeyMonitoringService | None = None,
         websocket_broadcaster: WebSocketBroadcaster | None = None,
         websocket_manager: WebSocketManager | None = None,
+        # Orchestration lifecycle services
+        checkpoint_manager: SupabaseCheckpointManager | None = None,
+        memory_bridge: SessionMemoryBridge | None = None,
+        mcp_bridge: LangGraphMCPBridge | None = None,
     ):
         """Initialize the service registry with optional service instances.
 
@@ -108,9 +120,12 @@ class ServiceRegistry:
         self.key_monitoring_service = key_monitoring_service
         self.websocket_broadcaster = websocket_broadcaster
         self.websocket_manager = websocket_manager
+        self.checkpoint_manager = checkpoint_manager
+        self.memory_bridge = memory_bridge
+        self.mcp_bridge = mcp_bridge
 
     @classmethod
-    async def create_default(cls, db_service: DatabaseService) -> "ServiceRegistry":
+    async def create_default(cls, db_service: DatabaseService) -> ServiceRegistry:
         """Create a service registry with default service implementations.
 
         This factory method initializes all services with their default configurations
@@ -165,6 +180,17 @@ class ServiceRegistry:
             database_service=db_service, user_service=user_service
         )
 
+        from tripsage.orchestration.checkpoint_manager import (
+            SupabaseCheckpointManager,
+        )
+        from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
+        from tripsage.orchestration.memory_bridge import SessionMemoryBridge
+
+        checkpoint_manager = SupabaseCheckpointManager()
+        memory_bridge = SessionMemoryBridge(memory_service=memory_service)
+        mcp_bridge = LangGraphMCPBridge()
+        await mcp_bridge.initialize()
+
         return cls(
             # Business services
             accommodation_service=accommodation_service,
@@ -191,6 +217,9 @@ class ServiceRegistry:
             key_monitoring_service=key_monitoring_service,
             websocket_broadcaster=websocket_broadcaster,
             websocket_manager=websocket_manager,
+            checkpoint_manager=checkpoint_manager,
+            memory_bridge=memory_bridge,
+            mcp_bridge=mcp_bridge,
         )
 
     def get_required_service(
@@ -221,6 +250,31 @@ class ServiceRegistry:
                 f" {expected_type.__name__}"
             )
         return cast(ServiceT, service)
+
+    def get_checkpoint_manager(self) -> SupabaseCheckpointManager:
+        """Return a shared checkpoint manager instance."""
+        from tripsage.orchestration.checkpoint_manager import SupabaseCheckpointManager
+
+        if self.checkpoint_manager is None:
+            self.checkpoint_manager = SupabaseCheckpointManager()
+        return self.checkpoint_manager
+
+    def get_memory_bridge(self) -> SessionMemoryBridge:
+        """Return the session memory bridge."""
+        from tripsage.orchestration.memory_bridge import SessionMemoryBridge
+
+        if self.memory_bridge is None:
+            self.memory_bridge = SessionMemoryBridge(memory_service=self.memory_service)
+        return self.memory_bridge
+
+    async def get_mcp_bridge(self) -> LangGraphMCPBridge:
+        """Return the LangGraph MCP bridge, ensuring it is initialized."""
+        from tripsage.orchestration.mcp_bridge import LangGraphMCPBridge
+
+        if self.mcp_bridge is None:
+            self.mcp_bridge = LangGraphMCPBridge()
+        await self.mcp_bridge.initialize()
+        return self.mcp_bridge
 
     def get_optional_service(
         self,
