@@ -73,14 +73,14 @@ TripSage implements a **hybrid integration architecture** that prioritizes perfo
 #### Implementation
 
 ```python
-from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
+from tripsage_core.services.external_apis.flights_service import DuffelFlightsService
 from tripsage_core.utils.cache_utils import cache_result
 
 class FlightService:
     """Unified flight service with direct Duffel integration."""
     
     def __init__(self):
-        self.duffel_client = DuffelHTTPClient()
+        self.duffel_client = DuffelFlightsService()
         self.cache_service = DragonflyDBService()
     
     @cache_result(ttl=300, namespace="flights")
@@ -585,7 +585,7 @@ class FlightBookingService:
     """Complete flight booking and management service."""
     
     def __init__(self):
-        self.duffel_client = DuffelHTTPClient()
+        self.duffel_client = DuffelFlightsService()
         self.cache_service = DragonflyDBService()
     
     async def create_booking(self, selected_offers: List[str], passengers: List[Passenger]) -> BookingResult:

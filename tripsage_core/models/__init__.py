@@ -76,7 +76,6 @@ from .domain import (
     AccommodationListing,
     AccommodationLocation,
     Airport,
-    CabinClass,
     Entity,
     FlightOffer,
     FlightSegment,
@@ -85,6 +84,7 @@ from .domain import (
     SessionMemory,
     TravelMemory,
 )
+from .schemas_common.enums import CabinClass
 
 
 __all__ = [

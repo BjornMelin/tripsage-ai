@@ -24,7 +24,10 @@ Usage:
     )
 """
 
-# Accommodation domain models
+from tripsage_core.models.domain.flights_canonical import FlightOffer, FlightSegment
+from tripsage_core.models.schemas_common.enums import CabinClass
+from tripsage_core.models.schemas_common.geographic import Airport
+
 from .accommodation import (
     AccommodationAmenity,
     AccommodationImage,
@@ -32,24 +35,7 @@ from .accommodation import (
     AccommodationLocation,
     PropertyType,
 )
-
-# Flight domain models
-from .flight import (
-    Airport,
-    CabinClass,
-    FlightOffer,
-    FlightSegment,
-)
-
-# Memory and knowledge graph domain models
-from .memory import (
-    Entity,
-    Relation,
-    SessionMemory,
-    TravelMemory,
-)
-
-# Transportation domain models
+from .memory import Entity, Relation, SessionMemory, TravelMemory
 from .transportation import (
     TransportationLocation,
     TransportationOffer,

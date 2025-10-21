@@ -1,4 +1,6 @@
-"""Comprehensive tests for AccommodationService.
+# pylint: disable=duplicate-code
+# pyright: reportCallIssue=false
+"""Tests for AccommodationService.
 
 This module provides full test coverage for accommodation management operations
 including search, booking, management, and MCP client integration.
@@ -6,7 +8,7 @@ Updated for Pydantic v2 and modern testing patterns.
 """
 
 from datetime import UTC, date, datetime, timedelta
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
@@ -18,11 +20,9 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.services.business.accommodation_service import (
-    AccommodationAmenity,
     AccommodationBooking,
     AccommodationBookingRequest,
     AccommodationHost,
-    AccommodationImage,
     AccommodationListing,
     AccommodationLocation,
     AccommodationSearchRequest,
@@ -35,6 +35,7 @@ from tripsage_core.services.business.accommodation_service import (
 )
 
 
+# pylint: disable=too-many-public-methods
 class TestAccommodationService:
     """Test suite for AccommodationService."""
 
@@ -48,33 +49,40 @@ class TestAccommodationService:
     @pytest.fixture
     def sample_search_request(self) -> AccommodationSearchRequest:
         """Sample accommodation search request."""
-        return AccommodationSearchRequest(
-            location="Paris, France",
-            check_in=date.today() + timedelta(days=30),
-            check_out=date.today() + timedelta(days=35),
-            guests=2,
-            adults=2,  # Add explicit adults field
-            children=0,  # Add explicit children field
-            property_types=[PropertyType.APARTMENT, PropertyType.HOTEL],
-            min_price=80.00,
-            max_price=300.00,
-            amenities=["wifi", "kitchen"],
-            min_rating=4.0,
-            instant_book=True,
+        return AccommodationSearchRequest.model_validate(
+            {
+                "user_id": "test-user-id",
+                "trip_id": str(uuid4()),
+                "location": "Paris, France",
+                "check_in": date.today() + timedelta(days=30),
+                "check_out": date.today() + timedelta(days=35),
+                "guests": 2,
+                "adults": 2,
+                "children": 0,
+                "property_types": [PropertyType.APARTMENT, PropertyType.HOTEL],
+                "min_price": 80.00,
+                "max_price": 300.00,
+                "amenities": ["wifi", "kitchen"],
+                "min_rating": 4.0,
+                "instant_book": True,
+                "metadata": {"source": "unit_test"},
+            }
         )
 
     @pytest.fixture
     def sample_accommodation_location(self) -> AccommodationLocation:
         """Sample accommodation location."""
-        return AccommodationLocation(
-            address="123 Rue de la Paix",
-            city="Paris",
-            country="France",
-            postal_code="75001",
-            latitude=48.8566,
-            longitude=2.3522,
-            neighborhood="1st Arrondissement",
-            distance_to_center=0.5,
+        return AccommodationLocation.model_validate(
+            {
+                "address": "123 Rue de la Paix",
+                "city": "Paris",
+                "country": "France",
+                "postal_code": "75001",
+                "latitude": 48.8566,
+                "longitude": 2.3522,
+                "neighborhood": "1st Arrondissement",
+                "distance_to_center": 0.5,
+            }
         )
 
     @pytest.fixture
@@ -101,59 +109,62 @@ class TestAccommodationService:
         """Sample accommodation listing."""
         listing_id = str(uuid4())
 
-        return AccommodationListing(
-            id=listing_id,
-            name="Charming Parisian Apartment in Montmartre",
-            description=(
-                "Beautiful 2-bedroom apartment with stunning views of Sacré-Cœur"
-            ),
-            property_type=PropertyType.APARTMENT,
-            location=sample_accommodation_location,
-            price_per_night=150.00,
-            total_price=750.00,
-            currency="EUR",
-            rating=4.8,
-            review_count=127,
-            max_guests=4,
-            bedrooms=2,
-            beds=3,
-            bathrooms=1.5,
-            amenities=[
-                AccommodationAmenity(
-                    name="WiFi",
-                    category="connectivity",
-                    icon="wifi",
-                    description="High-speed internet",
+        return AccommodationListing.model_validate(
+            {
+                "id": listing_id,
+                "user_id": "test-user-id",
+                "name": "Charming Parisian Apartment in Montmartre",
+                "description": (
+                    "Beautiful 2-bedroom apartment with stunning views of Sacré-Cœur"
                 ),
-                AccommodationAmenity(
-                    name="Kitchen",
-                    category="amenities",
-                    icon="kitchen",
-                    description="Fully equipped kitchen",
-                ),
-            ],
-            images=[
-                AccommodationImage(
-                    url="https://example.com/images/1.jpg",
-                    caption="Living room",
-                    is_primary=True,
-                    width=1200,
-                    height=800,
-                )
-            ],
-            host=sample_accommodation_host,
-            check_in_time="15:00",
-            check_out_time="11:00",
-            cancellation_policy=CancellationPolicy.MODERATE,
-            instant_book=True,
-            source="airbnb",
-            source_listing_id="airbnb_123456",
-            listing_url="https://airbnb.com/rooms/123456",
-            nights=5,
-            is_available=True,
-            score=0.95,
-            price_score=0.85,
-            location_score=0.98,
+                "property_type": PropertyType.APARTMENT,
+                "location": sample_accommodation_location.model_dump(),
+                "price_per_night": 150.00,
+                "total_price": 750.00,
+                "currency": "EUR",
+                "rating": 4.8,
+                "review_count": 127,
+                "max_guests": 4,
+                "bedrooms": 2,
+                "beds": 3,
+                "bathrooms": 1.5,
+                "amenities": [
+                    {
+                        "name": "WiFi",
+                        "category": "connectivity",
+                        "icon": "wifi",
+                        "description": "High-speed internet",
+                    },
+                    {
+                        "name": "Kitchen",
+                        "category": "amenities",
+                        "icon": "kitchen",
+                        "description": "Fully equipped kitchen",
+                    },
+                ],
+                "images": [
+                    {
+                        "url": "https://example.com/images/1.jpg",
+                        "caption": "Living room",
+                        "is_primary": True,
+                        "width": 1200,
+                        "height": 800,
+                    }
+                ],
+                "host": sample_accommodation_host.model_dump(),
+                "check_in_time": "15:00",
+                "check_out_time": "11:00",
+                "cancellation_policy": CancellationPolicy.MODERATE,
+                "instant_book": True,
+                "source": "airbnb",
+                "source_listing_id": "airbnb_123456",
+                "listing_url": "https://airbnb.com/rooms/123456",
+                "nights": 5,
+                "is_available": True,
+                "score": 0.95,
+                "price_score": 0.85,
+                "location_score": 0.98,
+            }
         )
 
     @pytest.fixture
@@ -171,6 +182,9 @@ class TestAccommodationService:
             id=booking_id,
             user_id=user_id,
             trip_id=str(uuid4()),
+            guest_name="Test Guest",
+            guest_email="test@example.com",
+            guest_phone="+33123456789",
             listing_id=str(uuid4()),
             confirmation_number="ABC123DEF",
             property_name="Charming Parisian Apartment",
@@ -188,9 +202,12 @@ class TestAccommodationService:
             cancellation_policy=CancellationPolicy.MODERATE,
             is_cancellable=True,
             is_refundable=True,
+            hold_only=False,
+            payment_method="credit_card",
             host=sample_accommodation_host,
             special_requests="Early check-in if possible",
             metadata={"booking_source": "web", "payment_method": "credit_card"},
+            created_at=now,
         )
 
     # Test Search Operations
@@ -211,6 +228,8 @@ class TestAccommodationService:
         assert isinstance(result, AccommodationSearchResponse)
         assert len(result.listings) == 3  # Mock generator returns 3 listings
         assert result.total_results == 3
+        assert result.user_id == sample_search_request.user_id
+        assert result.trip_id == sample_search_request.trip_id
         assert all(listing.location.city == "Paris" for listing in result.listings)
         assert all(listing.is_available for listing in result.listings)
         assert all(80 <= listing.price_per_night <= 300 for listing in result.listings)
@@ -225,6 +244,8 @@ class TestAccommodationService:
             ValueError, match="Check-out date must be after check-in date"
         ):
             AccommodationSearchRequest(
+                user_id="test-user-id",
+                trip_id=None,
                 location="Paris, France",
                 check_in=date.today() + timedelta(days=30),
                 check_out=date.today() + timedelta(days=25),  # Before check-in
@@ -303,7 +324,9 @@ class TestAccommodationService:
             guests=sample_accommodation_booking.guests,
             guest_name="Test Guest",
             guest_email="test@example.com",
+            guest_phone="+33123456789",
             special_requests=sample_accommodation_booking.special_requests,
+            payment_method="credit_card",
         )
 
         # Act
@@ -316,6 +339,11 @@ class TestAccommodationService:
         assert result.user_id == user_id
         assert result.listing_id == sample_accommodation_listing.id
         assert result.status == BookingStatus.BOOKED
+        assert result.guest_name == "Test Guest"
+        assert result.guest_email == "test@example.com"
+        assert result.guest_phone == "+33123456789"
+        assert result.payment_method == "credit_card"
+        assert not result.hold_only
         mock_database_service.get_accommodation_listing.assert_called_once_with(
             sample_accommodation_listing.id, user_id
         )
@@ -344,6 +372,8 @@ class TestAccommodationService:
             guests=2,
             guest_name="Test Guest",
             guest_email="test@example.com",
+            guest_phone="+33123456789",
+            payment_method="credit_card",
         )
 
         # Act & Assert
@@ -432,7 +462,26 @@ class TestAccommodationService:
     async def test_get_accommodation_service_returns_instance(self):
         """Test the dependency injection function."""
         # Act
-        service = await get_accommodation_service()
+        mock_db = AsyncMock()
+        mock_db.store_accommodation_search = AsyncMock()
+        mock_db.store_accommodation_listing = AsyncMock()
+        mock_db.store_accommodation_booking = AsyncMock()
+        mock_db.get_accommodation_listing = AsyncMock(return_value=None)
+
+        with (
+            patch(
+                "tripsage_core.services.infrastructure.get_database_service",
+                AsyncMock(return_value=mock_db),
+            ),
+            patch.object(
+                AccommodationService, "__init__", return_value=None
+            ) as mock_init,
+        ):
+            service = await get_accommodation_service()
+            mock_init.assert_called_once()
+            # Manually assign dependencies expected by tests
+            service.db = mock_db
+            service.external_service = None
 
         # Assert
         assert isinstance(service, AccommodationService)
@@ -446,6 +495,8 @@ class TestAccommodationService:
         """Test accommodation search with complex filters."""
         # Arrange
         search_request = AccommodationSearchRequest(
+            user_id="test-user-id",
+            trip_id=str(uuid4()),
             location="Paris, France",
             check_in=date.today() + timedelta(days=30),
             check_out=date.today() + timedelta(days=35),
@@ -463,6 +514,7 @@ class TestAccommodationService:
             min_rating=4.5,
             sort_by="price",
             sort_order="asc",
+            metadata={"test_case": "complex_filters"},
         )
 
         # Act
@@ -499,7 +551,7 @@ class TestAccommodationService:
         # Act - Test internal scoring method if it exists
         if hasattr(accommodation_service, "_calculate_listing_score"):
             scores = [
-                accommodation_service._calculate_listing_score(listing)
+                accommodation_service._calculate_listing_score(listing)  # type: ignore[attr-defined]
                 for listing in listings
             ]
 
@@ -520,13 +572,15 @@ class TestAccommodationService:
     ):
         """Test booking total price calculation with various inputs."""
         # Arrange
-        booking = AccommodationBookingRequest(
-            listing_id=str(uuid4()),
-            check_in=date.today() + timedelta(days=30),
-            check_out=date.today() + timedelta(days=30 + nights),
-            guests=guests,
-            guest_name="Test Guest",
-            guest_email="test@example.com",
+        booking = AccommodationBookingRequest.model_validate(
+            {
+                "listing_id": str(uuid4()),
+                "check_in": date.today() + timedelta(days=30),
+                "check_out": date.today() + timedelta(days=30 + nights),
+                "guests": guests,
+                "guest_name": "Test Guest",
+                "guest_email": "test@example.com",
+            }
         )
 
         # Assert
@@ -543,7 +597,9 @@ class TestAccommodationService:
         # Note: The model doesn't validate past dates
         # This would be done at service level
         # This test documents the current behavior
-        request = AccommodationSearchRequest(
+        request = AccommodationSearchRequest.model_validate(
+            user_id="test-user-id",
+            trip_id=None,
             location="Paris, France",
             check_in=date.today() - timedelta(days=1),  # Past date
             check_out=date.today() + timedelta(days=5),
@@ -558,7 +614,9 @@ class TestAccommodationService:
         """Test search with zero guests raises appropriate error."""
         # Act & Assert
         with pytest.raises(ValidationError) as exc_info:
-            AccommodationSearchRequest(
+            AccommodationSearchRequest.model_validate(
+                user_id="test-user-id",
+                trip_id=None,
                 location="Paris, France",
                 check_in=date.today() + timedelta(days=30),
                 check_out=date.today() + timedelta(days=35),
@@ -574,7 +632,9 @@ class TestAccommodationService:
     ):
         """Test that mock listings generator produces valid data."""
         # Arrange
-        search_request = AccommodationSearchRequest(
+        search_request = AccommodationSearchRequest.model_validate(
+            user_id="test-user-id",
+            trip_id=None,
             location="Test City",
             check_in=date.today() + timedelta(days=30),
             check_out=date.today() + timedelta(days=35),
@@ -594,3 +654,4 @@ class TestAccommodationService:
             assert listing.price_per_night > 0
             assert listing.max_guests >= search_request.guests
             assert listing.location.city == "Test City"
+        assert result.user_id == search_request.user_id

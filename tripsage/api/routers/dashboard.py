@@ -22,10 +22,7 @@ from tripsage.api.core.dependencies import CacheDep, DatabaseDep, SettingsDep
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 from tripsage_core.services.business.api_key_service import ServiceHealthStatus
-from tripsage_core.services.business.dashboard_service import (
-    ApiKeyValidator,
-    DashboardService,
-)  # Compatibility wrapper for validation  # Production-ready dashboard service
+from tripsage_core.services.business.dashboard_service import DashboardService
 
 
 logger = logging.getLogger(__name__)
@@ -187,22 +184,24 @@ async def get_system_overview(
         # Calculate uptime (simplified - would use actual startup time in production)
         uptime_seconds = 86400  # 24 hours as default
 
+        metrics = dashboard_data.metrics
+
         # Determine overall status
         overall_status = "healthy"
-        if dashboard_data.overall_success_rate < 0.9:  # <90% success rate
+        if metrics.success_rate < 0.9:  # <90% success rate
             overall_status = "degraded"
-        if dashboard_data.overall_success_rate < 0.8:  # <80% success rate
+        if metrics.success_rate < 0.8:  # <80% success rate
             overall_status = "unhealthy"
 
         return SystemOverview(
             status=overall_status,
             uptime_seconds=uptime_seconds,
             environment=settings.environment,
-            total_requests_24h=dashboard_data.total_requests,
-            total_errors_24h=dashboard_data.total_errors,
-            success_rate_24h=dashboard_data.overall_success_rate,
+            total_requests_24h=metrics.total_requests,
+            total_errors_24h=metrics.total_errors,
+            success_rate_24h=metrics.success_rate,
             active_users_24h=len(dashboard_data.top_users),
-            active_api_keys=dashboard_data.active_keys,
+            active_api_keys=metrics.active_keys_count,
         )
 
     except Exception as e:
@@ -216,6 +215,7 @@ async def get_system_overview(
 @router.get("/services", response_model=list[ServiceStatus])
 async def get_services_status(
     cache_service: CacheDep,
+    db_service: DatabaseDep,
     principal: Principal = Depends(get_current_principal),
 ) -> list[ServiceStatus]:
     """Get status of all external services.
@@ -227,45 +227,41 @@ async def get_services_status(
     - Other configured services
     """
     try:
-        services_status = []
+        dashboard_service = DashboardService(
+            cache_service=cache_service,
+            database_service=db_service,
+        )
 
-        # Check external services health
-        async with ApiKeyValidator() as validator:
-            health_checks = await validator.check_all_services_health()
+        if dashboard_service.api_key_service is None:
+            return []
 
-            for service_type, health_check in health_checks.items():
-                # Convert health status
-                status_str = "healthy"
-                if health_check.status == ServiceHealthStatus.DEGRADED:
-                    status_str = "degraded"
-                elif health_check.status == ServiceHealthStatus.UNHEALTHY:
-                    status_str = "unhealthy"
+        health_checks = (
+            await dashboard_service.api_key_service.check_all_services_health()
+        )
 
-                # Calculate error rate (simplified)
-                error_rate = 0.0
-                if health_check.status == ServiceHealthStatus.DEGRADED:
-                    error_rate = 0.1  # 10%
-                elif health_check.status == ServiceHealthStatus.UNHEALTHY:
-                    error_rate = 0.5  # 50%
+        services_status: list[ServiceStatus] = []
+        for service_type, health_check in health_checks.items():
+            status_str = "healthy"
+            if health_check.status == ServiceHealthStatus.DEGRADED:
+                status_str = "degraded"
+            elif health_check.status == ServiceHealthStatus.UNHEALTHY:
+                status_str = "unhealthy"
 
-                # Calculate uptime percentage (simplified)
-                uptime_percentage = 100.0
-                if health_check.status == ServiceHealthStatus.DEGRADED:
-                    uptime_percentage = 95.0
-                elif health_check.status == ServiceHealthStatus.UNHEALTHY:
-                    uptime_percentage = 80.0
+            details = health_check.details or {}
+            error_rate = float(details.get("error_rate", 0.0))
+            uptime_percentage = float(details.get("uptime_percentage", 100.0))
 
-                services_status.append(
-                    ServiceStatus(
-                        service=service_type.value,
-                        status=status_str,
-                        latency_ms=health_check.latency_ms,
-                        last_check=datetime.now(UTC),
-                        error_rate=error_rate,
-                        uptime_percentage=uptime_percentage,
-                        message=health_check.message,
-                    )
+            services_status.append(
+                ServiceStatus(
+                    service=service_type.value,
+                    status=status_str,
+                    latency_ms=health_check.latency_ms,
+                    last_check=health_check.checked_at,
+                    error_rate=error_rate,
+                    uptime_percentage=uptime_percentage,
+                    message=health_check.message,
                 )
+            )
 
         return services_status
 
@@ -281,6 +277,7 @@ async def get_services_status(
 async def get_usage_metrics(
     cache_service: CacheDep,
     db_service: DatabaseDep,
+    *,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     service: str | None = Query(default=None),
     principal: Principal = Depends(get_current_principal),
@@ -311,8 +308,9 @@ async def get_usage_metrics(
         )
 
         # Extract metrics from dashboard data
-        total_requests = dashboard_data.total_requests
-        total_errors = dashboard_data.total_errors
+        metrics = dashboard_data.metrics
+        total_requests = metrics.total_requests
+        total_errors = metrics.total_errors
 
         # Calculate average latency (simplified)
         avg_latency_ms = 150.0  # Default
@@ -338,7 +336,7 @@ async def get_usage_metrics(
             period_end=end_time,
             total_requests=total_requests,
             total_errors=total_errors,
-            success_rate=dashboard_data.overall_success_rate,
+            success_rate=metrics.success_rate,
             avg_latency_ms=avg_latency_ms,
             p95_latency_ms=p95_latency_ms,
             p99_latency_ms=p99_latency_ms,
@@ -360,6 +358,7 @@ async def get_usage_metrics(
 async def get_rate_limits_status(
     cache_service: CacheDep,
     db_service: DatabaseDep,
+    *,
     limit: int = Query(default=20, ge=1, le=100),
     principal: Principal = Depends(get_current_principal),
 ) -> list[RateLimitInfo]:
@@ -422,7 +421,8 @@ async def get_rate_limits_status(
                         )
                     )
 
-            except Exception as e:
+            except (OSError, RuntimeError, ValueError) as e:
+                # Service errors during rate limit retrieval
                 logger.warning("Failed to get rate limit for key %s: %s", key_id, e)
                 continue
 
@@ -441,6 +441,7 @@ async def get_alerts(
     settings: SettingsDep,
     cache_service: CacheDep,
     db_service: DatabaseDep,
+    *,
     severity: str | None = Query(default=None),
     acknowledged: bool | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
@@ -538,11 +539,11 @@ async def acknowledge_alert(
                 "acknowledged_by": principal.id,
                 "acknowledged_at": datetime.now(UTC).isoformat(),
             }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Alert {alert_id} not found",
-            )
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert {alert_id} not found",
+        )
 
     except HTTPException:
         raise
@@ -584,11 +585,11 @@ async def dismiss_alert(
                 "dismissed_by": principal.id,
                 "dismissed_at": datetime.now(UTC).isoformat(),
             }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Alert {alert_id} not found",
-            )
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Alert {alert_id} not found",
+        )
 
     except HTTPException:
         raise
@@ -604,6 +605,7 @@ async def dismiss_alert(
 async def get_user_activity(
     cache_service: CacheDep,
     db_service: DatabaseDep,
+    *,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     limit: int = Query(default=20, ge=1, le=100),
     principal: Principal = Depends(get_current_principal),
@@ -628,35 +630,20 @@ async def get_user_activity(
             top_users_limit=limit,
         )
 
-        user_activities = []
-
         # Convert top users to UserActivity objects
-        for user_data in dashboard_data.top_users:
-            user_id = user_data.get("user_id", "unknown")
-            request_count = user_data.get("request_count", 0)
-
-            # Calculate success rate (simplified)
-            error_count = int(request_count * 0.05)  # 5% error rate assumption
-            success_rate = (
-                (request_count - error_count) / request_count
-                if request_count > 0
-                else 1.0
+        return [
+            UserActivity(
+                user_id=user_data.user_id,
+                user_type="agent" if user_data.user_id.startswith("agent_") else "user",
+                request_count=user_data.request_count,
+                error_count=user_data.error_count,
+                success_rate=user_data.success_rate,
+                last_activity=user_data.last_activity,
+                services_used=user_data.services_used,
+                avg_latency_ms=user_data.avg_latency_ms,
             )
-
-            user_activities.append(
-                UserActivity(
-                    user_id=user_id,
-                    user_type="agent" if user_id.startswith("agent_") else "user",
-                    request_count=request_count,
-                    error_count=error_count,
-                    success_rate=success_rate,
-                    last_activity=datetime.now(UTC) - timedelta(hours=1),
-                    services_used=["chat", "flights", "accommodations"],
-                    avg_latency_ms=150.0,
-                )
-            )
-
-        return user_activities
+            for user_data in dashboard_data.top_users
+        ]
 
     except Exception as e:
         logger.exception("Failed to get user activity")
@@ -671,6 +658,7 @@ async def get_trend_data(
     metric_type: str,
     cache_service: CacheDep,
     db_service: DatabaseDep,
+    *,
     time_range_hours: int = Query(default=24, ge=1, le=168),
     interval_minutes: int = Query(default=60, ge=5, le=1440),
     principal: Principal = Depends(get_current_principal),
@@ -773,6 +761,12 @@ async def get_analytics_summary(
         end_time = datetime.now(UTC)
         start_time = end_time - timedelta(hours=time_range_hours)
 
+        metrics = dashboard_data.metrics
+        services = dashboard_data.services
+        service_breakdown = {
+            service.service_name: service.health_status.value for service in services
+        }
+
         # Build comprehensive summary
         return {
             "period": {
@@ -781,35 +775,37 @@ async def get_analytics_summary(
                 "hours": time_range_hours,
             },
             "performance": {
-                "total_requests": dashboard_data.total_requests,
-                "total_errors": dashboard_data.total_errors,
-                "success_rate": dashboard_data.overall_success_rate,
+                "total_requests": metrics.total_requests,
+                "total_errors": metrics.total_errors,
+                "success_rate": metrics.success_rate,
                 "avg_latency_ms": 150.0,  # Simplified
                 "p95_latency_ms": 300.0,  # Simplified
             },
             "services": {
-                "total_services": len(dashboard_data.services_status),
+                "total_services": len(services),
                 "healthy_services": sum(
                     1
-                    for status in dashboard_data.services_status.values()
-                    if status == "healthy"
+                    for service in services
+                    if service.health_status == ServiceHealthStatus.HEALTHY
                 ),
                 "degraded_services": sum(
                     1
-                    for status in dashboard_data.services_status.values()
-                    if status == "degraded"
+                    for service in services
+                    if service.health_status == ServiceHealthStatus.DEGRADED
                 ),
                 "unhealthy_services": sum(
                     1
-                    for status in dashboard_data.services_status.values()
-                    if status == "unhealthy"
+                    for service in services
+                    if service.health_status == ServiceHealthStatus.UNHEALTHY
                 ),
-                "service_breakdown": dashboard_data.services_status,
+                "service_breakdown": service_breakdown,
             },
             "usage": {
-                "active_api_keys": dashboard_data.active_keys,
+                "active_api_keys": metrics.active_keys_count,
                 "active_users": len(dashboard_data.top_users),
-                "usage_by_service": dashboard_data.usage_by_service,
+                "usage_by_service": {
+                    service.service_name: service.total_requests for service in services
+                },
                 "top_users": dashboard_data.top_users,
             },
             "alerts": {
