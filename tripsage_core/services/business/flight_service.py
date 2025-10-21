@@ -858,4 +858,22 @@ async def get_flight_service() -> FlightService:
     Returns:
         FlightService instance
     """
+    # Attempt to attach Duffel provider if a token is configured.
+    # Environment-based detection to avoid coupling to Settings attributes.
+    import os
+
+    access_token = os.getenv("DUFFEL_ACCESS_TOKEN") or os.getenv("DUFFEL_API_TOKEN")
+    if access_token:
+        try:
+            from tripsage_core.services.external_apis.duffel_provider import (
+                DuffelProvider,
+            )
+
+            provider = DuffelProvider(access_token=access_token)
+            return FlightService(external_flight_service=provider)
+        except (ImportError, TypeError, ValueError):
+            # Optional provider init failed; fall back safely.
+            # Fall back to service without external provider on any init error
+            return FlightService()
+
     return FlightService()
