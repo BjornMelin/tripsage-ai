@@ -3,6 +3,7 @@
 These tests validate that provider responses (Duffel-like dicts) are converted
 into canonical `FlightOffer` models without relying on external SDKs.
 """
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 
