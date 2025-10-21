@@ -4,13 +4,20 @@ This module implements the accommodation search and booking agent as a LangGraph
 using modern LangGraph @tool patterns for simplicity and maintainability.
 """
 
-import json
+# pylint: disable=import-error
+
 from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools import get_tools_for_agent
+from tripsage.orchestration.utils.structured import (
+    StructuredExtractor,
+    model_to_dict,
+)
 from tripsage_core.config import get_settings
 from tripsage_core.services.business.accommodation_service import (
     AccommodationSearchRequest,
@@ -30,6 +37,23 @@ else:
 logger = get_logger(__name__)
 
 
+class AccommodationSearchParameters(BaseModel):
+    """Structured accommodation extraction payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    location: str | None = None
+    check_in_date: date | None = None
+    check_out_date: date | None = None
+    guests: int | None = Field(default=None, ge=1)
+    rooms: int | None = Field(default=None, ge=1)
+    property_type: str | None = None
+    min_price: float | None = Field(default=None, ge=0)
+    max_price: float | None = Field(default=None, ge=0)
+    amenities: list[str] | None = None
+    rating_min: float | None = Field(default=None, ge=0, le=5)
+
+
 class AccommodationAgentNode(BaseAgentNode):
     """Accommodation search and booking agent node.
 
@@ -46,6 +70,9 @@ class AccommodationAgentNode(BaseAgentNode):
             model=settings.openai_model,
             temperature=settings.model_temperature,
             api_key=api_key_str,  # type: ignore
+        )
+        self._parameter_extractor = StructuredExtractor(
+            self.llm, AccommodationSearchParameters, logger=logger
         )
         super().__init__("accommodation_agent", service_registry)
         self.accommodation_service: AccommodationService = self.get_service(
@@ -126,7 +153,6 @@ class AccommodationAgentNode(BaseAgentNode):
         Returns:
             Dictionary of accommodation search parameters or None if insufficient info
         """
-        # Use LLM to extract parameters
         extraction_prompt = f"""
         Extract accommodation search parameters from this message and context.
 
@@ -159,34 +185,25 @@ class AccommodationAgentNode(BaseAgentNode):
         """
 
         try:
-            messages = [
-                SystemMessage(
-                    content="You are an accommodation parameter extraction assistant."
+            result = await self._parameter_extractor.extract_from_prompts(
+                system_prompt=(
+                    "You are an accommodation parameter extraction assistant."
                 ),
-                HumanMessage(content=extraction_prompt),
-            ]
-
-            response = await self.llm.ainvoke(messages)
-            raw_content = response.content
-            if not isinstance(raw_content, str):
-                logger.warning(
-                    "Accommodation parameter extraction returned non-text content",
-                    extra={"content_type": type(raw_content).__name__},
-                )
-                return None
-
-            if raw_content.strip().lower() in {"null", "none", "{}"}:
-                return None
-
-            params = json.loads(raw_content)
-
-            if params and params.get("location"):
-                return params
-            return None
-
+                user_prompt=extraction_prompt,
+            )
         except Exception:
             logger.exception("Error extracting accommodation parameters")
             return None
+
+        params = model_to_dict(result)
+        if not params.get("location"):
+            return None
+
+        amenities = params.get("amenities")
+        if isinstance(amenities, list):
+            params["amenities"] = [str(item) for item in amenities if item]
+
+        return params
 
     async def _search_accommodations(
         self, search_params: dict[str, Any]
@@ -218,13 +235,21 @@ class AccommodationAgentNode(BaseAgentNode):
     ) -> AccommodationSearchRequest:
         """Convert extracted parameters into a typed search request."""
         normalized = search_params.copy()
-        check_in_str = normalized.pop("check_in_date", None)
-        check_out_str = normalized.pop("check_out_date", None)
+        check_in_val = normalized.pop("check_in_date", None)
+        check_out_val = normalized.pop("check_out_date", None)
 
-        if check_in_str:
-            normalized["check_in"] = date.fromisoformat(check_in_str)
-        if check_out_str:
-            normalized["check_out"] = date.fromisoformat(check_out_str)
+        if check_in_val:
+            normalized["check_in"] = (
+                date.fromisoformat(check_in_val)
+                if isinstance(check_in_val, str)
+                else check_in_val
+            )
+        if check_out_val:
+            normalized["check_out"] = (
+                date.fromisoformat(check_out_val)
+                if isinstance(check_out_val, str)
+                else check_out_val
+            )
 
         return AccommodationSearchRequest(**normalized)
 

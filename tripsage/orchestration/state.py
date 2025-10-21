@@ -150,6 +150,9 @@ class TravelPlanningState(TypedDict):
     flight_searches: list[dict[str, Any]]  # List of SearchResult dicts
     accommodation_searches: list[dict[str, Any]]  # List of SearchResult dicts
     activity_searches: list[dict[str, Any]]  # List of SearchResult dicts
+    budget_analyses: list[dict[str, Any]]  # Budget analysis records
+    destination_research: list[dict[str, Any]]  # Destination research outputs
+    itineraries: list[dict[str, Any]]  # Planned itineraries
 
     # Booking progress tracking
     booking_progress: dict[str, Any] | None  # Serialized BookingProgress
@@ -208,6 +211,9 @@ def create_initial_state(
         flight_searches=[],
         accommodation_searches=[],
         activity_searches=[],
+        budget_analyses=[],
+        destination_research=[],
+        itineraries=[],
         booking_progress=None,
         # Agent coordination (starts with router)
         current_agent=None,
