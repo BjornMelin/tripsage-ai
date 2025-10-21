@@ -96,7 +96,9 @@ def mock_mcp_manager():
 
     manager.invoke.side_effect = invoke_side_effect
 
-    with patch("tripsage.mcp_abstraction.manager.mcp_manager", manager):
+    with patch(
+        "tripsage_core.services.simple_mcp_service.default_mcp_service", manager
+    ):
         yield manager
 
 
