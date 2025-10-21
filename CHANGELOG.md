@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Web search tooling replaced ad-hoc fallbacks with strict Agents SDK usage and literal-typed context sizing; batch helper now guards cache failures.
 - Web crawl helpers simplified to use `WebCrawlService` exclusively, centralizing error normalization and metrics recording.
 - OTEL decorators use overload-friendly typing so async/sync instrumentation survives pyright + pylint enforcement.
+- WebSocket router refactored around a shared `MessageContext`, consolidated handlers, and IDNA-aware origin validation while keeping dependencies Supabase-only.
 
 ### Deprecated
 
@@ -40,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Linting/typing issues in touched flight tests and orchestration node; pyright/pylint clean on changed scope.
+- WebSocket integration/unit test suites updated for the refactored router (async dependency overrides, Supabase wiring, Unicode homograph coverage).
 
 ### Security
 
