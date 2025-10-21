@@ -33,6 +33,7 @@ class BaseService(ABC):
     """Base class for all service implementations."""
 
     def __init__(self):
+        """Initialize Service_Registry."""
         self.settings = get_settings()
         self._connected = False
 
@@ -54,6 +55,7 @@ class ServiceAdapter(ABC):
     """Abstract adapter for services supporting different integration modes."""
 
     def __init__(self, service_name: str):
+        """Initialize Service_Registry."""
         self.service_name = service_name
         self._service_instance = None
 
@@ -84,6 +86,7 @@ class ServiceRegistry:
     """
 
     def __init__(self):
+        """Initialize Service_Registry."""
         self._services: dict[str, ServiceAdapter] = {}
         self._instances: dict[str, Any] = {}
         self._locks: dict[str, asyncio.Lock] = {}
@@ -137,7 +140,8 @@ class ServiceRegistry:
                 if hasattr(old_instance, "close"):
                     try:
                         await old_instance.close()
-                    except Exception as close_error:
+                    except (OSError, RuntimeError, AttributeError) as close_error:
+                        # Service cleanup errors (network, state, or method not found)
                         logger.warning(
                             "Failed to close existing service instance '%s': %s",
                             name,
@@ -157,7 +161,8 @@ class ServiceRegistry:
             if hasattr(instance, "close"):
                 try:
                     await instance.close()
-                except Exception as close_error:
+                except (OSError, RuntimeError, AttributeError) as close_error:
+                    # Service cleanup errors (network, state, or method not found)
                     logger.warning(
                         "Failed to close service instance '%s': %s",
                         _name,

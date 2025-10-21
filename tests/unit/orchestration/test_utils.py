@@ -25,6 +25,7 @@ class MockChatOpenAI:
         # Store responses for different scenarios
         self._responses = {}
         self._default_response = "I understand your request."
+        self._bound_tools = []
 
     def set_response(self, key: str, response: str):
         """Set a specific response for a key."""
@@ -161,6 +162,15 @@ class MockChatOpenAI:
         import asyncio
 
         return asyncio.run(self.ainvoke(messages, **kwargs))
+
+    def with_structured_output(self, schema):
+        """Return self to emulate LangChain structured output wrapper."""
+        return self
+
+    def bind_tools(self, tools):
+        """Return self to emulate tool binding."""
+        self._bound_tools = tools
+        return self
 
 
 def create_mock_llm(default_response: str = "Test response") -> MockChatOpenAI:
