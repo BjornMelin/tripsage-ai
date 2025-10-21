@@ -50,8 +50,8 @@ def _get_service_registry(
     registry = ctx.context.get("service_registry")
     if registry is None:
         raise ValueError("service_registry missing from tool context")
-    if not isinstance(registry, ServiceRegistry):  # pragma: no cover - defensive
-        raise TypeError("tool context service_registry is not a ServiceRegistry")
+    if not hasattr(registry, "get_required_service"):
+        raise TypeError("tool context service_registry is missing required API")
     return registry
 
 
@@ -60,12 +60,17 @@ def _get_accommodation_service(
 ) -> AccommodationService:
     registry = _get_service_registry(ctx)
     service = registry.get_required_service("accommodation_service")
-    if not isinstance(service, AccommodationService):  # pragma: no cover - defensive
+    required_methods = (
+        "search_accommodations",
+        "get_listing_details",
+        "book_accommodation",
+    )
+    if not all(hasattr(service, method) for method in required_methods):
         raise TypeError("service_registry did not provide an AccommodationService")
     return service
 
 
-@function_tool
+# pylint: disable=too-many-positional-arguments
 @with_error_handling()
 async def search_accommodations(
     ctx: ToolContext[Any],
@@ -124,7 +129,6 @@ async def search_accommodations(
     }
 
 
-@function_tool
 @with_error_handling()
 async def get_accommodation_details(
     ctx: ToolContext[Any],
@@ -146,7 +150,7 @@ async def get_accommodation_details(
     }
 
 
-@function_tool
+# pylint: disable=too-many-positional-arguments
 @with_error_handling()
 async def book_accommodation(
     ctx: ToolContext[Any],
@@ -188,8 +192,16 @@ async def book_accommodation(
     }
 
 
+search_accommodations_tool = function_tool(search_accommodations)
+get_accommodation_details_tool = function_tool(get_accommodation_details)
+book_accommodation_tool = function_tool(book_accommodation)
+
+
 __all__ = [
     "book_accommodation",
+    "book_accommodation_tool",
     "get_accommodation_details",
+    "get_accommodation_details_tool",
     "search_accommodations",
+    "search_accommodations_tool",
 ]
