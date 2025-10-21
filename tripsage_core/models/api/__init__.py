@@ -12,15 +12,6 @@ from tripsage_core.models.api.calendar_models import (
     EventReminder,
     UpdateEventRequest,
 )
-from tripsage_core.models.api.flights_models import (
-    Airport,
-    FlightOffer,
-    FlightOfferRequest,
-    Passenger,
-    PaymentRequest,
-    PriceBreakdown,
-    Segment,
-)
 from tripsage_core.models.api.weather_models import (
     CurrentWeather,
     DailyForecast,
@@ -32,8 +23,6 @@ from tripsage_core.models.api.weather_models import (
 
 
 __all__ = [
-    # Flight models
-    "Airport",
     # Calendar models
     "CalendarEvent",
     "CalendarList",
@@ -43,13 +32,7 @@ __all__ = [
     "DailyForecast",
     "EventDateTime",
     "EventReminder",
-    "FlightOffer",
-    "FlightOfferRequest",
     "HourlyForecast",
-    "Passenger",
-    "PaymentRequest",
-    "PriceBreakdown",
-    "Segment",
     "UpdateEventRequest",
     "WeatherAlert",
     "WeatherCondition",

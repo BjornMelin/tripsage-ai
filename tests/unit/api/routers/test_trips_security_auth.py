@@ -5,6 +5,8 @@ edge cases, authorization boundary testing, permission escalation attempts,
 and security vulnerability prevention.
 """
 
+# pylint: disable=too-many-public-methods, too-many-positional-arguments
+
 from datetime import UTC, date, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
