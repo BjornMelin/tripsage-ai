@@ -619,7 +619,7 @@ async def check_key_expiration(
         result = await monitoring_service.database_service.select(
             "api_keys",
             "*",
-            {"expires_at": {"lte": threshold.isoformat()}},
+            filters={"expires_at": {"lte": threshold.isoformat()}},
         )
         normalized: list[dict[str, Any]] = []
         if result:
@@ -671,7 +671,12 @@ async def get_key_health_metrics() -> dict[str, Any]:
         expiring_result = await db_service.select(
             "api_keys",
             "*",
-            {"expires_at": {"gt": now.isoformat(), "lte": future_date.isoformat()}},
+            filters={
+                "expires_at": {
+                    "gt": now.isoformat(),
+                    "lte": future_date.isoformat(),
+                }
+            },
         )
         expiring_count = len(expiring_result) if expiring_result else 0
 

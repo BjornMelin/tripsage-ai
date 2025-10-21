@@ -1,3 +1,5 @@
+# pylint: disable=import-error
+
 """Flight agent node implementation for LangGraph orchestration.
 
 This module implements the flight search and booking agent as a LangGraph node,
@@ -10,15 +12,31 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools import get_tools_for_agent
+from tripsage.orchestration.utils.structured import StructuredExtractor, model_to_dict
 from tripsage_core.config import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 
 logger = get_logger(__name__)
+
+
+class FlightSearchParameters(BaseModel):
+    """Structured flight search payload."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    origin: str | None = None
+    destination: str | None = None
+    departure_date: str | None = None
+    return_date: str | None = None
+    passengers: int | None = Field(default=None, ge=1)
+    class_preference: str | None = None
+    airline_preference: str | None = None
 
 
 class FlightAgentNode(BaseAgentNode):
@@ -37,15 +55,24 @@ class FlightAgentNode(BaseAgentNode):
 
     def __init__(self, service_registry):
         """Initialize the flight agent node with tools and language model."""
-        super().__init__("flight_agent", service_registry)
-
-        # Initialize LLM for flight-specific tasks
         settings = get_settings()
+        api_key_config = settings.openai_api_key
+        # type: ignore # pylint: disable=no-member
+        secret_api_key = (
+            api_key_config
+            if isinstance(api_key_config, SecretStr) or api_key_config is None
+            else SecretStr(api_key_config.get_secret_value())
+        )
         self.llm = ChatOpenAI(
             model=settings.openai_model,
             temperature=settings.model_temperature,
-            api_key=settings.openai_api_key.get_secret_value(),
+            api_key=secret_api_key,
         )
+        self._parameter_extractor = StructuredExtractor(
+            self.llm, FlightSearchParameters, logger=logger
+        )
+
+        super().__init__("flight_agent", service_registry)
 
     def _initialize_tools(self) -> None:
         """Initialize flight-specific tools using simple tool catalog."""
@@ -111,7 +138,6 @@ class FlightAgentNode(BaseAgentNode):
         Returns:
             Dictionary of flight search parameters or None if insufficient info
         """
-        # Use LLM to extract parameters
         extraction_prompt = f"""
         Extract flight search parameters from this message and context.
 
@@ -140,30 +166,18 @@ class FlightAgentNode(BaseAgentNode):
         """
 
         try:
-            messages = [
-                SystemMessage(
-                    content="You are a flight search parameter extraction assistant."
-                ),
-                HumanMessage(content=extraction_prompt),
-            ]
-
-            response = await self.llm.ainvoke(messages)
-
-            # Parse the response
-            if response.content.strip().lower() in ["null", "none", "{}"]:
-                return None
-
-            params = json.loads(response.content)
-
-            # Validate required fields
-            if params and params.get("origin") and params.get("destination"):
-                return params
-            else:
-                return None
-
+            result = await self._parameter_extractor.extract_from_prompts(
+                system_prompt="You are a flight search parameter extraction assistant.",
+                user_prompt=extraction_prompt,
+            )
         except Exception:
             logger.exception("Error extracting flight parameters")
             return None
+        params = model_to_dict(result)
+
+        if params.get("origin") and params.get("destination"):
+            return params
+        return None
 
     async def _search_flights(self, search_params: dict[str, Any]) -> dict[str, Any]:
         """Perform flight search using simple tool direct access.
@@ -286,8 +300,12 @@ class FlightAgentNode(BaseAgentNode):
                 HumanMessage(content=response_prompt),
             ]
 
+            if self.llm is None:
+                raise RuntimeError("Flight LLM is not initialized")
+
             response = await self.llm.ainvoke(messages)
-            content = response.content
+            raw_content = response.content
+            content = raw_content if isinstance(raw_content, str) else str(raw_content)
 
         except Exception:
             logger.exception("Error generating flight response")
