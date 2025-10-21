@@ -45,13 +45,7 @@ class DatabaseMetrics(BaseModel):
 @pytest.fixture
 def db_settings():
     """Database settings for performance testing."""
-    settings = get_settings()
-    # Optimize for testing
-    settings.DATABASE_POOL_SIZE = 20
-    settings.DATABASE_MAX_OVERFLOW = 30
-    settings.DATABASE_POOL_TIMEOUT = 30
-    settings.ENABLE_QUERY_CACHE = True
-    return settings
+    return get_settings()
 
 
 @pytest.fixture
@@ -68,7 +62,7 @@ async def cache_service():
     """Cache service instance for testing."""
     service = CacheService()
     yield service
-    await service.close()
+    await service.disconnect()
 
 
 class TestDatabaseConnectionPerformance:
@@ -170,7 +164,7 @@ class TestDatabaseQueryPerformance:
             try:
                 result = await database_service.execute_sql("SELECT 1 as test_value")
                 return len(result) if result else 0
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Query failed: %s", e)
                 return 0
 
@@ -191,7 +185,7 @@ class TestDatabaseQueryPerformance:
                     "SELECT $1::text as param_value", ("test_parameter",)
                 )
                 return len(result) if result else 0
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Parameterized query failed: %s", e)
                 return 0
 
@@ -217,7 +211,7 @@ class TestDatabaseQueryPerformance:
                 """
                 result = await database_service.execute_sql(query)
                 return len(result) if result else 0
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Complex join failed: %s", e)
                 return 0
 
@@ -238,7 +232,7 @@ class TestDatabaseQueryPerformance:
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
             logger.warning("Table creation failed: %s", e)
 
         async def execute_bulk_insert():
@@ -251,7 +245,7 @@ class TestDatabaseQueryPerformance:
                         (f"bulk_test_{i}", i * 10),
                     )
                 return 5
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Bulk insert failed: %s", e)
                 return 0
             finally:
@@ -280,7 +274,7 @@ class TestDatabaseTransactionPerformance:
                     await database_service.execute_sql("SELECT 1")
                     await database_service.execute_sql("SELECT 2")
                 return True
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Transaction failed: %s", e)
                 return False
 
@@ -327,7 +321,7 @@ class TestDatabaseTransactionPerformance:
                     )
 
                 return len(result) if result else 0
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Complex transaction failed: %s", e)
                 return 0
             finally:
@@ -353,8 +347,8 @@ class TestDatabaseTransactionPerformance:
                 async with database_service.transaction():
                     await database_service.execute_sql("SELECT 1")
                     # Simulate an error to trigger rollback
-                    raise Exception("Intentional rollback")
-            except Exception:
+                    raise RuntimeError("Intentional rollback")
+            except RuntimeError:
                 # Expected exception for rollback
                 return True
             return False
@@ -391,7 +385,7 @@ class TestDatabaseCacheIntegration:
                 )
                 mock_cache[cache_key] = result
                 return result
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Cached query failed: %s", e)
                 return []
 
@@ -451,8 +445,9 @@ class TestDatabaseVectorSearchPerformance:
                 )
 
                 # Generate test vectors
-                vector1 = np.random.random(384).tolist()
-                vector2 = np.random.random(384).tolist()
+                rng = np.random.default_rng()
+                vector1 = rng.random(384).tolist()
+                vector2 = rng.random(384).tolist()
 
                 # Perform vector similarity calculation
                 result = await database_service.execute_sql(
@@ -461,7 +456,7 @@ class TestDatabaseVectorSearchPerformance:
 
                 return len(result) if result else 0
 
-            except Exception as e:
+            except (RuntimeError, NotImplementedError, OSError) as e:
                 logger.warning("Vector search not available: %s", e)
                 # Return mock result for testing
                 return 1
@@ -483,7 +478,7 @@ class TestDatabaseVectorSearchPerformance:
                 await asyncio.sleep(0.005)  # Simulate index creation
                 await asyncio.sleep(0.002)  # Simulate index usage
                 return True
-            except Exception as e:
+            except (RuntimeError, NotImplementedError, OSError) as e:
                 logger.warning("Vector index test failed: %s", e)
                 return False
 
@@ -523,7 +518,7 @@ class TestDatabaseMemoryUsage:
                         processed_count += 1
 
                 return processed_count
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError, MemoryError) as e:
                 logger.warning("Large resultset test failed: %s", e)
                 return 0
 
@@ -592,7 +587,7 @@ class TestDatabaseErrorHandlingPerformance:
                 result = await service.execute_sql("SELECT 1")
                 return len(result) if result else 0
 
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError, ConnectionError) as e:
                 logger.warning("Connection recovery failed: %s", e)
                 return 0
             finally:
@@ -623,7 +618,7 @@ class TestDatabaseErrorHandlingPerformance:
             except TimeoutError:
                 # Handle timeout gracefully
                 return -1
-            except Exception as e:
+            except (RuntimeError, OSError) as e:
                 logger.warning("Query timeout test failed: %s", e)
                 return 0
 
@@ -685,7 +680,7 @@ class TestDatabaseIntegrationWorkflows:
 
                 return 1
 
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("CRUD workflow failed: %s", e)
                 return 0
 
@@ -721,7 +716,7 @@ class TestDatabaseIntegrationWorkflows:
 
                 return []
 
-            except Exception as e:
+            except (RuntimeError, TimeoutError, OSError) as e:
                 logger.warning("Database cache workflow failed: %s", e)
                 return []
 

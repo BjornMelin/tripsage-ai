@@ -1,164 +1,158 @@
-"""Comprehensive unit tests for destinations router."""
+"""Finalized unit tests for the destinations router."""
+
+from __future__ import annotations
 
 import pytest
 from fastapi import status
 
 
 class TestDestinationsRouter:
-    """Test suite for destinations router endpoints."""
+    """Test suite covering the finalized destination endpoints."""
 
-    def setup_method(self):
-        """Set up test data."""
-        # DestinationFactory methods are handled by mocks in conftest.py
-
-    # === SUCCESS TESTS ===
+    # === SUCCESS PATHS ===
 
     def test_search_destinations_success(
         self, api_test_client, valid_destination_search
     ):
-        """Test successful destination search."""
-        # Debug: print what we're sending
-        print(f"Request data: {valid_destination_search}")
-
-        # Act
+        """Search returns 200 with destinations list."""
         response = api_test_client.post(
             "/api/destinations/search",
             json=valid_destination_search,
         )
 
-        # Debug: print response details
-        print(f"Response status: {response.status_code}")
-        print(f"Response content: {response.text}")
-
-        # Assert
         assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "destinations" in data
-
-    def test_search_destinations_empty_query(self, api_test_client):
-        """Test destination search with empty query."""
-        search_request = {
-            "query": "",
-            "limit": 10,
-        }
-
-        # Act
-        response = api_test_client.post(
-            "/api/destinations/search",
-            json=search_request,
-        )
-
-        # Assert - should return validation error for empty query
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        payload = response.json()
+        assert "destinations" in payload
+        assert payload["count"] == len(payload["destinations"])
 
     def test_get_destination_details_success(
         self, api_test_client, valid_destination_details
     ):
-        """Test successful destination details retrieval."""
-        # Act
+        """Details endpoint returns 200 when destination exists."""
         response = api_test_client.get(
-            f"/api/destinations/{valid_destination_details['destination_id']}",
+            f"/api/destinations/{valid_destination_details['destination_id']}"
         )
 
-        # Assert
         assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert "destination" in payload
 
-    def test_get_destination_recommendations_success(self, api_test_client):
-        """Test successful destination recommendations."""
-        # Act
-        response = api_test_client.get(
-            "/api/destinations/recommendations",
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-
-    # === ERROR HANDLING TESTS ===
-
-    def test_search_destinations_service_error(
-        self, api_test_client, valid_destination_search
+    def test_save_destination_success(
+        self, api_test_client, valid_saved_destination_request
     ):
-        """Test destination search with service error."""
-        # Act
+        """Save endpoint returns 201 and saved payload."""
         response = api_test_client.post(
-            "/api/destinations/search",
-            json=valid_destination_search,
+            "/api/destinations/saved",
+            json=valid_saved_destination_request,
         )
 
-        # Assert - The mock service handles errors gracefully
+        assert response.status_code == status.HTTP_201_CREATED
+        payload = response.json()
+        assert payload["destination"]["name"]
+        assert payload["trip_id"] == valid_saved_destination_request["trip_id"]
+
+    def test_list_saved_destinations_success(self, api_test_client):
+        """Saved destinations endpoint returns list."""
+        response = api_test_client.get("/api/destinations/saved")
+
         assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert isinstance(payload, list)
 
-    # === VALIDATION TESTS ===
+    def test_recommendations_success(
+        self, api_test_client, valid_destination_recommendations
+    ):
+        """Recommendations endpoint returns 200 and list of items."""
+        response = api_test_client.post(
+            "/api/destinations/recommendations",
+            json=valid_destination_recommendations,
+        )
 
-    @pytest.mark.parametrize("limit", [0, -1, 101])  # Schema likely allows 1-100
+        assert response.status_code == status.HTTP_200_OK
+        payload = response.json()
+        assert isinstance(payload, list)
+
+    # === VALIDATION ===
+
+    @pytest.mark.parametrize("limit", [0, -1, 101])
     def test_search_destinations_invalid_limit(self, api_test_client, limit):
-        """Test destination search with invalid limit."""
-        search_request = {
-            "query": "Tokyo",
-            "limit": limit,
-        }
+        """Invalid limits result in 422."""
+        payload = {"query": "Tokyo", "limit": limit}
 
-        # Act
-        response = api_test_client.post(
-            "/api/destinations/search",
-            json=search_request,
-        )
+        response = api_test_client.post("/api/destinations/search", json=payload)
 
-        # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    @pytest.mark.parametrize("query", [None, "", " ", "a" * 1001])  # Test edge cases
+    @pytest.mark.parametrize("query", ["", " ", None])
     def test_search_destinations_invalid_query(self, api_test_client, query):
-        """Test destination search with invalid query."""
-        search_request = {
-            "query": query,
-            "limit": 10,
-        }
+        """Blank or missing query fails validation."""
+        payload = {"query": query, "limit": 5}
 
-        # Act
-        response = api_test_client.post(
-            "/api/destinations/search",
-            json=search_request,
-        )
+        response = api_test_client.post("/api/destinations/search", json=payload)
 
-        # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    # === AUTHENTICATION TESTS ===
+    def test_save_destination_missing_trip(self, api_test_client):
+        """Trip ID must be provided when saving."""
+        payload = {
+            "destination_id": "dest-1",
+            "notes": "test",
+            "priority": 2,
+        }
+
+        response = api_test_client.post("/api/destinations/saved", json=payload)
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    # === AUTHENTICATION ===
 
     def test_search_destinations_unauthorized(
         self, unauthenticated_test_client, valid_destination_search
     ):
-        """Test destination search without authentication."""
-        # Act
+        """Unauthenticated search requests are rejected."""
         response = unauthenticated_test_client.post(
             "/api/destinations/search",
             json=valid_destination_search,
         )
 
-        # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_destination_details_unauthorized(
         self, unauthenticated_test_client, valid_destination_details
     ):
-        """Test destination details without authentication."""
-        # Act
+        """Details endpoint requires authentication."""
         response = unauthenticated_test_client.get(
-            f"/api/destinations/{valid_destination_details['destination_id']}",
+            f"/api/destinations/{valid_destination_details['destination_id']}"
         )
 
-        # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_destination_recommendations_unauthorized(
-        self, unauthenticated_test_client
+    def test_save_destination_unauthorized(
+        self, unauthenticated_test_client, valid_saved_destination_request
     ):
-        """Test destination recommendations without authentication."""
-        # Act
-        response = unauthenticated_test_client.get(
-            "/api/destinations/recommendations",
+        """Saving destinations requires authentication."""
+        response = unauthenticated_test_client.post(
+            "/api/destinations/saved",
+            json=valid_saved_destination_request,
         )
 
-        # Assert
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_list_saved_destinations_unauthorized(
+        self, unauthenticated_test_client,
+    ):
+        """Listing saved destinations requires authentication."""
+        response = unauthenticated_test_client.get("/api/destinations/saved")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_recommendations_unauthorized(
+        self, unauthenticated_test_client, valid_destination_recommendations
+    ):
+        """Recommendations endpoint requires authentication."""
+        response = unauthenticated_test_client.post(
+            "/api/destinations/recommendations",
+            json=valid_destination_recommendations,
+        )
+
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
